@@ -13,15 +13,15 @@ SOLID, Clean Code, all code in English.
 | `tariffs` | `tariffs` | Tariff CRUD (hourly/daily/nightly/monthly), night window "HH:MM", validation |
 | `vehicles` | `vehicles` | Vehicle CRUD, normalized unique plate, plate search |
 | `plate-scanning` | `plate-scanning` | ML Kit OCR camera scan (one-shot `image_picker` capture), heuristic plate-block selection, shared `normalizePlate`, manual-entry fallback, `PlateScanningCubit`, `/scan` route |
+| `check-in` | `check-in` | `parking_sessions`+`evidence_photos` (backend), `EvidenceStoragePort`/`LocalEvidenceStorage`, `POST/GET /check-ins`; Flutter `CheckInCubit`/`CheckInPage` (`/check-in`), reuses `/scan` + evidence photo capture, remote-only (no offline cache yet) |
 
 ## Remaining changes (planned order)
 
-1. `check-in` (+ `evidence-capture`) — entry + damage photos
-2. `billing` — hourly/day/night/monthly computation
-3. `check-out` — close entry, payment, ticket
-4. `monthly-passes` — subscriptions
-5. `reports` — revenue, occupancy (web-first)
-6. `offline-sync` — outbox push/pull
+1. `billing` — hourly/day/night/monthly computation
+2. `check-out` — close entry, payment, ticket
+3. `monthly-passes` — subscriptions
+4. `reports` — revenue, occupancy (web-first)
+5. `offline-sync` — outbox push/pull
 
 ## Key technical decisions
 
@@ -35,8 +35,8 @@ SOLID, Clean Code, all code in English.
 
 ## Test counts
 
-- Backend (`cd backend && uv run pytest`): 41 passed.
-- Flutter (`flutter test`): 67 passed. `flutter analyze`: 0 issues.
+- Backend (`cd backend && uv run pytest`): 50 passed.
+- Flutter (`flutter test`): 74 passed. `flutter analyze`: 0 issues.
 
 ## Layer map (Flutter feature slice)
 
@@ -44,4 +44,4 @@ SOLID, Clean Code, all code in English.
 
 ## Backend layout
 
-`app/domain` (entities/ports) -> `app/application` (services) -> `app/infrastructure` (SQLAlchemy models/repos) -> `app/presentation` (routers/schemas/deps). Migrations in `backend/alembic/versions/` (0001..0004).
+`app/domain` (entities/ports) -> `app/application` (services) -> `app/infrastructure` (SQLAlchemy models/repos) -> `app/presentation` (routers/schemas/deps). Migrations in `backend/alembic/versions/` (0001..0006).

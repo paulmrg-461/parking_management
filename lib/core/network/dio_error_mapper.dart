@@ -10,6 +10,8 @@ Failure mapDioError(DioException error) {
       return const AuthenticationFailure('Forbidden');
     case 404:
       return const ValidationFailure('Not found');
+    case 409:
+      return const ValidationFailure('Conflict');
     default:
       return const NetworkFailure('Unable to reach the server');
   }

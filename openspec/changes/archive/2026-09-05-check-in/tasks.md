@@ -55,3 +55,20 @@
   reachable in this environment)
 - [x] 5.2 Confirm `pytest` passes (all pre-existing tests + new ones)
 - [x] 5.3 Confirm `openspec validate check-in` passes
+
+## 6. Flutter (parallel implementation against the API contract above)
+
+- [x] 6.1 Add `lib/features/check_in/domain/` (`ParkingSession` entity +
+  `ParkingSessionStatus` enum, `CheckInRepository` port)
+- [x] 6.2 Add `CheckInCubit` (`application/`) orchestrating scan/manual plate
+  entry + photo capture + submit, client-side plate validation via
+  `normalizePlate`
+- [x] 6.3 Add `DioCheckInRemoteDataSource` (multipart upload) +
+  `ParkingSessionDto` + `CheckInRepositoryImpl` (remote-only, no local cache)
+- [x] 6.4 Add `CheckInPage` (scan-plate button reusing `/scan`, manual
+  fallback, photo capture reusing `plate_scanning`'s image-capture
+  abstraction, open-sessions list) + `/check-in` route + home-page entry point
+- [x] 6.5 Register in DI (`injection.dart`)
+- [x] 6.6 Write 3 tests (Success / Failure / Security) per layer
+- [x] 6.7 Confirm `flutter analyze` (0 issues) and `flutter test` (all green)
+  pass with both the backend and Flutter halves merged
