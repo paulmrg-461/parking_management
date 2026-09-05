@@ -6,6 +6,10 @@ abstract class VehicleLocalDataSource {
   Future<void> cacheAll(List<Vehicle> vehicles);
 
   Future<List<Vehicle>> readAll();
+
+  Future<void> upsert(Vehicle vehicle);
+
+  Future<void> remove(int id);
 }
 
 class HiveVehicleLocalDataSource implements VehicleLocalDataSource {
@@ -30,5 +34,21 @@ class HiveVehicleLocalDataSource implements VehicleLocalDataSource {
       return const [];
     }
     return Hive.box<Vehicle>(_boxName).values.toList();
+  }
+
+  @override
+  Future<void> upsert(Vehicle vehicle) async {
+    final id = vehicle.id;
+    if (id == null) {
+      return;
+    }
+    final box = await _box();
+    await box.put(id, vehicle);
+  }
+
+  @override
+  Future<void> remove(int id) async {
+    final box = await _box();
+    await box.delete(id);
   }
 }

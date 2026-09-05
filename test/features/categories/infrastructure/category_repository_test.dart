@@ -12,6 +12,7 @@ import 'package:parking_management/features/categories/infrastructure/category_r
 import 'package:parking_management/features/categories/infrastructure/category_repository_impl.dart';
 
 import '../../../helpers/fake_auth_repository.dart';
+import '../../../helpers/fake_sync_outbox.dart';
 
 class _FakeRemote implements CategoryRemoteDataSource {
   _FakeRemote({this.failWithNetwork = false});
@@ -31,16 +32,25 @@ class _FakeRemote implements CategoryRemoteDataSource {
       Category(id: 2, name: name);
 
   @override
-  Future<Category> update(String token, int id, String name) async =>
-      Category(id: id, name: name);
+  Future<Category> update(String token, int id, String name) async {
+    if (failWithNetwork) {
+      throw const NetworkFailure('offline');
+    }
+    return Category(id: id, name: name);
+  }
 
   @override
-  Future<void> delete(String token, int id) async {}
+  Future<void> delete(String token, int id) async {
+    if (failWithNetwork) {
+      throw const NetworkFailure('offline');
+    }
+  }
 }
 
 void main() {
   late Directory tempDir;
   late FakeAuthRepository auth;
+  late FakeSyncOutbox outbox;
 
   setUpAll(() {
     Hive.registerAdapters();
@@ -55,6 +65,7 @@ void main() {
         token: 'token-1',
       ),
     );
+    outbox = FakeSyncOutbox();
   });
 
   tearDown(() async {
@@ -66,6 +77,7 @@ void main() {
         auth,
         remote,
         HiveCategoryLocalDataSource(),
+        outbox,
       );
 
   test('list returns remote categories and caches them', () async {
@@ -78,12 +90,13 @@ void main() {
 
   test('list falls back to the local cache on network failure', () async {
     final local = HiveCategoryLocalDataSource();
-    await CategoryRepositoryImpl(auth, _FakeRemote(), local).list();
+    await CategoryRepositoryImpl(auth, _FakeRemote(), local, outbox).list();
 
     final offline = CategoryRepositoryImpl(
       auth,
       _FakeRemote(failWithNetwork: true),
       local,
+      outbox,
     );
 
     expect((await offline.list()).single.name, 'carro');
@@ -97,4 +110,51 @@ void main() {
     expect(created.name, 'bus');
     expect(created.id, 2);
   });
+
+  test(
+    'update queues the mutation and returns an optimistic result on network failure',
+    () async {
+      final local = HiveCategoryLocalDataSource();
+      await CategoryRepositoryImpl(auth, _FakeRemote(), local, outbox).list();
+
+      final offline = CategoryRepositoryImpl(
+        auth,
+        _FakeRemote(failWithNetwork: true),
+        local,
+        outbox,
+      );
+
+      final result = await offline.update(1, 'camioneta');
+
+      expect(result.id, 1);
+      expect(result.name, 'camioneta');
+      expect(outbox.enqueued, hasLength(1));
+      expect(outbox.enqueued.single.entityType, 'category');
+      expect(outbox.enqueued.single.operation, 'update');
+      expect(outbox.enqueued.single.entityId, 1);
+    },
+  );
+
+  test(
+    'delete removes the local cache entry and queues the mutation on network failure',
+    () async {
+      final local = HiveCategoryLocalDataSource();
+      await CategoryRepositoryImpl(auth, _FakeRemote(), local, outbox).list();
+
+      final offline = CategoryRepositoryImpl(
+        auth,
+        _FakeRemote(failWithNetwork: true),
+        local,
+        outbox,
+      );
+
+      await offline.delete(1);
+
+      expect(await local.readAll(), isEmpty);
+      expect(outbox.enqueued, hasLength(1));
+      expect(outbox.enqueued.single.entityType, 'category');
+      expect(outbox.enqueued.single.operation, 'delete');
+      expect(outbox.enqueued.single.entityId, 1);
+    },
+  );
 }

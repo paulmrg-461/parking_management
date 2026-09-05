@@ -1,4 +1,8 @@
+import 'dart:convert';
+
 import '../../../core/error/failure.dart';
+import '../../../core/sync/pending_mutation.dart';
+import '../../../core/sync/sync_outbox.dart';
 import '../../auth/domain/repositories/auth_repository.dart';
 import '../domain/commands/create_tariff_command.dart';
 import '../domain/commands/update_tariff_command.dart';
@@ -8,11 +12,12 @@ import 'tariff_local_data_source.dart';
 import 'tariff_remote_data_source.dart';
 
 class TariffRepositoryImpl implements TariffRepository {
-  TariffRepositoryImpl(this._auth, this._remote, this._local);
+  TariffRepositoryImpl(this._auth, this._remote, this._local, this._outbox);
 
   final AuthRepository _auth;
   final TariffRemoteDataSource _remote;
   final TariffLocalDataSource _local;
+  final SyncOutbox _outbox;
 
   @override
   Future<List<Tariff>> list() async {
@@ -33,16 +38,72 @@ class TariffRepositoryImpl implements TariffRepository {
 
   @override
   Future<Tariff> update(UpdateTariffCommand command) async {
-    return _remote.update(
-      await _currentToken(),
-      command.id,
-      _toUpdatePayload(command),
-    );
+    final payload = _toUpdatePayload(command);
+    try {
+      final updated = await _remote.update(
+        await _currentToken(),
+        command.id,
+        payload,
+      );
+      await _local.upsert(updated);
+      return updated;
+    } on NetworkFailure {
+      final optimistic = await _applyUpdate(command);
+      await _outbox.enqueue(
+        PendingMutation(
+          entityType: 'tariff',
+          operation: 'update',
+          entityId: command.id,
+          payloadJson: jsonEncode(payload),
+          enqueuedAt: DateTime.now(),
+        ),
+      );
+      return optimistic;
+    }
   }
 
   @override
   Future<void> delete(int id) async {
-    await _remote.delete(await _currentToken(), id);
+    try {
+      await _remote.delete(await _currentToken(), id);
+      await _local.remove(id);
+    } on NetworkFailure {
+      await _local.remove(id);
+      await _outbox.enqueue(
+        PendingMutation(
+          entityType: 'tariff',
+          operation: 'delete',
+          entityId: id,
+          payloadJson: null,
+          enqueuedAt: DateTime.now(),
+        ),
+      );
+    }
+  }
+
+  /// Merges [command]'s patch fields onto the cached tariff client-side
+  /// (mirroring the backend's patch-merge shape) so the caller can show an
+  /// optimistic result while offline.
+  Future<Tariff> _applyUpdate(UpdateTariffCommand command) async {
+    final cached = await _local.readAll();
+    Tariff? existing;
+    for (final tariff in cached) {
+      if (tariff.id == command.id) {
+        existing = tariff;
+        break;
+      }
+    }
+    final merged = Tariff(
+      id: command.id,
+      categoryId: existing?.categoryId ?? 0,
+      type: command.type ?? existing?.type ?? TariffType.hourly,
+      amount: command.amount ?? existing?.amount ?? 0,
+      startTime: command.startTime ?? existing?.startTime,
+      endTime: command.endTime ?? existing?.endTime,
+      active: command.active ?? existing?.active ?? true,
+    );
+    await _local.upsert(merged);
+    return merged;
   }
 
   Future<String> _currentToken() async {

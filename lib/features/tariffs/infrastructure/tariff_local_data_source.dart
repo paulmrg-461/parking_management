@@ -6,6 +6,10 @@ abstract class TariffLocalDataSource {
   Future<void> cacheAll(List<Tariff> tariffs);
 
   Future<List<Tariff>> readAll();
+
+  Future<void> upsert(Tariff tariff);
+
+  Future<void> remove(int id);
 }
 
 class HiveTariffLocalDataSource implements TariffLocalDataSource {
@@ -30,5 +34,21 @@ class HiveTariffLocalDataSource implements TariffLocalDataSource {
       return const [];
     }
     return Hive.box<Tariff>(_boxName).values.toList();
+  }
+
+  @override
+  Future<void> upsert(Tariff tariff) async {
+    final id = tariff.id;
+    if (id == null) {
+      return;
+    }
+    final box = await _box();
+    await box.put(id, tariff);
+  }
+
+  @override
+  Future<void> remove(int id) async {
+    final box = await _box();
+    await box.delete(id);
   }
 }

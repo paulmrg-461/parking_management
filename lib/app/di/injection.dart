@@ -2,9 +2,12 @@ import 'package:dio/dio.dart';
 import 'package:get_it/get_it.dart';
 
 import '../../core/config/app_config.dart';
+import '../../core/network/connectivity_service.dart';
 import '../../core/network/dio_client.dart';
 import '../../core/storage/hive_key_value_store.dart';
 import '../../core/storage/key_value_store.dart';
+import '../../core/sync/sync_outbox.dart';
+import '../../core/sync/sync_service.dart';
 import '../../features/auth/application/auth_cubit.dart';
 import '../../features/auth/domain/repositories/auth_repository.dart';
 import '../../features/auth/infrastructure/auth_local_data_source.dart';
@@ -57,6 +60,10 @@ Future<void> configureDependencies() async {
     ..registerLazySingleton<DioClient>(() => DioClient(config.apiBaseUrl))
     ..registerLazySingleton<Dio>(() => serviceLocator<DioClient>().dio)
     ..registerLazySingleton<KeyValueStore>(() => HiveKeyValueStore())
+    ..registerLazySingleton<ConnectivityService>(
+      () => ConnectivityPlusService(),
+    )
+    ..registerLazySingleton<SyncOutbox>(() => HiveSyncOutbox())
     ..registerLazySingleton<AuthLocalDataSource>(() => HiveAuthLocalDataSource())
     ..registerLazySingleton<AuthRemoteDataSource>(
       () => DioAuthRemoteDataSource(serviceLocator<Dio>()),
@@ -84,6 +91,7 @@ Future<void> configureDependencies() async {
         serviceLocator<AuthRepository>(),
         serviceLocator<CategoryRemoteDataSource>(),
         serviceLocator<CategoryLocalDataSource>(),
+        serviceLocator<SyncOutbox>(),
       ),
     )
     ..registerFactory<CategoriesCubit>(
@@ -100,6 +108,7 @@ Future<void> configureDependencies() async {
         serviceLocator<AuthRepository>(),
         serviceLocator<TariffRemoteDataSource>(),
         serviceLocator<TariffLocalDataSource>(),
+        serviceLocator<SyncOutbox>(),
       ),
     )
     ..registerFactory<TariffsCubit>(
@@ -116,10 +125,20 @@ Future<void> configureDependencies() async {
         serviceLocator<AuthRepository>(),
         serviceLocator<VehicleRemoteDataSource>(),
         serviceLocator<VehicleLocalDataSource>(),
+        serviceLocator<SyncOutbox>(),
       ),
     )
     ..registerFactory<VehiclesCubit>(
       () => VehiclesCubit(serviceLocator<VehicleRepository>()),
+    )
+    ..registerLazySingleton<SyncService>(
+      () => SyncService(
+        serviceLocator<SyncOutbox>(),
+        serviceLocator<ConnectivityService>(),
+        serviceLocator<VehicleRepository>(),
+        serviceLocator<TariffRepository>(),
+        serviceLocator<CategoryRepository>(),
+      ),
     )
     ..registerLazySingleton<PlateScanner>(() => MlKitPlateScanner())
     ..registerFactory<PlateScanningCubit>(

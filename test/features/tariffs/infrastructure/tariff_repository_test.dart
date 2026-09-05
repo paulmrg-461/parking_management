@@ -6,12 +6,14 @@ import 'package:parking_management/app/di/hive_registrar.g.dart';
 import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/features/auth/domain/entities/auth_session.dart';
 import 'package:parking_management/features/auth/domain/entities/user.dart';
+import 'package:parking_management/features/tariffs/domain/commands/update_tariff_command.dart';
 import 'package:parking_management/features/tariffs/domain/entities/tariff.dart';
 import 'package:parking_management/features/tariffs/infrastructure/tariff_local_data_source.dart';
 import 'package:parking_management/features/tariffs/infrastructure/tariff_remote_data_source.dart';
 import 'package:parking_management/features/tariffs/infrastructure/tariff_repository_impl.dart';
 
 import '../../../helpers/fake_auth_repository.dart';
+import '../../../helpers/fake_sync_outbox.dart';
 
 class _FakeRemote implements TariffRemoteDataSource {
   _FakeRemote({this.failWithNetwork = false});
@@ -36,11 +38,24 @@ class _FakeRemote implements TariffRemoteDataSource {
 
   @override
   Future<Tariff> update(String token, int id, Map<String, dynamic> payload) async {
-    throw UnimplementedError();
+    if (failWithNetwork) {
+      throw const NetworkFailure('offline');
+    }
+    return Tariff(
+      id: id,
+      categoryId: 1,
+      type: payload['type'] != null
+          ? TariffType.values.byName(payload['type'] as String)
+          : TariffType.hourly,
+      amount: payload['amount'] as int? ?? 3000,
+    );
   }
 
   @override
   Future<void> delete(String token, int id) async {
+    if (failWithNetwork) {
+      throw const NetworkFailure('offline');
+    }
     deleteCalls++;
   }
 }
@@ -48,6 +63,7 @@ class _FakeRemote implements TariffRemoteDataSource {
 void main() {
   late Directory tempDir;
   late FakeAuthRepository auth;
+  late FakeSyncOutbox outbox;
 
   setUpAll(() {
     Hive.registerAdapters();
@@ -62,6 +78,7 @@ void main() {
         token: 'token-1',
       ),
     );
+    outbox = FakeSyncOutbox();
   });
 
   tearDown(() async {
@@ -73,6 +90,7 @@ void main() {
         auth,
         remote,
         HiveTariffLocalDataSource(),
+        outbox,
       );
 
   test('list returns remote tariffs and caches them', () async {
@@ -83,12 +101,13 @@ void main() {
 
   test('list falls back to the local cache on network failure', () async {
     final local = HiveTariffLocalDataSource();
-    await TariffRepositoryImpl(auth, _FakeRemote(), local).list();
+    await TariffRepositoryImpl(auth, _FakeRemote(), local, outbox).list();
 
     final offline = TariffRepositoryImpl(
       auth,
       _FakeRemote(failWithNetwork: true),
       local,
+      outbox,
     );
 
     expect((await offline.list()).single.amount, 3000);
@@ -102,4 +121,54 @@ void main() {
 
     expect(remote.deleteCalls, 1);
   });
+
+  test(
+    'update queues the mutation and returns an optimistic result on network failure',
+    () async {
+      final local = HiveTariffLocalDataSource();
+      await TariffRepositoryImpl(auth, _FakeRemote(), local, outbox).list();
+
+      final offline = TariffRepositoryImpl(
+        auth,
+        _FakeRemote(failWithNetwork: true),
+        local,
+        outbox,
+      );
+
+      final result = await offline.update(
+        const UpdateTariffCommand(id: 1, amount: 5000),
+      );
+
+      expect(result.id, 1);
+      expect(result.amount, 5000);
+      expect(result.type, TariffType.hourly);
+      expect(outbox.enqueued, hasLength(1));
+      expect(outbox.enqueued.single.entityType, 'tariff');
+      expect(outbox.enqueued.single.operation, 'update');
+      expect(outbox.enqueued.single.entityId, 1);
+    },
+  );
+
+  test(
+    'delete removes the local cache entry and queues the mutation on network failure',
+    () async {
+      final local = HiveTariffLocalDataSource();
+      await TariffRepositoryImpl(auth, _FakeRemote(), local, outbox).list();
+
+      final offline = TariffRepositoryImpl(
+        auth,
+        _FakeRemote(failWithNetwork: true),
+        local,
+        outbox,
+      );
+
+      await offline.delete(1);
+
+      expect(await local.readAll(), isEmpty);
+      expect(outbox.enqueued, hasLength(1));
+      expect(outbox.enqueued.single.entityType, 'tariff');
+      expect(outbox.enqueued.single.operation, 'delete');
+      expect(outbox.enqueued.single.entityId, 1);
+    },
+  );
 }
