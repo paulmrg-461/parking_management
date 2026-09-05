@@ -1,0 +1,42 @@
+schema: spec-driven
+
+# Project context (shown to AI when creating artifacts)
+context: |
+  Domain: Parking management system (parqueadero) for vehicle registration and
+  control, time-based billing, vehicle categories, night rates, damage evidence
+  photos, and automatic license plate detection.
+
+  Monorepo layout:
+  - `lib/`  -> Flutter app (targets: android + web)
+  - `backend/` -> FastAPI + PostgreSQL service (source of truth)
+  - `openspec/` -> specs and changes (this framework)
+
+  Architecture (MANDATORY, apply everywhere):
+  - Hexagonal (Ports & Adapters) + Clean Architecture, organized BY FEATURE.
+  - Per feature: domain/ (entities + repository ports) -> application/
+    (use cases + cubits) -> infrastructure/ (adapters + mappers) -> presentation/.
+  - SOLID strictly. Clean Code (functions <= 20 lines, max 2 params, meaningful names).
+  - Design patterns: Repository, UseCase, Adapter, Factory, DI Singleton, Observer (Cubit).
+  - Dependency rule: outer layers depend on inner; domain depends on nothing.
+
+  Naming: ALL code, classes, variables, files and comments MUST be in English.
+  OpenSpec artifacts (proposal, specs, design, tasks) MUST be in English.
+
+  Flutter stack: BLoC/Cubit + Equatable (immutable state), get_it (manual
+  registration), Hive CE (offline-first local store), Dio, go_router,
+  camera + image_picker, tflite_flutter + google_mlkit_text_recognition,
+  intl (COP currency, no decimals), json_serializable (DTOs).
+
+  Backend stack: FastAPI, SQLAlchemy 2.0 (async), Alembic, PostgreSQL,
+  JWT auth, Argon2id hashing.
+
+  Business rules:
+  - Vehicle categories: moto, car, camioneta, camion, bus (configurable).
+  - Tariffs per category: hourly, daily, nightly, monthly (COP).
+  - Night tariff is a time window that REPLACES the day tariff during that window.
+  - Billing: fractional hours ceil to next hour; daily cap; monthly pass overrides to 0.
+  - Evidence photos (dents/scratches) captured at check-in.
+  - Offline-first: Hive CE is local source of truth; outbox queue syncs to backend.
+  - Receipt/ticket internal only (no electronic invoicing).
+
+  TDD: write 3 tests (Success / Failure / Security) BEFORE logic.
