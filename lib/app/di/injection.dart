@@ -31,6 +31,10 @@ import '../../features/monthly_passes/infrastructure/monthly_pass_repository_imp
 import '../../features/plate_scanning/application/plate_scanning_cubit.dart';
 import '../../features/plate_scanning/domain/repositories/plate_scanner.dart';
 import '../../features/plate_scanning/infrastructure/mlkit_plate_scanner.dart';
+import '../../features/reports/application/reports_cubit.dart';
+import '../../features/reports/domain/repositories/report_repository.dart';
+import '../../features/reports/infrastructure/report_remote_data_source.dart';
+import '../../features/reports/infrastructure/report_repository_impl.dart';
 import '../../features/tariffs/application/tariffs_cubit.dart';
 import '../../features/tariffs/domain/repositories/tariff_repository.dart';
 import '../../features/tariffs/infrastructure/tariff_local_data_source.dart';
@@ -160,6 +164,18 @@ Future<void> configureDependencies() async {
     )
     ..registerFactory<MonthlyPassesCubit>(
       () => MonthlyPassesCubit(serviceLocator<MonthlyPassRepository>()),
+    )
+    ..registerLazySingleton<ReportRemoteDataSource>(
+      () => DioReportRemoteDataSource(serviceLocator<Dio>()),
+    )
+    ..registerLazySingleton<ReportRepository>(
+      () => ReportRepositoryImpl(
+        serviceLocator<AuthRepository>(),
+        serviceLocator<ReportRemoteDataSource>(),
+      ),
+    )
+    ..registerFactory<ReportsCubit>(
+      () => ReportsCubit(serviceLocator<ReportRepository>()),
     );
 
   await serviceLocator<KeyValueStore>().init();

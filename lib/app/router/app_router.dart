@@ -14,6 +14,8 @@ import '../../features/monthly_passes/application/monthly_passes_cubit.dart';
 import '../../features/monthly_passes/presentation/monthly_passes_page.dart';
 import '../../features/plate_scanning/application/plate_scanning_cubit.dart';
 import '../../features/plate_scanning/presentation/plate_scan_page.dart';
+import '../../features/reports/application/reports_cubit.dart';
+import '../../features/reports/presentation/reports_page.dart';
 import '../../features/tariffs/application/tariffs_cubit.dart';
 import '../../features/tariffs/presentation/tariffs_page.dart';
 import '../../features/users/application/users_cubit.dart';
@@ -128,6 +130,13 @@ final GoRouter appRouter = GoRouter(
           ),
         ],
         child: const CheckOutPage(),
+      ),
+    ),
+    GoRoute(
+      path: '/reports',
+      builder: (context, state) => BlocProvider<ReportsCubit>(
+        create: (_) => serviceLocator<ReportsCubit>(),
+        child: const ReportsPage(),
       ),
     ),
   ],
