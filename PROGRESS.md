@@ -36,7 +36,7 @@ SOLID, Clean Code, all code in English.
 ## Test counts
 
 - Backend (`cd backend && uv run pytest`): 89 passed.
-- Flutter (`flutter test`): 81 passed. `flutter analyze`: 0 issues.
+- Flutter (`flutter test`): 89 passed. `flutter analyze`: 0 issues.
 
 ## Layer map (Flutter feature slice)
 
