@@ -12,16 +12,16 @@ SOLID, Clean Code, all code in English.
 | `vehicle-categories` | `vehicle-categories` | Category CRUD, offline cache |
 | `tariffs` | `tariffs` | Tariff CRUD (hourly/daily/nightly/monthly), night window "HH:MM", validation |
 | `vehicles` | `vehicles` | Vehicle CRUD, normalized unique plate, plate search |
+| `plate-scanning` | `plate-scanning` | ML Kit OCR camera scan (one-shot `image_picker` capture), heuristic plate-block selection, shared `normalizePlate`, manual-entry fallback, `PlateScanningCubit`, `/scan` route |
 
 ## Remaining changes (planned order)
 
-1. `plate-scanning` — camera + YOLO (tflite) + OCR, manual plate fallback first
-2. `check-in` (+ `evidence-capture`) — entry + damage photos
-3. `billing` — hourly/day/night/monthly computation
-4. `check-out` — close entry, payment, ticket
-5. `monthly-passes` — subscriptions
-6. `reports` — revenue, occupancy (web-first)
-7. `offline-sync` — outbox push/pull
+1. `check-in` (+ `evidence-capture`) — entry + damage photos
+2. `billing` — hourly/day/night/monthly computation
+3. `check-out` — close entry, payment, ticket
+4. `monthly-passes` — subscriptions
+5. `reports` — revenue, occupancy (web-first)
+6. `offline-sync` — outbox push/pull
 
 ## Key technical decisions
 
@@ -36,7 +36,7 @@ SOLID, Clean Code, all code in English.
 ## Test counts
 
 - Backend (`cd backend && uv run pytest`): 41 passed.
-- Flutter (`flutter test`): 53 passed. `flutter analyze`: 0 issues.
+- Flutter (`flutter test`): 67 passed. `flutter analyze`: 0 issues.
 
 ## Layer map (Flutter feature slice)
 

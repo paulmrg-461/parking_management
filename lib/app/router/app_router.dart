@@ -6,6 +6,8 @@ import '../../features/auth/presentation/login_page.dart';
 import '../../features/categories/application/categories_cubit.dart';
 import '../../features/categories/presentation/categories_page.dart';
 import '../../features/home/presentation/home_page.dart';
+import '../../features/plate_scanning/application/plate_scanning_cubit.dart';
+import '../../features/plate_scanning/presentation/plate_scan_page.dart';
 import '../../features/tariffs/application/tariffs_cubit.dart';
 import '../../features/tariffs/presentation/tariffs_page.dart';
 import '../../features/users/application/users_cubit.dart';
@@ -78,6 +80,13 @@ final GoRouter appRouter = GoRouter(
           ),
         ],
         child: const VehiclesPage(),
+      ),
+    ),
+    GoRoute(
+      path: '/scan',
+      builder: (context, state) => BlocProvider<PlateScanningCubit>(
+        create: (_) => serviceLocator<PlateScanningCubit>(),
+        child: const PlateScanPage(),
       ),
     ),
   ],

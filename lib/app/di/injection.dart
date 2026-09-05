@@ -15,6 +15,9 @@ import '../../features/categories/domain/repositories/category_repository.dart';
 import '../../features/categories/infrastructure/category_local_data_source.dart';
 import '../../features/categories/infrastructure/category_remote_data_source.dart';
 import '../../features/categories/infrastructure/category_repository_impl.dart';
+import '../../features/plate_scanning/application/plate_scanning_cubit.dart';
+import '../../features/plate_scanning/domain/repositories/plate_scanner.dart';
+import '../../features/plate_scanning/infrastructure/mlkit_plate_scanner.dart';
 import '../../features/tariffs/application/tariffs_cubit.dart';
 import '../../features/tariffs/domain/repositories/tariff_repository.dart';
 import '../../features/tariffs/infrastructure/tariff_local_data_source.dart';
@@ -100,6 +103,10 @@ Future<void> configureDependencies() async {
     )
     ..registerFactory<VehiclesCubit>(
       () => VehiclesCubit(serviceLocator<VehicleRepository>()),
+    )
+    ..registerLazySingleton<PlateScanner>(() => MlKitPlateScanner())
+    ..registerFactory<PlateScanningCubit>(
+      () => PlateScanningCubit(serviceLocator<PlateScanner>()),
     );
 
   await serviceLocator<KeyValueStore>().init();
