@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from app.core.config import settings
 from app.presentation.routes import (
     auth,
+    billing,
     categories,
     check_ins,
     health,
@@ -23,6 +24,7 @@ def create_app() -> FastAPI:
     application.include_router(tariffs.router, prefix=settings.api_prefix)
     application.include_router(vehicles.router, prefix=settings.api_prefix)
     application.include_router(check_ins.router, prefix=settings.api_prefix)
+    application.include_router(billing.router, prefix=settings.api_prefix)
     return application
 
 

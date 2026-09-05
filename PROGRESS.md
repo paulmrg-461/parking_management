@@ -14,14 +14,14 @@ SOLID, Clean Code, all code in English.
 | `vehicles` | `vehicles` | Vehicle CRUD, normalized unique plate, plate search |
 | `plate-scanning` | `plate-scanning` | ML Kit OCR camera scan (one-shot `image_picker` capture), heuristic plate-block selection, shared `normalizePlate`, manual-entry fallback, `PlateScanningCubit`, `/scan` route |
 | `check-in` | `check-in` | `parking_sessions`+`evidence_photos` (backend), `EvidenceStoragePort`/`LocalEvidenceStorage`, `POST/GET /check-ins`; Flutter `CheckInCubit`/`CheckInPage` (`/check-in`), reuses `/scan` + evidence photo capture, remote-only (no offline cache yet) |
+| `billing` | `billing` | Pure `FareCalculator` (`app/application/billing_service.py`, no new tables): splits `[entry_time, exit_time)` by calendar day, then by the (possibly midnight-wrapping) night window; ceils to the hour once per calendar day per rate type (day vs night), not per sub-interval and not once for the whole stay; caps each calendar day's charge at the daily rate independently; `has_active_monthly_pass` flag short-circuits to `0` (no real subscription lookup yet — placeholder for `monthly-passes`). New `CategoryTariffs` domain aggregate bundles a category's hourly/daily/nightly `Tariff` rows (the real `Tariff` models one rate row at a time). Optional `GET /billing/quote` for a live fare preview. |
 
 ## Remaining changes (planned order)
 
-1. `billing` — hourly/day/night/monthly computation
-2. `check-out` — close entry, payment, ticket
-3. `monthly-passes` — subscriptions
-4. `reports` — revenue, occupancy (web-first)
-5. `offline-sync` — outbox push/pull
+1. `check-out` — close entry, payment, ticket
+2. `monthly-passes` — subscriptions
+3. `reports` — revenue, occupancy (web-first)
+4. `offline-sync` — outbox push/pull
 
 ## Key technical decisions
 
@@ -35,7 +35,7 @@ SOLID, Clean Code, all code in English.
 
 ## Test counts
 
-- Backend (`cd backend && uv run pytest`): 50 passed.
+- Backend (`cd backend && uv run pytest`): 70 passed.
 - Flutter (`flutter test`): 74 passed. `flutter analyze`: 0 issues.
 
 ## Layer map (Flutter feature slice)
