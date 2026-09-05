@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../../features/auth/application/auth_cubit.dart';
 import '../../features/auth/presentation/login_page.dart';
 import '../../features/categories/application/categories_cubit.dart';
+import '../../features/check_in/application/check_in_cubit.dart';
+import '../../features/check_in/presentation/check_in_page.dart';
 import '../../features/categories/presentation/categories_page.dart';
 import '../../features/home/presentation/home_page.dart';
 import '../../features/plate_scanning/application/plate_scanning_cubit.dart';
@@ -87,6 +89,13 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) => BlocProvider<PlateScanningCubit>(
         create: (_) => serviceLocator<PlateScanningCubit>(),
         child: const PlateScanPage(),
+      ),
+    ),
+    GoRoute(
+      path: '/check-in',
+      builder: (context, state) => BlocProvider<CheckInCubit>(
+        create: (_) => serviceLocator<CheckInCubit>(),
+        child: const CheckInPage(),
       ),
     ),
   ],

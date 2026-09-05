@@ -15,6 +15,10 @@ import '../../features/categories/domain/repositories/category_repository.dart';
 import '../../features/categories/infrastructure/category_local_data_source.dart';
 import '../../features/categories/infrastructure/category_remote_data_source.dart';
 import '../../features/categories/infrastructure/category_repository_impl.dart';
+import '../../features/check_in/application/check_in_cubit.dart';
+import '../../features/check_in/domain/repositories/check_in_repository.dart';
+import '../../features/check_in/infrastructure/check_in_remote_data_source.dart';
+import '../../features/check_in/infrastructure/check_in_repository_impl.dart';
 import '../../features/plate_scanning/application/plate_scanning_cubit.dart';
 import '../../features/plate_scanning/domain/repositories/plate_scanner.dart';
 import '../../features/plate_scanning/infrastructure/mlkit_plate_scanner.dart';
@@ -107,6 +111,18 @@ Future<void> configureDependencies() async {
     ..registerLazySingleton<PlateScanner>(() => MlKitPlateScanner())
     ..registerFactory<PlateScanningCubit>(
       () => PlateScanningCubit(serviceLocator<PlateScanner>()),
+    )
+    ..registerLazySingleton<CheckInRemoteDataSource>(
+      () => DioCheckInRemoteDataSource(serviceLocator<Dio>()),
+    )
+    ..registerLazySingleton<CheckInRepository>(
+      () => CheckInRepositoryImpl(
+        serviceLocator<AuthRepository>(),
+        serviceLocator<CheckInRemoteDataSource>(),
+      ),
+    )
+    ..registerFactory<CheckInCubit>(
+      () => CheckInCubit(serviceLocator<CheckInRepository>()),
     );
 
   await serviceLocator<KeyValueStore>().init();
