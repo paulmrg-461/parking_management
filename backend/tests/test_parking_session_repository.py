@@ -95,3 +95,51 @@ async def test_closed_session_is_excluded_from_open_list(
 
     assert await repository.get_open_by_vehicle_id(vehicle_id) is None
     assert session.id not in [s.id for s in await repository.list_open()]
+
+
+async def test_update_round_trips_checkout_fields(
+    repository, vehicle_id, operator_id
+):
+    entry_time = datetime.now(UTC)
+    session = await repository.create(
+        ParkingSession(
+            id=None,
+            vehicle_id=vehicle_id,
+            operator_id=operator_id,
+            entry_time=entry_time,
+        )
+    )
+    exit_time = datetime.now(UTC)
+    session.status = SessionStatus.CLOSED
+    session.exit_time = exit_time
+    session.amount_charged = 6000
+    session.ticket_number = f"TCK-{session.id:06d}"
+
+    updated = await repository.update(session)
+
+    assert updated.status == SessionStatus.CLOSED
+    assert updated.exit_time == exit_time
+    assert updated.amount_charged == 6000
+    assert updated.ticket_number == f"TCK-{session.id:06d}"
+
+    refetched = await repository.get_by_id(session.id)
+    assert refetched.exit_time == exit_time
+    assert refetched.amount_charged == 6000
+    assert refetched.ticket_number == f"TCK-{session.id:06d}"
+
+
+async def test_new_session_has_no_checkout_fields(
+    repository, vehicle_id, operator_id
+):
+    session = await repository.create(
+        ParkingSession(
+            id=None,
+            vehicle_id=vehicle_id,
+            operator_id=operator_id,
+            entry_time=datetime.now(UTC),
+        )
+    )
+
+    assert session.exit_time is None
+    assert session.amount_charged is None
+    assert session.ticket_number is None

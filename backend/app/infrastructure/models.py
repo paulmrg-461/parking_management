@@ -86,6 +86,11 @@ class ParkingSessionModel(Base):
     status: Mapped[str] = mapped_column(
         String(10), default="open", nullable=False
     )
+    exit_time: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    amount_charged: Mapped[int | None] = mapped_column(nullable=True)
+    ticket_number: Mapped[str | None] = mapped_column(String(20), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

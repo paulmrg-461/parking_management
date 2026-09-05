@@ -17,3 +17,6 @@ class ParkingSession:
     operator_id: int
     entry_time: datetime
     status: SessionStatus = SessionStatus.OPEN
+    exit_time: datetime | None = None
+    amount_charged: int | None = None
+    ticket_number: str | None = None

@@ -137,3 +137,15 @@ class CheckInRead(BaseModel):
     entry_time: datetime
     status: SessionStatus
     photos: list[EvidencePhotoRead] = []
+
+
+class CheckOutRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    plate: str
+    entry_time: datetime
+    exit_time: datetime
+    status: SessionStatus
+    amount_charged: int
+    ticket_number: str
