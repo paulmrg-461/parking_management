@@ -4,6 +4,7 @@ import '../../core/storage/models/app_settings.dart';
 import '../../features/auth/domain/entities/auth_session.dart';
 import '../../features/auth/domain/entities/user.dart';
 import '../../features/categories/domain/entities/category.dart';
+import '../../features/monthly_passes/domain/entities/monthly_pass.dart';
 import '../../features/tariffs/domain/entities/tariff.dart';
 import '../../features/vehicles/domain/entities/vehicle.dart';
 
@@ -16,5 +17,6 @@ import '../../features/vehicles/domain/entities/vehicle.dart';
   AdapterSpec<Tariff>(),
   AdapterSpec<TariffType>(),
   AdapterSpec<Vehicle>(),
+  AdapterSpec<MonthlyPass>(),
 ])
 part 'hive_adapters.g.dart';

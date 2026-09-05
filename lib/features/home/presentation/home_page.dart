@@ -53,6 +53,11 @@ class HomePage extends StatelessWidget {
                           onPressed: () => context.go('/vehicles'),
                           child: const Text('Manage vehicles'),
                         ),
+                        const SizedBox(height: 8),
+                        FilledButton(
+                          onPressed: () => context.go('/monthly-passes'),
+                          child: const Text('Manage monthly passes'),
+                        ),
                       ],
                       const SizedBox(height: 16),
                       OutlinedButton(

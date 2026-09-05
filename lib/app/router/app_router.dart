@@ -10,6 +10,8 @@ import '../../features/check_out/application/check_out_cubit.dart';
 import '../../features/check_out/presentation/check_out_page.dart';
 import '../../features/categories/presentation/categories_page.dart';
 import '../../features/home/presentation/home_page.dart';
+import '../../features/monthly_passes/application/monthly_passes_cubit.dart';
+import '../../features/monthly_passes/presentation/monthly_passes_page.dart';
 import '../../features/plate_scanning/application/plate_scanning_cubit.dart';
 import '../../features/plate_scanning/presentation/plate_scan_page.dart';
 import '../../features/tariffs/application/tariffs_cubit.dart';
@@ -84,6 +86,20 @@ final GoRouter appRouter = GoRouter(
           ),
         ],
         child: const VehiclesPage(),
+      ),
+    ),
+    GoRoute(
+      path: '/monthly-passes',
+      builder: (context, state) => MultiBlocProvider(
+        providers: [
+          BlocProvider<MonthlyPassesCubit>(
+            create: (_) => serviceLocator<MonthlyPassesCubit>(),
+          ),
+          BlocProvider<VehiclesCubit>(
+            create: (_) => serviceLocator<VehiclesCubit>(),
+          ),
+        ],
+        child: const MonthlyPassesPage(),
       ),
     ),
     GoRoute(

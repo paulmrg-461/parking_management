@@ -10,6 +10,7 @@ extension HiveRegistrar on HiveInterface {
     registerAdapter(AppSettingsAdapter());
     registerAdapter(AuthSessionAdapter());
     registerAdapter(CategoryAdapter());
+    registerAdapter(MonthlyPassAdapter());
     registerAdapter(TariffAdapter());
     registerAdapter(TariffTypeAdapter());
     registerAdapter(UserAdapter());
@@ -23,6 +24,7 @@ extension IsolatedHiveRegistrar on IsolatedHiveInterface {
     registerAdapter(AppSettingsAdapter());
     registerAdapter(AuthSessionAdapter());
     registerAdapter(CategoryAdapter());
+    registerAdapter(MonthlyPassAdapter());
     registerAdapter(TariffAdapter());
     registerAdapter(TariffTypeAdapter());
     registerAdapter(UserAdapter());

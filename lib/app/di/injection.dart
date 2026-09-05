@@ -23,6 +23,11 @@ import '../../features/check_out/application/check_out_cubit.dart';
 import '../../features/check_out/domain/repositories/check_out_repository.dart';
 import '../../features/check_out/infrastructure/check_out_remote_data_source.dart';
 import '../../features/check_out/infrastructure/check_out_repository_impl.dart';
+import '../../features/monthly_passes/application/monthly_passes_cubit.dart';
+import '../../features/monthly_passes/domain/repositories/monthly_pass_repository.dart';
+import '../../features/monthly_passes/infrastructure/monthly_pass_local_data_source.dart';
+import '../../features/monthly_passes/infrastructure/monthly_pass_remote_data_source.dart';
+import '../../features/monthly_passes/infrastructure/monthly_pass_repository_impl.dart';
 import '../../features/plate_scanning/application/plate_scanning_cubit.dart';
 import '../../features/plate_scanning/domain/repositories/plate_scanner.dart';
 import '../../features/plate_scanning/infrastructure/mlkit_plate_scanner.dart';
@@ -139,6 +144,22 @@ Future<void> configureDependencies() async {
     )
     ..registerFactory<CheckOutCubit>(
       () => CheckOutCubit(serviceLocator<CheckOutRepository>()),
+    )
+    ..registerLazySingleton<MonthlyPassLocalDataSource>(
+      () => HiveMonthlyPassLocalDataSource(),
+    )
+    ..registerLazySingleton<MonthlyPassRemoteDataSource>(
+      () => DioMonthlyPassRemoteDataSource(serviceLocator<Dio>()),
+    )
+    ..registerLazySingleton<MonthlyPassRepository>(
+      () => MonthlyPassRepositoryImpl(
+        serviceLocator<AuthRepository>(),
+        serviceLocator<MonthlyPassRemoteDataSource>(),
+        serviceLocator<MonthlyPassLocalDataSource>(),
+      ),
+    )
+    ..registerFactory<MonthlyPassesCubit>(
+      () => MonthlyPassesCubit(serviceLocator<MonthlyPassRepository>()),
     );
 
   await serviceLocator<KeyValueStore>().init();

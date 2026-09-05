@@ -339,3 +339,52 @@ class VehicleAdapter extends TypeAdapter<Vehicle> {
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
+
+class MonthlyPassAdapter extends TypeAdapter<MonthlyPass> {
+  @override
+  final typeId = 8;
+
+  @override
+  MonthlyPass read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return MonthlyPass(
+      id: (fields[0] as num?)?.toInt(),
+      vehicleId: (fields[1] as num).toInt(),
+      startDate: fields[2] as DateTime,
+      endDate: fields[3] as DateTime,
+      amount: (fields[4] as num).toInt(),
+      active: fields[5] == null ? true : fields[5] as bool,
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, MonthlyPass obj) {
+    writer
+      ..writeByte(6)
+      ..writeByte(0)
+      ..write(obj.id)
+      ..writeByte(1)
+      ..write(obj.vehicleId)
+      ..writeByte(2)
+      ..write(obj.startDate)
+      ..writeByte(3)
+      ..write(obj.endDate)
+      ..writeByte(4)
+      ..write(obj.amount)
+      ..writeByte(5)
+      ..write(obj.active);
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MonthlyPassAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
