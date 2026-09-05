@@ -1,6 +1,6 @@
 """Pydantic schemas for auth and user management."""
 
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -137,6 +137,31 @@ class CheckInRead(BaseModel):
     entry_time: datetime
     status: SessionStatus
     photos: list[EvidencePhotoRead] = []
+
+
+class MonthlyPassRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    vehicle_id: int
+    start_date: date
+    end_date: date
+    amount: int
+    active: bool
+
+
+class MonthlyPassCreate(BaseModel):
+    vehicle_id: int
+    start_date: date
+    end_date: date
+    amount: int
+
+
+class MonthlyPassUpdate(BaseModel):
+    start_date: date | None = None
+    end_date: date | None = None
+    amount: int | None = None
+    active: bool | None = None
 
 
 class CheckOutRead(BaseModel):

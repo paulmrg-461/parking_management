@@ -10,6 +10,7 @@ from app.presentation.routes import (
     check_ins,
     check_outs,
     health,
+    monthly_passes,
     tariffs,
     users,
     vehicles,
@@ -27,6 +28,7 @@ def create_app() -> FastAPI:
     application.include_router(check_ins.router, prefix=settings.api_prefix)
     application.include_router(check_outs.router, prefix=settings.api_prefix)
     application.include_router(billing.router, prefix=settings.api_prefix)
+    application.include_router(monthly_passes.router, prefix=settings.api_prefix)
     return application
 
 

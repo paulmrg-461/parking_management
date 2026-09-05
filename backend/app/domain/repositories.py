@@ -2,8 +2,11 @@
 
 from abc import ABC, abstractmethod
 
+from datetime import date
+
 from app.domain.category import Category
 from app.domain.evidence_photo import EvidencePhoto
+from app.domain.monthly_pass import MonthlyPass
 from app.domain.parking_session import ParkingSession
 from app.domain.tariff import Tariff
 from app.domain.user import User
@@ -141,4 +144,36 @@ class EvidencePhotoRepository(ABC):
 
     @abstractmethod
     async def create(self, photo: EvidencePhoto) -> EvidencePhoto:
+        raise NotImplementedError
+
+
+class MonthlyPassRepository(ABC):
+    @abstractmethod
+    async def get_by_id(self, pass_id: int) -> MonthlyPass | None:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def list_all(self) -> list[MonthlyPass]:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def list_by_vehicle(self, vehicle_id: int) -> list[MonthlyPass]:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_active_for_vehicle(
+        self, vehicle_id: int, on_date: date
+    ) -> MonthlyPass | None:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def create(self, monthly_pass: MonthlyPass) -> MonthlyPass:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def update(self, monthly_pass: MonthlyPass) -> MonthlyPass:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def delete(self, pass_id: int) -> None:
         raise NotImplementedError

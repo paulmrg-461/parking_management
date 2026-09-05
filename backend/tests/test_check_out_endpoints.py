@@ -12,6 +12,9 @@ from app.domain.vehicle import Vehicle
 from app.infrastructure.repositories.category_repository import (
     SqlAlchemyCategoryRepository,
 )
+from app.infrastructure.repositories.monthly_pass_repository import (
+    SqlAlchemyMonthlyPassRepository,
+)
 from app.infrastructure.repositories.parking_session_repository import (
     SqlAlchemyParkingSessionRepository,
 )
@@ -148,7 +151,10 @@ async def test_check_out_service_computes_exact_amount_for_injected_exit_time(
         )
         await session.commit()
 
-        service = CheckOutService(session_repository, vehicle_repository, tariff_repository)
+        monthly_pass_repository = SqlAlchemyMonthlyPassRepository(session)
+        service = CheckOutService(
+            session_repository, vehicle_repository, tariff_repository, monthly_pass_repository
+        )
         exit_time = entry_time + timedelta(hours=1, minutes=5)
 
         closed = await service.close_session(parking_session.id, exit_time=exit_time)
@@ -193,3 +199,33 @@ async def test_unauthenticated_check_out_is_rejected(client, session_factory):
     response = await client.post(f"/api/check-outs/{session_id}")
 
     assert response.status_code == 401
+
+
+async def test_check_out_with_active_monthly_pass_charges_zero(
+    client, session_factory
+):
+    admin_headers = await _admin_headers(client, session_factory)
+    vehicle = await _create_vehicle_with_hourly_tariff(
+        client, admin_headers, plate="OUT004"
+    )
+    today = datetime.now(UTC).date()
+    await client.post(
+        "/api/monthly-passes",
+        json={
+            "vehicle_id": vehicle["id"],
+            "start_date": (today - timedelta(days=1)).isoformat(),
+            "end_date": (today + timedelta(days=30)).isoformat(),
+            "amount": 100000,
+        },
+        headers=admin_headers,
+    )
+    operator_headers = await _operator_headers(client, session_factory)
+    check_in = await _check_in(client, operator_headers, "OUT004")
+    session_id = check_in["id"]
+
+    response = await client.post(
+        f"/api/check-outs/{session_id}", headers=operator_headers
+    )
+
+    assert response.status_code == 200
+    assert response.json()["amount_charged"] == 0

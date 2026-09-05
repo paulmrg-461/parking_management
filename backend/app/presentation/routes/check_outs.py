@@ -12,6 +12,9 @@ from app.application.check_out_service import (
     SessionNotFoundError,
 )
 from app.domain.user import User
+from app.infrastructure.repositories.monthly_pass_repository import (
+    SqlAlchemyMonthlyPassRepository,
+)
 from app.infrastructure.repositories.parking_session_repository import (
     SqlAlchemyParkingSessionRepository,
 )
@@ -23,6 +26,7 @@ from app.infrastructure.repositories.vehicle_repository import (
 )
 from app.presentation.deps import (
     get_current_user,
+    get_monthly_pass_repository,
     get_parking_session_repository,
     get_tariff_repository,
     get_vehicle_repository,
@@ -44,8 +48,11 @@ async def create_check_out(
     ),
     vehicles: SqlAlchemyVehicleRepository = Depends(get_vehicle_repository),
     tariffs: SqlAlchemyTariffRepository = Depends(get_tariff_repository),
+    monthly_passes: SqlAlchemyMonthlyPassRepository = Depends(
+        get_monthly_pass_repository
+    ),
 ) -> CheckOutRead:
-    service = CheckOutService(sessions, vehicles, tariffs)
+    service = CheckOutService(sessions, vehicles, tariffs, monthly_passes)
     try:
         session = await service.close_session(session_id)
     except SessionNotFoundError as exc:

@@ -16,6 +16,9 @@ from app.infrastructure.repositories.category_repository import (
 from app.infrastructure.repositories.evidence_photo_repository import (
     SqlAlchemyEvidencePhotoRepository,
 )
+from app.infrastructure.repositories.monthly_pass_repository import (
+    SqlAlchemyMonthlyPassRepository,
+)
 from app.infrastructure.repositories.parking_session_repository import (
     SqlAlchemyParkingSessionRepository,
 )
@@ -64,6 +67,12 @@ async def get_evidence_photo_repository(
     session: AsyncSession = Depends(get_session),
 ) -> SqlAlchemyEvidencePhotoRepository:
     return SqlAlchemyEvidencePhotoRepository(session)
+
+
+async def get_monthly_pass_repository(
+    session: AsyncSession = Depends(get_session),
+) -> SqlAlchemyMonthlyPassRepository:
+    return SqlAlchemyMonthlyPassRepository(session)
 
 
 async def get_evidence_storage() -> EvidenceStoragePort:
