@@ -8,6 +8,7 @@ from app.domain.category import Category
 from app.domain.evidence_photo import EvidencePhoto
 from app.domain.monthly_pass import MonthlyPass
 from app.domain.parking_session import ParkingSession
+from app.domain.report import OccupancyReport, RevenueReport
 from app.domain.tariff import Tariff
 from app.domain.user import User
 from app.domain.vehicle import Vehicle
@@ -176,4 +177,16 @@ class MonthlyPassRepository(ABC):
 
     @abstractmethod
     async def delete(self, pass_id: int) -> None:
+        raise NotImplementedError
+
+
+class ReportRepository(ABC):
+    @abstractmethod
+    async def revenue_by_range(
+        self, start_date: date, end_date: date
+    ) -> RevenueReport:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def current_occupancy(self) -> OccupancyReport:
         raise NotImplementedError

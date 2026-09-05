@@ -164,6 +164,36 @@ class MonthlyPassUpdate(BaseModel):
     active: bool | None = None
 
 
+class DailyRevenueRead(BaseModel):
+    date: str
+    amount: int
+
+
+class CategoryRevenueRead(BaseModel):
+    category_id: int
+    category_name: str
+    amount: int
+
+
+class RevenueReportRead(BaseModel):
+    start_date: date
+    end_date: date
+    total: int
+    by_day: list[DailyRevenueRead]
+    by_category: list[CategoryRevenueRead]
+
+
+class CategoryOccupancyRead(BaseModel):
+    category_id: int
+    category_name: str
+    count: int
+
+
+class OccupancyReportRead(BaseModel):
+    total_open: int
+    by_category: list[CategoryOccupancyRead]
+
+
 class CheckOutRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

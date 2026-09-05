@@ -22,6 +22,9 @@ from app.infrastructure.repositories.monthly_pass_repository import (
 from app.infrastructure.repositories.parking_session_repository import (
     SqlAlchemyParkingSessionRepository,
 )
+from app.infrastructure.repositories.report_repository import (
+    SqlAlchemyReportRepository,
+)
 from app.infrastructure.repositories.tariff_repository import (
     SqlAlchemyTariffRepository,
 )
@@ -73,6 +76,12 @@ async def get_monthly_pass_repository(
     session: AsyncSession = Depends(get_session),
 ) -> SqlAlchemyMonthlyPassRepository:
     return SqlAlchemyMonthlyPassRepository(session)
+
+
+async def get_report_repository(
+    session: AsyncSession = Depends(get_session),
+) -> SqlAlchemyReportRepository:
+    return SqlAlchemyReportRepository(session)
 
 
 async def get_evidence_storage() -> EvidenceStoragePort:
