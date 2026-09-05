@@ -3,6 +3,8 @@
 from abc import ABC, abstractmethod
 
 from app.domain.category import Category
+from app.domain.evidence_photo import EvidencePhoto
+from app.domain.parking_session import ParkingSession
 from app.domain.tariff import Tariff
 from app.domain.user import User
 from app.domain.vehicle import Vehicle
@@ -105,4 +107,38 @@ class VehicleRepository(ABC):
 
     @abstractmethod
     async def delete(self, vehicle_id: int) -> None:
+        raise NotImplementedError
+
+
+class ParkingSessionRepository(ABC):
+    @abstractmethod
+    async def get_by_id(self, session_id: int) -> ParkingSession | None:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_open_by_vehicle_id(
+        self, vehicle_id: int
+    ) -> ParkingSession | None:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def list_open(self) -> list[ParkingSession]:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def create(self, session: ParkingSession) -> ParkingSession:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def update(self, session: ParkingSession) -> ParkingSession:
+        raise NotImplementedError
+
+
+class EvidencePhotoRepository(ABC):
+    @abstractmethod
+    async def list_by_session_id(self, session_id: int) -> list[EvidencePhoto]:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def create(self, photo: EvidencePhoto) -> EvidencePhoto:
         raise NotImplementedError

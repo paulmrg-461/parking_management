@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     secret_key: str = "change-me-in-production-use-a-32-byte-secret-minimum"
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
+    evidence_storage_path: str = "./data/evidence"
 
 
 settings = Settings()

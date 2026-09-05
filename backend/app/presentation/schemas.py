@@ -1,7 +1,10 @@
 """Pydantic schemas for auth and user management."""
 
+from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.domain.parking_session import SessionStatus
 from app.domain.tariff import TariffType
 from app.domain.user import UserRole
 
@@ -111,3 +114,26 @@ class VehicleUpdate(BaseModel):
     category_id: int | None = None
     color: str | None = Field(default=None, max_length=30)
     brand: str | None = Field(default=None, max_length=50)
+
+
+class EvidencePhotoRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    file_path: str
+    taken_at: datetime
+
+
+class CheckInCreate(BaseModel):
+    plate: str = Field(min_length=1, max_length=20)
+
+
+class CheckInRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    vehicle_id: int
+    operator_id: int
+    entry_time: datetime
+    status: SessionStatus
+    photos: list[EvidencePhotoRead] = []

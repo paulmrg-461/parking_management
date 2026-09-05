@@ -6,10 +6,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.security import decode_access_token
+from app.domain.evidence_storage import EvidenceStoragePort
 from app.domain.user import User, UserRole
 from app.infrastructure.database import get_session
+from app.infrastructure.local_evidence_storage import LocalEvidenceStorage
 from app.infrastructure.repositories.category_repository import (
     SqlAlchemyCategoryRepository,
+)
+from app.infrastructure.repositories.evidence_photo_repository import (
+    SqlAlchemyEvidencePhotoRepository,
+)
+from app.infrastructure.repositories.parking_session_repository import (
+    SqlAlchemyParkingSessionRepository,
 )
 from app.infrastructure.repositories.tariff_repository import (
     SqlAlchemyTariffRepository,
@@ -44,6 +52,22 @@ async def get_vehicle_repository(
     session: AsyncSession = Depends(get_session),
 ) -> SqlAlchemyVehicleRepository:
     return SqlAlchemyVehicleRepository(session)
+
+
+async def get_parking_session_repository(
+    session: AsyncSession = Depends(get_session),
+) -> SqlAlchemyParkingSessionRepository:
+    return SqlAlchemyParkingSessionRepository(session)
+
+
+async def get_evidence_photo_repository(
+    session: AsyncSession = Depends(get_session),
+) -> SqlAlchemyEvidencePhotoRepository:
+    return SqlAlchemyEvidencePhotoRepository(session)
+
+
+async def get_evidence_storage() -> EvidenceStoragePort:
+    return LocalEvidenceStorage(settings.evidence_storage_path)
 
 
 async def get_current_user(

@@ -68,3 +68,37 @@ class VehicleModel(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+
+
+class ParkingSessionModel(Base):
+    __tablename__ = "parking_sessions"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    vehicle_id: Mapped[int] = mapped_column(
+        ForeignKey("vehicles.id"), nullable=False, index=True
+    )
+    operator_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id"), nullable=False, index=True
+    )
+    entry_time: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    status: Mapped[str] = mapped_column(
+        String(10), default="open", nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+class EvidencePhotoModel(Base):
+    __tablename__ = "evidence_photos"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    session_id: Mapped[int] = mapped_column(
+        ForeignKey("parking_sessions.id"), nullable=False, index=True
+    )
+    file_path: Mapped[str] = mapped_column(String(255), nullable=False)
+    taken_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
