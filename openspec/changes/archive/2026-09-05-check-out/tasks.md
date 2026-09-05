@@ -47,7 +47,23 @@
 - [x] 5.2 Extend `test_parking_session_repository.py` (or a new file):
   `update()` round-trips `exit_time`/`amount_charged`/`ticket_number`
 
-## 6. Verification
+## 6. Flutter (parallel implementation against the API contract above)
+
+- [x] 6.1 Add `lib/features/check_out/domain/` (`OpenSession`,
+  `CheckOutReceipt` entities, `CheckOutRepository` port)
+- [x] 6.2 Add `CheckOutCubit` (`application/`) orchestrating load-open-sessions
+  / check-out-and-refresh
+- [x] 6.3 Add `DioCheckOutRemoteDataSource` + DTOs + `CheckOutRepositoryImpl`
+  (remote-only, no local cache)
+- [x] 6.4 Add `CheckOutPage` (open-sessions list joined with `VehiclesCubit`
+  for plate resolution, search by plate, confirm dialog, receipt dialog using
+  `CopFormatter`) + `/check-out` route + home-page entry point
+- [x] 6.5 Register in DI (`injection.dart`)
+- [x] 6.6 Write 3 tests (Success / Failure / Security) per layer
+- [x] 6.7 Confirm `flutter analyze` (0 issues) and `flutter test` (all green)
+  pass with both the backend and Flutter halves merged
+
+## 7. Verification
 
 - [x] 6.1 `cd backend && uv run pytest -q` all green (pre-existing + new)
 - [x] 6.2 `openspec validate check-out --strict`
