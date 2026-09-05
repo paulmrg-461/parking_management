@@ -19,6 +19,10 @@ import '../../features/check_in/application/check_in_cubit.dart';
 import '../../features/check_in/domain/repositories/check_in_repository.dart';
 import '../../features/check_in/infrastructure/check_in_remote_data_source.dart';
 import '../../features/check_in/infrastructure/check_in_repository_impl.dart';
+import '../../features/check_out/application/check_out_cubit.dart';
+import '../../features/check_out/domain/repositories/check_out_repository.dart';
+import '../../features/check_out/infrastructure/check_out_remote_data_source.dart';
+import '../../features/check_out/infrastructure/check_out_repository_impl.dart';
 import '../../features/plate_scanning/application/plate_scanning_cubit.dart';
 import '../../features/plate_scanning/domain/repositories/plate_scanner.dart';
 import '../../features/plate_scanning/infrastructure/mlkit_plate_scanner.dart';
@@ -123,6 +127,18 @@ Future<void> configureDependencies() async {
     )
     ..registerFactory<CheckInCubit>(
       () => CheckInCubit(serviceLocator<CheckInRepository>()),
+    )
+    ..registerLazySingleton<CheckOutRemoteDataSource>(
+      () => DioCheckOutRemoteDataSource(serviceLocator<Dio>()),
+    )
+    ..registerLazySingleton<CheckOutRepository>(
+      () => CheckOutRepositoryImpl(
+        serviceLocator<AuthRepository>(),
+        serviceLocator<CheckOutRemoteDataSource>(),
+      ),
+    )
+    ..registerFactory<CheckOutCubit>(
+      () => CheckOutCubit(serviceLocator<CheckOutRepository>()),
     );
 
   await serviceLocator<KeyValueStore>().init();

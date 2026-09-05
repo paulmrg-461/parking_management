@@ -27,6 +27,11 @@ class HomePage extends StatelessWidget {
                         onPressed: () => context.go('/check-in'),
                         child: const Text('Check-in'),
                       ),
+                      const SizedBox(height: 8),
+                      FilledButton(
+                        onPressed: () => context.go('/check-out'),
+                        child: const Text('Check-out'),
+                      ),
                       if (session.user.role.name == 'admin') ...[
                         const SizedBox(height: 16),
                         FilledButton(

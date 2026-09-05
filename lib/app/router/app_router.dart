@@ -6,6 +6,8 @@ import '../../features/auth/presentation/login_page.dart';
 import '../../features/categories/application/categories_cubit.dart';
 import '../../features/check_in/application/check_in_cubit.dart';
 import '../../features/check_in/presentation/check_in_page.dart';
+import '../../features/check_out/application/check_out_cubit.dart';
+import '../../features/check_out/presentation/check_out_page.dart';
 import '../../features/categories/presentation/categories_page.dart';
 import '../../features/home/presentation/home_page.dart';
 import '../../features/plate_scanning/application/plate_scanning_cubit.dart';
@@ -96,6 +98,20 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) => BlocProvider<CheckInCubit>(
         create: (_) => serviceLocator<CheckInCubit>(),
         child: const CheckInPage(),
+      ),
+    ),
+    GoRoute(
+      path: '/check-out',
+      builder: (context, state) => MultiBlocProvider(
+        providers: [
+          BlocProvider<CheckOutCubit>(
+            create: (_) => serviceLocator<CheckOutCubit>(),
+          ),
+          BlocProvider<VehiclesCubit>(
+            create: (_) => serviceLocator<VehiclesCubit>(),
+          ),
+        ],
+        child: const CheckOutPage(),
       ),
     ),
   ],
