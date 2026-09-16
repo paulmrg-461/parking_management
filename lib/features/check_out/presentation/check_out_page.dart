@@ -71,13 +71,7 @@ class _CheckOutPageState extends State<CheckOutPage> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Plate: ${receipt.plate}'),
-            Text('Entry: ${receipt.entryTime}'),
-            Text('Exit: ${receipt.exitTime}'),
-            Text('Amount: ${CopFormatter.format(receipt.amountCharged)}'),
-            Text('Ticket: ${receipt.ticketNumber}'),
-          ],
+          children: _receiptLines(receipt),
         ),
         actions: [
           FilledButton(
@@ -87,6 +81,22 @@ class _CheckOutPageState extends State<CheckOutPage> {
         ],
       ),
     );
+  }
+
+  /// A queued (`pendingSync`) check-out has no amount/ticket yet — this
+  /// project never shows a client-computed fare guess, so the dialog shows a
+  /// pending notice instead of the numeric receipt.
+  List<Widget> _receiptLines(CheckOutReceipt receipt) {
+    if (receipt.pendingSync) {
+      return const [Text('Queued — amount pending sync')];
+    }
+    return [
+      Text('Plate: ${receipt.plate}'),
+      Text('Entry: ${receipt.entryTime}'),
+      Text('Exit: ${receipt.exitTime}'),
+      Text('Amount: ${CopFormatter.format(receipt.amountCharged!)}'),
+      Text('Ticket: ${receipt.ticketNumber}'),
+    ];
   }
 
   @override

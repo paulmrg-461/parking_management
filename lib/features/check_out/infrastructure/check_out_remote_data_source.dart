@@ -9,7 +9,13 @@ import 'models/open_session_dto.dart';
 abstract class CheckOutRemoteDataSource {
   Future<List<OpenSession>> listOpenSessions(String token);
 
-  Future<CheckOutReceipt> checkOut(String token, int sessionId);
+  /// [clientExitTime], when present, is sent as `client_exit_time` in the
+  /// POST body (used by replay); the online path omits it, unchanged.
+  Future<CheckOutReceipt> checkOut(
+    String token,
+    int sessionId, {
+    DateTime? clientExitTime,
+  });
 }
 
 class DioCheckOutRemoteDataSource implements CheckOutRemoteDataSource {
@@ -38,10 +44,17 @@ class DioCheckOutRemoteDataSource implements CheckOutRemoteDataSource {
   }
 
   @override
-  Future<CheckOutReceipt> checkOut(String token, int sessionId) async {
+  Future<CheckOutReceipt> checkOut(
+    String token,
+    int sessionId, {
+    DateTime? clientExitTime,
+  }) async {
     try {
       final response = await _dio.post(
         '$_checkOutsPath/$sessionId',
+        data: clientExitTime != null
+            ? {'client_exit_time': clientExitTime.toIso8601String()}
+            : null,
         options: Options(headers: _auth(token)),
       );
       return CheckOutReceiptDto.fromJson(response.data as Map<String, dynamic>)

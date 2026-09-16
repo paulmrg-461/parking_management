@@ -1,5 +1,6 @@
-/// A single queued `update`/`delete` mutation waiting to be replayed against
-/// the backend once connectivity is restored.
+/// A single queued mutation waiting to be replayed against the backend once
+/// connectivity is restored: `update`/`delete` for vehicles/tariffs/
+/// categories, plus `create` for check-ins and `close` for check-outs.
 ///
 /// Deliberately NOT a Hive-adapter type (no `@GenerateAdapters` entry, no
 /// typeId): it is stored as `jsonEncode(toJson())` inside a `Box<String>`
@@ -14,15 +15,17 @@ class PendingMutation {
     required this.enqueuedAt,
   });
 
-  /// `'vehicle' | 'tariff' | 'category'`.
+  /// `'vehicle' | 'tariff' | 'category' | 'checkIn' | 'checkOut'`.
   final String entityType;
 
-  /// `'update' | 'delete'`.
+  /// `'update' | 'delete' | 'create' | 'close'`.
   final String operation;
 
-  final int entityId;
+  /// The server-assigned id, or `null` for a `checkIn` `create` mutation
+  /// (no server id exists yet until the create replays successfully).
+  final int? entityId;
 
-  /// `jsonEncode`-d payload map for `update`; `null` for `delete`.
+  /// `jsonEncode`-d payload map; `null` for `delete`.
   final String? payloadJson;
 
   final DateTime enqueuedAt;
@@ -39,7 +42,7 @@ class PendingMutation {
       PendingMutation(
         entityType: json['entityType'] as String,
         operation: json['operation'] as String,
-        entityId: json['entityId'] as int,
+        entityId: json['entityId'] as int?,
         payloadJson: json['payloadJson'] as String?,
         enqueuedAt: DateTime.parse(json['enqueuedAt'] as String),
       );

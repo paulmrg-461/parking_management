@@ -24,7 +24,7 @@ class _FakeCheckOutRepository implements CheckOutRepository {
       checkOutCalled ? sessionsAfterCheckOut : sessionsBeforeCheckOut;
 
   @override
-  Future<CheckOutReceipt> checkOut(int sessionId) async {
+  Future<CheckOutReceipt> checkOut(int sessionId, {DateTime? clientExitTime}) async {
     checkOutCalled = true;
     final error = this.error;
     if (error != null) {

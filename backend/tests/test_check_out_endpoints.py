@@ -164,6 +164,27 @@ async def test_check_out_service_computes_exact_amount_for_injected_exit_time(
         assert closed.ticket_number == f"TCK-{parking_session.id:06d}"
 
 
+async def test_check_out_uses_client_supplied_exit_time(client, session_factory):
+    admin_headers = await _admin_headers(client, session_factory)
+    await _create_vehicle_with_hourly_tariff(client, admin_headers, plate="OUT005")
+    operator_headers = await _operator_headers(client, session_factory)
+    check_in = await _check_in(client, operator_headers, "OUT005")
+    session_id = check_in["id"]
+    entry_time = datetime.fromisoformat(check_in["entry_time"])
+    client_exit_time = entry_time + timedelta(hours=2)
+
+    response = await client.post(
+        f"/api/check-outs/{session_id}",
+        json={"client_exit_time": client_exit_time.isoformat()},
+        headers=operator_headers,
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert datetime.fromisoformat(body["exit_time"]) == client_exit_time
+    assert body["amount_charged"] == 6000  # 2h ceil * 3000
+
+
 async def test_check_out_unknown_session_is_not_found(client, session_factory):
     operator_headers = await _operator_headers(client, session_factory)
 

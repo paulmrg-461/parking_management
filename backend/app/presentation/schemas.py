@@ -194,6 +194,10 @@ class OccupancyReportRead(BaseModel):
     by_category: list[CategoryOccupancyRead]
 
 
+class CheckOutRequest(BaseModel):
+    client_exit_time: datetime | None = None
+
+
 class CheckOutRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

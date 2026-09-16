@@ -31,7 +31,7 @@ from app.presentation.deps import (
     get_tariff_repository,
     get_vehicle_repository,
 )
-from app.presentation.schemas import CheckOutRead
+from app.presentation.schemas import CheckOutRead, CheckOutRequest
 
 router = APIRouter(tags=["check-outs"])
 
@@ -42,6 +42,7 @@ router = APIRouter(tags=["check-outs"])
 )
 async def create_check_out(
     session_id: int,
+    body: CheckOutRequest | None = None,
     current_user: User = Depends(get_current_user),
     sessions: SqlAlchemyParkingSessionRepository = Depends(
         get_parking_session_repository
@@ -54,7 +55,9 @@ async def create_check_out(
 ) -> CheckOutRead:
     service = CheckOutService(sessions, vehicles, tariffs, monthly_passes)
     try:
-        session = await service.close_session(session_id)
+        session = await service.close_session(
+            session_id, exit_time=body.client_exit_time if body else None
+        )
     except SessionNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Session not found"

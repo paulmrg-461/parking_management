@@ -191,6 +191,9 @@ class _CheckInPageState extends State<CheckInPage> {
         ListTile(
           title: Text(session.plate),
           subtitle: Text('Entry: ${session.entryTime} · Photos: ${session.photoCount}'),
+          trailing: session.status == ParkingSessionStatus.pendingSync
+              ? const Chip(label: Text('Pending sync'))
+              : null,
         ),
     ];
   }

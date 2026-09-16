@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 
-enum ParkingSessionStatus { open, closed }
+enum ParkingSessionStatus { open, closed, pendingSync }
 
 class ParkingSession extends Equatable {
   const ParkingSession({

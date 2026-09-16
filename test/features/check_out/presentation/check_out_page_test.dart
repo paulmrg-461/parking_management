@@ -19,7 +19,7 @@ class _FakeCheckOutRepository implements CheckOutRepository {
       ];
 
   @override
-  Future<CheckOutReceipt> checkOut(int sessionId) async {
+  Future<CheckOutReceipt> checkOut(int sessionId, {DateTime? clientExitTime}) async {
     throw UnimplementedError();
   }
 }

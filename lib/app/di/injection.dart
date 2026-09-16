@@ -6,6 +6,7 @@ import '../../core/network/connectivity_service.dart';
 import '../../core/network/dio_client.dart';
 import '../../core/storage/hive_key_value_store.dart';
 import '../../core/storage/key_value_store.dart';
+import '../../core/sync/pending_photo_storage.dart';
 import '../../core/sync/sync_outbox.dart';
 import '../../core/sync/sync_service.dart';
 import '../../features/auth/application/auth_cubit.dart';
@@ -64,6 +65,7 @@ Future<void> configureDependencies() async {
       () => ConnectivityPlusService(),
     )
     ..registerLazySingleton<SyncOutbox>(() => HiveSyncOutbox())
+    ..registerLazySingleton<PendingPhotoStorage>(() => PendingPhotoStorage())
     ..registerLazySingleton<AuthLocalDataSource>(() => HiveAuthLocalDataSource())
     ..registerLazySingleton<AuthRemoteDataSource>(
       () => DioAuthRemoteDataSource(serviceLocator<Dio>()),
@@ -138,6 +140,9 @@ Future<void> configureDependencies() async {
         serviceLocator<VehicleRepository>(),
         serviceLocator<TariffRepository>(),
         serviceLocator<CategoryRepository>(),
+        serviceLocator<CheckInRepository>(),
+        serviceLocator<CheckOutRepository>(),
+        serviceLocator<PendingPhotoStorage>(),
       ),
     )
     ..registerLazySingleton<PlateScanner>(() => MlKitPlateScanner())
@@ -151,6 +156,8 @@ Future<void> configureDependencies() async {
       () => CheckInRepositoryImpl(
         serviceLocator<AuthRepository>(),
         serviceLocator<CheckInRemoteDataSource>(),
+        serviceLocator<SyncOutbox>(),
+        serviceLocator<PendingPhotoStorage>(),
       ),
     )
     ..registerFactory<CheckInCubit>(
@@ -163,6 +170,7 @@ Future<void> configureDependencies() async {
       () => CheckOutRepositoryImpl(
         serviceLocator<AuthRepository>(),
         serviceLocator<CheckOutRemoteDataSource>(),
+        serviceLocator<SyncOutbox>(),
       ),
     )
     ..registerFactory<CheckOutCubit>(
