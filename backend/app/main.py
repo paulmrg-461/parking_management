@@ -1,6 +1,7 @@
 """FastAPI application factory."""
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.presentation.routes import (
@@ -20,6 +21,13 @@ from app.presentation.routes import (
 
 def create_app() -> FastAPI:
     application = FastAPI(title=settings.app_name)
+    application.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origin_list,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
     application.include_router(health.router, prefix=settings.api_prefix)
     application.include_router(auth.router, prefix=settings.api_prefix)
     application.include_router(users.router, prefix=settings.api_prefix)

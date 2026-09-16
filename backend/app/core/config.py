@@ -19,6 +19,13 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
     evidence_storage_path: str = "./data/evidence"
+    # Comma-separated. Dev default is permissive ("*"). MUST be restricted to
+    # the app's real origin(s) via the CORS_ORIGINS env var in production.
+    cors_origins: str = "*"
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
 
 settings = Settings()

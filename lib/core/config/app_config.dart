@@ -15,7 +15,10 @@ class AppConfig {
         'APP_NAME',
         defaultValue: 'Parking Management',
       ),
-      apiBaseUrl: _defaultApiBaseUrl,
+      apiBaseUrl: String.fromEnvironment(
+        'API_BASE_URL',
+        defaultValue: _defaultApiBaseUrl,
+      ),
     );
   }
 }

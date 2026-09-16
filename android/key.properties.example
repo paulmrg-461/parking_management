@@ -1,0 +1,8 @@
+# Copy this file to `android/key.properties` (gitignored — never commit the
+# real one) and fill in your actual release keystore details. Until this
+# file exists, release builds fall back to debug signing (see
+# `android/app/build.gradle.kts`).
+storePassword=your-keystore-password
+keyPassword=your-key-password
+keyAlias=your-key-alias
+storeFile=/absolute/path/to/your/release-keystore.jks

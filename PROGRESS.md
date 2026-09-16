@@ -25,6 +25,39 @@ SOLID, Clean Code, all code in English.
 
 All planned capabilities are now implemented — nothing remains in the roadmap.
 
+## Infra/tooling (not OpenSpec capabilities — repo scaffolding)
+
+- **Docker**: `backend/Dockerfile` (uv-based) + root `docker-compose.yml`
+  (`db` postgres:16 + `backend`, migrations run automatically via
+  `backend/docker-entrypoint.sh`). `docker compose up --build` is the
+  fastest path to a running backend.
+- **First-admin bootstrap**: `backend/scripts/create_admin.py` — auth is
+  PIN-based with an admin-only user-creation endpoint, so a fresh DB has no
+  other way to create its first account.
+- **CORS**: `Settings.cors_origins` (CSV env var, default `*` for dev) wired
+  into `CORSMiddleware` in `app/main.py` — required for the Flutter web
+  target to call the API from a browser.
+- **`AppConfig.apiBaseUrl`** (Flutter) now actually reads
+  `--dart-define=API_BASE_URL=...` (was silently hardcoded before — a real
+  bug, not just a missing feature).
+- **Android release signing**: `android/app/build.gradle.kts` reads a
+  gitignored `android/key.properties` when present (see
+  `android/key.properties.example`), falling back to debug signing when it
+  doesn't — no keystore is checked into this repo.
+- **CI**: `.github/workflows/ci.yml` runs backend pytest + `flutter
+  analyze`/`flutter test` on push/PR to `main`.
+- **License**: MIT (`LICENSE`).
+- **Git config note**: this repo's `android/`, `ios/`, `linux/`, `macos/`,
+  `windows/` platform directories were never tracked in git — traced to a
+  sandbox-wide `core.excludesFile` (unrelated to this project) blanket-
+  excluding platform folders, not a deliberate `.gitignore` decision. Fixed
+  by setting this repo's local `core.excludesFile` to `/dev/null` (each
+  platform dir's own nested `.gitignore` — already present, e.g.
+  `android/.gitignore` excluding `local.properties`/`key.properties`/
+  keystores — still applies normally) and committing the previously-invisible
+  platform scaffolding. Worth knowing if a *fresh* clone/sandbox ever again
+  reports these directories as "untracked" unexpectedly.
+
 ## Key technical decisions
 
 - Local store: **Hive CE** (not Isar — Isar's generator is EOL/incompatible with modern source_gen).
