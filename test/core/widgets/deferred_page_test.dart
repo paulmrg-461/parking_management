@@ -4,14 +4,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/widgets/deferred_page.dart';
 
+import '../../helpers/test_app.dart';
+
 void main() {
   testWidgets('Success: shows a spinner, then the page once loaded', (
     tester,
   ) async {
     final loading = Completer<void>();
     await tester.pumpWidget(
-      MaterialApp(
-        home: DeferredPage(
+      testApp(
+        DeferredPage(
           loader: () => loading.future,
           builder: (_) => const Text('Loaded page'),
         ),
@@ -30,8 +32,8 @@ void main() {
   ) async {
     var attempts = 0;
     await tester.pumpWidget(
-      MaterialApp(
-        home: DeferredPage(
+      testApp(
+        DeferredPage(
           loader: () async {
             attempts++;
             if (attempts == 1) {
@@ -44,8 +46,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Could not load this section'), findsOneWidget);
-    await tester.tap(find.text('Retry'));
+    expect(find.text('No se pudo cargar esta sección'), findsOneWidget);
+    await tester.tap(find.text('Reintentar'));
     await tester.pumpAndSettle();
 
     expect(attempts, 2);
@@ -57,8 +59,8 @@ void main() {
     (tester) async {
       var built = false;
       await tester.pumpWidget(
-        MaterialApp(
-          home: DeferredPage(
+        testApp(
+          DeferredPage(
             loader: () => Completer<void>().future,
             builder: (_) {
               built = true;

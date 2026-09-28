@@ -327,6 +327,7 @@ void main() {
 
       expect(submitEnabled(tester), isTrue);
       await tester.ensureVisible(submitButton());
+      await tester.pumpAndSettle();
       await tester.tap(submitButton());
       await tester.pumpAndSettle();
 

@@ -71,6 +71,9 @@ final GoRoute _homeRoute = GoRoute(
           BlocProvider<VehicleLookupCubit>(
             create: (_) => serviceLocator<VehicleLookupCubit>(),
           ),
+          BlocProvider<PlateScanningCubit>(
+            create: (_) => serviceLocator<PlateScanningCubit>(),
+          ),
         ],
         child: CheckInPage(
           capture: serviceLocator<PlateImageCapture>(),

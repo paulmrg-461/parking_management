@@ -147,6 +147,7 @@
   "durationHoursMinutes": "{hours} h {minutes} min",
   "durationMinutes": "{minutes} min",
   "receiptGenerate": "Generate receipt",
+  "receiptView": "View receipt",
   "receiptClose": "Close",
   "receiptPhotos": "Evidence photos",
   "checkInReceiptTitle": "Check-in complete",

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/l10n/l10n.dart';
 import '../../../vehicles/domain/entities/vehicle.dart';
 import '../../application/vehicle_lookup_cubit.dart';
 
@@ -19,14 +20,15 @@ class VehicleLookupSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return switch (state) {
       VehicleLookupIdle() => const SizedBox.shrink(),
-      VehicleLookupLoading() => const Padding(
-        padding: EdgeInsets.symmetric(vertical: 8),
-        child: LinearProgressIndicator(semanticsLabel: 'Looking up vehicle'),
+      VehicleLookupLoading() => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: LinearProgressIndicator(semanticsLabel: l10n.lookupLoading),
       ),
       VehicleLookupFailure(:final message) => Text(
-        'Could not look up vehicle: $message',
+        l10n.lookupError(message),
         style: TextStyle(color: Theme.of(context).colorScheme.error),
       ),
       VehicleLookupFound(:final vehicle, :final categoryName) =>
@@ -45,6 +47,7 @@ class FoundVehicleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -54,18 +57,18 @@ class FoundVehicleCard extends StatelessWidget {
             Semantics(
               header: true,
               child: Text(
-                'Registered vehicle',
+                l10n.registeredVehicle,
                 style: Theme.of(context).textTheme.titleMedium,
               ),
             ),
             const SizedBox(height: 8),
-            _InfoRow(label: 'Plate', value: vehicle.plate),
+            _InfoRow(label: l10n.plateLabel, value: vehicle.plate),
             _InfoRow(
-              label: 'Category',
+              label: l10n.fieldCategory,
               value: categoryName ?? '#${vehicle.categoryId}',
             ),
-            _InfoRow(label: 'Color', value: vehicle.color ?? '—'),
-            _InfoRow(label: 'Brand', value: vehicle.brand ?? '—'),
+            _InfoRow(label: l10n.fieldColor, value: vehicle.color ?? l10n.notAvailable),
+            _InfoRow(label: l10n.fieldBrand, value: vehicle.brand ?? l10n.notAvailable),
           ],
         ),
       ),

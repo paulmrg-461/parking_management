@@ -178,6 +178,7 @@
   "durationMinutes": "{minutes} min",
   "@durationMinutes": {"placeholders": {"minutes": {"type": "int"}}},
   "receiptGenerate": "Generar recibo",
+  "receiptView": "Ver recibo",
   "receiptClose": "Cerrar",
   "receiptPhotos": "Fotos de evidencia",
   "checkInReceiptTitle": "Entrada registrada",

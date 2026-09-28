@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -96,7 +95,7 @@ void main() {
 
     final error = find.text('Usuario o PIN incorrectos');
     expect(error, findsOneWidget);
-    expect(tester.getSemantics(error), containsSemantics(isLiveRegion: true));
+    expect(tester.getSemantics(error), isSemantics(isLiveRegion: true));
   });
 
   testWidgets('A11y: button shows a spinner and is disabled while signing in', (

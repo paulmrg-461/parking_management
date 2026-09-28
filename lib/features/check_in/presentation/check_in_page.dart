@@ -1,16 +1,21 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:cross_file/cross_file.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 
+import '../../../core/l10n/failure_messages.dart';
+import '../../../core/l10n/l10n.dart';
 import '../../../core/state/submission.dart';
+import '../../../core/utils/formatters.dart';
+import '../../../core/widgets/photo_strip.dart';
 import '../../../core/widgets/receipt_card.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/widgets/sync_badge.dart';
+import '../../plate_scanning/application/plate_scanning_cubit.dart';
 import '../../plate_scanning/domain/repositories/plate_image_capture.dart';
+import '../../plate_scanning/presentation/inline_plate_scan.dart';
 import '../application/check_in_cubit.dart';
 import '../application/vehicle_lookup_cubit.dart';
 import '../domain/entities/new_vehicle_info.dart';
@@ -47,9 +52,9 @@ class _Photo {
 
 class _CheckInPageState extends State<CheckInPage> {
   static const _lookupDebounce = Duration(milliseconds: 500);
-  static const _thumbnailSize = 80.0;
 
   final _plateController = TextEditingController();
+  final _plateFocus = FocusNode();
   final _colorController = TextEditingController();
   final _brandController = TextEditingController();
   final List<_Photo> _photos = [];
@@ -68,17 +73,40 @@ class _CheckInPageState extends State<CheckInPage> {
   void dispose() {
     _debounce?.cancel();
     _plateController.dispose();
+    _plateFocus.dispose();
     _colorController.dispose();
     _brandController.dispose();
     super.dispose();
   }
 
-  Future<void> _scanPlate(BuildContext context) async {
-    final result = await context.push<String>('/scan');
-    if (result != null && mounted) {
-      setState(() => _plateController.text = result);
-      _lookupNow();
+  Future<void> _scanPlate() async {
+    final cubit = context.read<PlateScanningCubit>();
+    final image = await captureAndScan(cubit, widget.capture);
+    if (image != null && mounted && !_photoLimitReached) {
+      final bytes = await image.readAsBytes();
+      if (mounted && !_photoLimitReached) {
+        setState(() => _photos.add(_Photo(image, bytes)));
+      }
     }
+  }
+
+  void _onPlateDetected(String plate) {
+    if (!mounted) {
+      return;
+    }
+    setState(() => _plateController.text = plate);
+    _lookupNow();
+  }
+
+  void _onPlateUnreadable(String message, String prefill) {
+    if (!mounted) {
+      return;
+    }
+    if (prefill.isNotEmpty) {
+      setState(() => _plateController.text = prefill);
+    }
+    _plateFocus.requestFocus();
+    showErrorSnack(context, message);
   }
 
   void _onPlateChanged(String _) {
@@ -158,47 +186,46 @@ class _CheckInPageState extends State<CheckInPage> {
   void _onSubmission(BuildContext context, CheckInState state) {
     switch (state.submission) {
       case SubmissionSucceeded<ParkingSession>(:final result):
+        HapticFeedback.mediumImpact();
         _resetForm();
-        unawaited(showReceiptSummary(context, _checkInReceiptData(result)));
-      case SubmissionFailed(:final message):
-        showErrorSnack(context, message);
+        _plateFocus.requestFocus();
+        showInfoSnack(context, context.l10n.checkInSuccess(result.plate));
+      case SubmissionFailed(:final message, :final failure):
+        showErrorSnack(context, context.l10n.errorText(message, failure));
       default:
         break;
     }
   }
 
-  ReceiptData _checkInReceiptData(ParkingSession session) => ReceiptData(
-    kind: ReceiptKind.checkIn,
-    plate: session.plate,
-    entryTime: session.entryTime,
-    photoCount: session.photoCount,
-    pendingSync: session.status == ParkingSessionStatus.pendingSync,
-  );
-
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Check-in'),
+        title: Text(l10n.checkInTitle),
         actions: const [SyncBadge()],
       ),
-      body: BlocListener<CheckInCubit, CheckInState>(
-        listenWhen: (previous, current) =>
-            submissionJustFailed(previous.submission, current.submission) ||
-            submissionJustSucceeded(previous.submission, current.submission),
-        listener: _onSubmission,
-        child: CustomScrollView(
-          slivers: [
-            SliverPadding(
-              padding: const EdgeInsets.all(16),
-              sliver: SliverToBoxAdapter(child: _buildForm(context)),
-            ),
-            const SliverPadding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              sliver: SliverToBoxAdapter(child: _SessionsHeader()),
-            ),
-            const _OpenSessionsSliver(),
-          ],
+      body: PlateScanListener(
+        onDetected: _onPlateDetected,
+        onUnreadable: _onPlateUnreadable,
+        child: BlocListener<CheckInCubit, CheckInState>(
+          listenWhen: (previous, current) =>
+              submissionJustFailed(previous.submission, current.submission) ||
+              submissionJustSucceeded(previous.submission, current.submission),
+          listener: _onSubmission,
+          child: CustomScrollView(
+            slivers: [
+              SliverPadding(
+                padding: const EdgeInsets.all(16),
+                sliver: SliverToBoxAdapter(child: _buildForm(context)),
+              ),
+              const SliverPadding(
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                sliver: SliverToBoxAdapter(child: _SessionsHeader()),
+              ),
+              const _OpenSessionsSliver(),
+            ],
+          ),
         ),
       ),
     );
@@ -213,20 +240,25 @@ class _CheckInPageState extends State<CheckInPage> {
   }
 
   Widget _buildFormFields(BuildContext context, VehicleLookupState lookup) {
+    final l10n = context.l10n;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (widget.canScan) ...[
-          FilledButton.icon(
-            onPressed: () => _scanPlate(context),
-            icon: const Icon(Icons.camera_alt),
-            label: const Text('Scan plate'),
+          Tooltip(
+            message: l10n.plateScanTooltip,
+            child: FilledButton.icon(
+              onPressed: _scanPlate,
+              icon: const Icon(Icons.camera_alt),
+              label: Text(l10n.plateLabel),
+            ),
           ),
           const SizedBox(height: 8),
         ],
         TextField(
           controller: _plateController,
-          decoration: const InputDecoration(labelText: 'Plate'),
+          focusNode: _plateFocus,
+          decoration: InputDecoration(labelText: l10n.plateLabel),
           textCapitalization: TextCapitalization.characters,
           textInputAction: TextInputAction.done,
           onChanged: _onPlateChanged,
@@ -235,7 +267,12 @@ class _CheckInPageState extends State<CheckInPage> {
         const SizedBox(height: 8),
         VehicleLookupSection(state: lookup, registration: _buildRegistration),
         const SizedBox(height: 16),
-        _buildPhotos(context),
+        PhotoStrip(
+          photos: [for (final photo in _photos) photo.bytes],
+          max: EvidencePolicy.maxPhotos,
+          onAdd: _addPhoto,
+          onRemove: _removePhoto,
+        ),
         const SizedBox(height: 16),
         BlocSelector<CheckInCubit, CheckInState, bool>(
           selector: (state) => state.submission.isInProgress,
@@ -243,72 +280,6 @@ class _CheckInPageState extends State<CheckInPage> {
               _buildSubmit(context, submitting, lookup),
         ),
       ],
-    );
-  }
-
-  Widget _buildPhotos(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Evidence photos (${_photos.length}/${EvidencePolicy.maxPhotos})'),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            for (var i = 0; i < _photos.length; i++)
-              _buildThumbnail(context, i),
-            OutlinedButton(
-              onPressed: _photoLimitReached ? null : _addPhoto,
-              child: const Icon(Icons.add_a_photo, semanticLabel: 'Add photo'),
-            ),
-          ],
-        ),
-        if (_photoLimitReached)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Text(
-              'Maximum ${EvidencePolicy.maxPhotos} photos per check-in',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildThumbnail(BuildContext context, int index) {
-    final cacheWidth = (_thumbnailSize * MediaQuery.devicePixelRatioOf(context))
-        .round();
-    return SizedBox(
-      width: _thumbnailSize,
-      height: _thumbnailSize,
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: Image.memory(
-              _photos[index].bytes,
-              fit: BoxFit.cover,
-              cacheWidth: cacheWidth,
-              gaplessPlayback: true,
-            ),
-          ),
-          Positioned(
-            right: 0,
-            top: 0,
-            child: GestureDetector(
-              onTap: () => _removePhoto(index),
-              child: const CircleAvatar(
-                radius: 10,
-                child: Icon(
-                  Icons.close,
-                  size: 14,
-                  semanticLabel: 'Remove photo',
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -327,34 +298,35 @@ class _CheckInPageState extends State<CheckInPage> {
               height: 20,
               child: CircularProgressIndicator(strokeWidth: 2),
             )
-          : const Text('Submit check-in'),
+          : Text(context.l10n.checkInSubmit),
     );
   }
 
   Widget _buildRegistration(VehicleLookupNotFound lookup) {
+    final l10n = context.l10n;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Semantics(
           header: true,
           child: Text(
-            'New vehicle',
+            l10n.newVehicle,
             style: Theme.of(context).textTheme.titleMedium,
           ),
         ),
         const SizedBox(height: 8),
         if (lookup.categories.isEmpty)
           Text(
-            'No categories configured. Create one in the Categories section first.',
+            l10n.categoriesEmpty,
             style: TextStyle(color: Theme.of(context).colorScheme.error),
           )
         else
           DropdownButtonFormField<int>(
             key: ObjectKey(lookup),
             initialValue: _categoryId,
-            decoration: const InputDecoration(
-              labelText: 'Category',
-              helperText: 'Required to register this plate',
+            decoration: InputDecoration(
+              labelText: l10n.fieldCategory,
+              helperText: l10n.categoryRequiredHelper,
             ),
             items: [
               for (final category in lookup.categories)
@@ -369,13 +341,13 @@ class _CheckInPageState extends State<CheckInPage> {
         const SizedBox(height: 16),
         TextField(
           controller: _colorController,
-          decoration: const InputDecoration(labelText: 'Color (optional)'),
+          decoration: InputDecoration(labelText: l10n.colorOptional),
           textCapitalization: TextCapitalization.words,
         ),
         const SizedBox(height: 16),
         TextField(
           controller: _brandController,
-          decoration: const InputDecoration(labelText: 'Brand (optional)'),
+          decoration: InputDecoration(labelText: l10n.brandOptional),
           textCapitalization: TextCapitalization.words,
         ),
       ],
@@ -388,12 +360,15 @@ class _SessionsHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Column(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Divider(height: 32),
-        Text('Open sessions', style: TextStyle(fontWeight: FontWeight.bold)),
-        SizedBox(height: 8),
+        const Divider(height: 32),
+        Text(
+          context.l10n.openSessionsTitle,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
       ],
     );
   }
@@ -423,7 +398,9 @@ class _OpenSessionsSliver extends StatelessWidget {
           return SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(state.loadError ?? 'No open sessions'),
+              child: Text(
+                state.loadError ?? context.l10n.openSessionsEmpty,
+              ),
             ),
           );
         }
@@ -444,14 +421,34 @@ class _SessionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return ListTile(
       title: Text(session.plate),
       subtitle: Text(
-        'Entry: ${session.entryTime.toLocal()} · Photos: ${session.photoCount}',
+        '${l10n.sessionEntry(Formatters.dateTime(session.entryTime))}'
+        ' · ${l10n.sessionPhotos(session.photoCount)}',
       ),
       trailing: session.status == ParkingSessionStatus.pendingSync
-          ? const Chip(label: Text('Pending sync'))
-          : null,
+          ? Chip(label: Text(l10n.statusPendingSync))
+          : IconButton(
+              icon: const Icon(Icons.receipt_long),
+              tooltip: l10n.receiptView,
+              onPressed: () => _viewReceipt(context),
+            ),
+      onTap: () => _viewReceipt(context),
+    );
+  }
+
+  void _viewReceipt(BuildContext context) {
+    showReceipt(
+      context,
+      ReceiptData(
+        kind: ReceiptKind.checkIn,
+        plate: session.plate,
+        entryTime: session.entryTime,
+        photoCount: session.photoCount,
+        pendingSync: session.status == ParkingSessionStatus.pendingSync,
+      ),
     );
   }
 }

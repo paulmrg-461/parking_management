@@ -980,6 +980,12 @@ abstract class AppLocalizations {
   /// **'Generar recibo'**
   String get receiptGenerate;
 
+  /// No description provided for @receiptView.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver recibo'**
+  String get receiptView;
+
   /// No description provided for @receiptClose.
   ///
   /// In es, this message translates to:

@@ -25,6 +25,22 @@ SOLID, Clean Code, all code in English.
 
 All planned capabilities are now implemented — nothing remains in the roadmap.
 
+## Recent additions (post-roadmap, not OpenSpec changes)
+
+- **Receipts**: polished check-out/check-in receipts (`lib/core/widgets/receipt_card.dart`).
+  Check-out shows a formatted summary (dates `dd/MM/yyyy HH:mm:ss`, duration
+  `X h Y min`, a highlighted amount block) with a "Generar recibo" action that
+  opens the full `ReceiptCard` (dashed divider, ticket, pending-sync pill).
+- **Category seed**: `backend/scripts/seed_categories.py` idempotently creates
+  the standard categories (moto, car, camioneta, camion, bus) for a fresh DB,
+  and the check-in form surfaces a message when none exist (instead of a
+  silently disabled dropdown).
+- **l10n regression fix**: `check_in_page`/`check_out_page`/`vehicle_lookup_section`
+  had been rewritten with hardcoded English; restored `context.l10n.*` (Spanish
+  default) and the inline plate-scan flow (`PlateScanningCubit` +
+  `captureAndScan`), and fixed the two widget tests that pumped bare
+  `MaterialApp` without localization delegates.
+
 ## Infra/tooling (not OpenSpec capabilities — repo scaffolding)
 
 - **Docker**: `backend/Dockerfile` (uv-based) + root `docker-compose.yml`
@@ -70,8 +86,8 @@ All planned capabilities are now implemented — nothing remains in the roadmap.
 
 ## Test counts
 
-- Backend (`cd backend && uv run pytest`): 98 passed.
-- Flutter (`flutter test`): 119 passed. `flutter analyze`: 0 issues.
+- Backend (`cd backend && uv run pytest`): 232 passed, 4 skipped.
+- Flutter (`flutter test`): 401 passed. `flutter analyze`: 0 issues.
 
 ## Layer map (Flutter feature slice)
 

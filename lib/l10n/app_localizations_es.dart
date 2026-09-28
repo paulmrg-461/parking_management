@@ -514,6 +514,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get receiptGenerate => 'Generar recibo';
 
   @override
+  String get receiptView => 'Ver recibo';
+
+  @override
   String get receiptClose => 'Cerrar';
 
   @override
