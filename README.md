@@ -33,6 +33,13 @@ docker compose exec backend python scripts/create_admin.py \
   --username admin --display-name "Admin" --pin 1234
 ```
 
+Seed the default vehicle categories (a fresh database has none, which
+disables the check-in category dropdown for new vehicles):
+
+```bash
+docker compose exec backend python scripts/seed_categories.py
+```
+
 Then run the Flutter app against it — see [Flutter](#flutter) below.
 
 ## Backend (without Docker)
@@ -46,6 +53,7 @@ cp .env.example .env        # edit DATABASE_URL/SECRET_KEY for your setup
 uv sync
 uv run alembic upgrade head
 uv run python scripts/create_admin.py --username admin --display-name "Admin" --pin 1234
+uv run python scripts/seed_categories.py
 uv run uvicorn app.main:app --reload
 ```
 
