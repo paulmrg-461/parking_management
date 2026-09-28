@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/l10n/l10n.dart';
+import '../../../../core/theme/tokens.dart';
 import '../report_colors.dart';
 
 /// One row of [CategoryBarList].
@@ -31,7 +33,7 @@ class CategoryBarList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (items.isEmpty) {
-      return const Center(child: Text('No category data'));
+      return Center(child: Text(context.l10n.reportsNoCategoryData));
     }
     final maxValue = items
         .map((i) => i.value)
@@ -40,7 +42,7 @@ class CategoryBarList extends StatelessWidget {
     return Column(
       children: [
         for (var i = 0; i < items.length; i++) ...[
-          if (i > 0) const SizedBox(height: 10),
+          if (i > 0) const SizedBox(height: Space.sm),
           _CategoryRow(
             item: items[i],
             color: ReportColors.categorical(context, i),
@@ -66,8 +68,12 @@ class _CategoryRow extends StatelessWidget {
   final double ratio;
   final String Function(int) formatValue;
 
+  static const _swatch = 12.0;
+  static const _track = 8.0;
+
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
     return Tooltip(
       message: '${item.label}: ${formatValue(item.value)}',
       child: Column(
@@ -76,47 +82,48 @@ class _CategoryRow extends StatelessWidget {
           Row(
             children: [
               Container(
-                width: 10,
-                height: 10,
+                width: _swatch,
+                height: _swatch,
                 decoration: BoxDecoration(
                   color: color,
-                  borderRadius: BorderRadius.circular(2),
+                  borderRadius: BorderRadius.circular(Space.xs),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: Space.sm),
               Expanded(
                 child: Text(
                   item.label,
-                  style: TextStyle(color: ReportColors.secondaryText(context)),
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: ReportColors.secondaryText(context),
+                  ),
                 ),
               ),
               Text(
                 formatValue(item.value),
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
+                style: textTheme.titleSmall?.copyWith(
                   color: ReportColors.primaryText(context),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: Space.xs),
           LayoutBuilder(
             builder: (context, constraints) => Stack(
               children: [
                 Container(
-                  height: 8,
+                  height: _track,
                   width: constraints.maxWidth,
                   decoration: BoxDecoration(
                     color: ReportColors.gridline(context),
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(Space.xs),
                   ),
                 ),
                 Container(
-                  height: 8,
+                  height: _track,
                   width: constraints.maxWidth * ratio,
                   decoration: BoxDecoration(
                     color: color,
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(Space.xs),
                   ),
                 ),
               ],

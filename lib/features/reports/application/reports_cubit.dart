@@ -32,12 +32,15 @@ class ReportsLoaded extends ReportsState {
 }
 
 class ReportsFailure extends ReportsState {
-  const ReportsFailure(this.message);
+  const ReportsFailure(this.message, {this.failure});
+
+  ReportsFailure.of(Failure failure) : this(failure.message, failure: failure);
 
   final String message;
+  final Failure? failure;
 
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [message, failure?.code];
 }
 
 /// Orchestrates the admin reports screen: fetches revenue and occupancy for
@@ -65,7 +68,7 @@ class ReportsCubit extends Cubit<ReportsState> {
         ),
       );
     } on Failure catch (failure) {
-      emit(ReportsFailure(failure.message));
+      emit(ReportsFailure.of(failure));
     }
   }
 }

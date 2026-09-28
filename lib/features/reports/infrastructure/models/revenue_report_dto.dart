@@ -42,10 +42,10 @@ class CategoryRevenueDto {
   Map<String, dynamic> toJson() => _$CategoryRevenueDtoToJson(this);
 
   CategoryRevenue toDomain() => CategoryRevenue(
-        categoryId: categoryId,
-        categoryName: categoryName,
-        amount: amount,
-      );
+    categoryId: categoryId,
+    categoryName: categoryName,
+    amount: amount,
+  );
 }
 
 @JsonSerializable()
@@ -78,10 +78,10 @@ class RevenueReportDto {
   Map<String, dynamic> toJson() => _$RevenueReportDtoToJson(this);
 
   RevenueReport toDomain() => RevenueReport(
-        startDate: DateTime.parse(startDate),
-        endDate: DateTime.parse(endDate),
-        total: total,
-        byDay: byDay.map((dto) => dto.toDomain()).toList(),
-        byCategory: byCategory.map((dto) => dto.toDomain()).toList(),
-      );
+    startDate: DateTime.parse(startDate),
+    endDate: DateTime.parse(endDate),
+    total: total,
+    byDay: byDay.map((dto) => dto.toDomain()).toList(),
+    byCategory: byCategory.map((dto) => dto.toDomain()).toList(),
+  );
 }

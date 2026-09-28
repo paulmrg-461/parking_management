@@ -1,95 +1,114 @@
-import 'dart:io';
-
+import 'package:cross_file/cross_file.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/error/failure.dart';
-import '../../plate_scanning/domain/normalize_plate.dart';
+import '../../../core/state/submission.dart';
+import '../domain/entities/new_vehicle_info.dart';
 import '../domain/entities/parking_session.dart';
 import '../domain/repositories/check_in_repository.dart';
+import 'create_check_in.dart';
 
-sealed class CheckInState extends Equatable {
-  const CheckInState();
+enum SessionsStatus { loading, loaded, failure }
 
-  @override
-  List<Object?> get props => const [];
-}
+/// Open-sessions list and the check-in [submission] are orthogonal: the form
+/// works (and queues offline) even when the list failed to load, and a
+/// failed submit never hides the list.
+class CheckInState extends Equatable {
+  const CheckInState({
+    this.status = SessionsStatus.loading,
+    this.sessions = const [],
+    this.loadError,
+    this.loadFailure,
+    this.submission = const SubmissionIdle(),
+  });
 
-class CheckInInitial extends CheckInState {
-  const CheckInInitial();
-}
-
-class CheckInLoading extends CheckInState {
-  const CheckInLoading();
-}
-
-class CheckInLoaded extends CheckInState {
-  const CheckInLoaded(this.sessions);
-
+  final SessionsStatus status;
   final List<ParkingSession> sessions;
+  final String? loadError;
+  final Failure? loadFailure;
+  final Submission submission;
+
+  CheckInState copyWith({
+    SessionsStatus? status,
+    List<ParkingSession>? sessions,
+    String? loadError,
+    Failure? loadFailure,
+    Submission? submission,
+  }) => CheckInState(
+    status: status ?? this.status,
+    sessions: sessions ?? this.sessions,
+    loadError: loadError,
+    loadFailure: loadFailure,
+    submission: submission ?? this.submission,
+  );
 
   @override
-  List<Object?> get props => [sessions];
+  List<Object?> get props => [
+    status,
+    sessions,
+    loadError,
+    loadFailure?.code,
+    submission,
+  ];
 }
 
-class CheckInSubmitting extends CheckInState {
-  const CheckInSubmitting();
-}
-
-class CheckInSuccess extends CheckInState {
-  const CheckInSuccess(this.session);
-
-  final ParkingSession session;
-
-  @override
-  List<Object?> get props => [session];
-}
-
-class CheckInFailure extends CheckInState {
-  const CheckInFailure(this.message);
-
-  final String message;
-
-  @override
-  List<Object?> get props => [message];
-}
-
-/// Orchestrates the check-in flow: validates/normalizes the plate, submits it
-/// (with any evidence photos) to open a new parking session, and loads the
-/// list of currently open sessions.
 class CheckInCubit extends Cubit<CheckInState> {
-  CheckInCubit(this._repository) : super(const CheckInInitial());
+  CheckInCubit(this._createCheckIn, this._repository)
+    : super(const CheckInState());
 
+  final CreateCheckIn _createCheckIn;
   final CheckInRepository _repository;
 
   Future<void> loadOpenSessions() async {
-    emit(const CheckInLoading());
+    emit(state.copyWith(status: SessionsStatus.loading));
     try {
-      emit(CheckInLoaded(await _repository.listOpenSessions()));
+      final sessions = await _repository.listOpenSessions();
+      emit(state.copyWith(status: SessionsStatus.loaded, sessions: sessions));
     } on Failure catch (failure) {
-      emit(CheckInFailure(failure.message));
+      emit(
+        state.copyWith(
+          status: SessionsStatus.failure,
+          loadError: failure.message,
+          loadFailure: failure,
+        ),
+      );
     }
   }
 
-  /// Submits a check-in for [plate] with optional evidence [photos].
-  ///
-  /// The plate is normalized/validated client-side first (via
-  /// [normalizePlate]); an empty/whitespace-only plate is rejected with a
-  /// [CheckInFailure] before the repository is ever called.
+  /// Submits a check-in; validation happens in [CreateCheckIn]. [newVehicle]
+  /// is only passed when the plate is not yet registered.
   Future<void> submitCheckIn({
     required String plate,
-    required List<File> photos,
+    required List<XFile> photos,
+    NewVehicleInfo? newVehicle,
   }) async {
-    emit(const CheckInSubmitting());
+    emit(state.copyWith(submission: const SubmissionInProgress()));
     try {
-      final normalizedPlate = normalizePlate(plate);
-      final session = await _repository.createCheckIn(
-        plate: normalizedPlate,
+      final session = await _createCheckIn(
+        plate: plate,
         photos: photos,
+        newVehicle: newVehicle,
       );
-      emit(CheckInSuccess(session));
+      emit(
+        state.copyWith(
+          status: SessionsStatus.loaded,
+          sessions: await _sessionsAfter(session),
+          submission: SubmissionSucceeded<ParkingSession>(session),
+        ),
+      );
     } on Failure catch (failure) {
-      emit(CheckInFailure(failure.message));
+      emit(state.copyWith(submission: SubmissionFailed.of(failure)));
+    }
+  }
+
+  /// Fresh list from the server; offline, the new (pending) session is
+  /// prepended to what is already on screen.
+  Future<List<ParkingSession>> _sessionsAfter(ParkingSession created) async {
+    try {
+      return await _repository.listOpenSessions();
+    } on Failure {
+      return [created, ...state.sessions.where((s) => s.id != created.id)];
     }
   }
 }

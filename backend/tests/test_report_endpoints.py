@@ -141,7 +141,11 @@ async def test_revenue_report_sums_by_day_and_category_within_range(
     assert body["total"] == 2000
     assert body["by_day"] == [{"date": "2026-02-02", "amount": 2000}]
     assert body["by_category"] == [
-        {"category_id": body["by_category"][0]["category_id"], "category_name": "moto", "amount": 2000}
+        {
+            "category_id": body["by_category"][0]["category_id"],
+            "category_name": "moto",
+            "amount": 2000,
+        }
     ]
     amounts = [entry["amount"] for entry in body["by_day"]]
     assert 8000 not in amounts

@@ -1,12 +1,16 @@
+import '../../../../core/pagination/paged_result.dart';
 import '../entities/check_out_receipt.dart';
 import '../entities/open_session.dart';
 
 abstract class CheckOutRepository {
-  Future<List<OpenSession>> listOpenSessions();
+  /// One page of open sessions (`limit`/`offset`, `X-Total-Count`).
+  Future<PagedResult<OpenSession>> listOpenSessions({
+    int offset = 0,
+    int limit = defaultPageSize,
+  });
 
-  /// Closes [sessionId]. [clientExitTime] is only passed by
-  /// `SyncService._replayCheckOut` (the original attempt time captured when
-  /// this check-out was first queued offline); the online path omits it so
-  /// the backend uses its own clock, unchanged.
-  Future<CheckOutReceipt> checkOut(int sessionId, {DateTime? clientExitTime});
+  /// Closes [sessionId] using the backend clock. Offline, the attempt time
+  /// is queued as `client_exit_time` and replayed by
+  /// `CheckOutMutationReplayer`.
+  Future<CheckOutReceipt> checkOut(int sessionId);
 }

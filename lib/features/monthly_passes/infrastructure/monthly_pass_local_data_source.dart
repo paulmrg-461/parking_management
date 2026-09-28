@@ -11,6 +11,8 @@ abstract class MonthlyPassLocalDataSource {
 class HiveMonthlyPassLocalDataSource implements MonthlyPassLocalDataSource {
   static const _boxName = 'monthly_passes';
 
+  /// Opens lazily on first use (returns the already-open box afterwards),
+  /// so reads work on a cold start before any write happened.
   Future<Box<MonthlyPass>> _box() => Hive.openBox<MonthlyPass>(_boxName);
 
   @override
@@ -26,9 +28,6 @@ class HiveMonthlyPassLocalDataSource implements MonthlyPassLocalDataSource {
 
   @override
   Future<List<MonthlyPass>> readAll() async {
-    if (!Hive.isBoxOpen(_boxName)) {
-      return const [];
-    }
-    return Hive.box<MonthlyPass>(_boxName).values.toList();
+    return (await _box()).values.toList();
   }
 }

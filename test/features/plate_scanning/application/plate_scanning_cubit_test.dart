@@ -1,5 +1,4 @@
-import 'dart:io';
-
+import 'package:cross_file/cross_file.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/features/plate_scanning/application/plate_scanning_cubit.dart';
@@ -8,15 +7,18 @@ import 'package:parking_management/features/plate_scanning/domain/repositories/p
 
 class _FakePlateScanner implements PlateScanner {
   _FakePlateScanner.returning(this._result) : _error = null;
-  _FakePlateScanner.failing(Failure error)
-      : _error = error,
-        _result = null;
+  _FakePlateScanner.failing(Failure error) : _error = error, _result = null;
 
   final PlateScanResult? _result;
   final Failure? _error;
 
+  bool supported = true;
+
   @override
-  Future<PlateScanResult> scan(File image) async {
+  bool get isSupported => supported;
+
+  @override
+  Future<PlateScanResult> scan(XFile image) async {
     if (_error != null) {
       throw _error;
     }
@@ -25,23 +27,32 @@ class _FakePlateScanner implements PlateScanner {
 }
 
 void main() {
-  final image = File('scan.jpg');
+  final image = XFile('scan.jpg');
 
-  test('Success: scan emits a normalized candidate from the OCR result', () async {
-    final cubit = PlateScanningCubit(
-      _FakePlateScanner.returning(
-        const PlateScanResult(rawText: 'ABC123', candidatePlate: 'ABC123', confidence: 0.9),
-      ),
-    );
+  test(
+    'Success: scan emits a normalized candidate from the OCR result',
+    () async {
+      final cubit = PlateScanningCubit(
+        _FakePlateScanner.returning(
+          const PlateScanResult(
+            rawText: 'ABC123',
+            candidatePlate: 'ABC123',
+            confidence: 0.9,
+          ),
+        ),
+      );
 
-    await cubit.scan(image);
+      await cubit.scan(image);
 
-    expect(cubit.state, const PlateScanningSuccess('ABC123', 0.9));
-  });
+      expect(cubit.state, const PlateScanningSuccess('ABC123', 0.9));
+    },
+  );
 
   test('Failure: scan emits a failure state when the scanner throws', () async {
     final cubit = PlateScanningCubit(
-      _FakePlateScanner.failing(const ValidationFailure('Could not read text from image')),
+      _FakePlateScanner.failing(
+        const ValidationFailure('Could not read text from image'),
+      ),
     );
 
     await cubit.scan(image);
@@ -55,7 +66,11 @@ void main() {
   test('Security: normalizes a garbage/spaced OCR candidate before emitting success', () async {
     final cubit = PlateScanningCubit(
       _FakePlateScanner.returning(
-        const PlateScanResult(rawText: '  abc 123 ', candidatePlate: '  abc 123 ', confidence: 0.5),
+        const PlateScanResult(
+          rawText: '  abc 123 ',
+          candidatePlate: '  abc 123 ',
+          confidence: 0.5,
+        ),
       ),
     );
 
@@ -64,25 +79,48 @@ void main() {
     expect(cubit.state, const PlateScanningSuccess('ABC123', 0.5));
   });
 
-  test('falls back to manual entry when OCR finds no plate-like text', () async {
-    final cubit = PlateScanningCubit(
-      _FakePlateScanner.returning(
-        const PlateScanResult(rawText: 'PARKING', candidatePlate: '', confidence: 0.0),
-      ),
-    );
+  test(
+    'falls back to manual entry when OCR finds no plate-like text',
+    () async {
+      final cubit = PlateScanningCubit(
+        _FakePlateScanner.returning(
+          const PlateScanResult(
+            rawText: 'PARKING',
+            candidatePlate: '',
+            confidence: 0.0,
+          ),
+        ),
+      );
 
-    await cubit.scan(image);
+      await cubit.scan(image);
 
-    expect(cubit.state, const PlateScanningManualEntry(prefill: 'PARKING'));
-  });
+      expect(cubit.state, const PlateScanningManualEntry(prefill: 'PARKING'));
+    },
+  );
 
   test('confirmManual normalizes and validates manual input', () {
-    final cubit = PlateScanningCubit(_FakePlateScanner.returning(
-      const PlateScanResult(rawText: '', candidatePlate: '', confidence: 0.0),
-    ));
+    final cubit = PlateScanningCubit(
+      _FakePlateScanner.returning(
+        const PlateScanResult(rawText: '', candidatePlate: '', confidence: 0.0),
+      ),
+    );
 
     cubit.confirmManual('  xyz 789 ');
 
     expect(cubit.state, const PlateScanningSuccess('XYZ789', 1.0));
   });
+
+  test(
+    'Security: an unsupported scanner is never invoked, manual entry instead',
+    () async {
+      final scanner = _FakePlateScanner.failing(const ValidationFailure('boom'))
+        ..supported = false;
+      final cubit = PlateScanningCubit(scanner);
+
+      expect(cubit.isScanSupported, isFalse);
+      await cubit.scan(image);
+
+      expect(cubit.state, const PlateScanningManualEntry());
+    },
+  );
 }

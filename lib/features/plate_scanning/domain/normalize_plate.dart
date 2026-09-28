@@ -8,7 +8,10 @@ import '../../../core/error/failure.dart';
 String normalizePlate(String input) {
   final normalized = input.replaceAll(RegExp(r'\s'), '').toUpperCase();
   if (normalized.isEmpty) {
-    throw const ValidationFailure('Plate must not be empty');
+    throw const ValidationFailure(
+      'Plate must not be empty',
+      ClientFailureCodes.emptyPlate,
+    );
   }
   return normalized;
 }

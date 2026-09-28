@@ -6,9 +6,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.monthly_pass import MonthlyPass
+from app.domain.pagination import Page, PageRequest
 from app.domain.repositories import MonthlyPassRepository
 from app.infrastructure.models import MonthlyPassModel
+from app.infrastructure.repositories.paging import PagedQuery, fetch_page
 
+_BY_ID = select(MonthlyPassModel).order_by(MonthlyPassModel.id)
 
 class SqlAlchemyMonthlyPassRepository(MonthlyPassRepository):
     def __init__(self, session: AsyncSession):
@@ -56,6 +59,10 @@ class SqlAlchemyMonthlyPassRepository(MonthlyPassRepository):
         )
         model = result.scalar_one_or_none()
         return self._to_entity(model) if model else None
+
+    async def list_page(self, page: PageRequest) -> Page[MonthlyPass]:
+        models, total = await fetch_page(self._session, PagedQuery(_BY_ID, page))
+        return Page([self._to_entity(model) for model in models], total)
 
     async def create(self, monthly_pass: MonthlyPass) -> MonthlyPass:
         model = MonthlyPassModel(

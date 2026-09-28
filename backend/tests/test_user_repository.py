@@ -14,7 +14,7 @@ async def repository(session_factory):
 
 
 async def test_create_and_get_by_username(repository):
-    user = await repository.create(
+    await repository.create(
         User(
             id=None,
             username="juan",

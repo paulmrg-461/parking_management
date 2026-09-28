@@ -15,8 +15,7 @@ class _FakeHttpAdapter implements HttpClientAdapter {
     RequestOptions options,
     Stream<List<int>>? requestStream,
     Future<void>? cancelFuture,
-  ) =>
-      _handler(options);
+  ) => _handler(options);
 
   @override
   void close({bool force = false}) {}
@@ -29,30 +28,32 @@ Dio _dioWith(Future<ResponseBody> Function(RequestOptions) handler) {
 }
 
 ResponseBody _json(Object body, int statusCode) => ResponseBody.fromString(
-      jsonEncode(body),
-      statusCode,
-      headers: {
-        Headers.contentTypeHeader: [Headers.jsonContentType],
-      },
-    );
+  jsonEncode(body),
+  statusCode,
+  headers: {
+    Headers.contentTypeHeader: [Headers.jsonContentType],
+  },
+);
 
 void main() {
   group('DioTariffRemoteDataSource', () {
     test('list returns tariffs on success', () async {
-      final dio = _dioWith((options) async => _json([
-            {
-              'id': 1,
-              'category_id': 1,
-              'type': 'nightly',
-              'amount': 5000,
-              'start_time': '18:00',
-              'end_time': '06:00',
-              'active': true,
-            },
-          ], 200));
+      final dio = _dioWith(
+        (options) async => _json([
+          {
+            'id': 1,
+            'category_id': 1,
+            'type': 'nightly',
+            'amount': 5000,
+            'start_time': '18:00',
+            'end_time': '06:00',
+            'active': true,
+          },
+        ], 200),
+      );
       final source = DioTariffRemoteDataSource(dio);
 
-      final tariffs = await source.list('token');
+      final tariffs = await source.list();
 
       expect(tariffs.single.type.name, 'nightly');
       expect(tariffs.single.startTime, '18:00');
@@ -64,10 +65,7 @@ void main() {
       );
       final source = DioTariffRemoteDataSource(dio);
 
-      expect(
-        () => source.create('token', {}),
-        throwsA(isA<AuthenticationFailure>()),
-      );
+      expect(() => source.create({}), throwsA(isA<AuthenticationFailure>()));
     });
 
     test('list maps connection errors to a network failure', () async {
@@ -79,10 +77,7 @@ void main() {
       );
       final source = DioTariffRemoteDataSource(dio);
 
-      expect(
-        () => source.list('token'),
-        throwsA(isA<NetworkFailure>()),
-      );
+      expect(() => source.list(), throwsA(isA<NetworkFailure>()));
     });
   });
 }

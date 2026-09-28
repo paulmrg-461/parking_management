@@ -1,13 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/error/failure.dart';
-import 'package:parking_management/features/auth/domain/entities/auth_session.dart';
-import 'package:parking_management/features/auth/domain/entities/user.dart';
 import 'package:parking_management/features/reports/domain/entities/occupancy_report.dart';
 import 'package:parking_management/features/reports/domain/entities/revenue_report.dart';
 import 'package:parking_management/features/reports/infrastructure/report_remote_data_source.dart';
 import 'package:parking_management/features/reports/infrastructure/report_repository_impl.dart';
-
-import '../../../helpers/fake_auth_repository.dart';
 
 class _FakeRemote implements ReportRemoteDataSource {
   _FakeRemote({this.revenueToReturn, this.occupancyToReturn, this.error});
@@ -15,15 +11,12 @@ class _FakeRemote implements ReportRemoteDataSource {
   final RevenueReport? revenueToReturn;
   final OccupancyReport? occupancyToReturn;
   final Failure? error;
-  String? tokenUsed;
 
   @override
-  Future<RevenueReport> getRevenueReport(
-    String token, {
+  Future<RevenueReport> getRevenueReport({
     required DateTime startDate,
     required DateTime endDate,
   }) async {
-    tokenUsed = token;
     final error = this.error;
     if (error != null) {
       throw error;
@@ -32,8 +25,7 @@ class _FakeRemote implements ReportRemoteDataSource {
   }
 
   @override
-  Future<OccupancyReport> getOccupancyReport(String token) async {
-    tokenUsed = token;
+  Future<OccupancyReport> getOccupancyReport() async {
     final error = this.error;
     if (error != null) {
       throw error;
@@ -59,20 +51,14 @@ void main() {
     ],
   );
 
-  AuthSession authenticatedSession() => const AuthSession(
-        user: User(id: 1, username: 'admin', displayName: 'Admin', role: UserRole.admin),
-        token: 'token-1',
-      );
-
   test(
     'Success: both report getters return the remote-mapped entities',
     () async {
-      final auth = FakeAuthRepository(sessionToRestore: authenticatedSession());
       final remote = _FakeRemote(
         revenueToReturn: revenue,
         occupancyToReturn: occupancy,
       );
-      final repository = ReportRepositoryImpl(auth, remote);
+      final repository = ReportRepositoryImpl(remote);
 
       final revenueResult = await repository.getRevenueReport(
         startDate: DateTime(2026, 1, 1),
@@ -82,14 +68,12 @@ void main() {
 
       expect(revenueResult, revenue);
       expect(occupancyResult, occupancy);
-      expect(remote.tokenUsed, 'token-1');
     },
   );
 
   test('Failure: remote errors are rethrown as the mapped Failure', () async {
-    final auth = FakeAuthRepository(sessionToRestore: authenticatedSession());
     final remote = _FakeRemote(error: const NetworkFailure('offline'));
-    final repository = ReportRepositoryImpl(auth, remote);
+    final repository = ReportRepositoryImpl(remote);
 
     expect(
       () => repository.getOccupancyReport(),
@@ -98,23 +82,19 @@ void main() {
   });
 
   test(
-    'Security: missing token throws AuthenticationFailure before any network call',
+    'Security: an expired session (401) surfaces as AuthenticationFailure',
     () async {
-      final auth = FakeAuthRepository();
-      final remote = _FakeRemote(
-        revenueToReturn: revenue,
-        occupancyToReturn: occupancy,
+      final repository = ReportRepositoryImpl(
+        _FakeRemote(error: const AuthenticationFailure('Invalid credentials')),
       );
-      final repository = ReportRepositoryImpl(auth, remote);
 
-      expect(
-        () => repository.getRevenueReport(
+      await expectLater(
+        repository.getRevenueReport(
           startDate: DateTime(2026, 1, 1),
           endDate: DateTime(2026, 1, 31),
         ),
         throwsA(isA<AuthenticationFailure>()),
       );
-      expect(remote.tokenUsed, isNull);
     },
   );
 }

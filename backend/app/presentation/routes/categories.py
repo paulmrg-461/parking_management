@@ -1,20 +1,12 @@
 """Vehicle category endpoints."""
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Request, Response, status
 
-from app.application.category_service import (
-    CategoryNotFoundError,
-    CategoryService,
-    DuplicateCategoryNameError,
-)
-from app.infrastructure.repositories.category_repository import (
-    SqlAlchemyCategoryRepository,
-)
-from app.presentation.deps import (
-    get_category_repository,
-    get_current_user,
-    require_admin,
-)
+from app.application.category_service import CategoryService
+from app.domain.pagination import PageRequest
+from app.presentation.deps import get_category_service, get_current_user, require_admin
+from app.presentation.http_cache import conditional_json
+from app.presentation.pagination import TOTAL_COUNT_HEADER, page_request
 from app.presentation.schemas import CategoryCreate, CategoryRead, CategoryUpdate
 
 router = APIRouter(tags=["categories"])
@@ -26,10 +18,13 @@ router = APIRouter(tags=["categories"])
     dependencies=[Depends(get_current_user)],
 )
 async def list_categories(
-    categories: SqlAlchemyCategoryRepository = Depends(get_category_repository),
-) -> list[CategoryRead]:
-    result = await CategoryService(categories).list_all()
-    return [CategoryRead.model_validate(category) for category in result]
+    request: Request,
+    page: PageRequest = Depends(page_request),
+    service: CategoryService = Depends(get_category_service),
+) -> Response:
+    result = await service.list_page(page)
+    items = [CategoryRead.model_validate(category) for category in result.items]
+    return conditional_json(request, items, {TOTAL_COUNT_HEADER: str(result.total)})
 
 
 @router.post(
@@ -39,16 +34,9 @@ async def list_categories(
     dependencies=[Depends(require_admin)],
 )
 async def create_category(
-    body: CategoryCreate,
-    categories: SqlAlchemyCategoryRepository = Depends(get_category_repository),
+    body: CategoryCreate, service: CategoryService = Depends(get_category_service)
 ) -> CategoryRead:
-    try:
-        category = await CategoryService(categories).create(body.name)
-    except DuplicateCategoryNameError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail="Category already exists"
-        ) from exc
-    return CategoryRead.model_validate(category)
+    return CategoryRead.model_validate(await service.create(body.name))
 
 
 @router.patch(
@@ -59,19 +47,9 @@ async def create_category(
 async def update_category(
     category_id: int,
     body: CategoryUpdate,
-    categories: SqlAlchemyCategoryRepository = Depends(get_category_repository),
+    service: CategoryService = Depends(get_category_service),
 ) -> CategoryRead:
-    try:
-        category = await CategoryService(categories).update(category_id, body.name)
-    except CategoryNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Category not found"
-        ) from exc
-    except DuplicateCategoryNameError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail="Category already exists"
-        ) from exc
-    return CategoryRead.model_validate(category)
+    return CategoryRead.model_validate(await service.update(category_id, body.name))
 
 
 @router.delete(
@@ -80,12 +58,6 @@ async def update_category(
     dependencies=[Depends(require_admin)],
 )
 async def delete_category(
-    category_id: int,
-    categories: SqlAlchemyCategoryRepository = Depends(get_category_repository),
+    category_id: int, service: CategoryService = Depends(get_category_service)
 ) -> None:
-    try:
-        await CategoryService(categories).delete(category_id)
-    except CategoryNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Category not found"
-        ) from exc
+    await service.delete(category_id)

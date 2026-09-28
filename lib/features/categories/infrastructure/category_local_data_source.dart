@@ -15,6 +15,8 @@ abstract class CategoryLocalDataSource {
 class HiveCategoryLocalDataSource implements CategoryLocalDataSource {
   static const _boxName = 'categories';
 
+  /// Opens lazily on first use (returns the already-open box afterwards),
+  /// so reads work on a cold start before any write happened.
   Future<Box<Category>> _box() => Hive.openBox<Category>(_boxName);
 
   @override
@@ -30,10 +32,7 @@ class HiveCategoryLocalDataSource implements CategoryLocalDataSource {
 
   @override
   Future<List<Category>> readAll() async {
-    if (!Hive.isBoxOpen(_boxName)) {
-      return const [];
-    }
-    return Hive.box<Category>(_boxName).values.toList();
+    return (await _box()).values.toList();
   }
 
   @override

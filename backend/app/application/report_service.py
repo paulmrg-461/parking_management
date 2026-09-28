@@ -2,12 +2,11 @@
 
 from datetime import date
 
+from app.domain.errors import InvalidReportRangeError
 from app.domain.report import OccupancyReport, RevenueReport
 from app.domain.repositories import ReportRepository
 
-
-class InvalidReportRangeError(Exception):
-    pass
+__all__ = ["InvalidReportRangeError", "ReportService"]
 
 
 class ReportService:

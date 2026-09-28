@@ -14,6 +14,9 @@ class HiveAuthLocalDataSource implements AuthLocalDataSource {
   static const _boxName = 'auth';
   static const _sessionKey = 'session';
 
+  /// Opens lazily on first use (returns the already-open box afterwards):
+  /// a cold start must read the persisted session, not assume "signed out"
+  /// because nothing opened the box yet.
   Future<Box<AuthSession>> _box() => Hive.openBox<AuthSession>(_boxName);
 
   @override
@@ -24,10 +27,7 @@ class HiveAuthLocalDataSource implements AuthLocalDataSource {
 
   @override
   Future<AuthSession?> readSession() async {
-    if (!Hive.isBoxOpen(_boxName)) {
-      return null;
-    }
-    return Hive.box<AuthSession>(_boxName).get(_sessionKey);
+    return (await _box()).get(_sessionKey);
   }
 
   @override

@@ -15,8 +15,7 @@ class _FakeHttpAdapter implements HttpClientAdapter {
     RequestOptions options,
     Stream<List<int>>? requestStream,
     Future<void>? cancelFuture,
-  ) =>
-      _handler(options);
+  ) => _handler(options);
 
   @override
   void close({bool force = false}) {}
@@ -29,23 +28,25 @@ Dio _dioWith(Future<ResponseBody> Function(RequestOptions) handler) {
 }
 
 ResponseBody _json(Object body, int statusCode) => ResponseBody.fromString(
-      jsonEncode(body),
-      statusCode,
-      headers: {
-        Headers.contentTypeHeader: [Headers.jsonContentType],
-      },
-    );
+  jsonEncode(body),
+  statusCode,
+  headers: {
+    Headers.contentTypeHeader: [Headers.jsonContentType],
+  },
+);
 
 void main() {
   group('DioCategoryRemoteDataSource', () {
     test('list returns categories on success', () async {
-      final dio = _dioWith((options) async => _json([
-            {'id': 1, 'name': 'carro'},
-            {'id': 2, 'name': 'moto'},
-          ], 200));
+      final dio = _dioWith(
+        (options) async => _json([
+          {'id': 1, 'name': 'carro'},
+          {'id': 2, 'name': 'moto'},
+        ], 200),
+      );
       final source = DioCategoryRemoteDataSource(dio);
 
-      final categories = await source.list('token');
+      final categories = await source.list();
 
       expect(categories.length, 2);
       expect(categories.first.name, 'carro');
@@ -57,10 +58,7 @@ void main() {
       );
       final source = DioCategoryRemoteDataSource(dio);
 
-      expect(
-        () => source.create('token', 'bus'),
-        throwsA(isA<AuthenticationFailure>()),
-      );
+      expect(() => source.create('bus'), throwsA(isA<AuthenticationFailure>()));
     });
 
     test('list maps connection errors to a network failure', () async {
@@ -72,10 +70,7 @@ void main() {
       );
       final source = DioCategoryRemoteDataSource(dio);
 
-      expect(
-        () => source.list('token'),
-        throwsA(isA<NetworkFailure>()),
-      );
+      expect(() => source.list(), throwsA(isA<NetworkFailure>()));
     });
   });
 }

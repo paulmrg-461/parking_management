@@ -1,10 +1,11 @@
 """Parking session repository tests (Success / Failure / Security)."""
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
 from app.domain.category import Category
+from app.domain.errors import DuplicateOpenSessionError
 from app.domain.parking_session import ParkingSession, SessionStatus
 from app.domain.user import User, UserRole
 from app.domain.vehicle import Vehicle
@@ -18,6 +19,8 @@ from app.infrastructure.repositories.user_repository import SqlAlchemyUserReposi
 from app.infrastructure.repositories.vehicle_repository import (
     SqlAlchemyVehicleRepository,
 )
+
+NOW = datetime(2026, 3, 10, 14, 0, tzinfo=UTC)
 
 
 @pytest.fixture
@@ -62,7 +65,7 @@ async def test_create_and_get_open_by_vehicle_id(repository, vehicle_id, operato
             id=None,
             vehicle_id=vehicle_id,
             operator_id=operator_id,
-            entry_time=datetime.now(UTC),
+            entry_time=NOW,
         )
     )
 
@@ -87,7 +90,7 @@ async def test_closed_session_is_excluded_from_open_list(
             id=None,
             vehicle_id=vehicle_id,
             operator_id=operator_id,
-            entry_time=datetime.now(UTC),
+            entry_time=NOW,
         )
     )
     session.status = SessionStatus.CLOSED
@@ -100,7 +103,7 @@ async def test_closed_session_is_excluded_from_open_list(
 async def test_update_round_trips_checkout_fields(
     repository, vehicle_id, operator_id
 ):
-    entry_time = datetime.now(UTC)
+    entry_time = NOW
     session = await repository.create(
         ParkingSession(
             id=None,
@@ -109,7 +112,7 @@ async def test_update_round_trips_checkout_fields(
             entry_time=entry_time,
         )
     )
-    exit_time = datetime.now(UTC)
+    exit_time = NOW + timedelta(hours=1)
     session.status = SessionStatus.CLOSED
     session.exit_time = exit_time
     session.amount_charged = 6000
@@ -136,10 +139,73 @@ async def test_new_session_has_no_checkout_fields(
             id=None,
             vehicle_id=vehicle_id,
             operator_id=operator_id,
-            entry_time=datetime.now(UTC),
+            entry_time=NOW,
         )
     )
 
     assert session.exit_time is None
     assert session.amount_charged is None
     assert session.ticket_number is None
+
+
+# --- B-UQ: one open session per vehicle, atomic close ---------------------
+
+
+def _open(vehicle_id, operator_id):
+    return ParkingSession(
+        id=None, vehicle_id=vehicle_id, operator_id=operator_id, entry_time=NOW
+    )
+
+
+def _closing(session, exit_time):
+    session.status = SessionStatus.CLOSED
+    session.exit_time = exit_time
+    session.amount_charged = 3000
+    session.ticket_number = f"TCK-{session.id:06d}"
+    return session
+
+
+async def test_second_open_session_for_vehicle_is_rejected(
+    repository, vehicle_id, operator_id
+):
+    await repository.create(_open(vehicle_id, operator_id))
+
+    with pytest.raises(DuplicateOpenSessionError):
+        await repository.create(_open(vehicle_id, operator_id))
+
+
+async def test_new_open_session_allowed_after_previous_closed(
+    repository, vehicle_id, operator_id
+):
+    first = await repository.create(_open(vehicle_id, operator_id))
+    await repository.close(_closing(first, NOW + timedelta(hours=1)))
+
+    second = await repository.create(_open(vehicle_id, operator_id))
+
+    assert second.status == SessionStatus.OPEN
+
+
+async def test_close_is_atomic_and_rejects_second_close(
+    repository, vehicle_id, operator_id
+):
+    created = await repository.create(_open(vehicle_id, operator_id))
+    stale_copy = await repository.get_by_id(created.id)
+
+    closed = await repository.close(_closing(created, NOW + timedelta(hours=1)))
+    second = await repository.close(_closing(stale_copy, NOW + timedelta(hours=2)))
+
+    assert closed.status == SessionStatus.CLOSED
+    assert second is None
+    refetched = await repository.get_by_id(created.id)
+    assert refetched.exit_time == NOW + timedelta(hours=1)
+
+
+def test_model_declares_integrity_and_report_indexes():
+    from app.infrastructure.models import ParkingSessionModel
+
+    indexes = {index.name: index for index in ParkingSessionModel.__table__.indexes}
+
+    assert indexes["uq_open_session_per_vehicle"].unique is True
+    assert "ix_sessions_open_entry" in indexes
+    assert "ix_sessions_status_exit" in indexes
+    assert indexes["uq_sessions_ticket"].unique is True

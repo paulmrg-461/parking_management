@@ -3,7 +3,6 @@ import 'dart:convert';
 import '../../../core/error/failure.dart';
 import '../../../core/sync/pending_mutation.dart';
 import '../../../core/sync/sync_outbox.dart';
-import '../../auth/domain/repositories/auth_repository.dart';
 import '../domain/commands/create_tariff_command.dart';
 import '../domain/commands/update_tariff_command.dart';
 import '../domain/entities/tariff.dart';
@@ -12,18 +11,16 @@ import 'tariff_local_data_source.dart';
 import 'tariff_remote_data_source.dart';
 
 class TariffRepositoryImpl implements TariffRepository {
-  TariffRepositoryImpl(this._auth, this._remote, this._local, this._outbox);
+  TariffRepositoryImpl(this._remote, this._local, this._outbox);
 
-  final AuthRepository _auth;
   final TariffRemoteDataSource _remote;
   final TariffLocalDataSource _local;
   final SyncOutbox _outbox;
 
   @override
   Future<List<Tariff>> list() async {
-    final token = await _currentToken();
     try {
-      final tariffs = await _remote.list(token);
+      final tariffs = await _remote.list();
       await _local.cacheAll(tariffs);
       return tariffs;
     } on NetworkFailure {
@@ -33,26 +30,25 @@ class TariffRepositoryImpl implements TariffRepository {
 
   @override
   Future<Tariff> create(CreateTariffCommand command) async {
-    return _remote.create(await _currentToken(), _toCreatePayload(command));
+    return _remote.create(_toCreatePayload(command));
   }
 
   @override
   Future<Tariff> update(UpdateTariffCommand command) async {
     final payload = _toUpdatePayload(command);
     try {
-      final updated = await _remote.update(
-        await _currentToken(),
-        command.id,
-        payload,
-      );
+      final updated = await _remote.update(command.id, payload);
       await _local.upsert(updated);
       return updated;
     } on NetworkFailure {
       final optimistic = await _applyUpdate(command);
+      if (optimistic == null) {
+        rethrow;
+      }
       await _outbox.enqueue(
         PendingMutation(
-          entityType: 'tariff',
-          operation: 'update',
+          entityType: MutationEntity.tariff,
+          operation: MutationOperation.update,
           entityId: command.id,
           payloadJson: jsonEncode(payload),
           enqueuedAt: DateTime.now(),
@@ -65,14 +61,14 @@ class TariffRepositoryImpl implements TariffRepository {
   @override
   Future<void> delete(int id) async {
     try {
-      await _remote.delete(await _currentToken(), id);
+      await _remote.delete(id);
       await _local.remove(id);
     } on NetworkFailure {
       await _local.remove(id);
       await _outbox.enqueue(
         PendingMutation(
-          entityType: 'tariff',
-          operation: 'delete',
+          entityType: MutationEntity.tariff,
+          operation: MutationOperation.delete,
           entityId: id,
           payloadJson: null,
           enqueuedAt: DateTime.now(),
@@ -83,50 +79,48 @@ class TariffRepositoryImpl implements TariffRepository {
 
   /// Merges [command]'s patch fields onto the cached tariff client-side
   /// (mirroring the backend's patch-merge shape) so the caller can show an
-  /// optimistic result while offline.
-  Future<Tariff> _applyUpdate(UpdateTariffCommand command) async {
-    final cached = await _local.readAll();
-    Tariff? existing;
-    for (final tariff in cached) {
-      if (tariff.id == command.id) {
-        existing = tariff;
-        break;
-      }
+  /// optimistic result while offline. Returns `null` when the tariff is not
+  /// cached: category/type/amount are required and must never be invented.
+  Future<Tariff?> _applyUpdate(UpdateTariffCommand command) async {
+    final existing = await _cachedById(command.id);
+    if (existing == null) {
+      return null;
     }
     final merged = Tariff(
       id: command.id,
-      categoryId: existing?.categoryId ?? 0,
-      type: command.type ?? existing?.type ?? TariffType.hourly,
-      amount: command.amount ?? existing?.amount ?? 0,
-      startTime: command.startTime ?? existing?.startTime,
-      endTime: command.endTime ?? existing?.endTime,
-      active: command.active ?? existing?.active ?? true,
+      categoryId: existing.categoryId,
+      type: command.type ?? existing.type,
+      amount: command.amount ?? existing.amount,
+      startTime: command.startTime ?? existing.startTime,
+      endTime: command.endTime ?? existing.endTime,
+      active: command.active ?? existing.active,
     );
     await _local.upsert(merged);
     return merged;
   }
 
-  Future<String> _currentToken() async {
-    final session = await _auth.restoreSession();
-    if (session == null) {
-      throw const AuthenticationFailure('Not authenticated');
+  Future<Tariff?> _cachedById(int id) async {
+    for (final tariff in await _local.readAll()) {
+      if (tariff.id == id) {
+        return tariff;
+      }
     }
-    return session.token;
+    return null;
   }
 
   Map<String, dynamic> _toCreatePayload(CreateTariffCommand command) => {
-        'category_id': command.categoryId,
-        'type': command.type.name,
-        'amount': command.amount,
-        'start_time': command.startTime,
-        'end_time': command.endTime,
-      };
+    'category_id': command.categoryId,
+    'type': command.type.name,
+    'amount': command.amount,
+    'start_time': command.startTime,
+    'end_time': command.endTime,
+  };
 
   Map<String, dynamic> _toUpdatePayload(UpdateTariffCommand command) => {
-        if (command.type != null) 'type': command.type!.name,
-        if (command.amount != null) 'amount': command.amount,
-        if (command.startTime != null) 'start_time': command.startTime,
-        if (command.endTime != null) 'end_time': command.endTime,
-        if (command.active != null) 'active': command.active,
-      };
+    if (command.type != null) 'type': command.type!.name,
+    if (command.amount != null) 'amount': command.amount,
+    if (command.startTime != null) 'start_time': command.startTime,
+    if (command.endTime != null) 'end_time': command.endTime,
+    if (command.active != null) 'active': command.active,
+  };
 }

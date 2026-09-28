@@ -5,13 +5,13 @@ import '../domain/entities/tariff.dart';
 import 'models/tariff_dto.dart';
 
 abstract class TariffRemoteDataSource {
-  Future<List<Tariff>> list(String token);
+  Future<List<Tariff>> list();
 
-  Future<Tariff> create(String token, Map<String, dynamic> payload);
+  Future<Tariff> create(Map<String, dynamic> payload);
 
-  Future<Tariff> update(String token, int id, Map<String, dynamic> payload);
+  Future<Tariff> update(int id, Map<String, dynamic> payload);
 
-  Future<void> delete(String token, int id);
+  Future<void> delete(int id);
 }
 
 class DioTariffRemoteDataSource implements TariffRemoteDataSource {
@@ -22,15 +22,15 @@ class DioTariffRemoteDataSource implements TariffRemoteDataSource {
   static const _path = '/api/tariffs';
 
   @override
-  Future<List<Tariff>> list(String token) async {
+  Future<List<Tariff>> list() async {
     try {
-      final response = await _dio.get(
-        _path,
-        options: Options(headers: _auth(token)),
-      );
+      final response = await _dio.get(_path);
       final data = response.data as List<dynamic>;
       return data
-          .map((item) => TariffDto.fromJson(item as Map<String, dynamic>).toDomain())
+          .map(
+            (item) =>
+                TariffDto.fromJson(item as Map<String, dynamic>).toDomain(),
+          )
           .toList();
     } on DioException catch (error) {
       throw mapDioError(error);
@@ -38,42 +38,33 @@ class DioTariffRemoteDataSource implements TariffRemoteDataSource {
   }
 
   @override
-  Future<Tariff> create(String token, Map<String, dynamic> payload) async {
+  Future<Tariff> create(Map<String, dynamic> payload) async {
     try {
-      final response = await _dio.post(
-        _path,
-        data: payload,
-        options: Options(headers: _auth(token)),
-      );
-      return TariffDto.fromJson(response.data as Map<String, dynamic>).toDomain();
+      final response = await _dio.post(_path, data: payload);
+      return TariffDto.fromJson(response.data as Map<String, dynamic>)
+          .toDomain();
     } on DioException catch (error) {
       throw mapDioError(error);
     }
   }
 
   @override
-  Future<Tariff> update(String token, int id, Map<String, dynamic> payload) async {
+  Future<Tariff> update(int id, Map<String, dynamic> payload) async {
     try {
-      final response = await _dio.patch(
-        '$_path/$id',
-        data: payload,
-        options: Options(headers: _auth(token)),
-      );
-      return TariffDto.fromJson(response.data as Map<String, dynamic>).toDomain();
+      final response = await _dio.patch('$_path/$id', data: payload);
+      return TariffDto.fromJson(response.data as Map<String, dynamic>)
+          .toDomain();
     } on DioException catch (error) {
       throw mapDioError(error);
     }
   }
 
   @override
-  Future<void> delete(String token, int id) async {
+  Future<void> delete(int id) async {
     try {
-      await _dio.delete('$_path/$id', options: Options(headers: _auth(token)));
+      await _dio.delete('$_path/$id');
     } on DioException catch (error) {
       throw mapDioError(error);
     }
   }
-
-  Map<String, String> _auth(String token) =>
-      {'Authorization': 'Bearer $token'};
 }

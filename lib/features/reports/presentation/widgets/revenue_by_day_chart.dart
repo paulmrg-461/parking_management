@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/l10n/l10n.dart';
+import '../../../../core/theme/tokens.dart';
 import '../../../../core/utils/cop_formatter.dart';
 import '../../domain/entities/revenue_report.dart';
 import '../report_colors.dart';
@@ -21,29 +23,27 @@ class RevenueByDayChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (byDay.isEmpty) {
-      return const Center(child: Text('No revenue data for this range'));
+      return Center(child: Text(context.l10n.reportsNoRevenue));
     }
     final maxAmount = byDay
         .map((d) => d.amount)
         .fold<int>(0, (max, amount) => amount > max ? amount : max);
     final barColor = ReportColors.sequential(context);
+    final axisStyle = _axisStyle(context);
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(Space.md),
       decoration: BoxDecoration(
         color: ReportColors.chartSurface(context),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(Radii.sm),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             maxAmount == 0 ? '' : CopFormatter.format(maxAmount),
-            style: TextStyle(
-              fontSize: 11,
-              color: ReportColors.mutedText(context),
-            ),
+            style: axisStyle,
           ),
           SizedBox(
             height: _chartHeight,
@@ -65,31 +65,24 @@ class RevenueByDayChart extends StatelessWidget {
             ),
           ),
           Container(height: 1, color: ReportColors.baseline(context)),
-          const SizedBox(height: 4),
+          const SizedBox(height: Space.xs),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                _shortDate(byDay.first.date),
-                style: TextStyle(
-                  fontSize: 11,
-                  color: ReportColors.mutedText(context),
-                ),
-              ),
+              Text(_shortDate(byDay.first.date), style: axisStyle),
               if (byDay.length > 1)
-                Text(
-                  _shortDate(byDay.last.date),
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: ReportColors.mutedText(context),
-                  ),
-                ),
+                Text(_shortDate(byDay.last.date), style: axisStyle),
             ],
           ),
         ],
       ),
     );
   }
+
+  /// `labelSmall` so axis text follows the user's text scale.
+  static TextStyle? _axisStyle(BuildContext context) =>
+      Theme.of(context).textTheme.labelSmall
+          ?.copyWith(color: ReportColors.mutedText(context));
 
   static String _shortDate(DateTime date) =>
       '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}';
@@ -112,10 +105,29 @@ class _Bar extends StatelessWidget {
   final double chartHeight;
   final double barMaxWidth;
 
+  static const _minBar = 2.0;
+  static const _barWidthFactor = 0.7;
+
+  /// Room for the peak label at the current text scale.
+  static double _labelReserve(BuildContext context, TextStyle? style) {
+    final fontSize = style?.fontSize ?? 11;
+    final scaled = MediaQuery.textScalerOf(context).scale(fontSize);
+    return (scaled * (style?.height ?? 1.5)).ceilToDouble() + Space.xs;
+  }
+
   @override
   Widget build(BuildContext context) {
     final ratio = maxAmount == 0 ? 0.0 : day.amount / maxAmount;
-    final barHeight = (chartHeight - (isPeak ? 16 : 0)) * ratio;
+    final labelStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
+      fontWeight: FontWeight.w600,
+      color: ReportColors.primaryText(context),
+    );
+    // Every bar reserves the label room so all share one scale.
+    final reserve = _labelReserve(context, labelStyle);
+    final barHeight = ((chartHeight - reserve) * ratio).clamp(
+      _minBar,
+      chartHeight,
+    );
     return Tooltip(
       message:
           '${RevenueByDayChart._shortDate(day.date)}: ${CopFormatter.format(day.amount)}',
@@ -125,22 +137,23 @@ class _Bar extends StatelessWidget {
           if (isPeak)
             Text(
               CopFormatter.format(day.amount),
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-                color: ReportColors.primaryText(context),
-              ),
+              style: labelStyle,
+              maxLines: 1,
+              softWrap: false,
+              overflow: TextOverflow.visible,
             ),
-          const SizedBox(height: 2),
-          Center(
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 1),
-              width: barMaxWidth,
-              height: barHeight < 2 ? 2 : barHeight,
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(4),
+          if (isPeak) const SizedBox(height: Space.xs),
+          ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: barMaxWidth),
+            child: FractionallySizedBox(
+              widthFactor: _barWidthFactor,
+              child: Container(
+                height: barHeight,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(Space.xs),
+                  ),
                 ),
               ),
             ),

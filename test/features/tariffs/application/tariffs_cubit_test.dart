@@ -1,61 +1,80 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/error/failure.dart';
+import 'package:parking_management/core/state/submission.dart';
+import 'package:parking_management/features/categories/domain/entities/category.dart';
 import 'package:parking_management/features/tariffs/application/tariffs_cubit.dart';
 import 'package:parking_management/features/tariffs/domain/commands/create_tariff_command.dart';
 import 'package:parking_management/features/tariffs/domain/commands/update_tariff_command.dart';
 import 'package:parking_management/features/tariffs/domain/entities/tariff.dart';
-import 'package:parking_management/features/tariffs/domain/repositories/tariff_repository.dart';
 
-class _FakeRepository implements TariffRepository {
-  _FakeRepository({this.listError});
+import '../../../helpers/fake_category_repository.dart';
+import '../../../helpers/fake_tariff_repository.dart';
 
-  final Failure? listError;
-
-  @override
-  Future<List<Tariff>> list() async {
-    if (listError != null) {
-      throw listError!;
-    }
-    return const [Tariff(id: 1, categoryId: 1, type: TariffType.hourly, amount: 3000)];
-  }
-
-  @override
-  Future<Tariff> create(CreateTariffCommand command) async =>
-      Tariff(id: 2, categoryId: command.categoryId, type: command.type, amount: command.amount);
-
-  @override
-  Future<Tariff> update(UpdateTariffCommand command) async =>
-      const Tariff(id: 1, categoryId: 1, type: TariffType.daily, amount: 20000);
-
-  @override
-  Future<void> delete(int id) async {}
-}
+const _hourly = hourlyTariff;
 
 void main() {
-  test('load emits loaded state with tariffs', () async {
-    final cubit = TariffsCubit(_FakeRepository());
+  late FakeTariffRepository repository;
+  late FakeCategoryRepository categories;
+  late TariffsCubit cubit;
 
-    await cubit.load();
-
-    expect(cubit.state, isA<TariffsLoaded>());
-    expect((cubit.state as TariffsLoaded).tariffs.single.amount, 3000);
+  setUp(() {
+    repository = FakeTariffRepository();
+    categories = FakeCategoryRepository(const [Category(id: 1, name: 'carro')]);
+    cubit = TariffsCubit(repository, categories);
   });
 
-  test('load failure emits failure state', () async {
-    final cubit = TariffsCubit(_FakeRepository(listError: const NetworkFailure('offline')));
+  tearDown(() => cubit.close());
 
+  TariffsLoaded loaded() => cubit.state as TariffsLoaded;
+
+  test('Success: load precomputes category names for each tariff', () async {
     await cubit.load();
 
-    expect(cubit.state, isA<TariffsFailure>());
+    expect(loaded().tariffs, const [_hourly]);
+    expect(loaded().categoryNameOf(_hourly), 'carro');
   });
 
-  test('create persists and reloads', () async {
-    final cubit = TariffsCubit(_FakeRepository());
+  test('Success: create reloads the list', () async {
+    await cubit.load();
 
     await cubit.create(
-      const CreateTariffCommand(categoryId: 1, type: TariffType.daily, amount: 20000),
+      const CreateTariffCommand(
+        categoryId: 1,
+        type: TariffType.daily,
+        amount: 20000,
+      ),
     );
 
-    expect(cubit.state, isA<TariffsLoaded>());
+    expect(loaded().tariffs, hasLength(2));
+    expect(loaded().submission, const SubmissionIdle());
+  });
+
+  test('Failure: load failure emits failure state', () async {
+    repository.listError = const NetworkFailure('offline');
+
+    await cubit.load();
+
+    expect(cubit.state, const TariffsFailure('offline'));
+  });
+
+  test(
+    'Failure: a failed toggle keeps the list and reports the error',
+    () async {
+      await cubit.load();
+      repository.writeError = const ValidationFailure('Invalid window');
+
+      await cubit.update(const UpdateTariffCommand(id: 1, active: false));
+
+      expect(loaded().tariffs, const [_hourly]);
+      expect(loaded().submission, const SubmissionFailed('Invalid window'));
+    },
+  );
+
+  test('Security: missing categories fall back to the id label', () async {
+    categories.listError = const NetworkFailure('offline');
+
+    await cubit.load();
+
+    expect(loaded().categoryNameOf(_hourly), 'Category 1');
   });
 }

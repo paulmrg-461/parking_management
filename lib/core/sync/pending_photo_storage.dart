@@ -1,51 +1,35 @@
-import 'dart:io';
+import 'package:cross_file/cross_file.dart';
 
-import 'package:path/path.dart' as path;
-import 'package:path_provider/path_provider.dart';
-
-/// Persists a queued check-in's evidence photos into app-persistent storage
-/// (`getApplicationSupportDirectory()/pending_check_ins/<clientRef>/`).
+/// Persists a queued check-in's evidence photos until the outbox replays it.
 ///
-/// The image picker's original file lives in a transient/cache location the
-/// OS can reclaim before the offline queue drains, so this copy is required
-/// (not merely a convenience) for a queued check-in to survive until replay.
-class PendingPhotoStorage {
-  static const _rootFolder = 'pending_check_ins';
-
-  /// Copies each of [photos] into the persistent folder for [clientRef] and
-  /// returns the persisted file paths, in the same order as [photos].
+/// The picker's original file lives in a transient/cache location the OS
+/// can reclaim (mobile) or only in memory (web), so a durable copy is
+/// required for a queued check-in to survive until replay. Implementations:
+/// files on mobile, Hive bytes on web.
+abstract class PendingPhotoStorage {
+  /// Stores [photos] for [clientRef] and returns opaque references, in the
+  /// same order, to be queued in the mutation payload.
   Future<List<String>> persist({
     required String clientRef,
-    required List<File> photos,
-  }) async {
-    final dir = await _directoryFor(clientRef);
-    await dir.create(recursive: true);
+    required List<XFile> photos,
+  });
 
-    final persistedPaths = <String>[];
-    for (var i = 0; i < photos.length; i++) {
-      persistedPaths.add(await _copyOne(photos[i], dir, i));
-    }
-    return persistedPaths;
-  }
+  /// Resolves references returned by [persist] back into readable photos.
+  Future<List<XFile>> load(List<String> refs);
 
-  /// Deletes the persisted photo folder for [clientRef] (cleanup after a
-  /// successful replay). No-op if it does not exist.
-  Future<void> deleteFor(String clientRef) async {
-    final dir = await _directoryFor(clientRef);
-    if (await dir.exists()) {
-      await dir.delete(recursive: true);
-    }
-  }
+  /// Deletes every photo stored for [clientRef] (no-op if none).
+  Future<void> deleteFor(String clientRef);
+}
 
-  Future<String> _copyOne(File source, Directory dir, int index) async {
-    final extension = path.extension(source.path);
-    final target = path.join(dir.path, 'photo_$index$extension');
-    final copied = await source.copy(target);
-    return copied.path;
-  }
+/// MIME type for a photo file name (backend accepts JPEG/PNG only).
+String photoMimeType(String name) =>
+    name.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg';
 
-  Future<Directory> _directoryFor(String clientRef) async {
-    final base = await getApplicationSupportDirectory();
-    return Directory(path.join(base.path, _rootFolder, clientRef));
-  }
+/// File extension (with dot) for [photo], defaulting to `.jpg`. Looks at
+/// the MIME type, then the name (web), then the path (mobile).
+String photoExtensionOf(XFile photo) {
+  final label = photo.name.isNotEmpty ? photo.name : photo.path;
+  final isPng =
+      photo.mimeType == 'image/png' || label.toLowerCase().endsWith('.png');
+  return isPng ? '.png' : '.jpg';
 }

@@ -1,11 +1,13 @@
 """Tariff endpoints."""
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Request, Response, status
 
-from app.application.tariff_service import TariffNotFoundError, TariffPatch, TariffService
+from app.application.tariff_service import TariffPatch, TariffService
+from app.domain.pagination import PageRequest
 from app.domain.tariff import Tariff
-from app.infrastructure.repositories.tariff_repository import SqlAlchemyTariffRepository
-from app.presentation.deps import get_current_user, get_tariff_repository, require_admin
+from app.presentation.deps import get_current_user, get_tariff_service, require_admin
+from app.presentation.http_cache import conditional_json
+from app.presentation.pagination import TOTAL_COUNT_HEADER, page_request
 from app.presentation.schemas import TariffCreate, TariffRead, TariffUpdate
 
 router = APIRouter(tags=["tariffs"])
@@ -17,16 +19,14 @@ router = APIRouter(tags=["tariffs"])
     dependencies=[Depends(get_current_user)],
 )
 async def list_tariffs(
+    request: Request,
     category_id: int | None = None,
-    tariffs: SqlAlchemyTariffRepository = Depends(get_tariff_repository),
-) -> list[TariffRead]:
-    service = TariffService(tariffs)
-    result = (
-        await service.list_by_category(category_id)
-        if category_id is not None
-        else await service.list_all()
-    )
-    return [TariffRead.model_validate(tariff) for tariff in result]
+    page: PageRequest = Depends(page_request),
+    service: TariffService = Depends(get_tariff_service),
+) -> Response:
+    result = await service.list_page(page, category_id)
+    items = [TariffRead.model_validate(tariff) for tariff in result.items]
+    return conditional_json(request, items, {TOTAL_COUNT_HEADER: str(result.total)})
 
 
 @router.post(
@@ -36,25 +36,11 @@ async def list_tariffs(
     dependencies=[Depends(require_admin)],
 )
 async def create_tariff(
-    body: TariffCreate,
-    tariffs: SqlAlchemyTariffRepository = Depends(get_tariff_repository),
+    body: TariffCreate, service: TariffService = Depends(get_tariff_service)
 ) -> TariffRead:
-    try:
-        tariff = await TariffService(tariffs).create(
-            Tariff(
-                id=None,
-                category_id=body.category_id,
-                type=body.type,
-                amount=body.amount,
-                start_time=body.start_time,
-                end_time=body.end_time,
-            )
-        )
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
-        ) from exc
-    return TariffRead.model_validate(tariff)
+    tariff = Tariff(id=None, category_id=body.category_id, type=body.type, amount=body.amount,
+                    start_time=body.start_time, end_time=body.end_time)
+    return TariffRead.model_validate(await service.create(tariff))
 
 
 @router.patch(
@@ -65,28 +51,10 @@ async def create_tariff(
 async def update_tariff(
     tariff_id: int,
     body: TariffUpdate,
-    tariffs: SqlAlchemyTariffRepository = Depends(get_tariff_repository),
+    service: TariffService = Depends(get_tariff_service),
 ) -> TariffRead:
-    try:
-        tariff = await TariffService(tariffs).update(
-            tariff_id,
-            TariffPatch(
-                type=body.type,
-                amount=body.amount,
-                start_time=body.start_time,
-                end_time=body.end_time,
-                active=body.active,
-            ),
-        )
-    except TariffNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Tariff not found"
-        ) from exc
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
-        ) from exc
-    return TariffRead.model_validate(tariff)
+    patch = TariffPatch(**body.model_dump())
+    return TariffRead.model_validate(await service.update(tariff_id, patch))
 
 
 @router.delete(
@@ -95,12 +63,6 @@ async def update_tariff(
     dependencies=[Depends(require_admin)],
 )
 async def delete_tariff(
-    tariff_id: int,
-    tariffs: SqlAlchemyTariffRepository = Depends(get_tariff_repository),
+    tariff_id: int, service: TariffService = Depends(get_tariff_service)
 ) -> None:
-    try:
-        await TariffService(tariffs).delete(tariff_id)
-    except TariffNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Tariff not found"
-        ) from exc
+    await service.delete(tariff_id)

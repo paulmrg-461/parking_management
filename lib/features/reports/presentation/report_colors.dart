@@ -47,30 +47,47 @@ class ReportColors {
   /// legend needed, per the skill's series-count ladder).
   static Color sequential(BuildContext context) => categorical(context, 0);
 
+  static Brightness _brightness(BuildContext context) =>
+      Theme.of(context).brightness;
+
   static Color primaryText(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark
-          ? const Color(0xFFFFFFFF)
-          : const Color(0xFF0B0B0B);
+      _brightness(context) == Brightness.dark
+      ? const Color(0xFFFFFFFF)
+      : const Color(0xFF0B0B0B);
 
   static Color secondaryText(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark
-          ? const Color(0xFFC3C2B7)
-          : const Color(0xFF52514E);
+      secondaryTextFor(_brightness(context));
 
-  static Color mutedText(BuildContext context) => const Color(0xFF898781);
+  static Color secondaryTextFor(Brightness brightness) =>
+      brightness == Brightness.dark
+      ? const Color(0xFFC3C2B7)
+      : const Color(0xFF52514E);
+
+  /// Axis/date labels. Darkened from `#898781` (≈3.5:1) so they reach
+  /// WCAG AA (≥ 4.5:1) on [chartSurface] in both themes.
+  static Color mutedText(BuildContext context) =>
+      mutedTextFor(_brightness(context));
+
+  static Color mutedTextFor(Brightness brightness) =>
+      brightness == Brightness.dark
+      ? const Color(0xFFA3A29A)
+      : const Color(0xFF6B6A65);
 
   static Color gridline(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark
-          ? const Color(0xFF2C2C2A)
-          : const Color(0xFFE1E0D9);
+      _brightness(context) == Brightness.dark
+      ? const Color(0xFF2C2C2A)
+      : const Color(0xFFE1E0D9);
 
   static Color baseline(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark
-          ? const Color(0xFF383835)
-          : const Color(0xFFC3C2B7);
+      _brightness(context) == Brightness.dark
+      ? const Color(0xFF383835)
+      : const Color(0xFFC3C2B7);
 
   static Color chartSurface(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark
-          ? const Color(0xFF1A1A19)
-          : const Color(0xFFFCFCFB);
+      chartSurfaceFor(_brightness(context));
+
+  static Color chartSurfaceFor(Brightness brightness) =>
+      brightness == Brightness.dark
+      ? const Color(0xFF1A1A19)
+      : const Color(0xFFFCFCFB);
 }

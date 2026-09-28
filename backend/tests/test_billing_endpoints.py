@@ -94,3 +94,46 @@ async def test_quote_requires_authentication(client, session_factory):
     )
 
     assert response.status_code == 401
+
+
+async def test_quote_rejects_naive_datetimes(client, session_factory):
+    headers = await _auth_headers(client, session_factory)
+    category_id = await _create_category_with_hourly_tariff(client, headers)
+
+    response = await client.get(
+        "/api/billing/quote",
+        params={
+            "category_id": category_id,
+            "entry_time": "2026-01-01T08:00:00",
+            "exit_time": "2026-01-01T09:00:00",
+        },
+        headers=headers,
+    )
+
+    assert response.status_code == 422
+
+
+async def test_quote_applies_night_rate_in_business_local_time(
+    client, session_factory
+):
+    headers = await _auth_headers(client, session_factory)
+    category_id = await _create_category_with_hourly_tariff(client, headers, 3000)
+    await client.post(
+        "/api/tariffs",
+        json={"category_id": category_id, "type": "nightly", "amount": 1000,
+              "start_time": "22:00", "end_time": "06:00"},
+        headers=headers,
+    )
+
+    # 21:00 -> 23:00 America/Bogota.
+    response = await client.get(
+        "/api/billing/quote",
+        params={
+            "category_id": category_id,
+            "entry_time": "2026-01-02T02:00:00Z",
+            "exit_time": "2026-01-02T04:00:00Z",
+        },
+        headers=headers,
+    )
+
+    assert response.json() == {"amount": "4000"}

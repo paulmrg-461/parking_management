@@ -1,17 +1,19 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../core/state/submission.dart';
 import '../../../core/utils/cop_formatter.dart';
-import '../../vehicles/application/vehicles_cubit.dart';
-import '../../vehicles/domain/entities/vehicle.dart';
+import '../../../core/widgets/submission_feedback.dart';
+import '../../../core/widgets/sync_badge.dart';
 import '../application/check_out_cubit.dart';
 import '../domain/entities/check_out_receipt.dart';
 import '../domain/entities/open_session.dart';
 
-/// Lists currently open parking sessions (resolving each session's
-/// `vehicle_id` to its plate via [VehiclesCubit], the same join style used
-/// by the vehicles feature) and lets an operator search by plate and close
-/// one out, showing a receipt on success.
+/// Lists currently open parking sessions (plates resolved by the cubit),
+/// lets an operator search by plate (debounced in the cubit) and close one
+/// out, showing a receipt on success. Long lists page in on scroll.
 class CheckOutPage extends StatefulWidget {
   const CheckOutPage({super.key});
 
@@ -20,45 +22,61 @@ class CheckOutPage extends StatefulWidget {
 }
 
 class _CheckOutPageState extends State<CheckOutPage> {
-  final _searchController = TextEditingController();
-
   @override
   void initState() {
     super.initState();
-    context.read<CheckOutCubit>().loadOpenSessions();
-    context.read<VehiclesCubit>().load();
+    unawaited(context.read<CheckOutCubit>().loadOpenSessions());
   }
 
   @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _confirmCheckOut(
-    BuildContext context,
-    OpenSession session,
-    String plate,
-  ) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Check out'),
-        content: Text('Check out vehicle $plate?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Confirm'),
-          ),
-        ],
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Check-out'),
+        actions: const [SyncBadge()],
+      ),
+      body: BlocListener<CheckOutCubit, CheckOutState>(
+        listenWhen: (previous, current) =>
+            submissionJustFailed(
+              _submissionOf(previous),
+              _submissionOf(current),
+            ) ||
+            submissionJustSucceeded(
+              _submissionOf(previous),
+              _submissionOf(current),
+            ),
+        listener: _onSubmission,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Search by plate',
+                  prefixIcon: Icon(Icons.search),
+                ),
+                textCapitalization: TextCapitalization.characters,
+                onChanged: context.read<CheckOutCubit>().search,
+              ),
+            ),
+            const Expanded(child: _SessionsList()),
+          ],
+        ),
       ),
     );
-    if (confirmed == true && context.mounted) {
-      context.read<CheckOutCubit>().checkOut(session.id);
+  }
+
+  static Submission? _submissionOf(CheckOutState state) =>
+      state is CheckOutLoaded ? state.submission : null;
+
+  void _onSubmission(BuildContext context, CheckOutState state) {
+    switch (_submissionOf(state)) {
+      case SubmissionSucceeded<CheckOutReceipt>(:final result):
+        unawaited(_showReceipt(context, result));
+      case SubmissionFailed(:final message):
+        showErrorSnack(context, message);
+      default:
+        break;
     }
   }
 
@@ -92,100 +110,125 @@ class _CheckOutPageState extends State<CheckOutPage> {
     }
     return [
       Text('Plate: ${receipt.plate}'),
-      Text('Entry: ${receipt.entryTime}'),
-      Text('Exit: ${receipt.exitTime}'),
+      Text('Entry: ${receipt.entryTime.toLocal()}'),
+      Text('Exit: ${receipt.exitTime.toLocal()}'),
       Text('Amount: ${CopFormatter.format(receipt.amountCharged!)}'),
       Text('Ticket: ${receipt.ticketNumber}'),
     ];
   }
+}
+
+/// Rebuilds only when what it renders changes (not on submission status).
+class _SessionsList extends StatelessWidget {
+  const _SessionsList();
+
+  static const _loadMoreThreshold = 200.0;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Check-out')),
-      body: BlocConsumer<CheckOutCubit, CheckOutState>(
-        listener: (context, state) {
-          if (state is CheckOutSuccess) {
-            _showReceipt(context, state.receipt);
-          }
-        },
-        builder: (context, state) => Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: TextField(
-                controller: _searchController,
-                decoration: const InputDecoration(
-                  labelText: 'Search by plate',
-                  prefixIcon: Icon(Icons.search),
-                ),
-                textCapitalization: TextCapitalization.characters,
-                onChanged: (_) => setState(() {}),
-              ),
-            ),
-            Expanded(child: _buildBody(context, state)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBody(BuildContext context, CheckOutState state) {
-    return switch (state) {
-      CheckOutInitial() ||
-      CheckOutLoading() ||
-      CheckOutProcessing() ||
-      CheckOutSuccess() =>
-        const Center(child: CircularProgressIndicator()),
-      CheckOutFailure(message: final message) => Center(child: Text(message)),
-      CheckOutLoaded(sessions: final sessions) =>
-        BlocBuilder<VehiclesCubit, VehiclesState>(
-          builder: (context, vehiclesState) {
-            final vehicles = vehiclesState is VehiclesLoaded
-                ? vehiclesState.vehicles
-                : const <Vehicle>[];
-            return _buildSessionsList(context, sessions, vehicles);
-          },
-        ),
-    };
-  }
-
-  Widget _buildSessionsList(
-    BuildContext context,
-    List<OpenSession> sessions,
-    List<Vehicle> vehicles,
-  ) {
-    final query = _searchController.text.trim().toLowerCase();
-    final entries = [
-      for (final session in sessions)
-        (session: session, plate: _plateOf(vehicles, session.vehicleId)),
-    ].where((entry) => query.isEmpty || entry.plate.toLowerCase().contains(query)).toList();
-
-    if (entries.isEmpty) {
-      return const Center(child: Text('No open sessions'));
-    }
-    return ListView.builder(
-      itemCount: entries.length,
-      itemBuilder: (context, index) {
-        final entry = entries[index];
-        return ListTile(
-          title: Text(entry.plate),
-          subtitle: Text('Entry: ${entry.session.entryTime}'),
-          trailing: FilledButton(
-            onPressed: () => _confirmCheckOut(context, entry.session, entry.plate),
-            child: const Text('Check out'),
-          ),
-        );
+    return BlocBuilder<CheckOutCubit, CheckOutState>(
+      buildWhen: (previous, current) =>
+          previous is! CheckOutLoaded ||
+          current is! CheckOutLoaded ||
+          previous.visible != current.visible ||
+          previous.plates != current.plates ||
+          previous.hasMore != current.hasMore ||
+          previous.loadingMore != current.loadingMore,
+      builder: (context, state) => switch (state) {
+        CheckOutInitial() ||
+        CheckOutLoading() => const Center(child: CircularProgressIndicator()),
+        CheckOutFailure(:final message) => Center(child: Text(message)),
+        final CheckOutLoaded loaded => _buildList(context, loaded),
       },
     );
   }
 
-  String _plateOf(List<Vehicle> vehicles, int vehicleId) {
-    for (final vehicle in vehicles) {
-      if (vehicle.id == vehicleId) {
-        return vehicle.plate;
-      }
+  Widget _buildList(BuildContext context, CheckOutLoaded state) {
+    if (state.visible.isEmpty) {
+      return const Center(child: Text('No open sessions'));
     }
-    return 'Vehicle $vehicleId';
+    final showFooter = state.hasMore && state.query.isEmpty;
+    return NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        if (showFooter &&
+            notification.metrics.extentAfter < _loadMoreThreshold) {
+          unawaited(context.read<CheckOutCubit>().loadMore());
+        }
+        return false;
+      },
+      child: ListView.builder(
+        itemCount: state.visible.length + (showFooter ? 1 : 0),
+        itemBuilder: (context, index) => index == state.visible.length
+            ? _LoadMoreTile(loading: state.loadingMore)
+            : _SessionTile(
+                session: state.visible[index],
+                plate: state.plateOf(state.visible[index]),
+              ),
+      ),
+    );
+  }
+}
+
+class _SessionTile extends StatelessWidget {
+  const _SessionTile({required this.session, required this.plate});
+
+  final OpenSession session;
+  final String plate;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      title: Text(plate),
+      subtitle: Text('Entry: ${session.entryTime.toLocal()}'),
+      trailing: FilledButton(
+        onPressed: () => _confirmCheckOut(context),
+        child: const Text('Check out'),
+      ),
+    );
+  }
+
+  Future<void> _confirmCheckOut(BuildContext context) async {
+    final cubit = context.read<CheckOutCubit>();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Check out'),
+        content: Text('Check out vehicle $plate?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await cubit.checkOut(session.id);
+    }
+  }
+}
+
+class _LoadMoreTile extends StatelessWidget {
+  const _LoadMoreTile({required this.loading});
+
+  final bool loading;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Center(
+        child: loading
+            ? const CircularProgressIndicator()
+            : OutlinedButton(
+                onPressed: () => context.read<CheckOutCubit>().loadMore(),
+                child: const Text('Load more'),
+              ),
+      ),
+    );
   }
 }

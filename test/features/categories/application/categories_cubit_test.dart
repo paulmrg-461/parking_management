@@ -1,61 +1,67 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/error/failure.dart';
+import 'package:parking_management/core/state/submission.dart';
 import 'package:parking_management/features/categories/application/categories_cubit.dart';
 import 'package:parking_management/features/categories/domain/entities/category.dart';
-import 'package:parking_management/features/categories/domain/repositories/category_repository.dart';
 
-class _FakeRepository implements CategoryRepository {
-  _FakeRepository({this.listError});
+import '../../../helpers/fake_category_repository.dart';
 
-  final Failure? listError;
-
-  @override
-  Future<List<Category>> list() async {
-    if (listError != null) {
-      throw listError!;
-    }
-    return const [
-      Category(id: 1, name: 'carro'),
-      Category(id: 2, name: 'moto'),
-    ];
-  }
-
-  @override
-  Future<Category> create(String name) async => Category(id: 3, name: name);
-
-  @override
-  Future<Category> update(int id, String name) async =>
-      Category(id: id, name: name);
-
-  @override
-  Future<void> delete(int id) async {}
-}
+const _car = Category(id: 1, name: 'carro');
+const _moto = Category(id: 2, name: 'moto');
 
 void main() {
-  test('load emits loaded state with categories', () async {
-    final cubit = CategoriesCubit(_FakeRepository());
+  late FakeCategoryRepository repository;
+  late CategoriesCubit cubit;
 
-    await cubit.load();
-
-    expect(cubit.state, isA<CategoriesLoaded>());
-    expect((cubit.state as CategoriesLoaded).categories.length, 2);
+  setUp(() {
+    repository = FakeCategoryRepository(const [_car, _moto]);
+    cubit = CategoriesCubit(repository);
   });
 
-  test('load failure emits failure state', () async {
-    final cubit = CategoriesCubit(
-      _FakeRepository(listError: const NetworkFailure('offline')),
-    );
+  tearDown(() => cubit.close());
 
+  test('Success: load then create reloads with Idle submission', () async {
     await cubit.load();
-
-    expect(cubit.state, isA<CategoriesFailure>());
-  });
-
-  test('create persists and reloads the list', () async {
-    final cubit = CategoriesCubit(_FakeRepository());
-
     await cubit.create('bus');
 
-    expect(cubit.state, isA<CategoriesLoaded>());
+    final state = cubit.state as CategoriesLoaded;
+    expect(state.categories.map((c) => c.name), ['carro', 'moto', 'bus']);
+    expect(state.submission, const SubmissionIdle());
+  });
+
+  test('Failure: load failure emits failure state', () async {
+    repository.listError = const NetworkFailure('offline');
+
+    await cubit.load();
+
+    expect(cubit.state, const CategoriesFailure('offline'));
+  });
+
+  test(
+    'Failure: a failed rename keeps the list and reports SubmissionFailed',
+    () async {
+      await cubit.load();
+      repository.writeError = const ValidationFailure(
+        'Category already exists',
+      );
+
+      await cubit.rename(_car, 'moto');
+
+      expect(
+        cubit.state,
+        const CategoriesLoaded([
+          _car,
+          _moto,
+        ], submission: SubmissionFailed('Category already exists')),
+      );
+    },
+  );
+
+  test('Security: categories without a server id are never mutated', () async {
+    await cubit.load();
+
+    await cubit.delete(const Category(name: 'local'));
+
+    expect(cubit.state, const CategoriesLoaded([_car, _moto]));
   });
 }

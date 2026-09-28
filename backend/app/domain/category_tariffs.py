@@ -9,6 +9,7 @@ reshaping `Tariff` itself.
 
 from dataclasses import dataclass
 
+from app.domain.errors import DomainValidationError
 from app.domain.tariff import Tariff, TariffType
 
 
@@ -26,9 +27,9 @@ class CategoryTariffs:
         if self.nightly is not None and (
             self.nightly.start_time is None or self.nightly.end_time is None
         ):
-            raise ValueError("Nightly tariff requires a time window")
+            raise DomainValidationError("Nightly tariff requires a time window")
 
 
 def _assert_type(tariff: Tariff | None, expected: TariffType) -> None:
     if tariff is not None and tariff.type != expected:
-        raise ValueError(f"Expected a {expected.value} tariff, got {tariff.type.value}")
+        raise DomainValidationError(f"Expected a {expected.value} tariff, got {tariff.type.value}")

@@ -5,6 +5,14 @@ import 'package:hive_ce/hive_ce.dart';
 import 'package:parking_management/core/sync/pending_mutation.dart';
 import 'package:parking_management/core/sync/sync_outbox.dart';
 
+PendingMutation _mutation(int id) => PendingMutation(
+  entityType: MutationEntity.vehicle,
+  operation: MutationOperation.update,
+  entityId: id,
+  payloadJson: '{"color":"red"}',
+  enqueuedAt: DateTime.utc(2026, 1, 1),
+);
+
 void main() {
   late Directory tempDir;
 
@@ -18,54 +26,66 @@ void main() {
     await tempDir.delete(recursive: true);
   });
 
-  test('enqueue, listPending and remove round-trip a pending mutation', () async {
+  test(
+    'Success: enqueue, listPending and remove round-trip a mutation',
+    () async {
+      final outbox = HiveSyncOutbox();
+
+      await outbox.enqueue(_mutation(1));
+      final pending = await outbox.listPending();
+
+      expect(pending.single.value, _mutation(1));
+
+      await outbox.remove(pending.single.key);
+
+      expect(await outbox.listPending(), isEmpty);
+    },
+  );
+
+  test(
+    'Success: replace moves dead-lettered entries out of the pending list',
+    () async {
+      final outbox = HiveSyncOutbox();
+      await outbox.enqueue(_mutation(1));
+      await outbox.enqueue(_mutation(2));
+      final first = (await outbox.listPending()).first;
+
+      await outbox.replace(
+        first.key,
+        first.value.recordFailure('conflict', deadLettered: true),
+      );
+
+      expect((await outbox.listPending()).single.value.entityId, 2);
+      final dead = await outbox.listDeadLetters();
+      expect(dead.single.value.lastError, 'conflict');
+    },
+  );
+
+  test('Success: watch emits on every change', () async {
     final outbox = HiveSyncOutbox();
-    final mutation = PendingMutation(
-      entityType: 'vehicle',
-      operation: 'update',
-      entityId: 1,
-      payloadJson: '{"color":"red"}',
-      enqueuedAt: DateTime.utc(2026, 1, 1),
-    );
+    final events = <void>[];
+    final subscription = outbox.watch().listen(events.add);
+    await Future<void>.delayed(Duration.zero);
 
-    await outbox.enqueue(mutation);
-    final pending = await outbox.listPending();
+    await outbox.enqueue(_mutation(1));
+    await Future<void>.delayed(Duration.zero);
 
-    expect(pending, hasLength(1));
-    expect(pending.single.value.entityType, 'vehicle');
-    expect(pending.single.value.operation, 'update');
-    expect(pending.single.value.entityId, 1);
-    expect(pending.single.value.payloadJson, '{"color":"red"}');
-
-    await outbox.remove(pending.single.key);
-
-    expect(await outbox.listPending(), isEmpty);
+    expect(events, isNotEmpty);
+    await subscription.cancel();
   });
 
-  test('listPending returns multiple entries independently', () async {
-    final outbox = HiveSyncOutbox();
-    await outbox.enqueue(
-      PendingMutation(
-        entityType: 'tariff',
-        operation: 'delete',
-        entityId: 5,
-        payloadJson: null,
-        enqueuedAt: DateTime.utc(2026, 1, 1),
-      ),
-    );
-    await outbox.enqueue(
-      PendingMutation(
-        entityType: 'category',
-        operation: 'update',
-        entityId: 7,
-        payloadJson: '{"name":"bus"}',
-        enqueuedAt: DateTime.utc(2026, 1, 2),
-      ),
-    );
+  test(
+    'Security: a corrupt entry is skipped instead of breaking the queue',
+    () async {
+      final outbox = HiveSyncOutbox();
+      await outbox.enqueue(_mutation(1));
+      final box = await Hive.openBox<String>('sync_outbox');
+      await box.add('{"entityType":"hacker","operation":"x"}');
+      await box.add('not json');
 
-    final pending = await outbox.listPending();
+      final pending = await outbox.listPending();
 
-    expect(pending, hasLength(2));
-    expect(pending.map((e) => e.value.entityId), containsAll([5, 7]));
-  });
+      expect(pending.single.value.entityId, 1);
+    },
+  );
 }

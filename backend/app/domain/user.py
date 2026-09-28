@@ -1,8 +1,10 @@
 """User domain entity, role, and PIN validation."""
 
+import re
 from dataclasses import dataclass
 from enum import Enum
-import re
+
+from app.domain.errors import DomainValidationError
 
 
 class UserRole(str, Enum):
@@ -25,5 +27,5 @@ _PIN_PATTERN = re.compile(r"^\d{4,6}$")
 
 def validate_pin(pin: str) -> str:
     if not _PIN_PATTERN.match(pin):
-        raise ValueError("PIN must be 4 to 6 digits")
+        raise DomainValidationError("PIN must be 4 to 6 digits")
     return pin

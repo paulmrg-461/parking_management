@@ -1,9 +1,17 @@
 """FastAPI application factory."""
 
+import logging
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
+from app.infrastructure.local_evidence_storage import ensure_storage_root
+from app.infrastructure.shared_resources import build_shared_resources
+from app.presentation.deps import install_shared_resources
+from app.presentation.errors import register_exception_handlers
 from app.presentation.routes import (
     auth,
     billing,
@@ -18,27 +26,41 @@ from app.presentation.routes import (
     vehicles,
 )
 
+# Startup notices go to the server log channel (configured by uvicorn).
+logger = logging.getLogger("uvicorn.error")
+
+_ROUTERS = (health, auth, users, categories, tariffs, vehicles, check_ins, check_outs,
+            billing, monthly_passes, reports)
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    ensure_storage_root(settings.evidence_storage_path)
+    resources = build_shared_resources(settings.redis_url)
+    previous = install_shared_resources(resources)
+    logger.info("Shared cache/login limiter backend: %s", resources.backend)
+    try:
+        yield
+    finally:
+        install_shared_resources(previous)
+        await resources.aclose()
+
 
 def create_app() -> FastAPI:
-    application = FastAPI(title=settings.app_name)
+    application = FastAPI(title=settings.app_name, lifespan=lifespan)
+    # Catch-all first (innermost) so CORS still decorates generic 500s.
+    register_exception_handlers(application)
+    # Auth is a Bearer header (no cookies): credentials are never needed.
     application.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origin_list,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_credentials=False,
+        allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE"],
+        allow_headers=["Authorization", "Content-Type", "Idempotency-Key", "If-None-Match"],
+        expose_headers=["X-Total-Count", "ETag", "Retry-After", "Idempotent-Replayed"],
     )
-    application.include_router(health.router, prefix=settings.api_prefix)
-    application.include_router(auth.router, prefix=settings.api_prefix)
-    application.include_router(users.router, prefix=settings.api_prefix)
-    application.include_router(categories.router, prefix=settings.api_prefix)
-    application.include_router(tariffs.router, prefix=settings.api_prefix)
-    application.include_router(vehicles.router, prefix=settings.api_prefix)
-    application.include_router(check_ins.router, prefix=settings.api_prefix)
-    application.include_router(check_outs.router, prefix=settings.api_prefix)
-    application.include_router(billing.router, prefix=settings.api_prefix)
-    application.include_router(monthly_passes.router, prefix=settings.api_prefix)
-    application.include_router(reports.router, prefix=settings.api_prefix)
+    for module in _ROUTERS:
+        application.include_router(module.router, prefix=settings.api_prefix)
     return application
 
 

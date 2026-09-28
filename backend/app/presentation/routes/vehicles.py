@@ -1,16 +1,12 @@
 """Vehicle endpoints."""
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Response, status
 
-from app.application.vehicle_service import (
-    DuplicatePlateError,
-    VehicleNotFoundError,
-    VehiclePatch,
-    VehicleService,
-)
+from app.application.vehicle_service import VehiclePatch, VehicleService
+from app.domain.pagination import Page, PageRequest
 from app.domain.vehicle import Vehicle
-from app.infrastructure.repositories.vehicle_repository import SqlAlchemyVehicleRepository
-from app.presentation.deps import get_current_user, get_vehicle_repository, require_admin
+from app.presentation.deps import get_current_user, get_vehicle_service, require_admin
+from app.presentation.pagination import page_request, with_total
 from app.presentation.schemas import VehicleCreate, VehicleRead, VehicleUpdate
 
 router = APIRouter(tags=["vehicles"])
@@ -22,15 +18,17 @@ router = APIRouter(tags=["vehicles"])
     dependencies=[Depends(get_current_user)],
 )
 async def list_vehicles(
+    response: Response,
     plate: str | None = None,
-    vehicles: SqlAlchemyVehicleRepository = Depends(get_vehicle_repository),
+    page: PageRequest = Depends(page_request),
+    service: VehicleService = Depends(get_vehicle_service),
 ) -> list[VehicleRead]:
-    service = VehicleService(vehicles)
     if plate is not None:
         vehicle = await service.find_by_plate(plate)
-        return [VehicleRead.model_validate(vehicle)] if vehicle else []
-    result = await service.list_all()
-    return [VehicleRead.model_validate(vehicle) for vehicle in result]
+        result = Page([vehicle] if vehicle else [], 1 if vehicle else 0)
+    else:
+        result = await service.list_page(page)
+    return [VehicleRead.model_validate(vehicle) for vehicle in with_total(response, result)]
 
 
 @router.post(
@@ -40,28 +38,11 @@ async def list_vehicles(
     dependencies=[Depends(require_admin)],
 )
 async def create_vehicle(
-    body: VehicleCreate,
-    vehicles: SqlAlchemyVehicleRepository = Depends(get_vehicle_repository),
+    body: VehicleCreate, service: VehicleService = Depends(get_vehicle_service)
 ) -> VehicleRead:
-    try:
-        vehicle = await VehicleService(vehicles).create(
-            Vehicle(
-                id=None,
-                plate=body.plate,
-                category_id=body.category_id,
-                color=body.color,
-                brand=body.brand,
-            )
-        )
-    except DuplicatePlateError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail="Plate already exists"
-        ) from exc
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
-        ) from exc
-    return VehicleRead.model_validate(vehicle)
+    vehicle = Vehicle(id=None, plate=body.plate, category_id=body.category_id,
+                      color=body.color, brand=body.brand)
+    return VehicleRead.model_validate(await service.create(vehicle))
 
 
 @router.patch(
@@ -72,22 +53,10 @@ async def create_vehicle(
 async def update_vehicle(
     vehicle_id: int,
     body: VehicleUpdate,
-    vehicles: SqlAlchemyVehicleRepository = Depends(get_vehicle_repository),
+    service: VehicleService = Depends(get_vehicle_service),
 ) -> VehicleRead:
-    try:
-        vehicle = await VehicleService(vehicles).update(
-            vehicle_id,
-            VehiclePatch(
-                category_id=body.category_id,
-                color=body.color,
-                brand=body.brand,
-            ),
-        )
-    except VehicleNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Vehicle not found"
-        ) from exc
-    return VehicleRead.model_validate(vehicle)
+    patch = VehiclePatch(**body.model_dump())
+    return VehicleRead.model_validate(await service.update(vehicle_id, patch))
 
 
 @router.delete(
@@ -96,12 +65,6 @@ async def update_vehicle(
     dependencies=[Depends(require_admin)],
 )
 async def delete_vehicle(
-    vehicle_id: int,
-    vehicles: SqlAlchemyVehicleRepository = Depends(get_vehicle_repository),
+    vehicle_id: int, service: VehicleService = Depends(get_vehicle_service)
 ) -> None:
-    try:
-        await VehicleService(vehicles).delete(vehicle_id)
-    except VehicleNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Vehicle not found"
-        ) from exc
+    await service.delete(vehicle_id)

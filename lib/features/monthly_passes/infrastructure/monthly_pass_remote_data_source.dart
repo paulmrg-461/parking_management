@@ -5,13 +5,13 @@ import '../domain/entities/monthly_pass.dart';
 import 'models/monthly_pass_dto.dart';
 
 abstract class MonthlyPassRemoteDataSource {
-  Future<List<MonthlyPass>> list(String token, {int? vehicleId});
+  Future<List<MonthlyPass>> list({int? vehicleId});
 
-  Future<MonthlyPass> create(String token, Map<String, dynamic> payload);
+  Future<MonthlyPass> create(Map<String, dynamic> payload);
 
-  Future<MonthlyPass> update(String token, int id, Map<String, dynamic> payload);
+  Future<MonthlyPass> update(int id, Map<String, dynamic> payload);
 
-  Future<void> delete(String token, int id);
+  Future<void> delete(int id);
 }
 
 class DioMonthlyPassRemoteDataSource implements MonthlyPassRemoteDataSource {
@@ -22,17 +22,19 @@ class DioMonthlyPassRemoteDataSource implements MonthlyPassRemoteDataSource {
   static const _path = '/api/monthly-passes';
 
   @override
-  Future<List<MonthlyPass>> list(String token, {int? vehicleId}) async {
+  Future<List<MonthlyPass>> list({int? vehicleId}) async {
     try {
       final response = await _dio.get(
         _path,
         queryParameters: vehicleId != null ? {'vehicle_id': vehicleId} : null,
-        options: Options(headers: _auth(token)),
       );
       final data = response.data as List<dynamic>;
       return data
-          .map((item) =>
-              MonthlyPassDto.fromJson(item as Map<String, dynamic>).toDomain())
+          .map(
+            (item) =>
+                MonthlyPassDto.fromJson(item as Map<String, dynamic>)
+                    .toDomain(),
+          )
           .toList();
     } on DioException catch (error) {
       throw mapDioError(error);
@@ -40,13 +42,9 @@ class DioMonthlyPassRemoteDataSource implements MonthlyPassRemoteDataSource {
   }
 
   @override
-  Future<MonthlyPass> create(String token, Map<String, dynamic> payload) async {
+  Future<MonthlyPass> create(Map<String, dynamic> payload) async {
     try {
-      final response = await _dio.post(
-        _path,
-        data: payload,
-        options: Options(headers: _auth(token)),
-      );
+      final response = await _dio.post(_path, data: payload);
       return MonthlyPassDto.fromJson(response.data as Map<String, dynamic>)
           .toDomain();
     } on DioException catch (error) {
@@ -55,17 +53,9 @@ class DioMonthlyPassRemoteDataSource implements MonthlyPassRemoteDataSource {
   }
 
   @override
-  Future<MonthlyPass> update(
-    String token,
-    int id,
-    Map<String, dynamic> payload,
-  ) async {
+  Future<MonthlyPass> update(int id, Map<String, dynamic> payload) async {
     try {
-      final response = await _dio.patch(
-        '$_path/$id',
-        data: payload,
-        options: Options(headers: _auth(token)),
-      );
+      final response = await _dio.patch('$_path/$id', data: payload);
       return MonthlyPassDto.fromJson(response.data as Map<String, dynamic>)
           .toDomain();
     } on DioException catch (error) {
@@ -74,14 +64,11 @@ class DioMonthlyPassRemoteDataSource implements MonthlyPassRemoteDataSource {
   }
 
   @override
-  Future<void> delete(String token, int id) async {
+  Future<void> delete(int id) async {
     try {
-      await _dio.delete('$_path/$id', options: Options(headers: _auth(token)));
+      await _dio.delete('$_path/$id');
     } on DioException catch (error) {
       throw mapDioError(error);
     }
   }
-
-  Map<String, String> _auth(String token) =>
-      {'Authorization': 'Bearer $token'};
 }

@@ -34,12 +34,15 @@ class AuthUnauthenticated extends AuthState {
 }
 
 class AuthFailure extends AuthState {
-  const AuthFailure(this.message);
+  const AuthFailure(this.message, {this.failure});
+
+  AuthFailure.of(Failure failure) : this(failure.message, failure: failure);
 
   final String message;
+  final Failure? failure;
 
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [message, failure?.code];
 }
 
 class AuthCubit extends Cubit<AuthState> {
@@ -63,7 +66,7 @@ class AuthCubit extends Cubit<AuthState> {
       final session = await _repository.login(username, pin);
       emit(AuthAuthenticated(session));
     } on Failure catch (failure) {
-      emit(AuthFailure(failure.message));
+      emit(AuthFailure.of(failure));
     } on Exception {
       emit(const AuthFailure('Login failed'));
     }
@@ -72,5 +75,13 @@ class AuthCubit extends Cubit<AuthState> {
   Future<void> logout() async {
     await _repository.logout();
     emit(const AuthUnauthenticated());
+  }
+
+  /// Called by the network layer on a 401 for an authenticated request.
+  /// Ignored unless a user is signed in (avoids loops on the login screen).
+  Future<void> sessionExpired() async {
+    if (state is AuthAuthenticated) {
+      await logout();
+    }
   }
 }

@@ -15,6 +15,8 @@ abstract class TariffLocalDataSource {
 class HiveTariffLocalDataSource implements TariffLocalDataSource {
   static const _boxName = 'tariffs';
 
+  /// Opens lazily on first use (returns the already-open box afterwards),
+  /// so reads work on a cold start before any write happened.
   Future<Box<Tariff>> _box() => Hive.openBox<Tariff>(_boxName);
 
   @override
@@ -30,10 +32,7 @@ class HiveTariffLocalDataSource implements TariffLocalDataSource {
 
   @override
   Future<List<Tariff>> readAll() async {
-    if (!Hive.isBoxOpen(_boxName)) {
-      return const [];
-    }
-    return Hive.box<Tariff>(_boxName).values.toList();
+    return (await _box()).values.toList();
   }
 
   @override

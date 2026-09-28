@@ -3,7 +3,7 @@ services:
     image: postgres:16
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: parking
     volumes:
       - db_data:/var/lib/postgresql/data
@@ -12,25 +12,54 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-    ports:
-      - "5432:5432"
+    # No published ports: Postgres is reachable only on the compose network.
+    # For local inspection use `docker compose exec db psql -U postgres parking`.
+
+  redis:
+    image: redis:7-alpine
+    # Cache + login-attempt limiter only (safe to lose): no persistence.
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "64mb",
+              "--maxmemory-policy", "allkeys-lru"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    # No published ports: reachable only on the compose network.
 
   backend:
     build: ./backend
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/parking
-      SECRET_KEY: ${SECRET_KEY:-REPLACE_WITH_A_RANDOM_32+_BYTE_SECRET}
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      DATABASE_URL: postgresql+asyncpg://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/parking
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY is required (see .env.example)}
       JWT_ALGORITHM: HS256
-      ACCESS_TOKEN_EXPIRE_MINUTES: 60
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-60}
+      BUSINESS_TIMEZONE: ${BUSINESS_TIMEZONE:-America/Bogota}
       EVIDENCE_STORAGE_PATH: /app/data/evidence
-      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+      EVIDENCE_MAX_BYTES: ${EVIDENCE_MAX_BYTES:-5242880}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      # Shared cache + login limiter. Empty REDIS_URL = in-process fallback.
+      REDIS_URL: ${REDIS_URL-redis://redis:6379/0}
     volumes:
       - evidence_data:/app/data/evidence
     ports:
       - "8000:8000"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=3)"
+      interval: 15s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
 
 volumes:
   db_data:

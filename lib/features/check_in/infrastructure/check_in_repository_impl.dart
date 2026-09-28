@@ -1,12 +1,13 @@
 import 'dart:convert';
-import 'dart:io';
-import 'dart:math';
+
+import 'package:cross_file/cross_file.dart';
 
 import '../../../core/error/failure.dart';
+import '../../../core/sync/client_ref.dart';
 import '../../../core/sync/pending_mutation.dart';
 import '../../../core/sync/pending_photo_storage.dart';
 import '../../../core/sync/sync_outbox.dart';
-import '../../auth/domain/repositories/auth_repository.dart';
+import '../domain/entities/new_vehicle_info.dart';
 import '../domain/entities/parking_session.dart';
 import '../domain/repositories/check_in_repository.dart';
 import 'check_in_remote_data_source.dart';
@@ -16,9 +17,8 @@ import 'check_in_remote_data_source.dart';
 /// mutation, and returns an optimistic session instead of rethrowing (see
 /// `design.md` for why the synthetic id needs no reconciliation).
 class CheckInRepositoryImpl implements CheckInRepository {
-  CheckInRepositoryImpl(this._auth, this._remote, this._outbox, this._photos);
+  CheckInRepositoryImpl(this._remote, this._outbox, this._photos);
 
-  final AuthRepository _auth;
   final CheckInRemoteDataSource _remote;
   final SyncOutbox _outbox;
   final PendingPhotoStorage _photos;
@@ -26,30 +26,34 @@ class CheckInRepositoryImpl implements CheckInRepository {
   @override
   Future<ParkingSession> createCheckIn({
     required String plate,
-    required List<File> photos,
+    required List<XFile> photos,
+    NewVehicleInfo? newVehicle,
   }) async {
     try {
       return await _remote.createCheckIn(
-        await _currentToken(),
         plate: plate,
         photos: photos,
+        newVehicle: newVehicle,
       );
     } on NetworkFailure {
-      return _queueCheckIn(plate: plate, photos: photos);
+      return _queueCheckIn(
+        plate: plate,
+        photos: photos,
+        newVehicle: newVehicle,
+      );
     }
   }
 
   @override
-  Future<List<ParkingSession>> listOpenSessions() async {
-    return _remote.listOpenSessions(await _currentToken());
-  }
+  Future<List<ParkingSession>> listOpenSessions() => _remote.listOpenSessions();
 
   Future<ParkingSession> _queueCheckIn({
     required String plate,
-    required List<File> photos,
+    required List<XFile> photos,
+    NewVehicleInfo? newVehicle,
   }) async {
-    final clientRef = _newClientRef();
-    final entryTime = DateTime.now();
+    final clientRef = newClientRef();
+    final entryTime = DateTime.now().toUtc();
     final persistedPaths = await _photos.persist(
       clientRef: clientRef,
       photos: photos,
@@ -57,14 +61,15 @@ class CheckInRepositoryImpl implements CheckInRepository {
 
     await _outbox.enqueue(
       PendingMutation(
-        entityType: 'checkIn',
-        operation: 'create',
+        entityType: MutationEntity.checkIn,
+        operation: MutationOperation.create,
         entityId: null,
         payloadJson: jsonEncode({
           'plate': plate,
           'photo_paths': persistedPaths,
           'client_entry_time': entryTime.toIso8601String(),
           'client_ref': clientRef,
+          ..._newVehiclePayload(newVehicle),
         }),
         enqueuedAt: DateTime.now(),
       ),
@@ -74,24 +79,20 @@ class CheckInRepositoryImpl implements CheckInRepository {
       id: -DateTime.now().microsecondsSinceEpoch,
       plate: plate,
       status: ParkingSessionStatus.pendingSync,
-      entryTime: entryTime,
+      entryTime: entryTime.toLocal(),
       photoCount: photos.length,
     );
   }
 
-  /// A simple unique-enough string (timestamp + random suffix) used only as
-  /// the photo subfolder name — never persisted server-side, never compared
-  /// against a real id.
-  String _newClientRef() {
-    final suffix = Random().nextInt(1 << 32).toRadixString(16);
-    return '${DateTime.now().microsecondsSinceEpoch}-$suffix';
-  }
-
-  Future<String> _currentToken() async {
-    final session = await _auth.restoreSession();
-    if (session == null) {
-      throw const AuthenticationFailure('Not authenticated');
+  /// Keys mirror the multipart field names so `SyncService` can replay them.
+  Map<String, Object?> _newVehiclePayload(NewVehicleInfo? info) {
+    if (info == null) {
+      return const {};
     }
-    return session.token;
+    return {
+      'category_id': info.categoryId,
+      'color': info.color,
+      'brand': info.brand,
+    };
   }
 }

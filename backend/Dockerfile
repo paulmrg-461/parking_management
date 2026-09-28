@@ -13,7 +13,15 @@ RUN uv sync --frozen --no-dev
 
 ENV PATH="/app/.venv/bin:$PATH"
 
-RUN chmod +x docker-entrypoint.sh
+# Unprivileged runtime user. The evidence dir is created (and owned) here so
+# a fresh named volume inherits app ownership.
+RUN groupadd --system --gid 10001 app \
+    && useradd --system --uid 10001 --gid app --no-create-home app \
+    && mkdir -p /app/data/evidence \
+    && chown -R app:app /app/data \
+    && chmod +x docker-entrypoint.sh
+
+USER app
 
 EXPOSE 8000
 

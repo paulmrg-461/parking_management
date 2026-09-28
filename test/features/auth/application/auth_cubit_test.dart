@@ -36,25 +36,82 @@ void main() {
       expect(cubit.state, isA<AuthUnauthenticated>());
     });
 
-    test('restore with session emits authenticated and logout clears', () async {
+    test(
+      'restore with session emits authenticated and logout clears',
+      () async {
+        final repository = FakeAuthRepository(
+          sessionToRestore: const AuthSession(
+            user: User(
+              id: 1,
+              username: 'juan',
+              displayName: 'Juan',
+              role: UserRole.admin,
+            ),
+            token: 'token',
+          ),
+        );
+        final cubit = AuthCubit(repository);
+
+        await cubit.restore();
+        expect(cubit.state, isA<AuthAuthenticated>());
+
+        await cubit.logout();
+        expect(cubit.state, isA<AuthUnauthenticated>());
+      },
+    );
+    test('sessionExpired logs out an authenticated user', () async {
       final repository = FakeAuthRepository(
-        sessionToRestore: AuthSession(
-          user: const User(
+        sessionToRestore: const AuthSession(
+          user: User(
             id: 1,
             username: 'juan',
             displayName: 'Juan',
-            role: UserRole.admin,
+            role: UserRole.operator,
           ),
           token: 'token',
         ),
       );
       final cubit = AuthCubit(repository);
-
       await cubit.restore();
-      expect(cubit.state, isA<AuthAuthenticated>());
 
-      await cubit.logout();
+      await cubit.sessionExpired();
+
       expect(cubit.state, isA<AuthUnauthenticated>());
+      expect(repository.sessionToRestore, isNull);
+    });
+
+    test(
+      'sessionExpired is a no-op while not authenticated (login screen)',
+      () async {
+        final cubit = AuthCubit(
+          FakeAuthRepository(
+            loginError: const AuthenticationFailure('Invalid'),
+          ),
+        );
+        await cubit.login('juan', '0000');
+
+        await cubit.sessionExpired();
+
+        expect(cubit.state, isA<AuthFailure>());
+      },
+    );
+
+    test('Failure: a 429 shows the backend detail with minutes left', () async {
+      final cubit = AuthCubit(
+        FakeAuthRepository(
+          loginError: const RateLimitedFailure(
+            'Too many attempts, try later · Retry in 3 min',
+            retryAfter: Duration(seconds: 150),
+          ),
+        ),
+      );
+
+      await cubit.login('juan', '0000');
+
+      expect(
+        cubit.state,
+        const AuthFailure('Too many attempts, try later · Retry in 3 min'),
+      );
     });
   });
 }

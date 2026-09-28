@@ -1,17 +1,24 @@
 import 'package:dio/dio.dart';
 
 import '../../../core/network/dio_error_mapper.dart';
+import '../../../core/network/pagination.dart';
+import '../../../core/pagination/paged_result.dart';
 import '../domain/entities/vehicle.dart';
 import 'models/vehicle_dto.dart';
 
 abstract class VehicleRemoteDataSource {
-  Future<List<Vehicle>> list(String token, {String? plate});
+  Future<List<Vehicle>> list({String? plate});
 
-  Future<Vehicle> create(String token, Map<String, dynamic> payload);
+  Future<PagedResult<Vehicle>> listPage({
+    required int limit,
+    required int offset,
+  });
 
-  Future<Vehicle> update(String token, int id, Map<String, dynamic> payload);
+  Future<Vehicle> create(Map<String, dynamic> payload);
 
-  Future<void> delete(String token, int id);
+  Future<Vehicle> update(int id, Map<String, dynamic> payload);
+
+  Future<void> delete(int id);
 }
 
 class DioVehicleRemoteDataSource implements VehicleRemoteDataSource {
@@ -22,59 +29,67 @@ class DioVehicleRemoteDataSource implements VehicleRemoteDataSource {
   static const _path = '/api/vehicles';
 
   @override
-  Future<List<Vehicle>> list(String token, {String? plate}) async {
+  Future<List<Vehicle>> list({String? plate}) async {
     try {
       final response = await _dio.get(
         _path,
         queryParameters: plate != null ? {'plate': plate} : null,
-        options: Options(headers: _auth(token)),
       );
-      final data = response.data as List<dynamic>;
-      return data
-          .map((item) => VehicleDto.fromJson(item as Map<String, dynamic>).toDomain())
-          .toList();
+      return _parse(response.data);
     } on DioException catch (error) {
       throw mapDioError(error);
     }
   }
 
   @override
-  Future<Vehicle> create(String token, Map<String, dynamic> payload) async {
+  Future<PagedResult<Vehicle>> listPage({
+    required int limit,
+    required int offset,
+  }) async {
     try {
-      final response = await _dio.post(
+      final response = await _dio.get<Object?>(
         _path,
-        data: payload,
-        options: Options(headers: _auth(token)),
+        queryParameters: pageQuery(limit: limit, offset: offset),
       );
-      return VehicleDto.fromJson(response.data as Map<String, dynamic>).toDomain();
+      return PagedResult(_parse(response.data), total: totalCountOf(response));
+    } on DioException catch (error) {
+      throw mapDioError(error);
+    }
+  }
+
+  List<Vehicle> _parse(Object? data) => [
+    for (final item in data as List<dynamic>)
+      VehicleDto.fromJson(item as Map<String, dynamic>).toDomain(),
+  ];
+
+  @override
+  Future<Vehicle> create(Map<String, dynamic> payload) async {
+    try {
+      final response = await _dio.post(_path, data: payload);
+      return VehicleDto.fromJson(response.data as Map<String, dynamic>)
+          .toDomain();
     } on DioException catch (error) {
       throw mapDioError(error);
     }
   }
 
   @override
-  Future<Vehicle> update(String token, int id, Map<String, dynamic> payload) async {
+  Future<Vehicle> update(int id, Map<String, dynamic> payload) async {
     try {
-      final response = await _dio.patch(
-        '$_path/$id',
-        data: payload,
-        options: Options(headers: _auth(token)),
-      );
-      return VehicleDto.fromJson(response.data as Map<String, dynamic>).toDomain();
+      final response = await _dio.patch('$_path/$id', data: payload);
+      return VehicleDto.fromJson(response.data as Map<String, dynamic>)
+          .toDomain();
     } on DioException catch (error) {
       throw mapDioError(error);
     }
   }
 
   @override
-  Future<void> delete(String token, int id) async {
+  Future<void> delete(int id) async {
     try {
-      await _dio.delete('$_path/$id', options: Options(headers: _auth(token)));
+      await _dio.delete('$_path/$id');
     } on DioException catch (error) {
       throw mapDioError(error);
     }
   }
-
-  Map<String, String> _auth(String token) =>
-      {'Authorization': 'Bearer $token'};
 }

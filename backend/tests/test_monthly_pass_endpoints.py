@@ -1,6 +1,6 @@
 """Monthly pass endpoint tests (Success / Failure / Security)."""
 
-from datetime import UTC, datetime, timedelta
+from datetime import date, timedelta
 
 from app.core.security import hash_password
 from app.domain.user import User, UserRole
@@ -48,7 +48,7 @@ async def _create_vehicle(client, headers, plate="ABC123"):
 
 
 def _dates():
-    today = datetime.now(UTC).date()
+    today = date(2026, 3, 10)
     return (today - timedelta(days=1)).isoformat(), (today + timedelta(days=30)).isoformat()
 
 
@@ -101,7 +101,7 @@ async def test_create_monthly_pass_with_invalid_date_range_is_rejected(
 ):
     headers = await _admin_headers(client, session_factory)
     vehicle = await _create_vehicle(client, headers)
-    today = datetime.now(UTC).date().isoformat()
+    today = date(2026, 3, 10).isoformat()
 
     response = await client.post(
         "/api/monthly-passes",

@@ -3,10 +3,13 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domain.pagination import Page, PageRequest
 from app.domain.repositories import UserRepository
 from app.domain.user import User, UserRole
 from app.infrastructure.models import UserModel
+from app.infrastructure.repositories.paging import PagedQuery, fetch_page
 
+_BY_ID = select(UserModel).order_by(UserModel.id)
 
 class SqlAlchemyUserRepository(UserRepository):
     def __init__(self, session: AsyncSession):
@@ -37,6 +40,10 @@ class SqlAlchemyUserRepository(UserRepository):
     async def list_all(self) -> list[User]:
         result = await self._session.execute(select(UserModel).order_by(UserModel.id))
         return [self._to_entity(model) for model in result.scalars()]
+
+    async def list_page(self, page: PageRequest) -> Page[User]:
+        models, total = await fetch_page(self._session, PagedQuery(_BY_ID, page))
+        return Page([self._to_entity(model) for model in models], total)
 
     async def create(self, user: User) -> User:
         model = UserModel(

@@ -1,22 +1,18 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:image_picker/image_picker.dart';
 
 import '../../../core/error/failure.dart';
 import '../application/plate_scanning_cubit.dart';
 import '../domain/normalize_plate.dart';
-import '../infrastructure/image_picker_plate_capture.dart';
+import '../domain/repositories/plate_image_capture.dart';
 
 /// Captures a vehicle plate via camera OCR, with an always-reachable manual
 /// entry fallback. Pops the confirmed, normalized candidate plate.
 class PlateScanPage extends StatefulWidget {
-  const PlateScanPage({super.key, this.capture});
+  const PlateScanPage({super.key, required this.capture});
 
-  /// Overridable image-capture mechanism, injected in tests to avoid
-  /// invoking the real device camera.
-  final PlateImageCapture? capture;
+  /// Camera port (injected by the router from get_it; fakes in tests).
+  final PlateImageCapture capture;
 
   @override
   State<PlateScanPage> createState() => _PlateScanPageState();
@@ -24,7 +20,6 @@ class PlateScanPage extends StatefulWidget {
 
 class _PlateScanPageState extends State<PlateScanPage> {
   final _plateController = TextEditingController();
-  late final PlateImageCapture _capture = widget.capture ?? ImagePickerPlateCapture();
 
   @override
   void dispose() {
@@ -35,12 +30,12 @@ class _PlateScanPageState extends State<PlateScanPage> {
   Future<void> _captureAndScan(BuildContext context) async {
     final cubit = context.read<PlateScanningCubit>();
     cubit.startCapture();
-    final XFile? image = await _capture.capture();
+    final image = await widget.capture.capture();
     if (image == null) {
       cubit.enterManually();
       return;
     }
-    await cubit.scan(File(image.path));
+    await cubit.scan(image);
   }
 
   void _confirm(BuildContext context) {
@@ -65,11 +60,12 @@ class _PlateScanPageState extends State<PlateScanPage> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              FilledButton.icon(
-                onPressed: () => _captureAndScan(context),
-                icon: const Icon(Icons.camera_alt),
-                label: const Text('Capture plate'),
-              ),
+              if (context.read<PlateScanningCubit>().isScanSupported)
+                FilledButton.icon(
+                  onPressed: () => _captureAndScan(context),
+                  icon: const Icon(Icons.camera_alt),
+                  label: const Text('Capture plate'),
+                ),
               if (state is PlateScanningScanning)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 16),
@@ -80,7 +76,9 @@ class _PlateScanPageState extends State<PlateScanPage> {
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Text(
                     state.message,
-                    style: TextStyle(color: Theme.of(context).colorScheme.error),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
                   ),
                 ),
               if (state is PlateScanningManualEntry)
@@ -96,7 +94,8 @@ class _PlateScanPageState extends State<PlateScanPage> {
               ),
               const SizedBox(height: 8),
               TextButton(
-                onPressed: () => context.read<PlateScanningCubit>().enterManually(),
+                onPressed: () =>
+                    context.read<PlateScanningCubit>().enterManually(),
                 child: const Text('Enter manually'),
               ),
               FilledButton(
@@ -110,7 +109,10 @@ class _PlateScanPageState extends State<PlateScanPage> {
     );
   }
 
-  void _syncControllerWithState(BuildContext context, PlateScanningState state) {
+  void _syncControllerWithState(
+    BuildContext context,
+    PlateScanningState state,
+  ) {
     if (state is PlateScanningSuccess) {
       _plateController.text = state.candidatePlate;
     } else if (state is PlateScanningManualEntry) {

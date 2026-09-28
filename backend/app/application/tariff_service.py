@@ -2,6 +2,8 @@
 
 from dataclasses import dataclass
 
+from app.domain.errors import TariffNotFoundError
+from app.domain.pagination import Page, PageRequest, paginate
 from app.domain.repositories import TariffRepository
 from app.domain.tariff import (
     Tariff,
@@ -11,9 +13,7 @@ from app.domain.tariff import (
     validate_window,
 )
 
-
-class TariffNotFoundError(Exception):
-    pass
+__all__ = ["TariffNotFoundError", "TariffPatch", "TariffService"]
 
 
 @dataclass
@@ -39,17 +39,25 @@ class TariffService:
     async def list_by_category(self, category_id: int) -> list[Tariff]:
         return await self._tariffs.list_by_category(category_id)
 
+    async def list_page(self, page: PageRequest, category_id: int | None = None) -> Page[Tariff]:
+        rows = (
+            await self.list_by_category(category_id)
+            if category_id is not None
+            else await self.list_all()
+        )
+        return paginate(rows, page)
+
     async def update(self, tariff_id: int, patch: TariffPatch) -> Tariff:
         existing = await self._tariffs.get_by_id(tariff_id)
         if existing is None:
-            raise TariffNotFoundError(tariff_id)
+            raise TariffNotFoundError()
         merged = self._merge(existing, patch)
         self._validate(merged)
         return await self._tariffs.update(merged)
 
     async def delete(self, tariff_id: int) -> None:
         if await self._tariffs.get_by_id(tariff_id) is None:
-            raise TariffNotFoundError(tariff_id)
+            raise TariffNotFoundError()
         await self._tariffs.delete(tariff_id)
 
     def _merge(self, existing: Tariff, patch: TariffPatch) -> Tariff:

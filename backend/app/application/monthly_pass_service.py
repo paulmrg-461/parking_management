@@ -3,8 +3,9 @@
 from dataclasses import dataclass
 from datetime import date
 
-from app.application.check_in_service import VehicleNotFoundError
+from app.domain.errors import MonthlyPassNotFoundError, VehicleNotFoundError
 from app.domain.monthly_pass import MonthlyPass, validate_pass_dates
+from app.domain.pagination import Page, PageRequest, paginate
 from app.domain.repositories import MonthlyPassRepository, VehicleRepository
 
 __all__ = [
@@ -13,10 +14,6 @@ __all__ = [
     "MonthlyPassPatch",
     "MonthlyPassService",
 ]
-
-
-class MonthlyPassNotFoundError(Exception):
-    pass
 
 
 @dataclass
@@ -34,27 +31,28 @@ class MonthlyPassService:
 
     async def create(self, monthly_pass: MonthlyPass) -> MonthlyPass:
         if await self._vehicles.get_by_id(monthly_pass.vehicle_id) is None:
-            raise VehicleNotFoundError(monthly_pass.vehicle_id)
+            raise VehicleNotFoundError()
         validate_pass_dates(monthly_pass.start_date, monthly_pass.end_date)
         return await self._passes.create(monthly_pass)
 
-    async def list_all(self) -> list[MonthlyPass]:
-        return await self._passes.list_all()
-
-    async def list_by_vehicle(self, vehicle_id: int) -> list[MonthlyPass]:
-        return await self._passes.list_by_vehicle(vehicle_id)
+    async def list_page(
+        self, page: PageRequest, vehicle_id: int | None = None
+    ) -> Page[MonthlyPass]:
+        if vehicle_id is None:
+            return await self._passes.list_page(page)
+        return paginate(await self._passes.list_by_vehicle(vehicle_id), page)
 
     async def update(self, pass_id: int, patch: MonthlyPassPatch) -> MonthlyPass:
         existing = await self._passes.get_by_id(pass_id)
         if existing is None:
-            raise MonthlyPassNotFoundError(pass_id)
+            raise MonthlyPassNotFoundError()
         merged = self._merge(existing, patch)
         validate_pass_dates(merged.start_date, merged.end_date)
         return await self._passes.update(merged)
 
     async def delete(self, pass_id: int) -> None:
         if await self._passes.get_by_id(pass_id) is None:
-            raise MonthlyPassNotFoundError(pass_id)
+            raise MonthlyPassNotFoundError()
         await self._passes.delete(pass_id)
 
     def _merge(self, existing: MonthlyPass, patch: MonthlyPassPatch) -> MonthlyPass:

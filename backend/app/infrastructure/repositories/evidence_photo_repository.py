@@ -29,6 +29,16 @@ class SqlAlchemyEvidencePhotoRepository(EvidencePhotoRepository):
         )
         return [self._to_entity(model) for model in result.scalars()]
 
+    async def list_by_session_ids(self, session_ids: list[int]) -> list[EvidencePhoto]:
+        if not session_ids:
+            return []
+        result = await self._session.execute(
+            select(EvidencePhotoModel)
+            .where(EvidencePhotoModel.session_id.in_(session_ids))
+            .order_by(EvidencePhotoModel.session_id, EvidencePhotoModel.id)
+        )
+        return [self._to_entity(model) for model in result.scalars()]
+
     async def create(self, photo: EvidencePhoto) -> EvidencePhoto:
         model = EvidencePhotoModel(
             session_id=photo.session_id,

@@ -7,13 +7,12 @@ import 'models/occupancy_report_dto.dart';
 import 'models/revenue_report_dto.dart';
 
 abstract class ReportRemoteDataSource {
-  Future<RevenueReport> getRevenueReport(
-    String token, {
+  Future<RevenueReport> getRevenueReport({
     required DateTime startDate,
     required DateTime endDate,
   });
 
-  Future<OccupancyReport> getOccupancyReport(String token);
+  Future<OccupancyReport> getOccupancyReport();
 }
 
 class DioReportRemoteDataSource implements ReportRemoteDataSource {
@@ -25,8 +24,7 @@ class DioReportRemoteDataSource implements ReportRemoteDataSource {
   static const _occupancyPath = '/api/reports/occupancy';
 
   @override
-  Future<RevenueReport> getRevenueReport(
-    String token, {
+  Future<RevenueReport> getRevenueReport({
     required DateTime startDate,
     required DateTime endDate,
   }) async {
@@ -37,7 +35,6 @@ class DioReportRemoteDataSource implements ReportRemoteDataSource {
           'start_date': _formatDate(startDate),
           'end_date': _formatDate(endDate),
         },
-        options: Options(headers: _auth(token)),
       );
       return RevenueReportDto.fromJson(response.data as Map<String, dynamic>)
           .toDomain();
@@ -47,20 +44,15 @@ class DioReportRemoteDataSource implements ReportRemoteDataSource {
   }
 
   @override
-  Future<OccupancyReport> getOccupancyReport(String token) async {
+  Future<OccupancyReport> getOccupancyReport() async {
     try {
-      final response = await _dio.get(
-        _occupancyPath,
-        options: Options(headers: _auth(token)),
-      );
+      final response = await _dio.get(_occupancyPath);
       return OccupancyReportDto.fromJson(response.data as Map<String, dynamic>)
           .toDomain();
     } on DioException catch (error) {
       throw mapDioError(error);
     }
   }
-
-  Map<String, String> _auth(String token) => {'Authorization': 'Bearer $token'};
 
   static String _formatDate(DateTime d) =>
       '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';

@@ -2,6 +2,8 @@
 
 from dataclasses import dataclass
 
+from app.domain.errors import DomainValidationError
+
 
 @dataclass
 class Category:
@@ -12,5 +14,5 @@ class Category:
 def validate_name(name: str) -> str:
     value = name.strip()
     if not value:
-        raise ValueError("Category name must not be empty")
+        raise DomainValidationError("Category name must not be empty")
     return value

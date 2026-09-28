@@ -1,9 +1,20 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../auth/domain/commands/create_user_command.dart';
+import '../../../core/l10n/failure_messages.dart';
+import '../../../core/l10n/l10n.dart';
+import '../../../core/state/submission.dart';
+import '../../../core/theme/tokens.dart';
+import '../../../core/widgets/async_view.dart';
+import '../../../core/widgets/list_page_scaffold.dart';
+import '../../../core/widgets/submission_feedback.dart';
+import '../../../core/widgets/submission_listener.dart';
 import '../../auth/domain/entities/user.dart';
 import '../application/users_cubit.dart';
+import 'create_user_dialog.dart';
+import 'role_labels.dart';
 
 class UsersPage extends StatefulWidget {
   const UsersPage({super.key});
@@ -16,41 +27,59 @@ class _UsersPageState extends State<UsersPage> {
   @override
   void initState() {
     super.initState();
-    context.read<UsersCubit>().load();
+    unawaited(context.read<UsersCubit>().load());
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Users')),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showCreateDialog(context),
-        child: const Icon(Icons.add),
+    final cubit = context.read<UsersCubit>();
+    return ListPageScaffold(
+      title: context.l10n.usersTitle,
+      addTooltip: context.l10n.userAddTooltip,
+      onAdd: () => unawaited(
+        showDialog<void>(
+          context: context,
+          builder: (_) => CreateUserDialog(onCreate: cubit.create),
+        ),
       ),
-      body: BlocBuilder<UsersCubit, UsersState>(
-        builder: (context, state) {
-          return switch (state) {
-            UsersInitial() => const SizedBox.shrink(),
-            UsersLoading() => const Center(child: CircularProgressIndicator()),
-            UsersFailure(message: final message) => Center(child: Text(message)),
-            UsersLoaded(users: final users) => ListView.separated(
-                itemCount: users.length,
-                separatorBuilder: (_, _) => const Divider(height: 1),
-                itemBuilder: (context, index) =>
-                    _UserTile(user: users[index]),
-              ),
-          };
-        },
+      onRefresh: cubit.load,
+      body: SubmissionListener<UsersCubit, UsersState>(
+        submissionOf: _submissionOf,
+        child: BlocBuilder<UsersCubit, UsersState>(
+          buildWhen: (previous, current) =>
+              previous is! UsersLoaded ||
+              current is! UsersLoaded ||
+              previous.users != current.users,
+          builder: (context, state) => AsyncView<List<User>>(
+            status: _status(context, state),
+            builder: (users) => ListView.separated(
+              padding: const EdgeInsets.only(bottom: Space.xxl * 2),
+              itemCount: users.length,
+              separatorBuilder: (_, _) => const Divider(height: 1),
+              itemBuilder: (context, index) => _UserTile(user: users[index]),
+            ),
+          ),
+        ),
       ),
     );
   }
 
-  void _showCreateDialog(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (context) => const _CreateUserDialog(),
-    );
-  }
+  AsyncStatus<List<User>> _status(BuildContext context, UsersState state) =>
+      switch (state) {
+        UsersInitial() || UsersLoading() => const AsyncLoading(),
+        UsersFailure(:final message, :final failure) => AsyncFailed(
+          context.l10n.errorText(message, failure),
+          context.read<UsersCubit>().load,
+        ),
+        UsersLoaded(:final users) when users.isEmpty => AsyncEmpty(
+          context.l10n.usersEmpty,
+          icon: Icons.people_outline,
+        ),
+        UsersLoaded(:final users) => AsyncReady(users),
+      };
+
+  static Submission? _submissionOf(UsersState state) =>
+      state is UsersLoaded ? state.submission : null;
 }
 
 class _UserTile extends StatelessWidget {
@@ -60,91 +89,38 @@ class _UserTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return ListTile(
+      leading: const Icon(Icons.person_outline),
       title: Text(user.displayName),
-      subtitle: Text('${user.username} · ${user.role.name}'),
-      trailing: Switch(
-        value: user.isActive,
-        onChanged: (_) => context.read<UsersCubit>().toggleActive(user),
+      subtitle: Text('${user.username} · ${user.role.label(l10n)}'),
+      trailing: Semantics(
+        label: l10n.userActiveLabel(user.displayName),
+        child: Switch(
+          value: user.isActive,
+          onChanged: (_) => _toggle(context),
+        ),
       ),
     );
   }
-}
 
-class _CreateUserDialog extends StatefulWidget {
-  const _CreateUserDialog();
-
-  @override
-  State<_CreateUserDialog> createState() => _CreateUserDialogState();
-}
-
-class _CreateUserDialogState extends State<_CreateUserDialog> {
-  final _usernameController = TextEditingController();
-  final _displayNameController = TextEditingController();
-  final _pinController = TextEditingController();
-  UserRole _role = UserRole.operator;
-
-  @override
-  void dispose() {
-    _usernameController.dispose();
-    _displayNameController.dispose();
-    _pinController.dispose();
-    super.dispose();
-  }
-
-  void _submit(BuildContext context) {
-    final command = CreateUserCommand(
-      username: _usernameController.text.trim(),
-      displayName: _displayNameController.text.trim(),
-      role: _role,
-      pin: _pinController.text.trim(),
-    );
-    context.read<UsersCubit>().create(command);
-    Navigator.of(context).pop();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('New user'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: _usernameController,
-            decoration: const InputDecoration(labelText: 'Username'),
-          ),
-          TextField(
-            controller: _displayNameController,
-            decoration: const InputDecoration(labelText: 'Display name'),
-          ),
-          TextField(
-            controller: _pinController,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(labelText: 'PIN'),
-          ),
-          DropdownButtonFormField<UserRole>(
-            initialValue: _role,
-            items: UserRole.values
-                .map((role) => DropdownMenuItem(
-                      value: role,
-                      child: Text(role.name),
-                    ))
-                .toList(),
-            onChanged: (value) => setState(() => _role = value ?? _role),
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: () => _submit(context),
-          child: const Text('Create'),
-        ),
-      ],
-    );
+  /// Deactivation is reversible, so it gets an undo instead of a dialog.
+  void _toggle(BuildContext context) {
+    final cubit = context.read<UsersCubit>();
+    unawaited(cubit.toggleActive(user));
+    if (user.isActive) {
+      final toggled = User(
+        id: user.id,
+        username: user.username,
+        displayName: user.displayName,
+        role: user.role,
+        isActive: false,
+      );
+      showUndoSnack(
+        context,
+        message: context.l10n.userDeactivated(user.displayName),
+        onUndo: () => cubit.toggleActive(toggled),
+      );
+    }
   }
 }

@@ -1,42 +1,81 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:parking_management/app/app.dart';
-import 'package:parking_management/features/auth/application/auth_cubit.dart';
-import 'package:parking_management/features/auth/domain/entities/auth_session.dart';
 import 'package:parking_management/features/auth/domain/entities/user.dart';
 
-import 'helpers/fake_auth_repository.dart';
+import 'helpers/app_harness.dart';
 
 void main() {
-  testWidgets('redirects unauthenticated users to the login page', (tester) async {
-    final cubit = AuthCubit(FakeAuthRepository(sessionToRestore: null));
-    await cubit.restore();
+  group('Router (F-RT)', () {
+    testWidgets('redirects unauthenticated users to the login page', (tester) async {
+      await pumpApp(tester);
 
-    await tester.pumpWidget(ParkingApp(authCubit: cubit));
-    await tester.pumpAndSettle();
+      expect(find.text('Ingresar'), findsOneWidget);
+    });
 
-    expect(find.text('Sign in'), findsOneWidget);
+    testWidgets('shows the home page for authenticated users', (tester) async {
+      await pumpApp(tester, role: UserRole.admin);
+
+      expect(find.text('Hola, Juan'), findsOneWidget);
+      expect(find.byTooltip('Cerrar sesión'), findsOneWidget);
+    });
+
+    testWidgets('Success: logout lands on /login (no infinite spinner)', (tester) async {
+      await pumpApp(tester, role: UserRole.operator);
+
+      await tester.tap(find.byTooltip('Cerrar sesión'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Ingresar'), findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+    });
+
+    testWidgets('Success: an expired session (sessionExpired) returns to /login', (tester) async {
+      final auth = await pumpApp(tester, role: UserRole.admin);
+
+      await auth.sessionExpired();
+      await tester.pumpAndSettle();
+
+      expect(find.text('Ingresar'), findsOneWidget);
+    });
+
+    testWidgets('Success: admin can open /users', (tester) async {
+      await pumpApp(tester, role: UserRole.admin);
+
+      await goTo(tester, '/users');
+
+      expect(find.widgetWithText(AppBar, 'Usuarios'), findsOneWidget);
+    });
+
+    testWidgets('Security: operator typing /users is redirected home', (tester) async {
+      await pumpApp(tester, role: UserRole.operator);
+
+      await goTo(tester, '/users');
+
+      expect(find.widgetWithText(AppBar, 'Usuarios'), findsNothing);
+      expect(find.text('Hola, Juan'), findsOneWidget);
+    });
   });
 
-  testWidgets('shows the home page for authenticated users', (tester) async {
-    final cubit = AuthCubit(
-      FakeAuthRepository(
-        sessionToRestore: const AuthSession(
-          user: User(
-            id: 1,
-            username: 'juan',
-            displayName: 'Juan',
-            role: UserRole.admin,
-          ),
-          token: 'token',
-        ),
-      ),
-    );
-    await cubit.restore();
+  group('Navigation (F-NAV)', () {
+    testWidgets('Success: sub-pages show a back arrow that returns home', (tester) async {
+      await pumpApp(tester, role: UserRole.admin);
+      await goTo(tester, '/users');
 
-    await tester.pumpWidget(ParkingApp(authCubit: cubit));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
 
-    expect(find.text('Welcome, Juan'), findsOneWidget);
-    expect(find.text('Logout'), findsOneWidget);
+      expect(find.text('Hola, Juan'), findsOneWidget);
+    });
+
+    testWidgets('Failure: Android back from a sub-page goes home, not out of the app', (tester) async {
+      await pumpApp(tester, role: UserRole.admin);
+      await goTo(tester, '/users');
+
+      final handled = await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+
+      expect(handled, isTrue);
+      expect(find.text('Hola, Juan'), findsOneWidget);
+    });
   });
 }

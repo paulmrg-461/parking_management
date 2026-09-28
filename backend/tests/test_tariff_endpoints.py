@@ -123,3 +123,19 @@ async def test_admin_can_deactivate_and_delete_tariff(client, session_factory):
     assert updated.status_code == 200
     assert updated.json()["active"] is False
     assert deleted.status_code == 204
+
+
+async def test_overlong_tariff_time_is_rejected(client, session_factory):
+    headers = await _admin_headers(client, session_factory)
+    category = await client.post(
+        "/api/categories", json={"name": "len-check"}, headers=headers
+    )
+
+    response = await client.post(
+        "/api/tariffs",
+        json={"category_id": category.json()["id"], "type": "nightly",
+              "amount": 1000, "start_time": "22:00:00", "end_time": "06:00"},
+        headers=headers,
+    )
+
+    assert response.status_code == 422

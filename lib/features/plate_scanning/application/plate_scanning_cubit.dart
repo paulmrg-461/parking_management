@@ -1,5 +1,4 @@
-import 'dart:io';
-
+import 'package:cross_file/cross_file.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -37,12 +36,15 @@ class PlateScanningSuccess extends PlateScanningState {
 }
 
 class PlateScanningFailure extends PlateScanningState {
-  const PlateScanningFailure(this.message);
+  const PlateScanningFailure(this.message, {this.failure});
+
+  PlateScanningFailure.of(Failure failure) : this(failure.message, failure: failure);
 
   final String message;
+  final Failure? failure;
 
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [message, failure?.code];
 }
 
 class PlateScanningManualEntry extends PlateScanningState {
@@ -62,13 +64,20 @@ class PlateScanningCubit extends Cubit<PlateScanningState> {
 
   final PlateScanner _scanner;
 
+  /// `false` on platforms without on-device OCR (web): manual entry only.
+  bool get isScanSupported => _scanner.isSupported;
+
   /// Signals that image capture has started (called before invoking the
   /// device camera), so the UI can show progress.
   void startCapture() => emit(const PlateScanningCapturing());
 
   /// Scans [image] for a plate and emits the resulting candidate, or falls
   /// back to manual entry when OCR finds no plate-like text.
-  Future<void> scan(File image) async {
+  Future<void> scan(XFile image) async {
+    if (!isScanSupported) {
+      emit(const PlateScanningManualEntry());
+      return;
+    }
     emit(const PlateScanningScanning());
     try {
       final result = await _scanner.scan(image);
@@ -76,9 +85,14 @@ class PlateScanningCubit extends Cubit<PlateScanningState> {
         emit(PlateScanningManualEntry(prefill: result.rawText));
         return;
       }
-      emit(PlateScanningSuccess(normalizePlate(result.candidatePlate), result.confidence));
+      emit(
+        PlateScanningSuccess(
+          normalizePlate(result.candidatePlate),
+          result.confidence,
+        ),
+      );
     } on Failure catch (failure) {
-      emit(PlateScanningFailure(failure.message));
+      emit(PlateScanningFailure.of(failure));
     }
   }
 
@@ -92,7 +106,7 @@ class PlateScanningCubit extends Cubit<PlateScanningState> {
     try {
       emit(PlateScanningSuccess(normalizePlate(rawInput), 1.0));
     } on Failure catch (failure) {
-      emit(PlateScanningFailure(failure.message));
+      emit(PlateScanningFailure.of(failure));
     }
   }
 }

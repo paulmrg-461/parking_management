@@ -1,8 +1,10 @@
 """Tariff domain entity, type, and validation."""
 
+import re
 from dataclasses import dataclass
 from enum import Enum
-import re
+
+from app.domain.errors import DomainValidationError
 
 
 class TariffType(str, Enum):
@@ -28,7 +30,7 @@ class Tariff:
 
 def validate_amount(amount: int) -> int:
     if amount <= 0:
-        raise ValueError("Amount must be a positive integer")
+        raise DomainValidationError("Amount must be a positive integer")
     return amount
 
 
@@ -36,7 +38,7 @@ def validate_time(value: str | None) -> str | None:
     if value is None:
         return None
     if not _TIME_PATTERN.match(value):
-        raise ValueError("Time must be HH:MM in 24-hour format")
+        raise DomainValidationError("Time must be HH:MM in 24-hour format")
     return value
 
 
@@ -45,8 +47,8 @@ def validate_window(
 ) -> None:
     if tariff_type == TariffType.NIGHTLY:
         if start is None or end is None:
-            raise ValueError("Nightly tariff requires a time window")
+            raise DomainValidationError("Nightly tariff requires a time window")
         if start == end:
-            raise ValueError("Night window start and end must differ")
+            raise DomainValidationError("Night window start and end must differ")
     elif start is not None or end is not None:
-        raise ValueError("Only nightly tariffs carry a time window")
+        raise DomainValidationError("Only nightly tariffs carry a time window")

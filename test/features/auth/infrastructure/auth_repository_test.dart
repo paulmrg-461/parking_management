@@ -16,34 +16,17 @@ class _FakeRemote implements AuthRemoteDataSource {
 
   @override
   Future<AuthSession> login(String username, String pin) async => _session;
-
-  @override
-  Future<List<User>> listUsers(String token) async => const [];
-
-  @override
-  Future<User> createUser(String token, Map<String, dynamic> payload) async {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<User> updateUser(
-    String token,
-    int id,
-    Map<String, dynamic> payload,
-  ) async {
-    throw UnimplementedError();
-  }
 }
 
 AuthSession _session() => const AuthSession(
-      user: User(
-        id: 1,
-        username: 'juan',
-        displayName: 'Juan',
-        role: UserRole.admin,
-      ),
-      token: 'token-1',
-    );
+  user: User(
+    id: 1,
+    username: 'juan',
+    displayName: 'Juan',
+    role: UserRole.admin,
+  ),
+  token: 'token-1',
+);
 
 void main() {
   late Directory tempDir;
@@ -62,10 +45,8 @@ void main() {
     await tempDir.delete(recursive: true);
   });
 
-  AuthRepositoryImpl repository() => AuthRepositoryImpl(
-        _FakeRemote(_session()),
-        HiveAuthLocalDataSource(),
-      );
+  AuthRepositoryImpl repository() =>
+      AuthRepositoryImpl(_FakeRemote(_session()), HiveAuthLocalDataSource());
 
   test('login persists the session and restore reads it back', () async {
     final repo = repository();

@@ -1,5 +1,6 @@
-import 'dart:io';
 import 'dart:ui';
+
+import 'package:cross_file/cross_file.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
@@ -25,34 +26,47 @@ class _FakeTextRecognizer implements TextRecognizerClient {
 }
 
 TextBlock _blockOf(String text) => TextBlock(
-      text: text,
-      lines: const [],
-      boundingBox: Rect.zero,
-      recognizedLanguages: const [],
-      cornerPoints: const [],
-    );
+  text: text,
+  lines: const [],
+  boundingBox: Rect.zero,
+  recognizedLanguages: const [],
+  cornerPoints: const [],
+);
 
 void main() {
-  final image = File('scan.jpg');
+  final image = XFile('scan.jpg');
 
-  test('Success: extracts the most plate-like block with a confidence score', () async {
-    final recognized = RecognizedText(
-      text: 'PARKING\nABC123',
-      blocks: [_blockOf('PARKING'), _blockOf('abc 123')],
+  test(
+    'Success: extracts the most plate-like block with a confidence score',
+    () async {
+      final recognized = RecognizedText(
+        text: 'PARKING\nABC123',
+        blocks: [_blockOf('PARKING'), _blockOf('abc 123')],
+      );
+      final scanner = MlKitPlateScanner(_FakeTextRecognizer(recognized));
+
+      final result = await scanner.scan(image);
+
+      expect(result.candidatePlate, 'ABC123');
+      expect(result.confidence, greaterThan(0));
+    },
+  );
+
+  test('Success: ML Kit scanning is supported on mobile', () {
+    expect(
+      MlKitPlateScanner(_FakeTextRecognizer.throwing()).isSupported,
+      isTrue,
     );
-    final scanner = MlKitPlateScanner(_FakeTextRecognizer(recognized));
-
-    final result = await scanner.scan(image);
-
-    expect(result.candidatePlate, 'ABC123');
-    expect(result.confidence, greaterThan(0));
   });
 
-  test('Failure: wraps an OCR processing error as a ValidationFailure', () async {
-    final scanner = MlKitPlateScanner(_FakeTextRecognizer.throwing());
+  test(
+    'Failure: wraps an OCR processing error as a ValidationFailure',
+    () async {
+      final scanner = MlKitPlateScanner(_FakeTextRecognizer.throwing());
 
-    expect(scanner.scan(image), throwsA(isA<ValidationFailure>()));
-  });
+      expect(scanner.scan(image), throwsA(isA<ValidationFailure>()));
+    },
+  );
 
   test('Security: rejects garbage/injection-like text instead of returning it as a plate', () async {
     final recognized = RecognizedText(

@@ -1,26 +1,11 @@
-import 'dart:io';
+import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/core/network/connectivity_service.dart';
+import 'package:parking_management/core/sync/mutation_replayer.dart';
 import 'package:parking_management/core/sync/pending_mutation.dart';
-import 'package:parking_management/core/sync/pending_photo_storage.dart';
 import 'package:parking_management/core/sync/sync_service.dart';
-import 'package:parking_management/features/categories/domain/entities/category.dart';
-import 'package:parking_management/features/categories/domain/repositories/category_repository.dart';
-import 'package:parking_management/features/check_in/domain/entities/parking_session.dart';
-import 'package:parking_management/features/check_in/domain/repositories/check_in_repository.dart';
-import 'package:parking_management/features/check_out/domain/entities/check_out_receipt.dart';
-import 'package:parking_management/features/check_out/domain/entities/open_session.dart';
-import 'package:parking_management/features/check_out/domain/repositories/check_out_repository.dart';
-import 'package:parking_management/features/tariffs/domain/commands/create_tariff_command.dart';
-import 'package:parking_management/features/tariffs/domain/commands/update_tariff_command.dart';
-import 'package:parking_management/features/tariffs/domain/entities/tariff.dart';
-import 'package:parking_management/features/tariffs/domain/repositories/tariff_repository.dart';
-import 'package:parking_management/features/vehicles/domain/commands/create_vehicle_command.dart';
-import 'package:parking_management/features/vehicles/domain/commands/update_vehicle_command.dart';
-import 'package:parking_management/features/vehicles/domain/entities/vehicle.dart';
-import 'package:parking_management/features/vehicles/domain/repositories/vehicle_repository.dart';
 
 import '../../helpers/fake_sync_outbox.dart';
 
@@ -28,394 +13,291 @@ class _FakeConnectivity implements ConnectivityService {
   _FakeConnectivity({this.online = true});
 
   bool online;
+  final StreamController<bool> changes = StreamController<bool>.broadcast();
 
   @override
   Future<bool> isOnline() async => online;
 
   @override
-  Stream<bool> get onConnectivityChanged => const Stream.empty();
+  Stream<bool> get onConnectivityChanged => changes.stream;
 }
 
-class _FakeVehicleRepository implements VehicleRepository {
-  _FakeVehicleRepository({this.failWithNetwork = false});
-
-  final bool failWithNetwork;
-  int updateCalls = 0;
+/// Scriptable replayer: pops one outcome per call (null = success).
+class _FakeReplayer extends MutationReplayer {
+  _FakeReplayer(this.entity, [List<Object?> outcomes = const []])
+    : _outcomes = List.of(outcomes);
 
   @override
-  Future<Vehicle> update(UpdateVehicleCommand command) async {
-    updateCalls++;
-    if (failWithNetwork) {
-      throw const NetworkFailure('offline');
+  final MutationEntity entity;
+  final List<Object?> _outcomes;
+  final List<PendingMutation> replayed = [];
+  final List<PendingMutation> discarded = [];
+  Completer<void>? gate;
+
+  @override
+  Future<void> replay(PendingMutation mutation) async {
+    replayed.add(mutation);
+    await gate?.future;
+    final outcome = _outcomes.isEmpty ? null : _outcomes.removeAt(0);
+    if (outcome != null) {
+      throw outcome;
     }
-    return Vehicle(id: command.id, plate: 'ABC123', categoryId: 1);
   }
 
   @override
-  Future<void> delete(int id) async {}
-
-  @override
-  Future<Vehicle> create(CreateVehicleCommand command) async =>
-      throw UnimplementedError();
-
-  @override
-  Future<Vehicle?> findByPlate(String plate) async => throw UnimplementedError();
-
-  @override
-  Future<List<Vehicle>> list() async => throw UnimplementedError();
+  Future<void> discard(PendingMutation mutation) async =>
+      discarded.add(mutation);
 }
 
-class _FakeTariffRepository implements TariffRepository {
-  int updateCalls = 0;
+PendingMutation _vehicleUpdate(int id) => PendingMutation(
+  entityType: MutationEntity.vehicle,
+  operation: MutationOperation.update,
+  entityId: id,
+  payloadJson: '{"color":"red"}',
+  enqueuedAt: DateTime.utc(2026, 1, 1),
+);
 
-  @override
-  Future<Tariff> update(UpdateTariffCommand command) async {
-    updateCalls++;
-    return Tariff(id: command.id, categoryId: 1, type: TariffType.hourly, amount: 1000);
+PendingMutation _checkOut({
+  String payload = '{"client_exit_time":"2026-01-01T10:00:00.000"}',
+}) => PendingMutation(
+  entityType: MutationEntity.checkOut,
+  operation: MutationOperation.close,
+  entityId: 5,
+  payloadJson: payload,
+  enqueuedAt: DateTime.utc(2026, 1, 1),
+);
+
+class _Harness {
+  _Harness({List<MutationReplayer> replayers = const [], bool online = true})
+    : connectivity = _FakeConnectivity(online: online) {
+    service = SyncService(outbox, connectivity, replayers, clock: () => now);
   }
 
-  @override
-  Future<void> delete(int id) async {}
-
-  @override
-  Future<Tariff> create(CreateTariffCommand command) async =>
-      throw UnimplementedError();
-
-  @override
-  Future<List<Tariff>> list() async => throw UnimplementedError();
+  final FakeSyncOutbox outbox = FakeSyncOutbox();
+  final _FakeConnectivity connectivity;
+  late final SyncService service;
+  DateTime now = DateTime.utc(2026, 1, 1, 12);
 }
-
-class _FakeCategoryRepository implements CategoryRepository {
-  int updateCalls = 0;
-
-  @override
-  Future<Category> update(int id, String name) async {
-    updateCalls++;
-    return Category(id: id, name: name);
-  }
-
-  @override
-  Future<void> delete(int id) async {}
-
-  @override
-  Future<Category> create(String name) async => throw UnimplementedError();
-
-  @override
-  Future<List<Category>> list() async => throw UnimplementedError();
-}
-
-class _FakeCheckInRepository implements CheckInRepository {
-  _FakeCheckInRepository({this.failWithNetwork = false});
-
-  final bool failWithNetwork;
-  int createCalls = 0;
-  String? lastPlate;
-  List<File>? lastPhotos;
-
-  @override
-  Future<ParkingSession> createCheckIn({
-    required String plate,
-    required List<File> photos,
-  }) async {
-    createCalls++;
-    lastPlate = plate;
-    lastPhotos = photos;
-    if (failWithNetwork) {
-      throw const NetworkFailure('offline');
-    }
-    return ParkingSession(
-      id: 1,
-      plate: plate,
-      status: ParkingSessionStatus.open,
-      entryTime: DateTime(2026, 1, 1),
-      photoCount: photos.length,
-    );
-  }
-
-  @override
-  Future<List<ParkingSession>> listOpenSessions() async => throw UnimplementedError();
-}
-
-class _FakeCheckOutRepository implements CheckOutRepository {
-  _FakeCheckOutRepository({this.failWithNetwork = false});
-
-  final bool failWithNetwork;
-  int checkOutCalls = 0;
-  int? lastSessionId;
-  DateTime? lastClientExitTime;
-
-  @override
-  Future<List<OpenSession>> listOpenSessions() async => throw UnimplementedError();
-
-  @override
-  Future<CheckOutReceipt> checkOut(int sessionId, {DateTime? clientExitTime}) async {
-    checkOutCalls++;
-    lastSessionId = sessionId;
-    lastClientExitTime = clientExitTime;
-    if (failWithNetwork) {
-      throw const NetworkFailure('offline');
-    }
-    return CheckOutReceipt(
-      id: sessionId,
-      plate: 'ABC123',
-      entryTime: DateTime(2026, 1, 1),
-      exitTime: DateTime(2026, 1, 1, 2),
-      amountCharged: 6000,
-      ticketNumber: 'TCK-000001',
-    );
-  }
-}
-
-class _FakePendingPhotoStorage implements PendingPhotoStorage {
-  final List<String> deletedRefs = [];
-
-  @override
-  Future<void> deleteFor(String clientRef) async {
-    deletedRefs.add(clientRef);
-  }
-
-  @override
-  Future<List<String>> persist({
-    required String clientRef,
-    required List<File> photos,
-  }) async =>
-      throw UnimplementedError();
-}
-
-SyncService _buildService({
-  required FakeSyncOutbox outbox,
-  bool online = true,
-  _FakeVehicleRepository? vehicles,
-  _FakeTariffRepository? tariffs,
-  _FakeCategoryRepository? categories,
-  _FakeCheckInRepository? checkIns,
-  _FakeCheckOutRepository? checkOuts,
-  _FakePendingPhotoStorage? pendingPhotos,
-}) =>
-    SyncService(
-      outbox,
-      _FakeConnectivity(online: online),
-      vehicles ?? _FakeVehicleRepository(),
-      tariffs ?? _FakeTariffRepository(),
-      categories ?? _FakeCategoryRepository(),
-      checkIns ?? _FakeCheckInRepository(),
-      checkOuts ?? _FakeCheckOutRepository(),
-      pendingPhotos ?? _FakePendingPhotoStorage(),
-    );
 
 void main() {
-  group('SyncService.flush (vehicle/tariff/category)', () {
-    test('Success: replays a pending update and removes it from the outbox', () async {
-      final outbox = FakeSyncOutbox();
-      await outbox.enqueue(
-        PendingMutation(
-          entityType: 'vehicle',
-          operation: 'update',
-          entityId: 1,
-          payloadJson: '{"color":"red"}',
-          enqueuedAt: DateTime.now(),
-        ),
-      );
-      final vehicles = _FakeVehicleRepository();
-      final service = _buildService(outbox: outbox, vehicles: vehicles);
+  group('SyncService.flush', () {
+    test('Success: replays a pending entry and removes it', () async {
+      final vehicles = _FakeReplayer(MutationEntity.vehicle);
+      final h = _Harness(replayers: [vehicles]);
+      await h.outbox.enqueue(_vehicleUpdate(1));
 
-      await service.flush();
+      await h.service.flush();
 
-      expect(vehicles.updateCalls, 1);
-      expect(await outbox.listPending(), isEmpty);
-    });
-
-    test('Failure: a still-failing replay stays queued and flush does not throw', () async {
-      final outbox = FakeSyncOutbox();
-      await outbox.enqueue(
-        PendingMutation(
-          entityType: 'vehicle',
-          operation: 'update',
-          entityId: 1,
-          payloadJson: '{"color":"red"}',
-          enqueuedAt: DateTime.now(),
-        ),
-      );
-      final vehicles = _FakeVehicleRepository(failWithNetwork: true);
-      final service = _buildService(outbox: outbox, vehicles: vehicles);
-
-      await expectLater(service.flush(), completes);
-
-      expect(vehicles.updateCalls, 1);
-      expect(await outbox.listPending(), hasLength(1));
+      expect(vehicles.replayed.single.entityId, 1);
+      expect(h.outbox.all, isEmpty);
     });
 
     test(
-      'Security/robustness: one poison entry does not block an independent second entry',
+      'Success: concurrent flush calls share one drain (1 replay)',
       () async {
-        final outbox = FakeSyncOutbox();
-        await outbox.enqueue(
-          PendingMutation(
-            entityType: 'vehicle',
-            operation: 'update',
-            entityId: 1,
-            payloadJson: '{"color":"red"}',
-            enqueuedAt: DateTime.now(),
-          ),
-        );
-        await outbox.enqueue(
-          PendingMutation(
-            entityType: 'category',
-            operation: 'update',
-            entityId: 2,
-            payloadJson: '{"name":"bus"}',
-            enqueuedAt: DateTime.now(),
-          ),
-        );
-        final vehicles = _FakeVehicleRepository(failWithNetwork: true);
-        final categories = _FakeCategoryRepository();
-        final service = _buildService(
-          outbox: outbox,
-          vehicles: vehicles,
-          categories: categories,
-        );
+        final vehicles = _FakeReplayer(MutationEntity.vehicle)
+          ..gate = Completer<void>();
+        final h = _Harness(replayers: [vehicles]);
+        await h.outbox.enqueue(_vehicleUpdate(1));
 
-        await service.flush();
+        final first = h.service.flush();
+        final second = h.service.flush();
+        await Future<void>.delayed(Duration.zero);
+        vehicles.gate!.complete();
+        await Future.wait([first, second]);
 
-        expect(categories.updateCalls, 1);
-        final remaining = await outbox.listPending();
-        expect(remaining, hasLength(1));
-        expect(remaining.single.value.entityType, 'vehicle');
+        expect(vehicles.replayed, hasLength(1));
+        expect(h.outbox.all, isEmpty);
       },
     );
 
-    test('does nothing when offline', () async {
-      final outbox = FakeSyncOutbox();
-      await outbox.enqueue(
-        PendingMutation(
-          entityType: 'vehicle',
-          operation: 'update',
-          entityId: 1,
-          payloadJson: '{"color":"red"}',
-          enqueuedAt: DateTime.now(),
-        ),
+    test('Success: does nothing when offline', () async {
+      final vehicles = _FakeReplayer(MutationEntity.vehicle);
+      final h = _Harness(replayers: [vehicles], online: false);
+      await h.outbox.enqueue(_vehicleUpdate(1));
+
+      await h.service.flush();
+
+      expect(vehicles.replayed, isEmpty);
+      expect(h.outbox.all, hasLength(1));
+    });
+
+    test(
+      'Failure: NetworkFailure stops the drain and keeps entries untouched',
+      () async {
+        final vehicles = _FakeReplayer(MutationEntity.vehicle, [
+          const NetworkFailure('offline'),
+        ]);
+        final h = _Harness(replayers: [vehicles]);
+        await h.outbox.enqueue(_vehicleUpdate(1));
+        await h.outbox.enqueue(_vehicleUpdate(2));
+
+        await expectLater(h.service.flush(), completes);
+
+        expect(vehicles.replayed, hasLength(1));
+        expect(h.outbox.all, [_vehicleUpdate(1), _vehicleUpdate(2)]);
+      },
+    );
+
+    test(
+      'Failure: 409 dead-letters immediately and the queue continues',
+      () async {
+        final vehicles = _FakeReplayer(MutationEntity.vehicle, [
+          const ValidationFailure('Conflict'),
+        ]);
+        final h = _Harness(replayers: [vehicles]);
+        await h.outbox.enqueue(_vehicleUpdate(1));
+        await h.outbox.enqueue(_vehicleUpdate(2));
+
+        await h.service.flush();
+
+        expect(vehicles.replayed.map((m) => m.entityId), [1, 2]);
+        final dead = await h.outbox.listDeadLetters();
+        expect(dead.single.value.entityId, 1);
+        expect(dead.single.value.lastError, 'Conflict');
+        expect(dead.single.value.attempts, 1);
+        expect(await h.outbox.listPending(), isEmpty);
+      },
+    );
+
+    test(
+      'Failure: 5xx backs off 2^n s, skips until due, then retries',
+      () async {
+        final vehicles = _FakeReplayer(MutationEntity.vehicle, [
+          const ServerFailure(),
+        ]);
+        final h = _Harness(replayers: [vehicles]);
+        await h.outbox.enqueue(_vehicleUpdate(1));
+
+        await h.service.flush();
+        final retry = (await h.outbox.listPending()).single.value;
+        expect(retry.attempts, 1);
+        expect(retry.nextAttemptAt, h.now.add(const Duration(seconds: 2)));
+
+        h.now = h.now.add(const Duration(seconds: 1));
+        await h.service.flush();
+        expect(vehicles.replayed, hasLength(1));
+
+        h.now = h.now.add(const Duration(seconds: 1));
+        await h.service.flush();
+        expect(vehicles.replayed, hasLength(2));
+        expect(h.outbox.all, isEmpty);
+        await h.service.dispose();
+      },
+    );
+
+    test('Failure: dead-letters after 5 retryable failures', () async {
+      final vehicles = _FakeReplayer(
+        MutationEntity.vehicle,
+        List.filled(5, const ServerFailure()),
       );
-      final vehicles = _FakeVehicleRepository();
-      final service = _buildService(outbox: outbox, online: false, vehicles: vehicles);
+      final h = _Harness(replayers: [vehicles]);
+      await h.outbox.enqueue(_vehicleUpdate(1));
 
-      await service.flush();
+      for (var i = 0; i < 5; i++) {
+        await h.service.flush();
+        h.now = h.now.add(SyncService.maxBackoff);
+      }
 
-      expect(vehicles.updateCalls, 0);
-      expect(await outbox.listPending(), hasLength(1));
+      expect(vehicles.replayed, hasLength(5));
+      final dead = (await h.outbox.listDeadLetters()).single.value;
+      expect(dead.attempts, 5);
+      await h.service.dispose();
+    });
+
+    test(
+      'Failure: AuthenticationFailure stops the drain without burning attempts',
+      () async {
+        final vehicles = _FakeReplayer(MutationEntity.vehicle, [
+          const AuthenticationFailure('Invalid credentials'),
+        ]);
+        final h = _Harness(replayers: [vehicles]);
+        await h.outbox.enqueue(_vehicleUpdate(1));
+
+        await h.service.flush();
+
+        expect((await h.outbox.listPending()).single.value.attempts, 0);
+      },
+    );
+
+    test('Security: a poison entry (unexpected error) is parked, not retried forever', () async {
+      final vehicles = _FakeReplayer(MutationEntity.vehicle, [
+        const FormatException('bad payload'),
+      ]);
+      final h = _Harness(replayers: [vehicles]);
+      await h.outbox.enqueue(_vehicleUpdate(1));
+      await h.outbox.enqueue(_vehicleUpdate(2));
+
+      await h.service.flush();
+
+      expect((await h.outbox.listDeadLetters()).single.value.entityId, 1);
+      expect(vehicles.replayed, hasLength(2));
+    });
+
+    test('Security: legacy check-out without client_ref gets one persisted, reused on retry', () async {
+      final checkOuts = _FakeReplayer(MutationEntity.checkOut, [
+        const ServerFailure(),
+      ]);
+      final h = _Harness(replayers: [checkOuts]);
+      await h.outbox.enqueue(_checkOut());
+
+      await h.service.flush();
+      h.now = h.now.add(SyncService.maxBackoff);
+      await h.service.flush();
+
+      final keys = checkOuts.replayed
+          .map((m) => m.decodePayload()['client_ref'] as String?)
+          .toList();
+      expect(keys, hasLength(2));
+      expect(keys.first, isNotEmpty);
+      expect(keys.first, keys.last);
+      await h.service.dispose();
     });
   });
 
-  group('SyncService.flush (checkIn replay)', () {
+  group('SyncService lifecycle & dead letters', () {
     test(
-      'Success: replays a queued check-in, removes it from the outbox, and cleans up its photos',
+      'Success: discard removes a dead letter and lets the replayer clean up',
       () async {
-        final outbox = FakeSyncOutbox();
-        await outbox.enqueue(
-          PendingMutation(
-            entityType: 'checkIn',
-            operation: 'create',
-            entityId: null,
-            payloadJson:
-                '{"plate":"ABC123","photo_paths":["/tmp/a.jpg"],"client_entry_time":"2026-01-01T00:00:00.000","client_ref":"ref-1"}',
-            enqueuedAt: DateTime.now(),
-          ),
-        );
-        final checkIns = _FakeCheckInRepository();
-        final pendingPhotos = _FakePendingPhotoStorage();
-        final service = _buildService(
-          outbox: outbox,
-          checkIns: checkIns,
-          pendingPhotos: pendingPhotos,
-        );
+        final vehicles = _FakeReplayer(MutationEntity.vehicle, [
+          const ValidationFailure('Not found'),
+        ]);
+        final h = _Harness(replayers: [vehicles]);
+        await h.outbox.enqueue(_vehicleUpdate(1));
+        await h.service.flush();
+        final key = (await h.outbox.listDeadLetters()).single.key;
 
-        await service.flush();
+        await h.service.discard(key);
 
-        expect(checkIns.createCalls, 1);
-        expect(checkIns.lastPlate, 'ABC123');
-        expect(checkIns.lastPhotos, hasLength(1));
-        expect(pendingPhotos.deletedRefs, ['ref-1']);
-        expect(await outbox.listPending(), isEmpty);
+        expect(h.outbox.all, isEmpty);
+        expect(vehicles.discarded.single.entityId, 1);
       },
     );
 
-    test(
-      'Failure: a still-offline check-in replay stays queued and photos are not cleaned up',
-      () async {
-        final outbox = FakeSyncOutbox();
-        await outbox.enqueue(
-          PendingMutation(
-            entityType: 'checkIn',
-            operation: 'create',
-            entityId: null,
-            payloadJson:
-                '{"plate":"ABC123","photo_paths":[],"client_entry_time":"2026-01-01T00:00:00.000","client_ref":"ref-1"}',
-            enqueuedAt: DateTime.now(),
-          ),
-        );
-        final checkIns = _FakeCheckInRepository(failWithNetwork: true);
-        final pendingPhotos = _FakePendingPhotoStorage();
-        final service = _buildService(
-          outbox: outbox,
-          checkIns: checkIns,
-          pendingPhotos: pendingPhotos,
-        );
+    test('Success: coming back online triggers a flush', () async {
+      final vehicles = _FakeReplayer(MutationEntity.vehicle);
+      final h = _Harness(replayers: [vehicles], online: false);
+      await h.outbox.enqueue(_vehicleUpdate(1));
+      h.service.start();
+      await Future<void>.delayed(Duration.zero);
 
-        await service.flush();
+      h.connectivity.online = true;
+      h.connectivity.changes.add(true);
+      await Future<void>.delayed(Duration.zero);
+      await h.service.flush();
 
-        expect(checkIns.createCalls, 1);
-        expect(pendingPhotos.deletedRefs, isEmpty);
-        expect(await outbox.listPending(), hasLength(1));
-      },
-    );
-  });
+      expect(vehicles.replayed, hasLength(1));
+      await h.service.dispose();
+    });
 
-  group('SyncService.flush (checkOut replay)', () {
-    test(
-      'Success: replays a queued check-out with the original client_exit_time and removes it from the outbox',
-      () async {
-        final outbox = FakeSyncOutbox();
-        await outbox.enqueue(
-          PendingMutation(
-            entityType: 'checkOut',
-            operation: 'close',
-            entityId: 5,
-            payloadJson: '{"client_exit_time":"2026-01-01T10:00:00.000"}',
-            enqueuedAt: DateTime.now(),
-          ),
-        );
-        final checkOuts = _FakeCheckOutRepository();
-        final service = _buildService(outbox: outbox, checkOuts: checkOuts);
+    test('Security: dispose cancels the connectivity subscription', () async {
+      final h = _Harness(online: false);
+      h.service.start();
+      expect(h.connectivity.changes.hasListener, isTrue);
 
-        await service.flush();
+      await h.service.dispose();
 
-        expect(checkOuts.checkOutCalls, 1);
-        expect(checkOuts.lastSessionId, 5);
-        expect(checkOuts.lastClientExitTime, DateTime.parse('2026-01-01T10:00:00.000'));
-        expect(await outbox.listPending(), isEmpty);
-      },
-    );
-
-    test(
-      'Failure: a still-offline check-out replay stays queued, same as existing entity types',
-      () async {
-        final outbox = FakeSyncOutbox();
-        await outbox.enqueue(
-          PendingMutation(
-            entityType: 'checkOut',
-            operation: 'close',
-            entityId: 5,
-            payloadJson: '{"client_exit_time":"2026-01-01T10:00:00.000"}',
-            enqueuedAt: DateTime.now(),
-          ),
-        );
-        final checkOuts = _FakeCheckOutRepository(failWithNetwork: true);
-        final service = _buildService(outbox: outbox, checkOuts: checkOuts);
-
-        await service.flush();
-
-        expect(checkOuts.checkOutCalls, 1);
-        expect(await outbox.listPending(), hasLength(1));
-      },
-    );
+      expect(h.connectivity.changes.hasListener, isFalse);
+    });
   });
 }

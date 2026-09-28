@@ -15,6 +15,8 @@ abstract class VehicleLocalDataSource {
 class HiveVehicleLocalDataSource implements VehicleLocalDataSource {
   static const _boxName = 'vehicles';
 
+  /// Opens lazily on first use (returns the already-open box afterwards),
+  /// so reads work on a cold start before any write happened.
   Future<Box<Vehicle>> _box() => Hive.openBox<Vehicle>(_boxName);
 
   @override
@@ -30,10 +32,7 @@ class HiveVehicleLocalDataSource implements VehicleLocalDataSource {
 
   @override
   Future<List<Vehicle>> readAll() async {
-    if (!Hive.isBoxOpen(_boxName)) {
-      return const [];
-    }
-    return Hive.box<Vehicle>(_boxName).values.toList();
+    return (await _box()).values.toList();
   }
 
   @override

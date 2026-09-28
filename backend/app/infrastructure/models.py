@@ -2,7 +2,18 @@
 
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import (
+    Boolean,
+    Date,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    func,
+    text,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.infrastructure.database import Base
@@ -65,13 +76,45 @@ class VehicleModel(Base):
     )
     color: Mapped[str | None] = mapped_column(String(30), nullable=True)
     brand: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    # Audit: operator that auto-registered the vehicle during check-in.
+    created_by: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", name="fk_vehicles_created_by_users"), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
 
+_OPEN = text("status = 'open'")
+_HAS_TICKET = text("ticket_number IS NOT NULL")
+
+
 class ParkingSessionModel(Base):
     __tablename__ = "parking_sessions"
+    __table_args__ = (
+        # At most one open session per vehicle (closes the check-in race).
+        Index(
+            "uq_open_session_per_vehicle",
+            "vehicle_id",
+            unique=True,
+            postgresql_where=_OPEN,
+            sqlite_where=_OPEN,
+        ),
+        Index(
+            "ix_sessions_open_entry",
+            "entry_time",
+            postgresql_where=_OPEN,
+            sqlite_where=_OPEN,
+        ),
+        Index("ix_sessions_status_exit", "status", "exit_time"),
+        Index(
+            "uq_sessions_ticket",
+            "ticket_number",
+            unique=True,
+            postgresql_where=_HAS_TICKET,
+            sqlite_where=_HAS_TICKET,
+        ),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     vehicle_id: Mapped[int] = mapped_column(
@@ -122,4 +165,21 @@ class EvidencePhotoModel(Base):
     file_path: Mapped[str] = mapped_column(String(255), nullable=False)
     taken_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+class IdempotencyKeyModel(Base):
+    """Stored outcome of a write keyed by the client's Idempotency-Key."""
+
+    __tablename__ = "idempotency_keys"
+
+    key: Mapped[str] = mapped_column(String(100), primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    endpoint: Mapped[str] = mapped_column(String(200), nullable=False)
+    status_code: Mapped[int] = mapped_column(Integer, nullable=False)
+    response_body: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
     )

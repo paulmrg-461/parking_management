@@ -1,27 +1,24 @@
 """Authentication endpoints."""
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Request
 
-from app.application.auth_service import AuthService
-from app.infrastructure.repositories.user_repository import SqlAlchemyUserRepository
-from app.presentation.deps import get_user_repository
+from app.application.auth_service import AuthService, LoginAttempt
+from app.presentation.deps import get_auth_service
 from app.presentation.schemas import LoginRequest, TokenResponse, UserRead
 
 router = APIRouter(tags=["auth"])
 
 
+def _client_ip(request: Request) -> str:
+    # Direct client address; X-Forwarded-For is NOT trusted (no proxy).
+    return request.client.host if request.client else "unknown"
+
+
 @router.post("/auth/login", response_model=TokenResponse)
 async def login(
     body: LoginRequest,
-    users: SqlAlchemyUserRepository = Depends(get_user_repository),
+    request: Request,
+    service: AuthService = Depends(get_auth_service),
 ) -> TokenResponse:
-    service = AuthService(users)
-    user = await service.login(body.username, body.pin)
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
-        )
-    return TokenResponse(
-        access_token=service.issue_token(user),
-        user=UserRead.model_validate(user),
-    )
+    user = await service.login(LoginAttempt(body.username, body.pin, _client_ip(request)))
+    return TokenResponse(access_token=service.issue_token(user), user=UserRead.model_validate(user))

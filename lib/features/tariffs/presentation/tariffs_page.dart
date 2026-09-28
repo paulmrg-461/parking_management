@@ -1,12 +1,25 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../categories/application/categories_cubit.dart';
+import '../../../core/l10n/failure_messages.dart';
+import '../../../core/l10n/l10n.dart';
+import '../../../core/state/submission.dart';
+import '../../../core/theme/tokens.dart';
+import '../../../core/utils/formatters.dart';
+import '../../../core/widgets/app_icon_button.dart';
+import '../../../core/widgets/async_view.dart';
+import '../../../core/widgets/confirm_dialog.dart';
+import '../../../core/widgets/list_page_scaffold.dart';
+import '../../../core/widgets/submission_feedback.dart';
+import '../../../core/widgets/submission_listener.dart';
 import '../../categories/domain/entities/category.dart';
 import '../application/tariffs_cubit.dart';
-import '../domain/commands/create_tariff_command.dart';
 import '../domain/commands/update_tariff_command.dart';
 import '../domain/entities/tariff.dart';
+import 'create_tariff_dialog.dart';
+import 'tariff_labels.dart';
 
 class TariffsPage extends StatefulWidget {
   const TariffsPage({super.key});
@@ -19,63 +32,77 @@ class _TariffsPageState extends State<TariffsPage> {
   @override
   void initState() {
     super.initState();
-    context.read<TariffsCubit>().load();
-    context.read<CategoriesCubit>().load();
+    unawaited(context.read<TariffsCubit>().load());
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Tariffs')),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showCreateDialog(context),
-        child: const Icon(Icons.add),
-      ),
-      body: BlocBuilder<TariffsCubit, TariffsState>(
-        builder: (context, state) {
-          return switch (state) {
-            TariffsInitial() => const SizedBox.shrink(),
-            TariffsLoading() =>
-              const Center(child: CircularProgressIndicator()),
-            TariffsFailure(message: final message) => Center(child: Text(message)),
-            TariffsLoaded(tariffs: final tariffs) => BlocBuilder<CategoriesCubit, CategoriesState>(
-                builder: (context, categoriesState) {
-                  final categories = categoriesState is CategoriesLoaded
-                      ? categoriesState.categories
-                      : const <Category>[];
-                  return ListView.builder(
-                    itemCount: tariffs.length,
-                    itemBuilder: (context, index) {
-                      final tariff = tariffs[index];
-                      return _TariffTile(
-                        tariff: tariff,
-                        categoryName: _nameOf(categories, tariff.categoryId),
-                      );
-                    },
-                  );
-                },
+    return ListPageScaffold(
+      title: context.l10n.tariffsTitle,
+      addTooltip: context.l10n.tariffAddTooltip,
+      onAdd: () => _showCreateDialog(context),
+      onRefresh: context.read<TariffsCubit>().load,
+      body: SubmissionListener<TariffsCubit, TariffsState>(
+        submissionOf: _submissionOf,
+        child: BlocBuilder<TariffsCubit, TariffsState>(
+          buildWhen: (previous, current) =>
+              previous is! TariffsLoaded ||
+              current is! TariffsLoaded ||
+              previous.tariffs != current.tariffs ||
+              previous.categoryNames != current.categoryNames,
+          builder: (context, state) => AsyncView<TariffsLoaded>(
+            status: _status(context, state),
+            builder: (loaded) => ListView.builder(
+              padding: const EdgeInsets.only(bottom: Space.xxl * 2),
+              itemCount: loaded.tariffs.length,
+              itemBuilder: (context, index) => _TariffTile(
+                tariff: loaded.tariffs[index],
+                categoryName: _categoryName(context, loaded, index),
               ),
-          };
-        },
+            ),
+          ),
+        ),
       ),
     );
   }
 
-  String _nameOf(List<Category> categories, int categoryId) {
-    for (final category in categories) {
-      if (category.id == categoryId) {
-        return category.name;
-      }
-    }
-    return 'Category $categoryId';
+  String _categoryName(BuildContext context, TariffsLoaded loaded, int i) {
+    final categoryId = loaded.tariffs[i].categoryId;
+    return loaded.categoryNames[categoryId] ??
+        context.l10n.categoryFallback(categoryId);
   }
 
+  AsyncStatus<TariffsLoaded> _status(
+    BuildContext context,
+    TariffsState state,
+  ) => switch (state) {
+    TariffsInitial() || TariffsLoading() => const AsyncLoading(),
+    TariffsFailure(:final message, :final failure) => AsyncFailed(
+      context.l10n.errorText(message, failure),
+      context.read<TariffsCubit>().load,
+    ),
+    TariffsLoaded(:final tariffs) when tariffs.isEmpty => AsyncEmpty(
+      context.l10n.tariffsEmpty,
+      icon: Icons.payments_outlined,
+    ),
+    final TariffsLoaded loaded => AsyncReady(loaded),
+  };
+
+  static Submission? _submissionOf(TariffsState state) =>
+      state is TariffsLoaded ? state.submission : null;
+
   void _showCreateDialog(BuildContext context) {
-    final categories = context.read<CategoriesCubit>().state;
-    final options = categories is CategoriesLoaded ? categories.categories : const <Category>[];
-    showDialog<void>(
-      context: context,
-      builder: (context) => _CreateTariffDialog(categories: options),
+    final cubit = context.read<TariffsCubit>();
+    final state = cubit.state;
+    final options = state is TariffsLoaded
+        ? state.categories
+        : const <Category>[];
+    unawaited(
+      showDialog<void>(
+        context: context,
+        builder: (_) =>
+            CreateTariffDialog(categories: options, onCreate: cubit.create),
+      ),
     );
   }
 }
@@ -87,121 +114,64 @@ class _TariffTile extends StatelessWidget {
   final String categoryName;
 
   String get _window => tariff.type == TariffType.nightly
-      ? ' (${tariff.startTime}-${tariff.endTime})'
+      ? ' · ${tariff.startTime}–${tariff.endTime}'
       : '';
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return ListTile(
-      title: Text('$categoryName · ${tariff.type.name}'),
-      subtitle: Text('${tariff.amount} COP$_window'),
-      trailing: Switch(
-        value: tariff.active,
-        onChanged: (_) => context.read<TariffsCubit>().update(
-              UpdateTariffCommand(id: tariff.id!, active: !tariff.active),
-            ),
-      ),
-    );
-  }
-}
-
-class _CreateTariffDialog extends StatefulWidget {
-  const _CreateTariffDialog({required this.categories});
-
-  final List<Category> categories;
-
-  @override
-  State<_CreateTariffDialog> createState() => _CreateTariffDialogState();
-}
-
-class _CreateTariffDialogState extends State<_CreateTariffDialog> {
-  final _amountController = TextEditingController();
-  final _startController = TextEditingController();
-  final _endController = TextEditingController();
-  int? _categoryId;
-  TariffType _type = TariffType.hourly;
-
-  @override
-  void dispose() {
-    _amountController.dispose();
-    _startController.dispose();
-    _endController.dispose();
-    super.dispose();
-  }
-
-  void _submit(BuildContext context) {
-    final categoryId = _categoryId ??
-        (widget.categories.isNotEmpty ? widget.categories.first.id : null);
-    if (categoryId == null) {
-      return;
-    }
-    final command = CreateTariffCommand(
-      categoryId: categoryId,
-      type: _type,
-      amount: int.tryParse(_amountController.text) ?? 0,
-      startTime: _type == TariffType.nightly ? _startController.text : null,
-      endTime: _type == TariffType.nightly ? _endController.text : null,
-    );
-    context.read<TariffsCubit>().create(command);
-    Navigator.of(context).pop();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('New tariff'),
-      content: Column(
+      title: Text('$categoryName · ${tariff.type.label(l10n)}'),
+      subtitle: Text('${Formatters.money(tariff.amount)}$_window'),
+      trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          DropdownButtonFormField<int>(
-            initialValue: _categoryId,
-            items: widget.categories
-                .map((category) => DropdownMenuItem(
-                      value: category.id,
-                      child: Text(category.name),
-                    ))
-                .toList(),
-            onChanged: (value) => setState(() => _categoryId = value),
-            decoration: const InputDecoration(labelText: 'Category'),
-          ),
-          DropdownButtonFormField<TariffType>(
-            initialValue: _type,
-            items: TariffType.values
-                .map((type) => DropdownMenuItem(
-                      value: type,
-                      child: Text(type.name),
-                    ))
-                .toList(),
-            onChanged: (value) => setState(() => _type = value ?? _type),
-            decoration: const InputDecoration(labelText: 'Type'),
-          ),
-          TextField(
-            controller: _amountController,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(labelText: 'Amount (COP)'),
-          ),
-          if (_type == TariffType.nightly) ...[
-            TextField(
-              controller: _startController,
-              decoration: const InputDecoration(labelText: 'Start (HH:MM)'),
+          Semantics(
+            label: l10n.tariffActiveLabel,
+            child: Switch(
+              value: tariff.active,
+              onChanged: tariff.id == null ? null : (_) => _toggle(context),
             ),
-            TextField(
-              controller: _endController,
-              decoration: const InputDecoration(labelText: 'End (HH:MM)'),
-            ),
-          ],
+          ),
+          AppIconButton(
+            icon: Icons.delete_outline,
+            tooltip: l10n.tariffDeleteTooltip,
+            onPressed: tariff.id == null ? null : () => _delete(context),
+          ),
         ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: () => _submit(context),
-          child: const Text('Create'),
-        ),
-      ],
     );
+  }
+
+  void _toggle(BuildContext context) {
+    final cubit = context.read<TariffsCubit>();
+    final id = tariff.id!;
+    unawaited(cubit.update(UpdateTariffCommand(id: id, active: !tariff.active)));
+    if (tariff.active) {
+      showUndoSnack(
+        context,
+        message: context.l10n.tariffDeactivated,
+        onUndo: () => cubit.update(UpdateTariffCommand(id: id, active: true)),
+      );
+    }
+  }
+
+  Future<void> _delete(BuildContext context) async {
+    final cubit = context.read<TariffsCubit>();
+    final l10n = context.l10n;
+    final confirmed = await ConfirmDialog.show(
+      context,
+      ConfirmDialog(
+        title: l10n.tariffDeleteTitle,
+        body: l10n.tariffDeleteBody(
+          '$categoryName · ${tariff.type.label(l10n)}',
+        ),
+        confirmLabel: l10n.actionDelete,
+        destructive: true,
+      ),
+    );
+    if (confirmed) {
+      await cubit.delete(tariff.id!);
+    }
   }
 }

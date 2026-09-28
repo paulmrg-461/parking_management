@@ -26,18 +26,15 @@ class CategoryOccupancyDto {
   Map<String, dynamic> toJson() => _$CategoryOccupancyDtoToJson(this);
 
   CategoryOccupancy toDomain() => CategoryOccupancy(
-        categoryId: categoryId,
-        categoryName: categoryName,
-        count: count,
-      );
+    categoryId: categoryId,
+    categoryName: categoryName,
+    count: count,
+  );
 }
 
 @JsonSerializable()
 class OccupancyReportDto {
-  const OccupancyReportDto({
-    required this.totalOpen,
-    required this.byCategory,
-  });
+  const OccupancyReportDto({required this.totalOpen, required this.byCategory});
 
   factory OccupancyReportDto.fromJson(Map<String, dynamic> json) =>
       _$OccupancyReportDtoFromJson(json);
@@ -51,7 +48,7 @@ class OccupancyReportDto {
   Map<String, dynamic> toJson() => _$OccupancyReportDtoToJson(this);
 
   OccupancyReport toDomain() => OccupancyReport(
-        totalOpen: totalOpen,
-        byCategory: byCategory.map((dto) => dto.toDomain()).toList(),
-      );
+    totalOpen: totalOpen,
+    byCategory: byCategory.map((dto) => dto.toDomain()).toList(),
+  );
 }
