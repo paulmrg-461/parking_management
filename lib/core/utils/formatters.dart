@@ -8,6 +8,10 @@ abstract final class Formatters {
   static String dateTime(DateTime value) =>
       DateFormat.yMd(formatLocale).add_Hm().format(value.toLocal());
 
+  /// Receipt-style timestamp: `25/09/2026 14:07:05` (leading zeros + seconds).
+  static String dateTimeFull(DateTime value) =>
+      DateFormat('dd/MM/yyyy HH:mm:ss', formatLocale).format(value.toLocal());
+
   static String date(DateTime value) =>
       DateFormat.yMd(formatLocale).format(value.toLocal());
 

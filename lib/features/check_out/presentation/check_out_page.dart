@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/state/submission.dart';
-import '../../../core/utils/cop_formatter.dart';
+import '../../../core/widgets/receipt_card.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/widgets/sync_badge.dart';
 import '../application/check_out_cubit.dart';
@@ -81,41 +81,18 @@ class _CheckOutPageState extends State<CheckOutPage> {
   }
 
   Future<void> _showReceipt(BuildContext context, CheckOutReceipt receipt) {
-    return showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Check-out complete'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: _receiptLines(receipt),
-        ),
-        actions: [
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Done'),
-          ),
-        ],
-      ),
-    );
+    return showReceiptSummary(context, _receiptData(receipt));
   }
 
-  /// A queued (`pendingSync`) check-out has no amount/ticket yet — this
-  /// project never shows a client-computed fare guess, so the dialog shows a
-  /// pending notice instead of the numeric receipt.
-  List<Widget> _receiptLines(CheckOutReceipt receipt) {
-    if (receipt.pendingSync) {
-      return const [Text('Queued — amount pending sync')];
-    }
-    return [
-      Text('Plate: ${receipt.plate}'),
-      Text('Entry: ${receipt.entryTime.toLocal()}'),
-      Text('Exit: ${receipt.exitTime.toLocal()}'),
-      Text('Amount: ${CopFormatter.format(receipt.amountCharged!)}'),
-      Text('Ticket: ${receipt.ticketNumber}'),
-    ];
-  }
+  ReceiptData _receiptData(CheckOutReceipt receipt) => ReceiptData(
+    kind: ReceiptKind.checkOut,
+    plate: receipt.plate,
+    entryTime: receipt.entryTime,
+    exitTime: receipt.exitTime,
+    amountCharged: receipt.amountCharged,
+    ticketNumber: receipt.ticketNumber,
+    pendingSync: receipt.pendingSync,
+  );
 }
 
 /// Rebuilds only when what it renders changes (not on submission status).

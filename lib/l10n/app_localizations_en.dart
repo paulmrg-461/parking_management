@@ -507,6 +507,23 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get receiptGenerate => 'Generate receipt';
+
+  @override
+  String get receiptClose => 'Close';
+
+  @override
+  String get receiptPhotos => 'Evidence photos';
+
+  @override
+  String get checkInReceiptTitle => 'Check-in complete';
+
+  @override
+  String receiptGeneratedAt(String time) {
+    return 'Generated at $time';
+  }
+
+  @override
   String get scanTitle => 'Scan plate';
 
   @override

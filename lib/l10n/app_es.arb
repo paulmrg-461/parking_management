@@ -177,6 +177,12 @@
   "@durationHoursMinutes": {"placeholders": {"hours": {"type": "int"}, "minutes": {"type": "int"}}},
   "durationMinutes": "{minutes} min",
   "@durationMinutes": {"placeholders": {"minutes": {"type": "int"}}},
+  "receiptGenerate": "Generar recibo",
+  "receiptClose": "Cerrar",
+  "receiptPhotos": "Fotos de evidencia",
+  "checkInReceiptTitle": "Entrada registrada",
+  "receiptGeneratedAt": "Generado el {time}",
+  "@receiptGeneratedAt": {"placeholders": {"time": {"type": "String"}}},
 
   "scanTitle": "Escanear placa",
   "scanCapture": "Tomar foto de la placa",

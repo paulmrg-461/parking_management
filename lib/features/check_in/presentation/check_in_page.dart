@@ -7,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/state/submission.dart';
+import '../../../core/widgets/receipt_card.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/widgets/sync_badge.dart';
 import '../../plate_scanning/domain/repositories/plate_image_capture.dart';
@@ -158,13 +159,21 @@ class _CheckInPageState extends State<CheckInPage> {
     switch (state.submission) {
       case SubmissionSucceeded<ParkingSession>(:final result):
         _resetForm();
-        showInfoSnack(context, 'Check-in created for ${result.plate}');
+        unawaited(showReceiptSummary(context, _checkInReceiptData(result)));
       case SubmissionFailed(:final message):
         showErrorSnack(context, message);
       default:
         break;
     }
   }
+
+  ReceiptData _checkInReceiptData(ParkingSession session) => ReceiptData(
+    kind: ReceiptKind.checkIn,
+    plate: session.plate,
+    entryTime: session.entryTime,
+    photoCount: session.photoCount,
+    pendingSync: session.status == ParkingSessionStatus.pendingSync,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -334,23 +343,29 @@ class _CheckInPageState extends State<CheckInPage> {
           ),
         ),
         const SizedBox(height: 8),
-        DropdownButtonFormField<int>(
-          key: ObjectKey(lookup),
-          initialValue: _categoryId,
-          decoration: const InputDecoration(
-            labelText: 'Category',
-            helperText: 'Required to register this plate',
+        if (lookup.categories.isEmpty)
+          Text(
+            'No categories configured. Create one in the Categories section first.',
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
+          )
+        else
+          DropdownButtonFormField<int>(
+            key: ObjectKey(lookup),
+            initialValue: _categoryId,
+            decoration: const InputDecoration(
+              labelText: 'Category',
+              helperText: 'Required to register this plate',
+            ),
+            items: [
+              for (final category in lookup.categories)
+                if (category.id != null)
+                  DropdownMenuItem(
+                    value: category.id,
+                    child: Text(category.name),
+                  ),
+            ],
+            onChanged: (value) => setState(() => _categoryId = value),
           ),
-          items: [
-            for (final category in lookup.categories)
-              if (category.id != null)
-                DropdownMenuItem(
-                  value: category.id,
-                  child: Text(category.name),
-                ),
-          ],
-          onChanged: (value) => setState(() => _categoryId = value),
-        ),
         const SizedBox(height: 16),
         TextField(
           controller: _colorController,

@@ -974,6 +974,36 @@ abstract class AppLocalizations {
   /// **'{minutes} min'**
   String durationMinutes(int minutes);
 
+  /// No description provided for @receiptGenerate.
+  ///
+  /// In es, this message translates to:
+  /// **'Generar recibo'**
+  String get receiptGenerate;
+
+  /// No description provided for @receiptClose.
+  ///
+  /// In es, this message translates to:
+  /// **'Cerrar'**
+  String get receiptClose;
+
+  /// No description provided for @receiptPhotos.
+  ///
+  /// In es, this message translates to:
+  /// **'Fotos de evidencia'**
+  String get receiptPhotos;
+
+  /// No description provided for @checkInReceiptTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Entrada registrada'**
+  String get checkInReceiptTitle;
+
+  /// No description provided for @receiptGeneratedAt.
+  ///
+  /// In es, this message translates to:
+  /// **'Generado el {time}'**
+  String receiptGeneratedAt(String time);
+
   /// No description provided for @scanTitle.
   ///
   /// In es, this message translates to:
