@@ -520,6 +520,30 @@ class AppLocalizationsEs extends AppLocalizations {
   String get receiptClose => 'Cerrar';
 
   @override
+  String get printReceipt => 'Imprimir';
+
+  @override
+  String get printSystem => 'Impresora del sistema (PDF)';
+
+  @override
+  String get printBluetooth => 'Impresoras Bluetooth';
+
+  @override
+  String get printScan => 'Buscar impresoras';
+
+  @override
+  String get printScanning => 'Buscando impresoras...';
+
+  @override
+  String get printNoPrinters => 'No se encontraron impresoras Bluetooth';
+
+  @override
+  String get printSuccess => 'Recibo enviado a la impresora';
+
+  @override
+  String get printError => 'No se pudo imprimir';
+
+  @override
   String get receiptPhotos => 'Fotos de evidencia';
 
   @override

@@ -1,63 +1,47 @@
 import 'package:flutter/material.dart';
 
 import '../l10n/l10n.dart';
+import '../receipt/receipt_data.dart';
 import '../theme/status_colors.dart';
 import '../theme/tokens.dart';
 import '../utils/formatters.dart';
 
-/// Whether a receipt describes a vehicle entering or leaving.
-enum ReceiptKind { checkIn, checkOut }
-
-/// Display data for a [ReceiptCard]. Pure UI model: it is built from a
-/// `CheckOutReceipt` or a `ParkingSession` at the call site.
-class ReceiptData {
-  const ReceiptData({
-    required this.kind,
-    required this.plate,
-    required this.entryTime,
-    this.exitTime,
-    this.photoCount,
-    this.amountCharged,
-    this.ticketNumber,
-    this.pendingSync = false,
-  });
-
-  final ReceiptKind kind;
-  final String plate;
-  final DateTime entryTime;
-  final DateTime? exitTime;
-  final int? photoCount;
-  final int? amountCharged;
-  final String? ticketNumber;
-  final bool pendingSync;
-
-  bool get isCheckOut => kind == ReceiptKind.checkOut;
-}
+export '../receipt/receipt_data.dart';
 
 /// Shows [data] as a polished receipt dialog (the "generar recibo" target).
-Future<void> showReceipt(BuildContext context, ReceiptData data) {
+/// [onPrint], when provided, adds an "Imprimir" action (e.g. the print sheet).
+Future<void> showReceipt(
+  BuildContext context,
+  ReceiptData data, {
+  Future<void> Function()? onPrint,
+}) {
   return showDialog<void>(
     context: context,
-    builder: (dialogContext) => _ReceiptDialog(data: data),
+    builder: (dialogContext) => _ReceiptDialog(data: data, onPrint: onPrint),
   );
 }
 
 /// Shows a compact, formatted summary with a "Generar recibo" action that
 /// opens the full receipt via [showReceipt].
-Future<void> showReceiptSummary(BuildContext context, ReceiptData data) {
+Future<void> showReceiptSummary(
+  BuildContext context,
+  ReceiptData data, {
+  Future<void> Function()? onPrint,
+}) {
   return showDialog<void>(
     context: context,
     barrierDismissible: false,
-    builder: (_) => ReceiptSummaryDialog(data: data),
+    builder: (_) => ReceiptSummaryDialog(data: data, onPrint: onPrint),
   );
 }
 
 /// Compact post-action summary (check-in or check-out): formatted dates,
 /// duration, a pretty amount and a "Generar recibo" button.
 class ReceiptSummaryDialog extends StatelessWidget {
-  const ReceiptSummaryDialog({super.key, required this.data});
+  const ReceiptSummaryDialog({super.key, required this.data, this.onPrint});
 
   final ReceiptData data;
+  final Future<void> Function()? onPrint;
 
   @override
   Widget build(BuildContext context) {
@@ -157,7 +141,7 @@ class ReceiptSummaryDialog extends StatelessWidget {
                   FilledButton.icon(
                     onPressed: () {
                       Navigator.of(context).pop();
-                      showReceipt(context, data);
+                      showReceipt(context, data, onPrint: onPrint);
                     },
                     icon: const Icon(Icons.receipt_long),
                     label: Text(l10n.receiptGenerate),
@@ -173,9 +157,10 @@ class ReceiptSummaryDialog extends StatelessWidget {
 }
 
 class _ReceiptDialog extends StatelessWidget {
-  const _ReceiptDialog({required this.data});
+  const _ReceiptDialog({required this.data, this.onPrint});
 
   final ReceiptData data;
+  final Future<void> Function()? onPrint;
 
   @override
   Widget build(BuildContext context) {
@@ -202,6 +187,14 @@ class _ReceiptDialog extends StatelessWidget {
                 children: [
                   ReceiptCard(data: data),
                   const SizedBox(height: Space.lg),
+                  if (onPrint != null) ...[
+                    OutlinedButton.icon(
+                      onPressed: () => onPrint!(),
+                      icon: const Icon(Icons.print),
+                      label: Text(l10n.printReceipt),
+                    ),
+                    const SizedBox(height: Space.sm),
+                  ],
                   FilledButton.icon(
                     onPressed: () => Navigator.of(context).pop(),
                     icon: const Icon(Icons.check),

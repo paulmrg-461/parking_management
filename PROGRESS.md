@@ -40,6 +40,12 @@ All planned capabilities are now implemented — nothing remains in the roadmap.
   default) and the inline plate-scan flow (`PlateScanningCubit` +
   `captureAndScan`), and fixed the two widget tests that pumped bare
   `MaterialApp` without localization delegates.
+- **Receipt printing**: `lib/features/receipt_printing/` adds an "Imprimir"
+  action on every receipt — a system PDF print (`printing` package, all
+  platforms) and Bluetooth thermal printers (`bluetooth_print`, classic SPP,
+  Android). ESC/POS lines are built by `ReceiptLineBuilder`; discovery/print
+  state lives in `PrinterCubit`. Bluetooth permissions added to the Android
+  manifest.
 
 ## Infra/tooling (not OpenSpec capabilities — repo scaffolding)
 

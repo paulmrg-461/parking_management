@@ -7,6 +7,7 @@ import '../../../core/state/submission.dart';
 import '../../../core/widgets/receipt_card.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/widgets/sync_badge.dart';
+import '../../receipt_printing/presentation/receipt_print_sheet.dart';
 import '../application/check_out_cubit.dart';
 import '../domain/entities/check_out_receipt.dart';
 import '../domain/entities/open_session.dart';
@@ -81,7 +82,12 @@ class _CheckOutPageState extends State<CheckOutPage> {
   }
 
   Future<void> _showReceipt(BuildContext context, CheckOutReceipt receipt) {
-    return showReceiptSummary(context, _receiptData(receipt));
+    final data = _receiptData(receipt);
+    return showReceiptSummary(
+      context,
+      data,
+      onPrint: () => showReceiptPrintSheet(context, data),
+    );
   }
 
   ReceiptData _receiptData(CheckOutReceipt receipt) => ReceiptData(

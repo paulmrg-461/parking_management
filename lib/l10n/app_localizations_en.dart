@@ -516,6 +516,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get receiptClose => 'Close';
 
   @override
+  String get printReceipt => 'Print';
+
+  @override
+  String get printSystem => 'System printer (PDF)';
+
+  @override
+  String get printBluetooth => 'Bluetooth printers';
+
+  @override
+  String get printScan => 'Search for printers';
+
+  @override
+  String get printScanning => 'Searching for printers...';
+
+  @override
+  String get printNoPrinters => 'No Bluetooth printers found';
+
+  @override
+  String get printSuccess => 'Receipt sent to the printer';
+
+  @override
+  String get printError => 'Could not print';
+
+  @override
   String get receiptPhotos => 'Evidence photos';
 
   @override

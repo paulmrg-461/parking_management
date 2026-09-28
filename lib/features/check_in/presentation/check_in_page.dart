@@ -16,6 +16,7 @@ import '../../../core/widgets/sync_badge.dart';
 import '../../plate_scanning/application/plate_scanning_cubit.dart';
 import '../../plate_scanning/domain/repositories/plate_image_capture.dart';
 import '../../plate_scanning/presentation/inline_plate_scan.dart';
+import '../../receipt_printing/presentation/receipt_print_sheet.dart';
 import '../application/check_in_cubit.dart';
 import '../application/vehicle_lookup_cubit.dart';
 import '../domain/entities/new_vehicle_info.dart';
@@ -440,15 +441,17 @@ class _SessionTile extends StatelessWidget {
   }
 
   void _viewReceipt(BuildContext context) {
+    final data = ReceiptData(
+      kind: ReceiptKind.checkIn,
+      plate: session.plate,
+      entryTime: session.entryTime,
+      photoCount: session.photoCount,
+      pendingSync: session.status == ParkingSessionStatus.pendingSync,
+    );
     showReceipt(
       context,
-      ReceiptData(
-        kind: ReceiptKind.checkIn,
-        plate: session.plate,
-        entryTime: session.entryTime,
-        photoCount: session.photoCount,
-        pendingSync: session.status == ParkingSessionStatus.pendingSync,
-      ),
+      data,
+      onPrint: () => showReceiptPrintSheet(context, data),
     );
   }
 }

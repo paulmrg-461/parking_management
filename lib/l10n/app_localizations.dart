@@ -992,6 +992,54 @@ abstract class AppLocalizations {
   /// **'Cerrar'**
   String get receiptClose;
 
+  /// No description provided for @printReceipt.
+  ///
+  /// In es, this message translates to:
+  /// **'Imprimir'**
+  String get printReceipt;
+
+  /// No description provided for @printSystem.
+  ///
+  /// In es, this message translates to:
+  /// **'Impresora del sistema (PDF)'**
+  String get printSystem;
+
+  /// No description provided for @printBluetooth.
+  ///
+  /// In es, this message translates to:
+  /// **'Impresoras Bluetooth'**
+  String get printBluetooth;
+
+  /// No description provided for @printScan.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscar impresoras'**
+  String get printScan;
+
+  /// No description provided for @printScanning.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscando impresoras...'**
+  String get printScanning;
+
+  /// No description provided for @printNoPrinters.
+  ///
+  /// In es, this message translates to:
+  /// **'No se encontraron impresoras Bluetooth'**
+  String get printNoPrinters;
+
+  /// No description provided for @printSuccess.
+  ///
+  /// In es, this message translates to:
+  /// **'Recibo enviado a la impresora'**
+  String get printSuccess;
+
+  /// No description provided for @printError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo imprimir'**
+  String get printError;
+
   /// No description provided for @receiptPhotos.
   ///
   /// In es, this message translates to:
