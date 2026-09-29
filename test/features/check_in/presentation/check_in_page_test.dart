@@ -14,6 +14,7 @@ import 'package:parking_management/features/check_in/domain/entities/parking_ses
 import 'package:parking_management/features/check_in/domain/repositories/check_in_repository.dart';
 import 'package:parking_management/features/check_in/presentation/check_in_page.dart';
 import 'package:parking_management/core/error/failure.dart';
+import 'package:parking_management/features/home/application/dashboard_cubit.dart';
 import 'package:parking_management/features/plate_scanning/application/plate_scanning_cubit.dart';
 import 'package:parking_management/features/plate_scanning/domain/entities/plate_scan_result.dart';
 import 'package:parking_management/features/plate_scanning/domain/repositories/plate_image_capture.dart';
@@ -23,11 +24,13 @@ import 'package:parking_management/features/vehicles/domain/commands/update_vehi
 import 'package:parking_management/features/vehicles/domain/entities/vehicle.dart';
 import 'package:parking_management/features/vehicles/domain/repositories/vehicle_repository.dart';
 
+import '../../../helpers/fake_check_out_repository.dart';
 import '../../../helpers/test_app.dart';
 import '../../../helpers/test_png.dart';
 
 class _FakeCheckInRepository implements CheckInRepository {
   int createCalls = 0;
+  Failure? createError;
   String? lastPlate;
   NewVehicleInfo? lastNewVehicle;
   List<XFile> lastPhotos = const [];
@@ -42,6 +45,8 @@ class _FakeCheckInRepository implements CheckInRepository {
     lastPlate = plate;
     lastNewVehicle = newVehicle;
     lastPhotos = photos;
+    final error = createError;
+    if (error != null) throw error;
     return ParkingSession(
       id: 2,
       plate: plate,
@@ -149,6 +154,7 @@ class _FakeScanner implements PlateScanner {
 
 void main() {
   late _FakeCheckInRepository checkIns;
+  late FakeCheckOutRepository occupancy;
   late List<MethodCall> platformCalls;
 
   setUp(() {
@@ -170,12 +176,16 @@ void main() {
     _FakeScanner? scanner,
   }) async {
     checkIns = _FakeCheckInRepository();
+    occupancy = FakeCheckOutRepository();
     await tester.pumpWidget(
       testApp(
         MultiBlocProvider(
           providers: [
             BlocProvider<CheckInCubit>(
               create: (_) => CheckInCubit(CreateCheckIn(checkIns), checkIns),
+            ),
+            BlocProvider<DashboardCubit>(
+              create: (_) => DashboardCubit(occupancy),
             ),
             BlocProvider<VehicleLookupCubit>(
               create: (_) => VehicleLookupCubit(
@@ -271,6 +281,36 @@ void main() {
     expect(field.focusNode!.hasFocus, isTrue);
     expect(hapticFired(), isTrue);
   });
+
+  testWidgets(
+    'Success: a registered entry refreshes the vehicles-inside count',
+    (tester) async {
+      await pumpPage(tester);
+      await enterPlate(tester, 'abc123');
+
+      await tester.tap(submitButton());
+      await tester.pumpAndSettle();
+
+      expect(occupancy.listCalls, 1);
+    },
+  );
+
+  testWidgets(
+    'Failure: a rejected entry leaves the vehicles-inside count untouched',
+    (tester) async {
+      await pumpPage(tester);
+      await enterPlate(tester, 'abc123');
+      checkIns.createError = const ValidationFailure(
+        'Session already open for this plate',
+      );
+
+      await tester.tap(submitButton());
+      await tester.pumpAndSettle();
+
+      expect(find.text('Session already open for this plate'), findsOneWidget);
+      expect(occupancy.listCalls, 0);
+    },
+  );
 
   testWidgets('Failure: an empty plate is validated inline, never sent', (
     tester,

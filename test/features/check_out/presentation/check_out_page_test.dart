@@ -9,9 +9,12 @@ import 'package:parking_management/features/check_out/domain/entities/check_out_
 import 'package:parking_management/features/check_out/domain/entities/open_session.dart';
 import 'package:parking_management/features/check_out/domain/repositories/check_out_repository.dart';
 import 'package:parking_management/features/check_out/presentation/check_out_page.dart';
+import 'package:parking_management/features/home/application/dashboard_cubit.dart';
 import 'package:parking_management/features/vehicles/domain/entities/vehicle.dart';
 
+import '../../../helpers/fake_check_out_repository.dart';
 import '../../../helpers/fake_vehicle_repository.dart';
+import '../../../helpers/test_app.dart';
 
 class _FakeCheckOutRepository implements CheckOutRepository {
   Failure? checkOutError;
@@ -26,28 +29,47 @@ class _FakeCheckOutRepository implements CheckOutRepository {
   ]);
 
   @override
-  Future<CheckOutReceipt> checkOut(int sessionId) async =>
-      throw checkOutError ?? UnimplementedError();
+  Future<CheckOutReceipt> checkOut(int sessionId) async {
+    final error = checkOutError;
+    if (error != null) throw error;
+    return CheckOutReceipt(
+      id: sessionId,
+      plate: sessionId == 1 ? 'ABC123' : 'XYZ999',
+      entryTime: DateTime(2026, 1, 1, 8),
+      exitTime: DateTime(2026, 1, 1, 10),
+      amountCharged: 5000,
+      ticketNumber: 'TCK-000001',
+    );
+  }
 }
 
 void main() {
   late _FakeCheckOutRepository repository;
+  late FakeCheckOutRepository occupancy;
 
   Future<void> pumpPage(WidgetTester tester) async {
     repository = _FakeCheckOutRepository();
+    occupancy = FakeCheckOutRepository();
     final vehicles = FakeVehicleRepository(const [
       Vehicle(id: 1, plate: 'ABC123', categoryId: 1),
       Vehicle(id: 2, plate: 'XYZ999', categoryId: 1),
     ]);
     await tester.pumpWidget(
-      MaterialApp(
-        home: BlocProvider<CheckOutCubit>(
-          create: (_) => CheckOutCubit(
-            CheckOutVehicle(repository),
-            repository,
-            vehicles,
-            searchDebounce: Duration.zero,
-          ),
+      testApp(
+        MultiBlocProvider(
+          providers: [
+            BlocProvider<CheckOutCubit>(
+              create: (_) => CheckOutCubit(
+                CheckOutVehicle(repository),
+                repository,
+                vehicles,
+                searchDebounce: Duration.zero,
+              ),
+            ),
+            BlocProvider<DashboardCubit>(
+              create: (_) => DashboardCubit(occupancy),
+            ),
+          ],
           child: const CheckOutPage(),
         ),
       ),
@@ -78,6 +100,20 @@ void main() {
     expect(find.text('XYZ999'), findsOneWidget);
   });
 
+  testWidgets('Success: a closed session refreshes the vehicles-inside count', (
+    tester,
+  ) async {
+    await pumpPage(tester);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Check out').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Confirm'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Generar recibo'), findsOneWidget);
+    expect(occupancy.listCalls, 1);
+  });
+
   testWidgets(
     'Failure: a failed check-out keeps the list and shows a SnackBar',
     (tester) async {
@@ -93,6 +129,23 @@ void main() {
 
       expect(find.text('Session already closed'), findsOneWidget);
       expect(find.text('ABC123'), findsOneWidget);
+      expect(occupancy.listCalls, 0);
+    },
+  );
+
+  testWidgets(
+    'Security: a broken occupancy source cannot break the receipt flow',
+    (tester) async {
+      await pumpPage(tester);
+      occupancy.listError = const NetworkFailure('offline');
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Check out').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Confirm'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Generar recibo'), findsOneWidget);
+      expect(occupancy.listCalls, 1);
     },
   );
 }

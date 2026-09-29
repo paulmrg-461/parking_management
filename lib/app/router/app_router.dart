@@ -49,8 +49,10 @@ GoRouter buildRouter(AuthCubit auth, Listenable refresh) => GoRouter(
       ),
     ),
     ShellRoute(
-      builder: (context, state, child) =>
-          AppShell(location: state.uri.path, child: child),
+      builder: (context, state, child) => BlocProvider<DashboardCubit>(
+        create: (_) => serviceLocator<DashboardCubit>(),
+        child: AppShell(location: state.uri.path, child: child),
+      ),
       routes: [_homeRoute],
     ),
   ],
@@ -58,10 +60,7 @@ GoRouter buildRouter(AuthCubit auth, Listenable refresh) => GoRouter(
 
 final GoRoute _homeRoute = GoRoute(
   path: homePath,
-  builder: (context, state) => BlocProvider<DashboardCubit>(
-    create: (_) => serviceLocator<DashboardCubit>(),
-    child: const HomePage(),
-  ),
+  builder: (context, state) => const HomePage(),
   routes: [
     GoRoute(
       path: 'check-in',

@@ -13,6 +13,7 @@ import '../../../core/widgets/photo_strip.dart';
 import '../../../core/widgets/receipt_card.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/widgets/sync_badge.dart';
+import '../../home/application/dashboard_cubit.dart';
 import '../../plate_scanning/application/plate_scanning_cubit.dart';
 import '../../plate_scanning/domain/repositories/plate_image_capture.dart';
 import '../../plate_scanning/presentation/inline_plate_scan.dart';
@@ -190,6 +191,7 @@ class _CheckInPageState extends State<CheckInPage> {
         HapticFeedback.mediumImpact();
         _resetForm();
         _plateFocus.requestFocus();
+        unawaited(context.read<DashboardCubit>().load());
         showInfoSnack(context, context.l10n.checkInSuccess(result.plate));
       case SubmissionFailed(:final message, :final failure):
         showErrorSnack(context, context.l10n.errorText(message, failure));

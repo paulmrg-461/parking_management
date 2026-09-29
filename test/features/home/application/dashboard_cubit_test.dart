@@ -30,6 +30,17 @@ void main() {
     expect(cubit.state, isA<DashboardFailure>());
   });
 
+  test('Failure: a failed refresh keeps the last known occupancy', () async {
+    final repository = FakeCheckOutRepository(sessions: _sessions(7));
+    final cubit = DashboardCubit(repository);
+
+    await cubit.load();
+    repository.listError = const NetworkFailure('offline');
+    await cubit.load();
+
+    expect(cubit.state, const DashboardLoaded(openSessions: 7));
+  });
+
   test('Security: only one row is requested (count via X-Total-Count)', () async {
     final repository = _CountingRepository(sessions: _sessions(3));
     final cubit = DashboardCubit(repository);

@@ -49,7 +49,9 @@ class DashboardCubit extends Cubit<DashboardState> {
       final page = await _sessions.listOpenSessions(limit: 1);
       _emit(DashboardLoaded(openSessions: page.total ?? page.items.length));
     } on Failure catch (failure) {
-      _emit(DashboardFailure(failure));
+      if (state is! DashboardLoaded) {
+        _emit(DashboardFailure(failure));
+      }
     }
   }
 

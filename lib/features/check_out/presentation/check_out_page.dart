@@ -7,6 +7,7 @@ import '../../../core/state/submission.dart';
 import '../../../core/widgets/receipt_card.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/widgets/sync_badge.dart';
+import '../../home/application/dashboard_cubit.dart';
 import '../../receipt_printing/presentation/receipt_print_sheet.dart';
 import '../application/check_out_cubit.dart';
 import '../domain/entities/check_out_receipt.dart';
@@ -73,6 +74,7 @@ class _CheckOutPageState extends State<CheckOutPage> {
   void _onSubmission(BuildContext context, CheckOutState state) {
     switch (_submissionOf(state)) {
       case SubmissionSucceeded<CheckOutReceipt>(:final result):
+        unawaited(context.read<DashboardCubit>().load());
         unawaited(_showReceipt(context, result));
       case SubmissionFailed(:final message):
         showErrorSnack(context, message);

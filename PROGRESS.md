@@ -21,11 +21,26 @@ SOLID, Clean Code, all code in English.
 | `offline-sync` | `offline-sync` | Flutter-only, deliberately narrow scope: outbox-queued `update`/`delete` for **vehicles, tariffs, categories only**. New `lib/core/sync/` (`PendingMutation`, `SyncOutbox`/`HiveSyncOutbox` — JSON-in-`Box<String>`, no Hive adapter/typeId — `SyncService`) + `lib/core/network/connectivity_service.dart` (`connectivity_plus`). On `NetworkFailure`, `Vehicle/Tariff/CategoryRepositoryImpl.update`/`delete` now merge the patch into the local Hive cache (optimistic, merged client-side in the repository — mirrors the backend's own patch-merge shape) and enqueue instead of rethrowing; `SyncService.flush()` replays each entry through the repository's own `update`/`delete` once online, and one still-failing entry never blocks another (no backoff/reordering — simple last-write-wins, matching the app's existing preference). At the time this row was written, `check-in`/`check-out`/`monthly-passes`/all `create` mutations were NOT covered — see `offline-check-in-out` below for check-in/check-out. |
 | `offline-check-in-out` | `check-in`, `check-out`, `offline-sync` | Extends `offline-sync` to check-in (create) and check-out (close), the two kinds it originally excluded. **Check-out**: `CheckOutRepositoryImpl.checkOut` captures the device's local time at the moment of a `NetworkFailure`ed attempt and queues a `checkOut`/`close` `PendingMutation` carrying it as `client_exit_time` (keyed by the session's real id — no temp-id problem); replay reuses that *original* attempt time, never recaptures it, so the fare reflects when the operator acted, not when the device reconnected. Backend: `POST /check-outs/{session_id}` gains an optional JSON body (`CheckOutRequest.client_exit_time`), passed through to `CheckOutService.close_session`'s pre-existing (previously unused) `exit_time` override — omitted body keeps today's server-time behavior unchanged. The immediate receipt shows `pendingSync: true` with `amountCharged`/`ticketNumber` null — **no client-side fare calculation was added**; billing math stays backend-only (see its `design.md` Non-Goals: porting `FareCalculator`'s per-day/night-window/cap rules to Dart would create a second implementation that can drift from the backend's). **Check-in**: on `NetworkFailure`, `CheckInRepositoryImpl.createCheckIn` copies evidence photos from their transient picker location into `getApplicationSupportDirectory()/pending_check_ins/<clientRef>/` (new `lib/core/sync/pending_photo_storage.dart` — transient paths can be reclaimed by the OS before the queue drains), queues a `checkIn`/`create` `PendingMutation` (`entityId: null`), and returns an optimistic `ParkingSession` with a synthetic negative id and new `ParkingSessionStatus.pendingSync`. This sidesteps the generic "create needs server-id reconciliation" problem `offline-sync` flagged as a separate substantial feature: nothing on the client holds a reference to a session id after creation (open-sessions list is always refetched, never cached), so the synthetic id only has to be a valid list-row key until the next refresh — no reconciliation logic needed. `PendingMutation.entityId` widened to `int?` to represent this. `SyncService` gained `_replayCheckIn`/`_replayCheckOut` branches alongside the existing vehicle/tariff/category ones. |
 
+| `add-parking-settings` | `parking-settings` | **Implemented (commit `05f6359`), pending manual smoke + archive.** Backend: singleton `parking_settings` row (migration `0012`), public `GET /api/settings` with ETag/304 (login branding pre-auth), admin-only `PATCH` (422 field validation), logo upload/serving `POST/GET /api/settings/logo` (magic-byte check, 5 MB, `logo_version` counter, `settings_storage_path` + `backend/data/.gitignore`). Flutter `features/settings`: entity/port/Dio+Hive adapters, repository `load()` = remote→cache→defaults and offline `save()` = optimistic cache + outbox (`MutationEntity.settings`, replayer in `sync_module.buildMutationReplayers`), root `BrandingCubit` (cache-first seed, refresh online, only emits when ≠ `defaults()` so fallback stays l10n). Surfaces: admin `/settings` deferred form + logo upload (`image_picker`, online-only), read-only `/contact` in **primary nav for both roles** (`operatorRoutes` allowlist, `tel:`/website/`wa.me` actions, `whatsappUrl()` digits-only helper), WhatsApp FAB in both shells (hidden when unconfigured), receipts via `EscPosGenerator.build(data, settings)` + `SystemDialogReceiptPrinter` (cache-first settings, logo in PDF, `PARQUEADERO` fallback when nothing cached), login header/home AppBar/`onGenerateTitle` use `BrandingState.titleFor(l10n)`. New dep: `url_launcher` (+ `url_launcher_platform_interface` dev). |
+
 ## Remaining changes (planned order)
 
 All planned capabilities are now implemented — nothing remains in the roadmap.
 
+**OpenSpec `add-parking-settings`**: only task **10.4 (manual smoke)** is open —
+configure data on a device → contact page, WhatsApp link, login brand,
+thermal + PDF receipts; airplane mode → load/edit settings, re-enable network
+and confirm outbox replay. Then run `openspec archive add-parking-settings`.
+
 ## Recent additions (post-roadmap, not OpenSpec changes)
+
+- **Live occupancy**: after a successful entry or exit, the home "Vehículos
+  dentro" count refreshes (`DashboardCubit.load()` from
+  `check_in_page`/`check_out_page` `_onSubmission` success branches).
+  `DashboardCubit` moved from the `/` route to the `ShellRoute` so both pages
+  can reach it (provider `create` runs once → bloc survives in-shell
+  navigation); a failed refresh keeps the last known count instead of
+  blanking/erroring the card (important for offline check-ins).
 
 - **Receipts**: polished check-out/check-in receipts (`lib/core/widgets/receipt_card.dart`).
   Check-out shows a formatted summary (dates `dd/MM/yyyy HH:mm:ss`, duration
@@ -89,11 +104,12 @@ All planned capabilities are now implemented — nothing remains in the roadmap.
 - Login requires connectivity (backend is authority); session survives restarts offline.
 - COP currency via `intl`; night tariff = time window that replaces day tariff.
 - Hive codegen: single `@GenerateAdapters` file at `lib/app/di/hive_adapters.dart`.
+- Home occupancy: `DashboardCubit` is provided at the go_router `ShellRoute` (not on the `/` route), so the check-in/check-out pages can refresh the "Vehículos dentro" count after a submission; a failed refresh keeps the last known count instead of blanking the card (provider `create` runs once, so the bloc survives in-shell navigation).
 
 ## Test counts
 
-- Backend (`cd backend && uv run pytest`): 232 passed, 4 skipped.
-- Flutter (`flutter test`): 401 passed. `flutter analyze`: 0 issues.
+- Backend (`cd backend && uv run pytest`): 240 passed, 4 skipped.
+- Flutter (`flutter test`): 442 passed. `flutter analyze`: 0 issues.
 
 ## Layer map (Flutter feature slice)
 
@@ -101,4 +117,4 @@ All planned capabilities are now implemented — nothing remains in the roadmap.
 
 ## Backend layout
 
-`app/domain` (entities/ports) -> `app/application` (services) -> `app/infrastructure` (SQLAlchemy models/repos) -> `app/presentation` (routers/schemas/deps). Migrations in `backend/alembic/versions/` (0001..0008).
+`app/domain` (entities/ports) -> `app/application` (services) -> `app/infrastructure` (SQLAlchemy models/repos) -> `app/presentation` (routers/schemas/deps). Migrations in `backend/alembic/versions/` (0001..0012).
