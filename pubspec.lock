@@ -65,14 +65,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "9.2.1"
-  bluetooth_print:
+  bluetooth_print_plus:
     dependency: "direct main"
     description:
-      name: bluetooth_print
-      sha256: b391cd7b22b772e07dfddb4e065ecbed5f0e8dd777ce726e1ea56492c8d3ecc8
+      name: bluetooth_print_plus
+      sha256: "9d059064e8d7d8af9dbd1bf9b4c964428cb567d2f372a85177d9ba0f4e743d71"
       url: "https://pub.dev"
     source: hosted
-    version: "4.3.0"
+    version: "2.4.6"
   boolean_selector:
     dependency: transitive
     description:
@@ -913,10 +913,10 @@ packages:
     dependency: transitive
     description:
       name: rxdart
-      sha256: "0c7c0cedd93788d996e33041ffecda924cc54389199cde4e6a34b440f50044cb"
+      sha256: "5c3004a4a8dbb94bd4bf5412a4def4acdaa12e12f269737a5751369e12d1a962"
       url: "https://pub.dev"
     source: hosted
-    version: "0.27.7"
+    version: "0.28.0"
   shelf:
     dependency: transitive
     description:
