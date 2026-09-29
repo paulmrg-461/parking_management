@@ -11,6 +11,7 @@ extension HiveRegistrar on HiveInterface {
     registerAdapter(AuthSessionAdapter());
     registerAdapter(CategoryAdapter());
     registerAdapter(MonthlyPassAdapter());
+    registerAdapter(ParkingSettingsAdapter());
     registerAdapter(TariffAdapter());
     registerAdapter(TariffTypeAdapter());
     registerAdapter(UserAdapter());
@@ -25,6 +26,7 @@ extension IsolatedHiveRegistrar on IsolatedHiveInterface {
     registerAdapter(AuthSessionAdapter());
     registerAdapter(CategoryAdapter());
     registerAdapter(MonthlyPassAdapter());
+    registerAdapter(ParkingSettingsAdapter());
     registerAdapter(TariffAdapter());
     registerAdapter(TariffTypeAdapter());
     registerAdapter(UserAdapter());

@@ -218,6 +218,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get entityCheckOut => 'Check-out';
 
   @override
+  String get entitySettings => 'Settings';
+
+  @override
   String get navHome => 'Home';
 
   @override
@@ -245,10 +248,58 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navReports => 'Reports';
 
   @override
+  String get navSettings => 'Settings';
+
+  @override
+  String get navContact => 'Contact';
+
+  @override
   String get navMore => 'More';
 
   @override
   String get navMoreTooltip => 'More management sections';
+
+  @override
+  String get settingsTitle => 'Parking settings';
+
+  @override
+  String get settingsName => 'Name';
+
+  @override
+  String get settingsAddress => 'Address';
+
+  @override
+  String get settingsSchedule => 'Schedule';
+
+  @override
+  String get settingsPhone => 'Phone';
+
+  @override
+  String get settingsWebsite => 'Website';
+
+  @override
+  String get settingsWhatsapp => 'WhatsApp number';
+
+  @override
+  String get settingsSaved => 'Settings saved';
+
+  @override
+  String get settingsLogoSection => 'Logo';
+
+  @override
+  String get settingsLogoPick => 'Choose logo';
+
+  @override
+  String get settingsWebsiteInvalid => 'Enter a valid URL';
+
+  @override
+  String get contactTitle => 'Contact';
+
+  @override
+  String get contactWhatsApp => 'WhatsApp';
+
+  @override
+  String get whatsappTooltip => 'Chat on WhatsApp';
 
   @override
   String get loginSubtitle => 'Sign in to continue';

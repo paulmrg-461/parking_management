@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     evidence_storage_path: str = "./data/evidence"
     evidence_max_bytes: int = 5 * 1024 * 1024
     evidence_max_files: int = 5
+    # Uploaded parking logo files (PNG/JPEG), same cap as evidence photos.
+    settings_storage_path: str = "./data/settings"
     # IANA zone used for billing day boundaries, night windows and reports.
     business_timezone: str = "America/Bogota"
     # Comma-separated explicit origins (Flutter web dev, e.g.

@@ -18,6 +18,7 @@ const _adminOnly = [
   '/tariffs',
   '/vehicles',
   '/monthly-passes',
+  '/settings',
 ];
 
 void main() {
@@ -27,6 +28,7 @@ void main() {
       expect(authRedirect(_as(UserRole.operator), '/check-in'), isNull);
       expect(authRedirect(_as(UserRole.operator), '/check-out'), isNull);
       expect(authRedirect(_as(UserRole.operator), '/scan'), isNull);
+      expect(authRedirect(_as(UserRole.operator), '/contact'), isNull);
       for (final route in _adminOnly) {
         expect(authRedirect(_as(UserRole.admin), route), isNull, reason: route);
       }

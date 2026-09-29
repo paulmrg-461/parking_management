@@ -25,17 +25,21 @@ from app.presentation.routes import (
     users,
     vehicles,
 )
+from app.presentation.routes import (
+    settings as settings_routes,
+)
 
 # Startup notices go to the server log channel (configured by uvicorn).
 logger = logging.getLogger("uvicorn.error")
 
 _ROUTERS = (health, auth, users, categories, tariffs, vehicles, check_ins, check_outs,
-            billing, monthly_passes, reports)
+            billing, monthly_passes, reports, settings_routes)
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     ensure_storage_root(settings.evidence_storage_path)
+    ensure_storage_root(settings.settings_storage_path)
     resources = build_shared_resources(settings.redis_url)
     previous = install_shared_resources(resources)
     logger.info("Shared cache/login limiter backend: %s", resources.backend)

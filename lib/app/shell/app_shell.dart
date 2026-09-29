@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/l10n/l10n.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/widgets/offline_banner.dart';
+import '../../core/widgets/submission_feedback.dart';
 import '../../features/auth/application/auth_cubit.dart';
 import '../../features/auth/domain/entities/user.dart';
+import '../../features/settings/application/branding_cubit.dart';
+import '../../features/settings/domain/whatsapp_url.dart';
 import 'app_destinations.dart';
 
 /// Responsive chrome around every authenticated page: a [NavigationBar]
@@ -82,6 +86,7 @@ class _WideShell extends StatelessWidget {
           Expanded(child: content),
         ],
       ),
+      floatingActionButton: const _WhatsAppFab(),
     );
   }
 }
@@ -141,6 +146,7 @@ class _NarrowShell extends StatelessWidget {
     final more = destinationsFor(role).skip(primary.length).toList();
     return Scaffold(
       body: content,
+      floatingActionButton: const _WhatsAppFab(),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex(primary, more),
         onDestinationSelected: (i) => i < primary.length
@@ -194,5 +200,36 @@ class _NarrowShell extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Floating WhatsApp shortcut; hidden until a number is configured.
+class _WhatsAppFab extends StatelessWidget {
+  const _WhatsAppFab();
+
+  @override
+  Widget build(BuildContext context) {
+    final url = context.select<BrandingCubit, String?>(
+      (cubit) => whatsappUrl(cubit.state.settingsOrNull?.whatsapp ?? ''),
+    );
+    if (url == null) {
+      return const SizedBox.shrink();
+    }
+    return FloatingActionButton(
+      tooltip: context.l10n.whatsappTooltip,
+      onPressed: () => _open(context, url),
+      child: const Icon(Icons.chat),
+    );
+  }
+
+  Future<void> _open(BuildContext context, String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.platformDefault);
+      return;
+    }
+    if (context.mounted) {
+      showErrorSnack(context, context.l10n.errorUnknown);
+    }
   }
 }

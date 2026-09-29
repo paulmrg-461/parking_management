@@ -9,10 +9,12 @@ import 'package:parking_management/features/auth/application/auth_cubit.dart';
 import 'package:parking_management/features/auth/domain/entities/auth_session.dart';
 import 'package:parking_management/features/auth/domain/entities/user.dart';
 import 'package:parking_management/features/home/application/dashboard_cubit.dart';
+import 'package:parking_management/features/settings/application/branding_cubit.dart';
 import 'package:parking_management/features/users/application/users_cubit.dart';
 
 import 'fake_auth_repository.dart';
 import 'fake_check_out_repository.dart';
+import 'fake_settings_repository.dart';
 import 'fake_user_repository.dart';
 import 'fake_sync_outbox.dart';
 
@@ -30,6 +32,7 @@ Future<AuthCubit> pumpApp(
   Size size = const Size(400, 800),
   FakeSyncOutbox? outbox,
   ConnectivityCubit? connectivity,
+  BrandingCubit? branding,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -53,6 +56,8 @@ Future<AuthCubit> pumpApp(
     ParkingApp(
       authCubit: auth,
       syncStatusCubit: syncStatus,
+      brandingCubit:
+          branding ?? BrandingCubit(FakeParkingSettingsRepository()),
       connectivityCubit: connectivity,
     ),
   );

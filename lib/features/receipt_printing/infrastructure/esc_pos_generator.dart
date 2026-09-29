@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import '../../../core/receipt/receipt_data.dart';
 import '../../../core/utils/cop_formatter.dart';
+import '../../settings/domain/entities/parking_settings.dart';
 
 /// Builds raw ESC/POS bytes for an 80mm thermal receipt. Pure Dart (no I/O),
 /// so it can be unit-tested; the Bluetooth adapter sends the bytes to the
@@ -12,11 +13,13 @@ class EscPosGenerator {
   static const _init = [0x1B, 0x40]; // ESC @
   static const _cut = [0x1D, 0x56, 0x42, 0x00]; // GS V 66 0 (full cut)
 
-  List<int> build(ReceiptData data) {
+  /// [settings] is null when nothing was ever cached: the header then falls
+  /// back to `PARQUEADERO` so printing never fails.
+  List<int> build(ReceiptData data, ParkingSettings? settings) {
     final bytes = <int>[];
 
     bytes.addAll(_init);
-    _text(bytes, 'PARQUEADERO', align: 1, bold: true, doubleSize: true);
+    _text(bytes, _header(settings), align: 1, bold: true, doubleSize: true);
     _text(
       bytes,
       data.isCheckOut ? 'RECIBO DE SALIDA' : 'RECIBO DE ENTRADA',
@@ -48,10 +51,28 @@ class EscPosGenerator {
     _rule(bytes);
     _text(bytes, 'Generado el ${_dateTime(DateTime.now())}', align: 1);
     _text(bytes, 'Gracias por su visita', align: 1);
+    _footer(bytes, settings);
     _feed(bytes, 2);
     bytes.addAll(_cut);
 
     return bytes;
+  }
+
+  String _header(ParkingSettings? settings) {
+    final name = settings?.name.trim() ?? '';
+    return name.isEmpty ? 'PARQUEADERO' : name;
+  }
+
+  void _footer(List<int> out, ParkingSettings? settings) {
+    if (settings == null) {
+      return;
+    }
+    final lines = [settings.address, settings.schedule, settings.phone]
+        .map((line) => line.trim())
+        .where((line) => line.isNotEmpty);
+    for (final line in lines) {
+      _text(out, line, align: 1);
+    }
   }
 
   void _text(
@@ -66,7 +87,7 @@ class EscPosGenerator {
     }
     out.addAll([0x1B, 0x45, bold ? 1 : 0]); // ESC E — bold
     out.addAll([0x1B, 0x61, align]); // ESC a — alignment
-    out.addAll(latin1.encode(text));
+    out.addAll(latin1.encode(_latin1Safe(text)));
     out.add(0x0A);
     if (doubleSize) {
       out.addAll(const [0x1D, 0x21, 0x00]); // reset size
@@ -78,12 +99,17 @@ class EscPosGenerator {
     if (bold) {
       out.addAll(const [0x1B, 0x45, 1]);
     }
-    out.addAll(latin1.encode('$label: $value'));
+    out.addAll(latin1.encode(_latin1Safe('$label: $value')));
     out.add(0x0A);
     if (bold) {
       out.addAll(const [0x1B, 0x45, 0]);
     }
   }
+
+  /// Replaces anything outside CP437/Latin-1 so user-typed settings (emoji,
+  /// accents) can never throw mid-print.
+  String _latin1Safe(String text) =>
+      String.fromCharCodes(text.runes.map((r) => r < 0x100 ? r : 0x3F));
 
   void _rule(List<int> out) {
     out.addAll(latin1.encode('--------------------------------'));

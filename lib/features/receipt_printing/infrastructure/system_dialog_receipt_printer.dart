@@ -1,25 +1,34 @@
+import 'dart:typed_data';
+
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
 import '../../../core/receipt/receipt_data.dart';
 import '../../../core/utils/cop_formatter.dart';
+import '../../settings/domain/entities/parking_settings.dart';
+import '../../settings/domain/repositories/parking_settings_repository.dart';
 import '../domain/repositories/receipt_printer.dart';
 
 /// Prints a receipt through the OS print/share dialog by rendering it to a
 /// PDF (works on Android and web). The operator can then pick a system
-/// printer or save the PDF.
+/// printer or save the PDF. Identity comes from the cached settings so an
+/// offline print still renders the configured brand (or `PARQUEADERO`).
 class SystemDialogReceiptPrinter implements ReceiptPrinter {
-  const SystemDialogReceiptPrinter();
+  SystemDialogReceiptPrinter(this._settings);
+
+  final ParkingSettingsRepository _settings;
 
   @override
   Future<void> printPdf(ReceiptData data) async {
+    final settings = await _cachedSettings();
+    final logo = await _cachedLogo(settings);
     final document = pw.Document();
     document.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.roll80,
         margin: const pw.EdgeInsets.all(8),
-        build: (context) => _build(context, data),
+        build: (context) => _build(context, data, settings, logo),
       ),
     );
     await Printing.layoutPdf(
@@ -28,12 +37,36 @@ class SystemDialogReceiptPrinter implements ReceiptPrinter {
     );
   }
 
-  pw.Widget _build(pw.Context context, ReceiptData data) {
+  Future<ParkingSettings?> _cachedSettings() async {
+    try {
+      return await _settings.loadCached();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<Uint8List?> _cachedLogo(ParkingSettings? settings) async {
+    if (settings == null || settings.logoVersion == 0) {
+      return null;
+    }
+    try {
+      return await _settings.loadLogo(settings.logoVersion);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  pw.Widget _build(
+    pw.Context context,
+    ReceiptData data,
+    ParkingSettings? settings,
+    Uint8List? logo,
+  ) {
     final bold = pw.TextStyle(fontWeight: pw.FontWeight.bold);
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.stretch,
       children: [
-        pw.Text('PARQUEADERO', textAlign: pw.TextAlign.center, style: bold),
+        _title(logo, settings),
         pw.Text(
           data.isCheckOut ? 'RECIBO DE SALIDA' : 'RECIBO DE ENTRADA',
           textAlign: pw.TextAlign.center,
@@ -64,8 +97,45 @@ class SystemDialogReceiptPrinter implements ReceiptPrinter {
           textAlign: pw.TextAlign.center,
         ),
         pw.Text('Gracias por su visita', textAlign: pw.TextAlign.center),
+        ..._footer(settings),
       ],
     );
+  }
+
+  pw.Widget _title(Uint8List? logo, ParkingSettings? settings) {
+    final bold = pw.TextStyle(fontWeight: pw.FontWeight.bold);
+    return pw.Column(
+      children: [
+        if (logo != null)
+          pw.Padding(
+            padding: const pw.EdgeInsets.only(bottom: 4),
+            child: pw.SizedBox(
+              width: 48,
+              height: 48,
+              child: pw.Image(pw.MemoryImage(logo), fit: pw.BoxFit.contain),
+            ),
+          ),
+        pw.Text(_header(settings), textAlign: pw.TextAlign.center, style: bold),
+      ],
+    );
+  }
+
+  String _header(ParkingSettings? settings) {
+    final name = settings?.name.trim() ?? '';
+    return name.isEmpty ? 'PARQUEADERO' : name;
+  }
+
+  List<pw.Widget> _footer(ParkingSettings? settings) {
+    if (settings == null) {
+      return const [];
+    }
+    final lines = [settings.address, settings.schedule, settings.phone]
+        .map((line) => line.trim())
+        .where((line) => line.isNotEmpty);
+    return [
+      for (final line in lines)
+        pw.Text(line, textAlign: pw.TextAlign.center),
+    ];
   }
 
   pw.Widget _row(pw.Context context, String label, String value, {bool bold = false}) {

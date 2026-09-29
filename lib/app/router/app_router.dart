@@ -19,8 +19,10 @@ import '../../features/plate_scanning/presentation/plate_scan_page.dart';
 import '../di/injection.dart';
 import '../shell/app_shell.dart';
 import 'deferred/categories_entry.dart' deferred as categories;
+import 'deferred/contact_entry.dart' deferred as contact;
 import 'deferred/monthly_passes_entry.dart' deferred as monthly_passes;
 import 'deferred/reports_entry.dart' deferred as reports;
+import 'deferred/settings_entry.dart' deferred as settings;
 import 'deferred/tariffs_entry.dart' deferred as tariffs;
 import 'deferred/users_entry.dart' deferred as users;
 import 'deferred/vehicles_entry.dart' deferred as vehicles;
@@ -114,6 +116,16 @@ final GoRoute _homeRoute = GoRoute(
       'reports',
       reports.loadLibrary,
       () => reports.buildReportsEntry(),
+    ),
+    _deferred(
+      'settings',
+      settings.loadLibrary,
+      () => settings.buildSettingsEntry(),
+    ),
+    _deferred(
+      'contact',
+      contact.loadLibrary,
+      () => contact.buildContactEntry(),
     ),
   ],
 );

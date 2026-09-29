@@ -8,10 +8,12 @@ import 'package:parking_management/features/auth/domain/entities/user.dart';
 import 'package:parking_management/features/check_out/domain/entities/open_session.dart';
 import 'package:parking_management/features/home/application/dashboard_cubit.dart';
 import 'package:parking_management/features/home/presentation/home_page.dart';
+import 'package:parking_management/features/settings/application/branding_cubit.dart';
 
 import '../../../helpers/app_harness.dart';
 import '../../../helpers/fake_auth_repository.dart';
 import '../../../helpers/fake_check_out_repository.dart';
+import '../../../helpers/fake_settings_repository.dart';
 import '../../../helpers/test_app.dart';
 
 Future<FakeCheckOutRepository> _pump(
@@ -50,7 +52,10 @@ Future<FakeCheckOutRepository> _pump(
     ],
   );
   await tester.pumpWidget(
-    BlocProvider.value(value: auth, child: testRouterApp(router)),
+    BlocProvider<BrandingCubit>.value(
+      value: BrandingCubit(FakeParkingSettingsRepository()),
+      child: BlocProvider.value(value: auth, child: testRouterApp(router)),
+    ),
   );
   await tester.pumpAndSettle();
   return sessions;

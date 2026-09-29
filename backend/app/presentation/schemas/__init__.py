@@ -33,6 +33,10 @@ from app.presentation.schemas.reports import (
     OccupancyReportRead,
     RevenueReportRead,
 )
+from app.presentation.schemas.settings import (
+    ParkingSettingsRead,
+    ParkingSettingsUpdate,
+)
 from app.presentation.schemas.tariffs import (
     TariffCreate,
     TariffRead,
@@ -61,6 +65,8 @@ __all__ = [
     "MonthlyPassRead",
     "MonthlyPassUpdate",
     "OccupancyReportRead",
+    "ParkingSettingsRead",
+    "ParkingSettingsUpdate",
     "RevenueReportRead",
     "TariffCreate",
     "TariffRead",

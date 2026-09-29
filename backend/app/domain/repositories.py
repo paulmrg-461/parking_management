@@ -8,6 +8,7 @@ from app.domain.evidence_photo import EvidencePhoto
 from app.domain.monthly_pass import MonthlyPass
 from app.domain.pagination import Page, PageRequest
 from app.domain.parking_session import ParkingSession
+from app.domain.parking_settings import ParkingSettings
 from app.domain.report import OccupancyReport, RevenueReport
 from app.domain.tariff import Tariff
 from app.domain.user import User
@@ -220,4 +221,16 @@ class ReportRepository(ABC):
 
     @abstractmethod
     async def current_occupancy(self) -> OccupancyReport:
+        raise NotImplementedError
+
+
+class ParkingSettingsRepository(ABC):
+    @abstractmethod
+    async def get(self) -> ParkingSettings | None:
+        """The singleton record, or None before the first save."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def save(self, settings: ParkingSettings) -> ParkingSettings:
+        """Upsert the singleton record (id 1)."""
         raise NotImplementedError

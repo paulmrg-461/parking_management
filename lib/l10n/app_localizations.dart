@@ -476,6 +476,12 @@ abstract class AppLocalizations {
   /// **'Salida'**
   String get entityCheckOut;
 
+  /// No description provided for @entitySettings.
+  ///
+  /// In es, this message translates to:
+  /// **'Configuración'**
+  String get entitySettings;
+
   /// No description provided for @navHome.
   ///
   /// In es, this message translates to:
@@ -530,6 +536,18 @@ abstract class AppLocalizations {
   /// **'Reportes'**
   String get navReports;
 
+  /// No description provided for @navSettings.
+  ///
+  /// In es, this message translates to:
+  /// **'Configuración'**
+  String get navSettings;
+
+  /// No description provided for @navContact.
+  ///
+  /// In es, this message translates to:
+  /// **'Contacto'**
+  String get navContact;
+
   /// No description provided for @navMore.
   ///
   /// In es, this message translates to:
@@ -541,6 +559,90 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Más secciones de gestión'**
   String get navMoreTooltip;
+
+  /// No description provided for @settingsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Configuración del parqueadero'**
+  String get settingsTitle;
+
+  /// No description provided for @settingsName.
+  ///
+  /// In es, this message translates to:
+  /// **'Nombre'**
+  String get settingsName;
+
+  /// No description provided for @settingsAddress.
+  ///
+  /// In es, this message translates to:
+  /// **'Dirección'**
+  String get settingsAddress;
+
+  /// No description provided for @settingsSchedule.
+  ///
+  /// In es, this message translates to:
+  /// **'Horario'**
+  String get settingsSchedule;
+
+  /// No description provided for @settingsPhone.
+  ///
+  /// In es, this message translates to:
+  /// **'Teléfono'**
+  String get settingsPhone;
+
+  /// No description provided for @settingsWebsite.
+  ///
+  /// In es, this message translates to:
+  /// **'Sitio web'**
+  String get settingsWebsite;
+
+  /// No description provided for @settingsWhatsapp.
+  ///
+  /// In es, this message translates to:
+  /// **'Número de WhatsApp'**
+  String get settingsWhatsapp;
+
+  /// No description provided for @settingsSaved.
+  ///
+  /// In es, this message translates to:
+  /// **'Configuración guardada'**
+  String get settingsSaved;
+
+  /// No description provided for @settingsLogoSection.
+  ///
+  /// In es, this message translates to:
+  /// **'Logo'**
+  String get settingsLogoSection;
+
+  /// No description provided for @settingsLogoPick.
+  ///
+  /// In es, this message translates to:
+  /// **'Elegir logo'**
+  String get settingsLogoPick;
+
+  /// No description provided for @settingsWebsiteInvalid.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresa una URL válida'**
+  String get settingsWebsiteInvalid;
+
+  /// No description provided for @contactTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Contacto'**
+  String get contactTitle;
+
+  /// No description provided for @contactWhatsApp.
+  ///
+  /// In es, this message translates to:
+  /// **'WhatsApp'**
+  String get contactWhatsApp;
+
+  /// No description provided for @whatsappTooltip.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribir por WhatsApp'**
+  String get whatsappTooltip;
 
   /// No description provided for @loginSubtitle.
   ///

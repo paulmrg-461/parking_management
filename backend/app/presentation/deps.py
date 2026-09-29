@@ -20,6 +20,7 @@ from app.application.check_out_service import (
 from app.application.idempotency_service import IdempotencyService
 from app.application.monthly_pass_service import MonthlyPassService
 from app.application.report_service import ReportService
+from app.application.settings_service import SettingsService
 from app.application.tariff_service import TariffService
 from app.application.user_service import UserService
 from app.application.vehicle_service import VehicleService
@@ -29,12 +30,14 @@ from app.domain.clock import Clock, system_clock
 from app.domain.errors import AdminRequiredError, AuthenticationError, InvalidTokenError
 from app.domain.evidence_storage import EvidenceStoragePort
 from app.domain.login_attempts import LoginAttemptLimiter
+from app.domain.logo_storage import LogoStoragePort
 from app.domain.ports import CachePort, IdempotencyStore, PasswordHasher, TokenIssuer
 from app.domain.repositories import (
     CategoryRepository,
     EvidencePhotoRepository,
     MonthlyPassRepository,
     ParkingSessionRepository,
+    ParkingSettingsRepository,
     ReportRepository,
     TariffRepository,
     UserRepository,
@@ -49,6 +52,7 @@ from app.infrastructure.cached_repositories import (
 )
 from app.infrastructure.database import get_session
 from app.infrastructure.local_evidence_storage import LocalEvidenceStorage
+from app.infrastructure.local_logo_storage import LocalLogoStorage
 from app.infrastructure.repositories.category_repository import SqlAlchemyCategoryRepository
 from app.infrastructure.repositories.evidence_photo_repository import (
     SqlAlchemyEvidencePhotoRepository,
@@ -59,6 +63,9 @@ from app.infrastructure.repositories.monthly_pass_repository import (
 )
 from app.infrastructure.repositories.parking_session_repository import (
     SqlAlchemyParkingSessionRepository,
+)
+from app.infrastructure.repositories.parking_settings_repository import (
+    SqlAlchemyParkingSettingsRepository,
 )
 from app.infrastructure.repositories.report_repository import SqlAlchemyReportRepository
 from app.infrastructure.repositories.tariff_repository import SqlAlchemyTariffRepository
@@ -73,6 +80,7 @@ _bearer = HTTPBearer(auto_error=False)
 # Process-wide singletons. `_shared` starts in-process and is swapped for
 # the configured (possibly Redis-backed) set by the app lifespan.
 _evidence_storage = LocalEvidenceStorage(settings.evidence_storage_path)
+_logo_storage = LocalLogoStorage(settings.settings_storage_path)
 _password_hasher = Argon2PasswordHasher()
 _token_issuer = JwtTokenIssuer(
     JwtConfig(settings.secret_key, settings.jwt_algorithm, settings.access_token_expire_minutes)
@@ -117,6 +125,10 @@ async def get_fare_calculator() -> FareCalculator:
 
 async def get_evidence_storage() -> EvidenceStoragePort:
     return _evidence_storage
+
+
+async def get_logo_storage() -> LogoStoragePort:
+    return _logo_storage
 
 
 async def get_upload_limits() -> UploadLimits:
@@ -177,6 +189,12 @@ async def get_idempotency_store(session: AsyncSession = Depends(get_session)) ->
     return SqlAlchemyIdempotencyStore(session)
 
 
+async def get_settings_repository(
+    session: AsyncSession = Depends(get_session),
+) -> ParkingSettingsRepository:
+    return SqlAlchemyParkingSettingsRepository(session)
+
+
 # --- Services -------------------------------------------------------------------
 
 
@@ -225,6 +243,13 @@ async def get_report_service(
     reports: ReportRepository = Depends(get_report_repository),
 ) -> ReportService:
     return ReportService(reports)
+
+
+async def get_settings_service(
+    repository: ParkingSettingsRepository = Depends(get_settings_repository),
+    logos: LogoStoragePort = Depends(get_logo_storage),
+) -> SettingsService:
+    return SettingsService(repository, logos)
 
 
 async def get_fare_service(

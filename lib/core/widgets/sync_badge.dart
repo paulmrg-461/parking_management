@@ -102,6 +102,7 @@ class _DeadLetterTile extends StatelessWidget {
         MutationEntity.category => l10n.entityCategory,
         MutationEntity.checkIn => l10n.entityCheckIn,
         MutationEntity.checkOut => l10n.entityCheckOut,
+        MutationEntity.settings => l10n.entitySettings,
       };
 
   @override

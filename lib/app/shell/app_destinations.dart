@@ -29,11 +29,19 @@ String _categories(AppLocalizations l) => l.navCategories;
 String _monthlyPasses(AppLocalizations l) => l.navMonthlyPasses;
 String _users(AppLocalizations l) => l.navUsers;
 String _reports(AppLocalizations l) => l.navReports;
+String _settings(AppLocalizations l) => l.navSettings;
+String _contact(AppLocalizations l) => l.navContact;
 
 const primaryDestinations = [
   AppDestination(homePath, _home, Icons.home_outlined, Icons.home),
   AppDestination('/check-in', _checkIn, Icons.login_outlined, Icons.login),
   AppDestination('/check-out', _checkOut, Icons.logout_outlined, Icons.logout),
+  AppDestination(
+    '/contact',
+    _contact,
+    Icons.contact_mail_outlined,
+    Icons.contact_mail,
+  ),
 ];
 
 const managementDestinations = [
@@ -67,6 +75,12 @@ const managementDestinations = [
     _reports,
     Icons.bar_chart_outlined,
     Icons.bar_chart,
+  ),
+  AppDestination(
+    '/settings',
+    _settings,
+    Icons.settings_outlined,
+    Icons.settings,
   ),
 ];
 

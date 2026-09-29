@@ -13,6 +13,7 @@ import 'core/network/connectivity_cubit.dart';
 import 'core/sync/sync_service.dart';
 import 'core/sync/sync_status_cubit.dart';
 import 'features/auth/application/auth_cubit.dart';
+import 'features/settings/application/branding_cubit.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,6 +33,7 @@ Future<void> main() async {
     ParkingApp(
       authCubit: authCubit,
       syncStatusCubit: syncStatus,
+      brandingCubit: serviceLocator<BrandingCubit>(),
       connectivityCubit: connectivity,
     ),
   );

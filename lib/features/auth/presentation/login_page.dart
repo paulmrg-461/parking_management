@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/l10n/failure_messages.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/tokens.dart';
+import '../../settings/application/branding_cubit.dart';
 import '../application/auth_cubit.dart';
 
 /// Sign-in form: validated, autofill-friendly, Enter submits (web), the
@@ -118,29 +119,47 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Column(
-      children: [
-        Icon(
-          Icons.local_parking_rounded,
-          size: Space.xxl,
-          color: theme.colorScheme.primary,
-        ),
-        const SizedBox(height: Space.md),
-        Semantics(
-          header: true,
-          child: Text(
-            context.l10n.appTitle,
-            style: theme.textTheme.headlineMedium,
+    return BlocBuilder<BrandingCubit, BrandingState>(
+      builder: (context, branding) => Column(
+        children: [
+          if (branding.logoOrNull case final bytes?)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(Space.sm),
+              child: Image.memory(
+                bytes,
+                width: Space.xxl,
+                height: Space.xxl,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => Icon(
+                  Icons.local_parking_rounded,
+                  size: Space.xxl,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+            )
+          else
+            Icon(
+              Icons.local_parking_rounded,
+              size: Space.xxl,
+              color: theme.colorScheme.primary,
+            ),
+          const SizedBox(height: Space.md),
+          Semantics(
+            header: true,
+            child: Text(
+              branding.titleFor(context.l10n),
+              style: theme.textTheme.headlineMedium,
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: Space.sm),
+          Text(
+            context.l10n.loginSubtitle,
+            style: theme.textTheme.bodyMedium,
             textAlign: TextAlign.center,
           ),
-        ),
-        const SizedBox(height: Space.sm),
-        Text(
-          context.l10n.loginSubtitle,
-          style: theme.textTheme.bodyMedium,
-          textAlign: TextAlign.center,
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

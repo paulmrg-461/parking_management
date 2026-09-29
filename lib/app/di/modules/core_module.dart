@@ -19,7 +19,11 @@ void registerCoreModule(GetIt sl, AppConfig config) {
     // Conditional GETs for reference data that rarely changes.
     ..registerLazySingleton<EtagCacheInterceptor>(
       () => EtagCacheInterceptor(
-        cacheablePaths: const {'/api/categories', '/api/tariffs'},
+        cacheablePaths: const {
+          '/api/categories',
+          '/api/tariffs',
+          '/api/settings',
+        },
       ),
     )
     ..registerLazySingleton<DioClient>(

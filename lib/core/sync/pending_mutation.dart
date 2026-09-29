@@ -4,7 +4,7 @@ import 'package:equatable/equatable.dart';
 
 /// Which aggregate a queued mutation targets. Persisted as `.name`, which is
 /// byte-identical to the legacy string values, so old queues still parse.
-enum MutationEntity { vehicle, tariff, category, checkIn, checkOut }
+enum MutationEntity { vehicle, tariff, category, checkIn, checkOut, settings }
 
 /// What to do with the entity. Persisted as `.name` (legacy compatible).
 enum MutationOperation { create, update, delete, close }
@@ -34,7 +34,8 @@ class PendingMutation extends Equatable {
   final MutationEntity entityType;
   final MutationOperation operation;
 
-  /// The server-assigned id, or `null` for a `checkIn` `create` mutation.
+  /// The server-assigned id, or `null` for a `checkIn` `create` mutation and
+  /// for `settings` updates (the record is a singleton).
   final int? entityId;
 
   /// `jsonEncode`-d payload map; `null` for `delete`.
