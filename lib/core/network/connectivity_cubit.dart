@@ -1,12 +1,11 @@
 import 'dart:async';
 
-import 'package:flutter_bloc/flutter_bloc.dart';
-
 import 'connectivity_service.dart';
+import '../state/resilient_cubit.dart';
 
 /// `true` while the device reports a network interface. Starts optimistic
 /// (online) so the offline banner never flashes on launch.
-class ConnectivityCubit extends Cubit<bool> {
+class ConnectivityCubit extends ResilientCubit<bool> {
   ConnectivityCubit(this._service) : super(true);
 
   final ConnectivityService _service;

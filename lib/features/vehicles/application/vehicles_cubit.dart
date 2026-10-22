@@ -1,5 +1,4 @@
 import 'package:equatable/equatable.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/error/failure.dart';
 import '../../../core/pagination/paged_result.dart';
@@ -10,6 +9,7 @@ import '../domain/commands/create_vehicle_command.dart';
 import '../domain/commands/update_vehicle_command.dart';
 import '../domain/entities/vehicle.dart';
 import '../domain/repositories/vehicle_repository.dart';
+import '../../../core/state/resilient_cubit.dart';
 
 sealed class VehiclesState extends Equatable {
   const VehiclesState();
@@ -88,7 +88,7 @@ final class VehiclesFailure extends VehiclesState {
   List<Object?> get props => [message, failure?.code];
 }
 
-class VehiclesCubit extends Cubit<VehiclesState> {
+class VehiclesCubit extends ResilientCubit<VehiclesState> {
   VehiclesCubit(
     this._repository,
     this._categories, {

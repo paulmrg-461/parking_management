@@ -1,9 +1,11 @@
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'dart:async';
+
 import 'package:equatable/equatable.dart';
 
 import '../../../core/error/failure.dart';
 import '../domain/entities/auth_session.dart';
 import '../domain/repositories/auth_repository.dart';
+import '../../../core/state/resilient_cubit.dart';
 
 sealed class AuthState extends Equatable {
   const AuthState();
@@ -45,10 +47,14 @@ class AuthFailure extends AuthState {
   List<Object?> get props => [message, failure?.code];
 }
 
-class AuthCubit extends Cubit<AuthState> {
-  AuthCubit(this._repository) : super(const AuthInitial());
+class AuthCubit extends ResilientCubit<AuthState> {
+  AuthCubit(this._repository, [this._onAuthenticated])
+    : super(const AuthInitial());
 
   final AuthRepository _repository;
+
+  /// Lets the composition root kick the offline outbox once a token exists.
+  final Future<void> Function()? _onAuthenticated;
 
   Future<void> restore() async {
     emit(const AuthLoading());
@@ -65,6 +71,12 @@ class AuthCubit extends Cubit<AuthState> {
     try {
       final session = await _repository.login(username, pin);
       emit(AuthAuthenticated(session));
+      // The queue may have been waiting on a 401; now that there is a token,
+      // replay it without waiting for another connectivity event.
+      final kick = _onAuthenticated;
+      if (kick != null) {
+        unawaited(kick());
+      }
     } on Failure catch (failure) {
       emit(AuthFailure.of(failure));
     } on Exception {

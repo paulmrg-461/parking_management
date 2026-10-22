@@ -1,12 +1,12 @@
 import 'dart:typed_data';
 
 import 'package:equatable/equatable.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/error/failure.dart';
 import '../../../core/l10n/l10n.dart';
 import '../domain/entities/parking_settings.dart';
 import '../domain/repositories/parking_settings_repository.dart';
+import '../../../core/state/resilient_cubit.dart';
 
 sealed class BrandingState extends Equatable {
   const BrandingState();
@@ -54,7 +54,7 @@ final class BrandingLoaded extends BrandingState {
 /// the backend when online. Never fails: a broken refresh keeps whatever is
 /// already on screen. An all-defaults record behaves like "unconfigured"
 /// so first runs keep rendering the localized fallback.
-class BrandingCubit extends Cubit<BrandingState> {
+class BrandingCubit extends ResilientCubit<BrandingState> {
   BrandingCubit(this._repository) : super(const BrandingInitial());
 
   final ParkingSettingsRepository _repository;

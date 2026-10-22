@@ -1,12 +1,12 @@
 import 'dart:async';
 
 import 'package:equatable/equatable.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/receipt/receipt_data.dart';
 import '../domain/entities/bluetooth_printer.dart';
 import '../domain/entities/print_outcome.dart';
 import '../domain/repositories/receipt_printer.dart';
+import '../../../core/state/resilient_cubit.dart';
 
 class PrinterState extends Equatable {
   const PrinterState({
@@ -38,7 +38,7 @@ class PrinterState extends Equatable {
 }
 
 /// Bluetooth printer discovery and printing for the receipt print sheet.
-class PrinterCubit extends Cubit<PrinterState> {
+class PrinterCubit extends ResilientCubit<PrinterState> {
   PrinterCubit(this._scanner) : super(const PrinterState());
 
   final BluetoothPrinterScanner _scanner;

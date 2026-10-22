@@ -15,6 +15,8 @@ import 'package:parking_management/features/tariffs/infrastructure/tariff_local_
 import 'package:parking_management/features/vehicles/domain/entities/vehicle.dart';
 import 'package:parking_management/features/vehicles/infrastructure/vehicle_local_data_source.dart';
 
+import '../../helpers/fake_token_store.dart';
+
 const _session = AuthSession(
   user: User(id: 1, username: 'ana', displayName: 'Ana', role: UserRole.admin),
   token: 'jwt-1',
@@ -29,10 +31,15 @@ void main() {
 
   setUpAll(() => Hive.registerAdapters());
 
+  late FakeTokenStore tokens;
+
   setUp(() async {
     dir = await Directory.systemTemp.createTemp('hive_cold_start');
     Hive.init(dir.path);
+    tokens = FakeTokenStore();
   });
+
+  HiveAuthLocalDataSource authSource() => HiveAuthLocalDataSource(tokens);
 
   tearDown(() async {
     await Hive.close();
@@ -43,26 +50,26 @@ void main() {
     test(
       'Success: session saved before a restart is restored on cold start',
       () async {
-        await HiveAuthLocalDataSource().saveSession(_session);
+        await authSource().saveSession(_session);
         await _coldStart();
 
-        expect(await HiveAuthLocalDataSource().readSession(), _session);
+        expect(await authSource().readSession(), _session);
       },
     );
 
     test('Failure: cold start with no stored session returns null', () async {
-      expect(await HiveAuthLocalDataSource().readSession(), isNull);
+      expect(await authSource().readSession(), isNull);
     });
 
     test(
       'Security: a cleared session is not resurrected after a restart',
       () async {
-        final source = HiveAuthLocalDataSource();
+        final source = authSource();
         await source.saveSession(_session);
         await source.clearSession();
         await _coldStart();
 
-        expect(await HiveAuthLocalDataSource().readSession(), isNull);
+        expect(await authSource().readSession(), isNull);
       },
     );
   });

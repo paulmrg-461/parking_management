@@ -1,10 +1,10 @@
 import 'package:equatable/equatable.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/error/failure.dart';
 import '../domain/entities/occupancy_report.dart';
 import '../domain/entities/revenue_report.dart';
 import '../domain/repositories/report_repository.dart';
+import '../../../core/state/resilient_cubit.dart';
 
 sealed class ReportsState extends Equatable {
   const ReportsState();
@@ -46,7 +46,7 @@ class ReportsFailure extends ReportsState {
 /// Orchestrates the admin reports screen: fetches revenue and occupancy for
 /// the selected date range and emits both together, so the page never shows
 /// one report without the other.
-class ReportsCubit extends Cubit<ReportsState> {
+class ReportsCubit extends ResilientCubit<ReportsState> {
   ReportsCubit(this._repository) : super(const ReportsInitial());
 
   final ReportRepository _repository;

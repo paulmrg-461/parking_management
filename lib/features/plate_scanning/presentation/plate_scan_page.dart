@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/error/failure.dart';
+import '../../../core/l10n/failure_messages.dart';
+import '../../../core/l10n/l10n.dart';
 import '../application/plate_scanning_cubit.dart';
 import '../domain/normalize_plate.dart';
 import '../domain/repositories/plate_image_capture.dart';
@@ -43,7 +45,7 @@ class _PlateScanPageState extends State<PlateScanPage> {
       Navigator.of(context).pop(normalizePlate(_plateController.text));
     } on ValidationFailure {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter a plate before confirming')),
+        SnackBar(content: Text(context.l10n.scanEmpty)),
       );
     }
   }
@@ -51,7 +53,7 @@ class _PlateScanPageState extends State<PlateScanPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Scan plate')),
+      appBar: AppBar(title: Text(context.l10n.scanTitle)),
       body: BlocConsumer<PlateScanningCubit, PlateScanningState>(
         listener: _syncControllerWithState,
         builder: (context, state) => Padding(
@@ -64,7 +66,7 @@ class _PlateScanPageState extends State<PlateScanPage> {
                 FilledButton.icon(
                   onPressed: () => _captureAndScan(context),
                   icon: const Icon(Icons.camera_alt),
-                  label: const Text('Capture plate'),
+                  label: Text(context.l10n.scanCapture),
                 ),
               if (state is PlateScanningScanning)
                 const Padding(
@@ -75,32 +77,32 @@ class _PlateScanPageState extends State<PlateScanPage> {
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Text(
-                    state.message,
+                    context.l10n.errorText(state.message, state.failure),
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.error,
                     ),
                   ),
                 ),
               if (state is PlateScanningManualEntry)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8),
-                  child: Text('Enter the plate manually'),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Text(context.l10n.scanManualHint),
                 ),
               const SizedBox(height: 16),
               TextField(
                 controller: _plateController,
-                decoration: const InputDecoration(labelText: 'Plate'),
+                decoration: InputDecoration(labelText: context.l10n.plateLabel),
                 textCapitalization: TextCapitalization.characters,
               ),
               const SizedBox(height: 8),
               TextButton(
                 onPressed: () =>
                     context.read<PlateScanningCubit>().enterManually(),
-                child: const Text('Enter manually'),
+                child: Text(context.l10n.scanManual),
               ),
               FilledButton(
                 onPressed: () => _confirm(context),
-                child: const Text('Confirm'),
+                child: Text(context.l10n.actionConfirm),
               ),
             ],
           ),

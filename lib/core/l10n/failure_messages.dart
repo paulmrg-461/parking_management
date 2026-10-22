@@ -59,6 +59,7 @@ extension FailureMessages on AppLocalizations {
     ClientFailureCodes.tooManyPhotos => errorTooManyPhotos,
     ClientFailureCodes.pendingSyncCheckOut => errorPendingSyncCheckOut,
     ClientFailureCodes.missingPendingPhoto => errorMissingPendingPhoto,
+    ClientFailureCodes.unexpected => errorUnknown,
     _ => null,
   };
 
@@ -67,6 +68,7 @@ extension FailureMessages on AppLocalizations {
     NetworkFailure() => errorNetwork,
     StorageFailure() => errorStorage,
     AuthenticationFailure(message: _forbiddenDetail) => errorForbidden,
+    ValidationFailure(message: _forbiddenDetail) => errorForbidden,
     AuthenticationFailure() => errorAuth,
     _ when failure.message.isNotEmpty => failure.message,
     _ => errorUnknown,

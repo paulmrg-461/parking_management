@@ -71,4 +71,5 @@ abstract final class ClientFailureCodes {
   static const photoTooLarge = 'PhotoTooLargeError';
   static const pendingSyncCheckOut = 'PendingSyncCheckOut';
   static const missingPendingPhoto = 'MissingPendingPhoto';
+  static const unexpected = 'UnexpectedError';
 }

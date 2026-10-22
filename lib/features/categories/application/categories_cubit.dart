@@ -1,10 +1,10 @@
 import 'package:equatable/equatable.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/error/failure.dart';
 import '../../../core/state/submission.dart';
 import '../domain/entities/category.dart';
 import '../domain/repositories/category_repository.dart';
+import '../../../core/state/resilient_cubit.dart';
 
 sealed class CategoriesState extends Equatable {
   const CategoriesState();
@@ -47,7 +47,7 @@ final class CategoriesFailure extends CategoriesState {
   List<Object?> get props => [message, failure?.code];
 }
 
-class CategoriesCubit extends Cubit<CategoriesState> {
+class CategoriesCubit extends ResilientCubit<CategoriesState> {
   CategoriesCubit(this._repository) : super(const CategoriesInitial());
 
   final CategoryRepository _repository;

@@ -2,6 +2,9 @@ import 'package:dio/dio.dart';
 import 'package:get_it/get_it.dart';
 
 import '../../../core/network/session_reader.dart';
+import '../../../core/storage/session_cache_cleaner.dart';
+import '../../../core/storage/token_store.dart';
+import '../../../core/sync/sync_service.dart';
 import '../../../features/auth/application/auth_cubit.dart';
 import '../../../features/auth/domain/repositories/auth_repository.dart';
 import '../../../features/auth/infrastructure/auth_local_data_source.dart';
@@ -11,8 +14,11 @@ import '../../../features/auth/infrastructure/caching_auth_local_data_source.dar
 
 void registerAuthModule(GetIt sl) {
   sl
+    ..registerLazySingleton<TokenStore>(SecureTokenStore.new)
     ..registerLazySingleton<CachingAuthLocalDataSource>(
-      () => CachingAuthLocalDataSource(HiveAuthLocalDataSource()),
+      () => CachingAuthLocalDataSource(
+        HiveAuthLocalDataSource(sl<TokenStore>()),
+      ),
     )
     // One cached instance serves both the repository and the interceptor.
     ..registerLazySingleton<AuthLocalDataSource>(
@@ -28,7 +34,15 @@ void registerAuthModule(GetIt sl) {
       () => AuthRepositoryImpl(
         sl<AuthRemoteDataSource>(),
         sl<AuthLocalDataSource>(),
+        sl<SessionCacheCleaner>(),
       ),
     )
-    ..registerLazySingleton<AuthCubit>(() => AuthCubit(sl<AuthRepository>()));
+    ..registerLazySingleton<AuthCubit>(
+      () => AuthCubit(
+        sl<AuthRepository>(),
+        // Resolved on login (not at construction) to avoid a DI cycle:
+        // SyncService -> replayers -> Dio -> AuthInterceptor -> AuthCubit.
+        () => sl<SyncService>().flush(),
+      ),
+    );
 }

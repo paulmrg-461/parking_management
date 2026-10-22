@@ -1,5 +1,4 @@
 import 'package:equatable/equatable.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/error/failure.dart';
 import '../../../core/state/submission.dart';
@@ -9,6 +8,7 @@ import '../domain/commands/create_monthly_pass_command.dart';
 import '../domain/commands/update_monthly_pass_command.dart';
 import '../domain/entities/monthly_pass.dart';
 import '../domain/repositories/monthly_pass_repository.dart';
+import '../../../core/state/resilient_cubit.dart';
 
 sealed class MonthlyPassesState extends Equatable {
   const MonthlyPassesState();
@@ -70,7 +70,7 @@ final class MonthlyPassesFailure extends MonthlyPassesState {
   List<Object?> get props => [message, failure?.code];
 }
 
-class MonthlyPassesCubit extends Cubit<MonthlyPassesState> {
+class MonthlyPassesCubit extends ResilientCubit<MonthlyPassesState> {
   MonthlyPassesCubit(this._repository, this._vehicles)
     : super(const MonthlyPassesInitial());
 

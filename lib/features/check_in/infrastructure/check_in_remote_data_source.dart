@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 
 import '../../../core/network/dio_error_mapper.dart';
 import '../../../core/network/idempotency.dart';
+import '../../../core/network/pagination.dart';
 import '../../../core/sync/pending_photo_storage.dart';
 import '../domain/entities/new_vehicle_info.dart';
 import '../domain/entities/parking_session.dart';
@@ -14,6 +15,7 @@ abstract class CheckInRemoteDataSource {
     required List<XFile> photos,
     NewVehicleInfo? newVehicle,
     String? idempotencyKey,
+    DateTime? clientEntryTime,
   });
 
   Future<List<ParkingSession>> listOpenSessions();
@@ -32,10 +34,13 @@ class DioCheckInRemoteDataSource implements CheckInRemoteDataSource {
     required List<XFile> photos,
     NewVehicleInfo? newVehicle,
     String? idempotencyKey,
+    DateTime? clientEntryTime,
   }) async {
     try {
       final formData = FormData.fromMap({
         'plate': plate,
+        if (clientEntryTime != null)
+          'client_entry_time': clientEntryTime.toUtc().toIso8601String(),
         ..._newVehicleFields(newVehicle),
         'photos': [
           for (var i = 0; i < photos.length; i++) await _part(photos[i], i),
@@ -55,16 +60,30 @@ class DioCheckInRemoteDataSource implements CheckInRemoteDataSource {
 
   @override
   Future<List<ParkingSession>> listOpenSessions() async {
+    // The backend caps every page (100 by default): keep requesting pages so
+    // an occupied lot never silently loses vehicles past the first one.
+    const pageSize = 500;
+    final sessions = <ParkingSession>[];
+    var offset = 0;
     try {
-      final response = await _dio.get(_path);
-      final data = response.data as List<dynamic>;
-      return data
-          .map(
+      while (true) {
+        final response = await _dio.get(
+          _path,
+          queryParameters: pageQuery(limit: pageSize, offset: offset),
+        );
+        final data = response.data as List<dynamic>;
+        sessions.addAll(
+          data.map(
             (item) =>
                 ParkingSessionDto.fromJson(item as Map<String, dynamic>)
                     .toDomain(),
-          )
-          .toList();
+          ),
+        );
+        if (data.length < pageSize) {
+          return sessions;
+        }
+        offset += data.length;
+      }
     } on DioException catch (error) {
       throw mapDioError(error);
     }

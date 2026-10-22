@@ -30,6 +30,8 @@ class _FakeRemote implements CheckInRemoteDataSource {
   final ParkingSession? sessionToReturn;
   final Failure? error;
   NewVehicleInfo? newVehicleUsed;
+  String? idempotencyKeyUsed;
+  DateTime? clientEntryTimeUsed;
 
   @override
   Future<ParkingSession> createCheckIn({
@@ -37,8 +39,11 @@ class _FakeRemote implements CheckInRemoteDataSource {
     required List<XFile> photos,
     NewVehicleInfo? newVehicle,
     String? idempotencyKey,
+    DateTime? clientEntryTime,
   }) async {
     newVehicleUsed = newVehicle;
+    idempotencyKeyUsed = idempotencyKey;
+    clientEntryTimeUsed = clientEntryTime;
     final error = this.error;
     if (error != null) {
       throw error;
@@ -97,6 +102,45 @@ void main() {
       );
 
       expect(result, session);
+    },
+  );
+
+  test(
+    'Success: the online first attempt sends an Idempotency-Key',
+    () async {
+      final remote = _FakeRemote(sessionToReturn: session);
+      final repository = CheckInRepositoryImpl(
+        remote,
+        FakeSyncOutbox(),
+        FilePendingPhotoStorage(),
+      );
+
+      await repository.createCheckIn(plate: 'ABC123', photos: const []);
+
+      expect(remote.idempotencyKeyUsed, isNotEmpty);
+      // Online check-ins keep the server's `now`; only replays carry a time.
+      expect(remote.clientEntryTimeUsed, isNull);
+    },
+  );
+
+  test(
+    'Failure: the queued replay reuses the first attempt Idempotency-Key',
+    () async {
+      final remote = _FakeRemote(error: const NetworkFailure('offline'));
+      final outbox = FakeSyncOutbox();
+      final repository = CheckInRepositoryImpl(
+        remote,
+        outbox,
+        FilePendingPhotoStorage(),
+      );
+
+      await repository.createCheckIn(plate: 'ABC123', photos: const []);
+
+      final payload =
+          jsonDecode(outbox.enqueued.single.payloadJson!)
+              as Map<String, dynamic>;
+      expect(remote.idempotencyKeyUsed, isNotNull);
+      expect(payload['client_ref'], remote.idempotencyKeyUsed);
     },
   );
 

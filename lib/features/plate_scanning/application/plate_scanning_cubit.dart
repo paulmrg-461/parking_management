@@ -1,10 +1,10 @@
 import 'package:cross_file/cross_file.dart';
 import 'package:equatable/equatable.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/error/failure.dart';
 import '../domain/normalize_plate.dart';
 import '../domain/repositories/plate_scanner.dart';
+import '../../../core/state/resilient_cubit.dart';
 
 sealed class PlateScanningState extends Equatable {
   const PlateScanningState();
@@ -59,7 +59,7 @@ class PlateScanningManualEntry extends PlateScanningState {
 /// Orchestrates the plate-scanning flow: capture -> OCR scan -> normalize ->
 /// emit a reviewable candidate, or fall back to manual entry when the OCR
 /// adapter can't produce a usable candidate.
-class PlateScanningCubit extends Cubit<PlateScanningState> {
+class PlateScanningCubit extends ResilientCubit<PlateScanningState> {
   PlateScanningCubit(this._scanner) : super(const PlateScanningInitial());
 
   final PlateScanner _scanner;

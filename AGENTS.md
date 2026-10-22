@@ -54,6 +54,29 @@ Backend: FastAPI, SQLAlchemy 2.0 (async), Alembic, PostgreSQL, JWT, Argon2id.
 
 Write 3 tests (Success / Failure / Security) BEFORE logic.
 
+## Implementation invariants (from the review hardening pass)
+
+- **Retryable writes**: generate `client_ref` BEFORE the first attempt, send
+  it as `Idempotency-Key`, and persist the SAME ref if the attempt is queued.
+  Never create the key only inside the failure branch.
+- **Offline timestamps**: capture `client_entry_time` / `client_exit_time`
+  before the first request (not at replay) and validate them server-side with
+  `MAX_CLIENT_CLOCK_SKEW`.
+- **Sync lifecycle**: restore the session before `SyncService.start()`;
+  `AuthCubit` flushes the outbox on login. 401 stops the drain (login
+  resumes); 403 is a `ValidationFailure` and dead-letters only that entry.
+- **Cubits**: extend `ResilientCubit` (never raw `Cubit`) so an in-flight
+  future that resolves after `close()` cannot throw. Submission flows must
+  catch non-`Failure` errors and always leave `SubmissionInProgress`.
+- **Auth storage**: the JWT lives in `flutter_secure_storage` via `TokenStore`;
+  Hive only stores the profile. Logout clears reference-data/ETag caches but
+  never the outbox.
+- **Lists used for lookups** (open sessions, vehicles, monthly passes) must
+  walk every backend page; the backend defaults to 100 items per page.
+- **Secrets**: production rejects known/example `SECRET_KEY` values, including
+  the one in `.env.example`.
+- **UI text**: always `context.l10n`; no hardcoded operator-facing strings.
+
 ## Spec-driven workflow (OpenSpec)
 
 - Plan with OpenSpec: `openspec new change <name>` then fill proposal → specs → design → tasks.

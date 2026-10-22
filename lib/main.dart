@@ -22,9 +22,11 @@ Future<void> main() async {
   await initializeDateFormatting(formatLocale);
   Hive.registerAdapters();
   await configureDependencies();
-  serviceLocator<SyncService>().start();
   final authCubit = serviceLocator<AuthCubit>();
+  // Restore the token BEFORE the outbox drains: otherwise a cold start with
+  // queued work would fire token-less requests and stop on 401.
   await authCubit.restore();
+  serviceLocator<SyncService>().start();
   final syncStatus = serviceLocator<SyncStatusCubit>();
   unawaited(syncStatus.load());
   final connectivity = serviceLocator<ConnectivityCubit>();

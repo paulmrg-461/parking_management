@@ -402,7 +402,12 @@ class _OpenSessionsSliver extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(
-                state.loadError ?? context.l10n.openSessionsEmpty,
+                state.loadError == null
+                    ? context.l10n.openSessionsEmpty
+                    : context.l10n.errorText(
+                        state.loadError!,
+                        state.loadFailure,
+                      ),
               ),
             ),
           );

@@ -34,6 +34,24 @@ and confirm outbox replay. Then run `openspec archive add-parking-settings`.
 
 ## Recent additions (post-roadmap, not OpenSpec changes)
 
+- **Hardening pass (review findings)**: production config now rejects the
+  `.env.example`/`change-me` secrets that used to pass the 32-byte check;
+  offline check-ins carry `client_entry_time` end-to-end (Flutter form →
+  replayer → `CheckInForm` → `CheckInService`, validated with the same 5-min
+  skew rule as check-outs) so billing starts when the operator acted, not when
+  the device reconnects; the first online check-in/check-out attempt now sends
+  its `client_ref` as `Idempotency-Key`, so a lost response replays instead of
+  dead-lettering; 403 maps to a non-retryable `ValidationFailure` (one
+  forbidden mutation no longer stalls the outbox); sync starts after session
+  restore, flushes on login, and the badge has a "Reintentar ahora" action;
+  unpaged lookups (open sessions, vehicles, monthly passes) walk every backend
+  page; the JWT lives in `flutter_secure_storage` while Hive keeps only the
+  profile (legacy plaintext tokens are scrubbed on read), and logout clears
+  reference-data caches + the ETag cache; every cubit extends `ResilientCubit`
+  (late emits after `close()` are ignored), check-in/check-out submissions
+  catch unexpected errors instead of spinning forever, and the check-out/scan
+  screens are fully localized (Spanish default).
+
 - **Live occupancy**: after a successful entry or exit, the home "Vehículos
   dentro" count refreshes (`DashboardCubit.load()` from
   `check_in_page`/`check_out_page` `_onSubmission` success branches).
@@ -108,8 +126,10 @@ and confirm outbox replay. Then run `openspec archive add-parking-settings`.
 
 ## Test counts
 
-- Backend (`cd backend && uv run pytest`): 240 passed, 4 skipped.
-- Flutter (`flutter test`): 442 passed. `flutter analyze`: 0 issues.
+- Backend (`cd backend && uv run pytest`): 246 passed, 4 skipped.
+- Flutter (`flutter test`): 454 passed. `flutter analyze`: 0 errors/warnings
+  (81 SDK-deprecation/const infos under the local Flutter 3.50 beta; CI pins
+  3.49 where the baseline is clean).
 
 ## Layer map (Flutter feature slice)
 

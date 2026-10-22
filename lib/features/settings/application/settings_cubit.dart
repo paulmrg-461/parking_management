@@ -1,12 +1,12 @@
 import 'dart:typed_data';
 
 import 'package:equatable/equatable.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/error/failure.dart';
 import '../../../core/state/submission.dart';
 import '../domain/entities/parking_settings.dart';
 import '../domain/repositories/parking_settings_repository.dart';
+import '../../../core/state/resilient_cubit.dart';
 
 sealed class SettingsState extends Equatable {
   const SettingsState();
@@ -49,7 +49,7 @@ final class SettingsFailure extends SettingsState {
   List<Object?> get props => [message, failure?.code];
 }
 
-class SettingsCubit extends Cubit<SettingsState> {
+class SettingsCubit extends ResilientCubit<SettingsState> {
   SettingsCubit(this._repository) : super(const SettingsInitial());
 
   final ParkingSettingsRepository _repository;

@@ -84,8 +84,8 @@ void main() {
 
     expect(find.text('ABC123'), findsOneWidget);
     expect(find.text('XYZ999'), findsOneWidget);
-    expect(find.widgetWithText(FilledButton, 'Check out'), findsNWidgets(2));
-    expect(find.text('Search by plate'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Cobrar'), findsNWidgets(2));
+    expect(find.text('Buscar por placa'), findsOneWidget);
   });
 
   testWidgets('Success: searching filters the list through the cubit', (
@@ -105,9 +105,9 @@ void main() {
   ) async {
     await pumpPage(tester);
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Check out').first);
+    await tester.tap(find.widgetWithText(FilledButton, 'Cobrar').first);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Confirm'));
+    await tester.tap(find.text('Confirmar'));
     await tester.pumpAndSettle();
 
     expect(find.text('Generar recibo'), findsOneWidget);
@@ -122,9 +122,9 @@ void main() {
         'Session already closed',
       );
 
-      await tester.tap(find.widgetWithText(FilledButton, 'Check out').first);
+      await tester.tap(find.widgetWithText(FilledButton, 'Cobrar').first);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Confirm'));
+      await tester.tap(find.text('Confirmar'));
       await tester.pumpAndSettle();
 
       expect(find.text('Session already closed'), findsOneWidget);
@@ -139,9 +139,9 @@ void main() {
       await pumpPage(tester);
       occupancy.listError = const NetworkFailure('offline');
 
-      await tester.tap(find.widgetWithText(FilledButton, 'Check out').first);
+      await tester.tap(find.widgetWithText(FilledButton, 'Cobrar').first);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Confirm'));
+      await tester.tap(find.text('Confirmar'));
       await tester.pumpAndSettle();
 
       expect(find.text('Generar recibo'), findsOneWidget);

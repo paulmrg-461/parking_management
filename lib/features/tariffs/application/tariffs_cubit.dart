@@ -1,5 +1,4 @@
 import 'package:equatable/equatable.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/error/failure.dart';
 import '../../../core/state/submission.dart';
@@ -9,6 +8,7 @@ import '../domain/commands/create_tariff_command.dart';
 import '../domain/commands/update_tariff_command.dart';
 import '../domain/entities/tariff.dart';
 import '../domain/repositories/tariff_repository.dart';
+import '../../../core/state/resilient_cubit.dart';
 
 sealed class TariffsState extends Equatable {
   const TariffsState();
@@ -68,7 +68,7 @@ final class TariffsFailure extends TariffsState {
   List<Object?> get props => [message, failure?.code];
 }
 
-class TariffsCubit extends Cubit<TariffsState> {
+class TariffsCubit extends ResilientCubit<TariffsState> {
   TariffsCubit(this._repository, this._categories)
     : super(const TariffsInitial());
 

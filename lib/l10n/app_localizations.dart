@@ -428,6 +428,12 @@ abstract class AppLocalizations {
   /// **'Cambios sin sincronizar'**
   String get syncSheetTitle;
 
+  /// No description provided for @syncNow.
+  ///
+  /// In es, this message translates to:
+  /// **'Reintentar ahora'**
+  String get syncNow;
+
   /// No description provided for @syncQueued.
   ///
   /// In es, this message translates to:
@@ -991,6 +997,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Cobrar salida de {plate}'**
   String checkOutChargeTooltip(String plate);
+
+  /// No description provided for @checkOutConfirm.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Cobrar la salida del vehículo {plate}?'**
+  String checkOutConfirm(String plate);
 
   /// No description provided for @unknownVehicle.
   ///

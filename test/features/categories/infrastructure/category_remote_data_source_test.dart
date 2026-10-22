@@ -52,13 +52,13 @@ void main() {
       expect(categories.first.name, 'carro');
     });
 
-    test('create maps 403 to an authentication failure', () async {
+    test('create maps 403 to a non-retryable validation failure', () async {
       final dio = _dioWith(
         (options) async => _json({'detail': 'Forbidden'}, 403),
       );
       final source = DioCategoryRemoteDataSource(dio);
 
-      expect(() => source.create('bus'), throwsA(isA<AuthenticationFailure>()));
+      expect(() => source.create('bus'), throwsA(isA<ValidationFailure>()));
     });
 
     test('list maps connection errors to a network failure', () async {

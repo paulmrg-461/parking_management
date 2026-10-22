@@ -196,6 +196,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get syncSheetTitle => 'Cambios sin sincronizar';
 
   @override
+  String get syncNow => 'Reintentar ahora';
+
+  @override
   String syncQueued(int count) {
     return '$count en cola, se reintentarán solos.';
   }
@@ -508,6 +511,11 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String checkOutChargeTooltip(String plate) {
     return 'Cobrar salida de $plate';
+  }
+
+  @override
+  String checkOutConfirm(String plate) {
+    return '¿Cobrar la salida del vehículo $plate?';
   }
 
   @override

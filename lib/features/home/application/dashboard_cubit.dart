@@ -1,8 +1,8 @@
 import 'package:equatable/equatable.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/error/failure.dart';
 import '../../check_out/domain/repositories/check_out_repository.dart';
+import '../../../core/state/resilient_cubit.dart';
 
 sealed class DashboardState extends Equatable {
   const DashboardState();
@@ -36,7 +36,7 @@ final class DashboardFailure extends DashboardState {
 
 /// Operator/admin home summary: current occupancy. Asks for a single row
 /// and reads the count from `X-Total-Count`, so it stays cheap.
-class DashboardCubit extends Cubit<DashboardState> {
+class DashboardCubit extends ResilientCubit<DashboardState> {
   DashboardCubit(this._sessions) : super(const DashboardLoading());
 
   final CheckOutRepository _sessions;

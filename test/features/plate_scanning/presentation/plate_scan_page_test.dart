@@ -10,6 +10,8 @@ import 'package:parking_management/features/plate_scanning/domain/repositories/p
 import 'package:parking_management/features/plate_scanning/infrastructure/manual_entry_plate_scanner.dart';
 import 'package:parking_management/features/plate_scanning/presentation/plate_scan_page.dart';
 
+import '../../../helpers/test_app.dart';
+
 class _FakeScanner implements PlateScanner {
   _FakeScanner.result(this._result) : _error = null;
   _FakeScanner.failing(Failure error) : _error = error, _result = null;
@@ -42,8 +44,8 @@ Widget _scanPage({
   required PlateScanner scanner,
   required PlateImageCapture capture,
 }) {
-  return MaterialApp(
-    home: BlocProvider<PlateScanningCubit>(
+  return testApp(
+    BlocProvider<PlateScanningCubit>(
       create: (_) => PlateScanningCubit(scanner),
       child: PlateScanPage(capture: capture),
     ),
@@ -56,8 +58,8 @@ void main() {
   ) async {
     String? popped;
     await tester.pumpWidget(
-      MaterialApp(
-        home: Builder(
+      testApp(
+        Builder(
           builder: (context) => ElevatedButton(
             onPressed: () async {
               popped = await Navigator.of(context).push<String>(
@@ -88,12 +90,12 @@ void main() {
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Capture plate'));
+    await tester.tap(find.text('Tomar foto de la placa'));
     await tester.pumpAndSettle();
 
     expect(find.text('ABC123'), findsOneWidget);
 
-    await tester.tap(find.text('Confirm'));
+    await tester.tap(find.text('Confirmar'));
     await tester.pumpAndSettle();
 
     expect(popped, 'ABC123');
@@ -111,7 +113,7 @@ void main() {
       ),
     );
 
-    await tester.tap(find.text('Capture plate'));
+    await tester.tap(find.text('Tomar foto de la placa'));
     await tester.pumpAndSettle();
 
     expect(find.text('Could not read text from image'), findsOneWidget);
@@ -133,11 +135,11 @@ void main() {
         ),
       );
 
-      await tester.tap(find.text('Capture plate'));
+      await tester.tap(find.text('Tomar foto de la placa'));
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
-      expect(find.text('Enter the plate manually'), findsOneWidget);
+      expect(find.text('Escribe la placa manualmente'), findsOneWidget);
     },
   );
 
@@ -145,16 +147,16 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      MaterialApp(
-        home: BlocProvider<PlateScanningCubit>(
+      testApp(
+        BlocProvider<PlateScanningCubit>(
           create: (_) => PlateScanningCubit(ManualEntryPlateScanner()),
           child: PlateScanPage(capture: _FakeCapture(null)),
         ),
       ),
     );
 
-    expect(find.text('Capture plate'), findsNothing);
-    expect(find.widgetWithText(TextField, 'Plate'), findsOneWidget);
-    expect(find.text('Confirm'), findsOneWidget);
+    expect(find.text('Tomar foto de la placa'), findsNothing);
+    expect(find.widgetWithText(TextField, 'Placa'), findsOneWidget);
+    expect(find.text('Confirmar'), findsOneWidget);
   });
 }

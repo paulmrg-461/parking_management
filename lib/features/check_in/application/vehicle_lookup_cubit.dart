@@ -1,5 +1,4 @@
 import 'package:equatable/equatable.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/error/failure.dart';
 import '../../categories/domain/entities/category.dart';
@@ -7,6 +6,7 @@ import '../../categories/domain/repositories/category_repository.dart';
 import '../../plate_scanning/domain/normalize_plate.dart';
 import '../../vehicles/domain/entities/vehicle.dart';
 import '../../vehicles/domain/repositories/vehicle_repository.dart';
+import '../../../core/state/resilient_cubit.dart';
 
 sealed class VehicleLookupState extends Equatable {
   const VehicleLookupState();
@@ -62,7 +62,7 @@ class VehicleLookupFailure extends VehicleLookupState {
 ///
 /// Every lookup gets a sequence number; results from superseded lookups
 /// (typing faster than the network, or [reset]) are dropped.
-class VehicleLookupCubit extends Cubit<VehicleLookupState> {
+class VehicleLookupCubit extends ResilientCubit<VehicleLookupState> {
   VehicleLookupCubit(this._vehicles, this._categories)
     : super(const VehicleLookupIdle());
 

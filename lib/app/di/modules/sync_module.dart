@@ -62,6 +62,10 @@ void registerSyncModule(GetIt sl) {
       ),
     )
     ..registerLazySingleton<SyncStatusCubit>(
-      () => SyncStatusCubit(sl<SyncOutbox>(), sl<SyncService>().discard),
+      () => SyncStatusCubit(
+        sl<SyncOutbox>(),
+        sl<SyncService>().discard,
+        sl<SyncService>().flush,
+      ),
     );
 }

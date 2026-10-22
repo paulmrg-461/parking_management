@@ -30,11 +30,25 @@ class DioVehicleRemoteDataSource implements VehicleRemoteDataSource {
 
   @override
   Future<List<Vehicle>> list({String? plate}) async {
+    if (plate != null) {
+      return _searchByPlate(plate);
+    }
+    // Unpaged callers build plate/vehicle lookups: walk every page so a lot
+    // with more than one backend page never silently loses vehicles.
+    const pageSize = 500;
+    final vehicles = <Vehicle>[];
+    while (true) {
+      final page = await listPage(limit: pageSize, offset: vehicles.length);
+      vehicles.addAll(page.items);
+      if (page.items.isEmpty || !page.hasMoreAfter(vehicles.length)) {
+        return vehicles;
+      }
+    }
+  }
+
+  Future<List<Vehicle>> _searchByPlate(String plate) async {
     try {
-      final response = await _dio.get(
-        _path,
-        queryParameters: plate != null ? {'plate': plate} : null,
-      );
+      final response = await _dio.get(_path, queryParameters: {'plate': plate});
       return _parse(response.data);
     } on DioException catch (error) {
       throw mapDioError(error);
