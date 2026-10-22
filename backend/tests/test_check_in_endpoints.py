@@ -502,3 +502,61 @@ async def test_auto_registered_vehicle_records_operator(
         vehicle = await SqlAlchemyVehicleRepository(session).get_by_plate("AUD001")
         operator = await SqlAlchemyUserRepository(session).get_by_username("operator")
     assert vehicle.created_by == operator.id
+
+
+# --- Offline replays: client_entry_time ------------------------------------
+
+
+async def test_check_in_keeps_the_client_entry_time(
+    client, session_factory, tmp_path, clock
+):
+    """Offline check-ins are billed from when the operator acted, not sync."""
+    admin_headers = await _admin_headers(client, session_factory)
+    await _create_vehicle(client, admin_headers, plate="OFF001")
+    operator_headers = await _operator_headers(client, session_factory)
+    _use_tmp_storage(tmp_path)
+
+    response = await client.post(
+        "/api/check-ins",
+        data={"plate": "OFF001", "client_entry_time": "2026-03-10T12:00:00Z"},
+        headers=operator_headers,
+    )
+
+    assert response.status_code == 201
+    assert response.json()["entry_time"].startswith("2026-03-10T12:00:00")
+
+
+async def test_check_in_rejects_a_future_client_entry_time(
+    client, session_factory, tmp_path, clock
+):
+    admin_headers = await _admin_headers(client, session_factory)
+    await _create_vehicle(client, admin_headers, plate="OFF002")
+    operator_headers = await _operator_headers(client, session_factory)
+    _use_tmp_storage(tmp_path)
+
+    response = await client.post(
+        "/api/check-ins",
+        data={"plate": "OFF002", "client_entry_time": "2026-03-10T16:00:00Z"},
+        headers=operator_headers,
+    )
+
+    assert response.status_code == 422
+    assert response.json()["code"] == "InvalidEntryTimeError"
+
+
+async def test_check_in_rejects_a_naive_client_entry_time(
+    client, session_factory, tmp_path
+):
+    """Security: a timezone-less timestamp could shift billing arbitrarily."""
+    admin_headers = await _admin_headers(client, session_factory)
+    await _create_vehicle(client, admin_headers, plate="OFF003")
+    operator_headers = await _operator_headers(client, session_factory)
+    _use_tmp_storage(tmp_path)
+
+    response = await client.post(
+        "/api/check-ins",
+        data={"plate": "OFF003", "client_entry_time": "2026-03-10T12:00:00"},
+        headers=operator_headers,
+    )
+
+    assert response.status_code == 422
