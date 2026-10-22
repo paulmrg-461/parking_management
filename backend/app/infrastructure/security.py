@@ -48,3 +48,56 @@ class JwtTokenIssuer(TokenIssuer):
             return security.decode_access_token(token, self._config.signing_key)
         except (jwt.PyJWTError, KeyError) as exc:
             raise InvalidTokenError() from exc
+
+
+class SupabaseTokenIssuer(TokenIssuer):
+    """Validates GoTrue access tokens and maps the email to a username.
+
+    Self-hosted GoTrue signs HS256 tokens with the shared ``JWT_SECRET`` and
+    puts the user's email in the payload. The app's local profile keeps the
+    username as the email local-part (``operator@parking.local``).
+    """
+
+    def __init__(self, secret: str, audience: str = "authenticated"):
+        self._secret = secret
+        self._audience = audience
+
+    def issue(self, subject: str) -> str:
+        raise NotImplementedError("Supabase Auth issues its own tokens")
+
+    def subject_of(self, token: str) -> str:
+        try:
+            payload = jwt.decode(
+                token,
+                self._secret,
+                algorithms=["HS256"],
+                audience=self._audience,
+            )
+        except jwt.PyJWTError as exc:
+            raise InvalidTokenError() from exc
+        email = payload.get("email")
+        if not isinstance(email, str) or "@" not in email:
+            raise InvalidTokenError()
+        username = email.split("@", 1)[0].strip().lower()
+        if not username:
+            raise InvalidTokenError()
+        return username
+
+
+class CompositeTokenIssuer(TokenIssuer):
+    """Accepts legacy PIN tokens and (optionally) Supabase Auth tokens."""
+
+    def __init__(self, primary: TokenIssuer, fallback: TokenIssuer | None = None):
+        self._primary = primary
+        self._fallback = fallback
+
+    def issue(self, subject: str) -> str:
+        return self._primary.issue(subject)
+
+    def subject_of(self, token: str) -> str:
+        try:
+            return self._primary.subject_of(token)
+        except InvalidTokenError:
+            if self._fallback is None:
+                raise
+            return self._fallback.subject_of(token)

@@ -11,6 +11,28 @@ void main() {
 
       expect(config.apiBaseUrl, 'http://localhost:8000');
       expect(config.appName, 'Parking Management');
+      expect(config.supabaseAuthEnabled, isFalse);
+    });
+
+    test('Success: Supabase Auth is opt-in via dart-defines', () {
+      const config = AppConfig(
+        appName: 'Parking',
+        apiBaseUrl: 'http://localhost:8001',
+        supabaseUrl: 'http://localhost:8001',
+        supabaseAnonKey: 'anon-key',
+      );
+
+      expect(config.supabaseAuthEnabled, isTrue);
+    });
+
+    test('Failure: a URL without an anon key stays on legacy login', () {
+      const config = AppConfig(
+        appName: 'Parking',
+        apiBaseUrl: 'http://localhost:8000',
+        supabaseUrl: 'http://localhost:8001',
+      );
+
+      expect(config.supabaseAuthEnabled, isFalse);
     });
   });
 }

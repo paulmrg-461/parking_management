@@ -1,6 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:get_it/get_it.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/config/app_config.dart';
 import '../../../core/network/session_reader.dart';
 import '../../../core/storage/session_cache_cleaner.dart';
 import '../../../core/storage/token_store.dart';
@@ -11,6 +13,7 @@ import '../../../features/auth/infrastructure/auth_local_data_source.dart';
 import '../../../features/auth/infrastructure/auth_remote_data_source.dart';
 import '../../../features/auth/infrastructure/auth_repository_impl.dart';
 import '../../../features/auth/infrastructure/caching_auth_local_data_source.dart';
+import '../../../features/auth/infrastructure/supabase_auth_remote_data_source.dart';
 
 void registerAuthModule(GetIt sl) {
   sl
@@ -28,7 +31,10 @@ void registerAuthModule(GetIt sl) {
       () => sl<CachingAuthLocalDataSource>(),
     )
     ..registerLazySingleton<AuthRemoteDataSource>(
-      () => DioAuthRemoteDataSource(sl<Dio>()),
+      () => sl<AppConfig>().supabaseAuthEnabled
+          // Needs the SupabaseClient registered by configureDependencies().
+          ? SupabaseAuthRemoteDataSource(sl<SupabaseClient>())
+          : DioAuthRemoteDataSource(sl<Dio>()),
     )
     ..registerLazySingleton<AuthRepository>(
       () => AuthRepositoryImpl(

@@ -50,6 +50,9 @@ class Settings(BaseSettings):
     # Optional shared cache / login limiter (e.g. "redis://redis:6379/0").
     # Unset = in-process implementations (fine for a single worker).
     redis_url: str | None = None
+    # When set, Supabase Auth (GoTrue) access tokens are accepted in addition
+    # to the legacy PIN-issued JWTs (transitional migration to Supabase).
+    supabase_jwt_secret: str | None = None
 
     @property
     def cors_origin_list(self) -> list[str]:

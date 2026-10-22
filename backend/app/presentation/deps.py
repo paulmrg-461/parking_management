@@ -71,7 +71,13 @@ from app.infrastructure.repositories.report_repository import SqlAlchemyReportRe
 from app.infrastructure.repositories.tariff_repository import SqlAlchemyTariffRepository
 from app.infrastructure.repositories.user_repository import SqlAlchemyUserRepository
 from app.infrastructure.repositories.vehicle_repository import SqlAlchemyVehicleRepository
-from app.infrastructure.security import Argon2PasswordHasher, JwtConfig, JwtTokenIssuer
+from app.infrastructure.security import (
+    Argon2PasswordHasher,
+    CompositeTokenIssuer,
+    JwtConfig,
+    JwtTokenIssuer,
+    SupabaseTokenIssuer,
+)
 from app.infrastructure.shared_resources import SharedResources, build_shared_resources
 from app.presentation.uploads import UploadLimits
 
@@ -82,8 +88,19 @@ _bearer = HTTPBearer(auto_error=False)
 _evidence_storage = LocalEvidenceStorage(settings.evidence_storage_path)
 _logo_storage = LocalLogoStorage(settings.settings_storage_path)
 _password_hasher = Argon2PasswordHasher()
-_token_issuer = JwtTokenIssuer(
-    JwtConfig(settings.secret_key, settings.jwt_algorithm, settings.access_token_expire_minutes)
+_token_issuer = CompositeTokenIssuer(
+    JwtTokenIssuer(
+        JwtConfig(
+            settings.secret_key,
+            settings.jwt_algorithm,
+            settings.access_token_expire_minutes,
+        )
+    ),
+    # Transitional: accept Supabase Auth tokens when the stack provides the
+    # shared signing secret. None = legacy PIN tokens only.
+    SupabaseTokenIssuer(settings.supabase_jwt_secret)
+    if settings.supabase_jwt_secret
+    else None,
 )
 _fare_calculator = FareCalculator(settings.business_zone)
 _shared: SharedResources = build_shared_resources(None)

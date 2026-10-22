@@ -58,6 +58,7 @@ dependencies:
   bluetooth_print_plus: ^2.4.6
   url_launcher: ^6.3.2
   flutter_secure_storage: ^11.2.0
+  supabase_flutter: ^2.18.3
 
 dev_dependencies:
   flutter_test:

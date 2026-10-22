@@ -16,29 +16,39 @@ feature, on both sides of the stack. See `AGENTS.md` for the full conventions.
 
 ## Quickstart with Docker Compose
 
-Brings up PostgreSQL and the backend API; runs migrations automatically.
+Brings up **self-hosted Supabase** (Postgres, Auth, PostgREST, Storage,
+Studio), the FastAPI backend and Redis. Supabase migrations run automatically
+via the `supabase-migrate` service.
 
 ```bash
+cp .env.example .env
+sh supabase/generate-env.sh   # generates the stack secrets (never printed)
 docker compose up --build
 ```
 
-The API is then live at `http://localhost:8000` (`/api/health` for a quick
-check, `/docs` for the interactive OpenAPI UI).
+| Service | URL |
+|---|---|
+| FastAPI (transitional app API) | `http://localhost:8000` (`/docs`, `/api/health`) |
+| Supabase Studio | `http://localhost:8001` |
+| Supabase REST/Auth | `http://localhost:8001/rest/v1`, `http://localhost:8001/auth/v1` |
+| Postgres (Supavisor) | `localhost:5432`, database `parking` |
 
-Bootstrap the first admin user (auth is PIN-based and every other user is
-created through an admin-only endpoint, so a fresh database needs this once):
-
-```bash
-docker compose exec backend python scripts/create_admin.py \
-  --username admin --display-name "Admin" --pin 1234
-```
-
-Seed the default vehicle categories (a fresh database has none, which
-disables the check-in category dropdown for new vehicles):
+Supabase Auth is the target identity provider. Create the first admin in GoTrue
+(the `auth.users` trigger mirrors the profile into `public.users`):
 
 ```bash
-docker compose exec backend python scripts/seed_categories.py
+sh supabase/create-operator.sh admin 123456 admin
 ```
+
+The PIN is the GoTrue password for `admin@parking.local`; the kiosk keeps
+asking for username + PIN, but in Supabase mode it must be **6 digits**
+(GoTrue clamps the minimum to 6). The legacy PIN endpoint still works during
+the transition. Default categories are seeded by `supabase/migrations`.
+
+> The migration is phased (see `openspec/changes/migrate-to-supabase/`):
+> Supabase runs alongside FastAPI today; billing/check-in/check-out and
+> evidence uploads move to RPC/Storage next, then FastAPI is removed. A fresh
+> database uses `supabase/migrations`, not Alembic.
 
 Then run the Flutter app against it — see [Flutter](#flutter) below.
 
@@ -66,11 +76,17 @@ build/run time via `--dart-define` (defaults to `http://localhost:8000`):
 
 ```bash
 flutter pub get
-flutter run --dart-define=API_BASE_URL=http://localhost:8000
+flutter run \
+  --dart-define=API_BASE_URL=http://localhost:8000 \
+  --dart-define=SUPABASE_URL=http://localhost:8001 \
+  --dart-define=SUPABASE_ANON_KEY=<ANON_KEY from .env>
 ```
 
-- Android emulator talking to a backend on the host machine: use
-  `http://10.0.2.2:8000` instead of `localhost`.
+When both Supabase defines are present, login goes through GoTrue; without
+them the app falls back to the legacy FastAPI PIN endpoint.
+
+- Android emulator talking to services on the host machine: use
+  `http://10.0.2.2:8000` (API) and `http://10.0.2.2:8001` (Supabase).
 - Web (`flutter run -d chrome ...`) needs `CORS_ORIGINS` on the backend to
   include the origin Flutter serves from (see `backend/.env.example`).
 

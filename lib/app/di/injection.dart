@@ -1,7 +1,10 @@
 import 'package:get_it/get_it.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/config/app_config.dart';
 import '../../core/storage/key_value_store.dart';
+import '../../features/auth/domain/entities/auth_session.dart';
+import '../../features/auth/infrastructure/auth_local_data_source.dart';
 import 'modules/auth_module.dart';
 import 'modules/categories_module.dart';
 import 'modules/check_in_module.dart';
@@ -25,8 +28,37 @@ final GetIt serviceLocator = GetIt.instance;
 /// pending-photo storage) come from [registerPlatformModule], resolved per
 /// platform through a conditional import.
 Future<void> configureDependencies() async {
-  registerAllModules(serviceLocator, AppConfig.fromEnvironment());
+  final config = AppConfig.fromEnvironment();
+  registerAllModules(serviceLocator, config);
+  if (config.supabaseAuthEnabled) {
+    await _initSupabase(config);
+  }
   await serviceLocator<KeyValueStore>().init();
+}
+
+/// Boots GoTrue and keeps the cached bearer token fresh: Supabase rotates
+/// access tokens in the background, but FastAPI reads the token snapshot
+/// stored in Hive through [SessionReader].
+Future<void> _initSupabase(AppConfig config) async {
+  final supabase = await Supabase.initialize(
+    url: config.supabaseUrl,
+    anonKey: config.supabaseAnonKey,
+  );
+  serviceLocator.registerSingleton<SupabaseClient>(supabase.client);
+  supabase.client.auth.onAuthStateChange.listen((state) async {
+    final session = state.session;
+    if (session == null) {
+      return;
+    }
+    final local = serviceLocator<AuthLocalDataSource>();
+    final current = await local.readSession();
+    if (current == null) {
+      return;
+    }
+    await local.saveSession(
+      AuthSession(user: current.user, token: session.accessToken),
+    );
+  });
 }
 
 /// Registers every module into [sl] without touching storage (testable).

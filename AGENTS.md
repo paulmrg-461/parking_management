@@ -39,6 +39,9 @@ Flutter: BLoC/Cubit + Equatable, `get_it` (manual registration), Hive CE
 `tflite_flutter` + `google_mlkit_text_recognition`, `intl` (COP, no decimals).
 
 Backend: FastAPI, SQLAlchemy 2.0 (async), Alembic, PostgreSQL, JWT, Argon2id.
+**Transitional**: the target is self-hosted Supabase (Postgres, GoTrue,
+PostgREST, Storage, Studio) in `supabase/`; see
+`openspec/changes/migrate-to-supabase/`. FastAPI is removed in phase 5.
 
 ## Business rules
 
@@ -76,6 +79,11 @@ Write 3 tests (Success / Failure / Security) BEFORE logic.
 - **Secrets**: production rejects known/example `SECRET_KEY` values, including
   the one in `.env.example`.
 - **UI text**: always `context.l10n`; no hardcoded operator-facing strings.
+- **Supabase**: the root `.env` drives both compose stacks; `supabase/migrations`
+  owns the schema when `SCHEMA_MANAGED_EXTERNALLY=1` (never run Alembic there).
+  GoTrue usernames map to `<username>@parking.local` (6-digit PIN as password),
+  `public.users` is mirrored by the `auth.users` trigger, and every new table
+  must ship grants + RLS policies before PostgREST is exposed.
 
 ## Spec-driven workflow (OpenSpec)
 
