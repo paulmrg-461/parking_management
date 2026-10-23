@@ -42,6 +42,26 @@ Backend: self-hosted Supabase (PostgreSQL 17 + RLS, GoTrue, PostgREST,
 Storage, Edge Functions) in `supabase/`. There is no application server: SQL
 RPCs own business logic and the Flutter client calls Supabase directly.
 
+## Current state (post-migration, 2026-10-23)
+
+- Branch `feature/supabase`: FastAPI, Alembic, Dio, Redis and `backend/` are
+  deleted. Do not reintroduce them.
+- `docker compose up -d` from the repo root is the whole stack. Gateway/Studio
+  are on `:8000`; schema is applied by `supabase-migrate`.
+- Local admin: `sh supabase/create-operator.sh admin 123456 admin` (6-digit
+  PIN; rotate outside a disposable dev DB).
+- Flutter needs `--dart-define=SUPABASE_URL=...` and
+  `--dart-define=SUPABASE_ANON_KEY=...`; `configureDependencies()` fails fast
+  without them.
+- Key files: `supabase/migrations/0001..0007` (schema/RLS/RPCs/constraints),
+  `supabase/volumes/functions/admin-users/index.ts`, `lib/app/di/injection.dart`,
+  `lib/core/network/supabase_error_mapper.dart`.
+- Tests: `flutter test` (402) + `flutter analyze`; CI validates compose with
+  `sh supabase/generate-env.sh && docker compose config -q`.
+- Known operational notes: pre-migration data needs a manual `pg_dump`/restore;
+  Android release requires HTTPS in front of Envoy; `idempotency_keys` has no
+  automatic TTL purge yet.
+
 ## Business rules
 
 - Categories: moto, car, camioneta, camion, bus (configurable).
@@ -70,9 +90,11 @@ Write 3 tests (Success / Failure / Security) BEFORE logic.
 - **Cubits**: extend `ResilientCubit` (never raw `Cubit`) so an in-flight
   future that resolves after `close()` cannot throw. Submission flows must
   catch non-`Failure` errors and always leave `SubmissionInProgress`.
-- **Auth storage**: the JWT lives in `flutter_secure_storage` via `TokenStore`;
-  Hive only stores the profile. Logout clears reference-data caches but never
-  the outbox. Supabase rotates tokens; the auth-state listener refreshes Hive.
+- **Auth storage**: both the app JWT (`TokenStore`) and the Supabase SDK session
+  (`SecureSupabaseStorage`) live in `flutter_secure_storage`; Hive only stores
+  the profile. Logout clears reference-data caches and signs out locally
+  (`SignOutScope.local`) but never clears the outbox. The auth-state listener
+  refreshes the Hive token snapshot.
 - **Lists used for lookups** (open sessions, vehicles, monthly passes) must
   walk every Supabase page; PostgREST caps rows per request.
 - **UI text**: always `context.l10n`; no hardcoded operator-facing strings.

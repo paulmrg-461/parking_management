@@ -46,23 +46,29 @@ The app is now a Supabase-only stack: FastAPI, Alembic, Dio and Redis are gone.
 - **Auth**: GoTrue only. Usernames map to `<username>@parking.local`, PIN is
   the 6-digit password, and the `auth.users` trigger mirrors `public.users`.
   Admin user changes go through the `admin-users` Edge Function (service role
-  stays server-side). The client refreshes the cached Hive token on auth-state
-  changes.
+  stays server-side). Both the app token and the Supabase SDK session live in
+  `flutter_secure_storage` (Keychain/Keystore/WebCrypto); Hive keeps only the
+  profile, and logout signs out locally without touching the outbox.
 - **Business logic in SQL**: `calculate_fare` (per-day night split, ceil per
   rate type, daily cap), `check_in`, `check_out` (row lock, monthly pass,
   ticket, clock-skew validation) and idempotency via `idempotency_keys`.
   Reports (`report_revenue`, `report_occupancy`), branding (`set_branding_logo`).
 - **RLS**: `anon` has no table grants; `authenticated` reads reference data,
-  admins write it, operators can register vehicles. Session/evidence writes are
-  RPC-only; users see their own profile (admins see all).
+  admins write it, and operators cannot insert vehicles/profiles directly
+  (check-in registers the vehicle inside the security-definer RPC). Session/
+  evidence writes are RPC-only; users see their own profile (admins see all).
 - **Storage**: evidence photos upload to the private `evidence` bucket before
   `check_in`; the logo lives in the public `branding` bucket.
 - **Flutter**: every remote data source uses `supabase_flutter`
   (PostgREST/Storage/Functions); offline cache + outbox and the check-in/out
   replayers are unchanged in behaviour.
-- **Tests**: Flutter suite green; CI validates the Flutter app and the compose
-  file. End-to-end verified locally: GoTrue login → RPC/PostgREST, operator
-  denied on admin routes, idempotent check-in/check-out replays, reports.
+- **Validation**: wiped the database and re-ran the whole install; verified
+  GoTrue login → RPC/PostgREST, RLS denials, idempotent check-in/check-out,
+  reports, Storage uploads (private evidence/public branding) and the
+  `admin-users` function. CI validates the Flutter app and the compose file.
+- **Operational notes**: pre-migration data requires a manual `pg_dump`/restore;
+  Android release builds need HTTPS in front of Envoy; `idempotency_keys` has
+  no automatic TTL purge yet.
 
 ## Recent additions (post-roadmap, not OpenSpec changes)
 
