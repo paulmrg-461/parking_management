@@ -482,6 +482,53 @@ begin
     end;
 end $$;
 
+-- Branding is per lot: only the active lot's row changes.
+set local request.headers = '{"x-lot-id":"2"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+select public.set_branding_logo('logo_2');
+
+do $$
+begin
+    if (select logo_version from public.parking_settings where lot_id = 2) <> 1 then
+        raise exception 'logo version was not bumped for lot 2';
+    end if;
+    if (select logo_path from public.parking_settings where lot_id = 2) <> 'logo_2' then
+        raise exception 'logo path was not stored for lot 2';
+    end if;
+    if (select logo_version from public.parking_settings where lot_id = 1) <> 0 then
+        raise exception 'lot 1 branding was modified';
+    end if;
+end $$;
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    begin
+        perform public.set_branding_logo('logo_2_b');
+        raise exception 'operator changed the branding';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then
+            raise;
+        end if;
+    end;
+end $$;
+
+reset request.headers;
+
+-- Evidence objects must stay inside the active lot (policy regression guard).
+do $$
+begin
+    if not exists (
+        select 1 from pg_policies
+         where schemaname = 'storage'
+           and tablename = 'objects'
+           and policyname = 'evidence_objects_read'
+           and qual like '%current_lot_id%'
+    ) then
+        raise exception 'evidence read policy is not scoped to the lot';
+    end if;
+end $$;
+
 -- RLS: the operator must not read the admin's notifications.
 set local role authenticated;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';

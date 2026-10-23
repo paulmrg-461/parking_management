@@ -240,4 +240,10 @@ void main() {
     session.select(2);
     expect(await local.readLogo(1), isNull);
   });
+
+  test('Security: each lot stores its logo under its own object', () {
+    expect(logoPathForLot(1), 'logo_1');
+    expect(logoPathForLot(2), 'logo_2');
+    expect(logoPathForLot(1), isNot(logoPathForLot(2)));
+  });
 }

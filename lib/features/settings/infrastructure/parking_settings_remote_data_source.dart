@@ -27,7 +27,6 @@ class SupabaseParkingSettingsRemoteDataSource
 
   static const _table = 'parking_settings';
   static const _bucket = 'branding';
-  static const _logoPath = 'logo';
 
   @override
   Future<ParkingSettings> fetch() async {
@@ -64,11 +63,20 @@ class SupabaseParkingSettingsRemoteDataSource
     }
   }
 
+  int get _lotId {
+    final lotId = _lots.activeLotId;
+    if (lotId == null) {
+      throw StateError('Select a parking lot first');
+    }
+    return lotId;
+  }
+
   @override
   Future<ParkingSettings> uploadLogo(Uint8List bytes) async {
     try {
+      final path = logoPathForLot(_lotId);
       await _client.storage.from(_bucket).uploadBinary(
-        _logoPath,
+        path,
         bytes,
         fileOptions: FileOptions(
           contentType: _contentType(bytes),
@@ -77,7 +85,7 @@ class SupabaseParkingSettingsRemoteDataSource
       );
       final row = await _client.rpc(
         'set_branding_logo',
-        params: {'p_path': _logoPath},
+        params: {'p_path': path},
       );
       return ParkingSettingsDto.fromJson(
         Map<String, dynamic>.from(row as Map),
@@ -90,7 +98,9 @@ class SupabaseParkingSettingsRemoteDataSource
   @override
   Future<Uint8List> fetchLogo() async {
     try {
-      return await _client.storage.from(_bucket).download(_logoPath);
+      return await _client.storage.from(_bucket).download(
+        logoPathForLot(_lotId),
+      );
     } catch (_) {
       // Missing/offline logo is not fatal: the repository falls back to null.
       throw const NetworkFailure('Logo unavailable');
@@ -102,3 +112,7 @@ class SupabaseParkingSettingsRemoteDataSource
       ? 'image/jpeg'
       : 'image/png';
 }
+
+/// One logo object per lot, so uploading a site's logo never overwrites the
+/// other site's branding.
+String logoPathForLot(int lotId) => 'logo_$lotId';

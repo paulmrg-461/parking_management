@@ -65,4 +65,18 @@ void main() {
 
     expect(cubit.state, isA<BrandingInitial>());
   });
+
+  test('Success: a lot switch reloads the other site branding', () async {
+    repository.settings = const ParkingSettings(name: 'Sede Norte');
+    await cubit.load();
+    expect(cubit.state.settingsOrNull?.name, 'Sede Norte');
+
+    // The repository now resolves the newly selected lot.
+    repository
+      ..settings = const ParkingSettings(name: 'Sede Sur')
+      ..cached = const ParkingSettings(name: 'Sede Sur');
+    await cubit.load();
+
+    expect(cubit.state.settingsOrNull?.name, 'Sede Sur');
+  });
 }

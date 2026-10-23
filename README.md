@@ -183,12 +183,17 @@ passes, pass payments, reservations, settings and notifications carry a
 `lot_id`; vehicles stay a global registry keyed by plate, and the active lot's
 category is applied at check-in.
 
+Evidence photos are private: reads are limited to sessions of the active lot,
+so a leaked object path is useless outside its site.
+
 The active lot travels as the `x-lot-id` header, which the app sets from
 `LotContext` (persisted locally). `current_lot_id()` validates the caller's
 membership on every request and falls back to their lowest membership when the
 header is missing, so console/cron access and single-site installs keep working.
 A forged header fails with `LotRequiredError`.
 
+- Branding (name, address, logo) is per site: the logo is stored as
+  `branding/logo_<lotId>` and `set_branding_logo` only touches the active lot.
 - Admins create sites at `/lots` (platform admin), enable/disable them and
   manage their members (role per site). When creating a user, the admin can pick
   the site; the `admin-users` Edge Function writes the membership.

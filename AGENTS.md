@@ -75,7 +75,9 @@ RPCs own business logic and the Flutter client calls Supabase directly.
   are never queued. Notification taps deep-link by type via
   `notification_routes.dart`.
 - Printed receipts localize through `ReceiptLabels` (es/en); nothing may
-  hardcode receipt labels.
+  hardcode receipt labels. Branding is per lot (`branding/logo_<lotId>`,
+  `set_branding_logo` restricted to the active lot) and evidence objects are
+  readable only through a session of the active lot.
 - Multi-lot: every site-owned table carries `lot_id`; RLS and RPCs resolve the
   active lot with `current_lot_id()` (`x-lot-id` header validated against
   `lot_members`, lowest membership as fallback). Never trust a client lot id
@@ -85,7 +87,7 @@ RPCs own business logic and the Flutter client calls Supabase directly.
   browser push uses `web/push-sw.js` + VAPID (`web_push_subscriptions`);
   `FCM_SERVICE_ACCOUNT_JSON` + `supabase/notifications-cron.sh` enable
   background FCM. `push-dispatch` is service-role-only; never expose the key.
-- Tests: `flutter test` (480) + `flutter analyze`; CI validates compose and
+- Tests: `flutter test` (482) + `flutter analyze`; CI validates compose and
   runs `supabase/tests/run.sh` (real migrations + RPC/RLS tests) against
   `supabase/postgres`.
 - Backups: `sh supabase/backup.sh` (DB dump + Storage); restore with

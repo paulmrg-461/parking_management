@@ -181,8 +181,12 @@ The app is now a Supabase-only stack: FastAPI, Alembic, Dio and Redis are gone.
   monthly-pass and notification caches are keyed per lot; the reports screen
   adds a consolidated "Todas las sedes" switch (`report_revenue_all`); `/lots`
   manages members per site and `admin-users` accepts `lot_id`; receipts print
-  the active lot's settings header. Remaining: the contract migration that drops
-  the missing-header fallback (deliberate follow-up).
+  the active lot's settings header. Hardening pass: per-lot branding (logo object
+  and RPC scoped to the active site, reloaded on switch), evidence object reads
+  limited to the active lot's sessions, CI now runs on `feature/**`, GoTrue PIN
+  minimum raised to 6 with the `/token` rate-limit header configured, and the
+  web/Android metadata no longer ships Flutter defaults. Remaining: the contract
+  migration that drops the missing-header fallback (deliberate follow-up).
 
 ## Infra/tooling (not OpenSpec capabilities — repo scaffolding)
 
@@ -224,7 +228,7 @@ The app is now a Supabase-only stack: FastAPI, Alembic, Dio and Redis are gone.
 
 ## Test counts
 
-- Flutter (`flutter test`): 480 passed. `flutter analyze`: 0 errors/warnings
+- Flutter (`flutter test`): 482 passed. `flutter analyze`: 0 errors/warnings
   (98 SDK-deprecation/const infos under the local Flutter 3.50 beta; CI pins
   3.49 where the baseline is clean).
 - SQL/compose: validated against the running Supabase stack and by

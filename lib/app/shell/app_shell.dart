@@ -97,6 +97,11 @@ void _reloadForLot(BuildContext context) {
   } on ProviderNotFoundException {
     // no shift cubit in this context
   }
+  try {
+    unawaited(context.read<BrandingCubit>().load());
+  } on ProviderNotFoundException {
+    // no branding cubit in this context
+  }
 }
 
 class _WideShell extends StatelessWidget {

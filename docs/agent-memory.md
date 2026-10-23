@@ -4,7 +4,7 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-10-23, branch `feature/supabase` (`acb8f9e`).
+Last updated: 2026-10-23, branch `feature/supabase` (post-hardening).
 
 ## Where we are
 
@@ -93,6 +93,19 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   regeneration is needed when the entity has no `lot_id`.
 - Web push needs HTTPS (service-worker origin) and operator-provided VAPID/FCM
   credentials; without `WEB_PUSH_VAPID_PUBLIC_KEY` the inbox toggle is hidden.
+
+## Hardening pass (latest)
+
+- Branding is per lot: `0027` scopes `set_branding_logo` to the active lot,
+  the client uploads `branding/logo_<lotId>`, and the shell/auth reload
+  `BrandingCubit` on a lot switch.
+- Evidence objects: `storage.objects` read policy now joins
+  `evidence_photos` → `parking_sessions` and requires the active lot; a SQL
+  regression guard asserts the policy mentions `current_lot_id`.
+- CI runs on `feature/**` too; `.env.example` sets `PASSWORD_MIN_LENGTH=6` and
+  `RATE_LIMIT_HEADER`, and the auth service passes `GOTRUE_RATE_LIMIT_HEADER`.
+- `web/manifest.json`, `web/index.html` and the Android label no longer ship
+  Flutter defaults.
 
 ## Backlog / next moves
 

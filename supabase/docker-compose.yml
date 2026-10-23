@@ -136,6 +136,8 @@ services:
       GOTRUE_DISABLE_SIGNUP: ${DISABLE_SIGNUP:-true}
       # GoTrue enforces a 6-character minimum for passwords (PINs).
       GOTRUE_PASSWORD_MIN_LENGTH: ${PASSWORD_MIN_LENGTH:-6}
+      # Identifies the client for the /token rate limiter (PIN brute force).
+      GOTRUE_RATE_LIMIT_HEADER: ${RATE_LIMIT_HEADER:-X-Forwarded-For}
 
       GOTRUE_JWT_ADMIN_ROLES: service_role
       GOTRUE_JWT_AUD: authenticated
