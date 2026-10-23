@@ -38,6 +38,8 @@ class CheckOutRepositoryImpl implements CheckOutRepository {
     String paymentMethod = 'cash',
     int discountAmount = 0,
     String? discountReason,
+    bool lostTicket = false,
+    String? lostTicketReason,
   }) async {
     // Same key for the online attempt and any queued replay: a response lost
     // after the server committed must not become a dead letter on retry.
@@ -50,6 +52,8 @@ class CheckOutRepositoryImpl implements CheckOutRepository {
         paymentMethod: paymentMethod,
         discountAmount: discountAmount,
         discountReason: discountReason,
+        lostTicket: lostTicket,
+        lostTicketReason: lostTicketReason,
       );
     } on NetworkFailure {
       return _queueCheckOut(
@@ -59,6 +63,8 @@ class CheckOutRepositoryImpl implements CheckOutRepository {
         paymentMethod: paymentMethod,
         discountAmount: discountAmount,
         discountReason: discountReason,
+        lostTicket: lostTicket,
+        lostTicketReason: lostTicketReason,
       );
     }
   }
@@ -73,6 +79,8 @@ class CheckOutRepositoryImpl implements CheckOutRepository {
     required String paymentMethod,
     required int discountAmount,
     required String? discountReason,
+    required bool lostTicket,
+    required String? lostTicketReason,
   }) async {
     await _outbox.enqueue(
       PendingMutation(
@@ -85,6 +93,10 @@ class CheckOutRepositoryImpl implements CheckOutRepository {
           'payment_method': paymentMethod,
           'discount_amount': discountAmount,
           'discount_reason': ?discountReason,
+          if (lostTicket) ...{
+            'lost_ticket': true,
+            'lost_ticket_reason': ?lostTicketReason,
+          },
         }),
         enqueuedAt: exitTime,
       ),
@@ -102,6 +114,7 @@ class CheckOutRepositoryImpl implements CheckOutRepository {
       paymentMethod: paymentMethod,
       discountAmount: discountAmount,
       discountReason: discountReason,
+      lostTicket: lostTicket,
       pendingSync: true,
     );
   }

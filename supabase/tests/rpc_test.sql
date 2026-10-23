@@ -97,6 +97,58 @@ begin
     end if;
 end $$;
 
+-- Lost ticket: the full daily tariff is charged and the reason is stored.
+update public.categories set capacity = 0 where id = 2;
+insert into public.tariffs (category_id, type, amount, active)
+values (2, 'daily', 20000, true);
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+insert into _results (session_json)
+select public.check_in('LOST01', 2, null, null, '[]'::jsonb, null, null);
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+begin
+    begin
+        perform public.check_out(
+            (select s.id from public.parking_sessions s
+               join public.vehicles v on v.id = s.vehicle_id
+              where v.plate = 'LOST01'),
+            now() + interval '1 minute', null, 'cash', 0, null, true, null
+        );
+        raise exception 'lost ticket without a reason was accepted';
+    exception when others then
+        if sqlerrm not like '%LostTicketReasonRequired%' then
+            raise;
+        end if;
+    end;
+end $$;
+
+update _results
+   set receipt = public.check_out(
+       (select s.id from public.parking_sessions s
+          join public.vehicles v on v.id = s.vehicle_id
+         where v.plate = 'LOST01'),
+       now() + interval '1 minute', null, 'cash', 0, null, true, 'cliente sin ticket'
+   )
+ where session_json ->> 'plate' = 'LOST01';
+
+do $$
+begin
+    if ((select receipt from _results
+          where session_json ->> 'plate' = 'LOST01') ->> 'amount_charged')::integer <> 20000 then
+        raise exception 'lost ticket did not charge the full daily tariff';
+    end if;
+    if ((select receipt from _results
+          where session_json ->> 'plate' = 'LOST01') ->> 'lost_ticket')::boolean is not true then
+        raise exception 'lost ticket flag missing from the receipt';
+    end if;
+    if (select lost_ticket_reason from public.parking_sessions
+         where lost_ticket) is distinct from 'cliente sin ticket' then
+        raise exception 'lost ticket reason was not stored';
+    end if;
+end $$;
+
 -- RLS: the operator must not read the admin's notifications.
 set local role authenticated;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';

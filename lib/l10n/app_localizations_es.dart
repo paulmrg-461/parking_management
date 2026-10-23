@@ -749,6 +749,18 @@ class AppLocalizationsEs extends AppLocalizations {
   String get paymentExempt => 'Exento';
 
   @override
+  String get lostTicket => 'Ticket perdido';
+
+  @override
+  String get lostTicketHint => 'Se cobra la tarifa completa del día.';
+
+  @override
+  String get lostTicketReason => 'Motivo (ticket perdido)';
+
+  @override
+  String get lostTicketReasonRequired => 'Indica el motivo del ticket perdido';
+
+  @override
   String get discountAmount => 'Descuento (COP)';
 
   @override

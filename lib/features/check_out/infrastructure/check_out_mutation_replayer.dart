@@ -22,6 +22,8 @@ class CheckOutMutationReplayer extends MutationReplayer {
       paymentMethod: payload['payment_method'] as String? ?? 'cash',
       discountAmount: (payload['discount_amount'] as num?)?.toInt() ?? 0,
       discountReason: payload['discount_reason'] as String?,
+      lostTicket: payload['lost_ticket'] == true,
+      lostTicketReason: payload['lost_ticket_reason'] as String?,
     );
   }
 }

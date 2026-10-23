@@ -16,6 +16,7 @@ class CheckOutReceipt extends Equatable {
     this.paymentMethod = 'cash',
     this.discountAmount = 0,
     this.discountReason,
+    this.lostTicket = false,
     this.pendingSync = false,
   });
 
@@ -28,9 +29,22 @@ class CheckOutReceipt extends Equatable {
   final String paymentMethod;
   final int discountAmount;
   final String? discountReason;
+  final bool lostTicket;
   final bool pendingSync;
 
   @override
   List<Object?> get props =>
-      [id, plate, entryTime, exitTime, amountCharged, ticketNumber, paymentMethod, discountAmount, discountReason, pendingSync];
+      [
+        id,
+        plate,
+        entryTime,
+        exitTime,
+        amountCharged,
+        ticketNumber,
+        paymentMethod,
+        discountAmount,
+        discountReason,
+        lostTicket,
+        pendingSync,
+      ];
 }

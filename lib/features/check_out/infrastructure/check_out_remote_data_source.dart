@@ -22,6 +22,8 @@ abstract class CheckOutRemoteDataSource {
     String paymentMethod = 'cash',
     int discountAmount = 0,
     String? discountReason,
+    bool lostTicket = false,
+    String? lostTicketReason,
   });
 
   Future<OccupancySnapshot> occupancy();
@@ -81,6 +83,8 @@ class SupabaseCheckOutRemoteDataSource implements CheckOutRemoteDataSource {
     String paymentMethod = 'cash',
     int discountAmount = 0,
     String? discountReason,
+    bool lostTicket = false,
+    String? lostTicketReason,
   }) async {
     try {
       final result = await _client.rpc(
@@ -90,6 +94,10 @@ class SupabaseCheckOutRemoteDataSource implements CheckOutRemoteDataSource {
           'p_payment_method': paymentMethod,
           if (discountAmount > 0) 'p_discount_amount': discountAmount,
           'p_discount_reason': ?discountReason,
+          if (lostTicket) ...{
+            'p_lost_ticket': true,
+            'p_lost_ticket_reason': ?lostTicketReason,
+          },
           if (clientExitTime != null)
             'p_client_exit_time': clientExitTime.toUtc().toIso8601String(),
           'p_idempotency_key': ?idempotencyKey,

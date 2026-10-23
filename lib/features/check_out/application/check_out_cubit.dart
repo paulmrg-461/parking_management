@@ -195,6 +195,8 @@ class CheckOutCubit extends ResilientCubit<CheckOutState> {
     String paymentMethod = 'cash',
     int discountAmount = 0,
     String? discountReason,
+    bool lostTicket = false,
+    String? lostTicketReason,
   }) async {
     final current = state;
     if (current is! CheckOutLoaded) {
@@ -207,6 +209,8 @@ class CheckOutCubit extends ResilientCubit<CheckOutState> {
         paymentMethod: paymentMethod,
         discountAmount: discountAmount,
         discountReason: discountReason,
+        lostTicket: lostTicket,
+        lostTicketReason: lostTicketReason,
       );
       emit(
         _latest(current).copyWith(

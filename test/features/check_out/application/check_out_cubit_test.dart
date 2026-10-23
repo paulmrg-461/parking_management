@@ -49,6 +49,8 @@ class _FakeCheckOutRepository implements CheckOutRepository {
     String paymentMethod = 'cash',
     int discountAmount = 0,
     String? discountReason,
+    bool lostTicket = false,
+    String? lostTicketReason,
   }) async {
     if (checkOutError != null) {
       throw checkOutError!;

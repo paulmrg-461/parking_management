@@ -241,6 +241,8 @@ class _SessionTile extends StatelessWidget {
       paymentMethod: choice.method.wire,
       discountAmount: choice.discountAmount,
       discountReason: choice.discountReason,
+      lostTicket: choice.lostTicket,
+      lostTicketReason: choice.lostTicketReason,
     );
   }
 }

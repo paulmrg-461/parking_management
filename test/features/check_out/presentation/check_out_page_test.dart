@@ -19,6 +19,8 @@ import '../../../helpers/test_app.dart';
 
 class _FakeCheckOutRepository implements CheckOutRepository {
   Failure? checkOutError;
+  bool? lastLostTicket;
+  String? lastLostTicketReason;
 
   @override
   Future<OccupancySnapshot> occupancy() async =>
@@ -40,9 +42,13 @@ class _FakeCheckOutRepository implements CheckOutRepository {
     String paymentMethod = 'cash',
     int discountAmount = 0,
     String? discountReason,
+    bool lostTicket = false,
+    String? lostTicketReason,
   }) async {
     final error = checkOutError;
     if (error != null) throw error;
+    lastLostTicket = lostTicket;
+    lastLostTicketReason = lostTicketReason;
     return CheckOutReceipt(
       id: sessionId,
       plate: sessionId == 1 ? 'ABC123' : 'XYZ999',
@@ -143,6 +149,42 @@ void main() {
       expect(occupancy.occupancyCalls, 0);
     },
   );
+
+  testWidgets('Success: lost ticket charges the full rate with a reason', (
+    tester,
+  ) async {
+    await pumpPage(tester);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Cobrar').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Ticket perdido'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Motivo (ticket perdido)'),
+      'cliente sin ticket',
+    );
+    await tester.tap(find.text('Confirmar'));
+    await tester.pumpAndSettle();
+
+    expect(repository.lastLostTicket, isTrue);
+    expect(repository.lastLostTicketReason, 'cliente sin ticket');
+  });
+
+  testWidgets('Failure: a lost ticket without a reason is not submitted', (
+    tester,
+  ) async {
+    await pumpPage(tester);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Cobrar').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Ticket perdido'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Confirmar'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Indica el motivo del ticket perdido'), findsOneWidget);
+    expect(repository.lastLostTicket, isNull);
+  });
 
   testWidgets(
     'Security: a broken occupancy source cannot break the receipt flow',

@@ -15,6 +15,8 @@ class CheckOutVehicle {
     String paymentMethod = 'cash',
     int discountAmount = 0,
     String? discountReason,
+    bool lostTicket = false,
+    String? lostTicketReason,
   }) async {
     if (sessionId <= 0) {
       throw const ValidationFailure(
@@ -27,6 +29,8 @@ class CheckOutVehicle {
       paymentMethod: paymentMethod,
       discountAmount: discountAmount,
       discountReason: discountReason,
+      lostTicket: lostTicket,
+      lostTicketReason: lostTicketReason,
     );
   }
 }

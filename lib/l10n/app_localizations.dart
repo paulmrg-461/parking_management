@@ -1442,6 +1442,30 @@ abstract class AppLocalizations {
   /// **'Exento'**
   String get paymentExempt;
 
+  /// No description provided for @lostTicket.
+  ///
+  /// In es, this message translates to:
+  /// **'Ticket perdido'**
+  String get lostTicket;
+
+  /// No description provided for @lostTicketHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Se cobra la tarifa completa del día.'**
+  String get lostTicketHint;
+
+  /// No description provided for @lostTicketReason.
+  ///
+  /// In es, this message translates to:
+  /// **'Motivo (ticket perdido)'**
+  String get lostTicketReason;
+
+  /// No description provided for @lostTicketReasonRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'Indica el motivo del ticket perdido'**
+  String get lostTicketReasonRequired;
+
   /// No description provided for @discountAmount.
   ///
   /// In es, this message translates to:
