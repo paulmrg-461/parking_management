@@ -7,6 +7,7 @@ import '../../../core/l10n/failure_messages.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/state/submission.dart';
 import '../../../core/theme/tokens.dart';
+import '../../../core/receipt/payment_method.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/app_icon_button.dart';
 import '../../../core/widgets/async_view.dart';
@@ -20,6 +21,7 @@ import '../application/monthly_passes_cubit.dart';
 import '../domain/commands/create_monthly_pass_command.dart';
 import '../domain/commands/update_monthly_pass_command.dart';
 import '../domain/entities/monthly_pass.dart';
+import '../domain/entities/monthly_pass_payment.dart';
 import 'monthly_pass_dialog.dart';
 
 /// Admin-only reference-data CRUD screen for monthly passes. Plates are
@@ -52,21 +54,38 @@ class _MonthlyPassesPageState extends State<MonthlyPassesPage> {
               previous is! MonthlyPassesLoaded ||
               current is! MonthlyPassesLoaded ||
               previous.monthlyPasses != current.monthlyPasses ||
+              previous.pendingPayments != current.pendingPayments ||
               previous.plates != current.plates,
           builder: (context, state) => AsyncView<MonthlyPassesLoaded>(
             status: _status(context, state),
-            builder: (loaded) => ListView.builder(
+            builder: (loaded) => ListView(
               padding: const EdgeInsets.only(bottom: Space.xxl * 2),
-              itemCount: loaded.monthlyPasses.length,
-              itemBuilder: (context, index) {
-                final pass = loaded.monthlyPasses[index];
-                return _MonthlyPassTile(
-                  monthlyPass: pass,
-                  plate:
-                      loaded.plates[pass.vehicleId] ??
-                      context.l10n.unknownVehicle(pass.vehicleId),
-                );
-              },
+              children: [
+                if (loaded.pendingPayments.isNotEmpty) ...[
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      Space.md,
+                      Space.md,
+                      Space.md,
+                      Space.sm,
+                    ),
+                    child: Text(
+                      context.l10n.monthlyPassPendingTitle,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
+                  for (final payment in loaded.pendingPayments)
+                    _PendingPaymentTile(payment: payment),
+                  const Divider(),
+                ],
+                for (final pass in loaded.monthlyPasses)
+                  _MonthlyPassTile(
+                    monthlyPass: pass,
+                    plate:
+                        loaded.plates[pass.vehicleId] ??
+                        context.l10n.unknownVehicle(pass.vehicleId),
+                  ),
+              ],
             ),
           ),
         ),
@@ -112,6 +131,7 @@ class _MonthlyPassesPageState extends State<MonthlyPassesPage> {
               endDate: draft.endDate,
               amount: draft.amount,
               autoRenew: draft.autoRenew,
+              autoRenewPaymentMethod: draft.autoRenewPaymentMethod,
             ),
           ),
         ),
@@ -199,6 +219,7 @@ class _MonthlyPassTile extends StatelessWidget {
               endDate: draft.endDate,
               amount: draft.amount,
               autoRenew: draft.autoRenew,
+              autoRenewPaymentMethod: draft.autoRenewPaymentMethod,
             ),
           ),
         ),
@@ -221,5 +242,93 @@ class _MonthlyPassTile extends StatelessWidget {
     if (confirmed) {
       await cubit.delete(monthlyPass.id!);
     }
+  }
+}
+
+
+class _PendingPaymentTile extends StatelessWidget {
+  const _PendingPaymentTile({required this.payment});
+
+  final MonthlyPassPayment payment;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return ListTile(
+      leading: const Icon(Icons.payments_outlined),
+      title: Text(
+        '${payment.plate} · ${Formatters.money(payment.amount)}',
+      ),
+      subtitle: Text(
+        '${l10n.monthlyPassDue(Formatters.date(payment.dueDate))} · '
+        '${paymentMethodLabel(l10n, payment.paymentMethod)}',
+      ),
+      trailing: FilledButton(
+        onPressed: () => _pay(context),
+        child: Text(l10n.monthlyPassCharge),
+      ),
+    );
+  }
+
+  Future<void> _pay(BuildContext context) async {
+    final method = await showDialog<PaymentMethod>(
+      context: context,
+      builder: (_) => const _PaymentMethodDialog(),
+    );
+    if (method != null && context.mounted) {
+      await context.read<MonthlyPassesCubit>().registerPayment(
+        payment.id,
+        method.wire,
+      );
+    }
+  }
+}
+
+class _PaymentMethodDialog extends StatefulWidget {
+  const _PaymentMethodDialog();
+
+  @override
+  State<_PaymentMethodDialog> createState() => _PaymentMethodDialogState();
+}
+
+class _PaymentMethodDialogState extends State<_PaymentMethodDialog> {
+  PaymentMethod _method = PaymentMethod.cash;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(context.l10n.paymentMethodTitle),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final method in const [
+            PaymentMethod.cash,
+            PaymentMethod.card,
+            PaymentMethod.transfer,
+          ])
+            RadioListTile<PaymentMethod>(
+              value: method,
+              groupValue: _method,
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() => _method = value);
+                }
+              },
+              title: Text(method.label(context.l10n)),
+              secondary: Icon(method.icon),
+            ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(context.l10n.actionCancel),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(_method),
+          child: Text(context.l10n.actionConfirm),
+        ),
+      ],
+    );
   }
 }

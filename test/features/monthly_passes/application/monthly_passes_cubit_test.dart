@@ -84,6 +84,18 @@ void main() {
     },
   );
 
+  test('Success: collecting a pending pass payment removes it', () async {
+    repository.pending = [samplePayment];
+    await cubit.load();
+
+    expect(loaded().pendingPayments, [samplePayment]);
+
+    await cubit.registerPayment(samplePayment.id, 'cash');
+
+    expect(repository.paid, [samplePayment.id]);
+    expect(loaded().pendingPayments, isEmpty);
+  });
+
   test('Security: unknown vehicles fall back to the id label', () async {
     vehicles.listError = const NetworkFailure('offline');
 

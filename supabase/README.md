@@ -60,6 +60,17 @@ sh supabase/create-operator.sh juan 123456 operator
 - Rotating `JWT_SECRET` invalidates all issued tokens AND the `ANON_KEY`/
   `SERVICE_ROLE_KEY` values; re-run `generate-env.sh` after changing it.
 
+## Backups
+
+```bash
+sh supabase/backup.sh
+RESTORE_CONFIRM=yes sh supabase/restore.sh backups/<timestamp>
+```
+
+Backups include the PostgreSQL dump and `volumes/storage`; keep the root `.env`
+separately. SQL regression tests live in `supabase/tests/` and run in CI against
+a real `supabase/postgres` service.
+
 ## Reset
 
 ```bash

@@ -15,6 +15,8 @@ MonthlyPassDto _$MonthlyPassDtoFromJson(Map<String, dynamic> json) =>
       amount: (json['amount'] as num).toInt(),
       active: json['active'] as bool? ?? true,
       autoRenew: json['auto_renew'] as bool? ?? false,
+      autoRenewPaymentMethod:
+          json['auto_renew_payment_method'] as String? ?? 'cash',
     );
 
 Map<String, dynamic> _$MonthlyPassDtoToJson(MonthlyPassDto instance) =>
@@ -26,4 +28,5 @@ Map<String, dynamic> _$MonthlyPassDtoToJson(MonthlyPassDto instance) =>
       'amount': instance.amount,
       'active': instance.active,
       'auto_renew': instance.autoRenew,
+      'auto_renew_payment_method': instance.autoRenewPaymentMethod,
     };

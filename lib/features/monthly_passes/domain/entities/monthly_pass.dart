@@ -9,6 +9,7 @@ class MonthlyPass extends Equatable {
     required this.amount,
     this.active = true,
     this.autoRenew = false,
+    this.autoRenewPaymentMethod = 'cash',
   });
 
   final int? id;
@@ -18,8 +19,18 @@ class MonthlyPass extends Equatable {
   final int amount;
   final bool active;
   final bool autoRenew;
+  final String autoRenewPaymentMethod;
 
   @override
   List<Object?> get props =>
-      [id, vehicleId, startDate, endDate, amount, active, autoRenew];
+      [
+        id,
+        vehicleId,
+        startDate,
+        endDate,
+        amount,
+        active,
+        autoRenew,
+        autoRenewPaymentMethod,
+      ];
 }

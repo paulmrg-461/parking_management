@@ -317,6 +317,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shiftDiscounts => 'Discounts';
 
   @override
+  String get shiftPassPayments => 'Pass payments';
+
+  @override
+  String get shiftPassCash => 'Pass payments in cash';
+
+  @override
   String get shiftExpectedCash => 'Expected cash';
 
   @override
@@ -976,6 +982,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pinInvalid => 'The PIN must have 6 digits';
 
   @override
+  String get monthlyPassPendingTitle => 'Pending payments';
+
+  @override
+  String monthlyPassDue(String date) {
+    return 'Due: $date';
+  }
+
+  @override
+  String get monthlyPassCharge => 'Collect';
+
+  @override
+  String get monthlyPassRenewalMethod => 'Renewal payment method';
+
+  @override
   String get monthlyPassAutoRenew => 'Auto-renew';
 
   @override
@@ -1047,6 +1067,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reportsRevenueByDay => 'Revenue by day';
+
+  @override
+  String get reportsPassRevenue => 'Monthly pass revenue';
 
   @override
   String get reportsRevenueByPayment => 'Revenue by payment method';

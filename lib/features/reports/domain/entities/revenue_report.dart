@@ -86,6 +86,8 @@ class RevenueReport extends Equatable {
     this.totalDiscounts = 0,
     this.discountedSessions = 0,
     this.discountAudit = const [],
+    this.passRevenue = 0,
+    this.passByPayment = const [],
   });
 
   final DateTime startDate;
@@ -97,6 +99,8 @@ class RevenueReport extends Equatable {
   final int totalDiscounts;
   final int discountedSessions;
   final List<DiscountAudit> discountAudit;
+  final int passRevenue;
+  final List<PaymentRevenue> passByPayment;
 
   @override
   List<Object?> get props =>
@@ -110,5 +114,7 @@ class RevenueReport extends Equatable {
         totalDiscounts,
         discountedSessions,
         discountAudit,
+        passRevenue,
+        passByPayment,
       ];
 }

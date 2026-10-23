@@ -133,6 +133,8 @@ class RevenueReportDto {
     this.totalDiscounts = 0,
     this.discountedSessions = 0,
     this.discountAudit = const [],
+    this.passRevenue = 0,
+    this.passByPayment = const [],
   });
 
   factory RevenueReportDto.fromJson(Map<String, dynamic> json) =>
@@ -164,6 +166,12 @@ class RevenueReportDto {
   @JsonKey(name: 'discount_audit', defaultValue: [])
   final List<DiscountAuditDto> discountAudit;
 
+  @JsonKey(name: 'pass_revenue', defaultValue: 0)
+  final int passRevenue;
+
+  @JsonKey(name: 'pass_by_payment', defaultValue: [])
+  final List<PaymentRevenueDto> passByPayment;
+
   Map<String, dynamic> toJson() => _$RevenueReportDtoToJson(this);
 
   RevenueReport toDomain() => RevenueReport(
@@ -176,5 +184,7 @@ class RevenueReportDto {
     totalDiscounts: totalDiscounts,
     discountedSessions: discountedSessions,
     discountAudit: discountAudit.map((dto) => dto.toDomain()).toList(),
+    passRevenue: passRevenue,
+    passByPayment: passByPayment.map((dto) => dto.toDomain()).toList(),
   );
 }

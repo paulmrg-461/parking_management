@@ -22,6 +22,8 @@ class ShiftSummary extends Equatable {
     this.discounts = 0,
     this.withdrawals = 0,
     this.deposits = 0,
+    this.passCashSales = 0,
+    this.passPayments = 0,
   });
 
   final int id;
@@ -43,6 +45,8 @@ class ShiftSummary extends Equatable {
   final int discounts;
   final int withdrawals;
   final int deposits;
+  final int passCashSales;
+  final int passPayments;
 
   bool get isOpen => closedAt == null;
 
@@ -68,6 +72,8 @@ class ShiftSummary extends Equatable {
     discounts: (json['discounts'] as num?)?.toInt() ?? 0,
     withdrawals: (json['withdrawals'] as num?)?.toInt() ?? 0,
     deposits: (json['deposits'] as num?)?.toInt() ?? 0,
+    passCashSales: (json['pass_cash_sales'] as num?)?.toInt() ?? 0,
+    passPayments: (json['pass_payments'] as num?)?.toInt() ?? 0,
   );
 
   @override
@@ -91,5 +97,7 @@ class ShiftSummary extends Equatable {
     discounts,
     withdrawals,
     deposits,
+    passCashSales,
+    passPayments,
   ];
 }

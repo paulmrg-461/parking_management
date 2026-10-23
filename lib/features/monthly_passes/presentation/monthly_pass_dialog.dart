@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/l10n/l10n.dart';
+import '../../../core/receipt/payment_method.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/date_form_field.dart';
 import '../../vehicles/domain/entities/vehicle.dart';
@@ -15,6 +16,7 @@ class MonthlyPassDraft {
     required this.endDate,
     required this.amount,
     this.autoRenew = false,
+    this.autoRenewPaymentMethod = 'cash',
   });
 
   final int? vehicleId;
@@ -22,6 +24,7 @@ class MonthlyPassDraft {
   final DateTime endDate;
   final int amount;
   final bool autoRenew;
+  final String autoRenewPaymentMethod;
 }
 
 /// Create (with vehicle picker) or edit ([existing]) a monthly pass;
@@ -51,6 +54,8 @@ class _MonthlyPassDialogState extends State<MonthlyPassDialog> {
   );
   late int? _vehicleId = widget.vehicles.firstOrNull?.id;
   late bool _autoRenew = widget.existing?.autoRenew ?? false;
+  late String _autoRenewMethod =
+      widget.existing?.autoRenewPaymentMethod ?? 'cash';
 
   bool get _editing => widget.existing != null;
 
@@ -89,6 +94,7 @@ class _MonthlyPassDialogState extends State<MonthlyPassDialog> {
         endDate: _endKey.currentState!.value!,
         amount: int.parse(_amountController.text),
         autoRenew: _autoRenew,
+        autoRenewPaymentMethod: _autoRenewMethod,
       ),
     );
     Navigator.of(context).pop();
@@ -137,6 +143,29 @@ class _MonthlyPassDialogState extends State<MonthlyPassDialog> {
                 title: Text(l10n.monthlyPassAutoRenew),
                 subtitle: Text(l10n.monthlyPassAutoRenewHint),
               ),
+              if (_autoRenew)
+                DropdownButtonFormField<String>(
+                  initialValue: _autoRenewMethod,
+                  decoration: InputDecoration(
+                    labelText: l10n.monthlyPassRenewalMethod,
+                  ),
+                  items: [
+                    for (final method in const [
+                      PaymentMethod.cash,
+                      PaymentMethod.card,
+                      PaymentMethod.transfer,
+                    ])
+                      DropdownMenuItem(
+                        value: method.wire,
+                        child: Text(method.label(l10n)),
+                      ),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() => _autoRenewMethod = value);
+                    }
+                  },
+                ),
             ],
           ),
         ),

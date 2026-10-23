@@ -668,6 +668,18 @@ abstract class AppLocalizations {
   /// **'Descuentos'**
   String get shiftDiscounts;
 
+  /// No description provided for @shiftPassPayments.
+  ///
+  /// In es, this message translates to:
+  /// **'Mensualidades cobradas'**
+  String get shiftPassPayments;
+
+  /// No description provided for @shiftPassCash.
+  ///
+  /// In es, this message translates to:
+  /// **'Mensualidades en efectivo'**
+  String get shiftPassCash;
+
   /// No description provided for @shiftExpectedCash.
   ///
   /// In es, this message translates to:
@@ -1844,6 +1856,30 @@ abstract class AppLocalizations {
   /// **'El PIN debe tener 6 dígitos'**
   String get pinInvalid;
 
+  /// No description provided for @monthlyPassPendingTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Pagos pendientes'**
+  String get monthlyPassPendingTitle;
+
+  /// No description provided for @monthlyPassDue.
+  ///
+  /// In es, this message translates to:
+  /// **'Vence: {date}'**
+  String monthlyPassDue(String date);
+
+  /// No description provided for @monthlyPassCharge.
+  ///
+  /// In es, this message translates to:
+  /// **'Cobrar'**
+  String get monthlyPassCharge;
+
+  /// No description provided for @monthlyPassRenewalMethod.
+  ///
+  /// In es, this message translates to:
+  /// **'Método para renovación'**
+  String get monthlyPassRenewalMethod;
+
   /// No description provided for @monthlyPassAutoRenew.
   ///
   /// In es, this message translates to:
@@ -1963,6 +1999,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Ingresos por día'**
   String get reportsRevenueByDay;
+
+  /// No description provided for @reportsPassRevenue.
+  ///
+  /// In es, this message translates to:
+  /// **'Mensualidades cobradas'**
+  String get reportsPassRevenue;
 
   /// No description provided for @reportsRevenueByPayment.
   ///

@@ -37,3 +37,33 @@ jobs:
         run: |
           docker compose config -q
           test -n "$(ls supabase/migrations/*.sql)"
+
+  supabase-sql:
+    # Real Postgres + migrations + RPC/RLS regression tests. This is the guard
+    # for the SQL that Flutter cannot exercise (capacity, shifts, discounts,
+    # auto-renewal, RLS).
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: supabase/postgres:17.6.1.136
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: parking
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U supabase_admin -d parking"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      PGHOST: localhost
+      PGUSER: supabase_admin
+      PGPASSWORD: postgres
+      PGDATABASE: parking
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install psql
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Apply migrations and run SQL tests
+        run: sh supabase/tests/run.sh

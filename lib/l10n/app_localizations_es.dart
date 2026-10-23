@@ -321,6 +321,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get shiftDiscounts => 'Descuentos';
 
   @override
+  String get shiftPassPayments => 'Mensualidades cobradas';
+
+  @override
+  String get shiftPassCash => 'Mensualidades en efectivo';
+
+  @override
   String get shiftExpectedCash => 'Efectivo esperado';
 
   @override
@@ -980,6 +986,20 @@ class AppLocalizationsEs extends AppLocalizations {
   String get pinInvalid => 'El PIN debe tener 6 dígitos';
 
   @override
+  String get monthlyPassPendingTitle => 'Pagos pendientes';
+
+  @override
+  String monthlyPassDue(String date) {
+    return 'Vence: $date';
+  }
+
+  @override
+  String get monthlyPassCharge => 'Cobrar';
+
+  @override
+  String get monthlyPassRenewalMethod => 'Método para renovación';
+
+  @override
   String get monthlyPassAutoRenew => 'Renovación automática';
 
   @override
@@ -1052,6 +1072,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get reportsRevenueByDay => 'Ingresos por día';
+
+  @override
+  String get reportsPassRevenue => 'Mensualidades cobradas';
 
   @override
   String get reportsRevenueByPayment => 'Ingresos por método de pago';

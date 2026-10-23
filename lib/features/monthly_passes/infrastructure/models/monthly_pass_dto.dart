@@ -14,6 +14,7 @@ class MonthlyPassDto {
     required this.amount,
     this.active = true,
     this.autoRenew = false,
+    this.autoRenewPaymentMethod = 'cash',
   });
 
   factory MonthlyPassDto.fromJson(Map<String, dynamic> json) =>
@@ -36,6 +37,9 @@ class MonthlyPassDto {
   @JsonKey(name: 'auto_renew')
   final bool autoRenew;
 
+  @JsonKey(name: 'auto_renew_payment_method')
+  final String autoRenewPaymentMethod;
+
   Map<String, dynamic> toJson() => _$MonthlyPassDtoToJson(this);
 
   MonthlyPass toDomain() => MonthlyPass(
@@ -46,5 +50,6 @@ class MonthlyPassDto {
         amount: amount,
         active: active,
         autoRenew: autoRenew,
+        autoRenewPaymentMethod: autoRenewPaymentMethod,
       );
 }

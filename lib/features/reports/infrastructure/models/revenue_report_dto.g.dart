@@ -65,32 +65,37 @@ Map<String, dynamic> _$DiscountAuditDtoToJson(DiscountAuditDto instance) =>
       'discount_reason': instance.reason,
     };
 
-RevenueReportDto _$RevenueReportDtoFromJson(Map<String, dynamic> json) =>
-    RevenueReportDto(
-      startDate: json['start_date'] as String,
-      endDate: json['end_date'] as String,
-      total: (json['total'] as num).toInt(),
-      byDay: (json['by_day'] as List<dynamic>)
-          .map((e) => DailyRevenueDto.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      byCategory: (json['by_category'] as List<dynamic>)
-          .map((e) => CategoryRevenueDto.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      byPayment:
-          (json['by_payment'] as List<dynamic>?)
-              ?.map(
-                (e) => PaymentRevenueDto.fromJson(e as Map<String, dynamic>),
-              )
-              .toList() ??
-          [],
-      totalDiscounts: (json['total_discounts'] as num?)?.toInt() ?? 0,
-      discountedSessions: (json['discounted_sessions'] as num?)?.toInt() ?? 0,
-      discountAudit:
-          (json['discount_audit'] as List<dynamic>?)
-              ?.map((e) => DiscountAuditDto.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          [],
-    );
+RevenueReportDto _$RevenueReportDtoFromJson(
+  Map<String, dynamic> json,
+) => RevenueReportDto(
+  startDate: json['start_date'] as String,
+  endDate: json['end_date'] as String,
+  total: (json['total'] as num).toInt(),
+  byDay: (json['by_day'] as List<dynamic>)
+      .map((e) => DailyRevenueDto.fromJson(e as Map<String, dynamic>))
+      .toList(),
+  byCategory: (json['by_category'] as List<dynamic>)
+      .map((e) => CategoryRevenueDto.fromJson(e as Map<String, dynamic>))
+      .toList(),
+  byPayment:
+      (json['by_payment'] as List<dynamic>?)
+          ?.map((e) => PaymentRevenueDto.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      [],
+  totalDiscounts: (json['total_discounts'] as num?)?.toInt() ?? 0,
+  discountedSessions: (json['discounted_sessions'] as num?)?.toInt() ?? 0,
+  discountAudit:
+      (json['discount_audit'] as List<dynamic>?)
+          ?.map((e) => DiscountAuditDto.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      [],
+  passRevenue: (json['pass_revenue'] as num?)?.toInt() ?? 0,
+  passByPayment:
+      (json['pass_by_payment'] as List<dynamic>?)
+          ?.map((e) => PaymentRevenueDto.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      [],
+);
 
 Map<String, dynamic> _$RevenueReportDtoToJson(RevenueReportDto instance) =>
     <String, dynamic>{
@@ -103,4 +108,6 @@ Map<String, dynamic> _$RevenueReportDtoToJson(RevenueReportDto instance) =>
       'total_discounts': instance.totalDiscounts,
       'discounted_sessions': instance.discountedSessions,
       'discount_audit': instance.discountAudit,
+      'pass_revenue': instance.passRevenue,
+      'pass_by_payment': instance.passByPayment,
     };

@@ -179,6 +179,26 @@ Manual passes keep the three-day expiry reminder.
 - Billing day boundaries and night windows use
   `public.parking_settings.business_timezone` (default `America/Bogota`).
 
+## Backups and restore
+
+```bash
+sh supabase/backup.sh
+# -> backups/<UTC timestamp>/{parking.dump,storage.tgz,manifest.txt}
+
+RESTORE_CONFIRM=yes sh supabase/restore.sh backups/<timestamp>
+```
+
+The database dump is `pg_dump -Fc`; storage is the `supabase/volumes/storage`
+directory. `.env` is intentionally **not** included: back it up separately so the
+JWT/API keys survive a restore. Run backups from host cron, e.g. daily at 02:00.
+
+## CI and SQL tests
+
+`.github/workflows/ci.yml` runs Flutter analyze/test/web plus two Supabase jobs:
+compose validation and a real `supabase/postgres` job that applies every
+migration and runs `supabase/tests/rpc_test.sql` (capacity, shifts/arqueo,
+discounts, auto-renewal charges and RLS isolation).
+
 ## OpenSpec workflow
 
 New capabilities go through `openspec/changes/<name>/` before implementation;

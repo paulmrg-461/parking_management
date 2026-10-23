@@ -205,6 +205,11 @@ class _OpenShiftCard extends StatelessWidget {
             _MetricRow(label: l10n.shiftOpeningFloat, amount: shift.openingFloat),
             _MetricRow(label: l10n.shiftSales, amount: shift.revenue),
             _MetricRow(label: l10n.shiftCashSales, amount: shift.cashSales),
+            _MetricRow(label: l10n.shiftPassPayments, amount: shift.passPayments),
+            _MetricRow(
+              label: l10n.shiftPassCash,
+              amount: shift.passCashSales,
+            ),
             _MetricRow(label: l10n.shiftWithdrawals, amount: shift.withdrawals),
             _MetricRow(label: l10n.shiftDeposits, amount: shift.deposits),
             _MetricRow(label: l10n.shiftDiscounts, amount: shift.discounts),

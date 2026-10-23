@@ -86,10 +86,16 @@ The app is now a Supabase-only stack: FastAPI, Alembic, Dio and Redis are gone.
   no shift is open; check-out plate search moved to the server with pagination
   (no more truncation at loaded pages); discount audit detail (reason/admin/
   timestamp) in reports; expired idempotency keys purged by the cron.
-- **Operational notes**: pre-migration data requires a manual `pg_dump`/restore;
-  Android release builds need HTTPS in front of Envoy; `idempotency_keys` has
-  no automatic TTL purge yet; run the notifications cron for pass-expiry alerts
-  and FCM delivery.
+- **Pass charges and backups**: every pass (manual or auto-renewed) creates a
+  pending charge; admins collect it from the monthly-passes screen with
+  cash/card/transfer. Cash charges feed the shift drawer and expected cash;
+  reports show pass revenue separately. `supabase/backup.sh` /
+  `restore.sh` handle DB + Storage, and CI runs real migrations + SQL RPC/RLS
+  tests against `supabase/postgres`.
+- **Operational notes**: keep `.env` with backups (it is not included); schedule
+  `supabase/backup.sh`; Android release builds need HTTPS in front of Envoy;
+  run the notifications cron for pass expiry, overstays, renewals, idempotency
+  cleanup and FCM delivery.
 
 ## Recent additions (post-roadmap, not OpenSpec changes)
 
@@ -178,11 +184,12 @@ The app is now a Supabase-only stack: FastAPI, Alembic, Dio and Redis are gone.
 
 ## Test counts
 
-- Flutter (`flutter test`): 423 passed. `flutter analyze`: 0 errors/warnings
-  (96 SDK-deprecation/const infos under the local Flutter 3.50 beta; CI pins
+- Flutter (`flutter test`): 424 passed. `flutter analyze`: 0 errors/warnings
+  (98 SDK-deprecation/const infos under the local Flutter 3.50 beta; CI pins
   3.49 where the baseline is clean).
-- SQL/compose: validated against the running Supabase stack (migrations,
-  RLS, RPC idempotency, Edge Function admin checks).
+- SQL/compose: validated against the running Supabase stack and by
+  `supabase/tests/run.sh` (migrations, capacity, shifts/arqueo, discounts,
+  pass charges and RLS) in CI.
 
 ## Layer map (Flutter feature slice)
 

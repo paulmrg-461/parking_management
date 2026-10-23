@@ -5,6 +5,7 @@ import 'package:hive_ce/hive_ce.dart';
 import 'package:parking_management/app/di/hive_registrar.g.dart';
 import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/features/monthly_passes/domain/entities/monthly_pass.dart';
+import 'package:parking_management/features/monthly_passes/domain/entities/monthly_pass_payment.dart';
 import 'package:parking_management/features/monthly_passes/infrastructure/monthly_pass_local_data_source.dart';
 import 'package:parking_management/features/monthly_passes/infrastructure/monthly_pass_remote_data_source.dart';
 import 'package:parking_management/features/monthly_passes/infrastructure/monthly_pass_repository_impl.dart';
@@ -45,6 +46,13 @@ class _FakeRemote implements MonthlyPassRemoteDataSource {
   Future<void> delete(int id) async {
     deleteCalls++;
   }
+
+  @override
+  Future<List<MonthlyPassPayment>> pendingPayments() async => const [];
+
+  @override
+  Future<MonthlyPassPayment> registerPayment(int id, String method) async =>
+      throw UnimplementedError();
 }
 
 void main() {

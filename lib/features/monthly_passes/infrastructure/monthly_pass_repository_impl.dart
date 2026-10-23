@@ -2,6 +2,7 @@ import '../../../core/error/failure.dart';
 import '../domain/commands/create_monthly_pass_command.dart';
 import '../domain/commands/update_monthly_pass_command.dart';
 import '../domain/entities/monthly_pass.dart';
+import '../domain/entities/monthly_pass_payment.dart';
 import '../domain/repositories/monthly_pass_repository.dart';
 import 'monthly_pass_local_data_source.dart';
 import 'monthly_pass_remote_data_source.dart';
@@ -38,12 +39,21 @@ class MonthlyPassRepositoryImpl implements MonthlyPassRepository {
     await _remote.delete(id);
   }
 
+  @override
+  Future<List<MonthlyPassPayment>> pendingPayments() =>
+      _remote.pendingPayments();
+
+  @override
+  Future<MonthlyPassPayment> registerPayment(int id, String method) =>
+      _remote.registerPayment(id, method);
+
   Map<String, dynamic> _toCreatePayload(CreateMonthlyPassCommand command) => {
     'vehicle_id': command.vehicleId,
     'start_date': _formatDate(command.startDate),
     'end_date': _formatDate(command.endDate),
     'amount': command.amount,
     'auto_renew': command.autoRenew,
+    'auto_renew_payment_method': command.autoRenewPaymentMethod,
   };
 
   Map<String, dynamic> _toUpdatePayload(UpdateMonthlyPassCommand command) => {
@@ -53,6 +63,8 @@ class MonthlyPassRepositoryImpl implements MonthlyPassRepository {
     if (command.amount != null) 'amount': command.amount,
     if (command.active != null) 'active': command.active,
     if (command.autoRenew != null) 'auto_renew': command.autoRenew,
+    if (command.autoRenewPaymentMethod != null)
+      'auto_renew_payment_method': command.autoRenewPaymentMethod,
   };
 
   static String _formatDate(DateTime date) {

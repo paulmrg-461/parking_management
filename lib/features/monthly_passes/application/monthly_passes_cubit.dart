@@ -7,6 +7,7 @@ import '../../vehicles/domain/repositories/vehicle_repository.dart';
 import '../domain/commands/create_monthly_pass_command.dart';
 import '../domain/commands/update_monthly_pass_command.dart';
 import '../domain/entities/monthly_pass.dart';
+import '../domain/entities/monthly_pass_payment.dart';
 import '../domain/repositories/monthly_pass_repository.dart';
 import '../../../core/state/resilient_cubit.dart';
 
@@ -32,6 +33,7 @@ final class MonthlyPassesLoaded extends MonthlyPassesState {
     required this.monthlyPasses,
     this.vehicles = const [],
     this.plates = const {},
+    this.pendingPayments = const [],
     this.submission = const SubmissionIdle(),
   });
 
@@ -39,22 +41,31 @@ final class MonthlyPassesLoaded extends MonthlyPassesState {
   final List<Vehicle> vehicles;
   final Map<int, String> plates;
   final Submission submission;
+  final List<MonthlyPassPayment> pendingPayments;
 
   String plateOf(MonthlyPass pass) =>
       plates[pass.vehicleId] ?? 'Vehicle ${pass.vehicleId}';
 
   MonthlyPassesLoaded copyWith({
     List<MonthlyPass>? monthlyPasses,
+    List<MonthlyPassPayment>? pendingPayments,
     Submission? submission,
   }) => MonthlyPassesLoaded(
     monthlyPasses: monthlyPasses ?? this.monthlyPasses,
+    pendingPayments: pendingPayments ?? this.pendingPayments,
     vehicles: vehicles,
     plates: plates,
     submission: submission ?? this.submission,
   );
 
   @override
-  List<Object?> get props => [monthlyPasses, vehicles, plates, submission];
+  List<Object?> get props => [
+    monthlyPasses,
+    vehicles,
+    plates,
+    pendingPayments,
+    submission,
+  ];
 }
 
 /// The list itself could not be loaded (action errors never land here).
@@ -82,10 +93,12 @@ class MonthlyPassesCubit extends ResilientCubit<MonthlyPassesState> {
     final vehicles = _loadVehicles();
     try {
       final passes = await _repository.list(vehicleId: vehicleId);
+      final pending = await _repository.pendingPayments();
       final loadedVehicles = await vehicles;
       emit(
         MonthlyPassesLoaded(
           monthlyPasses: passes,
+          pendingPayments: pending,
           vehicles: loadedVehicles,
           plates: {
             for (final vehicle in loadedVehicles)
@@ -107,6 +120,9 @@ class MonthlyPassesCubit extends ResilientCubit<MonthlyPassesState> {
 
   Future<void> delete(int id) => _submit(() => _repository.delete(id));
 
+  Future<void> registerPayment(int id, String method) =>
+      _submit(() => _repository.registerPayment(id, method));
+
   Future<void> _submit(Future<Object?> Function() action) async {
     final current = state;
     if (current is! MonthlyPassesLoaded) {
@@ -118,6 +134,7 @@ class MonthlyPassesCubit extends ResilientCubit<MonthlyPassesState> {
       emit(
         current.copyWith(
           monthlyPasses: await _repository.list(),
+          pendingPayments: await _repository.pendingPayments(),
           submission: const SubmissionIdle(),
         ),
       );

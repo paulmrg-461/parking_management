@@ -5,6 +5,7 @@ class CreateMonthlyPassCommand {
     required this.endDate,
     required this.amount,
     this.autoRenew = false,
+    this.autoRenewPaymentMethod = 'cash',
   });
 
   final int vehicleId;
@@ -12,4 +13,5 @@ class CreateMonthlyPassCommand {
   final DateTime endDate;
   final int amount;
   final bool autoRenew;
+  final String autoRenewPaymentMethod;
 }

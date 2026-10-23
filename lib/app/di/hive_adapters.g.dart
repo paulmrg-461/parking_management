@@ -361,13 +361,14 @@ class MonthlyPassAdapter extends TypeAdapter<MonthlyPass> {
       amount: (fields[4] as num).toInt(),
       active: fields[5] == null ? true : fields[5] as bool,
       autoRenew: fields[6] == null ? false : fields[6] as bool,
+      autoRenewPaymentMethod: fields[7] == null ? 'cash' : fields[7] as String,
     );
   }
 
   @override
   void write(BinaryWriter writer, MonthlyPass obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(8)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -381,7 +382,9 @@ class MonthlyPassAdapter extends TypeAdapter<MonthlyPass> {
       ..writeByte(5)
       ..write(obj.active)
       ..writeByte(6)
-      ..write(obj.autoRenew);
+      ..write(obj.autoRenew)
+      ..writeByte(7)
+      ..write(obj.autoRenewPaymentMethod);
   }
 
   @override

@@ -97,7 +97,7 @@ types:
         index: 4
   MonthlyPass:
     typeId: 8
-    nextIndex: 7
+    nextIndex: 8
     fields:
       id:
         index: 0
@@ -113,6 +113,8 @@ types:
         index: 5
       autoRenew:
         index: 6
+      autoRenewPaymentMethod:
+        index: 7
   ParkingSettings:
     typeId: 9
     nextIndex: 7

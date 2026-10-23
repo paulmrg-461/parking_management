@@ -162,6 +162,24 @@ class _ReportsBody extends StatelessWidget {
               ),
             ),
         ],
+        if (revenue.passRevenue > 0) ...[
+          const SizedBox(height: Space.lg),
+          _SectionTitle(l10n.reportsPassRevenue),
+          MoneyText(revenue.passRevenue, style: textTheme.headlineSmall),
+          if (revenue.passByPayment.isNotEmpty) ...[
+            const SizedBox(height: Space.sm),
+            CategoryBarList(
+              items: [
+                for (final payment in revenue.passByPayment)
+                  CategoryBarItem(
+                    label: paymentMethodLabel(l10n, payment.paymentMethod),
+                    value: payment.amount,
+                  ),
+              ],
+              formatValue: Formatters.money,
+            ),
+          ],
+        ],
         const SizedBox(height: Space.lg),
         _SectionTitle(l10n.reportsRevenueByDay),
         RevenueByDayChart(byDay: revenue.byDay),
