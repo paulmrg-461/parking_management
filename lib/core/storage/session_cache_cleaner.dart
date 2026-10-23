@@ -14,6 +14,7 @@ class SessionCacheCleaner {
     'categories',
     'tariffs',
     'monthly_passes',
+    'notifications',
   ];
 
   Future<void> clear() async {

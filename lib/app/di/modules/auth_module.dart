@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/storage/session_cache_cleaner.dart';
 import '../../../core/storage/token_store.dart';
 import '../../../core/sync/sync_service.dart';
+import '../../../features/notifications/infrastructure/push_service.dart';
 import '../../../features/auth/application/auth_cubit.dart';
 import '../../../features/auth/domain/repositories/auth_repository.dart';
 import '../../../features/auth/infrastructure/auth_local_data_source.dart';
@@ -39,7 +40,10 @@ void registerAuthModule(GetIt sl) {
       () => AuthCubit(
         sl<AuthRepository>(),
         // Resolved on login to avoid a DI cycle through SyncService.
-        () => sl<SyncService>().flush(),
+        () async {
+          await sl<SyncService>().flush();
+          await sl<PushService>().start();
+        },
       ),
     );
 }

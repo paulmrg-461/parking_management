@@ -11,6 +11,7 @@ const operatorRoutes = {
   homePath,
   '/check-in',
   '/check-out',
+  '/notifications',
   '/scan',
   '/contact',
 };

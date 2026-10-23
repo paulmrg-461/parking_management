@@ -12,6 +12,9 @@ volumes/functions/hello/**
 !volumes/functions/admin-users/
 volumes/functions/admin-users/**
 !volumes/functions/admin-users/index.ts
+!volumes/functions/push-dispatch/
+volumes/functions/push-dispatch/**
+!volumes/functions/push-dispatch/index.ts
 .env
 test.http
 docker-compose.override.yml

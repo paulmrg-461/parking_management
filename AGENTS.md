@@ -53,10 +53,13 @@ RPCs own business logic and the Flutter client calls Supabase directly.
 - Flutter needs `--dart-define=SUPABASE_URL=...` and
   `--dart-define=SUPABASE_ANON_KEY=...`; `configureDependencies()` fails fast
   without them.
-- Key files: `supabase/migrations/0001..0007` (schema/RLS/RPCs/constraints),
-  `supabase/volumes/functions/admin-users/index.ts`, `lib/app/di/injection.dart`,
-  `lib/core/network/supabase_error_mapper.dart`.
-- Tests: `flutter test` (402) + `flutter analyze`; CI validates compose with
+- Key files: `supabase/migrations/0001..0008` (schema/RLS/RPCs/constraints/
+  notifications), `supabase/volumes/functions/{admin-users,push-dispatch}`,
+  `lib/app/di/injection.dart`, `lib/core/network/supabase_error_mapper.dart`.
+- Notifications: in-app rows + Supabase Realtime work with no extra config;
+  `FCM_SERVICE_ACCOUNT_JSON` + `supabase/notifications-cron.sh` enable
+  background FCM. `push-dispatch` is service-role-only; never expose the key.
+- Tests: `flutter test` (411) + `flutter analyze`; CI validates compose with
   `sh supabase/generate-env.sh && docker compose config -q`.
 - Known operational notes: pre-migration data needs a manual `pg_dump`/restore;
   Android release requires HTTPS in front of Envoy; `idempotency_keys` has no

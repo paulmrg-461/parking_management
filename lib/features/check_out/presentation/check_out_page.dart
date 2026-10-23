@@ -13,6 +13,7 @@ import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/widgets/sync_badge.dart';
 import '../../home/application/dashboard_cubit.dart';
 import '../../receipt_printing/presentation/receipt_print_sheet.dart';
+import '../../notifications/presentation/notification_bell.dart';
 import '../application/check_out_cubit.dart';
 import '../domain/entities/check_out_receipt.dart';
 import '../domain/entities/open_session.dart';
@@ -39,7 +40,7 @@ class _CheckOutPageState extends State<CheckOutPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(context.l10n.checkOutTitle),
-        actions: const [SyncBadge()],
+        actions: const [NotificationBell(), SyncBadge()],
       ),
       body: BlocListener<CheckOutCubit, CheckOutState>(
         listenWhen: (previous, current) =>

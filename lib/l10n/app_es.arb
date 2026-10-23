@@ -86,6 +86,10 @@
   "navReports": "Reportes",
   "navSettings": "Configuración",
   "navContact": "Contacto",
+  "navNotifications": "Avisos",
+  "notificationsTitle": "Notificaciones",
+  "notificationsEmpty": "No hay notificaciones",
+  "notificationsMarkAll": "Marcar todo leído",
   "navMore": "Más",
   "navMoreTooltip": "Más secciones de gestión",
 

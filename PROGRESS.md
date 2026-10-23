@@ -66,9 +66,16 @@ The app is now a Supabase-only stack: FastAPI, Alembic, Dio and Redis are gone.
   GoTrue login → RPC/PostgREST, RLS denials, idempotent check-in/check-out,
   reports, Storage uploads (private evidence/public branding) and the
   `admin-users` function. CI validates the Flutter app and the compose file.
+- **Notifications**: `notifications` + `device_tokens` with RLS, admin
+  check-in/check-out triggers, monthly-pass expiry alerts, Supabase Realtime
+  for the in-app inbox/badge/banner, and an optional FCM `push-dispatch` Edge
+  Function (service-role protected) driven by `supabase/notifications-cron.sh`.
+  Flutter FCM registration is opt-in via Firebase dart-defines; without it the
+  in-app center still works.
 - **Operational notes**: pre-migration data requires a manual `pg_dump`/restore;
   Android release builds need HTTPS in front of Envoy; `idempotency_keys` has
-  no automatic TTL purge yet.
+  no automatic TTL purge yet; run the notifications cron for pass-expiry alerts
+  and FCM delivery.
 
 ## Recent additions (post-roadmap, not OpenSpec changes)
 
@@ -157,8 +164,8 @@ The app is now a Supabase-only stack: FastAPI, Alembic, Dio and Redis are gone.
 
 ## Test counts
 
-- Flutter (`flutter test`): 402 passed. `flutter analyze`: 0 errors/warnings
-  (82 SDK-deprecation/const infos under the local Flutter 3.50 beta; CI pins
+- Flutter (`flutter test`): 411 passed. `flutter analyze`: 0 errors/warnings
+  (87 SDK-deprecation/const infos under the local Flutter 3.50 beta; CI pins
   3.49 where the baseline is clean).
 - SQL/compose: validated against the running Supabase stack (migrations,
   RLS, RPC idempotency, Edge Function admin checks).

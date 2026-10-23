@@ -76,6 +76,10 @@
   "navReports": "Reports",
   "navSettings": "Settings",
   "navContact": "Contact",
+  "navNotifications": "Alerts",
+  "notificationsTitle": "Notifications",
+  "notificationsEmpty": "No notifications yet",
+  "notificationsMarkAll": "Mark all read",
   "navMore": "More",
   "navMoreTooltip": "More management sections",
 

@@ -462,6 +462,8 @@ services:
       SUPABASE_DB_URL: postgresql://postgres:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
       # TODO: Allow configuring VERIFY_JWT per function.
       VERIFY_JWT: "${FUNCTIONS_VERIFY_JWT}"
+      # Optional: FCM service-account JSON for background push delivery.
+      FCM_SERVICE_ACCOUNT_JSON: ${FCM_SERVICE_ACCOUNT_JSON:-}
     command:
       [
         "start",

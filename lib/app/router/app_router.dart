@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -11,6 +13,8 @@ import '../../features/check_in/presentation/check_in_page.dart';
 import '../../features/check_out/application/check_out_cubit.dart';
 import '../../features/check_out/presentation/check_out_page.dart';
 import '../../features/home/application/dashboard_cubit.dart';
+import '../../features/notifications/application/notifications_cubit.dart';
+import '../../features/notifications/presentation/notifications_page.dart';
 import '../../features/home/presentation/home_page.dart';
 import '../../features/plate_scanning/application/plate_scanning_cubit.dart';
 import '../../features/plate_scanning/domain/repositories/plate_image_capture.dart';
@@ -49,9 +53,20 @@ GoRouter buildRouter(AuthCubit auth, Listenable refresh) => GoRouter(
       ),
     ),
     ShellRoute(
-      builder: (context, state, child) => BlocProvider<DashboardCubit>(
-        create: (_) => serviceLocator<DashboardCubit>(),
-        child: AppShell(location: state.uri.path, child: child),
+      builder: (context, state, child) => BlocProvider<NotificationsCubit>(
+        create: (_) {
+          final cubit = serviceLocator<NotificationsCubit>();
+          final session = switch (auth.state) {
+            AuthAuthenticated(:final session) => session,
+            _ => null,
+          };
+          unawaited(cubit.start(session?.user.id));
+          return cubit;
+        },
+        child: BlocProvider<DashboardCubit>(
+          create: (_) => serviceLocator<DashboardCubit>(),
+          child: AppShell(location: state.uri.path, child: child),
+        ),
       ),
       routes: [_homeRoute],
     ),
@@ -88,6 +103,10 @@ final GoRoute _homeRoute = GoRoute(
         create: (_) => serviceLocator<CheckOutCubit>(),
         child: const CheckOutPage(),
       ),
+    ),
+    GoRoute(
+      path: 'notifications',
+      builder: (context, state) => const NotificationsPage(),
     ),
     // Admin-only sections are deferred: operators never download them.
     _deferred('users', users.loadLibrary, () => users.buildUsersEntry()),

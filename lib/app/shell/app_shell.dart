@@ -9,6 +9,7 @@ import '../../core/widgets/offline_banner.dart';
 import '../../core/widgets/submission_feedback.dart';
 import '../../features/auth/application/auth_cubit.dart';
 import '../../features/auth/domain/entities/user.dart';
+import '../../features/notifications/application/notifications_cubit.dart';
 import '../../features/settings/application/branding_cubit.dart';
 import '../../features/settings/domain/whatsapp_url.dart';
 import 'app_destinations.dart';
@@ -37,19 +38,29 @@ class AppShell extends StatelessWidget {
     if (role == null) {
       return child;
     }
-    final content = Column(
-      children: [
-        const OfflineBanner(),
-        Expanded(
-          child: Center(
-            child: ConstrainedBox(
-              key: const Key('app-shell-content'),
-              constraints: const BoxConstraints(maxWidth: maxContentWidth),
-              child: child,
+    final content = BlocListener<NotificationsCubit, NotificationsState>(
+      listenWhen: (previous, current) =>
+          previous.latestArrived?.id != current.latestArrived?.id,
+      listener: (context, state) {
+        final notification = state.latestArrived;
+        if (notification != null) {
+          showInfoSnack(context, '${notification.title} · ${notification.body}');
+        }
+      },
+      child: Column(
+        children: [
+          const OfflineBanner(),
+          Expanded(
+            child: Center(
+              child: ConstrainedBox(
+                key: const Key('app-shell-content'),
+                constraints: const BoxConstraints(maxWidth: maxContentWidth),
+                child: child,
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
     return LayoutBuilder(
       builder: (context, constraints) => constraints.maxWidth >= wideBreakpoint
@@ -116,8 +127,11 @@ class _ScrollableRail extends StatelessWidget {
               destinations: [
                 for (final d in destinations)
                   NavigationRailDestination(
-                    icon: Icon(d.icon),
-                    selectedIcon: Icon(d.selectedIcon),
+                    icon: _NavIcon(destination: d, icon: d.icon),
+                    selectedIcon: _NavIcon(
+                      destination: d,
+                      icon: d.selectedIcon,
+                    ),
                     label: Text(d.label(context.l10n)),
                   ),
               ],
@@ -155,8 +169,11 @@ class _NarrowShell extends StatelessWidget {
         destinations: [
           for (final d in primary)
             NavigationDestination(
-              icon: Icon(d.icon),
-              selectedIcon: Icon(d.selectedIcon),
+              icon: _NavIcon(destination: d, icon: d.icon),
+              selectedIcon: _NavIcon(
+                destination: d,
+                icon: d.selectedIcon,
+              ),
               label: d.label(context.l10n),
             ),
           if (more.isNotEmpty)
@@ -231,5 +248,29 @@ class _WhatsAppFab extends StatelessWidget {
     if (context.mounted) {
       showErrorSnack(context, context.l10n.errorUnknown);
     }
+  }
+}
+
+
+/// Adds the unread badge to the notifications destination.
+class _NavIcon extends StatelessWidget {
+  const _NavIcon({required this.destination, required this.icon});
+
+  final AppDestination destination;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    if (destination.path != '/notifications') {
+      return Icon(icon);
+    }
+    final unread = context.select<NotificationsCubit, int>(
+      (cubit) => cubit.state.unreadCount,
+    );
+    return Badge(
+      isLabelVisible: unread > 0,
+      label: Text('$unread'),
+      child: Icon(icon),
+    );
   }
 }

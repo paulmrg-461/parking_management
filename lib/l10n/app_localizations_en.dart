@@ -257,6 +257,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navContact => 'Contact';
 
   @override
+  String get navNotifications => 'Alerts';
+
+  @override
+  String get notificationsTitle => 'Notifications';
+
+  @override
+  String get notificationsEmpty => 'No notifications yet';
+
+  @override
+  String get notificationsMarkAll => 'Mark all read';
+
+  @override
   String get navMore => 'More';
 
   @override

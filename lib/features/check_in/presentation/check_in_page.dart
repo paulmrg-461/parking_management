@@ -18,6 +18,7 @@ import '../../plate_scanning/application/plate_scanning_cubit.dart';
 import '../../plate_scanning/domain/repositories/plate_image_capture.dart';
 import '../../plate_scanning/presentation/inline_plate_scan.dart';
 import '../../receipt_printing/presentation/receipt_print_sheet.dart';
+import '../../notifications/presentation/notification_bell.dart';
 import '../application/check_in_cubit.dart';
 import '../application/vehicle_lookup_cubit.dart';
 import '../domain/entities/new_vehicle_info.dart';
@@ -206,7 +207,7 @@ class _CheckInPageState extends State<CheckInPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.checkInTitle),
-        actions: const [SyncBadge()],
+        actions: const [NotificationBell(), SyncBadge()],
       ),
       body: PlateScanListener(
         onDetected: _onPlateDetected,

@@ -12,6 +12,7 @@ import '../../../core/widgets/sync_badge.dart';
 import '../../auth/application/auth_cubit.dart';
 import '../../auth/domain/entities/auth_session.dart';
 import '../../auth/domain/entities/user.dart';
+import '../../notifications/presentation/notification_bell.dart';
 import '../../settings/application/branding_cubit.dart';
 import '../application/dashboard_cubit.dart';
 import 'widgets/dashboard_widgets.dart';
@@ -44,6 +45,7 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
         actions: [
+          const NotificationBell(),
           const SyncBadge(),
           AppIconButton(
             icon: Icons.logout,

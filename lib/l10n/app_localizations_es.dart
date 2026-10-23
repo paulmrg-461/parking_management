@@ -261,6 +261,18 @@ class AppLocalizationsEs extends AppLocalizations {
   String get navContact => 'Contacto';
 
   @override
+  String get navNotifications => 'Avisos';
+
+  @override
+  String get notificationsTitle => 'Notificaciones';
+
+  @override
+  String get notificationsEmpty => 'No hay notificaciones';
+
+  @override
+  String get notificationsMarkAll => 'Marcar todo leído';
+
+  @override
   String get navMore => 'Más';
 
   @override

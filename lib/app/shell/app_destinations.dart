@@ -31,11 +31,18 @@ String _users(AppLocalizations l) => l.navUsers;
 String _reports(AppLocalizations l) => l.navReports;
 String _settings(AppLocalizations l) => l.navSettings;
 String _contact(AppLocalizations l) => l.navContact;
+String _notifications(AppLocalizations l) => l.navNotifications;
 
 const primaryDestinations = [
   AppDestination(homePath, _home, Icons.home_outlined, Icons.home),
   AppDestination('/check-in', _checkIn, Icons.login_outlined, Icons.login),
   AppDestination('/check-out', _checkOut, Icons.logout_outlined, Icons.logout),
+  AppDestination(
+    '/notifications',
+    _notifications,
+    Icons.notifications_outlined,
+    Icons.notifications,
+  ),
   AppDestination(
     '/contact',
     _contact,

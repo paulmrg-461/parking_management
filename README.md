@@ -93,6 +93,41 @@ The `auth.users` trigger mirrors the profile into `public.users` and copies
 from the app; creation/role/active changes go through the `admin-users` Edge
 Function.
 
+## Notifications and push
+
+**In-app (works out of the box):** PostgreSQL triggers create rows in
+`public.notifications` for admin check-in/check-out events; monthly pass
+expiry alerts come from `notify_expiring_monthly_passes()`. The Flutter app
+subscribes to `public.notifications` through Supabase Realtime (RLS-scoped),
+shows a bell with the unread count and an inbox at `/notifications`, and shows
+a banner when a new row arrives.
+
+**Background push (FCM):** Supabase does not deliver push itself. Set
+`FCM_SERVICE_ACCOUNT_JSON` in `.env` (single-line Firebase service-account
+JSON), restart the `functions` service, and schedule `supabase/notifications-cron.sh`
+from host cron every minute. The `push-dispatch` Edge Function sends pending
+notifications to FCM and is protected by the service-role key.
+
+**Flutter (Android):** register the app in Firebase
+(`pro.devpaul.parking_management`) and run with:
+
+```bash
+flutter run \
+  --dart-define=SUPABASE_URL=... \
+  --dart-define=SUPABASE_ANON_KEY=... \
+  --dart-define=FCM_ENABLED=true \
+  --dart-define=FIREBASE_API_KEY=... \
+  --dart-define=FIREBASE_APP_ID=... \
+  --dart-define=FIREBASE_MESSAGING_SENDER_ID=... \
+  --dart-define=FIREBASE_PROJECT_ID=... \
+  --dart-define=FIREBASE_STORAGE_BUCKET=...
+```
+
+The device token is registered automatically after login. Without
+`FCM_ENABLED`/Firebase options the app still gets in-app notifications; web
+push additionally needs `firebase-messaging-sw.js` and a VAPID key
+(`FCM_VAPID_KEY`).
+
 ## Billing rules
 
 - Tariffs per category: hourly, daily, nightly, monthly (COP).

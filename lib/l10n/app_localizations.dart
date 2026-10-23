@@ -554,6 +554,30 @@ abstract class AppLocalizations {
   /// **'Contacto'**
   String get navContact;
 
+  /// No description provided for @navNotifications.
+  ///
+  /// In es, this message translates to:
+  /// **'Avisos'**
+  String get navNotifications;
+
+  /// No description provided for @notificationsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Notificaciones'**
+  String get notificationsTitle;
+
+  /// No description provided for @notificationsEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay notificaciones'**
+  String get notificationsEmpty;
+
+  /// No description provided for @notificationsMarkAll.
+  ///
+  /// In es, this message translates to:
+  /// **'Marcar todo leído'**
+  String get notificationsMarkAll;
+
   /// No description provided for @navMore.
   ///
   /// In es, this message translates to:
