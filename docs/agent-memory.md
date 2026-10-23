@@ -1,0 +1,104 @@
+# Agent memory
+
+Durable context for any agent working on this repo. Read this first, then
+`AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
+current: append decisions and gotchas, delete what the code now explains.
+
+Last updated: 2026-10-23, branch `feature/supabase` (`acb8f9e`).
+
+## Where we are
+
+- Stack: Flutter (android + web) + self-hosted Supabase only. No FastAPI,
+  Alembic, Dio, Redis or `backend/` — never reintroduce them.
+- `supabase/migrations/0001..0026` are the schema owner (applied by
+  `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
+- Flutter: 480 tests green, `flutter analyze` reports only SDK
+  deprecation/const infos from the local beta channel (0 errors/warnings).
+  Web build green. `supabase/tests/run.sh` green.
+- OpenSpec: `openspec/changes/add-multi-parking-lot` is 24/25 done (only the
+  header-fallback "contract" migration remains, intentionally later).
+
+## What shipped recently
+
+1. High priority: pass charges/payments, backup/restore scripts, real SQL CI.
+2. Medium: pass-charge backfill (`0017`), audited shift corrections (`0018`),
+   offline guards for cash/shift/pass collection, notification deep links,
+   admin PIN reset/delete with last-admin/self-delete guards.
+3. Low/product: lost ticket full daily tariff (`0019`), vehicle notes +
+   admin-only blacklist (`0020`), capacity reservations and full-category
+   pre-blocking (`0021`), localized printed receipts (`ReceiptLabels`),
+   skeletons honoring reduce-motion, browser push (VAPID + service worker,
+   `0022`).
+4. Multi-lot: `0023` (lots, members, `lot_id` columns, unique keys),
+   `0024` (`current_lot_id`, lot CRUD, re-scoped policies/RPCs/reports,
+   `report_revenue_all`), `0025` (offline replay lot capture via
+   `resolve_lot`), `0026` (`list_lot_members`).
+
+## Invariants worth re-reading
+
+- Active lot = `x-lot-id` header validated by `current_lot_id()` against
+  `lot_members`; missing header falls back to the lowest membership. Client
+  lot ids are only trusted through `resolve_lot()`.
+- Queued mutations capture `lot_id` at enqueue time; replays land in the origi-
+  nal site even after a lot switch.
+- Lot-scoped Flutter caches are namespaced (`categories`, `tariffs`,
+  `monthly_passes`, `notifications`, settings key `current_<lot>`, logo
+  `<lot>_<version>`). Vehicles stay global (a plate can park anywhere).
+- Receipts print the active lot's `parking_settings`; thermal labels come from
+  `ReceiptLabels` (es/en), ASCII-only.
+- Cash/shift actions are disabled offline with a banner and never queued.
+- Auth: GoTrue only; `admin-users` Edge Function owns user CRUD and accepts
+  `lot_id` (assigns membership, drops the seeded default lot when creating in
+  another site).
+
+## Commands
+
+```bash
+# Flutter
+flutter test
+flutter analyze
+flutter build web --release --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...
+
+# Local stack (repo root)
+docker compose up -d                 # gateway/studio on :8000
+docker compose up -d supabase-migrate && docker compose logs --tail=5 supabase-migrate
+docker compose restart functions     # after editing supabase/volumes/functions
+
+# SQL suite against a scratch database
+PW=$(grep -E '^POSTGRES_PASSWORD=' .env | cut -d= -f2-)
+docker exec supabase-db psql -U supabase_admin -d postgres -c "drop database if exists sql_test;"
+docker exec supabase-db psql -U supabase_admin -d postgres -c "create database sql_test owner supabase_admin;"
+docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
+  -e PGHOST=supabase-db -e PGUSER=supabase_admin -e PGPASSWORD="$PW" -e PGDATABASE=sql_test \
+  postgres:17-alpine sh -c "cd /work && sh tests/run.sh"
+
+# Local admin login: admin / 123456 (6-digit PIN, email admin@parking.local)
+```
+
+## Gotchas learned the hard way
+
+- `parking_settings.id` was a manual singleton; `0023` converts it to an
+  identity column and calls `setval`, otherwise the second lot collides.
+- Never name a PL/pgSQL variable `current_role` (SQL keyword): the `select into`
+  silently ignores it. Use `existing_role`.
+- PostgREST caches the schema: after adding an RPC, apply the migration and wait
+  (or restart) before calling it, else `PGRST202`.
+- `SupabaseClient.headers` is an unmodifiable getter plus a setter; assign a new
+  map to change `x-lot-id` (there are no per-request headers in `rpc()`).
+- `alter table ... add column lot_id integer not null default 1 references ...`
+  backfills in one statement; that is how the lot migration stays reversible.
+- `create or replace function` fails if the signature changed; drop the old
+  signature explicitly (as `0025` does for check-in/check-out).
+- Hive keys for lot-scoped caches are strings (`<lot>_<id>`), so no adapter
+  regeneration is needed when the entity has no `lot_id`.
+- Web push needs HTTPS (service-worker origin) and operator-provided VAPID/FCM
+  credentials; without `WEB_PUSH_VAPID_PUBLIC_KEY` the inbox toggle is hidden.
+
+## Backlog / next moves
+
+- `5.4` contract migration: drop the missing-header fallback once every client
+  sends `x-lot-id`.
+- Optional polish: per-lot receipt footer beyond settings, lot filter on the
+  vehicle history UI, consolidated report export, `idempotency_keys` TTL purge.
+- Dev DB artifacts from smoke tests: lot `NORTH` ("Sede Norte") and user
+  `norte2` (operator, PIN `123456`, member of lot 2). Safe to delete.

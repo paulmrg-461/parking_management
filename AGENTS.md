@@ -1,5 +1,10 @@
 # Parking Management — Agent Conventions
 
+## Session memory
+
+Read `docs/agent-memory.md` at the start of a session: current branch state,
+commands, invariants and known gotchas. Update it when a batch lands.
+
 ## Overview
 
 Parking management system (parqueadero): vehicle registration/control, time-based
