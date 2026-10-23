@@ -6,7 +6,11 @@ import '../../../core/l10n/l10n.dart';
 import '../../../core/receipt/payment_method.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/error_state.dart';
+import '../../../core/widgets/submission_feedback.dart';
+import '../../auth/application/auth_cubit.dart';
+import '../../auth/domain/entities/user.dart';
 import '../../../core/widgets/money_text.dart';
 import '../../../core/widgets/status_chip.dart';
 import '../application/vehicle_history_cubit.dart';
@@ -51,6 +55,19 @@ class _VehicleHistoryPageState extends State<VehicleHistoryPage> {
     }
   }
 
+  bool _canManage(BuildContext context) {
+    try {
+      final auth = context.read<AuthCubit>();
+      return switch (auth.state) {
+        AuthAuthenticated(:final session) =>
+          session.user.role == UserRole.admin,
+        _ => false,
+      };
+    } on ProviderNotFoundException {
+      return false;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -79,7 +96,16 @@ class _VehicleHistoryPageState extends State<VehicleHistoryPage> {
             ),
           ),
           Expanded(
-            child: BlocBuilder<VehicleHistoryCubit, VehicleHistoryState>(
+            child: BlocListener<VehicleHistoryCubit, VehicleHistoryState>(
+              listenWhen: (previous, current) =>
+                  previous.failure != current.failure &&
+                  current.failure != null,
+              listener: (context, state) {
+                final failure = state.failure!;
+                showErrorSnack(context, context.l10n.failure(failure));
+                context.read<VehicleHistoryCubit>().clearFailure();
+              },
+              child: BlocBuilder<VehicleHistoryCubit, VehicleHistoryState>(
               builder: (context, state) => switch (state.status) {
                 VehicleHistoryStatus.initial => _Hint(
                   message: l10n.vehicleHistoryPrompt,
@@ -95,8 +121,10 @@ class _VehicleHistoryPageState extends State<VehicleHistoryPage> {
                 ),
                 VehicleHistoryStatus.loaded => _HistoryBody(
                   history: state.history!,
+                  canManage: _canManage(context),
                 ),
               },
+            ),
             ),
           ),
         ],
@@ -133,9 +161,41 @@ class _Hint extends StatelessWidget {
 }
 
 class _HistoryBody extends StatelessWidget {
-  const _HistoryBody({required this.history});
+  const _HistoryBody({required this.history, required this.canManage});
 
   final VehicleHistory history;
+  final bool canManage;
+
+  Future<void> _editNotes(BuildContext context) async {
+    final notes = await showDialog<String>(
+      context: context,
+      builder: (_) => _NotesDialog(initial: history.notes ?? ''),
+    );
+    if (notes != null && context.mounted) {
+      await context.read<VehicleHistoryCubit>().updateFlags(notes: notes);
+    }
+  }
+
+  Future<void> _toggleBlacklist(BuildContext context) async {
+    final l10n = context.l10n;
+    final blocking = !history.isBlacklisted;
+    final confirmed = await ConfirmDialog.show(
+      context,
+      ConfirmDialog(
+        title: blocking ? l10n.vehicleBlacklistTitle : l10n.vehicleUnblockTitle,
+        body: blocking
+            ? l10n.vehicleBlacklistBody(history.plate)
+            : l10n.vehicleUnblockBody(history.plate),
+        confirmLabel: blocking ? l10n.vehicleBlacklist : l10n.vehicleUnblock,
+        destructive: blocking,
+      ),
+    );
+    if (confirmed && context.mounted) {
+      await context.read<VehicleHistoryCubit>().updateFlags(
+        blacklisted: blocking,
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -169,6 +229,14 @@ class _HistoryBody extends StatelessWidget {
                         label: l10n.statusOpen,
                         tone: StatusTone.warning,
                       ),
+                    if (history.isBlacklisted) ...[
+                      const SizedBox(width: Space.xs),
+                      StatusChip(
+                        label: l10n.vehicleBlacklisted,
+                        tone: StatusTone.warning,
+                        icon: Icons.block,
+                      ),
+                    ],
                   ],
                 ),
                 if (details.isNotEmpty) ...[
@@ -203,6 +271,53 @@ class _HistoryBody extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+        ),
+        if (history.notes != null && history.notes!.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: Space.sm),
+            child: Card(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              child: Padding(
+                padding: const EdgeInsets.all(Space.md),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(l10n.vehicleNotes, style: textTheme.labelMedium),
+                    const SizedBox(height: Space.xs),
+                    Text(history.notes!),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Wrap(
+            spacing: Space.sm,
+            children: [
+              TextButton.icon(
+                onPressed: () => _editNotes(context),
+                icon: const Icon(Icons.notes_outlined),
+                label: Text(
+                  history.notes == null || history.notes!.isEmpty
+                      ? l10n.vehicleAddNotes
+                      : l10n.vehicleEditNotes,
+                ),
+              ),
+              if (canManage)
+                TextButton.icon(
+                  onPressed: () => _toggleBlacklist(context),
+                  icon: Icon(
+                    history.isBlacklisted ? Icons.lock_open : Icons.block,
+                  ),
+                  label: Text(
+                    history.isBlacklisted
+                        ? l10n.vehicleUnblock
+                        : l10n.vehicleBlacklist,
+                  ),
+                ),
+            ],
           ),
         ),
         const SizedBox(height: Space.lg),
@@ -268,6 +383,14 @@ class _SessionTile extends StatelessWidget {
                     style: textTheme.titleSmall,
                   ),
                 ),
+                if (session.lostTicket) ...[
+                  StatusChip(
+                    label: l10n.lostTicket,
+                    tone: StatusTone.warning,
+                    icon: Icons.confirmation_number_outlined,
+                  ),
+                  const SizedBox(width: Space.xs),
+                ],
                 StatusChip(
                   label: session.isOpen ? l10n.statusOpen : l10n.statusClosed,
                   tone: session.isOpen
@@ -312,6 +435,51 @@ class _SessionTile extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+
+class _NotesDialog extends StatefulWidget {
+  const _NotesDialog({required this.initial});
+
+  final String initial;
+
+  @override
+  State<_NotesDialog> createState() => _NotesDialogState();
+}
+
+class _NotesDialogState extends State<_NotesDialog> {
+  late final _controller = TextEditingController(text: widget.initial);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(context.l10n.vehicleNotes),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        maxLines: 4,
+        decoration: InputDecoration(
+          hintText: context.l10n.vehicleNotesHint,
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(context.l10n.actionCancel),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(_controller.text.trim()),
+          child: Text(context.l10n.actionSave),
+        ),
+      ],
     );
   }
 }

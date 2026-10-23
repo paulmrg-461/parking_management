@@ -7,7 +7,10 @@ class FakeVehicleHistoryRepository implements VehicleHistoryRepository {
 
   VehicleHistory? history;
   Failure? error;
+  Failure? flagsError;
   final List<String> lookups = [];
+  bool? lastBlacklisted;
+  String? lastNotes;
 
   @override
   Future<VehicleHistory> lookup(String plate) async {
@@ -17,6 +20,32 @@ class FakeVehicleHistoryRepository implements VehicleHistoryRepository {
       throw error;
     }
     return history!;
+  }
+
+  @override
+  Future<VehicleFlags> updateFlags(
+    String plate, {
+    bool? blacklisted,
+    String? notes,
+  }) async {
+    final error = flagsError;
+    if (error != null) {
+      throw error;
+    }
+    lastBlacklisted = blacklisted;
+    lastNotes = notes;
+    final current = history;
+    final next = current?.withFlags(
+      isBlacklisted: blacklisted,
+      notes: notes,
+      replaceNotes: true,
+    );
+    history = next;
+    return VehicleFlags(
+      plate: plate,
+      isBlacklisted: next?.isBlacklisted ?? false,
+      notes: next?.notes,
+    );
   }
 }
 

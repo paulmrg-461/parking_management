@@ -29,6 +29,36 @@ class VehicleHistoryCubit extends ResilientCubit<VehicleHistoryState> {
 
   final VehicleHistoryRepository _repository;
 
+  /// `blacklisted` null keeps the flag; `notes` null keeps the current text
+  /// and an empty string clears it.
+  Future<void> updateFlags({bool? blacklisted, String? notes}) async {
+    final history = state.history;
+    if (history == null) {
+      return;
+    }
+    try {
+      final flags = await _repository.updateFlags(
+        history.plate,
+        blacklisted: blacklisted,
+        notes: notes,
+      );
+      emit(VehicleHistoryState(
+        status: VehicleHistoryStatus.loaded,
+        history: history.withFlags(
+          isBlacklisted: flags.isBlacklisted,
+          notes: flags.notes,
+          replaceNotes: true,
+        ),
+      ));
+    } on Failure catch (failure) {
+      emit(VehicleHistoryState(
+        status: VehicleHistoryStatus.loaded,
+        history: history,
+        failure: failure,
+      ));
+    }
+  }
+
   Future<void> search(String rawPlate) async {
     final String plate;
     try {
@@ -61,4 +91,11 @@ class VehicleHistoryCubit extends ResilientCubit<VehicleHistoryState> {
   }
 
   void clear() => emit(const VehicleHistoryState());
+
+  /// Drops a one-shot action error without touching the loaded history.
+  void clearFailure() {
+    if (state.failure != null) {
+      emit(VehicleHistoryState(status: state.status, history: state.history));
+    }
+  }
 }

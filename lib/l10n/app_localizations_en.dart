@@ -410,6 +410,47 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorDiscountReason => 'Enter the discount reason';
 
   @override
+  String get errorVehicleBlacklisted =>
+      'This vehicle is blocked; an admin must unblock it';
+
+  @override
+  String get vehicleNotes => 'Vehicle notes';
+
+  @override
+  String get vehicleNotesHint => 'Scratches, incidents, agreements…';
+
+  @override
+  String get vehicleAddNotes => 'Add note';
+
+  @override
+  String get vehicleEditNotes => 'Edit note';
+
+  @override
+  String get vehicleBlacklist => 'Block vehicle';
+
+  @override
+  String get vehicleUnblock => 'Unblock';
+
+  @override
+  String get vehicleBlacklisted => 'Blocked';
+
+  @override
+  String get vehicleBlacklistTitle => 'Block this vehicle?';
+
+  @override
+  String vehicleBlacklistBody(String plate) {
+    return '$plate will not be able to enter until an admin unblocks it.';
+  }
+
+  @override
+  String get vehicleUnblockTitle => 'Unblock this vehicle?';
+
+  @override
+  String vehicleUnblockBody(String plate) {
+    return '$plate will be able to enter the parking lot again.';
+  }
+
+  @override
   String get vehicleHistoryTitle => 'Vehicle history';
 
   @override

@@ -149,6 +149,62 @@ begin
     end if;
 end $$;
 
+-- Vehicle notes + blacklist: operators annotate, only admins block or clear.
+insert into public.vehicles (plate, category_id) values ('BLK001', 2);
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+select public.update_vehicle_flags('BLK001', null, 'rayon puerta izquierda');
+
+do $$
+begin
+    if (select notes from public.vehicles where plate = 'BLK001')
+        is distinct from 'rayon puerta izquierda' then
+        raise exception 'operator notes were not stored';
+    end if;
+    begin
+        perform public.update_vehicle_flags('BLK001', true, null);
+        raise exception 'operator toggled the blacklist';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then
+            raise;
+        end if;
+    end;
+end $$;
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+select public.update_vehicle_flags('BLK001', true, null);
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    begin
+        perform public.check_in('BLK001', 2, null, null, '[]'::jsonb, null, null);
+        raise exception 'blacklisted vehicle checked in';
+    exception when others then
+        if sqlerrm not like '%VehicleBlacklistedError%' then
+            raise;
+        end if;
+    end;
+end $$;
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+select public.update_vehicle_flags('BLK001', false, null);
+select public.update_vehicle_flags('BLK001', null, '');
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+insert into _results (session_json)
+select public.check_in('BLK001', 2, null, null, '[]'::jsonb, null, null);
+
+do $$
+begin
+    if (select notes from public.vehicles where plate = 'BLK001') is not null then
+        raise exception 'empty notes did not clear the field';
+    end if;
+    if (select is_blacklisted from public.vehicles where plate = 'BLK001') then
+        raise exception 'admin could not clear the blacklist';
+    end if;
+end $$;
+
 -- RLS: the operator must not read the admin's notifications.
 set local role authenticated;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';

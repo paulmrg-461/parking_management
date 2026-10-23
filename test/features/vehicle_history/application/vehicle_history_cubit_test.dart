@@ -42,4 +42,51 @@ void main() {
     expect(repository.lookups, isEmpty);
     expect(cubit.state.status, VehicleHistoryStatus.failure);
   });
+
+  test('Success: flags update the loaded history in place', () async {
+    final repository = FakeVehicleHistoryRepository(history: sampleHistory());
+    final cubit = VehicleHistoryCubit(repository);
+    addTearDown(cubit.close);
+    await cubit.search('ABC123');
+
+    await cubit.updateFlags(blacklisted: true, notes: 'deuda pendiente');
+
+    expect(cubit.state.history?.isBlacklisted, isTrue);
+    expect(cubit.state.history?.notes, 'deuda pendiente');
+    expect(repository.lastBlacklisted, isTrue);
+    expect(repository.lastNotes, 'deuda pendiente');
+  });
+
+  test('Failure: a rejected flag change keeps the history', () async {
+    final repository = FakeVehicleHistoryRepository(history: sampleHistory())
+      ..flagsError = const ValidationFailure(
+        'AdminRequiredError',
+        'AdminRequiredError',
+      );
+    final cubit = VehicleHistoryCubit(repository);
+    addTearDown(cubit.close);
+    await cubit.search('ABC123');
+
+    await cubit.updateFlags(blacklisted: true);
+
+    expect(cubit.state.status, VehicleHistoryStatus.loaded);
+    expect(cubit.state.history?.isBlacklisted, isFalse);
+    expect(cubit.state.failure?.code, 'AdminRequiredError');
+
+    cubit.clearFailure();
+
+    expect(cubit.state.failure, isNull);
+    expect(cubit.state.history?.plate, 'ABC123');
+  });
+
+  test('Security: flags are never sent without a loaded vehicle', () async {
+    final repository = FakeVehicleHistoryRepository(history: sampleHistory());
+    final cubit = VehicleHistoryCubit(repository);
+    addTearDown(cubit.close);
+
+    await cubit.updateFlags(blacklisted: true);
+
+    expect(repository.lastBlacklisted, isNull);
+    expect(cubit.state.status, VehicleHistoryStatus.initial);
+  });
 }

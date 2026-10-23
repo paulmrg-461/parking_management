@@ -412,6 +412,47 @@ class AppLocalizationsEs extends AppLocalizations {
   String get errorDiscountReason => 'Indica el motivo del descuento';
 
   @override
+  String get errorVehicleBlacklisted =>
+      'Este vehículo está bloqueado; un administrador debe desbloquearlo';
+
+  @override
+  String get vehicleNotes => 'Notas del vehículo';
+
+  @override
+  String get vehicleNotesHint => 'Rayones, incidentes, acuerdos…';
+
+  @override
+  String get vehicleAddNotes => 'Agregar nota';
+
+  @override
+  String get vehicleEditNotes => 'Editar nota';
+
+  @override
+  String get vehicleBlacklist => 'Bloquear vehículo';
+
+  @override
+  String get vehicleUnblock => 'Desbloquear';
+
+  @override
+  String get vehicleBlacklisted => 'Bloqueado';
+
+  @override
+  String get vehicleBlacklistTitle => '¿Bloquear vehículo?';
+
+  @override
+  String vehicleBlacklistBody(String plate) {
+    return '$plate no podrá ingresar hasta que un administrador lo desbloquee.';
+  }
+
+  @override
+  String get vehicleUnblockTitle => '¿Desbloquear vehículo?';
+
+  @override
+  String vehicleUnblockBody(String plate) {
+    return '$plate podrá volver a ingresar al parqueadero.';
+  }
+
+  @override
   String get vehicleHistoryTitle => 'Historial de vehículo';
 
   @override

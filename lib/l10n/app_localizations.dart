@@ -848,6 +848,78 @@ abstract class AppLocalizations {
   /// **'Indica el motivo del descuento'**
   String get errorDiscountReason;
 
+  /// No description provided for @errorVehicleBlacklisted.
+  ///
+  /// In es, this message translates to:
+  /// **'Este vehículo está bloqueado; un administrador debe desbloquearlo'**
+  String get errorVehicleBlacklisted;
+
+  /// No description provided for @vehicleNotes.
+  ///
+  /// In es, this message translates to:
+  /// **'Notas del vehículo'**
+  String get vehicleNotes;
+
+  /// No description provided for @vehicleNotesHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Rayones, incidentes, acuerdos…'**
+  String get vehicleNotesHint;
+
+  /// No description provided for @vehicleAddNotes.
+  ///
+  /// In es, this message translates to:
+  /// **'Agregar nota'**
+  String get vehicleAddNotes;
+
+  /// No description provided for @vehicleEditNotes.
+  ///
+  /// In es, this message translates to:
+  /// **'Editar nota'**
+  String get vehicleEditNotes;
+
+  /// No description provided for @vehicleBlacklist.
+  ///
+  /// In es, this message translates to:
+  /// **'Bloquear vehículo'**
+  String get vehicleBlacklist;
+
+  /// No description provided for @vehicleUnblock.
+  ///
+  /// In es, this message translates to:
+  /// **'Desbloquear'**
+  String get vehicleUnblock;
+
+  /// No description provided for @vehicleBlacklisted.
+  ///
+  /// In es, this message translates to:
+  /// **'Bloqueado'**
+  String get vehicleBlacklisted;
+
+  /// No description provided for @vehicleBlacklistTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Bloquear vehículo?'**
+  String get vehicleBlacklistTitle;
+
+  /// No description provided for @vehicleBlacklistBody.
+  ///
+  /// In es, this message translates to:
+  /// **'{plate} no podrá ingresar hasta que un administrador lo desbloquee.'**
+  String vehicleBlacklistBody(String plate);
+
+  /// No description provided for @vehicleUnblockTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Desbloquear vehículo?'**
+  String get vehicleUnblockTitle;
+
+  /// No description provided for @vehicleUnblockBody.
+  ///
+  /// In es, this message translates to:
+  /// **'{plate} podrá volver a ingresar al parqueadero.'**
+  String vehicleUnblockBody(String plate);
+
   /// No description provided for @vehicleHistoryTitle.
   ///
   /// In es, this message translates to:

@@ -24,4 +24,11 @@ class VehicleHistoryRepositoryImpl implements VehicleHistoryRepository {
       rethrow;
     }
   }
+
+  @override
+  Future<VehicleFlags> updateFlags(
+    String plate, {
+    bool? blacklisted,
+    String? notes,
+  }) => _remote.updateFlags(plate, blacklisted: blacklisted, notes: notes);
 }

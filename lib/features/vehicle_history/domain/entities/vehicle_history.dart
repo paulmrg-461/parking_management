@@ -10,6 +10,7 @@ class VehicleHistorySession extends Equatable {
     this.ticketNumber,
     this.paymentMethod,
     this.durationSeconds = 0,
+    this.lostTicket = false,
   });
 
   final int id;
@@ -20,6 +21,7 @@ class VehicleHistorySession extends Equatable {
   final String? ticketNumber;
   final String? paymentMethod;
   final int durationSeconds;
+  final bool lostTicket;
 
   bool get isOpen => status == 'open';
 
@@ -35,6 +37,7 @@ class VehicleHistorySession extends Equatable {
         ticketNumber: json['ticket_number'] as String?,
         paymentMethod: json['payment_method'] as String?,
         durationSeconds: (json['duration_seconds'] as num?)?.toInt() ?? 0,
+        lostTicket: json['lost_ticket'] == true,
       );
 
   Map<String, dynamic> toJson() => {
@@ -46,6 +49,7 @@ class VehicleHistorySession extends Equatable {
     'ticket_number': ticketNumber,
     'payment_method': paymentMethod,
     'duration_seconds': durationSeconds,
+    'lost_ticket': lostTicket,
   };
 
   @override
@@ -58,6 +62,7 @@ class VehicleHistorySession extends Equatable {
     ticketNumber,
     paymentMethod,
     durationSeconds,
+    lostTicket,
   ];
 }
 
@@ -72,6 +77,8 @@ class VehicleHistory extends Equatable {
     required this.sessions,
     this.color,
     this.brand,
+    this.isBlacklisted = false,
+    this.notes,
   });
 
   final String plate;
@@ -83,6 +90,27 @@ class VehicleHistory extends Equatable {
   final int totalSpent;
   final int openSessions;
   final List<VehicleHistorySession> sessions;
+  final bool isBlacklisted;
+  final String? notes;
+
+  VehicleHistory withFlags({
+    bool? isBlacklisted,
+    String? notes,
+    bool replaceNotes = false,
+  }) =>
+      VehicleHistory(
+        plate: plate,
+        vehicleId: vehicleId,
+        categoryName: categoryName,
+        color: color,
+        brand: brand,
+        visits: visits,
+        totalSpent: totalSpent,
+        openSessions: openSessions,
+        sessions: sessions,
+        isBlacklisted: isBlacklisted ?? this.isBlacklisted,
+        notes: replaceNotes ? notes : (notes ?? this.notes),
+      );
 
   factory VehicleHistory.fromJson(Map<String, dynamic> json) => VehicleHistory(
     plate: json['plate'] as String,
@@ -90,6 +118,8 @@ class VehicleHistory extends Equatable {
     categoryName: json['category_name'] as String? ?? '',
     color: json['color'] as String?,
     brand: json['brand'] as String?,
+    isBlacklisted: json['is_blacklisted'] == true,
+    notes: json['notes'] as String?,
     visits: (json['visits'] as num).toInt(),
     totalSpent: (json['total_spent'] as num).toInt(),
     openSessions: (json['open_sessions'] as num).toInt(),
@@ -105,6 +135,8 @@ class VehicleHistory extends Equatable {
     'category_name': categoryName,
     'color': color,
     'brand': brand,
+    'is_blacklisted': isBlacklisted,
+    'notes': notes,
     'visits': visits,
     'total_spent': totalSpent,
     'open_sessions': openSessions,
@@ -122,5 +154,7 @@ class VehicleHistory extends Equatable {
     totalSpent,
     openSessions,
     sessions,
+    isBlacklisted,
+    notes,
   ];
 }

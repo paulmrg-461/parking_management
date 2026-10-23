@@ -68,6 +68,7 @@ extension FailureMessages on AppLocalizations {
     'IdempotencyKeyMismatchError' => errorIdempotency,
     'ConflictError' => errorConflict,
     'VehicleNotRegisteredError' => errorVehicleNotRegistered,
+    'VehicleBlacklistedError' => errorVehicleBlacklisted,
     'InvalidPhotoError' => errorInvalidPhoto,
     'InvalidDataError' || 'InvalidUsername' => errorInvalidData,
     'InvalidPin' => pinInvalid,
