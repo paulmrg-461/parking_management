@@ -45,7 +45,7 @@ class ParkingSettings extends Equatable {
     logoVersion: logoVersion ?? this.logoVersion,
   );
 
-  /// Fields accepted by `PATCH /api/settings` (metadata excluded).
+  /// Editable fields (metadata excluded).
   Map<String, dynamic> toPayload() => {
     'name': name,
     'address': address,

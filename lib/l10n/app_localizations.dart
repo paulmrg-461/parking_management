@@ -1439,7 +1439,7 @@ abstract class AppLocalizations {
   /// No description provided for @pinInvalid.
   ///
   /// In es, this message translates to:
-  /// **'El PIN debe tener de 4 a 6 dígitos'**
+  /// **'El PIN debe tener 6 dígitos'**
   String get pinInvalid;
 
   /// No description provided for @monthlyPassesTitle.

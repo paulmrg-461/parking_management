@@ -1,7 +1,6 @@
-import 'package:dio/dio.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../../core/network/dio_error_mapper.dart';
-import '../../../core/network/pagination.dart';
+import '../../../core/network/supabase_error_mapper.dart';
 import '../../../core/pagination/paged_result.dart';
 import '../domain/entities/vehicle.dart';
 import 'models/vehicle_dto.dart';
@@ -21,20 +20,27 @@ abstract class VehicleRemoteDataSource {
   Future<void> delete(int id);
 }
 
-class DioVehicleRemoteDataSource implements VehicleRemoteDataSource {
-  DioVehicleRemoteDataSource(this._dio);
+class SupabaseVehicleRemoteDataSource implements VehicleRemoteDataSource {
+  SupabaseVehicleRemoteDataSource(this._client);
 
-  final Dio _dio;
+  final SupabaseClient _client;
 
-  static const _path = '/api/vehicles';
+  static const _table = 'vehicles';
 
   @override
   Future<List<Vehicle>> list({String? plate}) async {
     if (plate != null) {
-      return _searchByPlate(plate);
+      try {
+        final rows = await _client
+            .from(_table)
+            .select()
+            .eq('plate', plate)
+            .order('id');
+        return _parse(rows);
+      } catch (error) {
+        throw mapSupabaseError(error);
+      }
     }
-    // Unpaged callers build plate/vehicle lookups: walk every page so a lot
-    // with more than one backend page never silently loses vehicles.
     const pageSize = 500;
     final vehicles = <Vehicle>[];
     while (true) {
@@ -46,64 +52,62 @@ class DioVehicleRemoteDataSource implements VehicleRemoteDataSource {
     }
   }
 
-  Future<List<Vehicle>> _searchByPlate(String plate) async {
-    try {
-      final response = await _dio.get(_path, queryParameters: {'plate': plate});
-      return _parse(response.data);
-    } on DioException catch (error) {
-      throw mapDioError(error);
-    }
-  }
-
   @override
   Future<PagedResult<Vehicle>> listPage({
     required int limit,
     required int offset,
   }) async {
     try {
-      final response = await _dio.get<Object?>(
-        _path,
-        queryParameters: pageQuery(limit: limit, offset: offset),
-      );
-      return PagedResult(_parse(response.data), total: totalCountOf(response));
-    } on DioException catch (error) {
-      throw mapDioError(error);
+      final response = await _client
+          .from(_table)
+          .select()
+          .order('id')
+          .range(offset, offset + limit - 1)
+          .count(CountOption.exact);
+      return PagedResult(_parse(response.data), total: response.count);
+    } catch (error) {
+      throw mapSupabaseError(error);
     }
   }
 
-  List<Vehicle> _parse(Object? data) => [
-    for (final item in data as List<dynamic>)
-      VehicleDto.fromJson(item as Map<String, dynamic>).toDomain(),
-  ];
+  List<Vehicle> _parse(List<Map<String, dynamic>> rows) =>
+      [for (final row in rows) VehicleDto.fromJson(row).toDomain()];
 
   @override
   Future<Vehicle> create(Map<String, dynamic> payload) async {
     try {
-      final response = await _dio.post(_path, data: payload);
-      return VehicleDto.fromJson(response.data as Map<String, dynamic>)
-          .toDomain();
-    } on DioException catch (error) {
-      throw mapDioError(error);
+      final row = await _client
+          .from(_table)
+          .insert(payload)
+          .select()
+          .single();
+      return VehicleDto.fromJson(row).toDomain();
+    } catch (error) {
+      throw mapSupabaseError(error);
     }
   }
 
   @override
   Future<Vehicle> update(int id, Map<String, dynamic> payload) async {
     try {
-      final response = await _dio.patch('$_path/$id', data: payload);
-      return VehicleDto.fromJson(response.data as Map<String, dynamic>)
-          .toDomain();
-    } on DioException catch (error) {
-      throw mapDioError(error);
+      final row = await _client
+          .from(_table)
+          .update(payload)
+          .eq('id', id)
+          .select()
+          .single();
+      return VehicleDto.fromJson(row).toDomain();
+    } catch (error) {
+      throw mapSupabaseError(error);
     }
   }
 
   @override
   Future<void> delete(int id) async {
     try {
-      await _dio.delete('$_path/$id');
-    } on DioException catch (error) {
-      throw mapDioError(error);
+      await _client.from(_table).delete().eq('id', id);
+    } catch (error) {
+      throw mapSupabaseError(error);
     }
   }
 }

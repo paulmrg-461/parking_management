@@ -28,7 +28,7 @@ class CategoryRevenue extends Equatable {
 }
 
 /// Revenue report for a date range, as returned by
-/// `GET /api/reports/revenue`.
+/// `rpc/report_revenue`.
 class RevenueReport extends Equatable {
   const RevenueReport({
     required this.startDate,

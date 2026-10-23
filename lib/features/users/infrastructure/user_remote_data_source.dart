@@ -1,6 +1,7 @@
-import 'package:dio/dio.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 
-import '../../../core/network/dio_error_mapper.dart';
+import '../../../core/error/failure.dart';
+import '../../../core/network/supabase_error_mapper.dart';
 import '../../auth/domain/entities/user.dart';
 import '../../auth/infrastructure/models/user_dto.dart';
 
@@ -12,45 +13,48 @@ abstract class UserRemoteDataSource {
   Future<User> update(int id, Map<String, dynamic> payload);
 }
 
-class DioUserRemoteDataSource implements UserRemoteDataSource {
-  DioUserRemoteDataSource(this._dio);
+class SupabaseUserRemoteDataSource implements UserRemoteDataSource {
+  SupabaseUserRemoteDataSource(this._client);
 
-  final Dio _dio;
+  final SupabaseClient _client;
 
-  static const _path = '/api/users';
-
-  @override
-  Future<List<User>> list() => _guard(() async {
-    final response = await _dio.get<List<dynamic>>(_path);
-    return [
-      for (final item in response.data ?? const <dynamic>[])
-        UserDto.fromJson(item as Map<String, dynamic>).toDomain(),
-    ];
-  });
+  static const _table = 'users';
+  static const _function = 'admin-users';
 
   @override
-  Future<User> create(Map<String, dynamic> payload) => _guard(() async {
-    final response = await _dio.post<Map<String, dynamic>>(
-      _path,
-      data: payload,
-    );
-    return UserDto.fromJson(response.data!).toDomain();
-  });
-
-  @override
-  Future<User> update(int id, Map<String, dynamic> payload) => _guard(() async {
-    final response = await _dio.patch<Map<String, dynamic>>(
-      '$_path/$id',
-      data: payload,
-    );
-    return UserDto.fromJson(response.data!).toDomain();
-  });
-
-  Future<T> _guard<T>(Future<T> Function() request) async {
+  Future<List<User>> list() async {
     try {
-      return await request();
-    } on DioException catch (error) {
-      throw mapDioError(error);
+      final rows = await _client
+          .from(_table)
+          .select('id, username, display_name, role, is_active')
+          .order('id');
+      return [for (final row in rows) UserDto.fromJson(row).toDomain()];
+    } catch (error) {
+      throw mapSupabaseError(error);
+    }
+  }
+
+  @override
+  Future<User> create(Map<String, dynamic> payload) =>
+      _adminAction({'action': 'create', ...payload});
+
+  @override
+  Future<User> update(int id, Map<String, dynamic> payload) =>
+      _adminAction({'action': 'update', 'id': id, ...payload});
+
+  Future<User> _adminAction(Map<String, dynamic> body) async {
+    try {
+      final response = await _client.functions.invoke(
+        _function,
+        body: body,
+      );
+      final data = response.data;
+      if (data is! Map) {
+        throw const ServerFailure('Invalid admin-users response');
+      }
+      return UserDto.fromJson(Map<String, dynamic>.from(data)).toDomain();
+    } catch (error) {
+      throw mapSupabaseError(error);
     }
   }
 }

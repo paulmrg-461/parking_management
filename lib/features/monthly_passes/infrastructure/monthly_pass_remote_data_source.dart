@@ -1,7 +1,6 @@
-import 'package:dio/dio.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../../core/network/dio_error_mapper.dart';
-import '../../../core/network/pagination.dart';
+import '../../../core/network/supabase_error_mapper.dart';
 import '../domain/entities/monthly_pass.dart';
 import 'models/monthly_pass_dto.dart';
 
@@ -15,74 +14,64 @@ abstract class MonthlyPassRemoteDataSource {
   Future<void> delete(int id);
 }
 
-class DioMonthlyPassRemoteDataSource implements MonthlyPassRemoteDataSource {
-  DioMonthlyPassRemoteDataSource(this._dio);
+class SupabaseMonthlyPassRemoteDataSource implements MonthlyPassRemoteDataSource {
+  SupabaseMonthlyPassRemoteDataSource(this._client);
 
-  final Dio _dio;
+  final SupabaseClient _client;
 
-  static const _path = '/api/monthly-passes';
+  static const _table = 'monthly_passes';
 
   @override
   Future<List<MonthlyPass>> list({int? vehicleId}) async {
-    // The list feeds dropdowns/caches, not a paged UI: collect every page so
-    // passes beyond the backend's default page are not lost.
-    const pageSize = 500;
-    final passes = <MonthlyPass>[];
     try {
-      while (true) {
-        final response = await _dio.get(
-          _path,
-          queryParameters: {
-            'vehicle_id': ?vehicleId,
-            ...pageQuery(limit: pageSize, offset: passes.length),
-          },
-        );
-        final data = response.data as List<dynamic>;
-        passes.addAll(
-          data.map(
-            (item) =>
-                MonthlyPassDto.fromJson(item as Map<String, dynamic>)
-                    .toDomain(),
-          ),
-        );
-        final total = totalCountOf(response);
-        if (data.isEmpty || total == null || passes.length >= total) {
-          return passes;
-        }
+      var query = _client.from(_table).select();
+      if (vehicleId != null) {
+        query = query.eq('vehicle_id', vehicleId);
       }
-    } on DioException catch (error) {
-      throw mapDioError(error);
+      final rows = await query.order('id');
+      return rows
+          .map((row) => MonthlyPassDto.fromJson(row).toDomain())
+          .toList();
+    } catch (error) {
+      throw mapSupabaseError(error);
     }
   }
 
   @override
   Future<MonthlyPass> create(Map<String, dynamic> payload) async {
     try {
-      final response = await _dio.post(_path, data: payload);
-      return MonthlyPassDto.fromJson(response.data as Map<String, dynamic>)
-          .toDomain();
-    } on DioException catch (error) {
-      throw mapDioError(error);
+      final row = await _client
+          .from(_table)
+          .insert(payload)
+          .select()
+          .single();
+      return MonthlyPassDto.fromJson(row).toDomain();
+    } catch (error) {
+      throw mapSupabaseError(error);
     }
   }
 
   @override
   Future<MonthlyPass> update(int id, Map<String, dynamic> payload) async {
     try {
-      final response = await _dio.patch('$_path/$id', data: payload);
-      return MonthlyPassDto.fromJson(response.data as Map<String, dynamic>)
-          .toDomain();
-    } on DioException catch (error) {
-      throw mapDioError(error);
+      final row = await _client
+          .from(_table)
+          .update(payload)
+          .eq('id', id)
+          .select()
+          .single();
+      return MonthlyPassDto.fromJson(row).toDomain();
+    } catch (error) {
+      throw mapSupabaseError(error);
     }
   }
 
   @override
   Future<void> delete(int id) async {
     try {
-      await _dio.delete('$_path/$id');
-    } on DioException catch (error) {
-      throw mapDioError(error);
+      await _client.from(_table).delete().eq('id', id);
+    } catch (error) {
+      throw mapSupabaseError(error);
     }
   }
 }

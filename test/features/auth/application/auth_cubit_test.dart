@@ -11,7 +11,7 @@ void main() {
     test('login success emits authenticated state', () async {
       final cubit = AuthCubit(FakeAuthRepository());
 
-      await cubit.login('juan', '1234');
+      await cubit.login('juan', '123456');
 
       expect(cubit.state, isA<AuthAuthenticated>());
       final session = (cubit.state as AuthAuthenticated).session;
@@ -25,7 +25,7 @@ void main() {
         () async => flushes++,
       );
 
-      await cubit.login('juan', '1234');
+      await cubit.login('juan', '123456');
       await Future<void>.delayed(Duration.zero);
 
       expect(flushes, 1);
@@ -36,7 +36,7 @@ void main() {
         FakeAuthRepository(loginError: const AuthenticationFailure('Invalid')),
       );
 
-      await cubit.login('juan', '0000');
+      await cubit.login('juan', '000000');
 
       expect(cubit.state, isA<AuthFailure>());
     });
@@ -101,7 +101,7 @@ void main() {
             loginError: const AuthenticationFailure('Invalid'),
           ),
         );
-        await cubit.login('juan', '0000');
+        await cubit.login('juan', '000000');
 
         await cubit.sessionExpired();
 
@@ -119,7 +119,7 @@ void main() {
         ),
       );
 
-      await cubit.login('juan', '0000');
+      await cubit.login('juan', '000000');
 
       expect(
         cubit.state,

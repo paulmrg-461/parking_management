@@ -1,8 +1,6 @@
-import 'package:dio/dio.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../../core/network/dio_error_mapper.dart';
-import '../../../core/network/idempotency.dart';
-import '../../../core/network/pagination.dart';
+import '../../../core/network/supabase_error_mapper.dart';
 import '../../../core/pagination/paged_result.dart';
 import '../domain/entities/check_out_receipt.dart';
 import '../domain/entities/open_session.dart';
@@ -15,10 +13,6 @@ abstract class CheckOutRemoteDataSource {
     required int offset,
   });
 
-  /// [clientExitTime] / [idempotencyKey] are only sent by replays (as the
-  /// `client_exit_time` body field — always UTC with offset, the backend
-  /// rejects naive datetimes — and `Idempotency-Key` header); the online
-  /// path omits both.
   Future<CheckOutReceipt> checkOut(
     int sessionId, {
     DateTime? clientExitTime,
@@ -26,13 +20,12 @@ abstract class CheckOutRemoteDataSource {
   });
 }
 
-class DioCheckOutRemoteDataSource implements CheckOutRemoteDataSource {
-  DioCheckOutRemoteDataSource(this._dio);
+class SupabaseCheckOutRemoteDataSource implements CheckOutRemoteDataSource {
+  SupabaseCheckOutRemoteDataSource(this._client);
 
-  final Dio _dio;
+  final SupabaseClient _client;
 
-  static const _checkInsPath = '/api/check-ins';
-  static const _checkOutsPath = '/api/check-outs';
+  static const _view = 'open_sessions_view';
 
   @override
   Future<PagedResult<OpenSession>> listOpenSessions({
@@ -40,16 +33,19 @@ class DioCheckOutRemoteDataSource implements CheckOutRemoteDataSource {
     required int offset,
   }) async {
     try {
-      final response = await _dio.get<List<dynamic>>(
-        _checkInsPath,
-        queryParameters: pageQuery(limit: limit, offset: offset),
-      );
-      return PagedResult([
-        for (final item in response.data ?? const <dynamic>[])
-          OpenSessionDto.fromJson(item as Map<String, dynamic>).toDomain(),
-      ], total: totalCountOf(response));
-    } on DioException catch (error) {
-      throw mapDioError(error);
+      final response = await _client
+          .from(_view)
+          .select('id, vehicle_id, entry_time')
+          .order('entry_time')
+          .range(offset, offset + limit - 1)
+          .count(CountOption.exact);
+      final items = [
+        for (final row in response.data)
+          OpenSessionDto.fromJson(row).toDomain(),
+      ];
+      return PagedResult(items, total: response.count);
+    } catch (error) {
+      throw mapSupabaseError(error);
     }
   }
 
@@ -60,17 +56,20 @@ class DioCheckOutRemoteDataSource implements CheckOutRemoteDataSource {
     String? idempotencyKey,
   }) async {
     try {
-      final response = await _dio.post(
-        '$_checkOutsPath/$sessionId',
-        data: clientExitTime != null
-            ? {'client_exit_time': clientExitTime.toUtc().toIso8601String()}
-            : null,
-        options: idempotencyOptions(idempotencyKey),
+      final result = await _client.rpc(
+        'check_out',
+        params: {
+          'p_session_id': sessionId,
+          if (clientExitTime != null)
+            'p_client_exit_time': clientExitTime.toUtc().toIso8601String(),
+          'p_idempotency_key': ?idempotencyKey,
+        },
       );
-      return CheckOutReceiptDto.fromJson(response.data as Map<String, dynamic>)
-          .toDomain();
-    } on DioException catch (error) {
-      throw mapDioError(error);
+      return CheckOutReceiptDto.fromJson(
+        Map<String, dynamic>.from(result as Map),
+      ).toDomain();
+    } catch (error) {
+      throw mapSupabaseError(error);
     }
   }
 }

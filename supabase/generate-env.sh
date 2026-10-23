@@ -89,7 +89,6 @@ def jwt(secret: str, role: str) -> str:
     return signing_input + "." + b64(signature)
 
 
-ensure("SECRET_KEY", secrets.token_urlsafe(48))
 ensure("JWT_SECRET", secrets.token_urlsafe(48))
 ensure("POSTGRES_PASSWORD", secrets.token_urlsafe(24))
 ensure("SECRET_KEY_BASE", secrets.token_urlsafe(48))
@@ -107,8 +106,8 @@ put("S3_PROTOCOL_ACCESS_KEY_SECRET", secrets.token_hex(32))
 put("POSTGRES_DB", current().get("POSTGRES_DB") or "parking")
 put("POSTGRES_HOST", "db")
 put("POSTGRES_PORT", current().get("POSTGRES_PORT") or "5432")
-put("API_GW_HTTP_PORT", current().get("API_GW_HTTP_PORT") or "8001")
-put("SUPABASE_PUBLIC_URL", f"http://localhost:{current().get('API_GW_HTTP_PORT', '8001')}")
+put("API_GW_HTTP_PORT", current().get("API_GW_HTTP_PORT") or "8000")
+put("SUPABASE_PUBLIC_URL", f"http://localhost:{current().get('API_GW_HTTP_PORT', '8000')}")
 put(
     "API_EXTERNAL_URL",
     f"{current().get('SUPABASE_PUBLIC_URL')}/auth/v1",

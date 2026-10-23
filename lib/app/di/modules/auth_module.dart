@@ -1,9 +1,6 @@
-import 'package:dio/dio.dart';
 import 'package:get_it/get_it.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../../core/config/app_config.dart';
-import '../../../core/network/session_reader.dart';
 import '../../../core/storage/session_cache_cleaner.dart';
 import '../../../core/storage/token_store.dart';
 import '../../../core/sync/sync_service.dart';
@@ -27,27 +24,21 @@ void registerAuthModule(GetIt sl) {
     ..registerLazySingleton<AuthLocalDataSource>(
       () => sl<CachingAuthLocalDataSource>(),
     )
-    ..registerLazySingleton<SessionReader>(
-      () => sl<CachingAuthLocalDataSource>(),
-    )
     ..registerLazySingleton<AuthRemoteDataSource>(
-      () => sl<AppConfig>().supabaseAuthEnabled
-          // Needs the SupabaseClient registered by configureDependencies().
-          ? SupabaseAuthRemoteDataSource(sl<SupabaseClient>())
-          : DioAuthRemoteDataSource(sl<Dio>()),
+      () => SupabaseAuthRemoteDataSource(sl<SupabaseClient>()),
     )
     ..registerLazySingleton<AuthRepository>(
       () => AuthRepositoryImpl(
         sl<AuthRemoteDataSource>(),
         sl<AuthLocalDataSource>(),
         sl<SessionCacheCleaner>(),
+        () => sl<SupabaseClient>().auth.signOut(scope: SignOutScope.local),
       ),
     )
     ..registerLazySingleton<AuthCubit>(
       () => AuthCubit(
         sl<AuthRepository>(),
-        // Resolved on login (not at construction) to avoid a DI cycle:
-        // SyncService -> replayers -> Dio -> AuthInterceptor -> AuthCubit.
+        // Resolved on login to avoid a DI cycle through SyncService.
         () => sl<SyncService>().flush(),
       ),
     );

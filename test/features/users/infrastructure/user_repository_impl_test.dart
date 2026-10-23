@@ -52,7 +52,7 @@ void main() {
         username: 'op',
         displayName: 'Op',
         role: UserRole.admin,
-        pin: '1234',
+        pin: '123456',
       ),
     );
 
@@ -60,7 +60,7 @@ void main() {
       'username': 'op',
       'display_name': 'Op',
       'role': 'admin',
-      'pin': '1234',
+      'pin': '123456',
     });
   });
 

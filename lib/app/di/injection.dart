@@ -29,22 +29,30 @@ final GetIt serviceLocator = GetIt.instance;
 /// platform through a conditional import.
 Future<void> configureDependencies() async {
   final config = AppConfig.fromEnvironment();
-  registerAllModules(serviceLocator, config);
-  if (config.supabaseAuthEnabled) {
-    await _initSupabase(config);
+  if (!config.supabaseAuthEnabled) {
+    throw StateError(
+      'Supabase is required: pass --dart-define=SUPABASE_URL=... '
+      'and --dart-define=SUPABASE_ANON_KEY=...',
+    );
   }
+  registerAllModules(serviceLocator, config);
+  await _initSupabase(config);
   await serviceLocator<KeyValueStore>().init();
 }
 
 /// Boots GoTrue and keeps the cached bearer token fresh: Supabase rotates
-/// access tokens in the background, but FastAPI reads the token snapshot
-/// stored in Hive through [SessionReader].
+/// access tokens in the background, so the Hive snapshot is rewritten.
 Future<void> _initSupabase(AppConfig config) async {
   final supabase = await Supabase.initialize(
     url: config.supabaseUrl,
     anonKey: config.supabaseAnonKey,
   );
   serviceLocator.registerSingleton<SupabaseClient>(supabase.client);
+  // Hive and the SDK must agree on whether there is a session; a stale Hive
+  // token without an SDK session would make every query unauthenticated.
+  if (supabase.client.auth.currentSession == null) {
+    await serviceLocator<AuthLocalDataSource>().clearSession();
+  }
   supabase.client.auth.onAuthStateChange.listen((state) async {
     final session = state.session;
     if (session == null) {

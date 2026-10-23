@@ -1,7 +1,7 @@
 import '../error/failure.dart';
 import '../../l10n/app_localizations.dart';
 
-/// Must match the text `mapDioError` uses for a 403 without a `code`.
+/// Must match the text `mapSupabaseError` uses for a 403 without a `code`.
 const _forbiddenDetail = 'Forbidden';
 
 /// Localizes a [Failure] for the UI: known `code`s (backend `DomainError`
@@ -51,6 +51,8 @@ extension FailureMessages on AppLocalizations {
     'ConflictError' => errorConflict,
     'VehicleNotRegisteredError' => errorVehicleNotRegistered,
     'InvalidPhotoError' => errorInvalidPhoto,
+    'InvalidDataError' || 'InvalidUsername' => errorInvalidData,
+    'InvalidPin' => pinInvalid,
     'PhotoTooLargeError' || 'PayloadTooLargeError' => errorPhotoTooLarge,
     'InternalError' => errorServer,
     ClientFailureCodes.emptyPlate => errorEmptyPlate,

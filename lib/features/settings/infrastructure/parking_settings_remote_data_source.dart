@@ -1,9 +1,9 @@
 import 'dart:typed_data';
 
-import 'package:dio/dio.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/error/failure.dart';
-import '../../../core/network/dio_error_mapper.dart';
+import '../../../core/network/supabase_error_mapper.dart';
 import '../domain/entities/parking_settings.dart';
 import 'models/parking_settings_dto.dart';
 
@@ -17,69 +17,80 @@ abstract class ParkingSettingsRemoteDataSource {
   Future<Uint8List> fetchLogo();
 }
 
-class DioParkingSettingsRemoteDataSource
+class SupabaseParkingSettingsRemoteDataSource
     implements ParkingSettingsRemoteDataSource {
-  DioParkingSettingsRemoteDataSource(this._dio);
+  SupabaseParkingSettingsRemoteDataSource(this._client);
 
-  final Dio _dio;
+  final SupabaseClient _client;
 
-  static const _path = '/api/settings';
+  static const _table = 'parking_settings';
+  static const _bucket = 'branding';
+  static const _logoPath = 'logo';
 
   @override
   Future<ParkingSettings> fetch() async {
     try {
-      final response = await _dio.get(_path);
-      return _toDomain(response.data);
-    } on DioException catch (error) {
-      throw mapDioError(error);
+      final row = await _client
+          .from(_table)
+          .select()
+          .eq('id', 1)
+          .single();
+      return ParkingSettingsDto.fromJson(row).toDomain();
+    } catch (error) {
+      throw mapSupabaseError(error);
     }
   }
 
   @override
   Future<ParkingSettings> patch(Map<String, dynamic> fields) async {
     try {
-      final response = await _dio.patch(_path, data: fields);
-      return _toDomain(response.data);
-    } on DioException catch (error) {
-      throw mapDioError(error);
+      final row = await _client
+          .from(_table)
+          .update(fields)
+          .eq('id', 1)
+          .select()
+          .single();
+      return ParkingSettingsDto.fromJson(row).toDomain();
+    } catch (error) {
+      throw mapSupabaseError(error);
     }
   }
 
   @override
   Future<ParkingSettings> uploadLogo(Uint8List bytes) async {
     try {
-      final response = await _dio.post(
-        '$_path/logo',
-        data: FormData.fromMap({
-          'file': MultipartFile.fromBytes(bytes, filename: _filename(bytes)),
-        }),
+      await _client.storage.from(_bucket).uploadBinary(
+        _logoPath,
+        bytes,
+        fileOptions: FileOptions(
+          contentType: _contentType(bytes),
+          upsert: true,
+        ),
       );
-      return _toDomain(response.data);
-    } on DioException catch (error) {
-      throw mapDioError(error);
+      final row = await _client.rpc(
+        'set_branding_logo',
+        params: {'p_path': _logoPath},
+      );
+      return ParkingSettingsDto.fromJson(
+        Map<String, dynamic>.from(row as Map),
+      ).toDomain();
+    } catch (error) {
+      throw mapSupabaseError(error);
     }
   }
 
   @override
   Future<Uint8List> fetchLogo() async {
     try {
-      final response = await _dio.get<Uint8List>(
-        '$_path/logo',
-        options: Options(responseType: ResponseType.bytes),
-      );
-      return response.data ?? (throw const NetworkFailure('Logo unavailable'));
-    } on DioException catch (error) {
-      throw mapDioError(error);
+      return await _client.storage.from(_bucket).download(_logoPath);
+    } catch (_) {
+      // Missing/offline logo is not fatal: the repository falls back to null.
+      throw const NetworkFailure('Logo unavailable');
     }
   }
 
-  ParkingSettings _toDomain(Object? data) =>
-      ParkingSettingsDto.fromJson(data as Map<String, dynamic>).toDomain();
-
-  /// The server sniffs magic bytes (the name is ignored); matching it keeps
-  /// multipart metadata honest for logs and proxies.
-  String _filename(Uint8List bytes) =>
-      bytes.length >= 3 && bytes[0] == 0xFF && bytes[1] == 0xD8
-          ? 'logo.jpg'
-          : 'logo.png';
+  String _contentType(Uint8List bytes) =>
+      bytes.length >= 2 && bytes[0] == 0xFF && bytes[1] == 0xD8
+      ? 'image/jpeg'
+      : 'image/png';
 }

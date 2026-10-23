@@ -6,64 +6,6 @@ on:
   pull_request:
 
 jobs:
-  backend:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install uv
-        uses: astral-sh/setup-uv@v3
-        with:
-          version: "latest"
-      - name: Install dependencies
-        run: uv sync --all-groups
-      - name: Lint
-        run: uv run ruff check .
-      - name: Run tests
-        run: uv run pytest
-
-  backend-postgres:
-    # Behaviour SQLite cannot prove: partial unique indexes, VARCHAR(n)
-    # enforcement, timezone-aware report grouping, migrations on Postgres.
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: parking_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-    env:
-      ENVIRONMENT: test
-      TEST_DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/parking_test
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/parking_test
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install uv
-        uses: astral-sh/setup-uv@v3
-        with:
-          version: "latest"
-      - name: Install dependencies
-        run: uv sync --all-groups
-      - name: Migrations round-trip and drift check
-        run: |
-          uv run alembic upgrade head
-          uv run alembic check
-          uv run alembic downgrade base
-      - name: Run Postgres tests
-        run: uv run pytest -m postgres
-
   flutter:
     runs-on: ubuntu-latest
     steps:
@@ -82,3 +24,16 @@ jobs:
       # build (platform adapters are picked via conditional imports).
       - name: Build web (release)
         run: flutter build web --release
+
+  supabase-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate local secrets
+        run: |
+          cp .env.example .env
+          sh supabase/generate-env.sh
+      - name: Validate compose and migrations ordering
+        run: |
+          docker compose config -q
+          test -n "$(ls supabase/migrations/*.sql)"

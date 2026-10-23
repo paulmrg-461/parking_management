@@ -53,7 +53,7 @@ const _command = CreateUserCommand(
   username: 'op',
   displayName: 'Op',
   role: UserRole.operator,
-  pin: '1234',
+  pin: '123456',
 );
 
 void main() {

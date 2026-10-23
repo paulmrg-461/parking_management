@@ -1,4 +1,4 @@
-import 'package:dio/dio.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:get_it/get_it.dart';
 
 import '../../../features/monthly_passes/application/monthly_passes_cubit.dart';
@@ -14,7 +14,7 @@ void registerMonthlyPassesModule(GetIt sl) {
       HiveMonthlyPassLocalDataSource.new,
     )
     ..registerLazySingleton<MonthlyPassRemoteDataSource>(
-      () => DioMonthlyPassRemoteDataSource(sl<Dio>()),
+      () => SupabaseMonthlyPassRemoteDataSource(sl<SupabaseClient>()),
     )
     ..registerLazySingleton<MonthlyPassRepository>(
       () => MonthlyPassRepositoryImpl(

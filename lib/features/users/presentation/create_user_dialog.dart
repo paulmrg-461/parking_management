@@ -7,7 +7,7 @@ import '../../auth/domain/entities/user.dart';
 import '../domain/commands/create_user_command.dart';
 import 'role_labels.dart';
 
-final _pinPattern = RegExp(r'^\d{4,6}$');
+final _pinPattern = RegExp(r'^\d{6}$');
 
 /// Validated "new user" form (username, display name, 4–6 digit PIN, role).
 class CreateUserDialog extends StatefulWidget {

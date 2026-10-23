@@ -1,4 +1,4 @@
-import 'package:dio/dio.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:get_it/get_it.dart';
 
 import '../../../core/sync/sync_outbox.dart';
@@ -14,7 +14,7 @@ void registerCategoriesModule(GetIt sl) {
       HiveCategoryLocalDataSource.new,
     )
     ..registerLazySingleton<CategoryRemoteDataSource>(
-      () => DioCategoryRemoteDataSource(sl<Dio>()),
+      () => SupabaseCategoryRemoteDataSource(sl<SupabaseClient>()),
     )
     ..registerLazySingleton<CategoryRepository>(
       () => CategoryRepositoryImpl(

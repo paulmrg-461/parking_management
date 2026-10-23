@@ -55,7 +55,7 @@ void main() {
     expect(repository.users.single.isActive, isTrue);
   });
 
-  testWidgets('Failure: create rejects a PIN that is not 4-6 digits', (
+  testWidgets('Failure: create rejects a PIN that is not 6 digits', (
     tester,
   ) async {
     await pumpPage(tester);
@@ -72,7 +72,7 @@ void main() {
     await tester.tap(find.text('Crear'));
     await tester.pumpAndSettle();
 
-    expect(find.text('El PIN debe tener de 4 a 6 dígitos'), findsOneWidget);
+    expect(find.text('El PIN debe tener 6 dígitos'), findsOneWidget);
     expect(repository.created, isNull);
   });
 

@@ -8,7 +8,7 @@ license plate detection.
 
 Monorepo:
 - `lib/` — Flutter app (targets: `android` + `web`)
-- `backend/` — FastAPI + PostgreSQL service (source of truth)
+- `supabase/` — self-hosted Supabase (Postgres schema, RPCs, RLS, Storage, Edge Functions) — source of truth
 - `openspec/` — specs and changes (spec-driven development via OpenSpec)
 
 ## Architecture (MANDATORY)
@@ -19,7 +19,7 @@ Hexagonal (Ports & Adapters) + Clean Architecture, organized **by feature**.
 lib/features/<feature>/
 ├── domain/           # entities + repository ports (abstract). Depends on nothing.
 ├── application/      # use cases + cubits (orchestration + state)
-├── infrastructure/   # adapters (Isar, REST), models, mappers
+├── infrastructure/   # adapters (Supabase, Hive), models, mappers
 └── presentation/     # pages, widgets
 ```
 
@@ -35,13 +35,12 @@ OpenSpec artifacts (proposal, specs, design, tasks) MUST be in English.
 ## Stack
 
 Flutter: BLoC/Cubit + Equatable, `get_it` (manual registration), Hive CE
-(offline-first local store), Dio, `go_router`, `camera` + `image_picker`,
-`tflite_flutter` + `google_mlkit_text_recognition`, `intl` (COP, no decimals).
+(offline-first local store), `supabase_flutter`, `go_router`, `camera` +
+`image_picker`, `google_mlkit_text_recognition`, `intl` (COP, no decimals).
 
-Backend: FastAPI, SQLAlchemy 2.0 (async), Alembic, PostgreSQL, JWT, Argon2id.
-**Transitional**: the target is self-hosted Supabase (Postgres, GoTrue,
-PostgREST, Storage, Studio) in `supabase/`; see
-`openspec/changes/migrate-to-supabase/`. FastAPI is removed in phase 5.
+Backend: self-hosted Supabase (PostgreSQL 17 + RLS, GoTrue, PostgREST,
+Storage, Edge Functions) in `supabase/`. There is no application server: SQL
+RPCs own business logic and the Flutter client calls Supabase directly.
 
 ## Business rules
 
@@ -72,18 +71,19 @@ Write 3 tests (Success / Failure / Security) BEFORE logic.
   future that resolves after `close()` cannot throw. Submission flows must
   catch non-`Failure` errors and always leave `SubmissionInProgress`.
 - **Auth storage**: the JWT lives in `flutter_secure_storage` via `TokenStore`;
-  Hive only stores the profile. Logout clears reference-data/ETag caches but
-  never the outbox.
+  Hive only stores the profile. Logout clears reference-data caches but never
+  the outbox. Supabase rotates tokens; the auth-state listener refreshes Hive.
 - **Lists used for lookups** (open sessions, vehicles, monthly passes) must
-  walk every backend page; the backend defaults to 100 items per page.
-- **Secrets**: production rejects known/example `SECRET_KEY` values, including
-  the one in `.env.example`.
+  walk every Supabase page; PostgREST caps rows per request.
 - **UI text**: always `context.l10n`; no hardcoded operator-facing strings.
-- **Supabase**: the root `.env` drives both compose stacks; `supabase/migrations`
-  owns the schema when `SCHEMA_MANAGED_EXTERNALLY=1` (never run Alembic there).
-  GoTrue usernames map to `<username>@parking.local` (6-digit PIN as password),
-  `public.users` is mirrored by the `auth.users` trigger, and every new table
-  must ship grants + RLS policies before PostgREST is exposed.
+- **Supabase**: `supabase/migrations` is the only schema owner (applied by
+  `supabase-migrate`). Every new table ships grants + RLS before PostgREST sees
+  it; writes go through `security definer` RPCs that derive the operator from
+  `auth.uid()` and enforce idempotency.
+- **Auth**: GoTrue only. Usernames map to `<username>@parking.local` with a
+  6-digit PIN as password; `public.users` is mirrored by the `auth.users`
+  trigger. Never put the service-role key in the client — admin user changes go
+  through the `admin-users` Edge Function.
 
 ## Spec-driven workflow (OpenSpec)
 

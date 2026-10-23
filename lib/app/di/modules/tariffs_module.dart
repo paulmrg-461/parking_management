@@ -1,4 +1,4 @@
-import 'package:dio/dio.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:get_it/get_it.dart';
 
 import '../../../core/sync/sync_outbox.dart';
@@ -15,7 +15,7 @@ void registerTariffsModule(GetIt sl) {
       HiveTariffLocalDataSource.new,
     )
     ..registerLazySingleton<TariffRemoteDataSource>(
-      () => DioTariffRemoteDataSource(sl<Dio>()),
+      () => SupabaseTariffRemoteDataSource(sl<SupabaseClient>()),
     )
     ..registerLazySingleton<TariffRepository>(
       () => TariffRepositoryImpl(

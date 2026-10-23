@@ -271,7 +271,7 @@
   "@userActiveLabel": {"placeholders": {"name": {"type": "String"}}},
   "userDeactivated": "Usuario {name} desactivado",
   "@userDeactivated": {"placeholders": {"name": {"type": "String"}}},
-  "pinInvalid": "El PIN debe tener de 4 a 6 dígitos",
+  "pinInvalid": "El PIN debe tener 6 dígitos",
 
   "monthlyPassesTitle": "Mensualidades",
   "monthlyPassesEmpty": "Aún no hay mensualidades",

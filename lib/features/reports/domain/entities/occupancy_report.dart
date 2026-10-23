@@ -17,7 +17,7 @@ class CategoryOccupancy extends Equatable {
   List<Object?> get props => [categoryId, categoryName, count];
 }
 
-/// Current occupancy snapshot, as returned by `GET /api/reports/occupancy`.
+/// Current occupancy snapshot, as returned by `rpc/report_occupancy`.
 class OccupancyReport extends Equatable {
   const OccupancyReport({required this.totalOpen, required this.byCategory});
 

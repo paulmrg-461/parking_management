@@ -50,7 +50,7 @@ void main() {
     final repository = FakeAuthRepository();
     await tester.pumpWidget(_wrap(AuthCubit(repository)));
 
-    await _fill(tester, 'juan', '1234');
+    await _fill(tester, 'juan', '123456');
     await tester.tap(find.text('Ingresar'));
     await tester.pumpAndSettle();
 
@@ -63,7 +63,7 @@ void main() {
     final repository = FakeAuthRepository();
     await tester.pumpWidget(_wrap(AuthCubit(repository)));
 
-    await _fill(tester, 'juan', '1234');
+    await _fill(tester, 'juan', '123456');
     await tester.testTextInput.receiveAction(TextInputAction.done);
     await tester.pumpAndSettle();
 
@@ -94,7 +94,7 @@ void main() {
     );
     await tester.pumpWidget(_wrap(AuthCubit(repository)));
 
-    await _fill(tester, 'juan', '0000');
+    await _fill(tester, 'juan', '000000');
     await tester.tap(find.text('Ingresar'));
     await tester.pumpAndSettle();
 
@@ -110,7 +110,7 @@ void main() {
     final repository = FakeAuthRepository(gate: gate.future);
     await tester.pumpWidget(_wrap(AuthCubit(repository)));
 
-    await _fill(tester, 'juan', '1234');
+    await _fill(tester, 'juan', '123456');
     await tester.tap(find.text('Ingresar'));
     await tester.pump();
 

@@ -1,6 +1,6 @@
-import 'package:dio/dio.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../../core/network/dio_error_mapper.dart';
+import '../../../core/network/supabase_error_mapper.dart';
 import '../domain/entities/occupancy_report.dart';
 import '../domain/entities/revenue_report.dart';
 import 'models/occupancy_report_dto.dart';
@@ -15,13 +15,10 @@ abstract class ReportRemoteDataSource {
   Future<OccupancyReport> getOccupancyReport();
 }
 
-class DioReportRemoteDataSource implements ReportRemoteDataSource {
-  DioReportRemoteDataSource(this._dio);
+class SupabaseReportRemoteDataSource implements ReportRemoteDataSource {
+  SupabaseReportRemoteDataSource(this._client);
 
-  final Dio _dio;
-
-  static const _revenuePath = '/api/reports/revenue';
-  static const _occupancyPath = '/api/reports/occupancy';
+  final SupabaseClient _client;
 
   @override
   Future<RevenueReport> getRevenueReport({
@@ -29,28 +26,30 @@ class DioReportRemoteDataSource implements ReportRemoteDataSource {
     required DateTime endDate,
   }) async {
     try {
-      final response = await _dio.get(
-        _revenuePath,
-        queryParameters: {
-          'start_date': _formatDate(startDate),
-          'end_date': _formatDate(endDate),
+      final result = await _client.rpc(
+        'report_revenue',
+        params: {
+          'p_start_date': _formatDate(startDate),
+          'p_end_date': _formatDate(endDate),
         },
       );
-      return RevenueReportDto.fromJson(response.data as Map<String, dynamic>)
-          .toDomain();
-    } on DioException catch (error) {
-      throw mapDioError(error);
+      return RevenueReportDto.fromJson(
+        Map<String, dynamic>.from(result as Map),
+      ).toDomain();
+    } catch (error) {
+      throw mapSupabaseError(error);
     }
   }
 
   @override
   Future<OccupancyReport> getOccupancyReport() async {
     try {
-      final response = await _dio.get(_occupancyPath);
-      return OccupancyReportDto.fromJson(response.data as Map<String, dynamic>)
-          .toDomain();
-    } on DioException catch (error) {
-      throw mapDioError(error);
+      final result = await _client.rpc('report_occupancy');
+      return OccupancyReportDto.fromJson(
+        Map<String, dynamic>.from(result as Map),
+      ).toDomain();
+    } catch (error) {
+      throw mapSupabaseError(error);
     }
   }
 

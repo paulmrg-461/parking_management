@@ -225,7 +225,7 @@
   "userAddTooltip": "Add user",
   "userActiveLabel": "User active: {name}",
   "userDeactivated": "User {name} deactivated",
-  "pinInvalid": "The PIN must have 4 to 6 digits",
+  "pinInvalid": "The PIN must have 6 digits",
   "monthlyPassesTitle": "Monthly passes",
   "monthlyPassesEmpty": "No monthly passes yet",
   "monthlyPassNew": "New monthly pass",

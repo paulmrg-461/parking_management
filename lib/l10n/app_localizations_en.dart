@@ -758,7 +758,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get pinInvalid => 'The PIN must have 4 to 6 digits';
+  String get pinInvalid => 'The PIN must have 6 digits';
 
   @override
   String get monthlyPassesTitle => 'Monthly passes';
