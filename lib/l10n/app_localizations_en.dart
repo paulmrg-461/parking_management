@@ -247,6 +247,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get lotsTitle => 'Parking sites';
 
   @override
+  String get navAudit => 'Audit log';
+
+  @override
+  String get auditTitle => 'Audit log';
+
+  @override
+  String get auditTable => 'Table';
+
+  @override
+  String get auditAllTables => 'All';
+
+  @override
+  String get auditFilterDates => 'Filter by date';
+
+  @override
+  String get auditEmpty => 'No changes recorded';
+
+  @override
+  String get auditChangesTitle => 'Changes';
+
+  @override
   String get lotAdd => 'New site';
 
   @override

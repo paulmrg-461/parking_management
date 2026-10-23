@@ -5,6 +5,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/widgets/deferred_page.dart';
+import '../../features/audit/application/audit_cubit.dart';
+import '../../features/audit/presentation/audit_page.dart';
 import '../../features/auth/application/auth_cubit.dart';
 import '../../features/auth/domain/entities/user.dart';
 import '../../features/auth/presentation/login_page.dart';
@@ -123,6 +125,13 @@ GoRoute _homeRoute(AuthCubit auth) => GoRoute(
       builder: (context, state) => BlocProvider<CheckOutCubit>(
         create: (_) => serviceLocator<CheckOutCubit>(),
         child: const CheckOutPage(),
+      ),
+    ),
+    GoRoute(
+      path: 'audit',
+      builder: (context, state) => BlocProvider<AuditCubit>(
+        create: (_) => serviceLocator<AuditCubit>(),
+        child: const AuditPage(),
       ),
     ),
     GoRoute(

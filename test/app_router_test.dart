@@ -46,6 +46,25 @@ void main() {
       expect(find.widgetWithText(AppBar, 'Usuarios'), findsOneWidget);
     });
 
+    testWidgets('Success: admin can open /audit', (tester) async {
+      await pumpApp(tester, role: UserRole.admin);
+
+      await goTo(tester, '/audit');
+
+      expect(find.widgetWithText(AppBar, 'Auditoría'), findsOneWidget);
+    });
+
+    testWidgets('Security: operator typing /audit is redirected home', (
+      tester,
+    ) async {
+      await pumpApp(tester, role: UserRole.operator);
+
+      await goTo(tester, '/audit');
+
+      expect(find.widgetWithText(AppBar, 'Auditoría'), findsNothing);
+      expect(find.text('Hola, Juan'), findsOneWidget);
+    });
+
     testWidgets('Success: admin can open /lots', (tester) async {
       await pumpApp(tester, role: UserRole.admin);
 

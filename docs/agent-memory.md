@@ -127,6 +127,16 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   `postgres`), so scheduling stays in the host cron; the README documents how
   to enable pg_cron if the deployment supports `cron.database_name`.
 
+## Admin audit (latest)
+
+- `0031`: `audit_log` + `record_audit()` trigger (categories, tariffs, vehicles,
+  monthly passes, settings, lots, lot_members). Updates store only the changed
+  columns; `pin_hash` is stripped; `lot_id` comes from the row.
+- `admin-users` writes explicit audit rows (service-role writes have no
+  `auth.uid()`), including `pin_reset: true` without the PIN itself.
+- Read model `list_audit_log(limit, start, end, table)` (platform admins) backs
+  the Flutter `/audit` screen; `purge_audit_log(365)` runs in the cron.
+
 ## Observability (latest)
 
 - `0030`: `client_error_reports` + `report_client_error` (bounded payload,

@@ -34,6 +34,7 @@ String _contact(AppLocalizations l) => l.navContact;
 String _notifications(AppLocalizations l) => l.navNotifications;
 String _reservations(AppLocalizations l) => l.navReservations;
 String _lots(AppLocalizations l) => l.navLots;
+String _audit(AppLocalizations l) => l.navAudit;
 
 const primaryDestinations = [
   AppDestination(homePath, _home, Icons.home_outlined, Icons.home),
@@ -71,6 +72,12 @@ const managementDestinations = [
     _categories,
     Icons.category_outlined,
     Icons.category,
+  ),
+  AppDestination(
+    '/audit',
+    _audit,
+    Icons.history_outlined,
+    Icons.history,
   ),
   AppDestination(
     '/lots',

@@ -178,6 +178,14 @@ a vehicle outside the first page is still found; the query shows a proper
 "no plate matches" state. Discounts appear in the report with their reason,
 admin and timestamp.
 
+## Audit log
+
+Admins have `/audit`: every change to users, categories, tariffs, vehicles,
+monthly passes, settings, sites and memberships is stored with the actor, the
+lot, the affected row and the changed columns. Money-related actions keep their
+own audit (discounts, shift corrections, pass payments). Filter by table and
+date, and open an entry to see the before/after payload.
+
 ## Reports and shifts
 
 The admin revenue report has an **Export PDF** action (share/print sheet) with

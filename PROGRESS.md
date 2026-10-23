@@ -201,6 +201,12 @@ The app is now a Supabase-only stack: FastAPI, Alembic, Dio and Redis are gone.
   endpoints and backlog with an optional alert webhook, and
   `supabase/diagnostics.sh` prints the support snapshot.
 
+- **Admin audit trail**: `0031` adds `audit_log` with a generic row trigger on
+  categories, tariffs, vehicles, passes, settings, lots and memberships (actor
+  from `auth.uid()`, changed columns only, lot stamped), explicit audit for
+  user actions in `admin-users`, and an admin `/audit` screen with table/date
+  filters and a before/after dialog. Purged after 365 days by the cron.
+
 ## Infra/tooling (not OpenSpec capabilities — repo scaffolding)
 
 - **Docker**: root `docker-compose.yml` includes the official self-hosted
@@ -241,7 +247,7 @@ The app is now a Supabase-only stack: FastAPI, Alembic, Dio and Redis are gone.
 
 ## Test counts
 
-- Flutter (`flutter test`): 491 passed. `flutter analyze`: 0 errors/warnings
+- Flutter (`flutter test`): 500 passed. `flutter analyze`: 0 errors/warnings
   (98 SDK-deprecation/const infos under the local Flutter 3.50 beta; CI pins
   3.49 where the baseline is clean).
 - SQL/compose: validated against the running Supabase stack and by

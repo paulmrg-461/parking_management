@@ -252,6 +252,27 @@ class AppLocalizationsEs extends AppLocalizations {
   String get lotsTitle => 'Sedes del parqueadero';
 
   @override
+  String get navAudit => 'Auditoría';
+
+  @override
+  String get auditTitle => 'Auditoría';
+
+  @override
+  String get auditTable => 'Tabla';
+
+  @override
+  String get auditAllTables => 'Todas';
+
+  @override
+  String get auditFilterDates => 'Filtrar por fecha';
+
+  @override
+  String get auditEmpty => 'Sin cambios registrados';
+
+  @override
+  String get auditChangesTitle => 'Cambios';
+
+  @override
   String get lotAdd => 'Nueva sede';
 
   @override

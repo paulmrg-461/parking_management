@@ -623,6 +623,72 @@ begin
     end if;
 end $$;
 
+-- Audit trail: reference-data changes are recorded with their actor, lot and
+-- changed columns; only platform admins can read it.
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local request.headers = '{"x-lot-id":"2"}';
+insert into public.categories (name, capacity, lot_id) values ('audited', 2, 2);
+update public.categories set capacity = 3 where name = 'audited' and lot_id = 2;
+
+do $$
+begin
+    if (select count(*) from public.audit_log where table_name = 'categories') < 2 then
+        raise exception 'category changes were not audited';
+    end if;
+    if (select actor_id from public.audit_log
+         where table_name = 'categories' and action = 'update'
+         order by id desc limit 1) <> 1 then
+        raise exception 'audit actor was not derived from auth.uid()';
+    end if;
+    if not exists (
+        select 1 from public.audit_log
+         where table_name = 'categories' and action = 'update'
+           and after ? 'capacity' and not after ? 'name'
+    ) then
+        raise exception 'audit did not keep only the changed columns';
+    end if;
+    if (select lot_id from public.audit_log
+         where table_name = 'categories' and action = 'insert'
+           and after ->> 'name' = 'audited'
+         order by id desc limit 1) <> 2 then
+        raise exception 'audit row was not stamped with the lot';
+    end if;
+    if (select count(*) from jsonb_array_elements(public.list_audit_log(50, null, null, 'categories'))) < 2 then
+        raise exception 'audit log listing is incomplete';
+    end if;
+end $$;
+
+reset request.headers;
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    begin
+        perform public.list_audit_log(10, null, null, null);
+        raise exception 'operator read the audit log';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then
+            raise;
+        end if;
+    end;
+end $$;
+set local role authenticated;
+do $$
+begin
+    if exists (select 1 from public.audit_log) then
+        raise exception 'RLS leak: operator reads audit_log';
+    end if;
+end $$;
+reset role;
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+begin
+    if public.purge_audit_log(365) <> 0 then
+        raise exception 'purge removed fresh audit rows';
+    end if;
+end $$;
+
 -- RLS: the operator must not read the admin's notifications.
 set local role authenticated;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';

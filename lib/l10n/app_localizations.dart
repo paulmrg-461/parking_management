@@ -530,6 +530,48 @@ abstract class AppLocalizations {
   /// **'Sedes del parqueadero'**
   String get lotsTitle;
 
+  /// No description provided for @navAudit.
+  ///
+  /// In es, this message translates to:
+  /// **'Auditoría'**
+  String get navAudit;
+
+  /// No description provided for @auditTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Auditoría'**
+  String get auditTitle;
+
+  /// No description provided for @auditTable.
+  ///
+  /// In es, this message translates to:
+  /// **'Tabla'**
+  String get auditTable;
+
+  /// No description provided for @auditAllTables.
+  ///
+  /// In es, this message translates to:
+  /// **'Todas'**
+  String get auditAllTables;
+
+  /// No description provided for @auditFilterDates.
+  ///
+  /// In es, this message translates to:
+  /// **'Filtrar por fecha'**
+  String get auditFilterDates;
+
+  /// No description provided for @auditEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin cambios registrados'**
+  String get auditEmpty;
+
+  /// No description provided for @auditChangesTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Cambios'**
+  String get auditChangesTitle;
+
   /// No description provided for @lotAdd.
   ///
   /// In es, this message translates to:

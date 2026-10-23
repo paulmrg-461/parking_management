@@ -81,6 +81,40 @@ async function requireAdmin(req: Request): Promise<string> {
   return authId
 }
 
+// The public.users trigger does not cover service-role writes, so user actions
+// are audited here with the admin who performed them.
+async function profileId(authUserId: string): Promise<number | null> {
+  const { response, body } = await rest(
+    `users?auth_user_id=eq.${authUserId}&select=id`,
+  )
+  if (!response.ok || !Array.isArray(body) || body.length === 0) return null
+  return Number(body[0].id)
+}
+
+async function auditUser(
+  actorId: number | null,
+  action: 'insert' | 'update' | 'delete',
+  targetId: number | null,
+  before: Record<string, unknown> | null,
+  after: Record<string, unknown> | null,
+) {
+  if (actorId == null) return
+  await rest('audit_log', {
+    method: 'POST',
+    headers: { Prefer: 'return=minimal' },
+    body: JSON.stringify([
+      {
+        actor_id: actorId,
+        action,
+        table_name: 'users',
+        entity_id: targetId == null ? null : String(targetId),
+        before,
+        after,
+      },
+    ]),
+  }).catch(() => ({ response: null, body: null }))
+}
+
 async function activeAdminCount(excludeId?: number): Promise<number> {
   const filter = excludeId == null ? '' : `&id=neq.${excludeId}`
   const { response, body } = await rest(
@@ -121,7 +155,7 @@ async function assignLot(userId: number, lotId: number, role: string) {
   }
 }
 
-async function createUser(payload: Record<string, unknown>) {
+async function createUser(payload: Record<string, unknown>, actorId: number | null) {
   const username = String(payload.username ?? '').trim().toLowerCase()
   const pin = String(payload.pin ?? '')
   const role = payload.role === 'admin' ? 'admin' : 'operator'
@@ -150,6 +184,12 @@ async function createUser(payload: Record<string, unknown>) {
   const createdProfile = await profile(created.body.id)
   const lotId = Number(payload.lot_id ?? 1)
   await assignLot(Number(createdProfile.id), lotId, role)
+  await auditUser(actorId, 'insert', Number(createdProfile.id), null, {
+    username: createdProfile.username,
+    role,
+    is_active: true,
+    lot_id: lotId,
+  })
   // The profile trigger seeds the default lot; a user created for another site
   // belongs only to the requested one.
   if (lotId !== 1) {
@@ -160,7 +200,7 @@ async function createUser(payload: Record<string, unknown>) {
   return createdProfile
 }
 
-async function resetPin(payload: Record<string, unknown>) {
+async function resetPin(payload: Record<string, unknown>, actorId: number | null) {
   const id = Number(payload.id)
   const pin = String(payload.pin ?? '')
   if (pin.length < 6) {
@@ -180,13 +220,18 @@ async function resetPin(payload: Record<string, unknown>) {
     const message = updated.body?.msg ?? updated.body?.message ?? 'PIN reset failed'
     throw new Error(message)
   }
+  await auditUser(actorId, 'update', id, null, { pin_reset: true })
   return await profile(body[0].auth_user_id)
 }
 
-async function deleteUser(payload: Record<string, unknown>, callerAuthId: string) {
+async function deleteUser(
+  payload: Record<string, unknown>,
+  callerAuthId: string,
+  actorId: number | null,
+) {
   const id = Number(payload.id)
   const { response, body } = await rest(
-    `users?id=eq.${id}&select=auth_user_id,role,is_active`,
+    `users?id=eq.${id}&select=auth_user_id,username,role,is_active`,
   )
   if (!response.ok || !Array.isArray(body) || body.length === 0) {
     throw new Error('UserNotFoundError')
@@ -207,10 +252,15 @@ async function deleteUser(payload: Record<string, unknown>, callerAuthId: string
     throw new Error('User delete failed')
   }
   await rest(`users?id=eq.${id}`, { method: 'DELETE' })
+  await auditUser(actorId, 'delete', id, {
+    username: target.username,
+    role: target.role,
+    is_active: target.is_active,
+  }, null)
   return { deleted: true }
 }
 
-async function updateUser(payload: Record<string, unknown>) {
+async function updateUser(payload: Record<string, unknown>, actorId: number | null) {
   const id = Number(payload.id)
   const { response, body } = await rest(
     `users?id=eq.${id}&select=auth_user_id,role,is_active`,
@@ -272,6 +322,14 @@ async function updateUser(payload: Record<string, unknown>) {
       : (body[0].role === 'admin' ? 'admin' : 'operator')
     await assignLot(id, lotId, membershipRole)
   }
+  const changed: Record<string, unknown> = {}
+  if (payload.role != null) changed.role = payload.role
+  if (payload.is_active != null) changed.is_active = payload.is_active
+  if (payload.display_name != null) changed.display_name = payload.display_name
+  if (lotId != null) changed.lot_id = lotId
+  if (Object.keys(changed).length > 0) {
+    await auditUser(actorId, 'update', id, null, changed)
+  }
   return await profile(authUserId)
 }
 
@@ -298,17 +356,18 @@ Deno.serve(async (req) => {
   }
   try {
     const callerAuthId = await requireAdmin(req)
+    const actorId = await profileId(callerAuthId)
     const payload = await req.json().catch(() => ({}))
     action = String(payload.action ?? 'unknown')
     switch (payload.action) {
       case 'create':
-        return done(await createUser(payload))
+        return done(await createUser(payload, actorId))
       case 'update':
-        return done(await updateUser(payload))
+        return done(await updateUser(payload, actorId))
       case 'reset_pin':
-        return done(await resetPin(payload))
+        return done(await resetPin(payload, actorId))
       case 'delete':
-        return done(await deleteUser(payload, callerAuthId))
+        return done(await deleteUser(payload, callerAuthId, actorId))
       default:
         return done({ message: 'Unknown action' }, 400)
     }

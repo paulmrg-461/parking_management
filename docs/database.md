@@ -62,6 +62,7 @@ erDiagram
 | `notifications` | Per-user inbox rows (type, title, body, data, read/pushed state, dedupe key). | optional |
 | `device_tokens` | FCM tokens per user/device. | no |
 | `web_push_subscriptions` | Browser push endpoints (endpoint + p256dh + auth). | no |
+| `audit_log` | Admin audit trail: actor, action, table, entity, lot, changed columns (before/after). | via row |
 | `client_error_reports` | Uncaught app errors (platform, message, stack, context) for support; admin-readable. | no |
 | `idempotency_keys` | Replay cache for write RPCs keyed by `Idempotency-Key`. | — |
 | `schema_migrations` | Applied migration files. | — |
@@ -100,6 +101,11 @@ granted to `authenticated` only.
 `my_lots`, `list_lots`, `create_lot`, `update_lot`, `set_lot_member`,
 `list_lot_members`, `set_branding_logo`.
 
+**Audit**
+`list_audit_log` (filters: limit, date range, table), `purge_audit_log`,
+`record_audit` (trigger on categories, tariffs, vehicles, monthly passes,
+settings, lots and memberships).
+
 **Notifications and push**
 `mark_notifications_read`, `notify_session_event` (trigger),
 `notify_overstays`, `register_device_token`, `unregister_device_token`,
@@ -126,6 +132,7 @@ granted to `authenticated` only.
 | `monthly_pass_payments`, `category_reservations` | active lot | RPCs |
 | `parking_settings` | active lot; anonymous only the first lot (login branding) | lot admins |
 | `notifications` | own rows, active lot (or global) | RPCs/triggers |
+| `audit_log` | platform admins | triggers and the `admin-users` Edge Function |
 | `device_tokens`, `web_push_subscriptions` | own rows | RPCs |
 
 The active lot comes from `current_lot_id()`: the `x-lot-id` header validated

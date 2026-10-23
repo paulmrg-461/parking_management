@@ -179,8 +179,8 @@ Run the notification/retention script every minute from the host:
 ```
 
 It renews monthly passes, raises expiry/overstay alerts, purges stale
-notifications and expired reservations/idempotency keys, and flushes pending
-push notifications. If your Postgres image supports `pg_cron`, the same jobs
+notifications, expired reservations, old client error reports and the audit log
+(365 days), cleans idempotency keys, and flushes pending push notifications. If your Postgres image supports `pg_cron`, the same jobs
 can run inside the database (see
 [`../README.md#data-retention`](../README.md#data-retention)).
 

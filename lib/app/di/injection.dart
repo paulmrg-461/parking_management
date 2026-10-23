@@ -7,6 +7,7 @@ import '../../core/lot/lot_context.dart';
 import '../../core/storage/secure_supabase_storage.dart';
 import '../../features/auth/domain/entities/auth_session.dart';
 import '../../features/auth/infrastructure/auth_local_data_source.dart';
+import 'modules/audit_module.dart';
 import 'modules/auth_module.dart';
 import 'modules/categories_module.dart';
 import 'modules/check_in_module.dart';
@@ -98,6 +99,7 @@ void registerAllModules(GetIt sl, AppConfig config) {
   registerCoreModule(sl, config);
   registerPlatformModule(sl);
   registerAuthModule(sl);
+  registerAuditModule(sl);
   registerUsersModule(sl);
   registerCategoriesModule(sl);
   registerTariffsModule(sl);

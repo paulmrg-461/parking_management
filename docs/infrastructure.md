@@ -135,7 +135,7 @@ Recommended crons:
 
 | Job | Where | Frequency |
 |---|---|---|
-| Pass renewal, expiry/overstay alerts, stale-notification and reservation purge, idempotency purge, push flush | `supabase/notifications-cron.sh` (host cron) or `pg_cron` when available | every minute / daily |
+| Pass renewal, expiry/overstay alerts, stale-notification/reservation/client-error/audit purge, idempotency purge, push flush | `supabase/notifications-cron.sh` (host cron) or `pg_cron` when available | every minute / daily |
 | Database + storage backup | `supabase/backup.sh` | nightly (see `setup-cloud.md`) |
 | Restore drill | `supabase/restore.sh` on a scratch host | quarterly |
 
