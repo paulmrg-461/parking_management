@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/config/app_config.dart';
 import '../../core/storage/key_value_store.dart';
+import '../../core/storage/secure_supabase_storage.dart';
 import '../../features/auth/domain/entities/auth_session.dart';
 import '../../features/auth/infrastructure/auth_local_data_source.dart';
 import 'modules/auth_module.dart';
@@ -46,6 +47,9 @@ Future<void> _initSupabase(AppConfig config) async {
   final supabase = await Supabase.initialize(
     url: config.supabaseUrl,
     anonKey: config.supabaseAnonKey,
+    authOptions: FlutterAuthClientOptions(
+      localStorage: SecureSupabaseStorage(),
+    ),
   );
   serviceLocator.registerSingleton<SupabaseClient>(supabase.client);
   // Hive and the SDK must agree on whether there is a session; a stale Hive
