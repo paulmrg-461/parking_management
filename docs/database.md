@@ -58,7 +58,7 @@ erDiagram
 | `monthly_passes` | Pass period/amount, auto-renew flag, renewal link. | yes |
 | `monthly_pass_payments` | Exactly one charge per pass (`pending`/`paid`/`waived`), collected into a shift. | yes |
 | `category_reservations` | Capacity hold for a plate (`active`/`used`/`cancelled`/`expired`). | yes |
-| `parking_settings` | Per-site branding (name, address, schedule, contacts, logo version/path) + `business_timezone`, `overstay_hours`, `lost_ticket_fee`. | yes |
+| `parking_settings` | Per-site branding (name, address, schedule, contacts, logo version/path) + `business_timezone`, `overstay_hours`, `lost_ticket_fee`, `evidence_retention_days`. | yes |
 | `notifications` | Per-user inbox rows (type, title, body, data, read/pushed state, dedupe key). | optional |
 | `device_tokens` | FCM tokens per user/device. | no |
 | `web_push_subscriptions` | Browser push endpoints (endpoint + p256dh + auth). | no |
@@ -113,6 +113,7 @@ settings, lots and memberships).
 
 **Helpers / infrastructure**
 `current_app_user_id`, `current_app_role`, `is_admin`, `require_app_user`,
+`is_lot_member`, `can_read_evidence`,
 `require_admin`, `current_lot_id`, `lot_from_header`, `is_lot_admin`,
 `require_lot_admin`, `resolve_lot`, `replay_idempotent`, `remember_idempotent`,
 `purge_expired_idempotency`, `purge_stale_notifications`,
@@ -127,13 +128,18 @@ settings, lots and memberships).
 | `lot_members` | own memberships or platform admin | via `set_lot_member` (platform admin) |
 | `users` | own profile or platform admin | via `admin-users` Edge Function |
 | `categories`, `tariffs`, `monthly_passes` | active lot | RPC/table writes by lot admins of the active lot |
-| `parking_sessions`, `evidence_photos` | active lot (evidence also in Storage) | only through RPCs |
+| `parking_sessions` | active lot | only through RPCs |
+| `evidence_photos` | active lot | only through RPCs (rows deleted by `evidence-archive`) |
 | `shifts`, `cash_movements`, `shift_adjustments` | own shift or lot admin, active lot | RPCs |
 | `monthly_pass_payments`, `category_reservations` | active lot | RPCs |
 | `parking_settings` | active lot; anonymous only the first lot (login branding) | lot admins |
 | `notifications` | own rows, active lot (or global) | RPCs/triggers |
 | `audit_log` | platform admins | triggers and the `admin-users` Edge Function |
 | `device_tokens`, `web_push_subscriptions` | own rows | RPCs |
+
+Evidence objects are special: Storage cannot forward `x-lot-id`, so the bucket
+policy uses `can_read_evidence(name)` (security definer) and grants access when
+the photo belongs to a session of a lot the user is a member of.
 
 The active lot comes from `current_lot_id()`: the **mandatory** `x-lot-id`
 header validated against `lot_members`. A missing or forged value raises

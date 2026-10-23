@@ -54,6 +54,9 @@ class _FakeRemote implements ParkingSettingsRemoteDataSource {
       phone: fields['phone'] as String? ?? settings.phone,
       website: fields['website'] as String? ?? settings.website,
       whatsapp: fields['whatsapp'] as String? ?? settings.whatsapp,
+      evidenceRetentionDays:
+          fields['evidence_retention_days'] as int? ??
+          settings.evidenceRetentionDays,
     );
     return settings;
   }
@@ -245,5 +248,23 @@ void main() {
     expect(logoPathForLot(1), 'logo_1');
     expect(logoPathForLot(2), 'logo_2');
     expect(logoPathForLot(1), isNot(logoPathForLot(2)));
+  });
+
+  test('Success: evidence retention round-trips through the payload', () async {
+    final repo = ParkingSettingsRepositoryImpl(
+      _FakeRemote(),
+      HiveParkingSettingsLocalDataSource(LotSession()),
+      outbox,
+    );
+
+    final saved = await repo.save(
+      const ParkingSettings(
+        name: 'Parqueadero Central',
+        evidenceRetentionDays: 90,
+      ),
+    );
+
+    expect(saved.evidenceRetentionDays, 90);
+    expect((await repo.loadCached())?.evidenceRetentionDays, 90);
   });
 }

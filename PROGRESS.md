@@ -218,6 +218,13 @@ The app is now a Supabase-only stack: FastAPI, Alembic, Dio and Redis are gone.
   archived at `openspec/changes/archive/2026-10-23-add-multi-parking-lot`
   and the capability lives in `openspec/specs/parking-lots`.
 
+- **Evidence retention**: `parking_settings.evidence_retention_days` (0 = keep,
+  editable in settings) plus the `evidence-archive` Edge Function, which
+  deletes Storage objects and rows for sessions past the window (service-role
+  only, daily cron, dry-run supported). Storage reads now use the
+  membership-based `can_read_evidence()` helper, since the Storage API does not
+  forward `x-lot-id`.
+
 ## Infra/tooling (not OpenSpec capabilities — repo scaffolding)
 
 - **Docker**: root `docker-compose.yml` includes the official self-hosted
@@ -258,7 +265,7 @@ The app is now a Supabase-only stack: FastAPI, Alembic, Dio and Redis are gone.
 
 ## Test counts
 
-- Flutter (`flutter test`): 502 passed (plus 1 integration test that runs only against a live stack). `flutter analyze`: 0 errors/warnings
+- Flutter (`flutter test`): 503 passed (plus 1 integration test that runs only against a live stack). `flutter analyze`: 0 errors/warnings
   (98 SDK-deprecation/const infos under the local Flutter 3.50 beta; CI pins
   3.49 where the baseline is clean).
 - SQL/compose: validated against the running Supabase stack and by

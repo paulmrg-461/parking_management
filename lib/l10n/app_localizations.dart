@@ -1268,6 +1268,18 @@ abstract class AppLocalizations {
   /// **'Configuración del parqueadero'**
   String get settingsTitle;
 
+  /// No description provided for @settingsEvidenceRetention.
+  ///
+  /// In es, this message translates to:
+  /// **'Retención de evidencias (días)'**
+  String get settingsEvidenceRetention;
+
+  /// No description provided for @settingsEvidenceRetentionHint.
+  ///
+  /// In es, this message translates to:
+  /// **'0 = conservar siempre. Las fotos más antiguas se borran automáticamente.'**
+  String get settingsEvidenceRetentionHint;
+
   /// No description provided for @settingsName.
   ///
   /// In es, this message translates to:

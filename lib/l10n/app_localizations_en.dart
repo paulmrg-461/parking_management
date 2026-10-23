@@ -639,6 +639,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsTitle => 'Parking settings';
 
   @override
+  String get settingsEvidenceRetention => 'Evidence retention (days)';
+
+  @override
+  String get settingsEvidenceRetentionHint =>
+      '0 = keep forever. Older photos are deleted automatically.';
+
+  @override
   String get settingsName => 'Name';
 
   @override

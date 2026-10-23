@@ -216,6 +216,8 @@
   "navMoreTooltip": "Más secciones de gestión",
 
   "settingsTitle": "Configuración del parqueadero",
+  "settingsEvidenceRetention": "Retención de evidencias (días)",
+  "settingsEvidenceRetentionHint": "0 = conservar siempre. Las fotos más antiguas se borran automáticamente.",
   "settingsName": "Nombre",
   "settingsAddress": "Dirección",
   "settingsSchedule": "Horario",

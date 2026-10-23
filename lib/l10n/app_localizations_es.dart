@@ -642,6 +642,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsTitle => 'Configuración del parqueadero';
 
   @override
+  String get settingsEvidenceRetention => 'Retención de evidencias (días)';
+
+  @override
+  String get settingsEvidenceRetentionHint =>
+      '0 = conservar siempre. Las fotos más antiguas se borran automáticamente.';
+
+  @override
   String get settingsName => 'Nombre';
 
   @override

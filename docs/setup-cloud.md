@@ -176,11 +176,15 @@ Run the notification/retention script every minute from the host:
 
 ```bash
 * * * * * cd /opt/parking && sh supabase/notifications-cron.sh >> /var/log/parking-cron.log 2>&1
+# daily, after the 02:30 backup; sites with retention_days = 0 are skipped
+40 3 * * * cd /opt/parking && sh supabase/evidence-archive.sh >> /var/log/parking-evidence.log 2>&1
 ```
 
 It renews monthly passes, raises expiry/overstay alerts, purges stale
 notifications, expired reservations, old client error reports and the audit log
-(365 days), cleans idempotency keys, and flushes pending push notifications. If your Postgres image supports `pg_cron`, the same jobs
+(365 days), cleans idempotency keys, and flushes pending push notifications.
+The daily evidence job deletes photos past each site's `evidence_retention_days`
+(zero keeps them forever). If your Postgres image supports `pg_cron`, the same jobs
 can run inside the database (see
 [`../README.md#data-retention`](../README.md#data-retention)).
 

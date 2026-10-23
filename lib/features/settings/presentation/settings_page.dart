@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -39,6 +40,7 @@ class _SettingsPageState extends State<SettingsPage> {
   late final TextEditingController _phone;
   late final TextEditingController _website;
   late final TextEditingController _whatsapp;
+  late final TextEditingController _evidenceRetention;
   var _seeded = false;
 
   @override
@@ -50,6 +52,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _phone = TextEditingController();
     _website = TextEditingController();
     _whatsapp = TextEditingController();
+    _evidenceRetention = TextEditingController();
     unawaited(context.read<SettingsCubit>().load());
   }
 
@@ -61,6 +64,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _phone.dispose();
     _website.dispose();
     _whatsapp.dispose();
+    _evidenceRetention.dispose();
     super.dispose();
   }
 
@@ -106,6 +110,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _phone.text = settings.phone;
     _website.text = settings.website;
     _whatsapp.text = settings.whatsapp;
+    _evidenceRetention.text = settings.evidenceRetentionDays.toString();
   }
 
   void _onSaved(BuildContext context, Object? result) {
@@ -170,6 +175,22 @@ class _SettingsPageState extends State<SettingsPage> {
             keyboardType: TextInputType.phone,
             decoration: InputDecoration(labelText: l10n.settingsWhatsapp),
           ),
+          TextFormField(
+            key: const Key('settings_evidence_retention'),
+            controller: _evidenceRetention,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: InputDecoration(
+              labelText: l10n.settingsEvidenceRetention,
+              helperText: l10n.settingsEvidenceRetentionHint,
+            ),
+            validator: (value) {
+              final days = int.tryParse((value ?? '').trim());
+              return days == null || days < 0 || days > 3650
+                  ? l10n.invalidAmount
+                  : null;
+            },
+          ),
           const SizedBox(height: Space.md),
           FilledButton(
             onPressed: () => _save(context, settings),
@@ -230,6 +251,8 @@ class _SettingsPageState extends State<SettingsPage> {
         phone: _phone.text.trim(),
         website: _website.text.trim(),
         whatsapp: _whatsapp.text.trim(),
+        evidenceRetentionDays:
+            int.tryParse(_evidenceRetention.text.trim()) ?? 0,
       ),
     );
   }

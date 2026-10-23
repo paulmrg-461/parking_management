@@ -117,7 +117,7 @@ types:
         index: 7
   ParkingSettings:
     typeId: 9
-    nextIndex: 7
+    nextIndex: 8
     fields:
       name:
         index: 0
@@ -133,3 +133,5 @@ types:
         index: 5
       logoVersion:
         index: 6
+      evidenceRetentionDays:
+        index: 7

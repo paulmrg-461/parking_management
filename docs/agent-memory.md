@@ -127,6 +127,19 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   `postgres`), so scheduling stays in the host cron; the README documents how
   to enable pg_cron if the deployment supports `cron.database_name`.
 
+## Evidence retention (latest)
+
+- `0033`: `parking_settings.evidence_retention_days` (0 = keep, ≤3650) + UI
+  field in settings.
+- `evidence-archive` Edge Function (service-role only, `days=`/`dry_run=`
+  params) deletes the Storage object then the row; cron script
+  `supabase/evidence-archive.sh` runs daily after the backup.
+- `0034`/`0035`: Storage cannot forward `x-lot-id`, so `can_read_evidence(path)`
+  (security definer) checks membership instead of `current_lot_id()`. The
+  first version returned 500 on downloads — keep the helper.
+- Storage answers DELETE on a missing object with 400 + `NoSuchKey`; treat it as
+  already deleted.
+
 ## Multi-lot contract (latest)
 
 - `0032`: `x-lot-id` is mandatory; missing/forged → `LotRequiredError`. The
@@ -176,7 +189,6 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 - `5.4` contract migration: drop the missing-header fallback once every client
   sends `x-lot-id`.
 - Optional polish: per-lot receipt footer beyond settings, lot filter on the
-  vehicle history UI, evidence-file archival, admin audit log and
-  Flutter↔Supabase e2e tests.
+  vehicle history UI, audit-log export, admin diagnostics screen.
 - Dev DB artifacts from smoke tests: lot `NORTH` ("Sede Norte") and user
   `norte2` (operator, PIN `123456`, member of lot 2). Safe to delete.

@@ -503,6 +503,20 @@ begin
     perform set_config('request.headers', saved, true);
 end $$;
 
+-- Evidence retention is a per-lot, bounded setting (0 = keep forever).
+do $$
+begin
+    if (select evidence_retention_days from public.parking_settings where lot_id = 1) <> 0 then
+        raise exception 'evidence retention must default to 0';
+    end if;
+    begin
+        update public.parking_settings set evidence_retention_days = -1 where lot_id = 1;
+        raise exception 'negative evidence retention was accepted';
+    exception when check_violation then
+        null;
+    end;
+end $$;
+
 -- Branding is per lot: only the active lot's row changes.
 set local request.headers = '{"x-lot-id":"2"}';
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
@@ -544,7 +558,7 @@ begin
          where schemaname = 'storage'
            and tablename = 'objects'
            and policyname = 'evidence_objects_read'
-           and qual like '%current_lot_id%'
+           and qual like '%can_read_evidence%'
     ) then
         raise exception 'evidence read policy is not scoped to the lot';
     end if;

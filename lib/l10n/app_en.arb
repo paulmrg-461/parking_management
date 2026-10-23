@@ -204,6 +204,8 @@
   "navMoreTooltip": "More management sections",
 
   "settingsTitle": "Parking settings",
+  "settingsEvidenceRetention": "Evidence retention (days)",
+  "settingsEvidenceRetentionHint": "0 = keep forever. Older photos are deleted automatically.",
   "settingsName": "Name",
   "settingsAddress": "Address",
   "settingsSchedule": "Schedule",

@@ -178,6 +178,23 @@ a vehicle outside the first page is still found; the query shows a proper
 "no plate matches" state. Discounts appear in the report with their reason,
 admin and timestamp.
 
+## Evidence retention
+
+Each site can keep check-in photos for a limited time: `Retención de evidencias
+(días)` in the settings form (`0` = keep forever, the default). The
+`evidence-archive` Edge Function deletes the Storage object and its row for
+sessions older than that window; it is service-role-only and meant to run
+daily:
+
+```bash
+sh supabase/evidence-archive.sh            # real run
+DRY_RUN=1 sh supabase/evidence-archive.sh  # report only
+DAYS=30 sh supabase/evidence-archive.sh    # override every site
+```
+
+Backups (`supabase/backup.sh`) are the archive of record: take one before
+shrinking a retention window.
+
 ## Audit log
 
 Admins have `/audit`: every change to users, categories, tariffs, vehicles,
