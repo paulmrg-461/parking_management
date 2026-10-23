@@ -14,6 +14,17 @@ reports.
 There is no application server: the client talks to Supabase Auth, PostgREST and
 Storage directly, and business rules live in PostgreSQL functions.
 
+## Documentation
+
+| Guide | Contents |
+|---|---|
+| [`docs/setup-local.md`](docs/setup-local.md) | Full local setup from zero: secrets, stack, admin user, Flutter, tests, troubleshooting. |
+| [`docs/setup-cloud.md`](docs/setup-cloud.md) | Production on a VM: TLS proxy, hardening, backups, cron, push credentials, Android release, upgrades. |
+| [`docs/architecture.md`](docs/architecture.md) | Components, Flutter layers and the check-in/billing/shift/notification/multi-site flows. |
+| [`docs/infrastructure.md`](docs/infrastructure.md) | Services, ports, volumes, env vars, operations, scaling and CI. |
+| [`docs/database.md`](docs/database.md) | ER diagram, tables, RPC catalog, RLS model and migration rules. |
+| [`docs/agent-memory.md`](docs/agent-memory.md) | Current state, invariants and gotchas for the next session. |
+
 ## Architecture
 
 ```
@@ -60,7 +71,10 @@ sh supabase/create-operator.sh admin 123456 admin
 
 Migrations in `supabase/migrations/` are applied once by the
 `supabase-migrate` one-shot service and tracked in `public.schema_migrations`.
-See `supabase/README.md` for operations, resets and security notes.
+See [`docs/setup-local.md`](docs/setup-local.md) for the full walkthrough
+(requirements, emulator host, tests, troubleshooting) and
+[`docs/infrastructure.md`](docs/infrastructure.md) for operations, resets and
+security notes.
 
 ## Flutter
 
