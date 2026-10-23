@@ -187,14 +187,20 @@ class CheckOutCubit extends ResilientCubit<CheckOutState> {
     _searchTimer = Timer(searchDebounce, () => _applySearch(query));
   }
 
-  Future<void> checkOut(int sessionId) async {
+  Future<void> checkOut(
+    int sessionId, {
+    String paymentMethod = 'cash',
+  }) async {
     final current = state;
     if (current is! CheckOutLoaded) {
       return;
     }
     emit(current.copyWith(submission: const SubmissionInProgress()));
     try {
-      final receipt = await _checkOutVehicle(sessionId);
+      final receipt = await _checkOutVehicle(
+        sessionId,
+        paymentMethod: paymentMethod,
+      );
       emit(
         _latest(current).copyWith(
           sessions: await _sessionsAfterCheckOut(sessionId),

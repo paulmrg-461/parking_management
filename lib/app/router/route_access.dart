@@ -12,6 +12,7 @@ const operatorRoutes = {
   '/check-in',
   '/check-out',
   '/notifications',
+  '/history',
   '/scan',
   '/contact',
 };

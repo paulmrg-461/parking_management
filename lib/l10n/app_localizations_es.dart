@@ -273,6 +273,36 @@ class AppLocalizationsEs extends AppLocalizations {
   String get notificationsMarkAll => 'Marcar todo leído';
 
   @override
+  String get navHistory => 'Historial';
+
+  @override
+  String get vehicleHistoryTitle => 'Historial de vehículo';
+
+  @override
+  String get vehicleHistoryPrompt =>
+      'Busca una placa para ver sus entradas y salidas';
+
+  @override
+  String get vehicleHistoryVisits => 'Visitas';
+
+  @override
+  String get vehicleHistoryTotalSpent => 'Total pagado';
+
+  @override
+  String get vehicleHistorySessions => 'Movimientos';
+
+  @override
+  String get vehicleHistoryNoSessions => 'Sin movimientos registrados';
+
+  @override
+  String vehicleHistoryDuration(String duration) {
+    return 'Duración: $duration';
+  }
+
+  @override
+  String get vehicleHistoryOpen => 'En curso';
+
+  @override
   String get navMore => 'Más';
 
   @override
@@ -559,6 +589,30 @@ class AppLocalizationsEs extends AppLocalizations {
   String get receiptAmount => 'Total cobrado';
 
   @override
+  String get receiptPayment => 'Pago';
+
+  @override
+  String get paymentMethodTitle => 'Método de pago';
+
+  @override
+  String get paymentCash => 'Efectivo';
+
+  @override
+  String get paymentCard => 'Tarjeta';
+
+  @override
+  String get paymentTransfer => 'Transferencia';
+
+  @override
+  String get paymentMonthlyPass => 'Mensualidad';
+
+  @override
+  String get paymentExempt => 'Exento';
+
+  @override
+  String get paymentUnknown => 'Otro';
+
+  @override
   String get receiptTicket => 'Ticket';
 
   @override
@@ -842,6 +896,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get reportsRevenueByDay => 'Ingresos por día';
+
+  @override
+  String get reportsRevenueByPayment => 'Ingresos por método de pago';
 
   @override
   String get reportsRevenueByCategory => 'Ingresos por categoría';

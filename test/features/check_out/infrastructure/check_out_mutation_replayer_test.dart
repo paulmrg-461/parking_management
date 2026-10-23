@@ -14,6 +14,7 @@ class _FakeRemote implements CheckOutRemoteDataSource {
   int? sessionId;
   DateTime? clientExitTime;
   String? idempotencyKey;
+  String? paymentMethod;
 
   @override
   Future<PagedResult<OpenSession>> listOpenSessions({
@@ -26,10 +27,12 @@ class _FakeRemote implements CheckOutRemoteDataSource {
     int sessionId, {
     DateTime? clientExitTime,
     String? idempotencyKey,
+    String paymentMethod = 'cash',
   }) async {
     this.sessionId = sessionId;
     this.clientExitTime = clientExitTime;
     this.idempotencyKey = idempotencyKey;
+    this.paymentMethod = paymentMethod;
     if (error != null) {
       throw error!;
     }
@@ -60,13 +63,14 @@ void main() {
 
       await CheckOutMutationReplayer(remote).replay(
         _queued(
-          '{"client_exit_time":"2026-01-01T10:00:00.000","client_ref":"k1"}',
+          '{"client_exit_time":"2026-01-01T10:00:00.000","client_ref":"k1","payment_method":"card"}',
         ),
       );
 
       expect(remote.sessionId, 5);
       expect(remote.clientExitTime, DateTime.parse('2026-01-01T10:00:00.000'));
       expect(remote.idempotencyKey, 'k1');
+      expect(remote.paymentMethod, 'card');
     },
   );
 
@@ -78,7 +82,7 @@ void main() {
     await expectLater(
       CheckOutMutationReplayer(remote).replay(
         _queued(
-          '{"client_exit_time":"2026-01-01T10:00:00.000","client_ref":"k1"}',
+          '{"client_exit_time":"2026-01-01T10:00:00.000","client_ref":"k1","payment_method":"card"}',
         ),
       ),
       throwsA(const ValidationFailure('Session already closed')),

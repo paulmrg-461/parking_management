@@ -4,6 +4,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
+import '../../../core/receipt/payment_method.dart';
 import '../../../core/receipt/receipt_data.dart';
 import '../../../core/utils/cop_formatter.dart';
 import '../../settings/domain/entities/parking_settings.dart';
@@ -88,6 +89,8 @@ class SystemDialogReceiptPrinter implements ReceiptPrinter {
           pw.Divider(),
           _row(context, 'Total', CopFormatter.format(data.amountCharged!), bold: true),
         ],
+        if (data.isCheckOut && !data.pendingSync && data.paymentMethod != null)
+          _row(context, 'Pago', paymentMethodLabelEs(data.paymentMethod)),
         if (data.isCheckOut && !data.pendingSync && data.ticketNumber != null)
           _row(context, 'Ticket', data.ticketNumber!),
         pw.Divider(),

@@ -96,6 +96,15 @@ class _Dashboard extends StatelessWidget {
             onEntry: () => context.go('/check-in'),
             onExit: () => context.go('/check-out'),
           ),
+          const SizedBox(height: Space.sm),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: () => context.go('/history'),
+              icon: const Icon(Icons.history),
+              label: Text(l10n.navHistory),
+            ),
+          ),
           if (management.isNotEmpty) ...[
             const SizedBox(height: Space.xl),
             ManagementShortcuts(destinations: management),

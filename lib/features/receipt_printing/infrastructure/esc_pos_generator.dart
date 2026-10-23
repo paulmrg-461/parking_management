@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../../../core/receipt/payment_method.dart';
 import '../../../core/receipt/receipt_data.dart';
 import '../../../core/utils/cop_formatter.dart';
 import '../../settings/domain/entities/parking_settings.dart';
@@ -42,6 +43,10 @@ class EscPosGenerator {
     } else if (data.isCheckOut && data.amountCharged != null) {
       _rule(bytes);
       _row(bytes, 'Total', CopFormatter.format(data.amountCharged!), bold: true);
+    }
+
+    if (data.isCheckOut && !data.pendingSync && data.paymentMethod != null) {
+      _row(bytes, 'Pago', paymentMethodLabelEs(data.paymentMethod));
     }
 
     if (data.isCheckOut && !data.pendingSync && data.ticketNumber != null) {

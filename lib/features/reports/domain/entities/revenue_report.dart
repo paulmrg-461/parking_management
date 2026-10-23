@@ -27,6 +27,17 @@ class CategoryRevenue extends Equatable {
   List<Object?> get props => [categoryId, categoryName, amount];
 }
 
+/// Revenue collected through one payment method.
+class PaymentRevenue extends Equatable {
+  const PaymentRevenue({required this.paymentMethod, required this.amount});
+
+  final String paymentMethod;
+  final int amount;
+
+  @override
+  List<Object?> get props => [paymentMethod, amount];
+}
+
 /// Revenue report for a date range, as returned by
 /// `rpc/report_revenue`.
 class RevenueReport extends Equatable {
@@ -36,6 +47,7 @@ class RevenueReport extends Equatable {
     required this.total,
     required this.byDay,
     required this.byCategory,
+    this.byPayment = const [],
   });
 
   final DateTime startDate;
@@ -43,7 +55,9 @@ class RevenueReport extends Equatable {
   final int total;
   final List<DailyRevenue> byDay;
   final List<CategoryRevenue> byCategory;
+  final List<PaymentRevenue> byPayment;
 
   @override
-  List<Object?> get props => [startDate, endDate, total, byDay, byCategory];
+  List<Object?> get props =>
+      [startDate, endDate, total, byDay, byCategory, byPayment];
 }

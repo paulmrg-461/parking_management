@@ -269,6 +269,36 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationsMarkAll => 'Mark all read';
 
   @override
+  String get navHistory => 'History';
+
+  @override
+  String get vehicleHistoryTitle => 'Vehicle history';
+
+  @override
+  String get vehicleHistoryPrompt =>
+      'Search a plate to see its entries and exits';
+
+  @override
+  String get vehicleHistoryVisits => 'Visits';
+
+  @override
+  String get vehicleHistoryTotalSpent => 'Total paid';
+
+  @override
+  String get vehicleHistorySessions => 'Sessions';
+
+  @override
+  String get vehicleHistoryNoSessions => 'No sessions recorded';
+
+  @override
+  String vehicleHistoryDuration(String duration) {
+    return 'Duration: $duration';
+  }
+
+  @override
+  String get vehicleHistoryOpen => 'In progress';
+
+  @override
   String get navMore => 'More';
 
   @override
@@ -555,6 +585,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get receiptAmount => 'Amount charged';
 
   @override
+  String get receiptPayment => 'Payment';
+
+  @override
+  String get paymentMethodTitle => 'Payment method';
+
+  @override
+  String get paymentCash => 'Cash';
+
+  @override
+  String get paymentCard => 'Card';
+
+  @override
+  String get paymentTransfer => 'Transfer';
+
+  @override
+  String get paymentMonthlyPass => 'Monthly pass';
+
+  @override
+  String get paymentExempt => 'Exempt';
+
+  @override
+  String get paymentUnknown => 'Other';
+
+  @override
   String get receiptTicket => 'Ticket';
 
   @override
@@ -837,6 +891,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reportsRevenueByDay => 'Revenue by day';
+
+  @override
+  String get reportsRevenueByPayment => 'Revenue by payment method';
 
   @override
   String get reportsRevenueByCategory => 'Revenue by category';

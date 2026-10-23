@@ -72,6 +72,11 @@ The app is now a Supabase-only stack: FastAPI, Alembic, Dio and Redis are gone.
   Function (service-role protected) driven by `supabase/notifications-cron.sh`.
   Flutter FCM registration is opt-in via Firebase dart-defines; without it the
   in-app center still works.
+- **Operations**: check-out records the payment method (`cash`, `card`,
+  `transfer`, `monthly_pass`, `exempt`; passes force `monthly_pass`) and
+  receipts/reports show it; `/history` provides a per-plate timeline with
+  visits/total spent and an offline cache; `notify_overstays()` alerts admins
+  once a day for vehicles past `parking_settings.overstay_hours` (default 24).
 - **Operational notes**: pre-migration data requires a manual `pg_dump`/restore;
   Android release builds need HTTPS in front of Envoy; `idempotency_keys` has
   no automatic TTL purge yet; run the notifications cron for pass-expiry alerts
@@ -164,8 +169,8 @@ The app is now a Supabase-only stack: FastAPI, Alembic, Dio and Redis are gone.
 
 ## Test counts
 
-- Flutter (`flutter test`): 411 passed. `flutter analyze`: 0 errors/warnings
-  (87 SDK-deprecation/const infos under the local Flutter 3.50 beta; CI pins
+- Flutter (`flutter test`): 416 passed. `flutter analyze`: 0 errors/warnings
+  (93 SDK-deprecation/const infos under the local Flutter 3.50 beta; CI pins
   3.49 where the baseline is clean).
 - SQL/compose: validated against the running Supabase stack (migrations,
   RLS, RPC idempotency, Edge Function admin checks).

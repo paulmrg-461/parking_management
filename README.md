@@ -97,7 +97,9 @@ Function.
 
 **In-app (works out of the box):** PostgreSQL triggers create rows in
 `public.notifications` for admin check-in/check-out events; monthly pass
-expiry alerts come from `notify_expiring_monthly_passes()`. The Flutter app
+expiry alerts come from `notify_expiring_monthly_passes()` and overstay alerts
+from `notify_overstays()` (default 24 h, configurable in
+`parking_settings.overstay_hours`). The Flutter app
 subscribes to `public.notifications` through Supabase Realtime (RLS-scoped),
 shows a bell with the unread count and an inbox at `/notifications`, and shows
 a banner when a new row arrives.
@@ -127,6 +129,14 @@ The device token is registered automatically after login. Without
 `FCM_ENABLED`/Firebase options the app still gets in-app notifications; web
 push additionally needs `firebase-messaging-sw.js` and a VAPID key
 (`FCM_VAPID_KEY`).
+
+## Check-out, payments and history
+
+Check-out asks for the payment method (cash, card, transfer, monthly pass or
+exempt); monthly passes override the selection and charge zero. Revenue reports
+break down income by payment method. The `/history` screen (also linked from
+Home) looks up a plate and shows its visits, total spent, open-session flag and
+the latest sessions, with an offline cache per plate.
 
 ## Billing rules
 

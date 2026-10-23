@@ -37,6 +37,9 @@ final _revenue = RevenueReport(
   byCategory: const [
     CategoryRevenue(categoryId: 1, categoryName: 'Car', amount: 100000),
   ],
+  byPayment: const [
+    PaymentRevenue(paymentMethod: 'cash', amount: 100000),
+  ],
 );
 
 const _occupancy = OccupancyReport(
@@ -69,8 +72,12 @@ void main() {
     await _pump(tester);
 
     expect(find.text('\$150.000'), findsOneWidget);
-    expect(find.text('Vehículos dentro: 7'), findsOneWidget);
     expect(find.text('Ingresos por categoría'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Efectivo'), 200);
+    expect(find.text('Ingresos por método de pago'), findsOneWidget);
+    expect(find.text('Efectivo'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Vehículos dentro: 7'), 200);
+    expect(find.text('Vehículos dentro: 7'), findsOneWidget);
   });
 
   testWidgets('Failure: an error offers retry that reloads', (tester) async {

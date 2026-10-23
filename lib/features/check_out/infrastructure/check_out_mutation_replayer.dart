@@ -19,6 +19,7 @@ class CheckOutMutationReplayer extends MutationReplayer {
       mutation.entityId!,
       clientExitTime: DateTime.parse(payload['client_exit_time'] as String),
       idempotencyKey: payload['client_ref'] as String?,
+      paymentMethod: payload['payment_method'] as String? ?? 'cash',
     );
   }
 }

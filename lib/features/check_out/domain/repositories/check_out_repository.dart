@@ -12,5 +12,8 @@ abstract class CheckOutRepository {
   /// Closes [sessionId] using the backend clock. Offline, the attempt time
   /// is queued as `client_exit_time` and replayed by
   /// `CheckOutMutationReplayer`.
-  Future<CheckOutReceipt> checkOut(int sessionId);
+  Future<CheckOutReceipt> checkOut(
+    int sessionId, {
+    String paymentMethod = 'cash',
+  });
 }

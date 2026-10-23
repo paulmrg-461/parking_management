@@ -29,6 +29,18 @@ Map<String, dynamic> _$CategoryRevenueDtoToJson(CategoryRevenueDto instance) =>
       'amount': instance.amount,
     };
 
+PaymentRevenueDto _$PaymentRevenueDtoFromJson(Map<String, dynamic> json) =>
+    PaymentRevenueDto(
+      paymentMethod: json['payment_method'] as String,
+      amount: (json['amount'] as num).toInt(),
+    );
+
+Map<String, dynamic> _$PaymentRevenueDtoToJson(PaymentRevenueDto instance) =>
+    <String, dynamic>{
+      'payment_method': instance.paymentMethod,
+      'amount': instance.amount,
+    };
+
 RevenueReportDto _$RevenueReportDtoFromJson(Map<String, dynamic> json) =>
     RevenueReportDto(
       startDate: json['start_date'] as String,
@@ -40,6 +52,13 @@ RevenueReportDto _$RevenueReportDtoFromJson(Map<String, dynamic> json) =>
       byCategory: (json['by_category'] as List<dynamic>)
           .map((e) => CategoryRevenueDto.fromJson(e as Map<String, dynamic>))
           .toList(),
+      byPayment:
+          (json['by_payment'] as List<dynamic>?)
+              ?.map(
+                (e) => PaymentRevenueDto.fromJson(e as Map<String, dynamic>),
+              )
+              .toList() ??
+          [],
     );
 
 Map<String, dynamic> _$RevenueReportDtoToJson(RevenueReportDto instance) =>
@@ -49,4 +68,5 @@ Map<String, dynamic> _$RevenueReportDtoToJson(RevenueReportDto instance) =>
       'total': instance.total,
       'by_day': instance.byDay,
       'by_category': instance.byCategory,
+      'by_payment': instance.byPayment,
     };

@@ -28,18 +28,26 @@ class CheckOutRepositoryImpl implements CheckOutRepository {
   }) => _remote.listOpenSessions(limit: limit, offset: offset);
 
   @override
-  Future<CheckOutReceipt> checkOut(int sessionId) async {
+  Future<CheckOutReceipt> checkOut(
+    int sessionId, {
+    String paymentMethod = 'cash',
+  }) async {
     // Same key for the online attempt and any queued replay: a response lost
     // after the server committed must not become a dead letter on retry.
     final clientRef = newClientRef();
     final exitTime = DateTime.now().toUtc();
     try {
-      return await _remote.checkOut(sessionId, idempotencyKey: clientRef);
+      return await _remote.checkOut(
+        sessionId,
+        idempotencyKey: clientRef,
+        paymentMethod: paymentMethod,
+      );
     } on NetworkFailure {
       return _queueCheckOut(
         sessionId,
         clientRef: clientRef,
         exitTime: exitTime,
+        paymentMethod: paymentMethod,
       );
     }
   }
@@ -51,6 +59,7 @@ class CheckOutRepositoryImpl implements CheckOutRepository {
     int sessionId, {
     required String clientRef,
     required DateTime exitTime,
+    required String paymentMethod,
   }) async {
     await _outbox.enqueue(
       PendingMutation(
@@ -60,6 +69,7 @@ class CheckOutRepositoryImpl implements CheckOutRepository {
         payloadJson: jsonEncode({
           'client_exit_time': exitTime.toIso8601String(),
           'client_ref': clientRef,
+          'payment_method': paymentMethod,
         }),
         enqueuedAt: exitTime,
       ),
@@ -74,6 +84,7 @@ class CheckOutRepositoryImpl implements CheckOutRepository {
       exitTime: exitTime,
       amountCharged: null,
       ticketNumber: null,
+      paymentMethod: paymentMethod,
       pendingSync: true,
     );
   }

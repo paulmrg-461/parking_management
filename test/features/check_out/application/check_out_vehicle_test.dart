@@ -16,7 +16,10 @@ class _FakeRepository implements CheckOutRepository {
   }) async => const PagedResult([]);
 
   @override
-  Future<CheckOutReceipt> checkOut(int sessionId) async {
+  Future<CheckOutReceipt> checkOut(
+    int sessionId, {
+    String paymentMethod = 'cash',
+  }) async {
     checkedOut.add(sessionId);
     return CheckOutReceipt(
       id: sessionId,

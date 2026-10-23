@@ -49,6 +49,27 @@ class CategoryRevenueDto {
 }
 
 @JsonSerializable()
+class PaymentRevenueDto {
+  const PaymentRevenueDto({
+    required this.paymentMethod,
+    required this.amount,
+  });
+
+  factory PaymentRevenueDto.fromJson(Map<String, dynamic> json) =>
+      _$PaymentRevenueDtoFromJson(json);
+
+  @JsonKey(name: 'payment_method')
+  final String paymentMethod;
+
+  final int amount;
+
+  Map<String, dynamic> toJson() => _$PaymentRevenueDtoToJson(this);
+
+  PaymentRevenue toDomain() =>
+      PaymentRevenue(paymentMethod: paymentMethod, amount: amount);
+}
+
+@JsonSerializable()
 class RevenueReportDto {
   const RevenueReportDto({
     required this.startDate,
@@ -56,6 +77,7 @@ class RevenueReportDto {
     required this.total,
     required this.byDay,
     required this.byCategory,
+    this.byPayment = const [],
   });
 
   factory RevenueReportDto.fromJson(Map<String, dynamic> json) =>
@@ -75,6 +97,9 @@ class RevenueReportDto {
   @JsonKey(name: 'by_category')
   final List<CategoryRevenueDto> byCategory;
 
+  @JsonKey(name: 'by_payment', defaultValue: [])
+  final List<PaymentRevenueDto> byPayment;
+
   Map<String, dynamic> toJson() => _$RevenueReportDtoToJson(this);
 
   RevenueReport toDomain() => RevenueReport(
@@ -83,5 +108,6 @@ class RevenueReportDto {
     total: total,
     byDay: byDay.map((dto) => dto.toDomain()).toList(),
     byCategory: byCategory.map((dto) => dto.toDomain()).toList(),
+    byPayment: byPayment.map((dto) => dto.toDomain()).toList(),
   );
 }

@@ -4,6 +4,7 @@ import '../l10n/l10n.dart';
 import '../receipt/receipt_data.dart';
 import '../theme/status_colors.dart';
 import '../theme/tokens.dart';
+import '../receipt/payment_method.dart';
 import '../utils/formatters.dart';
 
 export '../receipt/receipt_data.dart';
@@ -114,6 +115,16 @@ class ReceiptSummaryDialog extends StatelessWidget {
                 _AmountBlock(
                   amount: data.amountCharged!,
                   label: l10n.receiptAmount,
+                ),
+              if (data.isCheckOut &&
+                  !data.pendingSync &&
+                  data.paymentMethod != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: Space.md),
+                  child: ReceiptRow(
+                    label: l10n.receiptPayment,
+                    value: paymentMethodLabel(l10n, data.paymentMethod),
+                  ),
                 ),
               if (data.isCheckOut &&
                   !data.pendingSync &&
@@ -266,6 +277,13 @@ class ReceiptCard extends StatelessWidget {
           _PendingNotice(message: l10n.receiptQueued, status: status)
         else if (data.isCheckOut && data.amountCharged != null)
           _AmountBlock(amount: data.amountCharged!, label: l10n.receiptAmount),
+        if (data.isCheckOut &&
+            !data.pendingSync &&
+            data.paymentMethod != null)
+          ReceiptRow(
+            label: l10n.receiptPayment,
+            value: paymentMethodLabel(l10n, data.paymentMethod),
+          ),
         if (data.isCheckOut && !data.pendingSync && data.ticketNumber != null)
           Padding(
             padding: const EdgeInsets.only(top: Space.md),

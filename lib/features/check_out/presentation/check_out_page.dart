@@ -16,7 +16,9 @@ import '../../receipt_printing/presentation/receipt_print_sheet.dart';
 import '../../notifications/presentation/notification_bell.dart';
 import '../application/check_out_cubit.dart';
 import '../domain/entities/check_out_receipt.dart';
+import '../../../core/receipt/payment_method.dart';
 import '../domain/entities/open_session.dart';
+import 'payment_method_dialog.dart';
 
 /// Lists currently open parking sessions (plates resolved by the cubit),
 /// lets an operator search by plate (debounced in the cubit) and close one
@@ -104,6 +106,7 @@ class _CheckOutPageState extends State<CheckOutPage> {
     exitTime: receipt.exitTime,
     amountCharged: receipt.amountCharged,
     ticketNumber: receipt.ticketNumber,
+    paymentMethod: receipt.paymentMethod,
     pendingSync: receipt.pendingSync,
   );
 }
@@ -189,26 +192,11 @@ class _SessionTile extends StatelessWidget {
 
   Future<void> _confirmCheckOut(BuildContext context) async {
     final cubit = context.read<CheckOutCubit>();
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(context.l10n.checkOutCharge),
-        content: Text(context.l10n.checkOutConfirm(plate)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(context.l10n.actionCancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(context.l10n.actionConfirm),
-          ),
-        ],
-      ),
-    );
-    if (confirmed == true) {
-      await cubit.checkOut(session.id);
+    final method = await showPaymentMethodDialog(context, plate: plate);
+    if (method == null) {
+      return;
     }
+    await cubit.checkOut(session.id, paymentMethod: method.wire);
   }
 }
 

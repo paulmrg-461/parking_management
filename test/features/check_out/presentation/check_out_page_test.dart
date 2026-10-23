@@ -29,7 +29,10 @@ class _FakeCheckOutRepository implements CheckOutRepository {
   ]);
 
   @override
-  Future<CheckOutReceipt> checkOut(int sessionId) async {
+  Future<CheckOutReceipt> checkOut(
+    int sessionId, {
+    String paymentMethod = 'cash',
+  }) async {
     final error = checkOutError;
     if (error != null) throw error;
     return CheckOutReceipt(

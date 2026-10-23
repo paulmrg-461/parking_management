@@ -29,6 +29,8 @@ class FakeCheckOutRepository implements CheckOutRepository {
   }
 
   @override
-  Future<CheckOutReceipt> checkOut(int sessionId) =>
-      throw UnimplementedError();
+  Future<CheckOutReceipt> checkOut(
+    int sessionId, {
+    String paymentMethod = 'cash',
+  }) => throw UnimplementedError();
 }

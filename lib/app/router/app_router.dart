@@ -15,6 +15,8 @@ import '../../features/check_out/presentation/check_out_page.dart';
 import '../../features/home/application/dashboard_cubit.dart';
 import '../../features/notifications/application/notifications_cubit.dart';
 import '../../features/notifications/presentation/notifications_page.dart';
+import '../../features/vehicle_history/application/vehicle_history_cubit.dart';
+import '../../features/vehicle_history/presentation/vehicle_history_page.dart';
 import '../../features/home/presentation/home_page.dart';
 import '../../features/plate_scanning/application/plate_scanning_cubit.dart';
 import '../../features/plate_scanning/domain/repositories/plate_image_capture.dart';
@@ -107,6 +109,13 @@ final GoRoute _homeRoute = GoRoute(
     GoRoute(
       path: 'notifications',
       builder: (context, state) => const NotificationsPage(),
+    ),
+    GoRoute(
+      path: 'history',
+      builder: (context, state) => BlocProvider<VehicleHistoryCubit>(
+        create: (_) => serviceLocator<VehicleHistoryCubit>(),
+        child: const VehicleHistoryPage(),
+      ),
     ),
     // Admin-only sections are deferred: operators never download them.
     _deferred('users', users.loadLibrary, () => users.buildUsersEntry()),

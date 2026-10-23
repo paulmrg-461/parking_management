@@ -17,6 +17,7 @@ abstract class CheckOutRemoteDataSource {
     int sessionId, {
     DateTime? clientExitTime,
     String? idempotencyKey,
+    String paymentMethod = 'cash',
   });
 }
 
@@ -54,12 +55,14 @@ class SupabaseCheckOutRemoteDataSource implements CheckOutRemoteDataSource {
     int sessionId, {
     DateTime? clientExitTime,
     String? idempotencyKey,
+    String paymentMethod = 'cash',
   }) async {
     try {
       final result = await _client.rpc(
         'check_out',
         params: {
           'p_session_id': sessionId,
+          'p_payment_method': paymentMethod,
           if (clientExitTime != null)
             'p_client_exit_time': clientExitTime.toUtc().toIso8601String(),
           'p_idempotency_key': ?idempotencyKey,

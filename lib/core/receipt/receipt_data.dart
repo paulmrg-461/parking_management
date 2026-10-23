@@ -13,6 +13,7 @@ class ReceiptData {
     this.photoCount,
     this.amountCharged,
     this.ticketNumber,
+    this.paymentMethod,
     this.pendingSync = false,
   });
 
@@ -23,6 +24,7 @@ class ReceiptData {
   final int? photoCount;
   final int? amountCharged;
   final String? ticketNumber;
+  final String? paymentMethod;
   final bool pendingSync;
 
   bool get isCheckOut => kind == ReceiptKind.checkOut;

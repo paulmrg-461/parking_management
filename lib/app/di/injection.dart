@@ -21,6 +21,7 @@ import 'modules/settings_module.dart';
 import 'modules/sync_module.dart';
 import 'modules/tariffs_module.dart';
 import 'modules/users_module.dart';
+import 'modules/vehicle_history_module.dart';
 import 'modules/vehicles_module.dart';
 
 final GetIt serviceLocator = GetIt.instance;
@@ -83,6 +84,7 @@ void registerAllModules(GetIt sl, AppConfig config) {
   registerCategoriesModule(sl);
   registerTariffsModule(sl);
   registerVehiclesModule(sl);
+  registerVehicleHistoryModule(sl);
   registerPlateScanningModule(sl);
   registerReceiptPrintingModule(sl);
   registerCheckInModule(sl);

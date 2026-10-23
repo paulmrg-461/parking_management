@@ -578,6 +578,60 @@ abstract class AppLocalizations {
   /// **'Marcar todo leído'**
   String get notificationsMarkAll;
 
+  /// No description provided for @navHistory.
+  ///
+  /// In es, this message translates to:
+  /// **'Historial'**
+  String get navHistory;
+
+  /// No description provided for @vehicleHistoryTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Historial de vehículo'**
+  String get vehicleHistoryTitle;
+
+  /// No description provided for @vehicleHistoryPrompt.
+  ///
+  /// In es, this message translates to:
+  /// **'Busca una placa para ver sus entradas y salidas'**
+  String get vehicleHistoryPrompt;
+
+  /// No description provided for @vehicleHistoryVisits.
+  ///
+  /// In es, this message translates to:
+  /// **'Visitas'**
+  String get vehicleHistoryVisits;
+
+  /// No description provided for @vehicleHistoryTotalSpent.
+  ///
+  /// In es, this message translates to:
+  /// **'Total pagado'**
+  String get vehicleHistoryTotalSpent;
+
+  /// No description provided for @vehicleHistorySessions.
+  ///
+  /// In es, this message translates to:
+  /// **'Movimientos'**
+  String get vehicleHistorySessions;
+
+  /// No description provided for @vehicleHistoryNoSessions.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin movimientos registrados'**
+  String get vehicleHistoryNoSessions;
+
+  /// No description provided for @vehicleHistoryDuration.
+  ///
+  /// In es, this message translates to:
+  /// **'Duración: {duration}'**
+  String vehicleHistoryDuration(String duration);
+
+  /// No description provided for @vehicleHistoryOpen.
+  ///
+  /// In es, this message translates to:
+  /// **'En curso'**
+  String get vehicleHistoryOpen;
+
   /// No description provided for @navMore.
   ///
   /// In es, this message translates to:
@@ -1076,6 +1130,54 @@ abstract class AppLocalizations {
   /// **'Total cobrado'**
   String get receiptAmount;
 
+  /// No description provided for @receiptPayment.
+  ///
+  /// In es, this message translates to:
+  /// **'Pago'**
+  String get receiptPayment;
+
+  /// No description provided for @paymentMethodTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Método de pago'**
+  String get paymentMethodTitle;
+
+  /// No description provided for @paymentCash.
+  ///
+  /// In es, this message translates to:
+  /// **'Efectivo'**
+  String get paymentCash;
+
+  /// No description provided for @paymentCard.
+  ///
+  /// In es, this message translates to:
+  /// **'Tarjeta'**
+  String get paymentCard;
+
+  /// No description provided for @paymentTransfer.
+  ///
+  /// In es, this message translates to:
+  /// **'Transferencia'**
+  String get paymentTransfer;
+
+  /// No description provided for @paymentMonthlyPass.
+  ///
+  /// In es, this message translates to:
+  /// **'Mensualidad'**
+  String get paymentMonthlyPass;
+
+  /// No description provided for @paymentExempt.
+  ///
+  /// In es, this message translates to:
+  /// **'Exento'**
+  String get paymentExempt;
+
+  /// No description provided for @paymentUnknown.
+  ///
+  /// In es, this message translates to:
+  /// **'Otro'**
+  String get paymentUnknown;
+
   /// No description provided for @receiptTicket.
   ///
   /// In es, this message translates to:
@@ -1573,6 +1675,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Ingresos por día'**
   String get reportsRevenueByDay;
+
+  /// No description provided for @reportsRevenueByPayment.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresos por método de pago'**
+  String get reportsRevenueByPayment;
 
   /// No description provided for @reportsRevenueByCategory.
   ///

@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/l10n/failure_messages.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/tokens.dart';
+import '../../../core/receipt/payment_method.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/app_icon_button.dart';
 import '../../../core/widgets/async_view.dart';
@@ -140,6 +141,20 @@ class _ReportsBody extends StatelessWidget {
           formatValue: Formatters.money,
         ),
         const SizedBox(height: Space.lg),
+        if (revenue.byPayment.isNotEmpty) ...[
+          _SectionTitle(l10n.reportsRevenueByPayment),
+          CategoryBarList(
+            items: [
+              for (final payment in revenue.byPayment)
+                CategoryBarItem(
+                  label: paymentMethodLabel(l10n, payment.paymentMethod),
+                  value: payment.amount,
+                ),
+            ],
+            formatValue: Formatters.money,
+          ),
+          const SizedBox(height: Space.lg),
+        ],
         _SectionTitle(l10n.reportsOccupancy),
         Text(
           l10n.reportsOpenSessions(occupancy.totalOpen),
