@@ -95,17 +95,17 @@ class _SkeletonTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return const Row(
       children: [
-        const SkeletonBox(width: 44, height: 44, radius: Radii.pill),
-        const SizedBox(width: Space.md),
+        SkeletonBox(width: 44, height: 44, radius: Radii.pill),
+        SizedBox(width: Space.md),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SkeletonBox(width: 140),
-              const SizedBox(height: Space.sm),
-              const SkeletonBox(height: 12),
+              SkeletonBox(width: 140),
+              SizedBox(height: Space.sm),
+              SkeletonBox(height: 12),
             ],
           ),
         ),

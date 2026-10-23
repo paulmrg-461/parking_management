@@ -13,6 +13,9 @@
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const FCM_RAW = Deno.env.get('FCM_SERVICE_ACCOUNT_JSON') ?? ''
+const VAPID_PUBLIC = Deno.env.get('VAPID_PUBLIC_KEY') ?? ''
+const VAPID_PRIVATE = Deno.env.get('VAPID_PRIVATE_KEY') ?? ''
+const VAPID_SUBJECT = Deno.env.get('VAPID_SUBJECT') ?? 'mailto:admin@parking.local'
 
 const jsonHeaders = {
   apikey: SERVICE_KEY,
@@ -25,6 +28,13 @@ type ServiceAccount = {
   client_email: string
   private_key: string
   token_uri?: string
+}
+
+type WebSubscription = {
+  id: number
+  endpoint: string
+  p256dh: string
+  auth: string
 }
 
 type PendingNotification = {
@@ -190,6 +200,67 @@ async function recordFailure(notification: PendingNotification) {
   })
 }
 
+// Web Push (VAPID) is loaded lazily so the function still boots without the
+// npm module when only FCM is configured.
+type WebPushModule = {
+  setVapidDetails(subject: string, publicKey: string, privateKey: string): void
+  sendNotification(
+    subscription: { endpoint: string; keys: { p256dh: string; auth: string } },
+    payload: string,
+  ): Promise<{ statusCode?: number }>
+}
+
+let webPushModule: WebPushModule | null = null
+
+async function webPush(): Promise<WebPushModule | null> {
+  if (!VAPID_PUBLIC || !VAPID_PRIVATE) return null
+  if (webPushModule) return webPushModule
+  try {
+    const module = await import('npm:web-push@3.6.7')
+    const push = (module.default ?? module) as unknown as WebPushModule
+    push.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE)
+    webPushModule = push
+    return push
+  } catch (error) {
+    console.error('web-push could not be loaded', error)
+    return null
+  }
+}
+
+async function webSubscriptions(userId: number): Promise<WebSubscription[]> {
+  const { response, body } = await rest(
+    `web_push_subscriptions?user_id=eq.${userId}&select=id,endpoint,p256dh,auth`,
+  )
+  if (!response.ok || !Array.isArray(body)) return []
+  return body
+}
+
+async function sendWebPush(
+  push: WebPushModule,
+  subscription: WebSubscription,
+  notification: PendingNotification,
+): Promise<{ ok: boolean; gone: boolean }> {
+  try {
+    await push.sendNotification(
+      {
+        endpoint: subscription.endpoint,
+        keys: { p256dh: subscription.p256dh, auth: subscription.auth },
+      },
+      JSON.stringify({
+        title: notification.title,
+        body: notification.body,
+        data: { ...notification.data, id: notification.id },
+      }),
+    )
+    return { ok: true, gone: false }
+  } catch (error) {
+    const status = (error as { statusCode?: number }).statusCode
+    const gone = status === 404 || status === 410
+    console.error(`web push failed (${status ?? 'unknown'})`)
+    return { ok: false, gone }
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ message: 'Method not allowed' }, 405)
   if (req.headers.get('authorization') !== `Bearer ${SERVICE_KEY}`) {
@@ -197,7 +268,8 @@ Deno.serve(async (req) => {
   }
 
   const account = serviceAccount()
-  if (!account) {
+  const push = await webPush()
+  if (!account && !push) {
     return json({ configured: false, sent: 0, failed: 0 })
   }
 
@@ -211,34 +283,52 @@ Deno.serve(async (req) => {
   const pending = body as PendingNotification[]
   if (pending.length === 0) return json({ configured: true, sent: 0, failed: 0 })
 
-  const access = await accessToken(account)
+  const access = account ? await accessToken(account) : null
   let sent = 0
   let failed = 0
 
   for (const notification of pending) {
-    const tokens = await deviceTokens(notification.user_id)
-    if (tokens.length === 0) {
-      await markPushed(notification.id)
-      continue
-    }
     let delivered = false
-    for (const device of tokens) {
-      const result = await sendToToken(
-        access,
-        account.project_id,
-        device.token,
-        notification,
-      )
-      if (result.ok) {
-        delivered = true
-        sent++
-      } else {
-        failed++
-        if (result.unregistered) {
-          await rest(`device_tokens?id=eq.${device.id}`, { method: 'DELETE' })
+
+    if (account && access) {
+      const tokens = await deviceTokens(notification.user_id)
+      for (const device of tokens) {
+        const result = await sendToToken(
+          access,
+          account.project_id,
+          device.token,
+          notification,
+        )
+        if (result.ok) {
+          delivered = true
+          sent++
+        } else {
+          failed++
+          if (result.unregistered) {
+            await rest(`device_tokens?id=eq.${device.id}`, { method: 'DELETE' })
+          }
         }
       }
     }
+
+    if (push) {
+      const subscriptions = await webSubscriptions(notification.user_id)
+      for (const subscription of subscriptions) {
+        const result = await sendWebPush(push, subscription, notification)
+        if (result.ok) {
+          delivered = true
+          sent++
+        } else {
+          failed++
+          if (result.gone) {
+            await rest(`web_push_subscriptions?id=eq.${subscription.id}`, {
+              method: 'DELETE',
+            })
+          }
+        }
+      }
+    }
+
     if (delivered) {
       await markPushed(notification.id)
     } else {
@@ -246,5 +336,11 @@ Deno.serve(async (req) => {
     }
   }
 
-  return json({ configured: true, sent, failed, pending: pending.length })
+  return json({
+    configured: true,
+    channels: { fcm: Boolean(account), web: Boolean(push) },
+    sent,
+    failed,
+    pending: pending.length,
+  })
 })

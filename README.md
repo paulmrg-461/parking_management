@@ -128,9 +128,26 @@ flutter run \
 ```
 
 The device token is registered automatically after login. Without
-`FCM_ENABLED`/Firebase options the app still gets in-app notifications; web
-push additionally needs `firebase-messaging-sw.js` and a VAPID key
-(`FCM_VAPID_KEY`).
+`FCM_ENABLED`/Firebase options the app still gets in-app notifications.
+
+**Browser push (VAPID):** the web build ships `web/push-sw.js`, a service
+worker that renders the OS notification and deep-links on click. Subscriptions
+live in `public.web_push_subscriptions` (one row per browser, owner derived
+from `auth.uid()`), and `push-dispatch` delivers to them with `web-push` when
+the VAPID keys are present:
+
+1. Generate the key pair: `npx web-push generate-vapid-keys`.
+2. Put `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` and `VAPID_SUBJECT` in `.env`
+   and restart the `functions` service.
+3. Build the web app with the same public key:
+   `flutter build web --release --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=... --dart-define=WEB_PUSH_VAPID_PUBLIC_KEY=<public key>`
+4. Serve it over HTTPS (service workers require a secure origin) and enable
+   **Notificaciones del navegador** from the inbox. Without the key the toggle
+   stays hidden and the function skips web push.
+
+Real Android credentials still have to come from your own Firebase project
+(`FCM_SERVICE_ACCOUNT_JSON` for the server, the `FIREBASE_*` dart-defines for
+the app); nothing in the repository can generate them.
 
 ## Check-out, payments and history
 

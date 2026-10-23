@@ -304,6 +304,16 @@ class AppLocalizationsEs extends AppLocalizations {
   String get navNotifications => 'Avisos';
 
   @override
+  String get webPushTitle => 'Notificaciones del navegador';
+
+  @override
+  String get webPushSubtitle => 'Recibe avisos aunque la pestaña esté cerrada.';
+
+  @override
+  String get webPushDenied =>
+      'El navegador no dio permiso para las notificaciones';
+
+  @override
   String get notificationsTitle => 'Notificaciones';
 
   @override

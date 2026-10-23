@@ -299,6 +299,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navNotifications => 'Alerts';
 
   @override
+  String get webPushTitle => 'Browser notifications';
+
+  @override
+  String get webPushSubtitle => 'Get alerts even when the tab is closed.';
+
+  @override
+  String get webPushDenied =>
+      'The browser did not grant notification permission';
+
+  @override
   String get notificationsTitle => 'Notifications';
 
   @override

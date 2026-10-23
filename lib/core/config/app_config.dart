@@ -10,6 +10,7 @@ class AppConfig {
     this.firebaseProjectId = '',
     this.firebaseStorageBucket = '',
     this.fcmVapidKey = '',
+    this.webPushVapidKey = '',
   });
 
   final String appName;
@@ -28,6 +29,10 @@ class AppConfig {
   final String firebaseProjectId;
   final String firebaseStorageBucket;
   final String fcmVapidKey;
+
+  /// VAPID public key for browser push. Empty disables the feature and the
+  /// notifications page hides its toggle.
+  final String webPushVapidKey;
 
   bool get supabaseAuthEnabled =>
       supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty;
@@ -51,6 +56,7 @@ class AppConfig {
         'FIREBASE_STORAGE_BUCKET',
       ),
       fcmVapidKey: String.fromEnvironment('FCM_VAPID_KEY'),
+      webPushVapidKey: String.fromEnvironment('WEB_PUSH_VAPID_PUBLIC_KEY'),
     );
   }
 }

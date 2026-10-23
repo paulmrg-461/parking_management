@@ -626,6 +626,24 @@ abstract class AppLocalizations {
   /// **'Avisos'**
   String get navNotifications;
 
+  /// No description provided for @webPushTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Notificaciones del navegador'**
+  String get webPushTitle;
+
+  /// No description provided for @webPushSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Recibe avisos aunque la pestaña esté cerrada.'**
+  String get webPushSubtitle;
+
+  /// No description provided for @webPushDenied.
+  ///
+  /// In es, this message translates to:
+  /// **'El navegador no dio permiso para las notificaciones'**
+  String get webPushDenied;
+
   /// No description provided for @notificationsTitle.
   ///
   /// In es, this message translates to:

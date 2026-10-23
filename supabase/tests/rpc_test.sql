@@ -268,6 +268,34 @@ begin
     end if;
 end $$;
 
+-- Web push: one row per endpoint, always owned by auth.uid().
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+select public.save_web_push_subscription('https://push.example/1', 'p256', 'auth');
+select public.save_web_push_subscription('https://push.example/1', 'p256b', 'authb');
+
+do $$
+begin
+    if (select count(*) from public.web_push_subscriptions) <> 1 then
+        raise exception 'endpoint upsert created a duplicate row';
+    end if;
+    if (select p256dh from public.web_push_subscriptions
+         where endpoint = 'https://push.example/1') <> 'p256b' then
+        raise exception 'endpoint upsert did not refresh the keys';
+    end if;
+    if (select user_id from public.web_push_subscriptions) <> 2 then
+        raise exception 'subscription owner was not derived from auth.uid()';
+    end if;
+end $$;
+
+select public.delete_web_push_subscription('https://push.example/1');
+
+do $$
+begin
+    if exists (select 1 from public.web_push_subscriptions) then
+        raise exception 'subscription was not deleted';
+    end if;
+end $$;
+
 -- RLS: the operator must not read the admin's notifications.
 set local role authenticated;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';

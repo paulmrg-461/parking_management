@@ -8,6 +8,8 @@ import '../../../core/theme/tokens.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/error_state.dart';
 import '../../../core/widgets/skeleton.dart';
+import '../../../app/di/injection.dart';
+import '../application/web_push_service.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../application/notifications_cubit.dart';
 import '../domain/entities/app_notification.dart';
@@ -43,7 +45,11 @@ class NotificationsPage extends StatelessWidget {
             ),
           ],
         ),
-        body: BlocBuilder<NotificationsCubit, NotificationsState>(
+        body: Column(
+          children: [
+            const WebPushToggle(),
+            Expanded(
+              child: BlocBuilder<NotificationsCubit, NotificationsState>(
           builder: (context, state) => switch (state.status) {
             NotificationsStatus.initial ||
             NotificationsStatus.loading => const Center(
@@ -57,8 +63,93 @@ class NotificationsPage extends StatelessWidget {
             ),
             NotificationsStatus.loaded => _Inbox(state: state),
           },
+              ),
+            ),
+          ],
         ),
       ),
+    );
+  }
+}
+
+/// Browser-only push switch. Rendered only when the build carries a VAPID
+/// public key and the runtime can subscribe; hidden everywhere else.
+class WebPushToggle extends StatefulWidget {
+  const WebPushToggle({super.key});
+
+  @override
+  State<WebPushToggle> createState() => _WebPushToggleState();
+}
+
+class _WebPushToggleState extends State<WebPushToggle> {
+  WebPushService? _service;
+  bool _enabled = false;
+  bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  }
+
+  Future<void> _load() async {
+    if (!serviceLocator.isRegistered<WebPushService>()) {
+      return;
+    }
+    final service = serviceLocator<WebPushService>();
+    if (!service.supported) {
+      return;
+    }
+    final enabled = await service.isEnabled();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _service = service;
+      _enabled = enabled;
+    });
+  }
+
+  Future<void> _toggle(bool value) async {
+    final service = _service;
+    if (service == null || _busy) {
+      return;
+    }
+    setState(() => _busy = true);
+    if (value) {
+      final granted = await service.enable();
+      if (mounted) {
+        setState(() {
+          _enabled = granted;
+          _busy = false;
+        });
+        if (!granted) {
+          showErrorSnack(context, context.l10n.webPushDenied);
+        }
+      }
+      return;
+    }
+    await service.disable();
+    if (mounted) {
+      setState(() {
+        _enabled = false;
+        _busy = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final service = _service;
+    if (service == null) {
+      return const SizedBox.shrink();
+    }
+    return SwitchListTile(
+      value: _enabled,
+      onChanged: _busy ? null : _toggle,
+      secondary: const Icon(Icons.notifications_active_outlined),
+      title: Text(context.l10n.webPushTitle),
+      subtitle: Text(context.l10n.webPushSubtitle),
     );
   }
 }
