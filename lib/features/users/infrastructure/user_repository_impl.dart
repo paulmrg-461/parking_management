@@ -22,6 +22,12 @@ class UserRepositoryImpl implements UserRepository {
   Future<User> update(UpdateUserCommand command) =>
       _remote.update(command.id, _toUpdatePayload(command));
 
+  @override
+  Future<User> resetPin(int id, String pin) => _remote.resetPin(id, pin);
+
+  @override
+  Future<void> delete(int id) => _remote.delete(id);
+
   Map<String, dynamic> _toCreatePayload(CreateUserCommand command) => {
     'username': command.username,
     'display_name': command.displayName,

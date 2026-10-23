@@ -64,7 +64,7 @@ async function callerId(req: Request): Promise<string> {
   return user.id
 }
 
-async function requireAdmin(req: Request): Promise<void> {
+async function requireAdmin(req: Request): Promise<string> {
   const authId = await callerId(req)
   const { response, body } = await rest(
     `users?auth_user_id=eq.${authId}&select=role,is_active`,
@@ -78,6 +78,18 @@ async function requireAdmin(req: Request): Promise<void> {
   if (body[0].role !== 'admin') {
     throw new Error('AdminRequiredError')
   }
+  return authId
+}
+
+async function activeAdminCount(excludeId?: number): Promise<number> {
+  const filter = excludeId == null ? '' : `&id=neq.${excludeId}`
+  const { response, body } = await rest(
+    `users?role=eq.admin&is_active=eq.true&select=id${filter}`,
+  )
+  if (!response.ok || !Array.isArray(body)) {
+    throw new Error('InternalError')
+  }
+  return body.length
 }
 
 async function profile(authUserId: string) {
@@ -119,15 +131,73 @@ async function createUser(payload: Record<string, unknown>) {
   return await profile(created.body.id)
 }
 
-async function updateUser(payload: Record<string, unknown>) {
+async function resetPin(payload: Record<string, unknown>) {
   const id = Number(payload.id)
+  const pin = String(payload.pin ?? '')
+  if (pin.length < 6) {
+    throw new Error('InvalidPin')
+  }
   const { response, body } = await rest(
     `users?id=eq.${id}&select=auth_user_id`,
   )
   if (!response.ok || !Array.isArray(body) || body.length === 0) {
     throw new Error('UserNotFoundError')
   }
+  const updated = await auth(`admin/users/${body[0].auth_user_id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ password: pin }),
+  })
+  if (!updated.response.ok) {
+    const message = updated.body?.msg ?? updated.body?.message ?? 'PIN reset failed'
+    throw new Error(message)
+  }
+  return await profile(body[0].auth_user_id)
+}
+
+async function deleteUser(payload: Record<string, unknown>, callerAuthId: string) {
+  const id = Number(payload.id)
+  const { response, body } = await rest(
+    `users?id=eq.${id}&select=auth_user_id,role,is_active`,
+  )
+  if (!response.ok || !Array.isArray(body) || body.length === 0) {
+    throw new Error('UserNotFoundError')
+  }
+  const target = body[0]
+  if (target.auth_user_id === callerAuthId) {
+    throw new Error('CannotDeleteSelfError')
+  }
+  if (target.role === 'admin' && target.is_active) {
+    if ((await activeAdminCount(id)) === 0) {
+      throw new Error('LastAdminError')
+    }
+  }
+  const removed = await auth(`admin/users/${target.auth_user_id}`, {
+    method: 'DELETE',
+  })
+  if (!removed.response.ok) {
+    throw new Error('User delete failed')
+  }
+  await rest(`users?id=eq.${id}`, { method: 'DELETE' })
+  return { deleted: true }
+}
+
+async function updateUser(payload: Record<string, unknown>) {
+  const id = Number(payload.id)
+  const { response, body } = await rest(
+    `users?id=eq.${id}&select=auth_user_id,role,is_active`,
+  )
+  if (!response.ok || !Array.isArray(body) || body.length === 0) {
+    throw new Error('UserNotFoundError')
+  }
   const authUserId = body[0].auth_user_id
+  const targetIsAdmin = body[0].role === 'admin' && body[0].is_active
+  const demoting = payload.role != null && payload.role !== 'admin'
+  const deactivating = payload.is_active === false
+  if (targetIsAdmin && (demoting || deactivating)) {
+    if ((await activeAdminCount(id)) === 0) {
+      throw new Error('LastAdminError')
+    }
+  }
 
   const authPatch: Record<string, unknown> = {}
   if (payload.pin != null) authPatch.password = String(payload.pin)
@@ -174,13 +244,17 @@ Deno.serve(async (req) => {
     return new Response('ok', { headers: cors })
   }
   try {
-    await requireAdmin(req)
+    const callerAuthId = await requireAdmin(req)
     const payload = await req.json().catch(() => ({}))
     switch (payload.action) {
       case 'create':
         return json(await createUser(payload))
       case 'update':
         return json(await updateUser(payload))
+      case 'reset_pin':
+        return json(await resetPin(payload))
+      case 'delete':
+        return json(await deleteUser(payload, callerAuthId))
       default:
         return json({ message: 'Unknown action' }, 400)
     }
@@ -190,6 +264,8 @@ Deno.serve(async (req) => {
       ? 403
       : message === 'InvalidTokenError' || message === 'AuthenticationError'
       ? 401
+      : message === 'LastAdminError' || message === 'CannotDeleteSelfError'
+      ? 409
       : 400
     return json({ message }, status)
   }

@@ -144,6 +144,17 @@ The app is now a Supabase-only stack: FastAPI, Alembic, Dio and Redis are gone.
   state lives in `PrinterCubit`. Bluetooth permissions added to the Android
   manifest.
 
+- **Ops/UX medium batch**: pass charges are backfilled for passes that predate
+  the charge table (`0017`); closed shifts can be corrected by an admin with a
+  mandatory reason, keeping old/new reconciliation in `shift_adjustments`
+  (`0018`, `rpc/adjust_shift`); cash operations (open/close/movement/adjust and
+  pass collection) are disabled offline with an explicit banner instead of
+  being queued; notifications deep-link by type (`shift_closed` → `/shift`,
+  pass events → `/monthly-passes`, vehicle events → `/history?plate=…`); and
+  admins can reset a PIN or delete a user from the users list, with
+  `LastAdminError`/`CannotDeleteSelfError` enforced server-side in the
+  `admin-users` Edge Function.
+
 ## Infra/tooling (not OpenSpec capabilities — repo scaffolding)
 
 - **Docker**: root `docker-compose.yml` includes the official self-hosted
@@ -184,7 +195,7 @@ The app is now a Supabase-only stack: FastAPI, Alembic, Dio and Redis are gone.
 
 ## Test counts
 
-- Flutter (`flutter test`): 424 passed. `flutter analyze`: 0 errors/warnings
+- Flutter (`flutter test`): 431 passed. `flutter analyze`: 0 errors/warnings
   (98 SDK-deprecation/const infos under the local Flutter 3.50 beta; CI pins
   3.49 where the baseline is clean).
 - SQL/compose: validated against the running Supabase stack and by

@@ -56,6 +56,24 @@ class FakeShiftRepository implements ShiftRepository {
   }
 
   @override
+  Future<ShiftSummary> adjust({
+    required int shiftId,
+    required int countedCash,
+    required String reason,
+  }) async {
+    _throwIfNeeded();
+    final closed = sampleShift(
+      id: shiftId,
+      countedCash: countedCash,
+      difference: countedCash - 15000,
+      closed: true,
+      notes: reason,
+    );
+    historyShifts = [closed];
+    return closed;
+  }
+
+  @override
   Future<List<ShiftSummary>> history({int limit = 20}) async {
     _throwIfNeeded();
     return historyShifts;

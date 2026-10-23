@@ -11,6 +11,10 @@ abstract class UserRemoteDataSource {
   Future<User> create(Map<String, dynamic> payload);
 
   Future<User> update(int id, Map<String, dynamic> payload);
+
+  Future<User> resetPin(int id, String pin);
+
+  Future<void> delete(int id);
 }
 
 class SupabaseUserRemoteDataSource implements UserRemoteDataSource {
@@ -41,6 +45,22 @@ class SupabaseUserRemoteDataSource implements UserRemoteDataSource {
   @override
   Future<User> update(int id, Map<String, dynamic> payload) =>
       _adminAction({'action': 'update', 'id': id, ...payload});
+
+  @override
+  Future<User> resetPin(int id, String pin) =>
+      _adminAction({'action': 'reset_pin', 'id': id, 'pin': pin});
+
+  @override
+  Future<void> delete(int id) async {
+    try {
+      await _client.functions.invoke(
+        _function,
+        body: {'action': 'delete', 'id': id},
+      );
+    } catch (error) {
+      throw mapSupabaseError(error);
+    }
+  }
 
   Future<User> _adminAction(Map<String, dynamic> body) async {
     try {

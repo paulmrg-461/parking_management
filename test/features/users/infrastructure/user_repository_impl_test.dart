@@ -35,6 +35,18 @@ class _FakeRemote implements UserRemoteDataSource {
     updatedPayload = payload;
     return _user;
   }
+
+  @override
+  Future<User> resetPin(int id, String pin) async {
+    updatedId = id;
+    updatedPayload = {'pin': pin};
+    return _user;
+  }
+
+  @override
+  Future<void> delete(int id) async {
+    updatedId = id;
+  }
 }
 
 void main() {

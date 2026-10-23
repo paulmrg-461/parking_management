@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/l10n/failure_messages.dart';
+import '../../../core/network/connectivity_cubit.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/state/submission.dart';
 import '../../../core/theme/tokens.dart';
@@ -264,10 +265,18 @@ class _PendingPaymentTile extends StatelessWidget {
         '${paymentMethodLabel(l10n, payment.paymentMethod)}',
       ),
       trailing: FilledButton(
-        onPressed: () => _pay(context),
+        onPressed: _online(context) ? () => _pay(context) : null,
         child: Text(l10n.monthlyPassCharge),
       ),
     );
+  }
+
+  bool _online(BuildContext context) {
+    try {
+      return context.watch<ConnectivityCubit>().state;
+    } on ProviderNotFoundException {
+      return true;
+    }
   }
 
   Future<void> _pay(BuildContext context) async {

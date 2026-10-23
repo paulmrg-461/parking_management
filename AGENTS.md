@@ -63,11 +63,14 @@ RPCs own business logic and the Flutter client calls Supabase directly.
   `parking_settings.overstay_hours`.
 - UX invariants: check-out search is server-side/paginated; the shift card and
   no-shift warning live in the shell-scoped `ShiftCubit`; discount audit detail
-  is exposed only in the admin revenue report.
+  is exposed only in the admin revenue report. Cash/shift actions (open, close,
+  movement, adjust, pass collection) are disabled offline with a banner — they
+  are never queued. Notification taps deep-link by type via
+  `notification_routes.dart`.
 - Notifications: in-app rows + Supabase Realtime work with no extra config;
   `FCM_SERVICE_ACCOUNT_JSON` + `supabase/notifications-cron.sh` enable
   background FCM. `push-dispatch` is service-role-only; never expose the key.
-- Tests: `flutter test` (424) + `flutter analyze`; CI validates compose and
+- Tests: `flutter test` (431) + `flutter analyze`; CI validates compose and
   runs `supabase/tests/run.sh` (real migrations + RPC/RLS tests) against
   `supabase/postgres`.
 - Backups: `sh supabase/backup.sh` (DB dump + Storage); restore with

@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/l10n/failure_messages.dart';
 import '../../../core/l10n/l10n.dart';
+import '../../../core/network/connectivity_cubit.dart';
 import '../../../core/state/submission.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/formatters.dart';
@@ -34,9 +35,18 @@ class _ShiftPageState extends State<ShiftPage> {
     });
   }
 
+  bool _online(BuildContext context) {
+    try {
+      return context.watch<ConnectivityCubit>().state;
+    } on ProviderNotFoundException {
+      return true;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final online = _online(context);
     return BlocListener<ShiftCubit, ShiftState>(
       listenWhen: (previous, current) =>
           submissionJustFailed(previous.submission, current.submission),
@@ -69,7 +79,11 @@ class _ShiftPageState extends State<ShiftPage> {
               onRetry: () =>
                   context.read<ShiftCubit>().load(admin: widget.isAdmin),
             ),
-            ShiftStatus.loaded => _Content(state: state, isAdmin: widget.isAdmin),
+            ShiftStatus.loaded => _Content(
+              state: state,
+              isAdmin: widget.isAdmin,
+              online: online,
+            ),
           },
         ),
       ),
@@ -78,10 +92,15 @@ class _ShiftPageState extends State<ShiftPage> {
 }
 
 class _Content extends StatelessWidget {
-  const _Content({required this.state, required this.isAdmin});
+  const _Content({
+    required this.state,
+    required this.isAdmin,
+    required this.online,
+  });
 
   final ShiftState state;
   final bool isAdmin;
+  final bool online;
 
   @override
   Widget build(BuildContext context) {
@@ -92,10 +111,11 @@ class _Content extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.all(Space.md),
         children: [
+        if (!online) const _OfflineNotice(),
         if (current != null)
-          _OpenShiftCard(shift: current)
+          _OpenShiftCard(shift: current, online: online)
         else ...[
-          const _OpenShiftForm(),
+          _OpenShiftForm(online: online),
           if (state.lastClosed != null) ...[
             const SizedBox(height: Space.lg),
             _ClosedShiftCard(shift: state.lastClosed!),
@@ -113,8 +133,37 @@ class _Content extends StatelessWidget {
   }
 }
 
+class _OfflineNotice extends StatelessWidget {
+  const _OfflineNotice();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Card(
+      color: scheme.errorContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(Space.md),
+        child: Row(
+          children: [
+            Icon(Icons.cloud_off, color: scheme.onErrorContainer),
+            const SizedBox(width: Space.sm),
+            Expanded(
+              child: Text(
+                context.l10n.shiftOffline,
+                style: TextStyle(color: scheme.onErrorContainer),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _OpenShiftForm extends StatefulWidget {
-  const _OpenShiftForm();
+  const _OpenShiftForm({required this.online});
+
+  final bool online;
 
   @override
   State<_OpenShiftForm> createState() => _OpenShiftFormState();
@@ -169,7 +218,7 @@ class _OpenShiftFormState extends State<_OpenShiftForm> {
               ),
               const SizedBox(height: Space.md),
               FilledButton.icon(
-                onPressed: _open,
+                onPressed: widget.online ? _open : null,
                 icon: const Icon(Icons.lock_open),
                 label: Text(l10n.shiftOpen),
               ),
@@ -182,9 +231,10 @@ class _OpenShiftFormState extends State<_OpenShiftForm> {
 }
 
 class _OpenShiftCard extends StatelessWidget {
-  const _OpenShiftCard({required this.shift});
+  const _OpenShiftCard({required this.shift, required this.online});
 
   final ShiftSummary shift;
+  final bool online;
 
   @override
   Widget build(BuildContext context) {
@@ -230,17 +280,17 @@ class _OpenShiftCard extends StatelessWidget {
               runSpacing: Space.sm,
               children: [
                 OutlinedButton.icon(
-                  onPressed: () => _movement(context, 'withdrawal'),
+                  onPressed: online ? () => _movement(context, 'withdrawal') : null,
                   icon: const Icon(Icons.remove),
                   label: Text(l10n.shiftWithdraw),
                 ),
                 OutlinedButton.icon(
-                  onPressed: () => _movement(context, 'deposit'),
+                  onPressed: online ? () => _movement(context, 'deposit') : null,
                   icon: const Icon(Icons.add),
                   label: Text(l10n.shiftDeposit),
                 ),
                 FilledButton.icon(
-                  onPressed: () => _close(context),
+                  onPressed: online ? () => _close(context) : null,
                   icon: const Icon(Icons.lock),
                   label: Text(l10n.shiftClose),
                 ),
@@ -342,6 +392,7 @@ class _HistoryTile extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: Space.sm),
       child: ListTile(
+        onTap: shift.isOpen ? null : () => _adjust(context),
         title: Text(Formatters.dateTime(shift.openedAt)),
         subtitle: Text(
           '${context.l10n.shiftSales}: ${Formatters.money(shift.revenue)} · '
@@ -352,8 +403,98 @@ class _HistoryTile extends StatelessWidget {
                 Icons.lock_open,
                 color: Theme.of(context).colorScheme.primary,
               )
-            : const Icon(Icons.lock),
+            : const Icon(Icons.edit_outlined),
       ),
+    );
+  }
+
+  Future<void> _adjust(BuildContext context) async {
+    final result = await showDialog<_CloseResult>(
+      context: context,
+      builder: (_) => const _AdjustShiftDialog(),
+    );
+    if (result != null && context.mounted) {
+      await context.read<ShiftCubit>().adjust(
+        shiftId: shift.id,
+        countedCash: result.counted,
+        reason: result.notes ?? '',
+      );
+    }
+  }
+}
+
+class _AdjustShiftDialog extends StatefulWidget {
+  const _AdjustShiftDialog();
+
+  @override
+  State<_AdjustShiftDialog> createState() => _AdjustShiftDialogState();
+}
+
+class _AdjustShiftDialogState extends State<_AdjustShiftDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _counted = TextEditingController();
+  final _reason = TextEditingController();
+
+  @override
+  void dispose() {
+    _counted.dispose();
+    _reason.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+    Navigator.of(context).pop(
+      _CloseResult(
+        int.parse(_counted.text.trim()),
+        _reason.text.trim(),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return AlertDialog(
+      title: Text(l10n.shiftAdjust),
+      content: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextFormField(
+              controller: _counted,
+              autofocus: true,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: InputDecoration(labelText: l10n.shiftCountedCash),
+              validator: (value) {
+                final amount = int.tryParse((value ?? '').trim());
+                return amount == null || amount < 0
+                    ? l10n.invalidAmount
+                    : null;
+              },
+            ),
+            const SizedBox(height: Space.md),
+            TextFormField(
+              controller: _reason,
+              decoration: InputDecoration(labelText: l10n.shiftReason),
+              validator: (value) => (value ?? '').trim().isEmpty
+                  ? l10n.fieldRequired
+                  : null,
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.actionCancel),
+        ),
+        FilledButton(onPressed: _save, child: Text(l10n.actionSave)),
+      ],
     );
   }
 }

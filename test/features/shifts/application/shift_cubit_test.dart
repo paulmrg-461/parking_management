@@ -43,6 +43,23 @@ void main() {
     expect(cubit.state.error, isA<NetworkFailure>());
   });
 
+  test('Success: an admin can correct a closed shift with a reason', () async {
+    final repository = FakeShiftRepository(
+      historyShifts: [sampleShift(closed: true, countedCash: 15000)],
+    );
+    final cubit = ShiftCubit(repository);
+    addTearDown(cubit.close);
+
+    await cubit.adjust(
+      shiftId: 1,
+      countedCash: 13900,
+      reason: 'correccion',
+    );
+
+    expect(cubit.state.history.single.countedCash, 13900);
+    expect(cubit.state.history.single.notes, 'correccion');
+  });
+
   test('Security: only admins load the shift history', () async {
     final repository = FakeShiftRepository(
       historyShifts: [sampleShift(closed: true)],

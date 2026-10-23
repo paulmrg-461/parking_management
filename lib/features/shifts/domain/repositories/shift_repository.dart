@@ -14,4 +14,10 @@ abstract class ShiftRepository {
   });
 
   Future<List<ShiftSummary>> history({int limit = 20});
+
+  Future<ShiftSummary> adjust({
+    required int shiftId,
+    required int countedCash,
+    required String reason,
+  });
 }

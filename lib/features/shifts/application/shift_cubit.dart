@@ -89,6 +89,21 @@ class ShiftCubit extends ResilientCubit<ShiftState> {
     );
   }
 
+  Future<void> adjust({
+    required int shiftId,
+    required int countedCash,
+    required String reason,
+  }) async {
+    await _submit(
+      () => _repository.adjust(
+        shiftId: shiftId,
+        countedCash: countedCash,
+        reason: reason,
+      ),
+    );
+    await load(admin: true);
+  }
+
   Future<void> addMovement({
     required String type,
     required int amount,

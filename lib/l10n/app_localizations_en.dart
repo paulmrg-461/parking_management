@@ -282,6 +282,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shiftUnavailable => 'Shift unavailable';
 
   @override
+  String get shiftOffline =>
+      'You need a connection to operate the cash drawer.';
+
+  @override
   String get shiftTitle => 'Shift / Cash';
 
   @override
@@ -341,6 +345,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shiftClosedTitle => 'Shift closed';
 
   @override
+  String get shiftAdjust => 'Correct shift close';
+
+  @override
   String get shiftCountedCash => 'Counted cash';
 
   @override
@@ -363,6 +370,26 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get errorShiftNotFound => 'Shift not found';
+
+  @override
+  String get errorLastAdmin =>
+      'You cannot leave the system without administrators';
+
+  @override
+  String get errorCannotDeleteSelf => 'You cannot delete your own account';
+
+  @override
+  String get errorPaymentNotFound => 'Payment not found';
+
+  @override
+  String get errorPaymentAlreadyProcessed =>
+      'This payment was already processed';
+
+  @override
+  String get errorShiftStillOpen => 'The shift is still open';
+
+  @override
+  String get errorShiftAdjustReason => 'Enter the correction reason';
 
   @override
   String get errorInvalidOpeningFloat => 'The opening float is not valid';
@@ -967,6 +994,31 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get userAddTooltip => 'Add user';
+
+  @override
+  String get userActions => 'Actions';
+
+  @override
+  String get userResetPin => 'Reset PIN';
+
+  @override
+  String userResetPinTitle(String name) {
+    return 'New PIN for $name';
+  }
+
+  @override
+  String get userNewPin => 'New PIN (6 digits)';
+
+  @override
+  String get userDelete => 'Delete user';
+
+  @override
+  String get userDeleteTitle => 'Delete user?';
+
+  @override
+  String userDeleteBody(String name) {
+    return '$name\'s account will be removed. This cannot be undone.';
+  }
 
   @override
   String userActiveLabel(String name) {

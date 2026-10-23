@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/l10n/failure_messages.dart';
 import '../../../core/l10n/l10n.dart';
@@ -9,6 +10,7 @@ import '../../../core/widgets/error_state.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../application/notifications_cubit.dart';
 import '../domain/entities/app_notification.dart';
+import 'notification_routes.dart';
 
 class NotificationsPage extends StatelessWidget {
   const NotificationsPage({super.key});
@@ -106,9 +108,7 @@ class _NotificationTile extends StatelessWidget {
     final unread = !notification.isRead;
     final scheme = Theme.of(context).colorScheme;
     return ListTile(
-      onTap: unread
-          ? () => context.read<NotificationsCubit>().markRead(notification.id)
-          : null,
+      onTap: () => _open(context, unread),
       leading: CircleAvatar(
         backgroundColor: unread
             ? scheme.primaryContainer
@@ -136,6 +136,16 @@ class _NotificationTile extends StatelessWidget {
           ? Icon(Icons.circle, size: Space.sm, color: scheme.primary)
           : null,
     );
+  }
+
+  void _open(BuildContext context, bool unread) {
+    if (unread) {
+      context.read<NotificationsCubit>().markRead(notification.id);
+    }
+    final route = routeForNotification(notification);
+    if (route != null) {
+      context.go(route);
+    }
   }
 
   static IconData _iconFor(String type) => switch (type) {

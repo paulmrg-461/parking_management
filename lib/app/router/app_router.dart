@@ -140,7 +140,9 @@ GoRoute _homeRoute(AuthCubit auth) => GoRoute(
       path: 'history',
       builder: (context, state) => BlocProvider<VehicleHistoryCubit>(
         create: (_) => serviceLocator<VehicleHistoryCubit>(),
-        child: const VehicleHistoryPage(),
+        child: VehicleHistoryPage(
+          initialPlate: state.uri.queryParameters['plate'],
+        ),
       ),
     ),
     // Admin-only sections are deferred: operators never download them.

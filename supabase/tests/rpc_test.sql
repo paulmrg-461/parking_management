@@ -67,6 +67,18 @@ begin
     end if;
 end $$;
 
+select public.adjust_shift(1, 13900, 'correccion de prueba');
+
+do $$
+begin
+    if (select difference from public.shifts where id = 1) <> -100 then
+        raise exception 'shift adjustment did not update the difference';
+    end if;
+    if (select count(*) from public.shift_adjustments where shift_id = 1) <> 1 then
+        raise exception 'shift adjustment audit row missing';
+    end if;
+end $$;
+
 insert into public.vehicles (plate, category_id) values ('REN001', 2);
 insert into public.monthly_passes (
     vehicle_id, start_date, end_date, amount, active, auto_renew

@@ -27,4 +27,15 @@ class ShiftRepositoryImpl implements ShiftRepository {
   @override
   Future<List<ShiftSummary>> history({int limit = 20}) =>
       _remote.history(limit: limit);
+
+  @override
+  Future<ShiftSummary> adjust({
+    required int shiftId,
+    required int countedCash,
+    required String reason,
+  }) => _remote.adjust(
+    shiftId: shiftId,
+    countedCash: countedCash,
+    reason: reason,
+  );
 }

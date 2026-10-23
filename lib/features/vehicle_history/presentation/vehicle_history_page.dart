@@ -13,7 +13,9 @@ import '../application/vehicle_history_cubit.dart';
 import '../domain/entities/vehicle_history.dart';
 
 class VehicleHistoryPage extends StatefulWidget {
-  const VehicleHistoryPage({super.key});
+  const VehicleHistoryPage({super.key, this.initialPlate});
+
+  final String? initialPlate;
 
   @override
   State<VehicleHistoryPage> createState() => _VehicleHistoryPageState();
@@ -21,6 +23,20 @@ class VehicleHistoryPage extends StatefulWidget {
 
 class _VehicleHistoryPageState extends State<VehicleHistoryPage> {
   final _controller = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    final plate = widget.initialPlate?.trim();
+    if (plate != null && plate.isNotEmpty) {
+      _controller.text = plate;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          context.read<VehicleHistoryCubit>().search(plate);
+        }
+      });
+    }
+  }
 
   @override
   void dispose() {

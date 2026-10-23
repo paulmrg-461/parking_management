@@ -41,6 +41,12 @@ extension FailureMessages on AppLocalizations {
     'ShiftNotFoundError' => errorShiftNotFound,
     'InvalidOpeningFloatError' => errorInvalidOpeningFloat,
     'InvalidCountedCashError' => errorInvalidCountedCash,
+    'LastAdminError' => errorLastAdmin,
+    'CannotDeleteSelfError' => errorCannotDeleteSelf,
+    'PaymentNotFoundError' => errorPaymentNotFound,
+    'PaymentAlreadyProcessedError' => errorPaymentAlreadyProcessed,
+    'ShiftStillOpenError' => errorShiftStillOpen,
+    'ShiftAdjustmentReasonRequired' => errorShiftAdjustReason,
     'InvalidCashMovementType' ||
     'InvalidCashMovementAmount' => errorInvalidCashMovement,
     'CashMovementReasonRequired' => errorCashMovementReason,

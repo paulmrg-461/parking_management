@@ -602,6 +602,12 @@ abstract class AppLocalizations {
   /// **'Turno no disponible'**
   String get shiftUnavailable;
 
+  /// No description provided for @shiftOffline.
+  ///
+  /// In es, this message translates to:
+  /// **'Necesitas conexión para operar la caja y el arqueo.'**
+  String get shiftOffline;
+
   /// No description provided for @shiftTitle.
   ///
   /// In es, this message translates to:
@@ -716,6 +722,12 @@ abstract class AppLocalizations {
   /// **'Turno cerrado'**
   String get shiftClosedTitle;
 
+  /// No description provided for @shiftAdjust.
+  ///
+  /// In es, this message translates to:
+  /// **'Corregir cierre de turno'**
+  String get shiftAdjust;
+
   /// No description provided for @shiftCountedCash.
   ///
   /// In es, this message translates to:
@@ -763,6 +775,42 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Turno no encontrado'**
   String get errorShiftNotFound;
+
+  /// No description provided for @errorLastAdmin.
+  ///
+  /// In es, this message translates to:
+  /// **'No puedes dejar el sistema sin administradores'**
+  String get errorLastAdmin;
+
+  /// No description provided for @errorCannotDeleteSelf.
+  ///
+  /// In es, this message translates to:
+  /// **'No puedes eliminar tu propia cuenta'**
+  String get errorCannotDeleteSelf;
+
+  /// No description provided for @errorPaymentNotFound.
+  ///
+  /// In es, this message translates to:
+  /// **'Pago no encontrado'**
+  String get errorPaymentNotFound;
+
+  /// No description provided for @errorPaymentAlreadyProcessed.
+  ///
+  /// In es, this message translates to:
+  /// **'Este pago ya fue procesado'**
+  String get errorPaymentAlreadyProcessed;
+
+  /// No description provided for @errorShiftStillOpen.
+  ///
+  /// In es, this message translates to:
+  /// **'El turno sigue abierto'**
+  String get errorShiftStillOpen;
+
+  /// No description provided for @errorShiftAdjustReason.
+  ///
+  /// In es, this message translates to:
+  /// **'Indica el motivo de la corrección'**
+  String get errorShiftAdjustReason;
 
   /// No description provided for @errorInvalidOpeningFloat.
   ///
@@ -1837,6 +1885,48 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Agregar usuario'**
   String get userAddTooltip;
+
+  /// No description provided for @userActions.
+  ///
+  /// In es, this message translates to:
+  /// **'Acciones'**
+  String get userActions;
+
+  /// No description provided for @userResetPin.
+  ///
+  /// In es, this message translates to:
+  /// **'Restablecer PIN'**
+  String get userResetPin;
+
+  /// No description provided for @userResetPinTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Nuevo PIN para {name}'**
+  String userResetPinTitle(String name);
+
+  /// No description provided for @userNewPin.
+  ///
+  /// In es, this message translates to:
+  /// **'Nuevo PIN (6 dígitos)'**
+  String get userNewPin;
+
+  /// No description provided for @userDelete.
+  ///
+  /// In es, this message translates to:
+  /// **'Eliminar usuario'**
+  String get userDelete;
+
+  /// No description provided for @userDeleteTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Eliminar usuario?'**
+  String get userDeleteTitle;
+
+  /// No description provided for @userDeleteBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Se eliminará la cuenta de {name}. Esta acción no se puede deshacer.'**
+  String userDeleteBody(String name);
 
   /// No description provided for @userActiveLabel.
   ///

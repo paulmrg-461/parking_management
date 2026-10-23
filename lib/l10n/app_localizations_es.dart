@@ -286,6 +286,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get shiftUnavailable => 'Turno no disponible';
 
   @override
+  String get shiftOffline =>
+      'Necesitas conexión para operar la caja y el arqueo.';
+
+  @override
   String get shiftTitle => 'Turno / Caja';
 
   @override
@@ -345,6 +349,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get shiftClosedTitle => 'Turno cerrado';
 
   @override
+  String get shiftAdjust => 'Corregir cierre de turno';
+
+  @override
   String get shiftCountedCash => 'Efectivo contado';
 
   @override
@@ -367,6 +374,24 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get errorShiftNotFound => 'Turno no encontrado';
+
+  @override
+  String get errorLastAdmin => 'No puedes dejar el sistema sin administradores';
+
+  @override
+  String get errorCannotDeleteSelf => 'No puedes eliminar tu propia cuenta';
+
+  @override
+  String get errorPaymentNotFound => 'Pago no encontrado';
+
+  @override
+  String get errorPaymentAlreadyProcessed => 'Este pago ya fue procesado';
+
+  @override
+  String get errorShiftStillOpen => 'El turno sigue abierto';
+
+  @override
+  String get errorShiftAdjustReason => 'Indica el motivo de la corrección';
 
   @override
   String get errorInvalidOpeningFloat => 'La base inicial no es válida';
@@ -971,6 +996,31 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get userAddTooltip => 'Agregar usuario';
+
+  @override
+  String get userActions => 'Acciones';
+
+  @override
+  String get userResetPin => 'Restablecer PIN';
+
+  @override
+  String userResetPinTitle(String name) {
+    return 'Nuevo PIN para $name';
+  }
+
+  @override
+  String get userNewPin => 'Nuevo PIN (6 dígitos)';
+
+  @override
+  String get userDelete => 'Eliminar usuario';
+
+  @override
+  String get userDeleteTitle => '¿Eliminar usuario?';
+
+  @override
+  String userDeleteBody(String name) {
+    return 'Se eliminará la cuenta de $name. Esta acción no se puede deshacer.';
+  }
 
   @override
   String userActiveLabel(String name) {
