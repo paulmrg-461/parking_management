@@ -135,10 +135,12 @@ settings, lots and memberships).
 | `audit_log` | platform admins | triggers and the `admin-users` Edge Function |
 | `device_tokens`, `web_push_subscriptions` | own rows | RPCs |
 
-The active lot comes from `current_lot_id()`: the `x-lot-id` header validated
-against `lot_members`, falling back to the user's lowest membership. A forged
-value raises `LotRequiredError`. Queued offline writes pass the captured lot
-through `resolve_lot()`, which validates membership the same way.
+The active lot comes from `current_lot_id()`: the **mandatory** `x-lot-id`
+header validated against `lot_members`. A missing or forged value raises
+`LotRequiredError` (contract since `0032`). Queued offline writes pass the
+captured lot through `resolve_lot()`, which validates membership the same way.
+Cron jobs (`notify_overstays`, renewals, purges) deliberately avoid
+`current_lot_id()` and act per row/site instead.
 
 ## 5. Migration rules
 

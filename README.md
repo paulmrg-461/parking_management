@@ -216,11 +216,12 @@ category is applied at check-in.
 Evidence photos are private: reads are limited to sessions of the active lot,
 so a leaked object path is useless outside its site.
 
-The active lot travels as the `x-lot-id` header, which the app sets from
-`LotContext` (persisted locally). `current_lot_id()` validates the caller's
-membership on every request and falls back to their lowest membership when the
-header is missing, so console/cron access and single-site installs keep working.
-A forged header fails with `LotRequiredError`.
+The active lot travels as the **mandatory** `x-lot-id` header, which the app
+sets from `LotContext` (persisted locally) before exposing the session.
+`current_lot_id()` validates the caller's membership on every lot-scoped
+request; a missing or forged header fails with `LotRequiredError`. Scheduled
+jobs and Studio work directly on the database and do not use that helper, so
+they keep working without a header.
 
 - Branding (name, address, logo) is per site: the logo is stored as
   `branding/logo_<lotId>` and `set_branding_logo` only touches the active lot.

@@ -3,6 +3,10 @@
 -- Runs in one transaction and rolls back; no fixture survives.
 begin;
 
+-- The x-lot-id header is mandatory since the contract migration; the suite
+-- runs against the default lot unless a block switches it.
+set local request.headers = '{"x-lot-id":"1"}';
+
 create temp table _results (
     session_json jsonb,
     receipt jsonb
@@ -443,7 +447,7 @@ begin
     end;
 end $$;
 
-reset request.headers;
+set local request.headers = '{"x-lot-id":"1"}';
 
 -- Platform-only operations.
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
@@ -482,6 +486,23 @@ begin
     end;
 end $$;
 
+-- The header is mandatory: omitting it fails closed.
+do $$
+declare
+    saved text := current_setting('request.headers', true);
+begin
+    perform set_config('request.headers', '', true);
+    begin
+        perform public.current_lot_id();
+        raise exception 'missing lot header was accepted';
+    exception when others then
+        if sqlerrm not like '%LotRequiredError%' then
+            raise;
+        end if;
+    end;
+    perform set_config('request.headers', saved, true);
+end $$;
+
 -- Branding is per lot: only the active lot's row changes.
 set local request.headers = '{"x-lot-id":"2"}';
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
@@ -513,7 +534,7 @@ begin
     end;
 end $$;
 
-reset request.headers;
+set local request.headers = '{"x-lot-id":"1"}';
 
 -- Evidence objects must stay inside the active lot (policy regression guard).
 do $$
@@ -658,7 +679,7 @@ begin
     end if;
 end $$;
 
-reset request.headers;
+set local request.headers = '{"x-lot-id":"1"}';
 
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
 do $$

@@ -229,13 +229,13 @@ sequenceDiagram
   participant GW as Envoy → PostgREST
   participant DB as PostgreSQL
 
-  App->>L: user picks a site
+  App->>L: login / user picks a site
   L->>L: persist lot id (Hive)
-  L->>GW: header x-lot-id: 2 on every request
+  L->>GW: header x-lot-id: 2 on every request (mandatory)
   GW->>DB: current_lot_id() validates membership
   alt member
     DB-->>App: lot 2 rows only
-  else forged / not a member
+  else missing / forged / not a member
     DB-->>App: LotRequiredError
   end
 ```
@@ -265,6 +265,6 @@ platform admins can request the consolidated view.
 | No application server | One deployable, no duplicated business rules, RLS is the boundary. |
 | SQL RPCs own logic | Billing/capacity must be atomic; the client cannot be trusted. |
 | Hive + outbox instead of live-sync | A parking lot loses connectivity; operators must keep working. |
-| Header-selected lot | No re-login to switch sites; validated server-side, so it is only a selector. |
+| Header-selected lot (mandatory) | No re-login to switch sites; validated server-side, so it is only a selector. Missing header fails closed. |
 | PDF/thermal receipts, no e-invoicing | Product scope: internal receipt only. |
 | Separate `admin-users` function | GoTrue admin API needs the service key; it must never reach the app. |

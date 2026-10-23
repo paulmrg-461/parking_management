@@ -127,6 +127,17 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   `postgres`), so scheduling stays in the host cron; the README documents how
   to enable pg_cron if the deployment supports `cron.database_name`.
 
+## Multi-lot contract (latest)
+
+- `0032`: `x-lot-id` is mandatory; missing/forged → `LotRequiredError`. The
+  Flutter `AuthCubit` awaits `onSessionReady` (lots loaded → header set) before
+  exposing the authenticated state. `notify_overstays` no longer uses
+  `current_lot_id()` (per-lot threshold/timezone, all sites), so cron is safe.
+- OpenSpec change archived: `openspec/changes/archive/2026-10-23-add-multi-parking-lot`,
+  capability `openspec/specs/parking-lots`.
+- E2E suites send the header; `supabase/tests/rpc_test.sql` sets lot 1 at the
+  top and switches per block.
+
 ## E2E (latest)
 
 - `supabase/tests/e2e.sh`: curl-level flow (login → check-in → check-out →

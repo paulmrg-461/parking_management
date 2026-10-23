@@ -127,4 +127,38 @@ void main() {
       );
     });
   });
+
+  test('Success: the lot is selected before the session is exposed', () async {
+    final events = <String>[];
+    final cubit = AuthCubit(
+      FakeAuthRepository(),
+      null,
+      () async => events.add('lot'),
+    );
+    addTearDown(cubit.close);
+    final subscription = cubit.stream.listen((state) {
+      if (state is AuthAuthenticated) {
+        events.add('authenticated');
+      }
+    });
+
+    await cubit.login('juan', '123456');
+    await Future<void>.delayed(Duration.zero);
+    await subscription.cancel();
+
+    expect(events, ['lot', 'authenticated']);
+  });
+
+  test('Failure: a broken lot lookup does not block sign-in', () async {
+    final cubit = AuthCubit(
+      FakeAuthRepository(),
+      null,
+      () async => throw StateError('offline'),
+    );
+    addTearDown(cubit.close);
+
+    await cubit.login('juan', '123456');
+
+    expect(cubit.state, isA<AuthAuthenticated>());
+  });
 }

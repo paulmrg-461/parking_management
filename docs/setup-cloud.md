@@ -235,6 +235,9 @@ docker compose up -d                    # supabase-migrate applies new migration
 docker compose logs --tail=20 supabase-migrate
 ```
 
+Manual API calls must send the active site: `-H "x-lot-id: <lot id>"` (the
+Flutter app and both e2e suites do it for you).
+
 Smoke test after every deploy:
 
 ```bash

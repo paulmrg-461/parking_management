@@ -83,10 +83,12 @@ RPCs own business logic and the Flutter client calls Supabase directly.
   `set_branding_logo` restricted to the active lot) and evidence objects are
   readable only through a session of the active lot.
 - Multi-lot: every site-owned table carries `lot_id`; RLS and RPCs resolve the
-  active lot with `current_lot_id()` (`x-lot-id` header validated against
-  `lot_members`, lowest membership as fallback). Never trust a client lot id
-  except through `resolve_lot()`. New site data must be stamped with the lot
-  and filtered in reads; queued mutations capture `lot_id` at enqueue time.
+  active lot with `current_lot_id()` from the **mandatory** `x-lot-id` header
+  (validated against `lot_members`, `LotRequiredError` when missing or forged).
+  The app selects the lot before exposing the session; scheduled jobs must not
+  call `current_lot_id()`. Never trust a client lot id except through
+  `resolve_lot()`. New site data must be stamped with the lot and filtered in
+  reads; queued mutations capture `lot_id` at enqueue time.
 - Audit: reference-data tables have `trg_audit_row` (actor from `auth.uid()`,
   changed columns only); user changes are audited inside `admin-users` because
   service-role writes have no `auth.uid()`. Never store secrets (the trigger
@@ -99,7 +101,7 @@ RPCs own business logic and the Flutter client calls Supabase directly.
   browser push uses `web/push-sw.js` + VAPID (`web_push_subscriptions`);
   `FCM_SERVICE_ACCOUNT_JSON` + `supabase/notifications-cron.sh` enable
   background FCM. `push-dispatch` is service-role-only; never expose the key.
-- Tests: `flutter test` (500, plus a live-stack e2e) + `flutter analyze`; CI
+- Tests: `flutter test` (502, plus a live-stack e2e) + `flutter analyze`; CI
   validates compose and runs `supabase/tests/run.sh` (real migrations +
   RPC/RLS tests) against `supabase/postgres`.
 - E2E: `sh supabase/tests/e2e.sh` and

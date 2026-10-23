@@ -45,9 +45,11 @@ void registerAuthModule(GetIt sl) {
         () async {
           await sl<SyncService>().flush();
           await sl<PushService>().start();
-          await sl<LotsCubit>().load();
           await sl<BrandingCubit>().load();
         },
+        // Awaited before the session is exposed: selects the active lot so the
+        // first request carries the mandatory x-lot-id header.
+        () => sl<LotsCubit>().load(),
       ),
     );
 }

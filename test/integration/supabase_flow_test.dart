@@ -50,6 +50,9 @@ void main() {
       final lotId = lots
           .map((lot) => (lot as Map<String, dynamic>)['id'] as int)
           .reduce((a, b) => a < b ? a : b);
+      // The header is mandatory: every lot-scoped request must select a lot
+      // the user belongs to.
+      client.headers = {...client.headers, 'x-lot-id': '$lotId'};
       final categoryId = await _ensureTariff(client, lotId);
       final plate = 'E2E${DateTime.now().millisecondsSinceEpoch % 1000000}';
 

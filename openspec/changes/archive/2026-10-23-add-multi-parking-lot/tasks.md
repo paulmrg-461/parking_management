@@ -83,7 +83,7 @@ no `lot_id`), tracked in the remaining tasks below.
       (invariants: active lot always from the server helper) and `PROGRESS.md`
 - [x] 5.3 Run the full suite: `flutter test`, `flutter analyze`,
       `supabase/tests/run.sh`, web build, and a manual two-lot smoke test
-- [ ] 5.4 Follow-up contract migration dropping the header fallback once every
+- [x] 5.4 Follow-up contract migration dropping the header fallback once every
       client sends `x-lot-id`
 
 Implemented notes: receipts print the active lot's `parking_settings` header

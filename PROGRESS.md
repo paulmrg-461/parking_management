@@ -212,6 +212,12 @@ The app is now a Supabase-only stack: FastAPI, Alembic, Dio and Redis are gone.
   (pure-Dart Supabase client) run against a real stack locally or in CI
   (compose up + admin + both suites).
 
+- **Multi-lot contract**: `0032` makes `x-lot-id` mandatory (no fallback),
+  rewrites the overstay cron to evaluate every site with its own threshold, and
+  the app selects the lot before exposing the session. The OpenSpec change is
+  archived at `openspec/changes/archive/2026-10-23-add-multi-parking-lot`
+  and the capability lives in `openspec/specs/parking-lots`.
+
 ## Infra/tooling (not OpenSpec capabilities — repo scaffolding)
 
 - **Docker**: root `docker-compose.yml` includes the official self-hosted
@@ -252,7 +258,7 @@ The app is now a Supabase-only stack: FastAPI, Alembic, Dio and Redis are gone.
 
 ## Test counts
 
-- Flutter (`flutter test`): 500 passed (plus 1 integration test that runs only against a live stack). `flutter analyze`: 0 errors/warnings
+- Flutter (`flutter test`): 502 passed (plus 1 integration test that runs only against a live stack). `flutter analyze`: 0 errors/warnings
   (98 SDK-deprecation/const infos under the local Flutter 3.50 beta; CI pins
   3.49 where the baseline is clean).
 - SQL/compose: validated against the running Supabase stack and by
