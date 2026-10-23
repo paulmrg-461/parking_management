@@ -386,6 +386,42 @@ class AppLocalizationsEs extends AppLocalizations {
       'Necesitas conexión para operar la caja y el arqueo.';
 
   @override
+  String get shiftHistoryFilter => 'Filtrar por fecha';
+
+  @override
+  String get shiftHistoryClearFilter => 'Quitar filtro';
+
+  @override
+  String get shiftHistoryEmpty => 'No hay turnos en el rango seleccionado';
+
+  @override
+  String get shiftCardSales => 'Ventas con tarjeta';
+
+  @override
+  String get shiftTransferSales => 'Ventas por transferencia';
+
+  @override
+  String get shiftPassSales => 'Mensualidades';
+
+  @override
+  String get shiftSessionCount => 'Salidas cobradas';
+
+  @override
+  String get shiftCashMovements => 'Movimientos de caja';
+
+  @override
+  String get shiftReconciliation => 'Arqueo';
+
+  @override
+  String get shiftNotesTitle => 'Notas';
+
+  @override
+  String get actionExportPdf => 'Exportar PDF';
+
+  @override
+  String get actionShare => 'Compartir';
+
+  @override
   String get shiftTitle => 'Turno / Caja';
 
   @override

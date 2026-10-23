@@ -776,6 +776,78 @@ abstract class AppLocalizations {
   /// **'Necesitas conexión para operar la caja y el arqueo.'**
   String get shiftOffline;
 
+  /// No description provided for @shiftHistoryFilter.
+  ///
+  /// In es, this message translates to:
+  /// **'Filtrar por fecha'**
+  String get shiftHistoryFilter;
+
+  /// No description provided for @shiftHistoryClearFilter.
+  ///
+  /// In es, this message translates to:
+  /// **'Quitar filtro'**
+  String get shiftHistoryClearFilter;
+
+  /// No description provided for @shiftHistoryEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay turnos en el rango seleccionado'**
+  String get shiftHistoryEmpty;
+
+  /// No description provided for @shiftCardSales.
+  ///
+  /// In es, this message translates to:
+  /// **'Ventas con tarjeta'**
+  String get shiftCardSales;
+
+  /// No description provided for @shiftTransferSales.
+  ///
+  /// In es, this message translates to:
+  /// **'Ventas por transferencia'**
+  String get shiftTransferSales;
+
+  /// No description provided for @shiftPassSales.
+  ///
+  /// In es, this message translates to:
+  /// **'Mensualidades'**
+  String get shiftPassSales;
+
+  /// No description provided for @shiftSessionCount.
+  ///
+  /// In es, this message translates to:
+  /// **'Salidas cobradas'**
+  String get shiftSessionCount;
+
+  /// No description provided for @shiftCashMovements.
+  ///
+  /// In es, this message translates to:
+  /// **'Movimientos de caja'**
+  String get shiftCashMovements;
+
+  /// No description provided for @shiftReconciliation.
+  ///
+  /// In es, this message translates to:
+  /// **'Arqueo'**
+  String get shiftReconciliation;
+
+  /// No description provided for @shiftNotesTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Notas'**
+  String get shiftNotesTitle;
+
+  /// No description provided for @actionExportPdf.
+  ///
+  /// In es, this message translates to:
+  /// **'Exportar PDF'**
+  String get actionExportPdf;
+
+  /// No description provided for @actionShare.
+  ///
+  /// In es, this message translates to:
+  /// **'Compartir'**
+  String get actionShare;
+
   /// No description provided for @shiftTitle.
   ///
   /// In es, this message translates to:

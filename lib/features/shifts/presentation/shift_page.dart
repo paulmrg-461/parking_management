@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/l10n/failure_messages.dart';
 import '../../../core/l10n/l10n.dart';
+import '../../../core/receipt/pdf_share.dart';
 import '../../../core/network/connectivity_cubit.dart';
 import '../../../core/state/submission.dart';
 import '../../../core/theme/tokens.dart';
@@ -11,8 +12,10 @@ import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/error_state.dart';
 import '../../../core/widgets/money_text.dart';
 import '../../../core/widgets/submission_feedback.dart';
+import '../../lots/application/lots_cubit.dart';
 import '../application/shift_cubit.dart';
 import '../domain/entities/shift_summary.dart';
+import 'shift_pdf.dart';
 
 class ShiftPage extends StatefulWidget {
   const ShiftPage({super.key, required this.isAdmin});
@@ -21,6 +24,18 @@ class ShiftPage extends StatefulWidget {
 
   @override
   State<ShiftPage> createState() => _ShiftPageState();
+}
+
+String? _activeLotName(BuildContext context) {
+  try {
+    final state = context.read<LotsCubit>().state;
+    if (state is LotsLoaded) {
+      return state.active?.name;
+    }
+  } on ProviderNotFoundException {
+    // Isolated tests do not provide the lot cubit.
+  }
+  return null;
 }
 
 class _ShiftPageState extends State<ShiftPage> {
@@ -121,16 +136,82 @@ class _Content extends StatelessWidget {
             _ClosedShiftCard(shift: state.lastClosed!),
           ],
         ],
-        if (isAdmin && state.history.isNotEmpty) ...[
+        if (isAdmin) ...[
           const SizedBox(height: Space.xl),
-          Text(l10n.shiftHistory, style: Theme.of(context).textTheme.titleMedium),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  l10n.shiftHistory,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+              if (state.historyFrom != null || state.historyTo != null)
+                TextButton(
+                  onPressed: () => context.read<ShiftCubit>().load(
+                    admin: true,
+                    clearHistoryRange: true,
+                  ),
+                  child: Text(l10n.shiftHistoryClearFilter),
+                ),
+              IconButton(
+                tooltip: l10n.shiftHistoryFilter,
+                onPressed: () => _pickHistoryRange(context, state),
+                icon: const Icon(Icons.date_range),
+              ),
+            ],
+          ),
           const SizedBox(height: Space.sm),
-          for (final shift in state.history) _HistoryTile(shift: shift),
+          if (state.history.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: Space.md),
+              child: Text(l10n.shiftHistoryEmpty),
+            )
+          else
+            for (final shift in state.history) _HistoryTile(shift: shift),
         ],
         ],
       ),
     );
   }
+
+  Future<void> _pickHistoryRange(BuildContext context, ShiftState state) async {
+    final now = DateTime.now();
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(now.year - 3),
+      lastDate: now,
+      initialDateRange: state.historyFrom == null || state.historyTo == null
+          ? null
+          : DateTimeRange(
+              start: state.historyFrom!,
+              end: state.historyTo!,
+            ),
+    );
+    if (picked != null && context.mounted) {
+      await context.read<ShiftCubit>().load(
+        admin: true,
+        historyFrom: picked.start,
+        historyTo: picked.end,
+      );
+    }
+  }
+}
+
+Future<void> exportShiftPdf(BuildContext context, ShiftSummary shift) async {
+  final bytes = await buildShiftPdf(
+    l10n: context.l10n,
+    shift: shift,
+    lotName: _activeLotName(context),
+  );
+  if (!context.mounted) {
+    return;
+  }
+  await sharePdfBytes(
+    context,
+    bytes: bytes,
+    filename: pdfFileName('turno-${shift.id}', shift.openedAt),
+  );
 }
 
 class _OfflineNotice extends StatelessWidget {
@@ -374,6 +455,14 @@ class _ClosedShiftCard extends StatelessWidget {
               const SizedBox(height: Space.sm),
               Text(shift.notes!),
             ],
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: () => exportShiftPdf(context, shift),
+                icon: const Icon(Icons.ios_share),
+                label: Text(l10n.actionExportPdf),
+              ),
+            ),
           ],
         ),
       ),
@@ -403,7 +492,22 @@ class _HistoryTile extends StatelessWidget {
                 Icons.lock_open,
                 color: Theme.of(context).colorScheme.primary,
               )
-            : const Icon(Icons.edit_outlined),
+            : PopupMenuButton<String>(
+                tooltip: context.l10n.shiftHistoryFilter,
+                onSelected: (action) => action == 'export'
+                    ? exportShiftPdf(context, shift)
+                    : _adjust(context),
+                itemBuilder: (_) => [
+                  PopupMenuItem(
+                    value: 'export',
+                    child: Text(context.l10n.actionExportPdf),
+                  ),
+                  PopupMenuItem(
+                    value: 'adjust',
+                    child: Text(context.l10n.shiftAdjust),
+                  ),
+                ],
+              ),
       ),
     );
   }

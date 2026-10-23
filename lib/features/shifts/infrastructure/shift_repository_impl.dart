@@ -25,8 +25,11 @@ class ShiftRepositoryImpl implements ShiftRepository {
   }) => _remote.addMovement(type: type, amount: amount, reason: reason);
 
   @override
-  Future<List<ShiftSummary>> history({int limit = 20}) =>
-      _remote.history(limit: limit);
+  Future<List<ShiftSummary>> history({
+    int limit = 20,
+    DateTime? from,
+    DateTime? to,
+  }) => _remote.history(limit: limit, from: from, to: to);
 
   @override
   Future<ShiftSummary> adjust({

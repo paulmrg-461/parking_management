@@ -107,11 +107,25 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 - `web/manifest.json`, `web/index.html` and the Android label no longer ship
   Flutter defaults.
 
+## Operational batch (latest)
+
+- PDF export: `buildRevenueReportPdf` (reports, includes the per-site
+  breakdown) and `buildShiftPdf` (arqueo) share through `printing`;
+  `sharePdfBytes` / `pdfFileName` live in `core/receipt/pdf_share.dart`.
+- Shift history filters: `list_shifts(p_limit, p_start_date, p_end_date)` (lot
+  implicit) + a date-range picker in the admin history; clearing is explicit.
+- Retention (`0028`): `expire_reservations`, `purge_stale_notifications` and the
+  existing idempotency purge, all called by `notifications-cron.sh`. pg_cron is
+  NOT available in this image's `parking` database (it can only be installed in
+  `postgres`), so scheduling stays in the host cron; the README documents how
+  to enable pg_cron if the deployment supports `cron.database_name`.
+
 ## Backlog / next moves
 
 - `5.4` contract migration: drop the missing-header fallback once every client
   sends `x-lot-id`.
 - Optional polish: per-lot receipt footer beyond settings, lot filter on the
-  vehicle history UI, consolidated report export, `idempotency_keys` TTL purge.
+  vehicle history UI, evidence-file archival, admin audit log, observability
+  (Sentry/logs/healthchecks) and Flutter↔Supabase e2e tests.
 - Dev DB artifacts from smoke tests: lot `NORTH` ("Sede Norte") and user
   `norte2` (operator, PIN `123456`, member of lot 2). Safe to delete.

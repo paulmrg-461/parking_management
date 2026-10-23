@@ -16,7 +16,11 @@ abstract class ShiftRemoteDataSource {
     required String reason,
   });
 
-  Future<List<ShiftSummary>> history({int limit});
+  Future<List<ShiftSummary>> history({
+    int limit,
+    DateTime? from,
+    DateTime? to,
+  });
 
   Future<ShiftSummary> adjust({
     required int shiftId,
@@ -117,11 +121,19 @@ class SupabaseShiftRemoteDataSource implements ShiftRemoteDataSource {
   }
 
   @override
-  Future<List<ShiftSummary>> history({int limit = 20}) async {
+  Future<List<ShiftSummary>> history({
+    int limit = 20,
+    DateTime? from,
+    DateTime? to,
+  }) async {
     try {
       final result = await _client.rpc(
         'list_shifts',
-        params: {'p_limit': limit},
+        params: {
+          'p_limit': limit,
+          if (from != null) 'p_start_date': _formatDate(from),
+          if (to != null) 'p_end_date': _formatDate(to),
+        },
       );
       return [
         for (final item in (result as List<dynamic>))
@@ -132,3 +144,8 @@ class SupabaseShiftRemoteDataSource implements ShiftRemoteDataSource {
     }
   }
 }
+
+String _formatDate(DateTime value) =>
+    '${value.year.toString().padLeft(4, '0')}-'
+    '${value.month.toString().padLeft(2, '0')}-'
+    '${value.day.toString().padLeft(2, '0')}';

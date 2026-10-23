@@ -188,6 +188,12 @@ The app is now a Supabase-only stack: FastAPI, Alembic, Dio and Redis are gone.
   web/Android metadata no longer ships Flutter defaults. Remaining: the contract
   migration that drops the missing-header fallback (deliberate follow-up).
 
+- **Operational batch**: revenue reports and the shift reconciliation export as
+  PDF (share/print sheet, per-site breakdown included); the admin shift history
+  filters by date range (`list_shifts(limit, start, end)`); retention jobs for
+  expired reservations and stale notifications run from the cron script (and
+  through pg_cron when the database has it).
+
 ## Infra/tooling (not OpenSpec capabilities — repo scaffolding)
 
 - **Docker**: root `docker-compose.yml` includes the official self-hosted
@@ -228,7 +234,7 @@ The app is now a Supabase-only stack: FastAPI, Alembic, Dio and Redis are gone.
 
 ## Test counts
 
-- Flutter (`flutter test`): 482 passed. `flutter analyze`: 0 errors/warnings
+- Flutter (`flutter test`): 486 passed. `flutter analyze`: 0 errors/warnings
   (98 SDK-deprecation/const infos under the local Flutter 3.50 beta; CI pins
   3.49 where the baseline is clean).
 - SQL/compose: validated against the running Supabase stack and by

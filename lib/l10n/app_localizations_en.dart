@@ -381,6 +381,42 @@ class AppLocalizationsEn extends AppLocalizations {
       'You need a connection to operate the cash drawer.';
 
   @override
+  String get shiftHistoryFilter => 'Filter by date';
+
+  @override
+  String get shiftHistoryClearFilter => 'Clear filter';
+
+  @override
+  String get shiftHistoryEmpty => 'No shifts in the selected range';
+
+  @override
+  String get shiftCardSales => 'Card sales';
+
+  @override
+  String get shiftTransferSales => 'Transfer sales';
+
+  @override
+  String get shiftPassSales => 'Monthly passes';
+
+  @override
+  String get shiftSessionCount => 'Paid exits';
+
+  @override
+  String get shiftCashMovements => 'Cash movements';
+
+  @override
+  String get shiftReconciliation => 'Reconciliation';
+
+  @override
+  String get shiftNotesTitle => 'Notes';
+
+  @override
+  String get actionExportPdf => 'Export PDF';
+
+  @override
+  String get actionShare => 'Share';
+
+  @override
   String get shiftTitle => 'Shift / Cash';
 
   @override

@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:printing/printing.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/l10n/failure_messages.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/receipt/payment_method.dart';
+import '../../../core/receipt/pdf_share.dart';
 import '../../../core/utils/formatters.dart';
+import '../../lots/application/lots_cubit.dart';
 import '../../../core/widgets/app_icon_button.dart';
 import '../../../core/widgets/async_view.dart';
 import '../../../core/widgets/money_text.dart';
 import '../../../core/widgets/sync_badge.dart';
 import '../application/reports_cubit.dart';
+import 'report_pdf.dart';
 import 'widgets/category_bar_list.dart';
 import 'widgets/revenue_by_day_chart.dart';
 
@@ -27,6 +31,7 @@ class ReportsPage extends StatefulWidget {
 class _ReportsPageState extends State<ReportsPage> {
   late DateTimeRange _range;
   bool _allLots = false;
+  bool _exporting = false;
 
   @override
   void initState() {
@@ -46,6 +51,49 @@ class _ReportsPageState extends State<ReportsPage> {
       endDate: _range.end,
       allLots: _allLots,
     );
+  }
+
+  String? _lotName(BuildContext context, bool allLots) {
+    if (allLots) {
+      return context.l10n.reportsAllLots;
+    }
+    try {
+      final state = context.read<LotsCubit>().state;
+      if (state is LotsLoaded) {
+        return state.active?.name;
+      }
+    } on ProviderNotFoundException {
+      // Isolated tests do not provide the lot cubit.
+    }
+    return null;
+  }
+
+  Future<void> _export(BuildContext context) async {
+    final state = context.read<ReportsCubit>().state;
+    if (state is! ReportsLoaded || _exporting) {
+      return;
+    }
+    setState(() => _exporting = true);
+    try {
+      final bytes = await buildRevenueReportPdf(
+        l10n: context.l10n,
+        revenue: state.revenue,
+        headline: context.l10n.reportsTitle,
+        lotName: _lotName(context, state.allLots),
+      );
+      if (!context.mounted) {
+        return;
+      }
+      await sharePdfBytes(
+        context,
+        bytes: bytes,
+        filename: pdfFileName('reporte', _range.start, _range.end),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _exporting = false);
+      }
+    }
   }
 
   Future<void> _pickRange(BuildContext context) async {
@@ -69,6 +117,11 @@ class _ReportsPageState extends State<ReportsPage> {
       appBar: AppBar(
         title: Text(l10n.reportsTitle),
         actions: [
+          AppIconButton(
+            icon: Icons.ios_share,
+            tooltip: l10n.actionExportPdf,
+            onPressed: () => _export(context),
+          ),
           AppIconButton(
             icon: Icons.date_range,
             tooltip: l10n.reportsRangeTooltip,

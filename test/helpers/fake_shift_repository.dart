@@ -74,7 +74,16 @@ class FakeShiftRepository implements ShiftRepository {
   }
 
   @override
-  Future<List<ShiftSummary>> history({int limit = 20}) async {
+  DateTime? lastHistoryFrom;
+  DateTime? lastHistoryTo;
+
+  Future<List<ShiftSummary>> history({
+    int limit = 20,
+    DateTime? from,
+    DateTime? to,
+  }) async {
+    lastHistoryFrom = from;
+    lastHistoryTo = to;
     _throwIfNeeded();
     return historyShifts;
   }

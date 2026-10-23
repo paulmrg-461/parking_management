@@ -13,7 +13,11 @@ abstract class ShiftRepository {
     required String reason,
   });
 
-  Future<List<ShiftSummary>> history({int limit = 20});
+  Future<List<ShiftSummary>> history({
+    int limit = 20,
+    DateTime? from,
+    DateTime? to,
+  });
 
   Future<ShiftSummary> adjust({
     required int shiftId,

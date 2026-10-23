@@ -16,6 +16,8 @@ class ShiftState extends Equatable {
     this.lastClosed,
     this.submission = const SubmissionIdle(),
     this.error,
+    this.historyFrom,
+    this.historyTo,
   });
 
   final ShiftStatus status;
@@ -25,6 +27,10 @@ class ShiftState extends Equatable {
   final Submission submission;
   final Failure? error;
 
+  /// Active admin-history filter (`null` = everything).
+  final DateTime? historyFrom;
+  final DateTime? historyTo;
+
   ShiftState copyWith({
     ShiftStatus? status,
     ShiftSummary? current,
@@ -33,6 +39,9 @@ class ShiftState extends Equatable {
     ShiftSummary? lastClosed,
     Submission? submission,
     Failure? error,
+    DateTime? historyFrom,
+    DateTime? historyTo,
+    bool clearHistoryRange = false,
   }) => ShiftState(
     status: status ?? this.status,
     current: clearCurrent ? null : (current ?? this.current),
@@ -40,11 +49,22 @@ class ShiftState extends Equatable {
     lastClosed: lastClosed ?? this.lastClosed,
     submission: submission ?? this.submission,
     error: error,
+    historyFrom: clearHistoryRange ? null : (historyFrom ?? this.historyFrom),
+    historyTo: clearHistoryRange ? null : (historyTo ?? this.historyTo),
   );
 
   @override
   List<Object?> get props =>
-      [status, current, history, lastClosed, submission, error];
+      [
+        status,
+        current,
+        history,
+        lastClosed,
+        submission,
+        error,
+        historyFrom,
+        historyTo,
+      ];
 }
 
 class ShiftCubit extends ResilientCubit<ShiftState> {
@@ -52,17 +72,30 @@ class ShiftCubit extends ResilientCubit<ShiftState> {
 
   final ShiftRepository _repository;
 
-  Future<void> load({bool admin = false}) async {
+  Future<void> load({
+    bool admin = false,
+    DateTime? historyFrom,
+    DateTime? historyTo,
+    bool clearHistoryRange = false,
+  }) async {
     emit(state.copyWith(status: ShiftStatus.loading, error: null));
     try {
       final current = await _repository.current();
-      final history = admin ? await _repository.history() : const <ShiftSummary>[];
+      final history = admin
+          ? await _repository.history(
+              from: clearHistoryRange ? null : (historyFrom ?? state.historyFrom),
+              to: clearHistoryRange ? null : (historyTo ?? state.historyTo),
+            )
+          : const <ShiftSummary>[];
       emit(
         state.copyWith(
           status: ShiftStatus.loaded,
           current: current,
           clearCurrent: current == null,
           history: history,
+          historyFrom: historyFrom,
+          historyTo: historyTo,
+          clearHistoryRange: clearHistoryRange,
         ),
       );
     } on Failure catch (failure) {

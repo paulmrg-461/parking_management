@@ -164,6 +164,14 @@ a vehicle outside the first page is still found; the query shows a proper
 "no plate matches" state. Discounts appear in the report with their reason,
 admin and timestamp.
 
+## Reports and shifts
+
+The admin revenue report has an **Export PDF** action (share/print sheet) with
+the same numbers shown on screen, including the per-site breakdown when the
+consolidated switch is on. The shift screen exports a one-page reconciliation
+("arqueo") from the freshly closed card and from each history entry, and the
+history can be filtered by date range.
+
 ## Shifts and cash reconciliation
 
 Home shows a live shift card (open/closed, expected cash, check-outs) and the
@@ -236,6 +244,23 @@ and a blocked vehicle is refused at check-in with a localized message.
 A pass can be marked auto-renew; the notification cron creates a linked new
 pass for the same duration and amount when it expires and notifies admins.
 Manual passes keep the three-day expiry reminder.
+
+## Data retention
+
+These functions are safe to call repeatedly:
+
+- `expire_reservations(24)` closes holds that were never used, freeing
+  capacity.
+- `purge_stale_notifications(90)` drops read notifications older than 90 days
+  (and anything older than a year).
+- `purge_expired_idempotency()` drops expired retry keys.
+
+`supabase/notifications-cron.sh` runs all of them every minute from host cron,
+which is the supported path. If your Postgres ships **pg_cron**, run
+`ALTER SYSTEM SET cron.database_name = 'parking';`, restart the database,
+`CREATE EXTENSION pg_cron;` and re-apply `0028_retention.sql`: it then
+schedules the same jobs inside Postgres. Storage evidence files are not purged
+automatically; delete them through the Storage API when you archive a period.
 
 ## Billing rules
 

@@ -73,4 +73,25 @@ void main() {
     await cubit.load(admin: true);
     expect(cubit.state.history, hasLength(1));
   });
+
+  test('Success: the admin history filter is sent to the repository', () async {
+    final repository = FakeShiftRepository(
+      historyShifts: [sampleShift(closed: true, countedCash: 15000)],
+    );
+    final cubit = ShiftCubit(repository);
+    addTearDown(cubit.close);
+    final from = DateTime(2026, 1, 1);
+    final to = DateTime(2026, 1, 31);
+
+    await cubit.load(admin: true, historyFrom: from, historyTo: to);
+
+    expect(repository.lastHistoryFrom, from);
+    expect(repository.lastHistoryTo, to);
+    expect(cubit.state.historyFrom, from);
+
+    await cubit.load(admin: true, clearHistoryRange: true);
+
+    expect(repository.lastHistoryFrom, isNull);
+    expect(cubit.state.historyFrom, isNull);
+  });
 }

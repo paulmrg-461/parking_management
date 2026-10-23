@@ -529,6 +529,61 @@ begin
     end if;
 end $$;
 
+-- Retention and expiry jobs (called by pg_cron or the external cron).
+insert into public.category_reservations (
+    plate, category_id, reserved_from, reserved_until, status, lot_id
+)
+select 'OLDHOLD', (select id from public.categories where lot_id = 2 and name = 'n2free'),
+       now() - interval '5 days', now() - interval '3 days', 'active', 2;
+
+do $$
+declare
+    expired integer;
+    purged integer;
+begin
+    expired := public.expire_reservations(24);
+    if expired < 1 then
+        raise exception 'expired reservations were not closed';
+    end if;
+    if not exists (
+        select 1 from public.category_reservations
+         where plate = 'OLDHOLD' and status = 'expired'
+    ) then
+        raise exception 'reservation did not move to expired';
+    end if;
+
+    insert into public.notifications (user_id, type, title, body, read_at, created_at)
+    values (1, 'check_in', 'old read', 'x', now() - interval '200 days', now() - interval '200 days');
+    insert into public.notifications (user_id, type, title, body, created_at)
+    values (1, 'check_in', 'old unread', 'x', now() - interval '400 days');
+    insert into public.notifications (user_id, type, title, body, created_at)
+    values (1, 'check_in', 'fresh', 'x', now());
+
+    purged := public.purge_stale_notifications(90);
+    if purged <> 2 then
+        raise exception 'stale notifications purge removed % rows', purged;
+    end if;
+    if not exists (
+        select 1 from public.notifications where title = 'fresh'
+    ) then
+        raise exception 'purge removed a fresh notification';
+    end if;
+end $$;
+
+-- Shift history filters: a range that excludes the shift returns nothing.
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+begin
+    if jsonb_array_length(
+           public.list_shifts(20, current_date + 10, current_date + 11)
+       ) <> 0 then
+        raise exception 'shift filter ignored the requested range';
+    end if;
+    if jsonb_array_length(public.list_shifts(20)) < 1 then
+        raise exception 'unfiltered shift history is empty';
+    end if;
+end $$;
+
 -- RLS: the operator must not read the admin's notifications.
 set local role authenticated;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
