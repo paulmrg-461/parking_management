@@ -11,6 +11,8 @@ import '../../../core/widgets/error_state.dart';
 import '../../../core/widgets/receipt_card.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/widgets/sync_badge.dart';
+import '../../auth/application/auth_cubit.dart';
+import '../../auth/domain/entities/user.dart';
 import '../../home/application/dashboard_cubit.dart';
 import '../../receipt_printing/presentation/receipt_print_sheet.dart';
 import '../../notifications/presentation/notification_bell.dart';
@@ -107,6 +109,8 @@ class _CheckOutPageState extends State<CheckOutPage> {
     amountCharged: receipt.amountCharged,
     ticketNumber: receipt.ticketNumber,
     paymentMethod: receipt.paymentMethod,
+    discountAmount: receipt.discountAmount,
+    discountReason: receipt.discountReason,
     pendingSync: receipt.pendingSync,
   );
 }
@@ -190,13 +194,36 @@ class _SessionTile extends StatelessWidget {
     );
   }
 
+  bool _canDiscount(BuildContext context) {
+    try {
+      final auth = context.read<AuthCubit>();
+      return switch (auth.state) {
+          AuthAuthenticated(:final session) =>
+            session.user.role == UserRole.admin,
+        _ => false,
+      };
+    } on ProviderNotFoundException {
+      return false;
+    }
+  }
+
   Future<void> _confirmCheckOut(BuildContext context) async {
     final cubit = context.read<CheckOutCubit>();
-    final method = await showPaymentMethodDialog(context, plate: plate);
-    if (method == null) {
+    final canDiscount = _canDiscount(context);
+    final choice = await showCheckoutDialog(
+      context,
+      plate: plate,
+      canDiscount: canDiscount,
+    );
+    if (choice == null) {
       return;
     }
-    await cubit.checkOut(session.id, paymentMethod: method.wire);
+    await cubit.checkOut(
+      session.id,
+      paymentMethod: choice.method.wire,
+      discountAmount: choice.discountAmount,
+      discountReason: choice.discountReason,
+    );
   }
 }
 

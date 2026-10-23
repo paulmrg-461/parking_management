@@ -70,6 +70,13 @@ class CategoriesCubit extends ResilientCubit<CategoriesState> {
     }
   }
 
+  Future<void> setCapacity(Category category, int capacity) async {
+    final id = category.id;
+    if (id != null) {
+      await _submit(() => _repository.setCapacity(id, capacity));
+    }
+  }
+
   Future<void> delete(Category category) async {
     final id = category.id;
     if (id != null) {

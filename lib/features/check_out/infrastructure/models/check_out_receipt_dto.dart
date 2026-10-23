@@ -14,6 +14,8 @@ class CheckOutReceiptDto {
     required this.amountCharged,
     required this.ticketNumber,
     this.paymentMethod,
+    this.discountAmount = 0,
+    this.discountReason,
   });
 
   factory CheckOutReceiptDto.fromJson(Map<String, dynamic> json) =>
@@ -37,6 +39,12 @@ class CheckOutReceiptDto {
   @JsonKey(name: 'payment_method')
   final String? paymentMethod;
 
+  @JsonKey(name: 'discount_amount')
+  final int discountAmount;
+
+  @JsonKey(name: 'discount_reason')
+  final String? discountReason;
+
   Map<String, dynamic> toJson() => _$CheckOutReceiptDtoToJson(this);
 
   CheckOutReceipt toDomain() => CheckOutReceipt(
@@ -47,5 +55,7 @@ class CheckOutReceiptDto {
         amountCharged: amountCharged,
         ticketNumber: ticketNumber,
         paymentMethod: paymentMethod ?? 'cash',
+        discountAmount: discountAmount,
+        discountReason: discountReason,
       );
 }

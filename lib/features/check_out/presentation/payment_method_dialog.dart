@@ -1,52 +1,127 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/l10n/l10n.dart';
 import '../../../core/receipt/payment_method.dart';
 
-/// Asks how the customer paid before closing a session.
-Future<PaymentMethod?> showPaymentMethodDialog(
-  BuildContext context, {
-  required String plate,
-}) => showDialog<PaymentMethod>(
-  context: context,
-  builder: (_) => _PaymentMethodDialog(plate: plate),
-);
+class CheckoutChoice {
+  const CheckoutChoice({
+    required this.method,
+    this.discountAmount = 0,
+    this.discountReason,
+  });
 
-class _PaymentMethodDialog extends StatefulWidget {
-  const _PaymentMethodDialog({required this.plate});
-
-  final String plate;
-
-  @override
-  State<_PaymentMethodDialog> createState() => _PaymentMethodDialogState();
+  final PaymentMethod method;
+  final int discountAmount;
+  final String? discountReason;
 }
 
-class _PaymentMethodDialogState extends State<_PaymentMethodDialog> {
+/// Asks how the customer paid (and, for admins, an optional audited
+/// discount) before closing a session.
+Future<CheckoutChoice?> showCheckoutDialog(
+  BuildContext context, {
+  required String plate,
+  required bool canDiscount,
+}) => showDialog<CheckoutChoice>(
+  context: context,
+  builder: (_) => _CheckoutDialog(plate: plate, canDiscount: canDiscount),
+);
+
+class _CheckoutDialog extends StatefulWidget {
+  const _CheckoutDialog({required this.plate, required this.canDiscount});
+
+  final String plate;
+  final bool canDiscount;
+
+  @override
+  State<_CheckoutDialog> createState() => _CheckoutDialogState();
+}
+
+class _CheckoutDialogState extends State<_CheckoutDialog> {
   PaymentMethod _selected = PaymentMethod.cash;
+  final _discountController = TextEditingController();
+  final _reasonController = TextEditingController();
+  String? _error;
+
+  @override
+  void dispose() {
+    _discountController.dispose();
+    _reasonController.dispose();
+    super.dispose();
+  }
+
+  void _confirm() {
+    final discount = widget.canDiscount
+        ? int.tryParse(_discountController.text.trim()) ?? 0
+        : 0;
+    final reason = _reasonController.text.trim();
+    if (discount < 0) {
+      setState(() => _error = context.l10n.invalidAmount);
+      return;
+    }
+    if (discount > 0 && reason.isEmpty) {
+      setState(() => _error = context.l10n.discountReasonRequired);
+      return;
+    }
+    Navigator.of(context).pop(
+      CheckoutChoice(
+        method: _selected,
+        discountAmount: discount,
+        discountReason: discount > 0 ? reason : null,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
       title: Text(context.l10n.paymentMethodTitle),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(context.l10n.checkOutConfirm(widget.plate)),
-          const SizedBox(height: 8),
-          for (final method in PaymentMethod.values)
-            RadioListTile<PaymentMethod>(
-              value: method,
-              groupValue: _selected,
-              onChanged: (value) {
-                if (value != null) {
-                  setState(() => _selected = value);
-                }
-              },
-              title: Text(method.label(context.l10n)),
-              secondary: Icon(method.icon),
-            ),
-        ],
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(context.l10n.checkOutConfirm(widget.plate)),
+            const SizedBox(height: 8),
+            for (final method in PaymentMethod.values)
+              RadioListTile<PaymentMethod>(
+                value: method,
+                groupValue: _selected,
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() => _selected = value);
+                  }
+                },
+                title: Text(method.label(context.l10n)),
+                secondary: Icon(method.icon),
+              ),
+            if (widget.canDiscount) ...[
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _discountController,
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                decoration: InputDecoration(
+                  labelText: context.l10n.discountAmount,
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _reasonController,
+                decoration: InputDecoration(
+                  labelText: context.l10n.discountReason,
+                ),
+              ),
+            ],
+            if (_error != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                _error!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ],
+          ],
+        ),
       ),
       actions: [
         TextButton(
@@ -54,7 +129,7 @@ class _PaymentMethodDialogState extends State<_PaymentMethodDialog> {
           child: Text(context.l10n.actionCancel),
         ),
         FilledButton(
-          onPressed: () => Navigator.of(context).pop(_selected),
+          onPressed: _confirm,
           child: Text(context.l10n.actionConfirm),
         ),
       ],

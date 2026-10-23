@@ -45,6 +45,10 @@ class EscPosGenerator {
       _row(bytes, 'Total', CopFormatter.format(data.amountCharged!), bold: true);
     }
 
+    if (data.isCheckOut && !data.pendingSync && data.discountAmount > 0) {
+      _row(bytes, 'Descuento', '-${CopFormatter.format(data.discountAmount)}');
+    }
+
     if (data.isCheckOut && !data.pendingSync && data.paymentMethod != null) {
       _row(bytes, 'Pago', paymentMethodLabelEs(data.paymentMethod));
     }

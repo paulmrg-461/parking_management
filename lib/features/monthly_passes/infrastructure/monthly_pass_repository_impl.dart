@@ -43,6 +43,7 @@ class MonthlyPassRepositoryImpl implements MonthlyPassRepository {
     'start_date': _formatDate(command.startDate),
     'end_date': _formatDate(command.endDate),
     'amount': command.amount,
+    'auto_renew': command.autoRenew,
   };
 
   Map<String, dynamic> _toUpdatePayload(UpdateMonthlyPassCommand command) => {
@@ -51,6 +52,7 @@ class MonthlyPassRepositoryImpl implements MonthlyPassRepository {
     if (command.endDate != null) 'end_date': _formatDate(command.endDate!),
     if (command.amount != null) 'amount': command.amount,
     if (command.active != null) 'active': command.active,
+    if (command.autoRenew != null) 'auto_renew': command.autoRenew,
   };
 
   static String _formatDate(DateTime date) {

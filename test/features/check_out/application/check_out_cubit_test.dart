@@ -6,6 +6,7 @@ import 'package:parking_management/features/check_out/application/check_out_cubi
 import 'package:parking_management/features/check_out/application/check_out_vehicle.dart';
 import 'package:parking_management/features/check_out/domain/entities/check_out_receipt.dart';
 import 'package:parking_management/features/check_out/domain/entities/open_session.dart';
+import 'package:parking_management/features/check_out/domain/entities/occupancy_snapshot.dart';
 import 'package:parking_management/features/check_out/domain/repositories/check_out_repository.dart';
 import 'package:parking_management/features/vehicles/domain/entities/vehicle.dart';
 
@@ -19,6 +20,10 @@ class _FakeCheckOutRepository implements CheckOutRepository {
   Object? unexpected;
   CheckOutReceipt? receipt;
   final List<int> offsets = [];
+
+  @override
+  Future<OccupancySnapshot> occupancy() async =>
+      const OccupancySnapshot(totalOpen: 0, totalCapacity: 0);
 
   @override
   Future<PagedResult<OpenSession>> listOpenSessions({
@@ -39,6 +44,8 @@ class _FakeCheckOutRepository implements CheckOutRepository {
   Future<CheckOutReceipt> checkOut(
     int sessionId, {
     String paymentMethod = 'cash',
+    int discountAmount = 0,
+    String? discountReason,
   }) async {
     if (checkOutError != null) {
       throw checkOutError!;

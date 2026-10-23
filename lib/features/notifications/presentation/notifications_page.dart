@@ -142,6 +142,9 @@ class _NotificationTile extends StatelessWidget {
     'check_in' => Icons.login,
     'check_out' => Icons.logout,
     'monthly_pass_expiring' => Icons.card_membership,
+    'monthly_pass_renewed' => Icons.autorenew,
+    'overstay' => Icons.timer_outlined,
+    'shift_closed' => Icons.point_of_sale,
     _ => Icons.notifications,
   };
 }

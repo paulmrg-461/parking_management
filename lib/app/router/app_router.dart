@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/widgets/deferred_page.dart';
 import '../../features/auth/application/auth_cubit.dart';
+import '../../features/auth/domain/entities/user.dart';
 import '../../features/auth/presentation/login_page.dart';
 import '../../features/check_in/application/check_in_cubit.dart';
 import '../../features/check_in/application/vehicle_lookup_cubit.dart';
@@ -15,6 +16,8 @@ import '../../features/check_out/presentation/check_out_page.dart';
 import '../../features/home/application/dashboard_cubit.dart';
 import '../../features/notifications/application/notifications_cubit.dart';
 import '../../features/notifications/presentation/notifications_page.dart';
+import '../../features/shifts/application/shift_cubit.dart';
+import '../../features/shifts/presentation/shift_page.dart';
 import '../../features/vehicle_history/application/vehicle_history_cubit.dart';
 import '../../features/vehicle_history/presentation/vehicle_history_page.dart';
 import '../../features/home/presentation/home_page.dart';
@@ -70,12 +73,12 @@ GoRouter buildRouter(AuthCubit auth, Listenable refresh) => GoRouter(
           child: AppShell(location: state.uri.path, child: child),
         ),
       ),
-      routes: [_homeRoute],
+      routes: [_homeRoute(auth)],
     ),
   ],
 );
 
-final GoRoute _homeRoute = GoRoute(
+GoRoute _homeRoute(AuthCubit auth) => GoRoute(
   path: homePath,
   builder: (context, state) => const HomePage(),
   routes: [
@@ -109,6 +112,20 @@ final GoRoute _homeRoute = GoRoute(
     GoRoute(
       path: 'notifications',
       builder: (context, state) => const NotificationsPage(),
+    ),
+    GoRoute(
+      path: 'shift',
+      builder: (context, state) {
+        final isAdmin = switch (auth.state) {
+          AuthAuthenticated(:final session) =>
+            session.user.role == UserRole.admin,
+          _ => false,
+        };
+        return BlocProvider<ShiftCubit>(
+          create: (_) => serviceLocator<ShiftCubit>(),
+          child: ShiftPage(isAdmin: isAdmin),
+        );
+      },
     ),
     GoRoute(
       path: 'history',

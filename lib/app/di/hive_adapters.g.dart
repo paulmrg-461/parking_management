@@ -173,17 +173,20 @@ class CategoryAdapter extends TypeAdapter<Category> {
     return Category(
       id: (fields[0] as num?)?.toInt(),
       name: fields[1] as String,
+      capacity: fields[2] == null ? 0 : (fields[2] as num).toInt(),
     );
   }
 
   @override
   void write(BinaryWriter writer, Category obj) {
     writer
-      ..writeByte(2)
+      ..writeByte(3)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
-      ..write(obj.name);
+      ..write(obj.name)
+      ..writeByte(2)
+      ..write(obj.capacity);
   }
 
   @override
@@ -357,13 +360,14 @@ class MonthlyPassAdapter extends TypeAdapter<MonthlyPass> {
       endDate: fields[3] as DateTime,
       amount: (fields[4] as num).toInt(),
       active: fields[5] == null ? true : fields[5] as bool,
+      autoRenew: fields[6] == null ? false : fields[6] as bool,
     );
   }
 
   @override
   void write(BinaryWriter writer, MonthlyPass obj) {
     writer
-      ..writeByte(6)
+      ..writeByte(7)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -375,7 +379,9 @@ class MonthlyPassAdapter extends TypeAdapter<MonthlyPass> {
       ..writeByte(4)
       ..write(obj.amount)
       ..writeByte(5)
-      ..write(obj.active);
+      ..write(obj.active)
+      ..writeByte(6)
+      ..write(obj.autoRenew);
   }
 
   @override

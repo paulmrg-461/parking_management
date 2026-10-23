@@ -6,6 +6,7 @@ import '../../../core/sync/client_ref.dart';
 import '../../../core/sync/pending_mutation.dart';
 import '../../../core/sync/sync_outbox.dart';
 import '../domain/entities/check_out_receipt.dart';
+import '../domain/entities/occupancy_snapshot.dart';
 import '../domain/entities/open_session.dart';
 import '../domain/repositories/check_out_repository.dart';
 import 'check_out_remote_data_source.dart';
@@ -28,9 +29,14 @@ class CheckOutRepositoryImpl implements CheckOutRepository {
   }) => _remote.listOpenSessions(limit: limit, offset: offset);
 
   @override
+  Future<OccupancySnapshot> occupancy() => _remote.occupancy();
+
+  @override
   Future<CheckOutReceipt> checkOut(
     int sessionId, {
     String paymentMethod = 'cash',
+    int discountAmount = 0,
+    String? discountReason,
   }) async {
     // Same key for the online attempt and any queued replay: a response lost
     // after the server committed must not become a dead letter on retry.
@@ -41,6 +47,8 @@ class CheckOutRepositoryImpl implements CheckOutRepository {
         sessionId,
         idempotencyKey: clientRef,
         paymentMethod: paymentMethod,
+        discountAmount: discountAmount,
+        discountReason: discountReason,
       );
     } on NetworkFailure {
       return _queueCheckOut(
@@ -48,6 +56,8 @@ class CheckOutRepositoryImpl implements CheckOutRepository {
         clientRef: clientRef,
         exitTime: exitTime,
         paymentMethod: paymentMethod,
+        discountAmount: discountAmount,
+        discountReason: discountReason,
       );
     }
   }
@@ -60,6 +70,8 @@ class CheckOutRepositoryImpl implements CheckOutRepository {
     required String clientRef,
     required DateTime exitTime,
     required String paymentMethod,
+    required int discountAmount,
+    required String? discountReason,
   }) async {
     await _outbox.enqueue(
       PendingMutation(
@@ -70,6 +82,8 @@ class CheckOutRepositoryImpl implements CheckOutRepository {
           'client_exit_time': exitTime.toIso8601String(),
           'client_ref': clientRef,
           'payment_method': paymentMethod,
+          'discount_amount': discountAmount,
+          'discount_reason': ?discountReason,
         }),
         enqueuedAt: exitTime,
       ),
@@ -85,6 +99,8 @@ class CheckOutRepositoryImpl implements CheckOutRepository {
       amountCharged: null,
       ticketNumber: null,
       paymentMethod: paymentMethod,
+      discountAmount: discountAmount,
+      discountReason: discountReason,
       pendingSync: true,
     );
   }

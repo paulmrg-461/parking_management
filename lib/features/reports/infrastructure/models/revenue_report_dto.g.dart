@@ -59,6 +59,8 @@ RevenueReportDto _$RevenueReportDtoFromJson(Map<String, dynamic> json) =>
               )
               .toList() ??
           [],
+      totalDiscounts: (json['total_discounts'] as num?)?.toInt() ?? 0,
+      discountedSessions: (json['discounted_sessions'] as num?)?.toInt() ?? 0,
     );
 
 Map<String, dynamic> _$RevenueReportDtoToJson(RevenueReportDto instance) =>
@@ -69,4 +71,6 @@ Map<String, dynamic> _$RevenueReportDtoToJson(RevenueReportDto instance) =>
       'by_day': instance.byDay,
       'by_category': instance.byCategory,
       'by_payment': instance.byPayment,
+      'total_discounts': instance.totalDiscounts,
+      'discounted_sessions': instance.discountedSessions,
     };

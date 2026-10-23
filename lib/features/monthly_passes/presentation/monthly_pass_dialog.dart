@@ -14,12 +14,14 @@ class MonthlyPassDraft {
     required this.startDate,
     required this.endDate,
     required this.amount,
+    this.autoRenew = false,
   });
 
   final int? vehicleId;
   final DateTime startDate;
   final DateTime endDate;
   final int amount;
+  final bool autoRenew;
 }
 
 /// Create (with vehicle picker) or edit ([existing]) a monthly pass;
@@ -48,6 +50,7 @@ class _MonthlyPassDialogState extends State<MonthlyPassDialog> {
     text: widget.existing?.amount.toString() ?? '',
   );
   late int? _vehicleId = widget.vehicles.firstOrNull?.id;
+  late bool _autoRenew = widget.existing?.autoRenew ?? false;
 
   bool get _editing => widget.existing != null;
 
@@ -85,6 +88,7 @@ class _MonthlyPassDialogState extends State<MonthlyPassDialog> {
         startDate: _startKey.currentState!.value!,
         endDate: _endKey.currentState!.value!,
         amount: int.parse(_amountController.text),
+        autoRenew: _autoRenew,
       ),
     );
     Navigator.of(context).pop();
@@ -125,6 +129,13 @@ class _MonthlyPassDialogState extends State<MonthlyPassDialog> {
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 decoration: InputDecoration(labelText: l10n.fieldAmount),
                 validator: _amount,
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                value: _autoRenew,
+                onChanged: (value) => setState(() => _autoRenew = value),
+                title: Text(l10n.monthlyPassAutoRenew),
+                subtitle: Text(l10n.monthlyPassAutoRenewHint),
               ),
             ],
           ),

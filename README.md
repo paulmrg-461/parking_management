@@ -133,10 +133,35 @@ push additionally needs `firebase-messaging-sw.js` and a VAPID key
 ## Check-out, payments and history
 
 Check-out asks for the payment method (cash, card, transfer, monthly pass or
-exempt); monthly passes override the selection and charge zero. Revenue reports
-break down income by payment method. The `/history` screen (also linked from
-Home) looks up a plate and shows its visits, total spent, open-session flag and
-the latest sessions, with an offline cache per plate.
+exempt); monthly passes override the selection and charge zero. Admins can also
+apply a discount with a mandatory reason; the actor, instant and reason are
+stored with the session and revenue reports show the discounted total. Receipts
+(screen, thermal, PDF) include the method and discount.
+
+The `/history` screen (also linked from Home) looks up a plate and shows its
+visits, total spent, open-session flag and the latest sessions, with an offline
+cache per plate.
+
+## Shifts and cash reconciliation
+
+Operators open a shift with an opening float, record cash withdrawals/deposits,
+and close it by counting the drawer. The close screen shows expected cash, the
+counted amount and the difference; check-outs attach to the shift open at the
+exit time (including offline replays). Admins see recent shifts and receive a
+close notification.
+
+## Capacity
+
+Each category has an optional capacity (0 = unlimited). The dashboard shows
+used/total vehicles, a progress bar and the names of full categories; a
+check-in into a full category is rejected with a localized error, enforced in
+the database under a per-category lock.
+
+## Monthly pass auto-renewal
+
+A pass can be marked auto-renew; the notification cron creates a linked new
+pass for the same duration and amount when it expires and notifies admins.
+Manual passes keep the three-day expiry reminder.
 
 ## Billing rules
 

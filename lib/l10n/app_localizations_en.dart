@@ -272,6 +272,104 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navHistory => 'History';
 
   @override
+  String get homeShift => 'Shift / Cash';
+
+  @override
+  String get shiftTitle => 'Shift / Cash';
+
+  @override
+  String get shiftNoOpen => 'No open shift';
+
+  @override
+  String get shiftOpeningFloat => 'Opening float (COP)';
+
+  @override
+  String get shiftOpen => 'Open shift';
+
+  @override
+  String get shiftOpenTitle => 'Open shift';
+
+  @override
+  String shiftOpenedAt(String time) {
+    return 'Opened: $time';
+  }
+
+  @override
+  String get shiftSales => 'Sales';
+
+  @override
+  String get shiftCashSales => 'Cash sales';
+
+  @override
+  String get shiftWithdrawals => 'Withdrawals';
+
+  @override
+  String get shiftDeposits => 'Cash deposits';
+
+  @override
+  String get shiftDiscounts => 'Discounts';
+
+  @override
+  String get shiftExpectedCash => 'Expected cash';
+
+  @override
+  String get shiftSessions => 'Check-outs';
+
+  @override
+  String get shiftWithdraw => 'Withdraw cash';
+
+  @override
+  String get shiftDeposit => 'Deposit cash';
+
+  @override
+  String get shiftClose => 'Close shift';
+
+  @override
+  String get shiftClosedTitle => 'Shift closed';
+
+  @override
+  String get shiftCountedCash => 'Counted cash';
+
+  @override
+  String get shiftDifference => 'Difference';
+
+  @override
+  String get shiftNotes => 'Notes';
+
+  @override
+  String get shiftReason => 'Reason';
+
+  @override
+  String get shiftHistory => 'Recent shifts';
+
+  @override
+  String get errorShiftAlreadyOpen => 'You already have an open shift';
+
+  @override
+  String get errorNoOpenShift => 'There is no open shift';
+
+  @override
+  String get errorShiftNotFound => 'Shift not found';
+
+  @override
+  String get errorInvalidOpeningFloat => 'The opening float is not valid';
+
+  @override
+  String get errorInvalidCountedCash => 'The counted cash is not valid';
+
+  @override
+  String get errorInvalidCashMovement => 'The cash movement is not valid';
+
+  @override
+  String get errorCashMovementReason => 'Enter the movement reason';
+
+  @override
+  String get errorInvalidDiscount => 'The discount is not valid';
+
+  @override
+  String get errorDiscountReason => 'Enter the discount reason';
+
+  @override
   String get vehicleHistoryTitle => 'Vehicle history';
 
   @override
@@ -588,6 +686,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get receiptPayment => 'Payment';
 
   @override
+  String get receiptDiscount => 'Discount';
+
+  @override
   String get paymentMethodTitle => 'Payment method';
 
   @override
@@ -604,6 +705,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get paymentExempt => 'Exempt';
+
+  @override
+  String get discountAmount => 'Discount (COP)';
+
+  @override
+  String get discountReason => 'Discount reason';
+
+  @override
+  String get discountReasonRequired => 'Enter the discount reason';
 
   @override
   String get paymentUnknown => 'Other';
@@ -701,6 +811,38 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get categoryRename => 'Rename category';
+
+  @override
+  String categoryCapacity(int count) {
+    return 'Capacity: $count';
+  }
+
+  @override
+  String get categoryCapacityUnlimited => 'No capacity limit';
+
+  @override
+  String categoryCapacityTitle(String name) {
+    return 'Capacity for $name';
+  }
+
+  @override
+  String get categoryCapacityLabel => 'Capacity';
+
+  @override
+  String get errorCategoryFull => 'This category is full';
+
+  @override
+  String get homeFull => 'Full';
+
+  @override
+  String homeFullCategories(String names) {
+    return 'Full categories: $names';
+  }
+
+  @override
+  String reportsOccupancyOf(int open, int capacity) {
+    return 'Vehicles inside: $open / $capacity';
+  }
 
   @override
   String categoryDeleteTooltip(String name) {
@@ -827,6 +969,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pinInvalid => 'The PIN must have 6 digits';
 
   @override
+  String get monthlyPassAutoRenew => 'Auto-renew';
+
+  @override
+  String get monthlyPassAutoRenewHint =>
+      'Renews for the same period and amount on expiry';
+
+  @override
   String get monthlyPassesTitle => 'Monthly passes';
 
   @override
@@ -894,6 +1043,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reportsRevenueByPayment => 'Revenue by payment method';
+
+  @override
+  String get reportsTotalDiscounts => 'Discounts applied';
+
+  @override
+  String reportsDiscountedSessions(int count) {
+    return '$count discounted check-outs';
+  }
 
   @override
   String get reportsRevenueByCategory => 'Revenue by category';

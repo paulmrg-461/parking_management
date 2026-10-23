@@ -125,6 +125,21 @@ class _ReportsBody extends StatelessWidget {
         const SizedBox(height: Space.sm),
         Text(l10n.reportsTotalRevenue, style: textTheme.labelLarge),
         MoneyText(revenue.total, style: textTheme.headlineMedium),
+        if (revenue.totalDiscounts > 0) ...[
+          const SizedBox(height: Space.sm),
+          Row(
+            children: [
+              Text(l10n.reportsTotalDiscounts, style: textTheme.bodyMedium),
+              const SizedBox(width: Space.xs),
+              MoneyText(revenue.totalDiscounts, style: textTheme.titleSmall),
+              const SizedBox(width: Space.sm),
+              Text(
+                l10n.reportsDiscountedSessions(revenue.discountedSessions),
+                style: textTheme.bodySmall,
+              ),
+            ],
+          ),
+        ],
         const SizedBox(height: Space.lg),
         _SectionTitle(l10n.reportsRevenueByDay),
         RevenueByDayChart(byDay: revenue.byDay),
@@ -157,7 +172,12 @@ class _ReportsBody extends StatelessWidget {
         ],
         _SectionTitle(l10n.reportsOccupancy),
         Text(
-          l10n.reportsOpenSessions(occupancy.totalOpen),
+          occupancy.totalCapacity > 0
+              ? l10n.reportsOccupancyOf(
+                  occupancy.totalOpen,
+                  occupancy.totalCapacity,
+                )
+              : l10n.reportsOpenSessions(occupancy.totalOpen),
           style: textTheme.headlineSmall,
         ),
         const SizedBox(height: Space.sm),
@@ -165,7 +185,10 @@ class _ReportsBody extends StatelessWidget {
           items: [
             for (final category in occupancy.byCategory)
               CategoryBarItem(
-                label: category.categoryName,
+                label: category.capacity > 0
+                    ? '${category.categoryName} '
+                          '(${category.count}/${category.capacity})'
+                    : category.categoryName,
                 value: category.count,
               ),
           ],

@@ -584,6 +584,198 @@ abstract class AppLocalizations {
   /// **'Historial'**
   String get navHistory;
 
+  /// No description provided for @homeShift.
+  ///
+  /// In es, this message translates to:
+  /// **'Turno / Caja'**
+  String get homeShift;
+
+  /// No description provided for @shiftTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Turno / Caja'**
+  String get shiftTitle;
+
+  /// No description provided for @shiftNoOpen.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay turno abierto'**
+  String get shiftNoOpen;
+
+  /// No description provided for @shiftOpeningFloat.
+  ///
+  /// In es, this message translates to:
+  /// **'Base inicial (COP)'**
+  String get shiftOpeningFloat;
+
+  /// No description provided for @shiftOpen.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir turno'**
+  String get shiftOpen;
+
+  /// No description provided for @shiftOpenTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Turno abierto'**
+  String get shiftOpenTitle;
+
+  /// No description provided for @shiftOpenedAt.
+  ///
+  /// In es, this message translates to:
+  /// **'Abierto: {time}'**
+  String shiftOpenedAt(String time);
+
+  /// No description provided for @shiftSales.
+  ///
+  /// In es, this message translates to:
+  /// **'Ventas'**
+  String get shiftSales;
+
+  /// No description provided for @shiftCashSales.
+  ///
+  /// In es, this message translates to:
+  /// **'Ventas en efectivo'**
+  String get shiftCashSales;
+
+  /// No description provided for @shiftWithdrawals.
+  ///
+  /// In es, this message translates to:
+  /// **'Retiros'**
+  String get shiftWithdrawals;
+
+  /// No description provided for @shiftDeposits.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresos de efectivo'**
+  String get shiftDeposits;
+
+  /// No description provided for @shiftDiscounts.
+  ///
+  /// In es, this message translates to:
+  /// **'Descuentos'**
+  String get shiftDiscounts;
+
+  /// No description provided for @shiftExpectedCash.
+  ///
+  /// In es, this message translates to:
+  /// **'Efectivo esperado'**
+  String get shiftExpectedCash;
+
+  /// No description provided for @shiftSessions.
+  ///
+  /// In es, this message translates to:
+  /// **'Salidas'**
+  String get shiftSessions;
+
+  /// No description provided for @shiftWithdraw.
+  ///
+  /// In es, this message translates to:
+  /// **'Retirar efectivo'**
+  String get shiftWithdraw;
+
+  /// No description provided for @shiftDeposit.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresar efectivo'**
+  String get shiftDeposit;
+
+  /// No description provided for @shiftClose.
+  ///
+  /// In es, this message translates to:
+  /// **'Cerrar turno'**
+  String get shiftClose;
+
+  /// No description provided for @shiftClosedTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Turno cerrado'**
+  String get shiftClosedTitle;
+
+  /// No description provided for @shiftCountedCash.
+  ///
+  /// In es, this message translates to:
+  /// **'Efectivo contado'**
+  String get shiftCountedCash;
+
+  /// No description provided for @shiftDifference.
+  ///
+  /// In es, this message translates to:
+  /// **'Diferencia'**
+  String get shiftDifference;
+
+  /// No description provided for @shiftNotes.
+  ///
+  /// In es, this message translates to:
+  /// **'Notas'**
+  String get shiftNotes;
+
+  /// No description provided for @shiftReason.
+  ///
+  /// In es, this message translates to:
+  /// **'Motivo'**
+  String get shiftReason;
+
+  /// No description provided for @shiftHistory.
+  ///
+  /// In es, this message translates to:
+  /// **'Turnos recientes'**
+  String get shiftHistory;
+
+  /// No description provided for @errorShiftAlreadyOpen.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya tienes un turno abierto'**
+  String get errorShiftAlreadyOpen;
+
+  /// No description provided for @errorNoOpenShift.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay un turno abierto'**
+  String get errorNoOpenShift;
+
+  /// No description provided for @errorShiftNotFound.
+  ///
+  /// In es, this message translates to:
+  /// **'Turno no encontrado'**
+  String get errorShiftNotFound;
+
+  /// No description provided for @errorInvalidOpeningFloat.
+  ///
+  /// In es, this message translates to:
+  /// **'La base inicial no es válida'**
+  String get errorInvalidOpeningFloat;
+
+  /// No description provided for @errorInvalidCountedCash.
+  ///
+  /// In es, this message translates to:
+  /// **'El efectivo contado no es válido'**
+  String get errorInvalidCountedCash;
+
+  /// No description provided for @errorInvalidCashMovement.
+  ///
+  /// In es, this message translates to:
+  /// **'El movimiento de caja no es válido'**
+  String get errorInvalidCashMovement;
+
+  /// No description provided for @errorCashMovementReason.
+  ///
+  /// In es, this message translates to:
+  /// **'Indica el motivo del movimiento'**
+  String get errorCashMovementReason;
+
+  /// No description provided for @errorInvalidDiscount.
+  ///
+  /// In es, this message translates to:
+  /// **'El descuento no es válido'**
+  String get errorInvalidDiscount;
+
+  /// No description provided for @errorDiscountReason.
+  ///
+  /// In es, this message translates to:
+  /// **'Indica el motivo del descuento'**
+  String get errorDiscountReason;
+
   /// No description provided for @vehicleHistoryTitle.
   ///
   /// In es, this message translates to:
@@ -1136,6 +1328,12 @@ abstract class AppLocalizations {
   /// **'Pago'**
   String get receiptPayment;
 
+  /// No description provided for @receiptDiscount.
+  ///
+  /// In es, this message translates to:
+  /// **'Descuento'**
+  String get receiptDiscount;
+
   /// No description provided for @paymentMethodTitle.
   ///
   /// In es, this message translates to:
@@ -1171,6 +1369,24 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Exento'**
   String get paymentExempt;
+
+  /// No description provided for @discountAmount.
+  ///
+  /// In es, this message translates to:
+  /// **'Descuento (COP)'**
+  String get discountAmount;
+
+  /// No description provided for @discountReason.
+  ///
+  /// In es, this message translates to:
+  /// **'Motivo del descuento'**
+  String get discountReason;
+
+  /// No description provided for @discountReasonRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'Indica el motivo del descuento'**
+  String get discountReasonRequired;
 
   /// No description provided for @paymentUnknown.
   ///
@@ -1351,6 +1567,54 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Renombrar categoría'**
   String get categoryRename;
+
+  /// No description provided for @categoryCapacity.
+  ///
+  /// In es, this message translates to:
+  /// **'Capacidad: {count}'**
+  String categoryCapacity(int count);
+
+  /// No description provided for @categoryCapacityUnlimited.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin límite de capacidad'**
+  String get categoryCapacityUnlimited;
+
+  /// No description provided for @categoryCapacityTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Capacidad de {name}'**
+  String categoryCapacityTitle(String name);
+
+  /// No description provided for @categoryCapacityLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Capacidad'**
+  String get categoryCapacityLabel;
+
+  /// No description provided for @errorCategoryFull.
+  ///
+  /// In es, this message translates to:
+  /// **'La categoría está llena'**
+  String get errorCategoryFull;
+
+  /// No description provided for @homeFull.
+  ///
+  /// In es, this message translates to:
+  /// **'Lleno'**
+  String get homeFull;
+
+  /// No description provided for @homeFullCategories.
+  ///
+  /// In es, this message translates to:
+  /// **'Categorías llenas: {names}'**
+  String homeFullCategories(String names);
+
+  /// No description provided for @reportsOccupancyOf.
+  ///
+  /// In es, this message translates to:
+  /// **'Vehículos dentro: {open} / {capacity}'**
+  String reportsOccupancyOf(int open, int capacity);
 
   /// No description provided for @categoryDeleteTooltip.
   ///
@@ -1568,6 +1832,18 @@ abstract class AppLocalizations {
   /// **'El PIN debe tener 6 dígitos'**
   String get pinInvalid;
 
+  /// No description provided for @monthlyPassAutoRenew.
+  ///
+  /// In es, this message translates to:
+  /// **'Renovación automática'**
+  String get monthlyPassAutoRenew;
+
+  /// No description provided for @monthlyPassAutoRenewHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Se renueva por el mismo periodo y valor al vencer'**
+  String get monthlyPassAutoRenewHint;
+
   /// No description provided for @monthlyPassesTitle.
   ///
   /// In es, this message translates to:
@@ -1681,6 +1957,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Ingresos por método de pago'**
   String get reportsRevenueByPayment;
+
+  /// No description provided for @reportsTotalDiscounts.
+  ///
+  /// In es, this message translates to:
+  /// **'Descuentos aplicados'**
+  String get reportsTotalDiscounts;
+
+  /// No description provided for @reportsDiscountedSessions.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} salidas con descuento'**
+  String reportsDiscountedSessions(int count);
 
   /// No description provided for @reportsRevenueByCategory.
   ///

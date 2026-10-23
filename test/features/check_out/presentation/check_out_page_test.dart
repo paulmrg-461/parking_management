@@ -7,6 +7,7 @@ import 'package:parking_management/features/check_out/application/check_out_cubi
 import 'package:parking_management/features/check_out/application/check_out_vehicle.dart';
 import 'package:parking_management/features/check_out/domain/entities/check_out_receipt.dart';
 import 'package:parking_management/features/check_out/domain/entities/open_session.dart';
+import 'package:parking_management/features/check_out/domain/entities/occupancy_snapshot.dart';
 import 'package:parking_management/features/check_out/domain/repositories/check_out_repository.dart';
 import 'package:parking_management/features/check_out/presentation/check_out_page.dart';
 import 'package:parking_management/features/home/application/dashboard_cubit.dart';
@@ -18,6 +19,10 @@ import '../../../helpers/test_app.dart';
 
 class _FakeCheckOutRepository implements CheckOutRepository {
   Failure? checkOutError;
+
+  @override
+  Future<OccupancySnapshot> occupancy() async =>
+      const OccupancySnapshot(totalOpen: 0, totalCapacity: 0);
 
   @override
   Future<PagedResult<OpenSession>> listOpenSessions({
@@ -32,6 +37,8 @@ class _FakeCheckOutRepository implements CheckOutRepository {
   Future<CheckOutReceipt> checkOut(
     int sessionId, {
     String paymentMethod = 'cash',
+    int discountAmount = 0,
+    String? discountReason,
   }) async {
     final error = checkOutError;
     if (error != null) throw error;
@@ -114,7 +121,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Generar recibo'), findsOneWidget);
-    expect(occupancy.listCalls, 1);
+    expect(occupancy.occupancyCalls, 1);
   });
 
   testWidgets(
@@ -132,7 +139,7 @@ void main() {
 
       expect(find.text('Session already closed'), findsOneWidget);
       expect(find.text('ABC123'), findsOneWidget);
-      expect(occupancy.listCalls, 0);
+      expect(occupancy.occupancyCalls, 0);
     },
   );
 
@@ -148,7 +155,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Generar recibo'), findsOneWidget);
-      expect(occupancy.listCalls, 1);
+      expect(occupancy.occupancyCalls, 1);
     },
   );
 }

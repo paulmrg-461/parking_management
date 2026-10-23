@@ -276,6 +276,104 @@ class AppLocalizationsEs extends AppLocalizations {
   String get navHistory => 'Historial';
 
   @override
+  String get homeShift => 'Turno / Caja';
+
+  @override
+  String get shiftTitle => 'Turno / Caja';
+
+  @override
+  String get shiftNoOpen => 'No hay turno abierto';
+
+  @override
+  String get shiftOpeningFloat => 'Base inicial (COP)';
+
+  @override
+  String get shiftOpen => 'Abrir turno';
+
+  @override
+  String get shiftOpenTitle => 'Turno abierto';
+
+  @override
+  String shiftOpenedAt(String time) {
+    return 'Abierto: $time';
+  }
+
+  @override
+  String get shiftSales => 'Ventas';
+
+  @override
+  String get shiftCashSales => 'Ventas en efectivo';
+
+  @override
+  String get shiftWithdrawals => 'Retiros';
+
+  @override
+  String get shiftDeposits => 'Ingresos de efectivo';
+
+  @override
+  String get shiftDiscounts => 'Descuentos';
+
+  @override
+  String get shiftExpectedCash => 'Efectivo esperado';
+
+  @override
+  String get shiftSessions => 'Salidas';
+
+  @override
+  String get shiftWithdraw => 'Retirar efectivo';
+
+  @override
+  String get shiftDeposit => 'Ingresar efectivo';
+
+  @override
+  String get shiftClose => 'Cerrar turno';
+
+  @override
+  String get shiftClosedTitle => 'Turno cerrado';
+
+  @override
+  String get shiftCountedCash => 'Efectivo contado';
+
+  @override
+  String get shiftDifference => 'Diferencia';
+
+  @override
+  String get shiftNotes => 'Notas';
+
+  @override
+  String get shiftReason => 'Motivo';
+
+  @override
+  String get shiftHistory => 'Turnos recientes';
+
+  @override
+  String get errorShiftAlreadyOpen => 'Ya tienes un turno abierto';
+
+  @override
+  String get errorNoOpenShift => 'No hay un turno abierto';
+
+  @override
+  String get errorShiftNotFound => 'Turno no encontrado';
+
+  @override
+  String get errorInvalidOpeningFloat => 'La base inicial no es válida';
+
+  @override
+  String get errorInvalidCountedCash => 'El efectivo contado no es válido';
+
+  @override
+  String get errorInvalidCashMovement => 'El movimiento de caja no es válido';
+
+  @override
+  String get errorCashMovementReason => 'Indica el motivo del movimiento';
+
+  @override
+  String get errorInvalidDiscount => 'El descuento no es válido';
+
+  @override
+  String get errorDiscountReason => 'Indica el motivo del descuento';
+
+  @override
   String get vehicleHistoryTitle => 'Historial de vehículo';
 
   @override
@@ -592,6 +690,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get receiptPayment => 'Pago';
 
   @override
+  String get receiptDiscount => 'Descuento';
+
+  @override
   String get paymentMethodTitle => 'Método de pago';
 
   @override
@@ -608,6 +709,15 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get paymentExempt => 'Exento';
+
+  @override
+  String get discountAmount => 'Descuento (COP)';
+
+  @override
+  String get discountReason => 'Motivo del descuento';
+
+  @override
+  String get discountReasonRequired => 'Indica el motivo del descuento';
 
   @override
   String get paymentUnknown => 'Otro';
@@ -705,6 +815,38 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get categoryRename => 'Renombrar categoría';
+
+  @override
+  String categoryCapacity(int count) {
+    return 'Capacidad: $count';
+  }
+
+  @override
+  String get categoryCapacityUnlimited => 'Sin límite de capacidad';
+
+  @override
+  String categoryCapacityTitle(String name) {
+    return 'Capacidad de $name';
+  }
+
+  @override
+  String get categoryCapacityLabel => 'Capacidad';
+
+  @override
+  String get errorCategoryFull => 'La categoría está llena';
+
+  @override
+  String get homeFull => 'Lleno';
+
+  @override
+  String homeFullCategories(String names) {
+    return 'Categorías llenas: $names';
+  }
+
+  @override
+  String reportsOccupancyOf(int open, int capacity) {
+    return 'Vehículos dentro: $open / $capacity';
+  }
 
   @override
   String categoryDeleteTooltip(String name) {
@@ -831,6 +973,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get pinInvalid => 'El PIN debe tener 6 dígitos';
 
   @override
+  String get monthlyPassAutoRenew => 'Renovación automática';
+
+  @override
+  String get monthlyPassAutoRenewHint =>
+      'Se renueva por el mismo periodo y valor al vencer';
+
+  @override
   String get monthlyPassesTitle => 'Mensualidades';
 
   @override
@@ -899,6 +1048,14 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get reportsRevenueByPayment => 'Ingresos por método de pago';
+
+  @override
+  String get reportsTotalDiscounts => 'Descuentos aplicados';
+
+  @override
+  String reportsDiscountedSessions(int count) {
+    return '$count salidas con descuento';
+  }
 
   @override
   String get reportsRevenueByCategory => 'Ingresos por categoría';

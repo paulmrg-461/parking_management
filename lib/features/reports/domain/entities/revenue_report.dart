@@ -48,6 +48,8 @@ class RevenueReport extends Equatable {
     required this.byDay,
     required this.byCategory,
     this.byPayment = const [],
+    this.totalDiscounts = 0,
+    this.discountedSessions = 0,
   });
 
   final DateTime startDate;
@@ -56,8 +58,19 @@ class RevenueReport extends Equatable {
   final List<DailyRevenue> byDay;
   final List<CategoryRevenue> byCategory;
   final List<PaymentRevenue> byPayment;
+  final int totalDiscounts;
+  final int discountedSessions;
 
   @override
   List<Object?> get props =>
-      [startDate, endDate, total, byDay, byCategory, byPayment];
+      [
+        startDate,
+        endDate,
+        total,
+        byDay,
+        byCategory,
+        byPayment,
+        totalDiscounts,
+        discountedSessions,
+      ];
 }

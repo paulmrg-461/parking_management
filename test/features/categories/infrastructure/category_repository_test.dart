@@ -29,6 +29,10 @@ class _FakeRemote implements CategoryRemoteDataSource {
   Future<Category> create(String name) async => Category(id: 2, name: name);
 
   @override
+  Future<Category> setCapacity(int id, int capacity) async =>
+      Category(id: id, name: 'x', capacity: capacity);
+
+  @override
   Future<Category> update(int id, String name) async {
     if (failWithNetwork) {
       throw const NetworkFailure('offline');

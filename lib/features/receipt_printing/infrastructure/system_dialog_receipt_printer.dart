@@ -89,6 +89,8 @@ class SystemDialogReceiptPrinter implements ReceiptPrinter {
           pw.Divider(),
           _row(context, 'Total', CopFormatter.format(data.amountCharged!), bold: true),
         ],
+        if (data.isCheckOut && !data.pendingSync && data.discountAmount > 0)
+          _row(context, 'Descuento', '-${CopFormatter.format(data.discountAmount)}'),
         if (data.isCheckOut && !data.pendingSync && data.paymentMethod != null)
           _row(context, 'Pago', paymentMethodLabelEs(data.paymentMethod)),
         if (data.isCheckOut && !data.pendingSync && data.ticketNumber != null)

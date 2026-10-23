@@ -97,13 +97,20 @@ class _Dashboard extends StatelessWidget {
             onExit: () => context.go('/check-out'),
           ),
           const SizedBox(height: Space.sm),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              onPressed: () => context.go('/history'),
-              icon: const Icon(Icons.history),
-              label: Text(l10n.navHistory),
-            ),
+          Wrap(
+            spacing: Space.sm,
+            children: [
+              TextButton.icon(
+                onPressed: () => context.go('/history'),
+                icon: const Icon(Icons.history),
+                label: Text(l10n.navHistory),
+              ),
+              TextButton.icon(
+                onPressed: () => context.go('/shift'),
+                icon: const Icon(Icons.point_of_sale),
+                label: Text(l10n.homeShift),
+              ),
+            ],
           ),
           if (management.isNotEmpty) ...[
             const SizedBox(height: Space.xl),

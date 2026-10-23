@@ -111,6 +111,7 @@ class _MonthlyPassesPageState extends State<MonthlyPassesPage> {
               startDate: draft.startDate,
               endDate: draft.endDate,
               amount: draft.amount,
+              autoRenew: draft.autoRenew,
             ),
           ),
         ),
@@ -134,7 +135,10 @@ class _MonthlyPassTile extends StatelessWidget {
     );
     return ListTile(
       title: PlateText(plate),
-      subtitle: Text('$period · ${Formatters.money(monthlyPass.amount)}'),
+      subtitle: Text(
+        '$period · ${Formatters.money(monthlyPass.amount)}'
+        '${monthlyPass.autoRenew ? ' · ${l10n.monthlyPassAutoRenew}' : ''}',
+      ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -145,6 +149,12 @@ class _MonthlyPassTile extends StatelessWidget {
               onChanged: (_) => _toggle(context),
             ),
           ),
+          if (monthlyPass.autoRenew)
+            Icon(
+              Icons.autorenew,
+              color: Theme.of(context).colorScheme.primary,
+              semanticLabel: l10n.monthlyPassAutoRenew,
+            ),
           AppIconButton(
             icon: Icons.edit_outlined,
             tooltip: l10n.monthlyPassEditTooltip(plate),
@@ -188,6 +198,7 @@ class _MonthlyPassTile extends StatelessWidget {
               startDate: draft.startDate,
               endDate: draft.endDate,
               amount: draft.amount,
+              autoRenew: draft.autoRenew,
             ),
           ),
         ),

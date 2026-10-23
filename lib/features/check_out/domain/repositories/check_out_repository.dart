@@ -1,5 +1,6 @@
 import '../../../../core/pagination/paged_result.dart';
 import '../entities/check_out_receipt.dart';
+import '../entities/occupancy_snapshot.dart';
 import '../entities/open_session.dart';
 
 abstract class CheckOutRepository {
@@ -15,5 +16,10 @@ abstract class CheckOutRepository {
   Future<CheckOutReceipt> checkOut(
     int sessionId, {
     String paymentMethod = 'cash',
+    int discountAmount = 0,
+    String? discountReason,
   });
+
+  /// Open sessions + capacity per category (any signed-in user).
+  Future<OccupancySnapshot> occupancy();
 }

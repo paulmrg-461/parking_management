@@ -116,6 +116,10 @@ class _FakeCategoryRepository implements CategoryRepository {
   Future<Category> update(int id, String name) => throw UnimplementedError();
 
   @override
+  Future<Category> setCapacity(int id, int capacity) =>
+      throw UnimplementedError();
+
+  @override
   Future<void> delete(int id) => throw UnimplementedError();
 }
 
@@ -291,7 +295,7 @@ void main() {
       await tester.tap(submitButton());
       await tester.pumpAndSettle();
 
-      expect(occupancy.listCalls, 1);
+      expect(occupancy.occupancyCalls, 1);
     },
   );
 
@@ -308,7 +312,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Session already open for this plate'), findsOneWidget);
-      expect(occupancy.listCalls, 0);
+      expect(occupancy.occupancyCalls, 0);
     },
   );
 

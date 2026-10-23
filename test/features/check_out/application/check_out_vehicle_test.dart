@@ -4,10 +4,15 @@ import 'package:parking_management/core/pagination/paged_result.dart';
 import 'package:parking_management/features/check_out/application/check_out_vehicle.dart';
 import 'package:parking_management/features/check_out/domain/entities/check_out_receipt.dart';
 import 'package:parking_management/features/check_out/domain/entities/open_session.dart';
+import 'package:parking_management/features/check_out/domain/entities/occupancy_snapshot.dart';
 import 'package:parking_management/features/check_out/domain/repositories/check_out_repository.dart';
 
 class _FakeRepository implements CheckOutRepository {
   final List<int> checkedOut = [];
+
+  @override
+  Future<OccupancySnapshot> occupancy() async =>
+      const OccupancySnapshot(totalOpen: 0, totalCapacity: 0);
 
   @override
   Future<PagedResult<OpenSession>> listOpenSessions({
@@ -19,6 +24,8 @@ class _FakeRepository implements CheckOutRepository {
   Future<CheckOutReceipt> checkOut(
     int sessionId, {
     String paymentMethod = 'cash',
+    int discountAmount = 0,
+    String? discountReason,
   }) async {
     checkedOut.add(sessionId);
     return CheckOutReceipt(

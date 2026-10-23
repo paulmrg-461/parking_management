@@ -11,6 +11,8 @@ abstract class CategoryRemoteDataSource {
 
   Future<Category> update(int id, String name);
 
+  Future<Category> setCapacity(int id, int capacity);
+
   Future<void> delete(int id);
 }
 
@@ -48,11 +50,18 @@ class SupabaseCategoryRemoteDataSource implements CategoryRemoteDataSource {
   }
 
   @override
-  Future<Category> update(int id, String name) async {
+  Future<Category> update(int id, String name) =>
+      _patch(id, {'name': name});
+
+  @override
+  Future<Category> setCapacity(int id, int capacity) =>
+      _patch(id, {'capacity': capacity});
+
+  Future<Category> _patch(int id, Map<String, dynamic> payload) async {
     try {
       final row = await _client
           .from(_table)
-          .update({'name': name})
+          .update(payload)
           .eq('id', id)
           .select()
           .single();

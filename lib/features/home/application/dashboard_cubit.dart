@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 
 import '../../../core/error/failure.dart';
+import '../../check_out/domain/entities/occupancy_snapshot.dart';
 import '../../check_out/domain/repositories/check_out_repository.dart';
 import '../../../core/state/resilient_cubit.dart';
 
@@ -16,13 +17,21 @@ final class DashboardLoading extends DashboardState {
 }
 
 final class DashboardLoaded extends DashboardState {
-  const DashboardLoaded({required this.openSessions});
+  const DashboardLoaded({
+    required this.openSessions,
+    this.totalCapacity = 0,
+    this.categories = const [],
+  });
 
   /// Vehicles currently inside (open sessions).
   final int openSessions;
+  final int totalCapacity;
+  final List<CategoryOccupancySnapshot> categories;
+
+  bool get isFull => totalCapacity > 0 && openSessions >= totalCapacity;
 
   @override
-  List<Object?> get props => [openSessions];
+  List<Object?> get props => [openSessions, totalCapacity, categories];
 }
 
 final class DashboardFailure extends DashboardState {
@@ -46,8 +55,14 @@ class DashboardCubit extends ResilientCubit<DashboardState> {
       emit(const DashboardLoading());
     }
     try {
-      final page = await _sessions.listOpenSessions(limit: 1);
-      _emit(DashboardLoaded(openSessions: page.total ?? page.items.length));
+      final snapshot = await _sessions.occupancy();
+      _emit(
+        DashboardLoaded(
+          openSessions: snapshot.totalOpen,
+          totalCapacity: snapshot.totalCapacity,
+          categories: snapshot.byCategory,
+        ),
+      );
     } on Failure catch (failure) {
       if (state is! DashboardLoaded) {
         _emit(DashboardFailure(failure));

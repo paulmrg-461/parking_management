@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/network/supabase_error_mapper.dart';
 import '../../../core/pagination/paged_result.dart';
 import '../domain/entities/check_out_receipt.dart';
+import '../domain/entities/occupancy_snapshot.dart';
 import '../domain/entities/open_session.dart';
 import 'models/check_out_receipt_dto.dart';
 import 'models/open_session_dto.dart';
@@ -18,7 +19,11 @@ abstract class CheckOutRemoteDataSource {
     DateTime? clientExitTime,
     String? idempotencyKey,
     String paymentMethod = 'cash',
+    int discountAmount = 0,
+    String? discountReason,
   });
+
+  Future<OccupancySnapshot> occupancy();
 }
 
 class SupabaseCheckOutRemoteDataSource implements CheckOutRemoteDataSource {
@@ -51,11 +56,25 @@ class SupabaseCheckOutRemoteDataSource implements CheckOutRemoteDataSource {
   }
 
   @override
+  Future<OccupancySnapshot> occupancy() async {
+    try {
+      final result = await _client.rpc('occupancy_snapshot');
+      return OccupancySnapshot.fromJson(
+        Map<String, dynamic>.from(result as Map),
+      );
+    } catch (error) {
+      throw mapSupabaseError(error);
+    }
+  }
+
+  @override
   Future<CheckOutReceipt> checkOut(
     int sessionId, {
     DateTime? clientExitTime,
     String? idempotencyKey,
     String paymentMethod = 'cash',
+    int discountAmount = 0,
+    String? discountReason,
   }) async {
     try {
       final result = await _client.rpc(
@@ -63,6 +82,8 @@ class SupabaseCheckOutRemoteDataSource implements CheckOutRemoteDataSource {
         params: {
           'p_session_id': sessionId,
           'p_payment_method': paymentMethod,
+          if (discountAmount > 0) 'p_discount_amount': discountAmount,
+          'p_discount_reason': ?discountReason,
           if (clientExitTime != null)
             'p_client_exit_time': clientExitTime.toUtc().toIso8601String(),
           'p_idempotency_key': ?idempotencyKey,

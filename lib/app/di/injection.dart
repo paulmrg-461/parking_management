@@ -18,6 +18,7 @@ import 'modules/platform_module.dart';
 import 'modules/receipt_printing_module.dart';
 import 'modules/reports_module.dart';
 import 'modules/settings_module.dart';
+import 'modules/shifts_module.dart';
 import 'modules/sync_module.dart';
 import 'modules/tariffs_module.dart';
 import 'modules/users_module.dart';
@@ -93,5 +94,6 @@ void registerAllModules(GetIt sl, AppConfig config) {
   registerNotificationsModule(sl);
   registerReportsModule(sl);
   registerSettingsModule(sl);
+  registerShiftsModule(sl);
   registerSyncModule(sl);
 }

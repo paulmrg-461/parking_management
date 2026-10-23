@@ -14,6 +14,7 @@ import '../../../core/widgets/list_page_scaffold.dart';
 import '../../../core/widgets/submission_listener.dart';
 import '../application/categories_cubit.dart';
 import '../domain/entities/category.dart';
+import 'capacity_dialog.dart';
 import 'name_dialog.dart';
 
 class CategoriesPage extends StatefulWidget {
@@ -106,13 +107,41 @@ class _CategoryTile extends StatelessWidget {
   Widget build(BuildContext context) => ListTile(
     leading: const Icon(Icons.category_outlined),
     title: Text(category.name),
-    trailing: AppIconButton(
-      icon: Icons.delete_outline,
-      tooltip: context.l10n.categoryDeleteTooltip(category.name),
-      onPressed: () => _confirmDelete(context),
+    subtitle: Text(
+      category.capacity == 0
+          ? context.l10n.categoryCapacityUnlimited
+          : context.l10n.categoryCapacity(category.capacity),
+    ),
+    trailing: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        AppIconButton(
+          icon: Icons.groups_outlined,
+          tooltip: context.l10n.categoryCapacityTitle(category.name),
+          onPressed: () => _capacity(context),
+        ),
+        AppIconButton(
+          icon: Icons.delete_outline,
+          tooltip: context.l10n.categoryDeleteTooltip(category.name),
+          onPressed: () => _confirmDelete(context),
+        ),
+      ],
     ),
     onTap: () => _rename(context),
   );
+
+  void _capacity(BuildContext context) {
+    final cubit = context.read<CategoriesCubit>();
+    unawaited(
+      CapacityDialog.show(
+        context,
+        CapacityDialog(
+          category: category,
+          onSave: (capacity) => cubit.setCapacity(category, capacity),
+        ),
+      ),
+    );
+  }
 
   void _rename(BuildContext context) {
     final cubit = context.read<CategoriesCubit>();

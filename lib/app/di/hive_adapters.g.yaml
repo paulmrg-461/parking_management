@@ -43,12 +43,14 @@ types:
         index: 1
   Category:
     typeId: 4
-    nextIndex: 2
+    nextIndex: 3
     fields:
       id:
         index: 0
       name:
         index: 1
+      capacity:
+        index: 2
   Tariff:
     typeId: 5
     nextIndex: 7
@@ -95,7 +97,7 @@ types:
         index: 4
   MonthlyPass:
     typeId: 8
-    nextIndex: 6
+    nextIndex: 7
     fields:
       id:
         index: 0
@@ -109,6 +111,8 @@ types:
         index: 4
       active:
         index: 5
+      autoRenew:
+        index: 6
   ParkingSettings:
     typeId: 9
     nextIndex: 7

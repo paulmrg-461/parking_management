@@ -116,6 +116,14 @@ class ReceiptSummaryDialog extends StatelessWidget {
                   amount: data.amountCharged!,
                   label: l10n.receiptAmount,
                 ),
+              if (data.isCheckOut && !data.pendingSync && data.discountAmount > 0)
+                Padding(
+                  padding: const EdgeInsets.only(top: Space.md),
+                  child: ReceiptRow(
+                    label: l10n.receiptDiscount,
+                    value: '-${Formatters.money(data.discountAmount)}',
+                  ),
+                ),
               if (data.isCheckOut &&
                   !data.pendingSync &&
                   data.paymentMethod != null)
@@ -277,6 +285,11 @@ class ReceiptCard extends StatelessWidget {
           _PendingNotice(message: l10n.receiptQueued, status: status)
         else if (data.isCheckOut && data.amountCharged != null)
           _AmountBlock(amount: data.amountCharged!, label: l10n.receiptAmount),
+        if (data.isCheckOut && !data.pendingSync && data.discountAmount > 0)
+          ReceiptRow(
+            label: l10n.receiptDiscount,
+            value: '-${Formatters.money(data.discountAmount)}',
+          ),
         if (data.isCheckOut &&
             !data.pendingSync &&
             data.paymentMethod != null)

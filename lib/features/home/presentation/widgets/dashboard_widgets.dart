@@ -7,6 +7,7 @@ import '../../../../core/l10n/failure_messages.dart';
 import '../../../../core/l10n/l10n.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../core/widgets/app_icon_button.dart';
+import '../../../../core/widgets/status_chip.dart';
 import '../../application/dashboard_cubit.dart';
 
 class Greeting extends StatelessWidget {
@@ -61,19 +62,67 @@ class OccupancyCard extends StatelessWidget {
                   duration: Motion.short,
                   child: switch (state) {
                     DashboardLoading() => const LinearProgressIndicator(),
-                    DashboardLoaded(:final openSessions) => MergeSemantics(
-                      child: Column(
-                        key: const ValueKey('loaded'),
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '$openSessions',
-                            style: textTheme.displaySmall,
-                          ),
-                          Text(l10n.homeOccupancy, style: textTheme.bodyLarge),
-                        ],
+                    DashboardLoaded(
+                      :final openSessions,
+                      :final totalCapacity,
+                      :final isFull,
+                      :final categories,
+                    ) =>
+                      MergeSemantics(
+                        child: Column(
+                          key: const ValueKey('loaded'),
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  totalCapacity > 0
+                                      ? '$openSessions / $totalCapacity'
+                                      : '$openSessions',
+                                  style: textTheme.displaySmall,
+                                ),
+                                if (isFull) ...[
+                                  const SizedBox(width: Space.sm),
+                                  StatusChip(
+                                    label: l10n.homeFull,
+                                    tone: StatusTone.warning,
+                                  ),
+                                ],
+                              ],
+                            ),
+                            Text(
+                              l10n.homeOccupancy,
+                              style: textTheme.bodyLarge,
+                            ),
+                            if (totalCapacity > 0) ...[
+                              const SizedBox(height: Space.xs),
+                              LinearProgressIndicator(
+                                value: (openSessions / totalCapacity).clamp(
+                                  0,
+                                  1,
+                                ),
+                              ),
+                            ],
+                            if (categories.any((c) => c.isFull)) ...[
+                              const SizedBox(height: Space.xs),
+                              Text(
+                                l10n.homeFullCategories(
+                                  categories
+                                      .where((c) => c.isFull)
+                                      .map((c) => c.name)
+                                      .join(', '),
+                                ),
+                                style: textTheme.bodySmall?.copyWith(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.error,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
                       ),
-                    ),
                     DashboardFailure(:final failure) => Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [

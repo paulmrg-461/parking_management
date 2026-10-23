@@ -6,6 +6,7 @@ import 'package:parking_management/core/sync/pending_mutation.dart';
 import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/features/check_out/domain/entities/check_out_receipt.dart';
 import 'package:parking_management/features/check_out/domain/entities/open_session.dart';
+import 'package:parking_management/features/check_out/domain/entities/occupancy_snapshot.dart';
 import 'package:parking_management/features/check_out/infrastructure/check_out_remote_data_source.dart';
 import 'package:parking_management/features/check_out/infrastructure/check_out_repository_impl.dart';
 
@@ -19,6 +20,12 @@ class _FakeRemote implements CheckOutRemoteDataSource {
   DateTime? clientExitTimeUsed;
   String? idempotencyKeyUsed;
   String? paymentMethodUsed;
+  int discountAmountUsed = 0;
+  String? discountReasonUsed;
+
+  @override
+  Future<OccupancySnapshot> occupancy() async =>
+      const OccupancySnapshot(totalOpen: 0, totalCapacity: 0);
 
   @override
   Future<PagedResult<OpenSession>> listOpenSessions({
@@ -32,10 +39,14 @@ class _FakeRemote implements CheckOutRemoteDataSource {
     DateTime? clientExitTime,
     String? idempotencyKey,
     String paymentMethod = 'cash',
+    int discountAmount = 0,
+    String? discountReason,
   }) async {
     clientExitTimeUsed = clientExitTime;
     idempotencyKeyUsed = idempotencyKey;
     paymentMethodUsed = paymentMethod;
+    discountAmountUsed = discountAmount;
+    discountReasonUsed = discountReason;
     final error = this.error;
     if (error != null) {
       throw error;
@@ -58,12 +69,19 @@ void main() {
     final remote = _FakeRemote(receiptToReturn: receipt);
     final repository = CheckOutRepositoryImpl(remote, FakeSyncOutbox());
 
-    final result = await repository.checkOut(1, paymentMethod: 'card');
+    final result = await repository.checkOut(
+      1,
+      paymentMethod: 'card',
+      discountAmount: 1000,
+      discountReason: 'cortesia',
+    );
 
     expect(result, receipt);
     expect(remote.clientExitTimeUsed, isNull);
     expect(remote.idempotencyKeyUsed, isNotEmpty);
     expect(remote.paymentMethodUsed, 'card');
+    expect(remote.discountAmountUsed, 1000);
+    expect(remote.discountReasonUsed, 'cortesia');
   });
 
   test('Failure: NetworkFailure queues a checkOut/close mutation and returns a pending receipt instead of rethrowing', () async {

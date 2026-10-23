@@ -14,6 +14,10 @@ class _FakeRemote implements CategoryRemoteDataSource {
   int? deletedId;
 
   @override
+  Future<Category> setCapacity(int id, int capacity) async =>
+      Category(id: id, name: 'x', capacity: capacity);
+
+  @override
   Future<Category> update(int id, String name) async {
     if (error != null) {
       throw error!;

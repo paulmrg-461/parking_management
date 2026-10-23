@@ -77,6 +77,11 @@ The app is now a Supabase-only stack: FastAPI, Alembic, Dio and Redis are gone.
   receipts/reports show it; `/history` provides a per-plate timeline with
   visits/total spent and an offline cache; `notify_overstays()` alerts admins
   once a day for vehicles past `parking_settings.overstay_hours` (default 24).
+- **Operations suite**: shifts/cash reconciliation (`open_shift`,
+  `add_cash_movement`, `close_shift`, `list_shifts`; check-outs attach by exit
+  time), per-category capacity with a serialized trigger and dashboard/full
+  warnings, admin-only audited discounts (reason/actor/instant + report totals),
+  and monthly-pass auto-renewal with linked passes and notifications.
 - **Operational notes**: pre-migration data requires a manual `pg_dump`/restore;
   Android release builds need HTTPS in front of Envoy; `idempotency_keys` has
   no automatic TTL purge yet; run the notifications cron for pass-expiry alerts
@@ -169,8 +174,8 @@ The app is now a Supabase-only stack: FastAPI, Alembic, Dio and Redis are gone.
 
 ## Test counts
 
-- Flutter (`flutter test`): 416 passed. `flutter analyze`: 0 errors/warnings
-  (93 SDK-deprecation/const infos under the local Flutter 3.50 beta; CI pins
+- Flutter (`flutter test`): 423 passed. `flutter analyze`: 0 errors/warnings
+  (96 SDK-deprecation/const infos under the local Flutter 3.50 beta; CI pins
   3.49 where the baseline is clean).
 - SQL/compose: validated against the running Supabase stack (migrations,
   RLS, RPC idempotency, Edge Function admin checks).

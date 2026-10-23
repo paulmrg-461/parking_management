@@ -53,16 +53,18 @@ RPCs own business logic and the Flutter client calls Supabase directly.
 - Flutter needs `--dart-define=SUPABASE_URL=...` and
   `--dart-define=SUPABASE_ANON_KEY=...`; `configureDependencies()` fails fast
   without them.
-- Key files: `supabase/migrations/0001..0010` (schema/RLS/RPCs/constraints/
-  notifications/payments/history), `supabase/volumes/functions/{admin-users,push-dispatch}`,
+- Key files: `supabase/migrations/0001..0013` (schema/RLS/RPCs/constraints/
+  notifications/payments/history/capacity/shifts/renewal), `supabase/volumes/functions/{admin-users,push-dispatch}`,
   `lib/app/di/injection.dart`, `lib/core/network/supabase_error_mapper.dart`.
 - Payments: check-out requires a method; monthly passes force `monthly_pass`.
+  Discounts are admin-only with a required reason; shifts reconcile cash by
+  operator; categories may cap capacity; auto-renew passes create linked rows.
   Vehicle history is `rpc/vehicle_history`; overstay alerts use
   `parking_settings.overstay_hours`.
 - Notifications: in-app rows + Supabase Realtime work with no extra config;
   `FCM_SERVICE_ACCOUNT_JSON` + `supabase/notifications-cron.sh` enable
   background FCM. `push-dispatch` is service-role-only; never expose the key.
-- Tests: `flutter test` (416) + `flutter analyze`; CI validates compose with
+- Tests: `flutter test` (423) + `flutter analyze`; CI validates compose with
   `sh supabase/generate-env.sh && docker compose config -q`.
 - Known operational notes: pre-migration data needs a manual `pg_dump`/restore;
   Android release requires HTTPS in front of Envoy; `idempotency_keys` has no
