@@ -26,6 +26,7 @@ class ReportsPage extends StatefulWidget {
 
 class _ReportsPageState extends State<ReportsPage> {
   late DateTimeRange _range;
+  bool _allLots = false;
 
   @override
   void initState() {
@@ -43,6 +44,7 @@ class _ReportsPageState extends State<ReportsPage> {
     context.read<ReportsCubit>().loadReports(
       startDate: _range.start,
       endDate: _range.end,
+      allLots: _allLots,
     );
   }
 
@@ -75,14 +77,31 @@ class _ReportsPageState extends State<ReportsPage> {
           const SyncBadge(),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: () async => _load(),
-        child: BlocBuilder<ReportsCubit, ReportsState>(
-          builder: (context, state) => AsyncView<ReportsLoaded>(
-            status: _status(context, state),
-            builder: (loaded) => _ReportsBody(range: _range, loaded: loaded),
+      body: Column(
+        children: [
+          SwitchListTile(
+            value: _allLots,
+            onChanged: (value) {
+              setState(() => _allLots = value);
+              _load();
+            },
+            title: Text(l10n.reportsAllLots),
+            subtitle: Text(l10n.reportsAllLotsHint),
+            secondary: const Icon(Icons.location_city_outlined),
           ),
-        ),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: () async => _load(),
+              child: BlocBuilder<ReportsCubit, ReportsState>(
+                builder: (context, state) => AsyncView<ReportsLoaded>(
+                  status: _status(context, state),
+                  builder: (loaded) =>
+                      _ReportsBody(range: _range, loaded: loaded),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -125,6 +144,17 @@ class _ReportsBody extends StatelessWidget {
         const SizedBox(height: Space.sm),
         Text(l10n.reportsTotalRevenue, style: textTheme.labelLarge),
         MoneyText(revenue.total, style: textTheme.headlineMedium),
+        if (revenue.byLot.isNotEmpty) ...[
+          const SizedBox(height: Space.lg),
+          _SectionTitle(l10n.reportsByLot),
+          CategoryBarList(
+            items: [
+              for (final lot in revenue.byLot)
+                CategoryBarItem(label: lot.lotName, value: lot.amount),
+            ],
+            formatValue: Formatters.money,
+          ),
+        ],
         if (revenue.totalDiscounts > 0) ...[
           const SizedBox(height: Space.sm),
           Row(

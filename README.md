@@ -189,11 +189,16 @@ membership on every request and falls back to their lowest membership when the
 header is missing, so console/cron access and single-site installs keep working.
 A forged header fails with `LotRequiredError`.
 
-- Admins create sites at `/lots` (platform admin) and can enable/disable them.
+- Admins create sites at `/lots` (platform admin), enable/disable them and
+  manage their members (role per site). When creating a user, the admin can pick
+  the site; the `admin-users` Edge Function writes the membership.
+- The reports screen has a **Todas las sedes** switch for platform admins
+  (`report_revenue_all`), which adds a per-site breakdown on top of the active
+  lot's report.
 - Users with more than one membership get a lot bar under the app chrome to
   switch sites; switching refreshes the dashboard and the shift card.
-- Reports and occupancy are per lot; platform admins can call
-  `report_revenue_all` for the consolidated view.
+- Reports and occupancy are per lot; the consolidated switch keeps the same
+  screen and adds the per-site breakdown.
 - Queued offline check-ins/check-outs capture the lot where the operator acted
   and replay into that same site.
 

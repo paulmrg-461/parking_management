@@ -80,7 +80,7 @@ RPCs own business logic and the Flutter client calls Supabase directly.
   browser push uses `web/push-sw.js` + VAPID (`web_push_subscriptions`);
   `FCM_SERVICE_ACCOUNT_JSON` + `supabase/notifications-cron.sh` enable
   background FCM. `push-dispatch` is service-role-only; never expose the key.
-- Tests: `flutter test` (472) + `flutter analyze`; CI validates compose and
+- Tests: `flutter test` (480) + `flutter analyze`; CI validates compose and
   runs `supabase/tests/run.sh` (real migrations + RPC/RLS tests) against
   `supabase/postgres`.
 - Backups: `sh supabase/backup.sh` (DB dump + Storage); restore with

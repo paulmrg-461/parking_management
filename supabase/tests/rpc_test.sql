@@ -419,6 +419,30 @@ begin
     end;
 end $$;
 
+-- Lot members listing: admins only, scoped to the requested lot.
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+select public.list_lot_members(2);
+
+do $$
+begin
+    if (select count(*) from jsonb_array_elements(public.list_lot_members(2))) < 1 then
+        raise exception 'lot members were not listed';
+    end if;
+end $$;
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    begin
+        perform public.list_lot_members(2);
+        raise exception 'operator listed the lot members';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then
+            raise;
+        end if;
+    end;
+end $$;
+
 reset request.headers;
 
 -- Platform-only operations.

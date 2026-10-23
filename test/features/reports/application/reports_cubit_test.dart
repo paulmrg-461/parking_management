@@ -20,6 +20,7 @@ class _FakeReportRepository implements ReportRepository {
   Future<RevenueReport> getRevenueReport({
     required DateTime startDate,
     required DateTime endDate,
+    bool allLots = false,
   }) async {
     final error = this.error;
     if (error != null) {

@@ -10,6 +10,7 @@ abstract class ReportRemoteDataSource {
   Future<RevenueReport> getRevenueReport({
     required DateTime startDate,
     required DateTime endDate,
+    bool allLots = false,
   });
 
   Future<OccupancyReport> getOccupancyReport();
@@ -24,10 +25,11 @@ class SupabaseReportRemoteDataSource implements ReportRemoteDataSource {
   Future<RevenueReport> getRevenueReport({
     required DateTime startDate,
     required DateTime endDate,
+    bool allLots = false,
   }) async {
     try {
       final result = await _client.rpc(
-        'report_revenue',
+        allLots ? 'report_revenue_all' : 'report_revenue',
         params: {
           'p_start_date': _formatDate(startDate),
           'p_end_date': _formatDate(endDate),

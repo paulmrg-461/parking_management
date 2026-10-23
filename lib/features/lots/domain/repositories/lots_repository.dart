@@ -1,3 +1,4 @@
+import '../entities/lot_member.dart';
 import '../entities/parking_lot.dart';
 
 abstract class LotsRepository {
@@ -21,6 +22,9 @@ abstract class LotsRepository {
     String? timezone,
     bool? active,
   });
+
+  /// Members of one site (lot admins or platform admins).
+  Future<List<LotMember>> members(int lotId);
 
   Future<void> setMember({
     required int userId,

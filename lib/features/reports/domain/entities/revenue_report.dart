@@ -27,6 +27,22 @@ class CategoryRevenue extends Equatable {
   List<Object?> get props => [categoryId, categoryName, amount];
 }
 
+/// Revenue of one parking lot, part of the consolidated `report_revenue_all`.
+class LotRevenue extends Equatable {
+  const LotRevenue({
+    required this.lotId,
+    required this.lotName,
+    required this.amount,
+  });
+
+  final int lotId;
+  final String lotName;
+  final int amount;
+
+  @override
+  List<Object?> get props => [lotId, lotName, amount];
+}
+
 /// Revenue collected through one payment method.
 class PaymentRevenue extends Equatable {
   const PaymentRevenue({required this.paymentMethod, required this.amount});
@@ -88,6 +104,7 @@ class RevenueReport extends Equatable {
     this.discountAudit = const [],
     this.passRevenue = 0,
     this.passByPayment = const [],
+    this.byLot = const [],
   });
 
   final DateTime startDate;
@@ -101,6 +118,9 @@ class RevenueReport extends Equatable {
   final List<DiscountAudit> discountAudit;
   final int passRevenue;
   final List<PaymentRevenue> passByPayment;
+
+  /// Only populated by the consolidated admin report.
+  final List<LotRevenue> byLot;
 
   @override
   List<Object?> get props =>
@@ -116,5 +136,6 @@ class RevenueReport extends Equatable {
         discountAudit,
         passRevenue,
         passByPayment,
+        byLot,
       ];
 }

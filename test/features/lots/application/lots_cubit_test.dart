@@ -4,6 +4,7 @@ import 'package:parking_management/core/lot/lot_context.dart';
 import 'package:parking_management/core/lot/lot_session.dart';
 import 'package:parking_management/core/state/submission.dart';
 import 'package:parking_management/features/lots/application/lots_cubit.dart';
+import 'package:parking_management/features/lots/domain/entities/lot_member.dart';
 
 import '../../../helpers/fake_key_value_store.dart';
 import '../../../helpers/fake_lots_repository.dart';
@@ -83,5 +84,35 @@ void main() {
 
     expect(session.activeLotId, isNull);
     expect(cubit.state, isA<LotsInitial>());
+  });
+
+  test('Success: members are listed and roles can be changed', () async {
+    await cubit.load();
+    repository.memberList = const [
+      LotMember(
+        userId: 2,
+        username: 'op',
+        displayName: 'Op',
+        role: 'operator',
+      ),
+    ];
+
+    expect((await cubit.members(1)).single.username, 'op');
+    expect(await cubit.setMember(2, 1, 'admin'), isTrue);
+    expect(repository.memberWrites, ['2:1:admin']);
+  });
+
+  test('Failure: a rejected role change reports it without dropping data',
+      () async {
+    await cubit.load();
+    repository.writeError = const ValidationFailure(
+      'LastAdminError',
+      'LastAdminError',
+    );
+
+    expect(await cubit.setMember(2, 1, 'operator'), isFalse);
+    final state = cubit.state as LotsLoaded;
+    expect((state.submission as SubmissionFailed).failure?.code,
+        'LastAdminError');
   });
 }

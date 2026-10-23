@@ -13,6 +13,7 @@ import '../../../core/widgets/submission_listener.dart';
 import '../application/lots_cubit.dart';
 import '../domain/entities/parking_lot.dart';
 import 'create_lot_dialog.dart';
+import 'lot_members_dialog.dart';
 
 class LotsPage extends StatefulWidget {
   const LotsPage({super.key});
@@ -81,6 +82,19 @@ class _LotTile extends StatelessWidget {
 
   final ParkingLot lot;
 
+  Future<void> _openMembers(BuildContext context) async {
+    final cubit = context.read<LotsCubit>();
+    await showDialog<void>(
+      context: context,
+      builder: (_) => LotMembersDialog(
+        lotName: lot.name,
+        loadMembers: () => cubit.members(lot.id),
+        onSetRole: (member, role) =>
+            cubit.setMember(member.userId, lot.id, role),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -95,12 +109,22 @@ class _LotTile extends StatelessWidget {
             l10n.lotMembers(lot.members),
           ].join(' · '),
         ),
-        trailing: Switch(
-          value: lot.active,
-          onChanged: (value) => context.read<LotsCubit>().setActiveFlag(
-            lot,
-            value,
-          ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              tooltip: l10n.lotMembersTitle(lot.name),
+              icon: const Icon(Icons.group_outlined),
+              onPressed: () => _openMembers(context),
+            ),
+            Switch(
+              value: lot.active,
+              onChanged: (value) => context.read<LotsCubit>().setActiveFlag(
+                lot,
+                value,
+              ),
+            ),
+          ],
         ),
       ),
     );

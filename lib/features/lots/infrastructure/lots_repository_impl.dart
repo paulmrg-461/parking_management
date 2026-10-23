@@ -1,3 +1,4 @@
+import '../domain/entities/lot_member.dart';
 import '../domain/entities/parking_lot.dart';
 import '../domain/repositories/lots_repository.dart';
 import 'lots_remote_data_source.dart';
@@ -40,6 +41,9 @@ class LotsRepositoryImpl implements LotsRepository {
     timezone: timezone,
     active: active,
   );
+
+  @override
+  Future<List<LotMember>> members(int lotId) => _remote.members(lotId);
 
   @override
   Future<void> setMember({

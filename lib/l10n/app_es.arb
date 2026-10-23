@@ -3,6 +3,7 @@
   "appTitle": "Parqueadero",
   "@appTitle": {"description": "Application name shown in the task switcher and login."},
 
+  "actionClose": "Cerrar",
   "actionCancel": "Cancelar",
   "actionSave": "Guardar",
   "actionCreate": "Crear",
@@ -77,9 +78,14 @@
 
   "categoryFullHint": "Las categorías llenas aparecen deshabilitadas.",
   "navLots": "Sedes",
+  "lotMembersTitle": "Miembros de {name}",
+  "@lotMembersTitle": {"placeholders": {"name": {"type": "String"}}},
+  "lotMembersEmpty": "Esta sede no tiene usuarios",
+  "userInactive": "inactivo",
   "lotsTitle": "Sedes del parqueadero",
   "lotAdd": "Nueva sede",
   "lotCode": "Código (2-10 letras/números)",
+  "lotLabel": "Sede",
   "lotName": "Nombre de la sede",
   "lotAddress": "Dirección (opcional)",
   "lotsEmpty": "Aún no hay sedes",
@@ -439,6 +445,9 @@
   "selectDate": "Seleccionar fecha",
   "dateRangeInvalid": "La fecha de fin debe ser posterior a la de inicio",
 
+  "reportsAllLots": "Todas las sedes",
+  "reportsAllLotsHint": "Suma las ventas de todas las sedes",
+  "reportsByLot": "Ingresos por sede",
   "reportsTitle": "Reportes",
   "reportsRangeTooltip": "Cambiar rango de fechas",
   "reportsTotalRevenue": "Ingresos totales",

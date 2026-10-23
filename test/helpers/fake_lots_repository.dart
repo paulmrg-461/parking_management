@@ -1,4 +1,5 @@
 import 'package:parking_management/core/error/failure.dart';
+import 'package:parking_management/features/lots/domain/entities/lot_member.dart';
 import 'package:parking_management/features/lots/domain/entities/parking_lot.dart';
 import 'package:parking_management/features/lots/domain/repositories/lots_repository.dart';
 
@@ -61,12 +62,24 @@ class FakeLotsRepository implements LotsRepository {
     return updated;
   }
 
+  List<LotMember> memberList = [];
+  final List<String> memberWrites = [];
+
+  @override
+  Future<List<LotMember>> members(int lotId) async => memberList;
+
   @override
   Future<void> setMember({
     required int userId,
     required int lotId,
     required String role,
-  }) async {}
+  }) async {
+    final failure = writeError;
+    if (failure != null) {
+      throw failure;
+    }
+    memberWrites.add('$userId:$lotId:$role');
+  }
 }
 
 ParkingLot sampleLot({

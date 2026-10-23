@@ -17,6 +17,7 @@ CheckOutReceiptDto _$CheckOutReceiptDtoFromJson(Map<String, dynamic> json) =>
       paymentMethod: json['payment_method'] as String?,
       discountAmount: (json['discount_amount'] as num?)?.toInt() ?? 0,
       discountReason: json['discount_reason'] as String?,
+      lostTicket: json['lost_ticket'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$CheckOutReceiptDtoToJson(CheckOutReceiptDto instance) =>
@@ -30,4 +31,5 @@ Map<String, dynamic> _$CheckOutReceiptDtoToJson(CheckOutReceiptDto instance) =>
       'payment_method': instance.paymentMethod,
       'discount_amount': instance.discountAmount,
       'discount_reason': instance.discountReason,
+      'lost_ticket': instance.lostTicket,
     };

@@ -33,6 +33,7 @@ class UserRepositoryImpl implements UserRepository {
     'display_name': command.displayName,
     'role': command.role.name,
     'pin': command.pin,
+    'lot_id': ?command.lotId,
   };
 
   Map<String, dynamic> _toUpdatePayload(UpdateUserCommand command) => {

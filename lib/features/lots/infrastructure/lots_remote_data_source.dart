@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/network/supabase_error_mapper.dart';
+import '../domain/entities/lot_member.dart';
 import '../domain/entities/parking_lot.dart';
 
 abstract class LotsRemoteDataSource {
@@ -22,6 +23,8 @@ abstract class LotsRemoteDataSource {
     String? timezone,
     bool? active,
   });
+
+  Future<List<LotMember>> members(int lotId);
 
   Future<void> setMember({
     required int userId,
@@ -98,6 +101,22 @@ class SupabaseLotsRemoteDataSource implements LotsRemoteDataSource {
         },
       );
       return ParkingLot.fromJson(Map<String, dynamic>.from(result as Map));
+    } catch (error) {
+      throw mapSupabaseError(error);
+    }
+  }
+
+  @override
+  Future<List<LotMember>> members(int lotId) async {
+    try {
+      final result = await _client.rpc(
+        'list_lot_members',
+        params: {'p_lot_id': lotId},
+      );
+      return [
+        for (final item in (result as List<dynamic>? ?? const []))
+          LotMember.fromJson(Map<String, dynamic>.from(item as Map)),
+      ];
     } catch (error) {
       throw mapSupabaseError(error);
     }

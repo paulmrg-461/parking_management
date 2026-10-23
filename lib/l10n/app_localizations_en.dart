@@ -13,6 +13,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appTitle => 'Parking';
 
   @override
+  String get actionClose => 'Close';
+
+  @override
   String get actionCancel => 'Cancel';
 
   @override
@@ -230,6 +233,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navLots => 'Sites';
 
   @override
+  String lotMembersTitle(String name) {
+    return 'Members of $name';
+  }
+
+  @override
+  String get lotMembersEmpty => 'This site has no users';
+
+  @override
+  String get userInactive => 'inactive';
+
+  @override
   String get lotsTitle => 'Parking sites';
 
   @override
@@ -237,6 +251,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get lotCode => 'Code (2-10 letters/digits)';
+
+  @override
+  String get lotLabel => 'Site';
 
   @override
   String get lotName => 'Site name';
@@ -1238,6 +1255,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dateRangeInvalid => 'The end date must be after the start date';
+
+  @override
+  String get reportsAllLots => 'All sites';
+
+  @override
+  String get reportsAllLotsHint => 'Adds up every site\'s revenue';
+
+  @override
+  String get reportsByLot => 'Revenue by site';
 
   @override
   String get reportsTitle => 'Reports';

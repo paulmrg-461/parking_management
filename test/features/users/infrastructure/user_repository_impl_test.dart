@@ -76,6 +76,33 @@ void main() {
     });
   });
 
+  test('Success: create forwards the selected lot', () async {
+    await repository.create(
+      const CreateUserCommand(
+        username: 'norte',
+        displayName: 'Norte',
+        role: UserRole.operator,
+        pin: '123456',
+        lotId: 2,
+      ),
+    );
+
+    expect(remote.createdPayload?['lot_id'], 2);
+  });
+
+  test('Security: create without a lot omits the field', () async {
+    await repository.create(
+      const CreateUserCommand(
+        username: 'op',
+        displayName: 'Op',
+        role: UserRole.operator,
+        pin: '123456',
+      ),
+    );
+
+    expect(remote.createdPayload?.containsKey('lot_id'), isFalse);
+  });
+
   test('Failure: remote failures propagate unchanged', () async {
     remote.error = const NetworkFailure();
 

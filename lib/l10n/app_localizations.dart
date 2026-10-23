@@ -104,6 +104,12 @@ abstract class AppLocalizations {
   /// **'Parqueadero'**
   String get appTitle;
 
+  /// No description provided for @actionClose.
+  ///
+  /// In es, this message translates to:
+  /// **'Cerrar'**
+  String get actionClose;
+
   /// No description provided for @actionCancel.
   ///
   /// In es, this message translates to:
@@ -500,6 +506,24 @@ abstract class AppLocalizations {
   /// **'Sedes'**
   String get navLots;
 
+  /// No description provided for @lotMembersTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Miembros de {name}'**
+  String lotMembersTitle(String name);
+
+  /// No description provided for @lotMembersEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Esta sede no tiene usuarios'**
+  String get lotMembersEmpty;
+
+  /// No description provided for @userInactive.
+  ///
+  /// In es, this message translates to:
+  /// **'inactivo'**
+  String get userInactive;
+
   /// No description provided for @lotsTitle.
   ///
   /// In es, this message translates to:
@@ -517,6 +541,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Código (2-10 letras/números)'**
   String get lotCode;
+
+  /// No description provided for @lotLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Sede'**
+  String get lotLabel;
 
   /// No description provided for @lotName.
   ///
@@ -2299,6 +2329,24 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'La fecha de fin debe ser posterior a la de inicio'**
   String get dateRangeInvalid;
+
+  /// No description provided for @reportsAllLots.
+  ///
+  /// In es, this message translates to:
+  /// **'Todas las sedes'**
+  String get reportsAllLots;
+
+  /// No description provided for @reportsAllLotsHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Suma las ventas de todas las sedes'**
+  String get reportsAllLotsHint;
+
+  /// No description provided for @reportsByLot.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresos por sede'**
+  String get reportsByLot;
 
   /// No description provided for @reportsTitle.
   ///

@@ -69,18 +69,23 @@ no `lot_id`), tracked in the remaining tasks below.
 
 - [x] 4.1 Receipts print the lot name/address from the active lot's settings;
       the ticket shows the lot code
-- [ ] 4.2 Dashboard, occupancy, shift and reports pages show the active lot in
+- [x] 4.2 Dashboard, occupancy, shift and reports pages show the active lot in
       the app bar; admins get an "all lots" toggle on the revenue report
 - [x] 4.3 Settings become per lot (form edits the active lot); platform-level
       branding (app name) stays global
 
 ## 5. Edge Functions, docs and rollout
 
-- [ ] 5.1 `admin-users` accepts `lot_id` and creates the matching
+- [x] 5.1 `admin-users` accepts `lot_id` and creates the matching
       `lot_members` row; `push-dispatch` filters subscriptions per lot when the
       notification carries one
 - [x] 5.2 Update `README.md` (header, lot creation, migration), `AGENTS.md`
       (invariants: active lot always from the server helper) and `PROGRESS.md`
 - [x] 5.3 Run the full suite: `flutter test`, `flutter analyze`,
       `supabase/tests/run.sh`, web build, and a manual two-lot smoke test
-- [ ] 5.4 Follow-up contract migration dropping the header fallback
+- [ ] 5.4 Follow-up contract migration dropping the header fallback once every
+      client sends `x-lot-id`
+
+Implemented notes: receipts print the active lot's `parking_settings` header
+(name/address), `admin-users` accepts `lot_id` on create/update, and
+`push-dispatch` stays per-user (a notification already carries its lot).

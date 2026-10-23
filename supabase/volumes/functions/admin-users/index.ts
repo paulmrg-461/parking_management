@@ -102,6 +102,25 @@ async function profile(authUserId: string) {
   return body[0]
 }
 
+// Membership rows are written with the service key: the Edge Function already
+// verified the caller is a platform admin, and `set_lot_member` would reject
+// the service role (no auth.uid()).
+async function assignLot(userId: number, lotId: number, role: string) {
+  const lot = Number.isFinite(lotId) && lotId > 0 ? lotId : 1
+  const { response, body } = await rest(
+    'lot_members?on_conflict=user_id,lot_id',
+    {
+      method: 'POST',
+      headers: { Prefer: 'resolution=merge-duplicates,return=representation' },
+      body: JSON.stringify([{ user_id: userId, lot_id: lot, role }]),
+    },
+  )
+  if (!response.ok) {
+    console.error('lot membership could not be written', body)
+    throw new Error('LotNotFoundError')
+  }
+}
+
 async function createUser(payload: Record<string, unknown>) {
   const username = String(payload.username ?? '').trim().toLowerCase()
   const pin = String(payload.pin ?? '')
@@ -128,7 +147,17 @@ async function createUser(payload: Record<string, unknown>) {
     const message = created.body?.msg ?? created.body?.message ?? 'User creation failed'
     throw new Error(message)
   }
-  return await profile(created.body.id)
+  const createdProfile = await profile(created.body.id)
+  const lotId = Number(payload.lot_id ?? 1)
+  await assignLot(Number(createdProfile.id), lotId, role)
+  // The profile trigger seeds the default lot; a user created for another site
+  // belongs only to the requested one.
+  if (lotId !== 1) {
+    await rest(`lot_members?user_id=eq.${createdProfile.id}&lot_id=eq.1`, {
+      method: 'DELETE',
+    })
+  }
+  return createdProfile
 }
 
 async function resetPin(payload: Record<string, unknown>) {
@@ -193,6 +222,7 @@ async function updateUser(payload: Record<string, unknown>) {
   const targetIsAdmin = body[0].role === 'admin' && body[0].is_active
   const demoting = payload.role != null && payload.role !== 'admin'
   const deactivating = payload.is_active === false
+  const lotId = payload.lot_id == null ? null : Number(payload.lot_id)
   if (targetIsAdmin && (demoting || deactivating)) {
     if ((await activeAdminCount(id)) === 0) {
       throw new Error('LastAdminError')
@@ -235,6 +265,12 @@ async function updateUser(payload: Record<string, unknown>) {
       method: 'PATCH',
       body: JSON.stringify(localPatch),
     })
+  }
+  if (lotId != null) {
+    const membershipRole = payload.role === 'admin' || payload.role === 'operator'
+      ? String(payload.role)
+      : (body[0].role === 'admin' ? 'admin' : 'operator')
+    await assignLot(id, lotId, membershipRole)
   }
   return await profile(authUserId)
 }

@@ -70,6 +70,31 @@ class PaymentRevenueDto {
 }
 
 @JsonSerializable()
+class LotRevenueDto {
+  const LotRevenueDto({
+    required this.lotId,
+    required this.lotName,
+    required this.amount,
+  });
+
+  factory LotRevenueDto.fromJson(Map<String, dynamic> json) =>
+      _$LotRevenueDtoFromJson(json);
+
+  @JsonKey(name: 'lot_id')
+  final int lotId;
+
+  @JsonKey(name: 'lot')
+  final String lotName;
+
+  final int amount;
+
+  Map<String, dynamic> toJson() => _$LotRevenueDtoToJson(this);
+
+  LotRevenue toDomain() =>
+      LotRevenue(lotId: lotId, lotName: lotName, amount: amount);
+}
+
+@JsonSerializable()
 class DiscountAuditDto {
   const DiscountAuditDto({
     required this.sessionId,
@@ -135,6 +160,7 @@ class RevenueReportDto {
     this.discountAudit = const [],
     this.passRevenue = 0,
     this.passByPayment = const [],
+    this.byLot = const [],
   });
 
   factory RevenueReportDto.fromJson(Map<String, dynamic> json) =>
@@ -172,6 +198,9 @@ class RevenueReportDto {
   @JsonKey(name: 'pass_by_payment', defaultValue: [])
   final List<PaymentRevenueDto> passByPayment;
 
+  @JsonKey(name: 'by_lot', defaultValue: [])
+  final List<LotRevenueDto> byLot;
+
   Map<String, dynamic> toJson() => _$RevenueReportDtoToJson(this);
 
   RevenueReport toDomain() => RevenueReport(
@@ -186,5 +215,6 @@ class RevenueReportDto {
     discountAudit: discountAudit.map((dto) => dto.toDomain()).toList(),
     passRevenue: passRevenue,
     passByPayment: passByPayment.map((dto) => dto.toDomain()).toList(),
+    byLot: byLot.map((dto) => dto.toDomain()).toList(),
   );
 }

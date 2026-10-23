@@ -4,6 +4,7 @@ import '../../../core/error/failure.dart';
 import '../../../core/lot/lot_context.dart';
 import '../../../core/state/resilient_cubit.dart';
 import '../../../core/state/submission.dart';
+import '../domain/entities/lot_member.dart';
 import '../domain/entities/parking_lot.dart';
 import '../domain/repositories/lots_repository.dart';
 
@@ -129,6 +130,21 @@ class LotsCubit extends ResilientCubit<LotsState> {
       ));
     } on Failure catch (failure) {
       emit(current.copyWith(submission: SubmissionFailed.of(failure)));
+    }
+  }
+
+  Future<List<LotMember>> members(int lotId) => _repository.members(lotId);
+
+  Future<bool> setMember(int userId, int lotId, String role) async {
+    try {
+      await _repository.setMember(userId: userId, lotId: lotId, role: role);
+      return true;
+    } on Failure catch (failure) {
+      final current = state;
+      if (current is LotsLoaded) {
+        emit(current.copyWith(submission: SubmissionFailed.of(failure)));
+      }
+      return false;
     }
   }
 

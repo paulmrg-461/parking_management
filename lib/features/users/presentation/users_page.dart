@@ -13,6 +13,8 @@ import '../../../core/widgets/list_page_scaffold.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/widgets/submission_listener.dart';
 import '../../auth/application/auth_cubit.dart';
+import '../../lots/application/lots_cubit.dart';
+import '../../lots/domain/entities/parking_lot.dart';
 import '../../auth/domain/entities/user.dart';
 import '../application/users_cubit.dart';
 import 'create_user_dialog.dart';
@@ -32,18 +34,38 @@ class _UsersPageState extends State<UsersPage> {
     unawaited(context.read<UsersCubit>().load());
   }
 
+  /// The lot list only matters when the installation has more than one site.
+  ({List<ParkingLot> lots, int? activeId}) _lotOptions(BuildContext context) {
+    try {
+      final state = context.read<LotsCubit>().state;
+      if (state is LotsLoaded) {
+        return (lots: state.lots, activeId: state.activeId);
+      }
+    } on ProviderNotFoundException {
+      // Isolated tests do not provide the lot cubit.
+    }
+    return (lots: const [], activeId: null);
+  }
+
+  Future<void> _addUser(BuildContext context, UsersCubit cubit) async {
+    final options = _lotOptions(context);
+    await showDialog<void>(
+      context: context,
+      builder: (_) => CreateUserDialog(
+        onCreate: cubit.create,
+        lots: options.lots,
+        initialLotId: options.activeId,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cubit = context.read<UsersCubit>();
     return ListPageScaffold(
       title: context.l10n.usersTitle,
       addTooltip: context.l10n.userAddTooltip,
-      onAdd: () => unawaited(
-        showDialog<void>(
-          context: context,
-          builder: (_) => CreateUserDialog(onCreate: cubit.create),
-        ),
-      ),
+      onAdd: () => unawaited(_addUser(context, cubit)),
       onRefresh: cubit.load,
       body: SubmissionListener<UsersCubit, UsersState>(
         submissionOf: _submissionOf,

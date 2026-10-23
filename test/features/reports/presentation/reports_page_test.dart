@@ -18,12 +18,17 @@ class _FakeReportRepository implements ReportRepository {
   final RevenueReport revenue;
   final OccupancyReport occupancy;
   Failure? error;
+  bool? lastAllLots;
 
   @override
   Future<RevenueReport> getRevenueReport({
     required DateTime startDate,
     required DateTime endDate,
-  }) async => error == null ? revenue : throw error!;
+    bool allLots = false,
+  }) async {
+    lastAllLots = allLots;
+    return error == null ? revenue : throw error!;
+  }
 
   @override
   Future<OccupancyReport> getOccupancyReport() async => occupancy;
@@ -111,5 +116,16 @@ void main() {
         greaterThanOrEqualTo(wcagAaNormalText),
       );
     }
+  });
+
+  testWidgets('Success: the consolidated switch asks for every lot', (
+    tester,
+  ) async {
+    final repository = await _pump(tester);
+
+    await tester.tap(find.text('Todas las sedes'));
+    await tester.pumpAndSettle();
+
+    expect(repository.lastAllLots, isTrue);
   });
 }

@@ -13,6 +13,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get appTitle => 'Parqueadero';
 
   @override
+  String get actionClose => 'Cerrar';
+
+  @override
   String get actionCancel => 'Cancelar';
 
   @override
@@ -235,6 +238,17 @@ class AppLocalizationsEs extends AppLocalizations {
   String get navLots => 'Sedes';
 
   @override
+  String lotMembersTitle(String name) {
+    return 'Miembros de $name';
+  }
+
+  @override
+  String get lotMembersEmpty => 'Esta sede no tiene usuarios';
+
+  @override
+  String get userInactive => 'inactivo';
+
+  @override
   String get lotsTitle => 'Sedes del parqueadero';
 
   @override
@@ -242,6 +256,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get lotCode => 'Código (2-10 letras/números)';
+
+  @override
+  String get lotLabel => 'Sede';
 
   @override
   String get lotName => 'Nombre de la sede';
@@ -1242,6 +1259,15 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get dateRangeInvalid =>
       'La fecha de fin debe ser posterior a la de inicio';
+
+  @override
+  String get reportsAllLots => 'Todas las sedes';
+
+  @override
+  String get reportsAllLotsHint => 'Suma las ventas de todas las sedes';
+
+  @override
+  String get reportsByLot => 'Ingresos por sede';
 
   @override
   String get reportsTitle => 'Reportes';

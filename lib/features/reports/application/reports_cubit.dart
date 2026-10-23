@@ -22,13 +22,20 @@ class ReportsLoading extends ReportsState {
 }
 
 class ReportsLoaded extends ReportsState {
-  const ReportsLoaded(this.revenue, this.occupancy);
+  const ReportsLoaded(
+    this.revenue,
+    this.occupancy, {
+    this.allLots = false,
+  });
 
   final RevenueReport revenue;
   final OccupancyReport occupancy;
 
+  /// `true` while the consolidated (every lot) view is selected.
+  final bool allLots;
+
   @override
-  List<Object?> get props => [revenue, occupancy];
+  List<Object?> get props => [revenue, occupancy, allLots];
 }
 
 class ReportsFailure extends ReportsState {
@@ -54,17 +61,23 @@ class ReportsCubit extends ResilientCubit<ReportsState> {
   Future<void> loadReports({
     required DateTime startDate,
     required DateTime endDate,
+    bool allLots = false,
   }) async {
     emit(const ReportsLoading());
     try {
       final results = await Future.wait([
-        _repository.getRevenueReport(startDate: startDate, endDate: endDate),
+        _repository.getRevenueReport(
+          startDate: startDate,
+          endDate: endDate,
+          allLots: allLots,
+        ),
         _repository.getOccupancyReport(),
       ]);
       emit(
         ReportsLoaded(
           results[0] as RevenueReport,
           results[1] as OccupancyReport,
+          allLots: allLots,
         ),
       );
     } on Failure catch (failure) {

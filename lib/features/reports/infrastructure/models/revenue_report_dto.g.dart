@@ -41,6 +41,20 @@ Map<String, dynamic> _$PaymentRevenueDtoToJson(PaymentRevenueDto instance) =>
       'amount': instance.amount,
     };
 
+LotRevenueDto _$LotRevenueDtoFromJson(Map<String, dynamic> json) =>
+    LotRevenueDto(
+      lotId: (json['lot_id'] as num).toInt(),
+      lotName: json['lot'] as String,
+      amount: (json['amount'] as num).toInt(),
+    );
+
+Map<String, dynamic> _$LotRevenueDtoToJson(LotRevenueDto instance) =>
+    <String, dynamic>{
+      'lot_id': instance.lotId,
+      'lot': instance.lotName,
+      'amount': instance.amount,
+    };
+
 DiscountAuditDto _$DiscountAuditDtoFromJson(Map<String, dynamic> json) =>
     DiscountAuditDto(
       sessionId: (json['session_id'] as num).toInt(),
@@ -95,6 +109,11 @@ RevenueReportDto _$RevenueReportDtoFromJson(
           ?.map((e) => PaymentRevenueDto.fromJson(e as Map<String, dynamic>))
           .toList() ??
       [],
+  byLot:
+      (json['by_lot'] as List<dynamic>?)
+          ?.map((e) => LotRevenueDto.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      [],
 );
 
 Map<String, dynamic> _$RevenueReportDtoToJson(RevenueReportDto instance) =>
@@ -110,4 +129,5 @@ Map<String, dynamic> _$RevenueReportDtoToJson(RevenueReportDto instance) =>
       'discount_audit': instance.discountAudit,
       'pass_revenue': instance.passRevenue,
       'pass_by_payment': instance.passByPayment,
+      'by_lot': instance.byLot,
     };
