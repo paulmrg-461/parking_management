@@ -131,8 +131,10 @@ class CheckOutCubit extends ResilientCubit<CheckOutState> {
   /// Server offset already fetched. Never derive it from `sessions.length`:
   /// removing a closed row would shift it and duplicate/skip the next page.
   int _loadedCount = 0;
+  int _searchToken = 0;
 
   Future<void> loadOpenSessions() async {
+    _searchToken++;
     emit(const CheckOutLoading());
     final plates = _plates();
     try {
@@ -161,6 +163,7 @@ class CheckOutCubit extends ResilientCubit<CheckOutState> {
       final page = await _repository.listOpenSessions(
         offset: _loadedCount,
         limit: pageSize,
+        plate: current.query.trim().isEmpty ? null : current.query.trim(),
       );
       _loadedCount += page.items.length;
       emit(
@@ -233,10 +236,42 @@ class CheckOutCubit extends ResilientCubit<CheckOutState> {
     return super.close();
   }
 
-  void _applySearch(String query) {
+  Future<void> _applySearch(String query) async {
     final current = state;
-    if (!isClosed && current is CheckOutLoaded) {
-      emit(current.copyWith(query: query));
+    if (isClosed || current is! CheckOutLoaded) {
+      return;
+    }
+    final token = ++_searchToken;
+    final trimmed = query.trim();
+    emit(current.copyWith(query: query, loadingMore: true));
+    try {
+      final page = await _repository.listOpenSessions(
+        offset: 0,
+        limit: pageSize,
+        plate: trimmed.isEmpty ? null : trimmed,
+      );
+      if (isClosed || token != _searchToken) {
+        return;
+      }
+      _loadedCount = page.items.length;
+      emit(
+        current.copyWith(
+          sessions: page.items,
+          query: query,
+          total: page.total,
+          loadingMore: false,
+        ),
+      );
+    } on Failure catch (failure) {
+      if (isClosed || token != _searchToken) {
+        return;
+      }
+      emit(
+        current.copyWith(
+          loadingMore: false,
+          submission: SubmissionFailed.of(failure),
+        ),
+      );
     }
   }
 
@@ -245,8 +280,12 @@ class CheckOutCubit extends ResilientCubit<CheckOutState> {
     return current is CheckOutLoaded ? current : fallback;
   }
 
-  Future<PagedResult<OpenSession>> _firstPage() =>
-      _repository.listOpenSessions(offset: 0, limit: pageSize);
+  Future<PagedResult<OpenSession>> _firstPage({String? plate}) =>
+      _repository.listOpenSessions(
+        offset: 0,
+        limit: pageSize,
+        plate: plate,
+      );
 
   /// Plates are best-effort: a failure falls back to "Vehicle #id" rows.
   Future<Map<int, String>> _plates() async {
@@ -265,12 +304,15 @@ class CheckOutCubit extends ResilientCubit<CheckOutState> {
   /// Refetches the first page; offline (queued check-out) the closed session
   /// is simply removed from what is on screen.
   Future<List<OpenSession>> _sessionsAfterCheckOut(int sessionId) async {
+    final current = state;
+    final query = current is CheckOutLoaded ? current.query.trim() : '';
     try {
-      final items = (await _firstPage()).items;
+      final items = (await _firstPage(
+        plate: query.isEmpty ? null : query,
+      )).items;
       _loadedCount = items.length;
       return items;
     } on Failure {
-      final current = state;
       final sessions = current is CheckOutLoaded
           ? current.sessions
           : const <OpenSession>[];

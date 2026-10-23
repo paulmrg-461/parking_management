@@ -24,6 +24,8 @@ docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
   "select public.notify_overstays();" >/dev/null
 docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
   "select public.renew_monthly_passes();" >/dev/null
+docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
+  "select public.purge_expired_idempotency();" >/dev/null
 
 curl -fsS -X POST "${API_URL:-http://localhost:8000}/functions/v1/push-dispatch" \
   -H "Authorization: Bearer ${SERVICE_KEY}" >/dev/null

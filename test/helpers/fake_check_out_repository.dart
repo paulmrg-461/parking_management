@@ -36,6 +36,7 @@ class FakeCheckOutRepository implements CheckOutRepository {
   Future<PagedResult<OpenSession>> listOpenSessions({
     int offset = 0,
     int limit = defaultPageSize,
+    String? plate,
   }) async {
     listCalls++;
     final error = listError;

@@ -70,6 +70,58 @@ class PaymentRevenueDto {
 }
 
 @JsonSerializable()
+class DiscountAuditDto {
+  const DiscountAuditDto({
+    required this.sessionId,
+    required this.plate,
+    required this.amountCharged,
+    required this.discountAmount,
+    required this.discountAt,
+    required this.admin,
+    this.ticketNumber,
+    this.reason,
+  });
+
+  factory DiscountAuditDto.fromJson(Map<String, dynamic> json) =>
+      _$DiscountAuditDtoFromJson(json);
+
+  @JsonKey(name: 'session_id')
+  final int sessionId;
+
+  final String plate;
+
+  @JsonKey(name: 'amount_charged')
+  final int amountCharged;
+
+  @JsonKey(name: 'discount_amount')
+  final int discountAmount;
+
+  @JsonKey(name: 'discount_at')
+  final DateTime discountAt;
+
+  final String admin;
+
+  @JsonKey(name: 'ticket_number')
+  final String? ticketNumber;
+
+  @JsonKey(name: 'discount_reason')
+  final String? reason;
+
+  Map<String, dynamic> toJson() => _$DiscountAuditDtoToJson(this);
+
+  DiscountAudit toDomain() => DiscountAudit(
+    sessionId: sessionId,
+    plate: plate,
+    amountCharged: amountCharged,
+    discountAmount: discountAmount,
+    discountAt: discountAt,
+    admin: admin,
+    ticketNumber: ticketNumber,
+    reason: reason,
+  );
+}
+
+@JsonSerializable()
 class RevenueReportDto {
   const RevenueReportDto({
     required this.startDate,
@@ -80,6 +132,7 @@ class RevenueReportDto {
     this.byPayment = const [],
     this.totalDiscounts = 0,
     this.discountedSessions = 0,
+    this.discountAudit = const [],
   });
 
   factory RevenueReportDto.fromJson(Map<String, dynamic> json) =>
@@ -108,6 +161,9 @@ class RevenueReportDto {
   @JsonKey(name: 'discounted_sessions', defaultValue: 0)
   final int discountedSessions;
 
+  @JsonKey(name: 'discount_audit', defaultValue: [])
+  final List<DiscountAuditDto> discountAudit;
+
   Map<String, dynamic> toJson() => _$RevenueReportDtoToJson(this);
 
   RevenueReport toDomain() => RevenueReport(
@@ -119,5 +175,6 @@ class RevenueReportDto {
     byPayment: byPayment.map((dto) => dto.toDomain()).toList(),
     totalDiscounts: totalDiscounts,
     discountedSessions: discountedSessions,
+    discountAudit: discountAudit.map((dto) => dto.toDomain()).toList(),
   );
 }

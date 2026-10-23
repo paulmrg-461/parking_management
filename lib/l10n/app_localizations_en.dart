@@ -275,6 +275,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeShift => 'Shift / Cash';
 
   @override
+  String get checkOutNoShift =>
+      'No open shift: this payment will not be part of the cash reconciliation.';
+
+  @override
+  String get shiftUnavailable => 'Shift unavailable';
+
+  @override
   String get shiftTitle => 'Shift / Cash';
 
   @override
@@ -1046,6 +1053,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reportsTotalDiscounts => 'Discounts applied';
+
+  @override
+  String get reportsDiscountLog => 'Discount details';
+
+  @override
+  String reportsDiscountBy(String admin) {
+    return 'by $admin';
+  }
 
   @override
   String reportsDiscountedSessions(int count) {

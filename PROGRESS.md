@@ -82,6 +82,10 @@ The app is now a Supabase-only stack: FastAPI, Alembic, Dio and Redis are gone.
   time), per-category capacity with a serialized trigger and dashboard/full
   warnings, admin-only audited discounts (reason/actor/instant + report totals),
   and monthly-pass auto-renewal with linked passes and notifications.
+- **UX/robustness pass**: live shift card on Home and a check-out banner when
+  no shift is open; check-out plate search moved to the server with pagination
+  (no more truncation at loaded pages); discount audit detail (reason/admin/
+  timestamp) in reports; expired idempotency keys purged by the cron.
 - **Operational notes**: pre-migration data requires a manual `pg_dump`/restore;
   Android release builds need HTTPS in front of Envoy; `idempotency_keys` has
   no automatic TTL purge yet; run the notifications cron for pass-expiry alerts

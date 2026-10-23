@@ -6,8 +6,10 @@ import '../../../../app/shell/app_destinations.dart';
 import '../../../../core/l10n/failure_messages.dart';
 import '../../../../core/l10n/l10n.dart';
 import '../../../../core/theme/tokens.dart';
+import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/app_icon_button.dart';
 import '../../../../core/widgets/status_chip.dart';
+import '../../../shifts/application/shift_cubit.dart';
 import '../../application/dashboard_cubit.dart';
 
 class Greeting extends StatelessWidget {
@@ -263,6 +265,52 @@ class ManagementShortcuts extends StatelessWidget {
           ],
         ),
       ],
+    );
+  }
+}
+
+
+/// Compact shift state on Home: open/close from the cash screen.
+class ShiftCard extends StatelessWidget {
+  const ShiftCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final ShiftCubit? cubit;
+    try {
+      cubit = context.watch<ShiftCubit>();
+    } on ProviderNotFoundException {
+      return const SizedBox.shrink();
+    }
+    final l10n = context.l10n;
+    final state = cubit.state;
+    final shift = state.current;
+    final unavailable = state.status == ShiftStatus.failure;
+    return Card(
+      child: ListTile(
+        onTap: () => context.go('/shift'),
+        leading: Icon(
+          shift == null ? Icons.lock_open : Icons.point_of_sale,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+        title: Text(
+          unavailable
+              ? l10n.shiftUnavailable
+              : shift == null
+              ? l10n.shiftNoOpen
+              : l10n.shiftOpenTitle,
+        ),
+        subtitle: unavailable
+            ? Text(l10n.errorUnknown)
+            : shift == null
+            ? Text(l10n.homeShift)
+            : Text(
+                '${l10n.shiftExpectedCash}: '
+                '${Formatters.money(shift.expectedCash)} · '
+                '${l10n.shiftSessions}: ${shift.sessionCount}',
+              ),
+        trailing: const Icon(Icons.chevron_right),
+      ),
     );
   }
 }

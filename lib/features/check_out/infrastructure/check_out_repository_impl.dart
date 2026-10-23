@@ -26,7 +26,8 @@ class CheckOutRepositoryImpl implements CheckOutRepository {
   Future<PagedResult<OpenSession>> listOpenSessions({
     int offset = 0,
     int limit = defaultPageSize,
-  }) => _remote.listOpenSessions(limit: limit, offset: offset);
+    String? plate,
+  }) => _remote.listOpenSessions(limit: limit, offset: offset, plate: plate);
 
   @override
   Future<OccupancySnapshot> occupancy() => _remote.occupancy();

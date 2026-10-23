@@ -27,6 +27,7 @@ class _FakeRemote implements CheckOutRemoteDataSource {
   Future<PagedResult<OpenSession>> listOpenSessions({
     required int limit,
     required int offset,
+    String? plate,
   }) async => const PagedResult([]);
 
   @override

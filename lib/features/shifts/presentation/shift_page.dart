@@ -27,7 +27,10 @@ class _ShiftPageState extends State<ShiftPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ShiftCubit>().load(admin: widget.isAdmin);
+      final cubit = context.read<ShiftCubit>();
+      if (cubit.state.status == ShiftStatus.initial) {
+        cubit.load(admin: widget.isAdmin);
+      }
     });
   }
 
@@ -84,9 +87,11 @@ class _Content extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final current = state.current;
-    return ListView(
-      padding: const EdgeInsets.all(Space.md),
-      children: [
+    return RefreshIndicator(
+      onRefresh: () => context.read<ShiftCubit>().load(admin: isAdmin),
+      child: ListView(
+        padding: const EdgeInsets.all(Space.md),
+        children: [
         if (current != null)
           _OpenShiftCard(shift: current)
         else ...[
@@ -102,7 +107,8 @@ class _Content extends StatelessWidget {
           const SizedBox(height: Space.sm),
           for (final shift in state.history) _HistoryTile(shift: shift),
         ],
-      ],
+        ],
+      ),
     );
   }
 }

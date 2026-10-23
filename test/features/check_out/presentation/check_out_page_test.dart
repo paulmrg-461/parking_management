@@ -28,6 +28,7 @@ class _FakeCheckOutRepository implements CheckOutRepository {
   Future<PagedResult<OpenSession>> listOpenSessions({
     int offset = 0,
     int limit = defaultPageSize,
+    String? plate,
   }) async => PagedResult([
     OpenSession(id: 1, vehicleId: 1, entryTime: DateTime(2026, 1, 1)),
     OpenSession(id: 2, vehicleId: 2, entryTime: DateTime(2026, 1, 1)),

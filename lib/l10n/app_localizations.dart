@@ -590,6 +590,18 @@ abstract class AppLocalizations {
   /// **'Turno / Caja'**
   String get homeShift;
 
+  /// No description provided for @checkOutNoShift.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay turno abierto: este cobro no entrará en el arqueo.'**
+  String get checkOutNoShift;
+
+  /// No description provided for @shiftUnavailable.
+  ///
+  /// In es, this message translates to:
+  /// **'Turno no disponible'**
+  String get shiftUnavailable;
+
   /// No description provided for @shiftTitle.
   ///
   /// In es, this message translates to:
@@ -1963,6 +1975,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Descuentos aplicados'**
   String get reportsTotalDiscounts;
+
+  /// No description provided for @reportsDiscountLog.
+  ///
+  /// In es, this message translates to:
+  /// **'Detalle de descuentos'**
+  String get reportsDiscountLog;
+
+  /// No description provided for @reportsDiscountBy.
+  ///
+  /// In es, this message translates to:
+  /// **'por {admin}'**
+  String reportsDiscountBy(String admin);
 
   /// No description provided for @reportsDiscountedSessions.
   ///

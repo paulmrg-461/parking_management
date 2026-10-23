@@ -107,8 +107,10 @@ a banner when a new row arrives.
 **Background push (FCM):** Supabase does not deliver push itself. Set
 `FCM_SERVICE_ACCOUNT_JSON` in `.env` (single-line Firebase service-account
 JSON), restart the `functions` service, and schedule `supabase/notifications-cron.sh`
-from host cron every minute. The `push-dispatch` Edge Function sends pending
-notifications to FCM and is protected by the service-role key.
+from host cron every minute. The cron also renews monthly passes, raises
+overstay alerts and purges expired idempotency keys. The `push-dispatch` Edge
+Function sends pending notifications to FCM and is protected by the service-role
+key.
 
 **Flutter (Android):** register the app in Firebase
 (`pro.devpaul.parking_management`) and run with:
@@ -140,10 +142,15 @@ stored with the session and revenue reports show the discounted total. Receipts
 
 The `/history` screen (also linked from Home) looks up a plate and shows its
 visits, total spent, open-session flag and the latest sessions, with an offline
-cache per plate.
+cache per plate. Check-out searches plates **server-side** with pagination, so
+a vehicle outside the first page is still found; the query shows a proper
+"no plate matches" state. Discounts appear in the report with their reason,
+admin and timestamp.
 
 ## Shifts and cash reconciliation
 
+Home shows a live shift card (open/closed, expected cash, check-outs) and the
+check-out screen warns when no shift is open, linking to the cash screen.
 Operators open a shift with an opening float, record cash withdrawals/deposits,
 and close it by counting the drawer. The close screen shows expected cash, the
 counted amount and the difference; check-outs attach to the shift open at the

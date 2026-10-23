@@ -140,6 +140,28 @@ class _ReportsBody extends StatelessWidget {
             ],
           ),
         ],
+        if (revenue.discountAudit.isNotEmpty) ...[
+          const SizedBox(height: Space.lg),
+          _SectionTitle(l10n.reportsDiscountLog),
+          for (final discount in revenue.discountAudit)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(
+                '${discount.plate} · ${Formatters.dateTime(discount.discountAt)}',
+              ),
+              subtitle: Text(
+                [
+                  if (discount.reason != null) discount.reason!,
+                  l10n.reportsDiscountBy(discount.admin),
+                  if (discount.ticketNumber != null) discount.ticketNumber!,
+                ].join(' · '),
+              ),
+              trailing: Text(
+                '-${Formatters.money(discount.discountAmount)}',
+                style: textTheme.titleSmall,
+              ),
+            ),
+        ],
         const SizedBox(height: Space.lg),
         _SectionTitle(l10n.reportsRevenueByDay),
         RevenueByDayChart(byDay: revenue.byDay),

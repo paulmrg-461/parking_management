@@ -8,6 +8,7 @@ abstract class CheckOutRepository {
   Future<PagedResult<OpenSession>> listOpenSessions({
     int offset = 0,
     int limit = defaultPageSize,
+    String? plate,
   });
 
   /// Closes [sessionId] using the backend clock. Offline, the attempt time

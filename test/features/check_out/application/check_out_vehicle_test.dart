@@ -18,6 +18,7 @@ class _FakeRepository implements CheckOutRepository {
   Future<PagedResult<OpenSession>> listOpenSessions({
     int offset = 0,
     int limit = defaultPageSize,
+    String? plate,
   }) async => const PagedResult([]);
 
   @override

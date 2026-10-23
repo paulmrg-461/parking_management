@@ -68,9 +68,21 @@ GoRouter buildRouter(AuthCubit auth, Listenable refresh) => GoRouter(
           unawaited(cubit.start(session?.user.id));
           return cubit;
         },
-        child: BlocProvider<DashboardCubit>(
-          create: (_) => serviceLocator<DashboardCubit>(),
-          child: AppShell(location: state.uri.path, child: child),
+        child: BlocProvider<ShiftCubit>(
+          create: (_) {
+            final cubit = serviceLocator<ShiftCubit>();
+            final isAdmin = switch (auth.state) {
+              AuthAuthenticated(:final session) =>
+                session.user.role == UserRole.admin,
+              _ => false,
+            };
+            unawaited(cubit.load(admin: isAdmin));
+            return cubit;
+          },
+          child: BlocProvider<DashboardCubit>(
+            create: (_) => serviceLocator<DashboardCubit>(),
+            child: AppShell(location: state.uri.path, child: child),
+          ),
         ),
       ),
       routes: [_homeRoute(auth)],
@@ -121,10 +133,7 @@ GoRoute _homeRoute(AuthCubit auth) => GoRoute(
             session.user.role == UserRole.admin,
           _ => false,
         };
-        return BlocProvider<ShiftCubit>(
-          create: (_) => serviceLocator<ShiftCubit>(),
-          child: ShiftPage(isAdmin: isAdmin),
-        );
+        return ShiftPage(isAdmin: isAdmin);
       },
     ),
     GoRoute(

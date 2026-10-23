@@ -12,6 +12,7 @@ abstract class CheckOutRemoteDataSource {
   Future<PagedResult<OpenSession>> listOpenSessions({
     required int limit,
     required int offset,
+    String? plate,
   });
 
   Future<CheckOutReceipt> checkOut(
@@ -37,11 +38,16 @@ class SupabaseCheckOutRemoteDataSource implements CheckOutRemoteDataSource {
   Future<PagedResult<OpenSession>> listOpenSessions({
     required int limit,
     required int offset,
+    String? plate,
   }) async {
     try {
-      final response = await _client
+      var query = _client
           .from(_view)
-          .select('id, vehicle_id, entry_time')
+          .select('id, vehicle_id, entry_time');
+      if (plate != null && plate.trim().isNotEmpty) {
+        query = query.ilike('plate', '%${plate.trim()}%');
+      }
+      final response = await query
           .order('entry_time')
           .range(offset, offset + limit - 1)
           .count(CountOption.exact);

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/l10n/failure_messages.dart';
 import '../../../core/l10n/l10n.dart';
@@ -14,6 +15,7 @@ import '../../../core/widgets/sync_badge.dart';
 import '../../auth/application/auth_cubit.dart';
 import '../../auth/domain/entities/user.dart';
 import '../../home/application/dashboard_cubit.dart';
+import '../../shifts/application/shift_cubit.dart';
 import '../../receipt_printing/presentation/receipt_print_sheet.dart';
 import '../../notifications/presentation/notification_bell.dart';
 import '../application/check_out_cubit.dart';
@@ -70,6 +72,7 @@ class _CheckOutPageState extends State<CheckOutPage> {
                 onChanged: context.read<CheckOutCubit>().search,
               ),
             ),
+            const _ShiftBanner(),
             const Expanded(child: _SessionsList()),
           ],
         ),
@@ -84,11 +87,20 @@ class _CheckOutPageState extends State<CheckOutPage> {
     switch (_submissionOf(state)) {
       case SubmissionSucceeded<CheckOutReceipt>(:final result):
         unawaited(context.read<DashboardCubit>().load());
+        _refreshShift(context);
         unawaited(_showReceipt(context, result));
       case SubmissionFailed(:final message, :final failure):
         showErrorSnack(context, context.l10n.errorText(message, failure));
       default:
         break;
+    }
+  }
+
+  void _refreshShift(BuildContext context) {
+    try {
+      unawaited(context.read<ShiftCubit>().load());
+    } on ProviderNotFoundException {
+      // Isolated tests may not provide the shell-level shift cubit.
     }
   }
 
@@ -146,9 +158,15 @@ class _SessionsList extends StatelessWidget {
 
   Widget _buildList(BuildContext context, CheckOutLoaded state) {
     if (state.visible.isEmpty) {
-      return Center(child: Text(context.l10n.openSessionsEmpty));
+      return Center(
+        child: Text(
+          state.query.isEmpty
+              ? context.l10n.openSessionsEmpty
+              : context.l10n.checkOutNoMatch(state.query),
+        ),
+      );
     }
-    final showFooter = state.hasMore && state.query.isEmpty;
+    final showFooter = state.hasMore;
     return NotificationListener<ScrollNotification>(
       onNotification: (notification) {
         if (showFooter &&
@@ -243,6 +261,51 @@ class _LoadMoreTile extends StatelessWidget {
                 onPressed: () => context.read<CheckOutCubit>().loadMore(),
                 child: Text(context.l10n.actionLoadMore),
               ),
+      ),
+    );
+  }
+}
+
+
+class _ShiftBanner extends StatelessWidget {
+  const _ShiftBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final ShiftCubit cubit;
+    try {
+      cubit = context.watch<ShiftCubit>();
+    } on ProviderNotFoundException {
+      return const SizedBox.shrink();
+    }
+    if (cubit.state.status != ShiftStatus.loaded ||
+        cubit.state.current != null) {
+      return const SizedBox.shrink();
+    }
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: scheme.errorContainer,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.warning_amber_outlined, color: scheme.onErrorContainer),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              context.l10n.checkOutNoShift,
+              style: TextStyle(color: scheme.onErrorContainer),
+            ),
+          ),
+          TextButton(
+            onPressed: () => context.go('/shift'),
+            child: Text(context.l10n.shiftOpen),
+          ),
+        ],
       ),
     );
   }

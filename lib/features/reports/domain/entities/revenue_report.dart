@@ -38,6 +38,41 @@ class PaymentRevenue extends Equatable {
   List<Object?> get props => [paymentMethod, amount];
 }
 
+/// One discounted check-out, for the audit trail.
+class DiscountAudit extends Equatable {
+  const DiscountAudit({
+    required this.sessionId,
+    required this.plate,
+    required this.amountCharged,
+    required this.discountAmount,
+    required this.discountAt,
+    required this.admin,
+    this.ticketNumber,
+    this.reason,
+  });
+
+  final int sessionId;
+  final String plate;
+  final int amountCharged;
+  final int discountAmount;
+  final DateTime discountAt;
+  final String admin;
+  final String? ticketNumber;
+  final String? reason;
+
+  @override
+  List<Object?> get props => [
+    sessionId,
+    plate,
+    amountCharged,
+    discountAmount,
+    discountAt,
+    admin,
+    ticketNumber,
+    reason,
+  ];
+}
+
 /// Revenue report for a date range, as returned by
 /// `rpc/report_revenue`.
 class RevenueReport extends Equatable {
@@ -50,6 +85,7 @@ class RevenueReport extends Equatable {
     this.byPayment = const [],
     this.totalDiscounts = 0,
     this.discountedSessions = 0,
+    this.discountAudit = const [],
   });
 
   final DateTime startDate;
@@ -60,6 +96,7 @@ class RevenueReport extends Equatable {
   final List<PaymentRevenue> byPayment;
   final int totalDiscounts;
   final int discountedSessions;
+  final List<DiscountAudit> discountAudit;
 
   @override
   List<Object?> get props =>
@@ -72,5 +109,6 @@ class RevenueReport extends Equatable {
         byPayment,
         totalDiscounts,
         discountedSessions,
+        discountAudit,
       ];
 }

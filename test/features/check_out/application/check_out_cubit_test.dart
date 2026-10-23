@@ -20,6 +20,7 @@ class _FakeCheckOutRepository implements CheckOutRepository {
   Object? unexpected;
   CheckOutReceipt? receipt;
   final List<int> offsets = [];
+  String? lastPlate;
 
   @override
   Future<OccupancySnapshot> occupancy() async =>
@@ -29,8 +30,10 @@ class _FakeCheckOutRepository implements CheckOutRepository {
   Future<PagedResult<OpenSession>> listOpenSessions({
     int offset = 0,
     int limit = defaultPageSize,
+    String? plate,
   }) async {
     offsets.add(offset);
+    lastPlate = plate;
     if (listError != null) {
       throw listError!;
     }
@@ -114,6 +117,7 @@ void main() {
     await Future<void>.delayed(Duration.zero);
 
     expect(loaded().query, 'xyz');
+    expect(repository.lastPlate, 'xyz');
     expect(loaded().visible.map((s) => s.id), [2]);
     expect(loaded().sessions, hasLength(2));
   });

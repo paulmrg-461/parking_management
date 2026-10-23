@@ -41,6 +41,30 @@ Map<String, dynamic> _$PaymentRevenueDtoToJson(PaymentRevenueDto instance) =>
       'amount': instance.amount,
     };
 
+DiscountAuditDto _$DiscountAuditDtoFromJson(Map<String, dynamic> json) =>
+    DiscountAuditDto(
+      sessionId: (json['session_id'] as num).toInt(),
+      plate: json['plate'] as String,
+      amountCharged: (json['amount_charged'] as num).toInt(),
+      discountAmount: (json['discount_amount'] as num).toInt(),
+      discountAt: DateTime.parse(json['discount_at'] as String),
+      admin: json['admin'] as String,
+      ticketNumber: json['ticket_number'] as String?,
+      reason: json['discount_reason'] as String?,
+    );
+
+Map<String, dynamic> _$DiscountAuditDtoToJson(DiscountAuditDto instance) =>
+    <String, dynamic>{
+      'session_id': instance.sessionId,
+      'plate': instance.plate,
+      'amount_charged': instance.amountCharged,
+      'discount_amount': instance.discountAmount,
+      'discount_at': instance.discountAt.toIso8601String(),
+      'admin': instance.admin,
+      'ticket_number': instance.ticketNumber,
+      'discount_reason': instance.reason,
+    };
+
 RevenueReportDto _$RevenueReportDtoFromJson(Map<String, dynamic> json) =>
     RevenueReportDto(
       startDate: json['start_date'] as String,
@@ -61,6 +85,11 @@ RevenueReportDto _$RevenueReportDtoFromJson(Map<String, dynamic> json) =>
           [],
       totalDiscounts: (json['total_discounts'] as num?)?.toInt() ?? 0,
       discountedSessions: (json['discounted_sessions'] as num?)?.toInt() ?? 0,
+      discountAudit:
+          (json['discount_audit'] as List<dynamic>?)
+              ?.map((e) => DiscountAuditDto.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
     );
 
 Map<String, dynamic> _$RevenueReportDtoToJson(RevenueReportDto instance) =>
@@ -73,4 +102,5 @@ Map<String, dynamic> _$RevenueReportDtoToJson(RevenueReportDto instance) =>
       'by_payment': instance.byPayment,
       'total_discounts': instance.totalDiscounts,
       'discounted_sessions': instance.discountedSessions,
+      'discount_audit': instance.discountAudit,
     };

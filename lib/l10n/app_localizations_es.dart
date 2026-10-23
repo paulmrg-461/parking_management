@@ -279,6 +279,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get homeShift => 'Turno / Caja';
 
   @override
+  String get checkOutNoShift =>
+      'No hay turno abierto: este cobro no entrará en el arqueo.';
+
+  @override
+  String get shiftUnavailable => 'Turno no disponible';
+
+  @override
   String get shiftTitle => 'Turno / Caja';
 
   @override
@@ -1051,6 +1058,14 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get reportsTotalDiscounts => 'Descuentos aplicados';
+
+  @override
+  String get reportsDiscountLog => 'Detalle de descuentos';
+
+  @override
+  String reportsDiscountBy(String admin) {
+    return 'por $admin';
+  }
 
   @override
   String reportsDiscountedSessions(int count) {
