@@ -32,6 +32,8 @@ docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
   "select public.expire_reservations(24);" >/dev/null
 docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
   "select public.purge_stale_notifications(90);" >/dev/null
+docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
+  "select public.purge_client_error_reports(30);" >/dev/null
 
 curl -fsS -X POST "${API_URL:-http://localhost:8000}/functions/v1/push-dispatch" \
   -H "Authorization: Bearer ${SERVICE_KEY}" >/dev/null

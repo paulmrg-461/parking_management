@@ -15,6 +15,7 @@ import 'modules/core_module.dart';
 import 'modules/lots_module.dart';
 import 'modules/monthly_passes_module.dart';
 import 'modules/notifications_module.dart';
+import 'modules/observability_module.dart';
 import 'modules/plate_scanning_module.dart';
 import 'modules/platform_module.dart';
 import 'modules/receipt_printing_module.dart';
@@ -109,6 +110,7 @@ void registerAllModules(GetIt sl, AppConfig config) {
   registerLotsModule(sl);
   registerMonthlyPassesModule(sl);
   registerNotificationsModule(sl);
+  registerObservabilityModule(sl);
   registerReportsModule(sl);
   registerReservationsModule(sl);
   registerSettingsModule(sl);

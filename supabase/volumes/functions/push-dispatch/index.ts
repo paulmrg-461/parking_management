@@ -262,15 +262,28 @@ async function sendWebPush(
 }
 
 Deno.serve(async (req) => {
-  if (req.method !== 'POST') return json({ message: 'Method not allowed' }, 405)
+  const started = Date.now()
+  const done = (body: Record<string, unknown>, status = 200) => {
+    console.log(
+      JSON.stringify({
+        fn: 'push-dispatch',
+        status,
+        ms: Date.now() - started,
+        ...body,
+      }),
+    )
+    return json(body, status)
+  }
+
+  if (req.method !== 'POST') return done({ message: 'Method not allowed' }, 405)
   if (req.headers.get('authorization') !== `Bearer ${SERVICE_KEY}`) {
-    return json({ message: 'Forbidden' }, 403)
+    return done({ message: 'Forbidden' }, 403)
   }
 
   const account = serviceAccount()
   const push = await webPush()
   if (!account && !push) {
-    return json({ configured: false, sent: 0, failed: 0 })
+    return done({ configured: false, sent: 0, failed: 0 })
   }
 
   const { response, body } = await rest(
@@ -278,10 +291,12 @@ Deno.serve(async (req) => {
       '&select=id,user_id,title,body,data,push_attempts&order=created_at&limit=50',
   )
   if (!response.ok || !Array.isArray(body)) {
-    return json({ configured: true, error: 'Could not read notifications' }, 500)
+    return done({ configured: true, error: 'Could not read notifications' }, 500)
   }
   const pending = body as PendingNotification[]
-  if (pending.length === 0) return json({ configured: true, sent: 0, failed: 0 })
+  if (pending.length === 0) {
+    return done({ configured: true, sent: 0, failed: 0, pending: 0 })
+  }
 
   const access = account ? await accessToken(account) : null
   let sent = 0
@@ -336,7 +351,7 @@ Deno.serve(async (req) => {
     }
   }
 
-  return json({
+  return done({
     configured: true,
     channels: { fcm: Boolean(account), web: Boolean(push) },
     sent,

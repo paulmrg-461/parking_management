@@ -96,7 +96,32 @@ Health endpoints through the gateway:
 - `GET /rest/v1/` (with apikey) → OpenAPI document
 - `GET /storage/v1/status` → storage status
 
-## 6. Migrations
+## 6. Monitoring and diagnostics
+
+```bash
+sh supabase/healthcheck.sh     # services, HTTP endpoints, backlog; exit 1 on failure
+sh supabase/diagnostics.sh     # tables/rows/sizes, stuck sessions, shifts, backlog
+```
+
+`healthcheck.sh` verifies running services, `/auth/v1/health`, a REST query and
+`/storage/v1/status`, then warns about sessions open >48 h, shifts open >12 h,
+notifications that exhausted their push attempts, a push backlog (only when
+push is configured), client error reports and an oversized idempotency table.
+Set `HEALTHCHECK_WEBHOOK` to a Slack-compatible endpoint to alert on failures.
+
+Client errors are stored in `public.client_error_reports` (admins can select
+them; the app reports via `rpc/report_client_error`, throttled and bounded).
+Edge Functions log one JSON line per request (`fn`, `action`, `status`, `ms`,
+plus counts), so `docker compose logs functions | grep '"ok":false'` finds
+failures.
+
+Recommended crons:
+
+```cron
+*/5 * * * * cd /opt/parking && HEALTHCHECK_WEBHOOK=... sh supabase/healthcheck.sh >> /var/log/parking-health.log 2>&1
+```
+
+## 7. Migrations
 
 - `supabase/migrations/*.sql` is the only schema owner; applied in filename
   order by `supabase-migrate` and recorded in `public.schema_migrations`.
@@ -106,7 +131,7 @@ Health endpoints through the gateway:
 - New tables must ship grants + RLS **before** PostgREST can see them; writes
   go through `security definer` RPCs.
 
-## 7. Scheduled work
+## 8. Scheduled work
 
 | Job | Where | Frequency |
 |---|---|---|
@@ -114,7 +139,7 @@ Health endpoints through the gateway:
 | Database + storage backup | `supabase/backup.sh` | nightly (see `setup-cloud.md`) |
 | Restore drill | `supabase/restore.sh` on a scratch host | quarterly |
 
-## 8. Scaling notes
+## 9. Scaling notes
 
 - The DB is the bottleneck for writes (capacity locks are per category).
   Vertical scaling plus `supavisor` pooling covers many lots.
@@ -125,7 +150,7 @@ Health endpoints through the gateway:
 - Realtime connections are per authenticated client; the default stack handles
   a single parking lot comfortably.
 
-## 9. CI
+## 10. CI
 
 `.github/workflows/ci.yml` runs on `main`, `feature/**` and PRs:
 

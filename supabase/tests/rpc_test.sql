@@ -584,6 +584,45 @@ begin
     end if;
 end $$;
 
+-- Client error reports: bounded payload, own actor, admins only for reads.
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+select public.report_client_error(
+    'android',
+    repeat('x', 3000),
+    'stack',
+    '{"screen": "check_in"}'::jsonb,
+    '1.2.3'
+);
+
+do $$
+begin
+    if (select length(message) from public.client_error_reports) <> 2000 then
+        raise exception 'client error message was not bounded';
+    end if;
+    if (select user_id from public.client_error_reports) <> 2 then
+        raise exception 'client error owner was not derived from auth.uid()';
+    end if;
+end $$;
+
+set local role authenticated;
+do $$
+begin
+    if exists (select 1 from public.client_error_reports) then
+        raise exception 'RLS leak: operator reads client error reports';
+    end if;
+end $$;
+reset role;
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+select public.purge_client_error_reports(30);
+
+do $$
+begin
+    if public.purge_client_error_reports(1) <> 0 then
+        raise exception 'purge removed a fresh client error report';
+    end if;
+end $$;
+
 -- RLS: the operator must not read the admin's notifications.
 set local role authenticated;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';

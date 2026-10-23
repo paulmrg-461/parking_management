@@ -127,12 +127,24 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   `postgres`), so scheduling stays in the host cron; the README documents how
   to enable pg_cron if the deployment supports `cron.database_name`.
 
+## Observability (latest)
+
+- `0030`: `client_error_reports` + `report_client_error` (bounded payload,
+  actor from auth.uid(), admin read) + `purge_client_error_reports(30)` in the
+  cron.
+- Flutter: `ErrorReporter` (throttled/deduped, disabled in debug) with a
+  Supabase sink, installed in `main.dart` for `FlutterError.onError` and
+  `PlatformDispatcher.onError`.
+- Functions: JSON log line per request; `docker compose logs functions`.
+- Ops: `healthcheck.sh` (exit 1 on failure, `HEALTHCHECK_WEBHOOK` alerts) and
+  `diagnostics.sh` (stuck sessions/shifts, backlog, client errors, sizes).
+
 ## Backlog / next moves
 
 - `5.4` contract migration: drop the missing-header fallback once every client
   sends `x-lot-id`.
 - Optional polish: per-lot receipt footer beyond settings, lot filter on the
-  vehicle history UI, evidence-file archival, admin audit log, observability
-  (Sentry/logs/healthchecks) and Flutter↔Supabase e2e tests.
+  vehicle history UI, evidence-file archival, admin audit log and
+  Flutter↔Supabase e2e tests.
 - Dev DB artifacts from smoke tests: lot `NORTH` ("Sede Norte") and user
   `norte2` (operator, PIN `123456`, member of lot 2). Safe to delete.

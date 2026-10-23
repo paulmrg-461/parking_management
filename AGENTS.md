@@ -87,11 +87,15 @@ RPCs own business logic and the Flutter client calls Supabase directly.
   `lot_members`, lowest membership as fallback). Never trust a client lot id
   except through `resolve_lot()`. New site data must be stamped with the lot
   and filtered in reads; queued mutations capture `lot_id` at enqueue time.
+- Observability: uncaught errors go through `core/observability` into
+  `client_error_reports` (never report expected `Failure`s, never throw from
+  the reporter); Edge Functions log one JSON line per request; run
+  `sh supabase/healthcheck.sh` / `diagnostics.sh` when triaging.
 - Notifications: in-app rows + Supabase Realtime work with no extra config;
   browser push uses `web/push-sw.js` + VAPID (`web_push_subscriptions`);
   `FCM_SERVICE_ACCOUNT_JSON` + `supabase/notifications-cron.sh` enable
   background FCM. `push-dispatch` is service-role-only; never expose the key.
-- Tests: `flutter test` (486) + `flutter analyze`; CI validates compose and
+- Tests: `flutter test` (491) + `flutter analyze`; CI validates compose and
   runs `supabase/tests/run.sh` (real migrations + RPC/RLS tests) against
   `supabase/postgres`.
 - Backups: `sh supabase/backup.sh` (DB dump + Storage); restore with

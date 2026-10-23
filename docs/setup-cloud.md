@@ -195,7 +195,19 @@ can run inside the database (see
   `--dart-define=WEB_PUSH_VAPID_PUBLIC_KEY=<public>`. Service workers require
   HTTPS (you have it). Users enable it from the inbox.
 
-## 9. Android release
+## 9. Monitoring
+
+```bash
+sh supabase/healthcheck.sh          # 0 = healthy, 1 = something is down
+sh supabase/diagnostics.sh          # support snapshot
+```
+
+Cron it every 5 minutes with `HEALTHCHECK_WEBHOOK` pointing at your alert
+channel; the script only posts when there is a hard failure. Pair it with an
+external uptime check on `https://parking.example.com/auth/v1/health` (it needs
+the `apikey` header) and a daily look at `client_error_reports` from Studio.
+
+## 10. Android release
 
 ```bash
 flutter build appbundle --release \
@@ -212,7 +224,7 @@ Sign with your own keystore (`android/key.properties`, never committed) and
 distribute through Play/internal track or MDM. The release manifest forbids
 cleartext traffic, hence the HTTPS requirement.
 
-## 10. Upgrades
+## 11. Upgrades
 
 ```bash
 cd /opt/parking
@@ -226,7 +238,7 @@ docker compose logs --tail=20 supabase-migrate
 Smoke test after every deploy: log in, check-in/check-out one test plate, open
 the shift screen, open `/reports`, and confirm the dashboard occupancy.
 
-## 11. Hardening checklist
+## 12. Hardening checklist
 
 - [ ] `chmod 600 .env`; secrets only in `.env` (or your secret manager).
 - [ ] Only 22/80/443 open; gateway and DB bound to `127.0.0.1`.

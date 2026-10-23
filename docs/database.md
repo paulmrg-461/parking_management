@@ -62,6 +62,7 @@ erDiagram
 | `notifications` | Per-user inbox rows (type, title, body, data, read/pushed state, dedupe key). | optional |
 | `device_tokens` | FCM tokens per user/device. | no |
 | `web_push_subscriptions` | Browser push endpoints (endpoint + p256dh + auth). | no |
+| `client_error_reports` | Uncaught app errors (platform, message, stack, context) for support; admin-readable. | no |
 | `idempotency_keys` | Replay cache for write RPCs keyed by `Idempotency-Key`. | — |
 | `schema_migrations` | Applied migration files. | — |
 
@@ -109,6 +110,7 @@ granted to `authenticated` only.
 `require_admin`, `current_lot_id`, `lot_from_header`, `is_lot_admin`,
 `require_lot_admin`, `resolve_lot`, `replay_idempotent`, `remember_idempotent`,
 `purge_expired_idempotency`, `purge_stale_notifications`,
+`purge_client_error_reports`, `report_client_error`,
 `handle_auth_user` (trigger), `add_default_lot_member` (trigger).
 
 ## 4. Access control (RLS)

@@ -194,6 +194,13 @@ The app is now a Supabase-only stack: FastAPI, Alembic, Dio and Redis are gone.
   expired reservations and stale notifications run from the cron script (and
   through pg_cron when the database has it).
 
+- **Observability**: uncaught app errors land in `client_error_reports`
+  (`report_client_error`, throttled/bounded, admin-readable, 30-day purge) and
+  are wired to Flutter's global handlers; Edge Functions emit one structured
+  JSON log line per request; `supabase/healthcheck.sh` checks services,
+  endpoints and backlog with an optional alert webhook, and
+  `supabase/diagnostics.sh` prints the support snapshot.
+
 ## Infra/tooling (not OpenSpec capabilities — repo scaffolding)
 
 - **Docker**: root `docker-compose.yml` includes the official self-hosted
@@ -234,7 +241,7 @@ The app is now a Supabase-only stack: FastAPI, Alembic, Dio and Redis are gone.
 
 ## Test counts
 
-- Flutter (`flutter test`): 486 passed. `flutter analyze`: 0 errors/warnings
+- Flutter (`flutter test`): 491 passed. `flutter analyze`: 0 errors/warnings
   (98 SDK-deprecation/const infos under the local Flutter 3.50 beta; CI pins
   3.49 where the baseline is clean).
 - SQL/compose: validated against the running Supabase stack and by

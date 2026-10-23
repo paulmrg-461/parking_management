@@ -276,23 +276,41 @@ async function updateUser(payload: Record<string, unknown>) {
 }
 
 Deno.serve(async (req) => {
+  const started = Date.now()
+  let action = 'unknown'
+  // One structured line per request: greppable in `docker compose logs
+  // functions` and free of user data.
+  const done = (body: unknown, status = 200) => {
+    console.log(
+      JSON.stringify({
+        fn: 'admin-users',
+        action,
+        status,
+        ms: Date.now() - started,
+        ok: status < 400,
+      }),
+    )
+    return json(body, status)
+  }
+
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: cors })
   }
   try {
     const callerAuthId = await requireAdmin(req)
     const payload = await req.json().catch(() => ({}))
+    action = String(payload.action ?? 'unknown')
     switch (payload.action) {
       case 'create':
-        return json(await createUser(payload))
+        return done(await createUser(payload))
       case 'update':
-        return json(await updateUser(payload))
+        return done(await updateUser(payload))
       case 'reset_pin':
-        return json(await resetPin(payload))
+        return done(await resetPin(payload))
       case 'delete':
-        return json(await deleteUser(payload, callerAuthId))
+        return done(await deleteUser(payload, callerAuthId))
       default:
-        return json({ message: 'Unknown action' }, 400)
+        return done({ message: 'Unknown action' }, 400)
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'InternalError'
@@ -303,6 +321,6 @@ Deno.serve(async (req) => {
       : message === 'LastAdminError' || message === 'CannotDeleteSelfError'
       ? 409
       : 400
-    return json({ message }, status)
+    return done({ message }, status)
   }
 })
