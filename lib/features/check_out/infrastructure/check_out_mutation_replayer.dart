@@ -24,6 +24,7 @@ class CheckOutMutationReplayer extends MutationReplayer {
       discountReason: payload['discount_reason'] as String?,
       lostTicket: payload['lost_ticket'] == true,
       lostTicketReason: payload['lost_ticket_reason'] as String?,
+      lotId: (payload['lot_id'] as num?)?.toInt(),
     );
   }
 }

@@ -70,14 +70,17 @@ RPCs own business logic and the Flutter client calls Supabase directly.
   are never queued. Notification taps deep-link by type via
   `notification_routes.dart`.
 - Printed receipts localize through `ReceiptLabels` (es/en); nothing may
-  hardcode receipt labels. Multi-lot is a planned OpenSpec change
-  (`openspec/changes/add-multi-parking-lot/`) — keep new schema lot-ready but
-  do not half-implement it.
+  hardcode receipt labels.
+- Multi-lot: every site-owned table carries `lot_id`; RLS and RPCs resolve the
+  active lot with `current_lot_id()` (`x-lot-id` header validated against
+  `lot_members`, lowest membership as fallback). Never trust a client lot id
+  except through `resolve_lot()`. New site data must be stamped with the lot
+  and filtered in reads; queued mutations capture `lot_id` at enqueue time.
 - Notifications: in-app rows + Supabase Realtime work with no extra config;
   browser push uses `web/push-sw.js` + VAPID (`web_push_subscriptions`);
   `FCM_SERVICE_ACCOUNT_JSON` + `supabase/notifications-cron.sh` enable
   background FCM. `push-dispatch` is service-role-only; never expose the key.
-- Tests: `flutter test` (460) + `flutter analyze`; CI validates compose and
+- Tests: `flutter test` (470) + `flutter analyze`; CI validates compose and
   runs `supabase/tests/run.sh` (real migrations + RPC/RLS tests) against
   `supabase/postgres`.
 - Backups: `sh supabase/backup.sh` (DB dump + Storage); restore with

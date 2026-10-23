@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -9,7 +11,11 @@ import '../../core/widgets/offline_banner.dart';
 import '../../core/widgets/submission_feedback.dart';
 import '../../features/auth/application/auth_cubit.dart';
 import '../../features/auth/domain/entities/user.dart';
+import '../../features/home/application/dashboard_cubit.dart';
+import '../../features/lots/application/lots_cubit.dart';
+import '../../features/lots/presentation/lot_bar.dart';
 import '../../features/notifications/application/notifications_cubit.dart';
+import '../../features/shifts/application/shift_cubit.dart';
 import '../../features/settings/application/branding_cubit.dart';
 import '../../features/settings/domain/whatsapp_url.dart';
 import 'app_destinations.dart';
@@ -38,7 +44,13 @@ class AppShell extends StatelessWidget {
     if (role == null) {
       return child;
     }
-    final content = BlocListener<NotificationsCubit, NotificationsState>(
+    final content = BlocListener<LotsCubit, LotsState>(
+      listenWhen: (previous, current) =>
+          previous is LotsLoaded &&
+          current is LotsLoaded &&
+          previous.activeId != current.activeId,
+      listener: (context, state) => _reloadForLot(context),
+      child: BlocListener<NotificationsCubit, NotificationsState>(
       listenWhen: (previous, current) =>
           previous.latestArrived?.id != current.latestArrived?.id,
       listener: (context, state) {
@@ -50,6 +62,7 @@ class AppShell extends StatelessWidget {
       child: Column(
         children: [
           const OfflineBanner(),
+          const LotBar(),
           Expanded(
             child: Center(
               child: ConstrainedBox(
@@ -61,12 +74,28 @@ class AppShell extends StatelessWidget {
           ),
         ],
       ),
+      ),
     );
     return LayoutBuilder(
       builder: (context, constraints) => constraints.maxWidth >= wideBreakpoint
           ? _WideShell(role: role, location: location, content: content)
           : _NarrowShell(role: role, location: location, content: content),
     );
+  }
+}
+
+/// Refreshes the shell-scoped summaries after a lot switch. Providers are
+/// optional so isolated tests can omit them.
+void _reloadForLot(BuildContext context) {
+  try {
+    unawaited(context.read<DashboardCubit>().load());
+  } on ProviderNotFoundException {
+    // no dashboard in this context
+  }
+  try {
+    unawaited(context.read<ShiftCubit>().load());
+  } on ProviderNotFoundException {
+    // no shift cubit in this context
   }
 }
 

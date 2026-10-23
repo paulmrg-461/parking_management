@@ -40,6 +40,7 @@ class _FakeRemote implements CheckOutRemoteDataSource {
     String? discountReason,
     bool lostTicket = false,
     String? lostTicketReason,
+    int? lotId,
   }) async {
     this.sessionId = sessionId;
     this.clientExitTime = clientExitTime;

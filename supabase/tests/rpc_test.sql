@@ -296,6 +296,168 @@ begin
     end if;
 end $$;
 
+-- Multi-lot: two sites coexist, the header selects one and membership gates it.
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+select public.create_lot('N2', 'North lot', 'Calle 2', 'America/Bogota');
+select public.set_lot_member(2, 2, 'operator');
+
+insert into public.categories (name, capacity, lot_id)
+values ('n2car', 1, 2);
+insert into public.tariffs (category_id, type, amount, active, lot_id)
+select id, 'hourly', 4000, true, 2
+  from public.categories where lot_id = 2 and name = 'n2car';
+
+do $$
+begin
+    if (select count(*) from public.lot_members where user_id = 2) <> 2 then
+        raise exception 'lot membership was not created';
+    end if;
+    if (select count(*) from public.parking_settings where lot_id = 2) <> 1 then
+        raise exception 'new lot got no settings row';
+    end if;
+    if (select count(*) from public.categories where lot_id = 2 and name = 'n2car') <> 1 then
+        raise exception 'lot 2 category missing';
+    end if;
+end $$;
+
+set local request.headers = '{"x-lot-id":"2"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+insert into _results (session_json)
+select public.check_in(
+    'L2CAR',
+    (select id from public.categories where lot_id = 2 and name = 'n2car'),
+    null, null, '[]'::jsonb, null, null
+);
+
+do $$
+begin
+    if not exists (
+        select 1 from public.parking_sessions s
+         where s.lot_id = 2 and s.status = 'open'
+    ) then
+        raise exception 'check-in was not stamped with the active lot';
+    end if;
+    begin
+        perform public.check_in(
+            'L2SECOND',
+            (select id from public.categories where lot_id = 2 and name = 'n2car'),
+            null, null, '[]'::jsonb, null, null
+        );
+        raise exception 'capacity was not enforced per lot';
+    exception when others then
+        if sqlerrm not like '%CategoryFullError%' then
+            raise;
+        end if;
+    end;
+end $$;
+
+set local role authenticated;
+set local request.headers = '{"x-lot-id":"1"}';
+do $$
+begin
+    if exists (select 1 from public.parking_sessions where lot_id = 2) then
+        raise exception 'RLS leak: lot 1 header sees lot 2 sessions';
+    end if;
+end $$;
+reset role;
+
+set local role authenticated;
+set local request.headers = '{"x-lot-id":"2"}';
+do $$
+begin
+    if (select count(*) from public.parking_sessions) <> 1 then
+        raise exception 'lot 2 header should see exactly its own session';
+    end if;
+end $$;
+reset role;
+
+set local request.headers = '{"x-lot-id":"3"}';
+do $$
+begin
+    begin
+        perform public.current_lot_id();
+        raise exception 'forged lot header was accepted';
+    exception when others then
+        if sqlerrm not like '%LotRequiredError%' then
+            raise;
+        end if;
+    end;
+end $$;
+
+-- An explicit lot (offline replay) is honored after a lot switch, but still
+-- validated against membership.
+insert into public.categories (name, capacity, lot_id) values ('n2free', 0, 2);
+
+set local request.headers = '{"x-lot-id":"1"}';
+insert into _results (session_json)
+select public.check_in(
+    'L2OFF',
+    (select id from public.categories where lot_id = 2 and name = 'n2free'),
+    null, null, '[]'::jsonb, null, null, 2
+);
+
+do $$
+begin
+    if not exists (
+        select 1 from public.parking_sessions s
+         where s.lot_id = 2 and s.status = 'open'
+           and s.vehicle_id = (select id from public.vehicles where plate = 'L2OFF')
+    ) then
+        raise exception 'offline replay ignored the captured lot';
+    end if;
+    begin
+        perform public.check_in(
+            'L2BAD',
+            (select id from public.categories where lot_id = 2 and name = 'n2free'),
+            null, null, '[]'::jsonb, null, null, 9
+        );
+        raise exception 'offline replay accepted a foreign lot';
+    exception when others then
+        if sqlerrm not like '%LotRequiredError%' then
+            raise;
+        end if;
+    end;
+end $$;
+
+reset request.headers;
+
+-- Platform-only operations.
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    begin
+        perform public.create_lot('N3', 'Third lot');
+        raise exception 'operator created a lot';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then
+            raise;
+        end if;
+    end;
+    begin
+        perform public.report_revenue_all(current_date, current_date);
+        raise exception 'operator read the consolidated report';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then
+            raise;
+        end if;
+    end;
+end $$;
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+select public.report_revenue_all(current_date, current_date);
+
+do $$
+begin
+    begin
+        perform public.set_lot_member(1, 2, 'operator');
+        raise exception 'last lot admin was demoted';
+    exception when others then
+        if sqlerrm not like '%LastAdminError%' then
+            raise;
+        end if;
+    end;
+end $$;
+
 -- RLS: the operator must not read the admin's notifications.
 set local role authenticated;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';

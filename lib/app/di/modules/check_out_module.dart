@@ -1,6 +1,8 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:get_it/get_it.dart';
 
+import '../../../core/lot/lot_session.dart';
+
 import '../../../core/sync/sync_outbox.dart';
 import '../../../features/check_out/application/check_out_cubit.dart';
 import '../../../features/check_out/application/check_out_vehicle.dart';
@@ -19,6 +21,7 @@ void registerCheckOutModule(GetIt sl) {
       () => CheckOutRepositoryImpl(
         sl<CheckOutRemoteDataSource>(),
         sl<SyncOutbox>(),
+        sl<LotSession>(),
       ),
     )
     ..registerLazySingleton<CheckOutVehicle>(

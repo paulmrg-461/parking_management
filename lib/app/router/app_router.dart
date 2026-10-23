@@ -14,6 +14,8 @@ import '../../features/check_in/presentation/check_in_page.dart';
 import '../../features/check_out/application/check_out_cubit.dart';
 import '../../features/check_out/presentation/check_out_page.dart';
 import '../../features/home/application/dashboard_cubit.dart';
+import '../../features/lots/application/lots_cubit.dart';
+import '../../features/lots/presentation/lots_page.dart';
 import '../../features/notifications/application/notifications_cubit.dart';
 import '../../features/notifications/presentation/notifications_page.dart';
 import '../../features/shifts/application/shift_cubit.dart';
@@ -121,6 +123,13 @@ GoRoute _homeRoute(AuthCubit auth) => GoRoute(
       builder: (context, state) => BlocProvider<CheckOutCubit>(
         create: (_) => serviceLocator<CheckOutCubit>(),
         child: const CheckOutPage(),
+      ),
+    ),
+    GoRoute(
+      path: 'lots',
+      builder: (context, state) => BlocProvider<LotsCubit>.value(
+        value: serviceLocator<LotsCubit>(),
+        child: const LotsPage(),
       ),
     ),
     GoRoute(

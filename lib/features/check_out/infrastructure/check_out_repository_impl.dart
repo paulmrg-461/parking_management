@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import '../../../core/error/failure.dart';
 import '../../../core/pagination/paged_result.dart';
+import '../../../core/lot/lot_session.dart';
 import '../../../core/sync/client_ref.dart';
 import '../../../core/sync/pending_mutation.dart';
 import '../../../core/sync/sync_outbox.dart';
@@ -17,10 +18,11 @@ import 'check_out_remote_data_source.dart';
 /// the operator actually acted, not whenever the device reconnects (see
 /// `design.md`). The immediate result is a pending receipt with no amount.
 class CheckOutRepositoryImpl implements CheckOutRepository {
-  CheckOutRepositoryImpl(this._remote, this._outbox);
+  CheckOutRepositoryImpl(this._remote, this._outbox, this._lots);
 
   final CheckOutRemoteDataSource _remote;
   final SyncOutbox _outbox;
+  final LotSession _lots;
 
   @override
   Future<PagedResult<OpenSession>> listOpenSessions({
@@ -90,6 +92,7 @@ class CheckOutRepositoryImpl implements CheckOutRepository {
         payloadJson: jsonEncode({
           'client_exit_time': exitTime.toIso8601String(),
           'client_ref': clientRef,
+          'lot_id': ?_lots.activeLotId,
           'payment_method': paymentMethod,
           'discount_amount': discountAmount,
           'discount_reason': ?discountReason,

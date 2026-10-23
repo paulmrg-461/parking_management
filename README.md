@@ -174,6 +174,29 @@ counted amount and the difference; check-outs attach to the shift open at the
 exit time (including offline replays). Admins see recent shifts and receive a
 close notification.
 
+## Multiple parking sites
+
+One installation can run several parking lots. `parking_lots` holds the sites
+and `lot_members` the role each user has **per site** (an operator can work at
+two locations with one account). Categories, tariffs, sessions, shifts, monthly
+passes, pass payments, reservations, settings and notifications carry a
+`lot_id`; vehicles stay a global registry keyed by plate, and the active lot's
+category is applied at check-in.
+
+The active lot travels as the `x-lot-id` header, which the app sets from
+`LotContext` (persisted locally). `current_lot_id()` validates the caller's
+membership on every request and falls back to their lowest membership when the
+header is missing, so console/cron access and single-site installs keep working.
+A forged header fails with `LotRequiredError`.
+
+- Admins create sites at `/lots` (platform admin) and can enable/disable them.
+- Users with more than one membership get a lot bar under the app chrome to
+  switch sites; switching refreshes the dashboard and the shift card.
+- Reports and occupancy are per lot; platform admins can call
+  `report_revenue_all` for the consolidated view.
+- Queued offline check-ins/check-outs capture the lot where the operator acted
+  and replay into that same site.
+
 ## Capacity and reservations
 
 Each category has an optional capacity (0 = unlimited). The dashboard shows

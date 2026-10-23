@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:parking_management/core/lot/lot_session.dart';
 import 'package:parking_management/core/pagination/paged_result.dart';
 import 'package:parking_management/core/sync/pending_mutation.dart';
 import 'package:parking_management/core/error/failure.dart';
@@ -44,6 +45,7 @@ class _FakeRemote implements CheckOutRemoteDataSource {
     String? discountReason,
     bool lostTicket = false,
     String? lostTicketReason,
+    int? lotId,
   }) async {
     clientExitTimeUsed = clientExitTime;
     idempotencyKeyUsed = idempotencyKey;
@@ -70,7 +72,7 @@ void main() {
 
   test('Success: checkOut sends an Idempotency-Key but no clientExitTime', () async {
     final remote = _FakeRemote(receiptToReturn: receipt);
-    final repository = CheckOutRepositoryImpl(remote, FakeSyncOutbox());
+    final repository = CheckOutRepositoryImpl(remote, FakeSyncOutbox(), LotSession());
 
     final result = await repository.checkOut(
       1,
@@ -90,7 +92,8 @@ void main() {
   test('Failure: NetworkFailure queues a checkOut/close mutation and returns a pending receipt instead of rethrowing', () async {
     final remote = _FakeRemote(error: const NetworkFailure('offline'));
     final outbox = FakeSyncOutbox();
-    final repository = CheckOutRepositoryImpl(remote, outbox);
+    final lots = LotSession()..select(2);
+    final repository = CheckOutRepositoryImpl(remote, outbox, lots);
 
     final result = await repository.checkOut(1);
 
@@ -103,6 +106,7 @@ void main() {
     expect(outbox.enqueued.single.entityId, 1);
     final payload =
         jsonDecode(outbox.enqueued.single.payloadJson!) as Map<String, dynamic>;
+    expect(payload['lot_id'], 2);
     expect(payload['client_exit_time'], endsWith('Z'));
     expect(payload['client_ref'], remote.idempotencyKeyUsed);
     expect(payload['payment_method'], 'cash');
@@ -113,7 +117,7 @@ void main() {
     () async {
       final remote = _FakeRemote(error: const NetworkFailure('offline'));
       final outbox = FakeSyncOutbox();
-      final repository = CheckOutRepositoryImpl(remote, outbox);
+      final repository = CheckOutRepositoryImpl(remote, outbox, LotSession());
 
       await repository.checkOut(1);
       await repository.checkOut(2);
@@ -128,7 +132,7 @@ void main() {
   test('Security/robustness: the queued client_exit_time is the attempt time, captured at call time', () async {
     final remote = _FakeRemote(error: const NetworkFailure('offline'));
     final outbox = FakeSyncOutbox();
-    final repository = CheckOutRepositoryImpl(remote, outbox);
+    final repository = CheckOutRepositoryImpl(remote, outbox, LotSession());
 
     final before = DateTime.now();
     await repository.checkOut(1);
@@ -145,7 +149,7 @@ void main() {
   test('Failure: a non-network failure still propagates un-queued', () async {
     final remote = _FakeRemote(error: const ValidationFailure('Conflict'));
     final outbox = FakeSyncOutbox();
-    final repository = CheckOutRepositoryImpl(remote, outbox);
+    final repository = CheckOutRepositoryImpl(remote, outbox, LotSession());
 
     await expectLater(
       repository.checkOut(1),
@@ -161,7 +165,7 @@ void main() {
       final remote = _FakeRemote(
         error: const AuthenticationFailure('Invalid credentials'),
       );
-      final repository = CheckOutRepositoryImpl(remote, outbox);
+      final repository = CheckOutRepositoryImpl(remote, outbox, LotSession());
 
       await expectLater(
         repository.checkOut(1),

@@ -232,6 +232,35 @@ class AppLocalizationsEs extends AppLocalizations {
       'Las categorías llenas aparecen deshabilitadas.';
 
   @override
+  String get navLots => 'Sedes';
+
+  @override
+  String get lotsTitle => 'Sedes del parqueadero';
+
+  @override
+  String get lotAdd => 'Nueva sede';
+
+  @override
+  String get lotCode => 'Código (2-10 letras/números)';
+
+  @override
+  String get lotName => 'Nombre de la sede';
+
+  @override
+  String get lotAddress => 'Dirección (opcional)';
+
+  @override
+  String get lotsEmpty => 'Aún no hay sedes';
+
+  @override
+  String get lotSwitch => 'Cambiar';
+
+  @override
+  String lotMembers(int count) {
+    return '$count usuarios';
+  }
+
+  @override
   String get navReservations => 'Reservas';
 
   @override

@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/config/app_config.dart';
 import '../../core/storage/key_value_store.dart';
+import '../../core/lot/lot_context.dart';
 import '../../core/storage/secure_supabase_storage.dart';
 import '../../features/auth/domain/entities/auth_session.dart';
 import '../../features/auth/infrastructure/auth_local_data_source.dart';
@@ -11,6 +12,7 @@ import 'modules/categories_module.dart';
 import 'modules/check_in_module.dart';
 import 'modules/check_out_module.dart';
 import 'modules/core_module.dart';
+import 'modules/lots_module.dart';
 import 'modules/monthly_passes_module.dart';
 import 'modules/notifications_module.dart';
 import 'modules/plate_scanning_module.dart';
@@ -56,6 +58,19 @@ Future<void> _initSupabase(AppConfig config) async {
     ),
   );
   serviceLocator.registerSingleton<SupabaseClient>(supabase.client);
+  // The active lot travels as a header on every request; the client validates
+  // membership server-side, so a stale value only fails closed.
+  final lotContext = serviceLocator<LotContext>();
+  lotContext.onApplied((lotId) {
+    final headers = {...supabase.client.headers};
+    if (lotId == null) {
+      headers.remove('x-lot-id');
+    } else {
+      headers['x-lot-id'] = '$lotId';
+    }
+    supabase.client.headers = headers;
+  });
+  lotContext.restore();
   // Hive and the SDK must agree on whether there is a session; a stale Hive
   // token without an SDK session would make every query unauthenticated.
   if (supabase.client.auth.currentSession == null) {
@@ -91,6 +106,7 @@ void registerAllModules(GetIt sl, AppConfig config) {
   registerReceiptPrintingModule(sl);
   registerCheckInModule(sl);
   registerCheckOutModule(sl);
+  registerLotsModule(sl);
   registerMonthlyPassesModule(sl);
   registerNotificationsModule(sl);
   registerReportsModule(sl);

@@ -14,6 +14,7 @@ abstract class CheckInRemoteDataSource {
     NewVehicleInfo? newVehicle,
     String? idempotencyKey,
     DateTime? clientEntryTime,
+    int? lotId,
   });
 
   Future<List<ParkingSession>> listOpenSessions();
@@ -34,6 +35,7 @@ class SupabaseCheckInRemoteDataSource implements CheckInRemoteDataSource {
     NewVehicleInfo? newVehicle,
     String? idempotencyKey,
     DateTime? clientEntryTime,
+    int? lotId,
   }) async {
     try {
       final paths = await _uploadPhotos(photos, existingIdempotencyKey: idempotencyKey);
@@ -55,6 +57,7 @@ class SupabaseCheckInRemoteDataSource implements CheckInRemoteDataSource {
           'p_idempotency_key': ?idempotencyKey,
           if (clientEntryTime != null)
             'p_client_entry_time': clientEntryTime.toUtc().toIso8601String(),
+          'p_lot_id': ?lotId,
         },
       );
       return ParkingSessionDto.fromJson(

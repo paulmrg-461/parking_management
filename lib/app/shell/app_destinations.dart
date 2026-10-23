@@ -33,6 +33,7 @@ String _settings(AppLocalizations l) => l.navSettings;
 String _contact(AppLocalizations l) => l.navContact;
 String _notifications(AppLocalizations l) => l.navNotifications;
 String _reservations(AppLocalizations l) => l.navReservations;
+String _lots(AppLocalizations l) => l.navLots;
 
 const primaryDestinations = [
   AppDestination(homePath, _home, Icons.home_outlined, Icons.home),
@@ -70,6 +71,12 @@ const managementDestinations = [
     _categories,
     Icons.category_outlined,
     Icons.category,
+  ),
+  AppDestination(
+    '/lots',
+    _lots,
+    Icons.location_city_outlined,
+    Icons.location_city,
   ),
   AppDestination(
     '/reservations',

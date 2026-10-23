@@ -24,6 +24,7 @@ abstract class CheckOutRemoteDataSource {
     String? discountReason,
     bool lostTicket = false,
     String? lostTicketReason,
+    int? lotId,
   });
 
   Future<OccupancySnapshot> occupancy();
@@ -85,6 +86,7 @@ class SupabaseCheckOutRemoteDataSource implements CheckOutRemoteDataSource {
     String? discountReason,
     bool lostTicket = false,
     String? lostTicketReason,
+    int? lotId,
   }) async {
     try {
       final result = await _client.rpc(
@@ -101,6 +103,7 @@ class SupabaseCheckOutRemoteDataSource implements CheckOutRemoteDataSource {
           if (clientExitTime != null)
             'p_client_exit_time': clientExitTime.toUtc().toIso8601String(),
           'p_idempotency_key': ?idempotencyKey,
+          'p_lot_id': ?lotId,
         },
       );
       return CheckOutReceiptDto.fromJson(

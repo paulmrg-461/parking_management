@@ -494,6 +494,60 @@ abstract class AppLocalizations {
   /// **'Las categorías llenas aparecen deshabilitadas.'**
   String get categoryFullHint;
 
+  /// No description provided for @navLots.
+  ///
+  /// In es, this message translates to:
+  /// **'Sedes'**
+  String get navLots;
+
+  /// No description provided for @lotsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Sedes del parqueadero'**
+  String get lotsTitle;
+
+  /// No description provided for @lotAdd.
+  ///
+  /// In es, this message translates to:
+  /// **'Nueva sede'**
+  String get lotAdd;
+
+  /// No description provided for @lotCode.
+  ///
+  /// In es, this message translates to:
+  /// **'Código (2-10 letras/números)'**
+  String get lotCode;
+
+  /// No description provided for @lotName.
+  ///
+  /// In es, this message translates to:
+  /// **'Nombre de la sede'**
+  String get lotName;
+
+  /// No description provided for @lotAddress.
+  ///
+  /// In es, this message translates to:
+  /// **'Dirección (opcional)'**
+  String get lotAddress;
+
+  /// No description provided for @lotsEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no hay sedes'**
+  String get lotsEmpty;
+
+  /// No description provided for @lotSwitch.
+  ///
+  /// In es, this message translates to:
+  /// **'Cambiar'**
+  String get lotSwitch;
+
+  /// No description provided for @lotMembers.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} usuarios'**
+  String lotMembers(int count);
+
   /// No description provided for @navReservations.
   ///
   /// In es, this message translates to:

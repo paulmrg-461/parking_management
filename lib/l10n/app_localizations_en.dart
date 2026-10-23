@@ -227,6 +227,35 @@ class AppLocalizationsEn extends AppLocalizations {
   String get categoryFullHint => 'Full categories are disabled.';
 
   @override
+  String get navLots => 'Sites';
+
+  @override
+  String get lotsTitle => 'Parking sites';
+
+  @override
+  String get lotAdd => 'New site';
+
+  @override
+  String get lotCode => 'Code (2-10 letters/digits)';
+
+  @override
+  String get lotName => 'Site name';
+
+  @override
+  String get lotAddress => 'Address (optional)';
+
+  @override
+  String get lotsEmpty => 'No sites yet';
+
+  @override
+  String get lotSwitch => 'Switch';
+
+  @override
+  String lotMembers(int count) {
+    return '$count users';
+  }
+
+  @override
   String get navReservations => 'Reservations';
 
   @override

@@ -25,6 +25,7 @@ class _FakeRemote implements CheckInRemoteDataSource {
     NewVehicleInfo? newVehicle,
     String? idempotencyKey,
     DateTime? clientEntryTime,
+    int? lotId,
   }) async {
     this.plate = plate;
     this.photos = photos;

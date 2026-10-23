@@ -8,7 +8,11 @@ import 'package:parking_management/core/sync/sync_status_cubit.dart';
 import 'package:parking_management/features/auth/application/auth_cubit.dart';
 import 'package:parking_management/features/auth/domain/entities/auth_session.dart';
 import 'package:parking_management/features/auth/domain/entities/user.dart';
+import 'package:parking_management/core/lot/lot_context.dart';
+import 'package:parking_management/core/lot/lot_session.dart';
+import 'package:parking_management/core/storage/key_value_store.dart';
 import 'package:parking_management/features/home/application/dashboard_cubit.dart';
+import 'package:parking_management/features/lots/application/lots_cubit.dart';
 import 'package:parking_management/features/notifications/application/notifications_cubit.dart';
 import 'package:parking_management/features/reservations/application/reservations_cubit.dart';
 import 'package:parking_management/features/shifts/application/shift_cubit.dart';
@@ -18,9 +22,11 @@ import 'package:parking_management/features/users/application/users_cubit.dart';
 import 'fake_auth_repository.dart';
 import 'fake_check_out_repository.dart';
 import 'fake_category_repository.dart';
+import 'fake_key_value_store.dart';
 import 'fake_notification_repository.dart';
 import 'fake_reservation_repository.dart';
 import 'fake_settings_repository.dart';
+import 'fake_lots_repository.dart';
 import 'fake_shift_repository.dart';
 import 'fake_user_repository.dart';
 import 'fake_sync_outbox.dart';
@@ -57,6 +63,12 @@ Future<AuthCubit> pumpApp(
       () => NotificationsCubit(FakeNotificationRepository()),
     )
     ..registerFactory<ShiftCubit>(() => ShiftCubit(FakeShiftRepository()))
+    ..registerLazySingleton<LotsCubit>(
+      () => LotsCubit(
+        FakeLotsRepository(),
+        LotContext(FakeKeyValueStore(), LotSession()),
+      ),
+    )
     ..registerFactory<ReservationsCubit>(
       () => ReservationsCubit(
         FakeReservationRepository(),
@@ -76,6 +88,7 @@ Future<AuthCubit> pumpApp(
       brandingCubit:
           branding ?? BrandingCubit(FakeParkingSettingsRepository()),
       connectivityCubit: connectivity,
+      lotsCubit: serviceLocator<LotsCubit>(),
     ),
   );
   await tester.pumpAndSettle();

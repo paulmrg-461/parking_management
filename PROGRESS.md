@@ -164,9 +164,20 @@ The app is now a Supabase-only stack: FastAPI, Alembic, Dio and Redis are gone.
   honor reduce-motion; and browsers can subscribe to Web Push (VAPID) — the
   service worker, `web_push_subscriptions`, `push-dispatch` delivery and the
   inbox toggle are in place, while the VAPID/FCM keys remain operator-provided
-  (`0022`). Multi-lot is planned in
-  `openspec/changes/add-multi-parking-lot/` (not implemented: it re-scopes
-  every table, policy and RPC).
+  (`0022`).
+
+- **Multi-lot (phases 1–3)**: `parking_lots` + `lot_members` with a seeded
+  `default` lot; `lot_id` on every site-owned table (categories, tariffs,
+  sessions, shifts, passes, pass payments, reservations, settings,
+  notifications) and unique keys rebuilt as `(lot_id, …)` (`0023`);
+  `current_lot_id()` / `is_lot_admin()` / `require_lot_admin()` plus lot CRUD
+  and membership RPCs, re-scoped policies and every RPC/report filtering the
+  active lot (`0024`); offline check-in/check-out carry the captured lot and
+  `resolve_lot()` validates it on replay (`0025`). Flutter adds `LotContext`
+  (persisted active lot wired into the Supabase header), a shell lot bar for
+  multi-site users and an admin `/lots` page. Remaining in the OpenSpec change:
+  lot-keyed Hive cache paths, a consolidated-report toggle, per-lot receipts
+  and a lot member management UI.
 
 ## Infra/tooling (not OpenSpec capabilities — repo scaffolding)
 
@@ -208,7 +219,7 @@ The app is now a Supabase-only stack: FastAPI, Alembic, Dio and Redis are gone.
 
 ## Test counts
 
-- Flutter (`flutter test`): 460 passed. `flutter analyze`: 0 errors/warnings
+- Flutter (`flutter test`): 470 passed. `flutter analyze`: 0 errors/warnings
   (98 SDK-deprecation/const infos under the local Flutter 3.50 beta; CI pins
   3.49 where the baseline is clean).
 - SQL/compose: validated against the running Supabase stack and by

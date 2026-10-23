@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/storage/session_cache_cleaner.dart';
 import '../../../core/storage/token_store.dart';
 import '../../../core/sync/sync_service.dart';
+import '../../../features/lots/application/lots_cubit.dart';
 import '../../../features/notifications/infrastructure/push_service.dart';
 import '../../../features/auth/application/auth_cubit.dart';
 import '../../../features/auth/domain/repositories/auth_repository.dart';
@@ -43,6 +44,7 @@ void registerAuthModule(GetIt sl) {
         () async {
           await sl<SyncService>().flush();
           await sl<PushService>().start();
+          await sl<LotsCubit>().load();
         },
       ),
     );

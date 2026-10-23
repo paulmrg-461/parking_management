@@ -1,6 +1,8 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:get_it/get_it.dart';
 
+import '../../../core/lot/lot_session.dart';
+
 import '../../../core/sync/pending_photo_storage.dart';
 import '../../../core/sync/sync_outbox.dart';
 import '../../../features/categories/domain/repositories/category_repository.dart';
@@ -22,6 +24,7 @@ void registerCheckInModule(GetIt sl) {
         sl<CheckInRemoteDataSource>(),
         sl<SyncOutbox>(),
         sl<PendingPhotoStorage>(),
+        sl<LotSession>(),
       ),
     )
     ..registerLazySingleton<CreateCheckIn>(

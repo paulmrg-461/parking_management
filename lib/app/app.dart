@@ -9,6 +9,7 @@ import '../core/network/connectivity_cubit.dart';
 import '../core/sync/sync_status_cubit.dart';
 import '../core/theme/app_theme.dart';
 import '../features/auth/application/auth_cubit.dart';
+import '../features/lots/application/lots_cubit.dart';
 import '../features/settings/application/branding_cubit.dart';
 import 'router/app_router.dart';
 import 'router/go_router_refresh_stream.dart';
@@ -22,11 +23,15 @@ class ParkingApp extends StatefulWidget {
     required this.syncStatusCubit,
     required this.brandingCubit,
     this.connectivityCubit,
+    this.lotsCubit,
   });
 
   final AuthCubit authCubit;
   final SyncStatusCubit syncStatusCubit;
   final BrandingCubit brandingCubit;
+
+  /// Multi-lot context; optional so single-lot tests can omit it.
+  final LotsCubit? lotsCubit;
 
   /// Drives the offline banner; optional so tests can omit it.
   final ConnectivityCubit? connectivityCubit;
@@ -46,6 +51,9 @@ class _ParkingAppState extends State<ParkingApp> {
     _router = buildRouter(widget.authCubit, _refresh);
     // Seed from Hive, then refresh: a no-network first run just stays put.
     unawaited(widget.brandingCubit.load());
+    if (widget.lotsCubit case final lots?) {
+      unawaited(lots.load());
+    }
   }
 
   @override
@@ -62,6 +70,8 @@ class _ParkingAppState extends State<ParkingApp> {
         BlocProvider<AuthCubit>.value(value: widget.authCubit),
         BlocProvider<SyncStatusCubit>.value(value: widget.syncStatusCubit),
         BlocProvider<BrandingCubit>.value(value: widget.brandingCubit),
+        if (widget.lotsCubit case final lots?)
+          BlocProvider<LotsCubit>.value(value: lots),
         if (widget.connectivityCubit case final connectivity?)
           BlocProvider<ConnectivityCubit>.value(value: connectivity),
       ],

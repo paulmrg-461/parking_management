@@ -13,6 +13,7 @@ import 'core/network/connectivity_cubit.dart';
 import 'core/sync/sync_service.dart';
 import 'core/sync/sync_status_cubit.dart';
 import 'features/auth/application/auth_cubit.dart';
+import 'features/lots/application/lots_cubit.dart';
 import 'features/settings/application/branding_cubit.dart';
 
 Future<void> main() async {
@@ -37,6 +38,7 @@ Future<void> main() async {
       syncStatusCubit: syncStatus,
       brandingCubit: serviceLocator<BrandingCubit>(),
       connectivityCubit: connectivity,
+      lotsCubit: serviceLocator<LotsCubit>(),
     ),
   );
 }
