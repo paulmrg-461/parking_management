@@ -60,17 +60,24 @@ RPCs own business logic and the Flutter client calls Supabase directly.
   Discounts are admin-only with a required reason; shifts reconcile cash by
   operator; categories may cap capacity; auto-renew passes create linked rows.
   Vehicle history is `rpc/vehicle_history`; overstay alerts use
-  `parking_settings.overstay_hours`.
+  `parking_settings.overstay_hours`. A lost ticket charges the full daily tariff
+  with a mandatory reason; blacklisted vehicles cannot check in; reservations
+  (`category_reservations`) hold capacity until used, cancelled or expired.
 - UX invariants: check-out search is server-side/paginated; the shift card and
   no-shift warning live in the shell-scoped `ShiftCubit`; discount audit detail
   is exposed only in the admin revenue report. Cash/shift actions (open, close,
   movement, adjust, pass collection) are disabled offline with a banner — they
   are never queued. Notification taps deep-link by type via
   `notification_routes.dart`.
+- Printed receipts localize through `ReceiptLabels` (es/en); nothing may
+  hardcode receipt labels. Multi-lot is a planned OpenSpec change
+  (`openspec/changes/add-multi-parking-lot/`) — keep new schema lot-ready but
+  do not half-implement it.
 - Notifications: in-app rows + Supabase Realtime work with no extra config;
+  browser push uses `web/push-sw.js` + VAPID (`web_push_subscriptions`);
   `FCM_SERVICE_ACCOUNT_JSON` + `supabase/notifications-cron.sh` enable
   background FCM. `push-dispatch` is service-role-only; never expose the key.
-- Tests: `flutter test` (431) + `flutter analyze`; CI validates compose and
+- Tests: `flutter test` (460) + `flutter analyze`; CI validates compose and
   runs `supabase/tests/run.sh` (real migrations + RPC/RLS tests) against
   `supabase/postgres`.
 - Backups: `sh supabase/backup.sh` (DB dump + Storage); restore with

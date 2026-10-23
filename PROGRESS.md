@@ -155,6 +155,19 @@ The app is now a Supabase-only stack: FastAPI, Alembic, Dio and Redis are gone.
   `LastAdminError`/`CannotDeleteSelfError` enforced server-side in the
   `admin-users` Edge Function.
 
+- **Product batch (low priority)**: a lost ticket charges the full daily tariff
+  (or `parking_settings.lost_ticket_fee`) with a mandatory reason (`0019`);
+  vehicles carry notes and an admin-only blacklist that blocks check-in
+  (`0020`); capacity reservations hold slots and the check-in dropdown disables
+  full categories before submitting (`0021`); printed receipts follow the app
+  language through `ReceiptLabels`; list screens use pulsing skeletons that
+  honor reduce-motion; and browsers can subscribe to Web Push (VAPID) — the
+  service worker, `web_push_subscriptions`, `push-dispatch` delivery and the
+  inbox toggle are in place, while the VAPID/FCM keys remain operator-provided
+  (`0022`). Multi-lot is planned in
+  `openspec/changes/add-multi-parking-lot/` (not implemented: it re-scopes
+  every table, policy and RPC).
+
 ## Infra/tooling (not OpenSpec capabilities — repo scaffolding)
 
 - **Docker**: root `docker-compose.yml` includes the official self-hosted
@@ -195,7 +208,7 @@ The app is now a Supabase-only stack: FastAPI, Alembic, Dio and Redis are gone.
 
 ## Test counts
 
-- Flutter (`flutter test`): 431 passed. `flutter analyze`: 0 errors/warnings
+- Flutter (`flutter test`): 460 passed. `flutter analyze`: 0 errors/warnings
   (98 SDK-deprecation/const infos under the local Flutter 3.50 beta; CI pins
   3.49 where the baseline is clean).
 - SQL/compose: validated against the running Supabase stack and by

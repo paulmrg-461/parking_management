@@ -174,12 +174,29 @@ counted amount and the difference; check-outs attach to the shift open at the
 exit time (including offline replays). Admins see recent shifts and receive a
 close notification.
 
-## Capacity
+## Capacity and reservations
 
 Each category has an optional capacity (0 = unlimited). The dashboard shows
 used/total vehicles, a progress bar and the names of full categories; a
 check-in into a full category is rejected with a localized error, enforced in
-the database under a per-category lock.
+the database under a per-category lock. The check-in form loads a fresh
+occupancy snapshot and disables full categories before submitting.
+
+Reservations (`/reservations`, admins) hold a slot for a plate until it checks
+in, the hold is cancelled or it expires. Active holds count against the
+category capacity, and a check-in converts the plate's own hold into an
+occupied slot instead of being rejected.
+
+## Lost tickets, notes and blacklist
+
+Check-out offers a **ticket perdido** option: it ignores the monthly pass and
+charges the full daily tariff (or `parking_settings.lost_ticket_fee` when set),
+requires a reason, and stores both on the session so the shift report and the
+vehicle history can explain the charge.
+
+Vehicle history also shows free-text notes and an admin-only blacklist. An
+operator can annotate incidents; only an admin can block or unblock a plate,
+and a blocked vehicle is refused at check-in with a localized message.
 
 ## Monthly pass auto-renewal
 
@@ -195,6 +212,9 @@ Manual passes keep the three-day expiry reminder.
   independently to every day touched; monthly pass → 0.
 - Billing day boundaries and night windows use
   `public.parking_settings.business_timezone` (default `America/Bogota`).
+- Printed receipts (PDF and 80 mm thermal) follow the app language through
+  `ReceiptLabels`; thermal labels stay ASCII so they survive the CP437 code
+  page.
 
 ## Backups and restore
 
