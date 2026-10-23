@@ -73,6 +73,8 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  # Pure-Dart client used by the e2e test that talks to a real stack.
+  supabase: ^2.16.5
   build_runner: ^2.16.0
   hive_ce_generator: ^1.11.3
   json_serializable: ^6.14.1

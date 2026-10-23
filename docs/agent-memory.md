@@ -127,6 +127,17 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   `postgres`), so scheduling stays in the host cron; the README documents how
   to enable pg_cron if the deployment supports `cron.database_name`.
 
+## E2E (latest)
+
+- `supabase/tests/e2e.sh`: curl-level flow (login → check-in → check-out →
+  report → history) with `E2E…` plates; used by the `supabase-e2e` CI job and
+  for post-deploy smoke tests.
+- `test/integration/supabase_flow_test.dart`: same flow through the pure-Dart
+  `supabase` client (dev_dependency). Skipped unless `SUPABASE_URL` and
+  `SUPABASE_ANON_KEY` are set; the CI job exports them from `.env`.
+- Both fail on: session not open, wrong lot, ticket without `TCK-`, report total
+  below the charge, empty history.
+
 ## Admin audit (latest)
 
 - `0031`: `audit_log` + `record_audit()` trigger (categories, tariffs, vehicles,

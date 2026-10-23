@@ -141,6 +141,20 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 The suite runs inside one transaction and rolls back, so it is safe to point at
 a scratch database. CI does exactly this against `supabase/postgres`.
 
+End-to-end against the running stack (login → check-in → check-out → report →
+history), both at the API level and through the Dart client the app uses:
+
+```bash
+sh supabase/tests/e2e.sh
+
+SUPABASE_URL=http://localhost:8000 \
+SUPABASE_ANON_KEY=$(grep '^ANON_KEY=' .env | cut -d= -f2-) \
+flutter test test/integration
+```
+
+Both create a unique `E2E…` plate per run; delete test rows from the database
+if you care about a clean local dataset.
+
 ## 7. Day-to-day commands
 
 ```bash

@@ -73,10 +73,10 @@ class FakeShiftRepository implements ShiftRepository {
     return closed;
   }
 
-  @override
   DateTime? lastHistoryFrom;
   DateTime? lastHistoryTo;
 
+  @override
   Future<List<ShiftSummary>> history({
     int limit = 20,
     DateTime? from,

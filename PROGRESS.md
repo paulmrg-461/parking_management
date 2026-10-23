@@ -207,6 +207,11 @@ The app is now a Supabase-only stack: FastAPI, Alembic, Dio and Redis are gone.
   user actions in `admin-users`, and an admin `/audit` screen with table/date
   filters and a before/after dialog. Purged after 365 days by the cron.
 
+- **End-to-end tests**: `supabase/tests/e2e.sh` (curl: login → check-in →
+  check-out → report → history) and `test/integration/supabase_flow_test.dart`
+  (pure-Dart Supabase client) run against a real stack locally or in CI
+  (compose up + admin + both suites).
+
 ## Infra/tooling (not OpenSpec capabilities — repo scaffolding)
 
 - **Docker**: root `docker-compose.yml` includes the official self-hosted
@@ -247,7 +252,7 @@ The app is now a Supabase-only stack: FastAPI, Alembic, Dio and Redis are gone.
 
 ## Test counts
 
-- Flutter (`flutter test`): 500 passed. `flutter analyze`: 0 errors/warnings
+- Flutter (`flutter test`): 500 passed (plus 1 integration test that runs only against a live stack). `flutter analyze`: 0 errors/warnings
   (98 SDK-deprecation/const infos under the local Flutter 3.50 beta; CI pins
   3.49 where the baseline is clean).
 - SQL/compose: validated against the running Supabase stack and by

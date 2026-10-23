@@ -235,8 +235,14 @@ docker compose up -d                    # supabase-migrate applies new migration
 docker compose logs --tail=20 supabase-migrate
 ```
 
-Smoke test after every deploy: log in, check-in/check-out one test plate, open
-the shift screen, open `/reports`, and confirm the dashboard occupancy.
+Smoke test after every deploy:
+
+```bash
+sh supabase/tests/e2e.sh          # login → check-in → check-out → report → history
+```
+
+Then in the app: open the shift screen, `/reports` and `/audit`, and confirm the
+dashboard occupancy moved.
 
 ## 12. Hardening checklist
 

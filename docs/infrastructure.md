@@ -159,3 +159,7 @@ Recommended crons:
 2. `docker compose config -q` with generated secrets.
 3. `supabase/tests/run.sh` against `supabase/postgres` (migrations + RPC/RLS
    regressions).
+4. `supabase-e2e`: brings the real stack up, creates the admin, runs
+   `supabase/tests/e2e.sh` (API-level: login → check-in → check-out → report →
+   history) and then the Flutter e2e (`test/integration/supabase_flow_test.dart`,
+   pure-Dart client) against the same server.

@@ -67,3 +67,56 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
       - name: Apply migrations and run SQL tests
         run: sh supabase/tests/run.sh
+
+  # Real stack: compose up, admin login, API e2e (curl) and the Flutter client
+  # e2e (pure-Dart Supabase client) against the same server the app talks to.
+  supabase-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate local secrets
+        run: |
+          cp .env.example .env
+          sh supabase/generate-env.sh
+
+      - name: Start the stack
+        run: docker compose up -d
+
+      - name: Wait for the API
+        run: |
+          anon=$(grep '^ANON_KEY=' .env | cut -d= -f2-)
+          for _ in $(seq 1 60); do
+            if curl -fsS -H "apikey: $anon" http://localhost:8000/auth/v1/health >/dev/null; then
+              echo "API is up"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "API did not become healthy in time" >&2
+          docker compose ps || true
+          docker compose logs --tail=80 || true
+          exit 1
+
+      - name: Apply migrations and create the admin
+        run: |
+          docker compose up -d supabase-migrate
+          docker compose logs --tail=20 supabase-migrate
+          sh supabase/create-operator.sh admin 123456 admin
+
+      - name: API e2e (curl)
+        run: sh supabase/tests/e2e.sh
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: beta
+          flutter-version: 3.49.0-0.1.pre
+          cache: true
+      - run: flutter pub get
+
+      - name: Flutter ↔ Supabase e2e
+        run: |
+          export SUPABASE_URL=http://localhost:8000
+          export SUPABASE_ANON_KEY=$(grep '^ANON_KEY=' .env | cut -d= -f2-)
+          flutter test test/integration
