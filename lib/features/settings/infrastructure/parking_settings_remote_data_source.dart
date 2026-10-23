@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/error/failure.dart';
+import '../../../core/lot/lot_session.dart';
 import '../../../core/network/supabase_error_mapper.dart';
 import '../domain/entities/parking_settings.dart';
 import 'models/parking_settings_dto.dart';
@@ -19,9 +20,10 @@ abstract class ParkingSettingsRemoteDataSource {
 
 class SupabaseParkingSettingsRemoteDataSource
     implements ParkingSettingsRemoteDataSource {
-  SupabaseParkingSettingsRemoteDataSource(this._client);
+  SupabaseParkingSettingsRemoteDataSource(this._client, this._lots);
 
   final SupabaseClient _client;
+  final LotSession _lots;
 
   static const _table = 'parking_settings';
   static const _bucket = 'branding';
@@ -30,11 +32,13 @@ class SupabaseParkingSettingsRemoteDataSource
   @override
   Future<ParkingSettings> fetch() async {
     try {
-      final row = await _client
-          .from(_table)
-          .select()
-          .eq('id', 1)
-          .single();
+      // RLS returns only the active lot's row; `order` keeps it deterministic
+      // for the single-lot fallback.
+      final rows = await _client.from(_table).select().order('id').limit(1);
+      if (rows.isEmpty) {
+        throw StateError('Parking settings missing');
+      }
+      final row = rows.first;
       return ParkingSettingsDto.fromJson(row).toDomain();
     } catch (error) {
       throw mapSupabaseError(error);
@@ -44,10 +48,14 @@ class SupabaseParkingSettingsRemoteDataSource
   @override
   Future<ParkingSettings> patch(Map<String, dynamic> fields) async {
     try {
+      final lotId = _lots.activeLotId;
+      if (lotId == null) {
+        throw StateError('Select a parking lot first');
+      }
       final row = await _client
           .from(_table)
           .update(fields)
-          .eq('id', 1)
+          .eq('lot_id', lotId)
           .select()
           .single();
       return ParkingSettingsDto.fromJson(row).toDomain();

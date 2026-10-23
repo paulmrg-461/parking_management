@@ -1,6 +1,8 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:get_it/get_it.dart';
 
+import '../../../core/lot/lot_session.dart';
+
 import '../../../core/sync/sync_outbox.dart';
 import '../../../features/settings/application/branding_cubit.dart';
 import '../../../features/settings/application/settings_cubit.dart';
@@ -12,10 +14,13 @@ import '../../../features/settings/infrastructure/parking_settings_repository_im
 void registerSettingsModule(GetIt sl) {
   sl
     ..registerLazySingleton<ParkingSettingsLocalDataSource>(
-      HiveParkingSettingsLocalDataSource.new,
+      () => HiveParkingSettingsLocalDataSource(sl<LotSession>()),
     )
     ..registerLazySingleton<ParkingSettingsRemoteDataSource>(
-      () => SupabaseParkingSettingsRemoteDataSource(sl<SupabaseClient>()),
+      () => SupabaseParkingSettingsRemoteDataSource(
+        sl<SupabaseClient>(),
+        sl<LotSession>(),
+      ),
     )
     ..registerLazySingleton<ParkingSettingsRepository>(
       () => ParkingSettingsRepositoryImpl(

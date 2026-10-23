@@ -47,6 +47,10 @@ implemented (`0023`–`0025`). Remaining work is called out below.
 
 ## 3. Flutter: lot context
 
+Implemented for settings, notifications, the active lot and the outbox. The
+monthly-pass and vehicle-list caches are still flat boxes (their entities have
+no `lot_id`), tracked in the remaining tasks below.
+
 - [x] 3.1 Tests first: `LotContext` persists and restores the active lot;
       switching refreshes the dashboard/shift/list cubits; a single-member user
       never sees the switcher; an offline cold start keeps the last lot
@@ -56,7 +60,7 @@ implemented (`0023`–`0025`). Remaining work is called out below.
       `SupabaseClient.global.headers['x-lot-id']`, updated by `LotContext`
 - [x] 3.4 `lib/features/lots/`: admin CRUD page (deferred route + nav entry) and
       the shell switcher (bottom sheet on narrow, dropdown on wide)
-- [ ] 3.5 Key every lot-scoped Hive cache by `lotId` (vehicles page cache,
+- [x] 3.5 Key every lot-scoped Hive cache by `lotId` (vehicles page cache,
       passes, notifications, history) and clear the in-memory cubits on switch
 - [x] 3.6 Outbox mutations capture `lot_id` at enqueue time and the replayers
       send `x-lot-id` for the captured lot
@@ -67,7 +71,7 @@ implemented (`0023`–`0025`). Remaining work is called out below.
       the ticket shows the lot code
 - [ ] 4.2 Dashboard, occupancy, shift and reports pages show the active lot in
       the app bar; admins get an "all lots" toggle on the revenue report
-- [ ] 4.3 Settings become per lot (form edits the active lot); platform-level
+- [x] 4.3 Settings become per lot (form edits the active lot); platform-level
       branding (app name) stays global
 
 ## 5. Edge Functions, docs and rollout
@@ -75,7 +79,7 @@ implemented (`0023`–`0025`). Remaining work is called out below.
 - [ ] 5.1 `admin-users` accepts `lot_id` and creates the matching
       `lot_members` row; `push-dispatch` filters subscriptions per lot when the
       notification carries one
-- [ ] 5.2 Update `README.md` (header, lot creation, migration), `AGENTS.md`
+- [x] 5.2 Update `README.md` (header, lot creation, migration), `AGENTS.md`
       (invariants: active lot always from the server helper) and `PROGRESS.md`
 - [x] 5.3 Run the full suite: `flutter test`, `flutter analyze`,
       `supabase/tests/run.sh`, web build, and a manual two-lot smoke test

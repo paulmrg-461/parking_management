@@ -1,4 +1,6 @@
 import 'package:get_it/get_it.dart';
+
+import '../../../core/lot/lot_session.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../features/notifications/application/notifications_cubit.dart';
@@ -17,7 +19,7 @@ import '../../../core/config/app_config.dart';
 void registerNotificationsModule(GetIt sl) {
   sl
     ..registerLazySingleton<NotificationLocalDataSource>(
-      HiveNotificationLocalDataSource.new,
+      () => HiveNotificationLocalDataSource(sl<LotSession>()),
     )
     ..registerLazySingleton<NotificationRemoteDataSource>(
       () => SupabaseNotificationRemoteDataSource(sl<SupabaseClient>()),
