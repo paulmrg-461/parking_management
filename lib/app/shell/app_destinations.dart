@@ -32,6 +32,7 @@ String _reports(AppLocalizations l) => l.navReports;
 String _settings(AppLocalizations l) => l.navSettings;
 String _contact(AppLocalizations l) => l.navContact;
 String _notifications(AppLocalizations l) => l.navNotifications;
+String _reservations(AppLocalizations l) => l.navReservations;
 
 const primaryDestinations = [
   AppDestination(homePath, _home, Icons.home_outlined, Icons.home),
@@ -69,6 +70,12 @@ const managementDestinations = [
     _categories,
     Icons.category_outlined,
     Icons.category,
+  ),
+  AppDestination(
+    '/reservations',
+    _reservations,
+    Icons.event_available_outlined,
+    Icons.event_available,
   ),
   AppDestination(
     '/monthly-passes',

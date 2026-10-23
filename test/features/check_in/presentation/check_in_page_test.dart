@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/pagination/paged_result.dart';
 import 'package:parking_management/features/categories/domain/entities/category.dart';
+import 'package:parking_management/features/check_out/domain/entities/occupancy_snapshot.dart';
 import 'package:parking_management/features/categories/domain/repositories/category_repository.dart';
 import 'package:parking_management/features/check_in/application/check_in_cubit.dart';
 import 'package:parking_management/features/check_in/application/create_check_in.dart';
@@ -178,9 +179,10 @@ void main() {
     bool canScan = true,
     bool photos = false,
     _FakeScanner? scanner,
+    List<CategoryOccupancySnapshot> occupancyCategories = const [],
   }) async {
     checkIns = _FakeCheckInRepository();
-    occupancy = FakeCheckOutRepository();
+    occupancy = FakeCheckOutRepository(categories: occupancyCategories);
     await tester.pumpWidget(
       testApp(
         MultiBlocProvider(
@@ -235,6 +237,37 @@ void main() {
         200,
         scrollable: find.byType(Scrollable).first,
       );
+
+  testWidgets('Success: a full category is disabled in the dropdown', (
+    tester,
+  ) async {
+    await pumpPage(
+      tester,
+      occupancyCategories: const [
+        CategoryOccupancySnapshot(
+          categoryId: 1,
+          name: 'Car',
+          count: 1,
+          capacity: 1,
+          isFull: true,
+        ),
+      ],
+    );
+
+    await enterPlate(tester, 'NEW999');
+    await scrollTo(tester, categoryField());
+    await tester.tap(categoryField());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Car · La categoría está llena'), findsOneWidget);
+    expect(find.text('Motorcycle'), findsOneWidget);
+
+    await tester.tap(find.text('Car · La categoría está llena'));
+    await tester.pumpAndSettle();
+
+    // A disabled item does not select anything, so the menu stays open.
+    expect(find.text('Car · La categoría está llena'), findsOneWidget);
+  });
 
   testWidgets('Success: renders the open sessions list and the check-in form', (
     tester,
@@ -295,7 +328,9 @@ void main() {
       await tester.tap(submitButton());
       await tester.pumpAndSettle();
 
-      expect(occupancy.occupancyCalls, 1);
+      // One snapshot on open (for the capacity-aware category dropdown) plus
+    // one refresh after the successful entry.
+    expect(occupancy.occupancyCalls, 2);
     },
   );
 
@@ -312,7 +347,9 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Session already open for this plate'), findsOneWidget);
-      expect(occupancy.occupancyCalls, 0);
+      // Only the snapshot taken when the page opened; a rejected entry never
+    // refreshes occupancy.
+    expect(occupancy.occupancyCalls, 1);
     },
   );
 

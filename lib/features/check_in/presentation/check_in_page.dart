@@ -70,6 +70,18 @@ class _CheckInPageState extends State<CheckInPage> {
   void initState() {
     super.initState();
     unawaited(context.read<CheckInCubit>().loadOpenSessions());
+    // Fresh capacity snapshot so full categories are disabled in the
+    // registration dropdown even on a deep link.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      try {
+        unawaited(context.read<DashboardCubit>().load());
+      } on ProviderNotFoundException {
+        // Isolated tests may not provide the dashboard cubit.
+      }
+    });
   }
 
   @override
@@ -306,8 +318,26 @@ class _CheckInPageState extends State<CheckInPage> {
     );
   }
 
+  /// Category ids that already reached their capacity (reservations
+  /// included). Empty when the dashboard snapshot is unavailable.
+  Set<int> _fullCategories(BuildContext context) {
+    try {
+      final state = context.watch<DashboardCubit>().state;
+      if (state is! DashboardLoaded) {
+        return const {};
+      }
+      return {
+        for (final category in state.categories)
+          if (category.isFull) category.categoryId,
+      };
+    } on ProviderNotFoundException {
+      return const {};
+    }
+  }
+
   Widget _buildRegistration(VehicleLookupNotFound lookup) {
     final l10n = context.l10n;
+    final full = _fullCategories(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -330,14 +360,21 @@ class _CheckInPageState extends State<CheckInPage> {
             initialValue: _categoryId,
             decoration: InputDecoration(
               labelText: l10n.fieldCategory,
-              helperText: l10n.categoryRequiredHelper,
+              helperText: full.isEmpty
+                  ? l10n.categoryRequiredHelper
+                  : l10n.categoryFullHint,
             ),
             items: [
               for (final category in lookup.categories)
                 if (category.id != null)
                   DropdownMenuItem(
                     value: category.id,
-                    child: Text(category.name),
+                    enabled: !full.contains(category.id),
+                    child: Text(
+                      full.contains(category.id)
+                          ? '${category.name} · ${l10n.errorCategoryFull}'
+                          : category.name,
+                    ),
                   ),
             ],
             onChanged: (value) => setState(() => _categoryId = value),

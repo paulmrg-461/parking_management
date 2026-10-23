@@ -25,6 +25,8 @@ import '../../features/plate_scanning/application/plate_scanning_cubit.dart';
 import '../../features/plate_scanning/domain/repositories/plate_image_capture.dart';
 import '../../features/plate_scanning/domain/repositories/plate_scanner.dart';
 import '../../features/plate_scanning/presentation/plate_scan_page.dart';
+import '../../features/reservations/application/reservations_cubit.dart';
+import '../../features/reservations/presentation/reservations_page.dart';
 import '../di/injection.dart';
 import '../shell/app_shell.dart';
 import 'deferred/categories_entry.dart' deferred as categories;
@@ -119,6 +121,13 @@ GoRoute _homeRoute(AuthCubit auth) => GoRoute(
       builder: (context, state) => BlocProvider<CheckOutCubit>(
         create: (_) => serviceLocator<CheckOutCubit>(),
         child: const CheckOutPage(),
+      ),
+    ),
+    GoRoute(
+      path: 'reservations',
+      builder: (context, state) => BlocProvider<ReservationsCubit>(
+        create: (_) => serviceLocator<ReservationsCubit>(),
+        child: const ReservationsPage(),
       ),
     ),
     GoRoute(

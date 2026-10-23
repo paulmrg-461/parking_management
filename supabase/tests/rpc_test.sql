@@ -205,6 +205,69 @@ begin
     end if;
 end $$;
 
+-- Reservations hold capacity until used, cancelled or expired.
+insert into public.categories (name, capacity) values ('testcap', 1);
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+select public.create_reservation('RES001',
+    (select id from public.categories where name = 'testcap'),
+    now() + interval '2 hours', 'cliente frecuente');
+
+do $$
+begin
+    begin
+        perform public.create_reservation('RES002',
+            (select id from public.categories where name = 'testcap'),
+            now() + interval '2 hours', null);
+        raise exception 'reservation exceeded the capacity';
+    exception when others then
+        if sqlerrm not like '%CategoryFullError%' then
+            raise;
+        end if;
+    end;
+    if (select count(*) from public.category_reservations where status = 'active') <> 1 then
+        raise exception 'reservation was not stored as active';
+    end if;
+end $$;
+
+select public.cancel_reservation(
+    (select id from public.category_reservations where plate = 'RES001')
+);
+
+do $$
+begin
+    if (select status from public.category_reservations where plate = 'RES001') <> 'cancelled' then
+        raise exception 'cancel did not update the reservation';
+    end if;
+end $$;
+
+select public.create_reservation('RES001',
+    (select id from public.categories where name = 'testcap'),
+    now() + interval '2 hours', null);
+select public.check_in('RES001',
+    (select id from public.categories where name = 'testcap'),
+    null, null, '[]'::jsonb, null, null);
+
+do $$
+begin
+    if not exists (
+        select 1 from public.category_reservations
+         where plate = 'RES001' and status = 'used'
+    ) then
+        raise exception 'check-in did not consume the reservation';
+    end if;
+    if not exists (
+        select 1 from public.occupancy_snapshot() o, jsonb_array_elements(o -> 'by_category') c
+         where (c ->> 'category_id')::integer =
+               (select id from public.categories where name = 'testcap')
+           and (c ->> 'count')::integer = 1
+           and (c ->> 'reserved')::integer = 0
+           and (c ->> 'is_full')::boolean
+    ) then
+        raise exception 'occupancy snapshot ignored the reservation';
+    end if;
+end $$;
+
 -- RLS: the operator must not read the admin's notifications.
 set local role authenticated;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';

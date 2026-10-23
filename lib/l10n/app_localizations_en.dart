@@ -224,6 +224,45 @@ class AppLocalizationsEn extends AppLocalizations {
   String get entitySettings => 'Settings';
 
   @override
+  String get categoryFullHint => 'Full categories are disabled.';
+
+  @override
+  String get navReservations => 'Reservations';
+
+  @override
+  String get reservationsTitle => 'Capacity reservations';
+
+  @override
+  String get reservationAdd => 'New reservation';
+
+  @override
+  String get reservationsEmpty => 'No active reservations';
+
+  @override
+  String reservationUntil(String when) {
+    return 'Until $when';
+  }
+
+  @override
+  String reservationUntilLabel(String when) {
+    return 'Hold until $when';
+  }
+
+  @override
+  String get reservationNotes => 'Notes (optional)';
+
+  @override
+  String get reservationCancel => 'Cancel reservation';
+
+  @override
+  String get reservationCancelTitle => 'Cancel this reservation?';
+
+  @override
+  String reservationCancelBody(String plate) {
+    return 'The slot held for $plate will be released.';
+  }
+
+  @override
   String get navHome => 'Home';
 
   @override

@@ -10,13 +10,16 @@ import 'package:parking_management/features/auth/domain/entities/auth_session.da
 import 'package:parking_management/features/auth/domain/entities/user.dart';
 import 'package:parking_management/features/home/application/dashboard_cubit.dart';
 import 'package:parking_management/features/notifications/application/notifications_cubit.dart';
+import 'package:parking_management/features/reservations/application/reservations_cubit.dart';
 import 'package:parking_management/features/shifts/application/shift_cubit.dart';
 import 'package:parking_management/features/settings/application/branding_cubit.dart';
 import 'package:parking_management/features/users/application/users_cubit.dart';
 
 import 'fake_auth_repository.dart';
 import 'fake_check_out_repository.dart';
+import 'fake_category_repository.dart';
 import 'fake_notification_repository.dart';
+import 'fake_reservation_repository.dart';
 import 'fake_settings_repository.dart';
 import 'fake_shift_repository.dart';
 import 'fake_user_repository.dart';
@@ -53,7 +56,13 @@ Future<AuthCubit> pumpApp(
     ..registerFactory<NotificationsCubit>(
       () => NotificationsCubit(FakeNotificationRepository()),
     )
-    ..registerFactory<ShiftCubit>(() => ShiftCubit(FakeShiftRepository()));
+    ..registerFactory<ShiftCubit>(() => ShiftCubit(FakeShiftRepository()))
+    ..registerFactory<ReservationsCubit>(
+      () => ReservationsCubit(
+        FakeReservationRepository(),
+        FakeCategoryRepository(),
+      ),
+    );
   addTearDown(serviceLocator.reset);
   final syncOutbox = outbox ?? FakeSyncOutbox();
   final auth = AuthCubit(repository);

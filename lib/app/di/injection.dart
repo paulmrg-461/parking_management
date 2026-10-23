@@ -17,6 +17,7 @@ import 'modules/plate_scanning_module.dart';
 import 'modules/platform_module.dart';
 import 'modules/receipt_printing_module.dart';
 import 'modules/reports_module.dart';
+import 'modules/reservations_module.dart';
 import 'modules/settings_module.dart';
 import 'modules/shifts_module.dart';
 import 'modules/sync_module.dart';
@@ -93,6 +94,7 @@ void registerAllModules(GetIt sl, AppConfig config) {
   registerMonthlyPassesModule(sl);
   registerNotificationsModule(sl);
   registerReportsModule(sl);
+  registerReservationsModule(sl);
   registerSettingsModule(sl);
   registerShiftsModule(sl);
   registerSyncModule(sl);

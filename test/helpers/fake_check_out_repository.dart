@@ -11,11 +11,13 @@ class FakeCheckOutRepository implements CheckOutRepository {
     this.sessions = const [],
     this.listError,
     this.capacity = 0,
+    this.categories = const [],
   });
 
   List<OpenSession> sessions;
   Failure? listError;
   final int capacity;
+  final List<CategoryOccupancySnapshot> categories;
   int occupancyCalls = 0;
   int listCalls = 0;
 
@@ -29,6 +31,7 @@ class FakeCheckOutRepository implements CheckOutRepository {
     return OccupancySnapshot(
       totalOpen: sessions.length,
       totalCapacity: capacity,
+      byCategory: categories,
     );
   }
 

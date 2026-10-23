@@ -488,6 +488,72 @@ abstract class AppLocalizations {
   /// **'Configuración'**
   String get entitySettings;
 
+  /// No description provided for @categoryFullHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Las categorías llenas aparecen deshabilitadas.'**
+  String get categoryFullHint;
+
+  /// No description provided for @navReservations.
+  ///
+  /// In es, this message translates to:
+  /// **'Reservas'**
+  String get navReservations;
+
+  /// No description provided for @reservationsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Reservas de cupo'**
+  String get reservationsTitle;
+
+  /// No description provided for @reservationAdd.
+  ///
+  /// In es, this message translates to:
+  /// **'Nueva reserva'**
+  String get reservationAdd;
+
+  /// No description provided for @reservationsEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay reservas activas'**
+  String get reservationsEmpty;
+
+  /// No description provided for @reservationUntil.
+  ///
+  /// In es, this message translates to:
+  /// **'Hasta {when}'**
+  String reservationUntil(String when);
+
+  /// No description provided for @reservationUntilLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Reservar hasta {when}'**
+  String reservationUntilLabel(String when);
+
+  /// No description provided for @reservationNotes.
+  ///
+  /// In es, this message translates to:
+  /// **'Notas (opcional)'**
+  String get reservationNotes;
+
+  /// No description provided for @reservationCancel.
+  ///
+  /// In es, this message translates to:
+  /// **'Cancelar reserva'**
+  String get reservationCancel;
+
+  /// No description provided for @reservationCancelTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Cancelar la reserva?'**
+  String get reservationCancelTitle;
+
+  /// No description provided for @reservationCancelBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Se liberará el cupo reservado para {plate}.'**
+  String reservationCancelBody(String plate);
+
   /// No description provided for @navHome.
   ///
   /// In es, this message translates to:

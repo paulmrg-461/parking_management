@@ -228,6 +228,46 @@ class AppLocalizationsEs extends AppLocalizations {
   String get entitySettings => 'Configuración';
 
   @override
+  String get categoryFullHint =>
+      'Las categorías llenas aparecen deshabilitadas.';
+
+  @override
+  String get navReservations => 'Reservas';
+
+  @override
+  String get reservationsTitle => 'Reservas de cupo';
+
+  @override
+  String get reservationAdd => 'Nueva reserva';
+
+  @override
+  String get reservationsEmpty => 'No hay reservas activas';
+
+  @override
+  String reservationUntil(String when) {
+    return 'Hasta $when';
+  }
+
+  @override
+  String reservationUntilLabel(String when) {
+    return 'Reservar hasta $when';
+  }
+
+  @override
+  String get reservationNotes => 'Notas (opcional)';
+
+  @override
+  String get reservationCancel => 'Cancelar reserva';
+
+  @override
+  String get reservationCancelTitle => '¿Cancelar la reserva?';
+
+  @override
+  String reservationCancelBody(String plate) {
+    return 'Se liberará el cupo reservado para $plate.';
+  }
+
+  @override
   String get navHome => 'Inicio';
 
   @override
