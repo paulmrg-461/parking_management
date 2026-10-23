@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/receipt/receipt_data.dart';
+import 'package:parking_management/core/receipt/receipt_labels.dart';
 import 'package:parking_management/features/receipt_printing/application/printer_cubit.dart';
 import 'package:parking_management/features/receipt_printing/domain/entities/bluetooth_printer.dart';
 import 'package:parking_management/features/receipt_printing/domain/entities/print_outcome.dart';
@@ -13,6 +14,7 @@ class _FakeScanner implements BluetoothPrinterScanner {
 
   PrintOutcome outcome = PrintOutcome.success;
   BluetoothPrinter? lastPrinted;
+  ReceiptLabels? lastLabels;
 
   @override
   Stream<List<BluetoothPrinter>> get results => _results.stream;
@@ -33,8 +35,13 @@ class _FakeScanner implements BluetoothPrinterScanner {
   Future<void> stopScan() async {}
 
   @override
-  Future<PrintOutcome> print(BluetoothPrinter printer, ReceiptData data) async {
+  Future<PrintOutcome> print(
+    BluetoothPrinter printer,
+    ReceiptData data,
+    ReceiptLabels labels,
+  ) async {
     lastPrinted = printer;
+    lastLabels = labels;
     return outcome;
   }
 }
@@ -67,9 +74,11 @@ void main() {
     final cubit = PrinterCubit(scanner);
     const printer = BluetoothPrinter(name: 'EPSON', address: 'AA:BB:CC');
 
-    await cubit.print(printer, _data());
+    await cubit.print(printer, _data(), ReceiptLabels.english);
 
     expect(scanner.lastPrinted?.address, 'AA:BB:CC');
+    expect(scanner.lastLabels?.total, 'Total');
+    expect(scanner.lastLabels?.thanks, 'Thank you for your visit');
     expect(cubit.state.outcome, PrintOutcome.success);
     await cubit.close();
   });
@@ -81,6 +90,7 @@ void main() {
     await cubit.print(
       const BluetoothPrinter(name: 'EPSON', address: 'AA:BB:CC'),
       _data(),
+      ReceiptLabels.spanish,
     );
 
     expect(cubit.state.outcome, PrintOutcome.timeout);

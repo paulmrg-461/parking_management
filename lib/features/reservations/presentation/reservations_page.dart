@@ -9,6 +9,7 @@ import '../../../core/theme/tokens.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/error_state.dart';
 import '../../../core/widgets/list_page_scaffold.dart';
+import '../../../core/widgets/skeleton.dart';
 import '../../../core/widgets/submission_listener.dart';
 import '../application/reservations_cubit.dart';
 import '../domain/entities/reservation.dart';
@@ -40,9 +41,8 @@ class _ReservationsPageState extends State<ReservationsPage> {
         onRefresh: context.read<ReservationsCubit>().load,
         body: BlocBuilder<ReservationsCubit, ReservationsState>(
           builder: (context, state) => switch (state) {
-            ReservationsInitial() || ReservationsLoading() => const Center(
-              child: CircularProgressIndicator(),
-            ),
+            ReservationsInitial() || ReservationsLoading() =>
+              const SkeletonList(),
             ReservationsFailure(:final message) => ErrorState(
               message: message,
               onRetry: context.read<ReservationsCubit>().load,

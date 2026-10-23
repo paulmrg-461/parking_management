@@ -7,6 +7,7 @@ import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/error_state.dart';
+import '../../../core/widgets/skeleton.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../application/notifications_cubit.dart';
 import '../domain/entities/app_notification.dart';
@@ -46,7 +47,7 @@ class NotificationsPage extends StatelessWidget {
           builder: (context, state) => switch (state.status) {
             NotificationsStatus.initial ||
             NotificationsStatus.loading => const Center(
-              child: CircularProgressIndicator(),
+              child: SkeletonList(),
             ),
             NotificationsStatus.failure => ErrorState(
               message: state.error == null

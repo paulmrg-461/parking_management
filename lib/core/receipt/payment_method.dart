@@ -42,13 +42,3 @@ String paymentMethodLabel(AppLocalizations l10n, String? wire) =>
     wire == null || wire == 'unknown'
     ? l10n.paymentUnknown
     : paymentMethodFromWire(wire).label(l10n);
-
-/// Spanish label for printed receipts (the thermal/PDF layout is Spanish).
-String paymentMethodLabelEs(String? wire) => switch (wire) {
-  'card' => 'Tarjeta',
-  'transfer' => 'Transferencia',
-  'monthly_pass' => 'Mensualidad',
-  'exempt' => 'Exento',
-  'cash' => 'Efectivo',
-  _ => 'Otro',
-};

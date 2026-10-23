@@ -10,6 +10,7 @@ import '../../../core/state/submission.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/error_state.dart';
 import '../../../core/widgets/receipt_card.dart';
+import '../../../core/widgets/skeleton.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/widgets/sync_badge.dart';
 import '../../auth/application/auth_cubit.dart';
@@ -145,7 +146,7 @@ class _SessionsList extends StatelessWidget {
           previous.loadingMore != current.loadingMore,
       builder: (context, state) => switch (state) {
         CheckOutInitial() ||
-        CheckOutLoading() => const Center(child: CircularProgressIndicator()),
+        CheckOutLoading() => const SkeletonList(),
         CheckOutFailure(:final message, :final failure) => ErrorState(
           message: context.l10n.errorText(message, failure),
           onRetry: () =>

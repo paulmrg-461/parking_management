@@ -4,8 +4,8 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
-import '../../../core/receipt/payment_method.dart';
 import '../../../core/receipt/receipt_data.dart';
+import '../../../core/receipt/receipt_labels.dart';
 import '../../../core/utils/cop_formatter.dart';
 import '../../settings/domain/entities/parking_settings.dart';
 import '../../settings/domain/repositories/parking_settings_repository.dart';
@@ -21,7 +21,7 @@ class SystemDialogReceiptPrinter implements ReceiptPrinter {
   final ParkingSettingsRepository _settings;
 
   @override
-  Future<void> printPdf(ReceiptData data) async {
+  Future<void> printPdf(ReceiptData data, ReceiptLabels labels) async {
     final settings = await _cachedSettings();
     final logo = await _cachedLogo(settings);
     final document = pw.Document();
@@ -29,7 +29,7 @@ class SystemDialogReceiptPrinter implements ReceiptPrinter {
       pw.Page(
         pageFormat: PdfPageFormat.roll80,
         margin: const pw.EdgeInsets.all(8),
-        build: (context) => _build(context, data, settings, logo),
+        build: (context) => _build(context, data, settings, logo, labels),
       ),
     );
     await Printing.layoutPdf(
@@ -62,6 +62,7 @@ class SystemDialogReceiptPrinter implements ReceiptPrinter {
     ReceiptData data,
     ParkingSettings? settings,
     Uint8List? logo,
+    ReceiptLabels labels,
   ) {
     final bold = pw.TextStyle(fontWeight: pw.FontWeight.bold);
     return pw.Column(
@@ -69,39 +70,52 @@ class SystemDialogReceiptPrinter implements ReceiptPrinter {
       children: [
         _title(logo, settings),
         pw.Text(
-          data.isCheckOut ? 'RECIBO DE SALIDA' : 'RECIBO DE ENTRADA',
+          data.isCheckOut ? labels.checkOutTitle : labels.checkInTitle,
           textAlign: pw.TextAlign.center,
         ),
         pw.SizedBox(height: 8),
         pw.Text(data.plate, textAlign: pw.TextAlign.center, style: bold),
         pw.SizedBox(height: 8),
         pw.Divider(),
-        _row(context, 'Placa', data.plate),
-        _row(context, 'Entrada', _dateTime(data.entryTime)),
+        _row(context, labels.plate, data.plate),
+        _row(context, labels.entry, _dateTime(data.entryTime)),
         if (data.isCheckOut && data.exitTime != null) ...[
-          _row(context, 'Salida', _dateTime(data.exitTime!)),
-          _row(context, 'Tiempo', _duration(data.exitTime!.difference(data.entryTime))),
+          _row(context, labels.exit, _dateTime(data.exitTime!)),
+          _row(
+            context,
+            labels.duration,
+            _duration(data.exitTime!.difference(data.entryTime)),
+          ),
         ] else if (data.photoCount != null)
-          _row(context, 'Fotos', '${data.photoCount}'),
+          _row(context, labels.photos, '${data.photoCount}'),
         if (data.pendingSync)
-          pw.Text('PENDIENTE DE SINCRONIZAR', textAlign: pw.TextAlign.center)
+          pw.Text(labels.pendingSync, textAlign: pw.TextAlign.center)
         else if (data.isCheckOut && data.amountCharged != null) ...[
           pw.Divider(),
-          _row(context, 'Total', CopFormatter.format(data.amountCharged!), bold: true),
+          _row(
+            context,
+            labels.total,
+            CopFormatter.format(data.amountCharged!),
+            bold: true,
+          ),
         ],
         if (data.isCheckOut && !data.pendingSync && data.discountAmount > 0)
-          _row(context, 'Descuento', '-${CopFormatter.format(data.discountAmount)}'),
+          _row(
+            context,
+            labels.discount,
+            '-${CopFormatter.format(data.discountAmount)}',
+          ),
         if (data.isCheckOut && !data.pendingSync && data.paymentMethod != null)
-          _row(context, 'Pago', paymentMethodLabelEs(data.paymentMethod)),
+          _row(context, labels.payment, labels.paymentMethod(data.paymentMethod!)),
         if (data.isCheckOut && !data.pendingSync && data.ticketNumber != null)
-          _row(context, 'Ticket', data.ticketNumber!),
+          _row(context, labels.ticket, data.ticketNumber!),
         pw.Divider(),
         pw.SizedBox(height: 8),
         pw.Text(
-          'Generado el ${_dateTime(DateTime.now())}',
+          '${labels.generatedOn} ${_dateTime(DateTime.now())}',
           textAlign: pw.TextAlign.center,
         ),
-        pw.Text('Gracias por su visita', textAlign: pw.TextAlign.center),
+        pw.Text(labels.thanks, textAlign: pw.TextAlign.center),
         ..._footer(settings),
       ],
     );
