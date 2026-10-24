@@ -91,9 +91,10 @@ RPCs own business logic and the Flutter client calls Supabase directly.
   reads; queued mutations capture `lot_id` at enqueue time.
 - Customer contact: `vehicles.owner_phone` (optional, 7–15 digits) is set
   through `update_vehicle_flags`; receipts are shared as `wa.me` links with a
-  prefilled message (no WhatsApp provider is integrated): receipts from the
-  history and pass-expiry reminders from the passes list. Missing WhatsApp is a
-  snack, never a crash.
+  prefilled message: receipts from the history and pass-expiry reminders from
+  the passes list. Missing WhatsApp is a snack, never a crash. With
+  `whatsapp_auto` on, the app enqueues into `whatsapp_messages` instead and
+  `whatsapp-dispatch` sends it with the Meta token (never in the client).
 - Evidence: `parking_settings.evidence_retention_days` (0 = keep) drives the
   `evidence-archive` Edge Function (Storage delete + row delete, service-role
   only, daily cron). Storage cannot see `x-lot-id`, so the bucket policy uses
@@ -114,7 +115,7 @@ RPCs own business logic and the Flutter client calls Supabase directly.
   browser push uses `web/push-sw.js` + VAPID (`web_push_subscriptions`);
   `FCM_SERVICE_ACCOUNT_JSON` + `supabase/notifications-cron.sh` enable
   background FCM. `push-dispatch` is service-role-only; never expose the key.
-- Tests: `flutter test` (534, plus a live-stack e2e) + `flutter analyze`; CI
+- Tests: `flutter test` (536, plus a live-stack e2e) + `flutter analyze`; CI
   validates compose and runs `supabase/tests/run.sh` (real migrations +
   RPC/RLS tests) against `supabase/postgres`.
 - E2E: `sh supabase/tests/e2e.sh` and

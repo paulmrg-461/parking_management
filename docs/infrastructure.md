@@ -16,7 +16,7 @@ Everything runs with Docker Compose. `docker-compose.yml` (repo root) includes
 | `storage` | `supabase/storage-api:v1.81.0` | Object storage (evidence, branding) | internal `5000` |
 | `imgproxy` | `darthsim/imgproxy:v3.31.4` | Image transforms for Storage | internal `5001` |
 | `meta` | `supabase/postgres-meta:v0.100.0` | Schema introspection for Studio | internal `8080` |
-| `functions` | `supabase/edge-runtime:v1.77.4` | `admin-users`, `push-dispatch` | internal `9000` |
+| `functions` | `supabase/edge-runtime:v1.77.4` | `admin-users`, `push-dispatch`, `evidence-archive`, `whatsapp-dispatch` | internal `9000` |
 | `db` | `supabase/postgres:17.6.1.136` | PostgreSQL 17 + roles/extensions | `${POSTGRES_PORT}` → `5432`, pooler `${POOLER_PROXY_PORT_TRANSACTION}` → `6543` |
 | `supavisor` | `supabase/supavisor:2.9.13` | Connection pooler | `6543` (transaction mode) |
 | `supabase-migrate` | `postgres:17-alpine` | Applies `supabase/migrations/*.sql` once | none (one-shot) |
@@ -138,7 +138,7 @@ Recommended crons:
 
 | Job | Where | Frequency |
 |---|---|---|
-| Pass renewal, expiry/overstay alerts, stale-notification/reservation/client-error/audit purge, idempotency purge, push flush | `supabase/notifications-cron.sh` (host cron) or `pg_cron` when available | every minute / daily |
+| Pass renewal, expiry/overstay alerts, stale-notification/reservation/client-error/audit/WhatsApp purge, idempotency purge, push flush, WhatsApp dispatch | `supabase/notifications-cron.sh` (host cron) or `pg_cron` when available | every minute / daily |
 | Evidence retention (deletes objects + rows) | `supabase/evidence-archive.sh` → `functions/evidence-archive` | daily, after the backup |
 | Database + storage backup | `supabase/backup.sh` | nightly (see `setup-cloud.md`) |
 | Restore drill | `supabase/restore-drill.sh` (scratch DB, no downtime) | monthly |

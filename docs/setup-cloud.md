@@ -213,6 +213,27 @@ channel; the script only posts when there is a hard failure. Pair it with an
 external uptime check on `https://parking.example.com/auth/v1/health` (it needs
 the `apikey` header) and a daily look at `client_error_reports` from Studio.
 
+## 9b. WhatsApp Cloud API (optional)
+
+Automated customer messages go through Meta, not the phone:
+
+1. Create a Meta app with the WhatsApp product, add a sender number and get its
+   **phone number id** and a permanent **system-user token**.
+2. Create two message templates (Spanish/English as needed):
+   - `receipt` with body params `{{1}}` plate, `{{2}}` amount, `{{3}}` ticket.
+   - `pass_expiry` with `{{1}}` plate, `{{2}}` date.
+3. Put the values in `.env` (`WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`,
+   optional `WHATSAPP_API_VERSION`/`WHATSAPP_TEMPLATE_*`) and restart
+   `functions`.
+4. Enable **WhatsApp automático** in the site settings. From then on the
+   receipt/pass actions enqueue rows in `whatsapp_messages`; the cron calls
+   `whatsapp-dispatch`, which retries up to 3 times and marks failures.
+5. Watch the queue in `/diagnostics` (notifications section) or with SQL:
+   `select status, count(*) from whatsapp_messages group by status;`
+
+Without credentials the dispatcher returns `{configured:false}` and the app
+keeps opening `wa.me` on the device.
+
 ## 10. Android release
 
 ```bash

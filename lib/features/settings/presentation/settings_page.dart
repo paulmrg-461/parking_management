@@ -42,6 +42,7 @@ class _SettingsPageState extends State<SettingsPage> {
   late final TextEditingController _whatsapp;
   late final TextEditingController _evidenceRetention;
   var _seeded = false;
+  bool _whatsappAuto = false;
 
   @override
   void initState() {
@@ -111,6 +112,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _website.text = settings.website;
     _whatsapp.text = settings.whatsapp;
     _evidenceRetention.text = settings.evidenceRetentionDays.toString();
+    _whatsappAuto = settings.whatsappAuto;
   }
 
   void _onSaved(BuildContext context, Object? result) {
@@ -191,6 +193,14 @@ class _SettingsPageState extends State<SettingsPage> {
                   : null;
             },
           ),
+          SwitchListTile(
+            key: const Key('settings_whatsapp_auto'),
+            contentPadding: EdgeInsets.zero,
+            value: _whatsappAuto,
+            onChanged: (value) => setState(() => _whatsappAuto = value),
+            title: Text(l10n.settingsWhatsappAuto),
+            subtitle: Text(l10n.settingsWhatsappAutoHint),
+          ),
           const SizedBox(height: Space.md),
           FilledButton(
             onPressed: () => _save(context, settings),
@@ -253,6 +263,7 @@ class _SettingsPageState extends State<SettingsPage> {
         whatsapp: _whatsapp.text.trim(),
         evidenceRetentionDays:
             int.tryParse(_evidenceRetention.text.trim()) ?? 0,
+        whatsappAuto: _whatsappAuto,
       ),
     );
   }

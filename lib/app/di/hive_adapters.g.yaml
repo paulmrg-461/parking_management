@@ -119,7 +119,7 @@ types:
         index: 7
   ParkingSettings:
     typeId: 9
-    nextIndex: 8
+    nextIndex: 9
     fields:
       name:
         index: 0
@@ -137,3 +137,5 @@ types:
         index: 6
       evidenceRetentionDays:
         index: 7
+      whatsappAuto:
+        index: 8

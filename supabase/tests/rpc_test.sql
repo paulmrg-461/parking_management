@@ -661,6 +661,64 @@ begin
     end if;
 end $$;
 
+-- WhatsApp queue: disabled by default, validates the phone, records the lot.
+set local request.headers = '{"x-lot-id":"2"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+begin
+    begin
+        perform public.enqueue_whatsapp_message('573001112233', 'receipt', '["ABC123"]'::jsonb);
+        raise exception 'whatsapp queue accepted a disabled site';
+    exception when others then
+        if sqlerrm not like '%WhatsappDisabledError%' then
+            raise;
+        end if;
+    end;
+end $$;
+
+update public.parking_settings set whatsapp_auto = true where lot_id = 2;
+
+do $$
+declare
+    queued jsonb;
+begin
+    queued := public.enqueue_whatsapp_message(
+        '+57 300 111 2233', 'receipt', '["ABC123","5000","TCK-NORTH-1"]'::jsonb
+    );
+    if (queued ->> 'status') <> 'pending' then
+        raise exception 'queued whatsapp message is not pending';
+    end if;
+    if (select to_phone from public.whatsapp_messages where id = (queued ->> 'id')::bigint)
+        <> '573001112233' then
+        raise exception 'whatsapp phone was not normalized';
+    end if;
+    if (select lot_id from public.whatsapp_messages where id = (queued ->> 'id')::bigint) <> 2 then
+        raise exception 'whatsapp message was not stamped with the lot';
+    end if;
+    begin
+        perform public.enqueue_whatsapp_message('123', 'receipt', '[]'::jsonb);
+        raise exception 'invalid whatsapp phone was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidPhoneError%' then
+            raise;
+        end if;
+    end;
+    update public.whatsapp_messages set status = 'sent', sent_at = now();
+    if public.purge_whatsapp_messages(90) <> 0 then
+        raise exception 'purge removed fresh whatsapp rows';
+    end if;
+end $$;
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+set local role authenticated;
+do $$
+begin
+    if exists (select 1 from public.whatsapp_messages) then
+        raise exception 'RLS leak: operator reads the whatsapp queue';
+    end if;
+end $$;
+reset role;
+
 -- Branding is per lot: only the active lot's row changes.
 set local request.headers = '{"x-lot-id":"2"}';
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';

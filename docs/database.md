@@ -62,6 +62,7 @@ erDiagram
 | `notifications` | Per-user inbox rows (type, title, body, data, read/pushed state, dedupe key). | optional |
 | `device_tokens` | FCM tokens per user/device. | no |
 | `web_push_subscriptions` | Browser push endpoints (endpoint + p256dh + auth). | no |
+| `whatsapp_messages` | Queue of customer WhatsApp templates (`pending`/`sent`/`failed`, attempts, error, lot). | yes |
 | `audit_log` | Admin audit trail: actor, action, table, entity, lot, changed columns (before/after). | via row |
 | `client_error_reports` | Uncaught app errors (platform, message, stack, context) for support; admin-readable. | no |
 | `idempotency_keys` | Replay cache for write RPCs keyed by `Idempotency-Key`. | — |
@@ -107,6 +108,10 @@ granted to `authenticated` only.
 `record_audit` (trigger on categories, tariffs, vehicles, monthly passes,
 settings, lots and memberships).
 
+**Customer messages**
+`enqueue_whatsapp_message` (operators, only when the site enabled
+`whatsapp_auto`), `purge_whatsapp_messages`.
+
 **Diagnostics**
 `diagnostics_snapshot` (counters + storage usage), `list_client_error_reports`
 (admin-only, last N days).
@@ -138,6 +143,7 @@ settings, lots and memberships).
 | `shifts`, `cash_movements`, `shift_adjustments` | own shift or lot admin, active lot | RPCs |
 | `monthly_pass_payments`, `category_reservations` | active lot | RPCs |
 | `parking_settings` | active lot; anonymous only the first lot (login branding) | lot admins |
+| `whatsapp_messages` | admins | `enqueue_whatsapp_message` + the dispatcher |
 | `notifications` | own rows, active lot (or global) | RPCs/triggers |
 | `audit_log` | platform admins | triggers and the `admin-users` Edge Function |
 | `device_tokens`, `web_push_subscriptions` | own rows | RPCs |

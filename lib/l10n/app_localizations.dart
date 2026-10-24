@@ -1514,6 +1514,30 @@ abstract class AppLocalizations {
   /// **'0 = conservar siempre. Las fotos más antiguas se borran automáticamente.'**
   String get settingsEvidenceRetentionHint;
 
+  /// No description provided for @settingsWhatsappAuto.
+  ///
+  /// In es, this message translates to:
+  /// **'WhatsApp automático'**
+  String get settingsWhatsappAuto;
+
+  /// No description provided for @settingsWhatsappAutoHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Envía los avisos por la API de WhatsApp (requiere credenciales en el servidor). Si está apagado, se abre WhatsApp en el teléfono.'**
+  String get settingsWhatsappAutoHint;
+
+  /// No description provided for @whatsappQueued.
+  ///
+  /// In es, this message translates to:
+  /// **'Mensaje en cola de WhatsApp'**
+  String get whatsappQueued;
+
+  /// No description provided for @errorWhatsappDisabled.
+  ///
+  /// In es, this message translates to:
+  /// **'El WhatsApp automático está desactivado en esta sede'**
+  String get errorWhatsappDisabled;
+
   /// No description provided for @settingsName.
   ///
   /// In es, this message translates to:

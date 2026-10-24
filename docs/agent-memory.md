@@ -127,6 +127,17 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   `postgres`), so scheduling stays in the host cron; the README documents how
   to enable pg_cron if the deployment supports `cron.database_name`.
 
+## Automated WhatsApp (latest)
+
+- `0042`: `parking_settings.whatsapp_auto` + `whatsapp_messages` (pending/sent/
+  failed, attempts, error, lot) and `enqueue_whatsapp_message` (operators; only
+  when the site enabled the flag), `purge_whatsapp_messages(90)` in the cron.
+- `whatsapp-dispatch` (service-role) sends Meta templates `receipt`/`pass_expiry`
+  with positional body params; retries 3 times. No credentials → `configured:false`.
+- App: `BrandingCubit.settingsOrNull.whatsappAuto` decides between enqueue
+  (`whatsappQueued` snack) and `wa.me`; `CustomerMessageRepository` is the port.
+- Passes/history UI tests cover both branches (fake repo + branding).
+
 ## WhatsApp receipts (latest)
 
 - `0041`: `vehicles.owner_phone` (+ check 7–15 digits) and

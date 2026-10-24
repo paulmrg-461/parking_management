@@ -36,6 +36,11 @@ docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
   "select public.purge_client_error_reports(30);" >/dev/null
 docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
   "select public.purge_audit_log(365);" >/dev/null
+docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
+  "select public.purge_whatsapp_messages(90);" >/dev/null
 
 curl -fsS -X POST "${API_URL:-http://localhost:8000}/functions/v1/push-dispatch" \
+  -H "Authorization: Bearer ${SERVICE_KEY}" >/dev/null
+# No-op ({configured:false}) until WHATSAPP_TOKEN/PHONE_NUMBER_ID are set.
+curl -fsS -X POST "${API_URL:-http://localhost:8000}/functions/v1/whatsapp-dispatch" \
   -H "Authorization: Bearer ${SERVICE_KEY}" >/dev/null

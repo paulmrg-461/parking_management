@@ -13,6 +13,7 @@ import 'modules/categories_module.dart';
 import 'modules/check_in_module.dart';
 import 'modules/check_out_module.dart';
 import 'modules/core_module.dart';
+import 'modules/customer_messages_module.dart';
 import 'modules/lots_module.dart';
 import 'modules/monthly_passes_module.dart';
 import 'modules/notifications_module.dart';
@@ -97,6 +98,7 @@ Future<void> _initSupabase(AppConfig config) async {
 /// Registers every module into [sl] without touching storage (testable).
 void registerAllModules(GetIt sl, AppConfig config) {
   registerCoreModule(sl, config);
+  registerCustomerMessagesModule(sl);
   registerPlatformModule(sl);
   registerAuthModule(sl);
   registerAuditModule(sl);

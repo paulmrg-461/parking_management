@@ -780,6 +780,20 @@ class AppLocalizationsEs extends AppLocalizations {
       '0 = conservar siempre. Las fotos más antiguas se borran automáticamente.';
 
   @override
+  String get settingsWhatsappAuto => 'WhatsApp automático';
+
+  @override
+  String get settingsWhatsappAutoHint =>
+      'Envía los avisos por la API de WhatsApp (requiere credenciales en el servidor). Si está apagado, se abre WhatsApp en el teléfono.';
+
+  @override
+  String get whatsappQueued => 'Mensaje en cola de WhatsApp';
+
+  @override
+  String get errorWhatsappDisabled =>
+      'El WhatsApp automático está desactivado en esta sede';
+
+  @override
   String get settingsName => 'Nombre';
 
   @override

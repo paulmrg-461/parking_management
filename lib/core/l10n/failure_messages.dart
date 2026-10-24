@@ -70,6 +70,7 @@ extension FailureMessages on AppLocalizations {
     'VehicleNotRegisteredError' => errorVehicleNotRegistered,
     'VehicleBlacklistedError' => errorVehicleBlacklisted,
     'InvalidPhoneError' => errorInvalidPhone,
+    'WhatsappDisabledError' => errorWhatsappDisabled,
     'InvalidPhotoError' => errorInvalidPhoto,
     'InvalidDataError' || 'InvalidUsername' => errorInvalidData,
     'InvalidPin' => pinInvalid,

@@ -13,6 +13,7 @@ class ParkingSettings extends Equatable {
     this.whatsapp = '',
     this.logoVersion = 0,
     this.evidenceRetentionDays = 0,
+    this.whatsappAuto = false,
   });
 
   final String name;
@@ -29,6 +30,10 @@ class ParkingSettings extends Equatable {
   /// `0` keeps them forever (default).
   final int evidenceRetentionDays;
 
+  /// When true, customer messages are queued for the WhatsApp dispatcher
+  /// instead of opening `wa.me` on the device.
+  final bool whatsappAuto;
+
   /// The never-configured record (mirrors the backend default).
   static ParkingSettings defaults() => const ParkingSettings();
 
@@ -41,6 +46,7 @@ class ParkingSettings extends Equatable {
     String? whatsapp,
     int? logoVersion,
     int? evidenceRetentionDays,
+    bool? whatsappAuto,
   }) => ParkingSettings(
     name: name ?? this.name,
     address: address ?? this.address,
@@ -51,6 +57,7 @@ class ParkingSettings extends Equatable {
     logoVersion: logoVersion ?? this.logoVersion,
     evidenceRetentionDays:
         evidenceRetentionDays ?? this.evidenceRetentionDays,
+    whatsappAuto: whatsappAuto ?? this.whatsappAuto,
   );
 
   /// Editable fields (metadata excluded).
@@ -62,6 +69,7 @@ class ParkingSettings extends Equatable {
     'website': website,
     'whatsapp': whatsapp,
     'evidence_retention_days': evidenceRetentionDays,
+    'whatsapp_auto': whatsappAuto,
   };
 
   @override
@@ -74,5 +82,6 @@ class ParkingSettings extends Equatable {
     whatsapp,
     logoVersion,
     evidenceRetentionDays,
+    whatsappAuto,
   ];
 }

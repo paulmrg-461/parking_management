@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 
+import '../../../core/error/failure.dart';
 import '../../../core/l10n/failure_messages.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/receipt/payment_method.dart';
@@ -12,8 +13,11 @@ import '../../../core/utils/whatsapp_launcher.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/error_state.dart';
 import '../../../core/widgets/submission_feedback.dart';
+import '../../../app/di/injection.dart';
 import '../../auth/application/auth_cubit.dart';
 import '../../auth/domain/entities/user.dart';
+import '../../customer_messages/domain/repositories/customer_message_repository.dart';
+import '../../settings/application/whatsapp_mode.dart';
 import '../../settings/domain/whatsapp_url.dart';
 import '../../../core/widgets/money_text.dart';
 import '../../../core/widgets/receipt_card.dart';
@@ -492,6 +496,10 @@ class _SessionTile extends StatelessWidget {
   );
 
   Future<void> _sendWhatsapp(BuildContext context) async {
+    if (whatsappAutoEnabled(context)) {
+      await _queueReceipt(context);
+      return;
+    }
     final url = whatsappUrl(
       phone!,
       text: receiptWhatsappMessage(
@@ -501,6 +509,32 @@ class _SessionTile extends StatelessWidget {
       ),
     );
     await openWhatsapp(context, url);
+  }
+
+  /// Automated path: the dispatcher sends it through the WhatsApp API.
+  Future<void> _queueReceipt(BuildContext context) async {
+    final l10n = context.l10n;
+    if (!serviceLocator.isRegistered<CustomerMessageRepository>()) {
+      return;
+    }
+    try {
+      await serviceLocator<CustomerMessageRepository>().enqueueWhatsapp(
+        phone: phone!,
+        template: 'receipt',
+        params: [
+          plate,
+          Formatters.money(session.amountCharged ?? 0),
+          session.ticketNumber ?? '',
+        ],
+      );
+      if (context.mounted) {
+        showInfoSnack(context, l10n.whatsappQueued);
+      }
+    } on Failure catch (failure) {
+      if (context.mounted) {
+        showErrorSnack(context, l10n.failure(failure));
+      }
+    }
   }
 
   Future<void> _reprint(BuildContext context) => showReceiptSummary(

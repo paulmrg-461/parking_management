@@ -776,6 +776,20 @@ class AppLocalizationsEn extends AppLocalizations {
       '0 = keep forever. Older photos are deleted automatically.';
 
   @override
+  String get settingsWhatsappAuto => 'Automated WhatsApp';
+
+  @override
+  String get settingsWhatsappAutoHint =>
+      'Sends notices through the WhatsApp API (requires server credentials). When off, WhatsApp opens on the device.';
+
+  @override
+  String get whatsappQueued => 'Message queued for WhatsApp';
+
+  @override
+  String get errorWhatsappDisabled =>
+      'Automated WhatsApp is disabled for this site';
+
+  @override
   String get settingsName => 'Name';
 
   @override

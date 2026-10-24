@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../core/error/failure.dart';
 import '../../../core/l10n/failure_messages.dart';
 import '../../../core/network/connectivity_cubit.dart';
 import '../../../core/l10n/l10n.dart';
@@ -14,8 +15,11 @@ import '../../../core/widgets/app_icon_button.dart';
 import '../../../core/widgets/async_view.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/list_page_scaffold.dart';
+import '../../../app/di/injection.dart';
 import '../../../core/utils/whatsapp_launcher.dart';
 import '../../../core/widgets/plate_text.dart';
+import '../../customer_messages/domain/repositories/customer_message_repository.dart';
+import '../../settings/application/whatsapp_mode.dart';
 import '../../settings/domain/whatsapp_url.dart';
 import 'customer_message.dart';
 import '../../../core/widgets/submission_feedback.dart';
@@ -157,6 +161,10 @@ class _MonthlyPassTile extends StatelessWidget {
   final String? phone;
 
   Future<void> _notify(BuildContext context) async {
+    if (whatsappAutoEnabled(context)) {
+      await _queueReminder(context);
+      return;
+    }
     final url = whatsappUrl(
       phone!,
       text: monthlyPassWhatsappMessage(
@@ -166,6 +174,27 @@ class _MonthlyPassTile extends StatelessWidget {
       ),
     );
     await openWhatsapp(context, url);
+  }
+
+  Future<void> _queueReminder(BuildContext context) async {
+    final l10n = context.l10n;
+    if (!serviceLocator.isRegistered<CustomerMessageRepository>()) {
+      return;
+    }
+    try {
+      await serviceLocator<CustomerMessageRepository>().enqueueWhatsapp(
+        phone: phone!,
+        template: 'pass_expiry',
+        params: [plate, Formatters.date(monthlyPass.endDate)],
+      );
+      if (context.mounted) {
+        showInfoSnack(context, l10n.whatsappQueued);
+      }
+    } on Failure catch (failure) {
+      if (context.mounted) {
+        showErrorSnack(context, l10n.failure(failure));
+      }
+    }
   }
 
   @override
