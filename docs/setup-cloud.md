@@ -278,10 +278,12 @@ dashboard occupancy moved.
 
 ## 12. Hardening checklist
 
-- [ ] `chmod 600 .env`; secrets only in `.env` (or your secret manager).
+- [ ] `chmod 600 .env`; secrets only in `.env` (or your secret manager);
+      `sh supabase/check-secrets.sh` is clean.
 - [ ] Only 22/80/443 open; gateway and DB bound to `127.0.0.1`.
 - [ ] Studio protected (basic auth or IP allowlist).
-- [ ] Unique 6-digit PIN per operator; rotate the bootstrap admin PIN.
+- [ ] Unique 6-digit PIN per operator; rotate the bootstrap admin PIN
+      (`sh supabase/rotate-pin.sh`, see [`runbook-secrets.md`](runbook-secrets.md)).
 - [ ] `DISABLE_SIGNUP=true`; `FUNCTIONS_VERIFY_JWT` left at its default.
 - [ ] Nightly backups + offsite copy + a restore drill on record.
 - [ ] Cron script running (check `/var/log/parking-cron.log`).

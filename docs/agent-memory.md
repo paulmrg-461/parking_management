@@ -169,6 +169,17 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 - `LotComparison` widget (reports) sorts by revenue and shows a bar, the
   percentage of the total and `N exits · average X`; only in consolidated mode.
 
+## Secrets runbook (latest)
+
+- `supabase/rotate-pin.sh <user> <pin>`: GoTrue admin API with the service key
+  (works with no signed-in admin); no audit row — log it manually.
+- `supabase/check-secrets.sh`: `.env` mode/placeholders/tracked/`DISABLE_SIGNUP`/
+  `PASSWORD_MIN_LENGTH`, exits 1 on failures.
+- `docs/runbook-secrets.md`: inventory, quarterly review, PIN/JWT/DB/provider
+  rotation (JWT rotation logs everyone out and needs client rebuilds; DB needs
+  `ALTER USER` for postgres, supabase_admin, supabase_auth_admin,
+  supabase_storage_admin, authenticator) and leak response.
+
 ## Restore drill (latest)
 
 - `supabase/restore-drill.sh [backups/<stamp>]`: creates a scratch DB, restores

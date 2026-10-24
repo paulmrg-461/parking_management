@@ -364,6 +364,11 @@ JWT/API keys survive a restore. Run backups from host cron, e.g. daily at 02:00,
 and the drill monthly — the full procedure (including a restore on a new host)
 is in [`docs/runbook-restore.md`](docs/runbook-restore.md).
 
+Operator PINs rotate with `sh supabase/rotate-pin.sh <user> <pin>` (or the
+app's "Reset PIN"); `sh supabase/check-secrets.sh` and
+[`docs/runbook-secrets.md`](docs/runbook-secrets.md) cover the quarterly secret
+review and JWT/database rotation.
+
 ## CI and SQL tests
 
 `.github/workflows/ci.yml` runs Flutter analyze/test/web plus two Supabase jobs:

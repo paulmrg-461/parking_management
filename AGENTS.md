@@ -122,6 +122,10 @@ RPCs own business logic and the Flutter client calls Supabase directly.
 - E2E: `sh supabase/tests/e2e.sh` and
   `SUPABASE_URL=... SUPABASE_ANON_KEY=... flutter test test/integration`
   exercise the real stack; update them when an RPC contract changes.
+- Secrets: `.env` only, `chmod 600`; review quarterly with
+  `sh supabase/check-secrets.sh`; PIN rotation via
+  `sh supabase/rotate-pin.sh`; JWT/DB rotation and leak response are in
+  `docs/runbook-secrets.md`.
 - Backups: drill them with `sh supabase/restore-drill.sh` (scratch DB, safe)
   at least monthly; restore with
   `RESTORE_CONFIRM=yes sh supabase/restore.sh <dir>`. `.env` is not included.
