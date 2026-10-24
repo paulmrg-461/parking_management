@@ -135,7 +135,10 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 - History: phone chip (opens a greeting) or "Add phone"; closed sessions have a
   chat icon that builds `receiptWhatsappMessage` and opens `wa.me` with text.
 - `whatsappUrl(raw, text:)` encodes the message; launching failures show a snack.
-- Pass-expiry WhatsApp is not wired yet (needs the phone in the passes list).
+- Pass expiry: `Vehicle.ownerPhone` reaches the passes list (vehicles are
+  loaded there); active passes with a phone offer a reminder built by
+  `monthlyPassWhatsappMessage`. Launching lives in
+  `core/utils/whatsapp_launcher.dart` (shared with the history).
 
 ## Ticket reprint (latest)
 

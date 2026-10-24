@@ -1403,6 +1403,14 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get monthlyPassWhatsapp => 'Avisar por WhatsApp';
+
+  @override
+  String monthlyPassWhatsappMessage(String plate, String date) {
+    return 'Hola, te recordamos que la mensualidad del vehículo $plate vence el $date.';
+  }
+
+  @override
   String get monthlyPassCharge => 'Cobrar';
 
   @override

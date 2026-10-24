@@ -83,7 +83,7 @@ types:
         index: 3
   Vehicle:
     typeId: 7
-    nextIndex: 5
+    nextIndex: 6
     fields:
       id:
         index: 0
@@ -95,6 +95,8 @@ types:
         index: 3
       brand:
         index: 4
+      ownerPhone:
+        index: 5
   MonthlyPass:
     typeId: 8
     nextIndex: 8

@@ -179,7 +179,9 @@ closed session can **reprint its ticket**: the same amounts (including any
 discount) and ticket number are rebuilt from history and can be printed again.
 Each vehicle can also store the **customer's phone**; once set, a closed
 session offers "send receipt via WhatsApp" (`wa.me` with the receipt prefilled,
-no external provider) and the phone chip opens a chat with the lot. Check-out searches plates **server-side** with pagination, so
+no external provider) and the phone chip opens a chat with the lot. Monthly
+passes of that vehicle get a "notify via WhatsApp" action with the expiry date
+prefilled. Check-out searches plates **server-side** with pagination, so
 a vehicle outside the first page is still found; the query shows a proper
 "no plate matches" state. Discounts appear in the report with their reason,
 admin and timestamp.

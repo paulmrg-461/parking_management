@@ -13,15 +13,24 @@ import '../../../helpers/test_app.dart';
 void main() {
   late FakeMonthlyPassRepository repository;
 
-  Future<void> pumpPage(WidgetTester tester, {Failure? listError}) async {
+  Future<void> pumpPage(
+    WidgetTester tester, {
+    Failure? listError,
+    String? ownerPhone,
+  }) async {
     repository = FakeMonthlyPassRepository()..listError = listError;
     await tester.pumpWidget(
       testApp(
         BlocProvider<MonthlyPassesCubit>(
           create: (_) => MonthlyPassesCubit(
             repository,
-            FakeVehicleRepository(const [
-              Vehicle(id: 1, plate: 'ABC123', categoryId: 1),
+            FakeVehicleRepository([
+              Vehicle(
+                id: 1,
+                plate: 'ABC123',
+                categoryId: 1,
+                ownerPhone: ownerPhone,
+              ),
             ]),
           ),
           child: const MonthlyPassesPage(),
@@ -110,5 +119,18 @@ void main() {
     await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
     await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
     await expectLater(tester, meetsGuideline(textContrastGuideline));
+  });
+
+  testWidgets('Success: a pass with a customer phone offers the WhatsApp notice',
+      (tester) async {
+    await pumpPage(tester, ownerPhone: '+57 300 111 2233');
+
+    expect(find.byTooltip('Avisar por WhatsApp'), findsOneWidget);
+  });
+
+  testWidgets('Security: no phone means no WhatsApp action', (tester) async {
+    await pumpPage(tester);
+
+    expect(find.byTooltip('Avisar por WhatsApp'), findsNothing);
   });
 }

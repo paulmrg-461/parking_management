@@ -2612,6 +2612,18 @@ abstract class AppLocalizations {
   /// **'Vence: {date}'**
   String monthlyPassDue(String date);
 
+  /// No description provided for @monthlyPassWhatsapp.
+  ///
+  /// In es, this message translates to:
+  /// **'Avisar por WhatsApp'**
+  String get monthlyPassWhatsapp;
+
+  /// No description provided for @monthlyPassWhatsappMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'Hola, te recordamos que la mensualidad del vehículo {plate} vence el {date}.'**
+  String monthlyPassWhatsappMessage(String plate, String date);
+
   /// No description provided for @monthlyPassCharge.
   ///
   /// In es, this message translates to:

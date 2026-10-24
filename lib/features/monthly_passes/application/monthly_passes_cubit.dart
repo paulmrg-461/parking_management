@@ -46,6 +46,16 @@ final class MonthlyPassesLoaded extends MonthlyPassesState {
   String plateOf(MonthlyPass pass) =>
       plates[pass.vehicleId] ?? 'Vehicle ${pass.vehicleId}';
 
+  /// Customer phone of the pass' vehicle, when known.
+  String? phoneOf(MonthlyPass pass) {
+    for (final vehicle in vehicles) {
+      if (vehicle.id == pass.vehicleId) {
+        return vehicle.ownerPhone;
+      }
+    }
+    return null;
+  }
+
   MonthlyPassesLoaded copyWith({
     List<MonthlyPass>? monthlyPasses,
     List<MonthlyPassPayment>? pendingPayments,

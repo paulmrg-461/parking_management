@@ -14,7 +14,10 @@ import '../../../core/widgets/app_icon_button.dart';
 import '../../../core/widgets/async_view.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/list_page_scaffold.dart';
+import '../../../core/utils/whatsapp_launcher.dart';
 import '../../../core/widgets/plate_text.dart';
+import '../../settings/domain/whatsapp_url.dart';
+import 'customer_message.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/widgets/submission_listener.dart';
 import '../../vehicles/domain/entities/vehicle.dart';
@@ -85,6 +88,7 @@ class _MonthlyPassesPageState extends State<MonthlyPassesPage> {
                     plate:
                         loaded.plates[pass.vehicleId] ??
                         context.l10n.unknownVehicle(pass.vehicleId),
+                    phone: loaded.phoneOf(pass),
                   ),
               ],
             ),
@@ -142,10 +146,27 @@ class _MonthlyPassesPageState extends State<MonthlyPassesPage> {
 }
 
 class _MonthlyPassTile extends StatelessWidget {
-  const _MonthlyPassTile({required this.monthlyPass, required this.plate});
+  const _MonthlyPassTile({
+    required this.monthlyPass,
+    required this.plate,
+    this.phone,
+  });
 
   final MonthlyPass monthlyPass;
   final String plate;
+  final String? phone;
+
+  Future<void> _notify(BuildContext context) async {
+    final url = whatsappUrl(
+      phone!,
+      text: monthlyPassWhatsappMessage(
+        l10n: context.l10n,
+        plate: plate,
+        monthlyPass: monthlyPass,
+      ),
+    );
+    await openWhatsapp(context, url);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -175,6 +196,12 @@ class _MonthlyPassTile extends StatelessWidget {
               Icons.autorenew,
               color: Theme.of(context).colorScheme.primary,
               semanticLabel: l10n.monthlyPassAutoRenew,
+            ),
+          if (phone != null && monthlyPass.active)
+            AppIconButton(
+              icon: Icons.chat_outlined,
+              tooltip: l10n.monthlyPassWhatsapp,
+              onPressed: () => _notify(context),
             ),
           AppIconButton(
             icon: Icons.edit_outlined,

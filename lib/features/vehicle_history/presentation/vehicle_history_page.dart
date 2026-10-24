@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:url_launcher/url_launcher.dart';
+
 
 import '../../../core/l10n/failure_messages.dart';
 import '../../../core/l10n/l10n.dart';
@@ -8,6 +8,7 @@ import '../../../core/receipt/payment_method.dart';
 import '../../../core/receipt/receipt_data.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/utils/whatsapp_launcher.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/error_state.dart';
 import '../../../core/widgets/submission_feedback.dart';
@@ -223,7 +224,7 @@ class _HistoryBodyState extends State<_HistoryBody> {
       phone,
       text: generalWhatsappMessage(l10n: context.l10n, plate: history.plate),
     );
-    await _openWhatsapp(context, url);
+    await openWhatsapp(context, url);
   }
 
   Future<void> _toggleBlacklist(BuildContext context) async {
@@ -499,7 +500,7 @@ class _SessionTile extends StatelessWidget {
         session: session,
       ),
     );
-    await _openWhatsapp(context, url);
+    await openWhatsapp(context, url);
   }
 
   Future<void> _reprint(BuildContext context) => showReceiptSummary(
@@ -609,27 +610,6 @@ class _SessionTile extends StatelessWidget {
   }
 }
 
-
-/// Opens a `wa.me` link; a device without WhatsApp shows a snack instead of
-/// crashing the screen.
-Future<void> _openWhatsapp(BuildContext context, String? url) async {
-  if (url == null) {
-    return;
-  }
-  try {
-    final opened = await launchUrl(
-      Uri.parse(url),
-      mode: LaunchMode.externalApplication,
-    );
-    if (!opened && context.mounted) {
-      showErrorSnack(context, context.l10n.errorWhatsappUnavailable);
-    }
-  } catch (_) {
-    if (context.mounted) {
-      showErrorSnack(context, context.l10n.errorWhatsappUnavailable);
-    }
-  }
-}
 
 class _PhoneDialog extends StatefulWidget {
   const _PhoneDialog({required this.initial});

@@ -12,6 +12,7 @@ VehicleDto _$VehicleDtoFromJson(Map<String, dynamic> json) => VehicleDto(
   categoryId: (json['category_id'] as num).toInt(),
   color: json['color'] as String?,
   brand: json['brand'] as String?,
+  ownerPhone: json['owner_phone'] as String?,
 );
 
 Map<String, dynamic> _$VehicleDtoToJson(VehicleDto instance) =>
@@ -21,4 +22,5 @@ Map<String, dynamic> _$VehicleDtoToJson(VehicleDto instance) =>
       'category_id': instance.categoryId,
       'color': instance.color,
       'brand': instance.brand,
+      'owner_phone': instance.ownerPhone,
     };
