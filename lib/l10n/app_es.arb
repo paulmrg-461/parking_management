@@ -504,6 +504,12 @@
 
   "reportsAllLots": "Todas las sedes",
   "reportsAllLotsHint": "Suma las ventas de todas las sedes",
+  "reportsLotTickets": "{count} salidas",
+  "@reportsLotTickets": {"placeholders": {"count": {"type": "int"}}},
+  "reportsLotAverage": "promedio {amount}",
+  "@reportsLotAverage": {"placeholders": {"amount": {"type": "String"}}},
+  "reportsLotShare": "{percent}% del total",
+  "@reportsLotShare": {"placeholders": {"percent": {"type": "int"}}},
   "reportsByLot": "Ingresos por sede",
   "reportsTitle": "Reportes",
   "reportsRangeTooltip": "Cambiar rango de fechas",

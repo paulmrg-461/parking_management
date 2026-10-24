@@ -2660,6 +2660,24 @@ abstract class AppLocalizations {
   /// **'Suma las ventas de todas las sedes'**
   String get reportsAllLotsHint;
 
+  /// No description provided for @reportsLotTickets.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} salidas'**
+  String reportsLotTickets(int count);
+
+  /// No description provided for @reportsLotAverage.
+  ///
+  /// In es, this message translates to:
+  /// **'promedio {amount}'**
+  String reportsLotAverage(String amount);
+
+  /// No description provided for @reportsLotShare.
+  ///
+  /// In es, this message translates to:
+  /// **'{percent}% del total'**
+  String reportsLotShare(int percent);
+
   /// No description provided for @reportsByLot.
   ///
   /// In es, this message translates to:

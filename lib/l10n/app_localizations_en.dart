@@ -1431,6 +1431,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportsAllLotsHint => 'Adds up every site\'s revenue';
 
   @override
+  String reportsLotTickets(int count) {
+    return '$count exits';
+  }
+
+  @override
+  String reportsLotAverage(String amount) {
+    return 'average $amount';
+  }
+
+  @override
+  String reportsLotShare(int percent) {
+    return '$percent% of total';
+  }
+
+  @override
   String get reportsByLot => 'Revenue by site';
 
   @override

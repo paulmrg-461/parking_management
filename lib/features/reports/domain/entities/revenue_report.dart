@@ -33,14 +33,22 @@ class LotRevenue extends Equatable {
     required this.lotId,
     required this.lotName,
     required this.amount,
+    this.tickets = 0,
+    this.avgTicket = 0,
   });
 
   final int lotId;
   final String lotName;
   final int amount;
 
+  /// Charged exits at this site in the range.
+  final int tickets;
+
+  /// `amount / tickets` (0 when there were no exits).
+  final int avgTicket;
+
   @override
-  List<Object?> get props => [lotId, lotName, amount];
+  List<Object?> get props => [lotId, lotName, amount, tickets, avgTicket];
 }
 
 /// Revenue collected through one payment method.

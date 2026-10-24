@@ -45,6 +45,10 @@ final _revenue = RevenueReport(
   byPayment: const [
     PaymentRevenue(paymentMethod: 'cash', amount: 100000),
   ],
+  byLot: const [
+    LotRevenue(lotId: 1, lotName: 'Central', amount: 120000, tickets: 4, avgTicket: 30000),
+    LotRevenue(lotId: 2, lotName: 'North', amount: 30000, tickets: 2, avgTicket: 15000),
+  ],
 );
 
 const _occupancy = OccupancyReport(
@@ -123,9 +127,14 @@ void main() {
   ) async {
     final repository = await _pump(tester);
 
+    expect(find.text('Ingresos por sede'), findsNothing);
+
     await tester.tap(find.text('Todas las sedes'));
     await tester.pumpAndSettle();
 
     expect(repository.lastAllLots, isTrue);
+    expect(find.text('Ingresos por sede'), findsOneWidget);
+    expect(find.text('Central'), findsOneWidget);
+    expect(find.text('80% del total'), findsOneWidget);
   });
 }

@@ -595,6 +595,25 @@ begin
     end if;
 end $$;
 
+-- Consolidated report exposes per-site revenue, tickets and average ticket.
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    lots jsonb;
+    entry jsonb;
+begin
+    lots := public.report_revenue_all(current_date, current_date) -> 'by_lot';
+    if jsonb_array_length(lots) < 2 then
+        raise exception 'consolidated report does not list every site';
+    end if;
+    select item into entry
+      from jsonb_array_elements(lots) item
+     where item ->> 'lot_id' = '1';
+    if entry is null or not (entry ? 'tickets') or not (entry ? 'avg_ticket') then
+        raise exception 'per-site comparison fields are missing';
+    end if;
+end $$;
+
 -- Branding is per lot: only the active lot's row changes.
 set local request.headers = '{"x-lot-id":"2"}';
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';

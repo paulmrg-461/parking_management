@@ -15,6 +15,7 @@ import '../../../core/widgets/sync_badge.dart';
 import '../application/reports_cubit.dart';
 import 'report_pdf.dart';
 import 'widgets/category_bar_list.dart';
+import 'widgets/lot_comparison.dart';
 import 'widgets/revenue_by_day_chart.dart';
 
 /// Admin reports screen: a date-range picker driving a revenue report
@@ -196,16 +197,10 @@ class _ReportsBody extends StatelessWidget {
         const SizedBox(height: Space.sm),
         Text(l10n.reportsTotalRevenue, style: textTheme.labelLarge),
         MoneyText(revenue.total, style: textTheme.headlineMedium),
-        if (revenue.byLot.isNotEmpty) ...[
+        if (loaded.allLots && revenue.byLot.isNotEmpty) ...[
           const SizedBox(height: Space.lg),
           _SectionTitle(l10n.reportsByLot),
-          CategoryBarList(
-            items: [
-              for (final lot in revenue.byLot)
-                CategoryBarItem(label: lot.lotName, value: lot.amount),
-            ],
-            formatValue: Formatters.money,
-          ),
+          LotComparison(lots: revenue.byLot),
         ],
         if (revenue.totalDiscounts > 0) ...[
           const SizedBox(height: Space.sm),

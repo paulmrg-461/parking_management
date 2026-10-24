@@ -219,7 +219,9 @@ view as PDF (share/print) or CSV (clipboard).
 
 The admin revenue report has an **Export PDF** action (share/print sheet) with
 the same numbers shown on screen, including the per-site breakdown when the
-consolidated switch is on. The shift screen exports a one-page reconciliation
+consolidated switch is on. The consolidated view compares sites with a bar per
+site: revenue, charged exits, average ticket and share of the total (sites with
+no movement that day still appear, at zero). The shift screen exports a one-page reconciliation
 ("arqueo") from the freshly closed card and from each history entry, and the
 history can be filtered by date range.
 

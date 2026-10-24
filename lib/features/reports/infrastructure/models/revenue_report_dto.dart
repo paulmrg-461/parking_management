@@ -75,6 +75,8 @@ class LotRevenueDto {
     required this.lotId,
     required this.lotName,
     required this.amount,
+    this.tickets = 0,
+    this.avgTicket = 0,
   });
 
   factory LotRevenueDto.fromJson(Map<String, dynamic> json) =>
@@ -88,10 +90,21 @@ class LotRevenueDto {
 
   final int amount;
 
+  @JsonKey(name: 'tickets', defaultValue: 0)
+  final int tickets;
+
+  @JsonKey(name: 'avg_ticket', defaultValue: 0)
+  final int avgTicket;
+
   Map<String, dynamic> toJson() => _$LotRevenueDtoToJson(this);
 
-  LotRevenue toDomain() =>
-      LotRevenue(lotId: lotId, lotName: lotName, amount: amount);
+  LotRevenue toDomain() => LotRevenue(
+    lotId: lotId,
+    lotName: lotName,
+    amount: amount,
+    tickets: tickets,
+    avgTicket: avgTicket,
+  );
 }
 
 @JsonSerializable()

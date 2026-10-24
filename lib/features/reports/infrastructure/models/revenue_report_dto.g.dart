@@ -46,6 +46,8 @@ LotRevenueDto _$LotRevenueDtoFromJson(Map<String, dynamic> json) =>
       lotId: (json['lot_id'] as num).toInt(),
       lotName: json['lot'] as String,
       amount: (json['amount'] as num).toInt(),
+      tickets: (json['tickets'] as num?)?.toInt() ?? 0,
+      avgTicket: (json['avg_ticket'] as num?)?.toInt() ?? 0,
     );
 
 Map<String, dynamic> _$LotRevenueDtoToJson(LotRevenueDto instance) =>
@@ -53,6 +55,8 @@ Map<String, dynamic> _$LotRevenueDtoToJson(LotRevenueDto instance) =>
       'lot_id': instance.lotId,
       'lot': instance.lotName,
       'amount': instance.amount,
+      'tickets': instance.tickets,
+      'avg_ticket': instance.avgTicket,
     };
 
 DiscountAuditDto _$DiscountAuditDtoFromJson(Map<String, dynamic> json) =>

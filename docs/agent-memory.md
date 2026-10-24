@@ -127,6 +127,13 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   `postgres`), so scheduling stays in the host cron; the README documents how
   to enable pg_cron if the deployment supports `cron.database_name`.
 
+## Site comparison (latest)
+
+- `0039`: `report_revenue_all` by_lot now includes `tickets` and `avg_ticket`
+  and lists every lot via `left join` (zero-revenue sites included).
+- `LotComparison` widget (reports) sorts by revenue and shows a bar, the
+  percentage of the total and `N exits · average X`; only in consolidated mode.
+
 ## Restore drill (latest)
 
 - `supabase/restore-drill.sh [backups/<stamp>]`: creates a scratch DB, restores
