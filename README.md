@@ -173,7 +173,8 @@ stored with the session and revenue reports show the discounted total. Receipts
 
 The `/history` screen (also linked from Home) looks up a plate and shows its
 visits, total spent, open-session flag and the latest sessions, with an offline
-cache per plate. Check-out searches plates **server-side** with pagination, so
+cache per plate. Every session is tagged with its site, and when the plate has
+visited more than one site a filter narrows the timeline to one of them. Check-out searches plates **server-side** with pagination, so
 a vehicle outside the first page is still found; the query shows a proper
 "no plate matches" state. Discounts appear in the report with their reason,
 admin and timestamp.
@@ -265,6 +266,13 @@ they keep working without a header.
   screen and adds the per-site breakdown.
 - Queued offline check-ins/check-outs capture the lot where the operator acted
   and replay into that same site.
+
+## Dashboard
+
+Home shows current occupancy plus today's numbers for the active site
+(`rpc/dashboard_today`): revenue, cash collected, monthly-pass collections,
+entries and exits. Counters reset at local midnight using the site's
+`business_timezone`; a slow summary never blocks the occupancy card.
 
 ## Capacity and reservations
 

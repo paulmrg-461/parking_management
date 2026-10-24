@@ -127,6 +127,14 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   `postgres`), so scheduling stays in the host cron; the README documents how
   to enable pg_cron if the deployment supports `cron.database_name`.
 
+## Product polish (latest)
+
+- Vehicle history: sessions carry `lotId`/`lotName`; the page shows a site chip
+  per session and filters locally by site (no extra RPC).
+- Home: `dashboard_today()` (active lot, business-timezone midnight) feeds a
+  `TodayCard` (revenue/cash/pass/entries/exits). A failing summary degrades to
+  zeros instead of hiding occupancy.
+
 ## Audit export (latest)
 
 - `0037`: `list_audit_log(limit, start, end, table, actor)` (actor = username,

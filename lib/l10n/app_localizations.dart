@@ -1376,6 +1376,18 @@ abstract class AppLocalizations {
   /// **'Total pagado'**
   String get vehicleHistoryTotalSpent;
 
+  /// No description provided for @vehicleHistoryAllLots.
+  ///
+  /// In es, this message translates to:
+  /// **'Todas las sedes'**
+  String get vehicleHistoryAllLots;
+
+  /// No description provided for @vehicleHistoryCurrentLotVisits.
+  ///
+  /// In es, this message translates to:
+  /// **'En esta sede: {count}'**
+  String vehicleHistoryCurrentLotVisits(int count);
+
   /// No description provided for @vehicleHistorySessions.
   ///
   /// In es, this message translates to:
@@ -1555,6 +1567,36 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Operador'**
   String get roleOperator;
+
+  /// No description provided for @homeToday.
+  ///
+  /// In es, this message translates to:
+  /// **'Hoy'**
+  String get homeToday;
+
+  /// No description provided for @homeTodayEntries.
+  ///
+  /// In es, this message translates to:
+  /// **'Entradas'**
+  String get homeTodayEntries;
+
+  /// No description provided for @homeTodayExits.
+  ///
+  /// In es, this message translates to:
+  /// **'Salidas'**
+  String get homeTodayExits;
+
+  /// No description provided for @homeTodayCash.
+  ///
+  /// In es, this message translates to:
+  /// **'Efectivo'**
+  String get homeTodayCash;
+
+  /// No description provided for @homeTodayPasses.
+  ///
+  /// In es, this message translates to:
+  /// **'Mensualidades'**
+  String get homeTodayPasses;
 
   /// No description provided for @homeOccupancy.
   ///

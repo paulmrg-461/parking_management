@@ -577,6 +577,24 @@ begin
     end if;
 end $$;
 
+-- Today's dashboard summary reflects the check-outs and entries of the lot.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    summary jsonb := public.dashboard_today();
+begin
+    if (summary ->> 'lot_id')::integer <> 1 then
+        raise exception 'dashboard summary used the wrong lot';
+    end if;
+    if (summary ->> 'revenue')::integer < 1 then
+        raise exception 'dashboard summary ignored today revenue';
+    end if;
+    if (summary ->> 'entries')::integer < 1 then
+        raise exception 'dashboard summary ignored today entries';
+    end if;
+end $$;
+
 -- Branding is per lot: only the active lot's row changes.
 set local request.headers = '{"x-lot-id":"2"}';
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';

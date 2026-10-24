@@ -149,4 +149,35 @@ void main() {
     expect(repository.lastBlacklisted, isTrue);
     expect(find.text('Bloqueado'), findsOneWidget);
   });
+
+  testWidgets('Success: sessions are filtered and tagged by site', (
+    tester,
+  ) async {
+    final repository = FakeVehicleHistoryRepository(history: sampleHistory());
+    final cubit = VehicleHistoryCubit(repository);
+    addTearDown(cubit.close);
+    await tester.pumpWidget(
+      testApp(
+        BlocProvider.value(
+          value: cubit,
+          child: const VehicleHistoryPage(initialPlate: 'ABC123'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Both sites show up as chips, and the filter defaults to all.
+    expect(find.text('Central'), findsOneWidget);
+    expect(find.text('North'), findsOneWidget);
+    expect(find.text('TCK-000002'), findsOneWidget);
+    expect(find.text('TCK-000001'), findsOneWidget);
+
+    await tester.tap(find.text('Todas las sedes'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('North').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('TCK-000001'), findsOneWidget);
+    expect(find.text('TCK-000002'), findsNothing);
+  });
 }

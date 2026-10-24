@@ -11,6 +11,8 @@ class VehicleHistorySession extends Equatable {
     this.paymentMethod,
     this.durationSeconds = 0,
     this.lostTicket = false,
+    this.lotId,
+    this.lotName,
   });
 
   final int id;
@@ -22,6 +24,8 @@ class VehicleHistorySession extends Equatable {
   final String? paymentMethod;
   final int durationSeconds;
   final bool lostTicket;
+  final int? lotId;
+  final String? lotName;
 
   bool get isOpen => status == 'open';
 
@@ -38,6 +42,8 @@ class VehicleHistorySession extends Equatable {
         paymentMethod: json['payment_method'] as String?,
         durationSeconds: (json['duration_seconds'] as num?)?.toInt() ?? 0,
         lostTicket: json['lost_ticket'] == true,
+        lotId: (json['lot_id'] as num?)?.toInt(),
+        lotName: json['lot_name'] as String?,
       );
 
   Map<String, dynamic> toJson() => {
@@ -50,6 +56,8 @@ class VehicleHistorySession extends Equatable {
     'payment_method': paymentMethod,
     'duration_seconds': durationSeconds,
     'lost_ticket': lostTicket,
+    'lot_id': lotId,
+    'lot_name': lotName,
   };
 
   @override
@@ -63,6 +71,8 @@ class VehicleHistorySession extends Equatable {
     paymentMethod,
     durationSeconds,
     lostTicket,
+    lotId,
+    lotName,
   ];
 }
 
@@ -79,6 +89,7 @@ class VehicleHistory extends Equatable {
     this.brand,
     this.isBlacklisted = false,
     this.notes,
+    this.currentLotVisits = 0,
   });
 
   final String plate;
@@ -92,6 +103,24 @@ class VehicleHistory extends Equatable {
   final List<VehicleHistorySession> sessions;
   final bool isBlacklisted;
   final String? notes;
+
+  /// Visits at the lot the app is currently working in.
+  final int currentLotVisits;
+
+  /// Distinct sites the plate has visited, for the history filter.
+  List<({int id, String name})> get lots {
+    final seen = <int, String>{};
+    for (final session in sessions) {
+      final id = session.lotId;
+      if (id != null) {
+        seen.putIfAbsent(id, () => session.lotName ?? '#$id');
+      }
+    }
+    final entries = [
+      for (final entry in seen.entries) (id: entry.key, name: entry.value),
+    ]..sort((a, b) => a.name.compareTo(b.name));
+    return entries;
+  }
 
   VehicleHistory withFlags({
     bool? isBlacklisted,
@@ -110,6 +139,7 @@ class VehicleHistory extends Equatable {
         sessions: sessions,
         isBlacklisted: isBlacklisted ?? this.isBlacklisted,
         notes: replaceNotes ? notes : (notes ?? this.notes),
+        currentLotVisits: currentLotVisits,
       );
 
   factory VehicleHistory.fromJson(Map<String, dynamic> json) => VehicleHistory(
@@ -120,6 +150,7 @@ class VehicleHistory extends Equatable {
     brand: json['brand'] as String?,
     isBlacklisted: json['is_blacklisted'] == true,
     notes: json['notes'] as String?,
+    currentLotVisits: (json['current_lot_visits'] as num?)?.toInt() ?? 0,
     visits: (json['visits'] as num).toInt(),
     totalSpent: (json['total_spent'] as num).toInt(),
     openSessions: (json['open_sessions'] as num).toInt(),
@@ -137,6 +168,7 @@ class VehicleHistory extends Equatable {
     'brand': brand,
     'is_blacklisted': isBlacklisted,
     'notes': notes,
+    'current_lot_visits': currentLotVisits,
     'visits': visits,
     'total_spent': totalSpent,
     'open_sessions': openSessions,
@@ -156,5 +188,6 @@ class VehicleHistory extends Equatable {
     sessions,
     isBlacklisted,
     notes,
+    currentLotVisits,
   ];
 }

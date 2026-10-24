@@ -235,6 +235,11 @@ The app is now a Supabase-only stack: FastAPI, Alembic, Dio and Redis are gone.
   `list_audit_log`) and exports the current view as PDF (share/print) or CSV
   (clipboard).
 
+- **Product polish**: vehicle history tags each session with its site and adds
+  a per-site filter (plus "visits at this site" when the plate has been
+  everywhere); home gained a "today" card with revenue, cash, pass collections,
+  entries and exits (`rpc/dashboard_today`, local-midnight window).
+
 ## Infra/tooling (not OpenSpec capabilities — repo scaffolding)
 
 - **Docker**: root `docker-compose.yml` includes the official self-hosted
@@ -275,7 +280,7 @@ The app is now a Supabase-only stack: FastAPI, Alembic, Dio and Redis are gone.
 
 ## Test counts
 
-- Flutter (`flutter test`): 516 passed (plus 1 integration test that runs only against a live stack). `flutter analyze`: 0 errors/warnings
+- Flutter (`flutter test`): 520 passed (plus 1 integration test that runs only against a live stack). `flutter analyze`: 0 errors/warnings
   (98 SDK-deprecation/const infos under the local Flutter 3.50 beta; CI pins
   3.49 where the baseline is clean).
 - SQL/compose: validated against the running Supabase stack and by

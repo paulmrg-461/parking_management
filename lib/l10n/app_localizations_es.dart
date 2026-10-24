@@ -701,6 +701,14 @@ class AppLocalizationsEs extends AppLocalizations {
   String get vehicleHistoryTotalSpent => 'Total pagado';
 
   @override
+  String get vehicleHistoryAllLots => 'Todas las sedes';
+
+  @override
+  String vehicleHistoryCurrentLotVisits(int count) {
+    return 'En esta sede: $count';
+  }
+
+  @override
   String get vehicleHistorySessions => 'Movimientos';
 
   @override
@@ -794,6 +802,21 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get roleOperator => 'Operador';
+
+  @override
+  String get homeToday => 'Hoy';
+
+  @override
+  String get homeTodayEntries => 'Entradas';
+
+  @override
+  String get homeTodayExits => 'Salidas';
+
+  @override
+  String get homeTodayCash => 'Efectivo';
+
+  @override
+  String get homeTodayPasses => 'Mensualidades';
 
   @override
   String get homeOccupancy => 'Vehículos dentro';

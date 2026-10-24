@@ -92,6 +92,8 @@ class _Dashboard extends StatelessWidget {
           const SizedBox(height: Space.lg),
           const OccupancyCard(),
           const SizedBox(height: Space.md),
+          const TodayCard(),
+          const SizedBox(height: Space.md),
           const ShiftCard(),
           const SizedBox(height: Space.lg),
           PrimaryActions(

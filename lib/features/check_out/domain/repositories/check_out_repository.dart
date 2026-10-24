@@ -2,6 +2,7 @@ import '../../../../core/pagination/paged_result.dart';
 import '../entities/check_out_receipt.dart';
 import '../entities/occupancy_snapshot.dart';
 import '../entities/open_session.dart';
+import '../entities/today_summary.dart';
 
 abstract class CheckOutRepository {
   /// One page of open sessions (`limit`/`offset`, `X-Total-Count`).
@@ -25,4 +26,7 @@ abstract class CheckOutRepository {
 
   /// Open sessions + capacity per category (any signed-in user).
   Future<OccupancySnapshot> occupancy();
+
+  /// Today's revenue/entries/exits for the active site (home dashboard).
+  Future<TodaySummary> todaySummary();
 }

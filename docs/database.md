@@ -83,7 +83,7 @@ granted to `authenticated` only.
 
 **Billing and reports**
 `report_revenue` (active lot), `report_revenue_all` (platform admins),
-`report_occupancy`, `occupancy_snapshot`.
+`report_occupancy`, `occupancy_snapshot`, `dashboard_today` (home KPIs).
 
 **Shifts and cash**
 `open_shift`, `current_shift`, `close_shift`, `add_cash_movement`,

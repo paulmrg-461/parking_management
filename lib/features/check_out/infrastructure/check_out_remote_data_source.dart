@@ -5,6 +5,7 @@ import '../../../core/pagination/paged_result.dart';
 import '../domain/entities/check_out_receipt.dart';
 import '../domain/entities/occupancy_snapshot.dart';
 import '../domain/entities/open_session.dart';
+import '../domain/entities/today_summary.dart';
 import 'models/check_out_receipt_dto.dart';
 import 'models/open_session_dto.dart';
 
@@ -28,6 +29,8 @@ abstract class CheckOutRemoteDataSource {
   });
 
   Future<OccupancySnapshot> occupancy();
+
+  Future<TodaySummary> todaySummary();
 }
 
 class SupabaseCheckOutRemoteDataSource implements CheckOutRemoteDataSource {
@@ -71,6 +74,16 @@ class SupabaseCheckOutRemoteDataSource implements CheckOutRemoteDataSource {
       return OccupancySnapshot.fromJson(
         Map<String, dynamic>.from(result as Map),
       );
+    } catch (error) {
+      throw mapSupabaseError(error);
+    }
+  }
+
+  @override
+  Future<TodaySummary> todaySummary() async {
+    try {
+      final result = await _client.rpc('dashboard_today');
+      return TodaySummary.fromJson(Map<String, dynamic>.from(result as Map));
     } catch (error) {
       throw mapSupabaseError(error);
     }

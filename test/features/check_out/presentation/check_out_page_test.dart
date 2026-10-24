@@ -8,6 +8,7 @@ import 'package:parking_management/features/check_out/application/check_out_vehi
 import 'package:parking_management/features/check_out/domain/entities/check_out_receipt.dart';
 import 'package:parking_management/features/check_out/domain/entities/open_session.dart';
 import 'package:parking_management/features/check_out/domain/entities/occupancy_snapshot.dart';
+import 'package:parking_management/features/check_out/domain/entities/today_summary.dart';
 import 'package:parking_management/features/check_out/domain/repositories/check_out_repository.dart';
 import 'package:parking_management/features/check_out/presentation/check_out_page.dart';
 import 'package:parking_management/features/home/application/dashboard_cubit.dart';
@@ -21,6 +22,9 @@ class _FakeCheckOutRepository implements CheckOutRepository {
   Failure? checkOutError;
   bool? lastLostTicket;
   String? lastLostTicketReason;
+
+  @override
+  Future<TodaySummary> todaySummary() async => TodaySummary.empty;
 
   @override
   Future<OccupancySnapshot> occupancy() async =>

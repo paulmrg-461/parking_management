@@ -120,6 +120,7 @@ class _VehicleHistoryPageState extends State<VehicleHistoryPage> {
                   onRetry: _search,
                 ),
                 VehicleHistoryStatus.loaded => _HistoryBody(
+                  key: ValueKey(state.history!.plate),
                   history: state.history!,
                   canManage: _canManage(context),
                 ),
@@ -160,11 +161,32 @@ class _Hint extends StatelessWidget {
   }
 }
 
-class _HistoryBody extends StatelessWidget {
-  const _HistoryBody({required this.history, required this.canManage});
+class _HistoryBody extends StatefulWidget {
+  const _HistoryBody({
+    super.key,
+    required this.history,
+    required this.canManage,
+  });
 
   final VehicleHistory history;
   final bool canManage;
+
+  @override
+  State<_HistoryBody> createState() => _HistoryBodyState();
+}
+
+class _HistoryBodyState extends State<_HistoryBody> {
+  int? _lotFilter;
+
+  VehicleHistory get history => widget.history;
+  bool get canManage => widget.canManage;
+
+  List<VehicleHistorySession> get _sessions => _lotFilter == null
+      ? history.sessions
+      : [
+          for (final session in history.sessions)
+            if (session.lotId == _lotFilter) session,
+        ];
 
   Future<void> _editNotes(BuildContext context) async {
     final notes = await showDialog<String>(
@@ -320,17 +342,55 @@ class _HistoryBody extends StatelessWidget {
             ],
           ),
         ),
+        if (history.lots.length > 1 &&
+            history.currentLotVisits > 0) ...[
+          const SizedBox(height: Space.sm),
+          Text(
+            l10n.vehicleHistoryCurrentLotVisits(history.currentLotVisits),
+            style: textTheme.bodySmall,
+          ),
+        ],
         const SizedBox(height: Space.lg),
-        Text(l10n.vehicleHistorySessions, style: textTheme.titleMedium),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                l10n.vehicleHistorySessions,
+                style: textTheme.titleMedium,
+              ),
+            ),
+            if (history.lots.length > 1)
+              DropdownButton<int?>(
+                value: _lotFilter,
+                underline: const SizedBox.shrink(),
+                items: [
+                  DropdownMenuItem(
+                    value: null,
+                    child: Text(l10n.vehicleHistoryAllLots),
+                  ),
+                  for (final lot in history.lots)
+                    DropdownMenuItem(
+                      value: lot.id,
+                      child: Text(lot.name),
+                    ),
+                ],
+                onChanged: (value) => setState(() => _lotFilter = value),
+              ),
+          ],
+        ),
         const SizedBox(height: Space.sm),
         if (history.sessions.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: Space.md),
             child: Text(l10n.vehicleHistoryNoSessions),
           )
+        else if (_sessions.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: Space.md),
+            child: Text(l10n.vehicleHistoryNoSessions),
+          )
         else
-          for (final session in history.sessions)
-            _SessionTile(session: session),
+          for (final session in _sessions) _SessionTile(session: session),
       ],
     );
   }
@@ -383,6 +443,14 @@ class _SessionTile extends StatelessWidget {
                     style: textTheme.titleSmall,
                   ),
                 ),
+                if (session.lotName != null) ...[
+                  StatusChip(
+                    label: session.lotName!,
+                    tone: StatusTone.neutral,
+                    icon: Icons.location_on_outlined,
+                  ),
+                  const SizedBox(width: Space.xs),
+                ],
                 if (session.lostTicket) ...[
                   StatusChip(
                     label: l10n.lostTicket,

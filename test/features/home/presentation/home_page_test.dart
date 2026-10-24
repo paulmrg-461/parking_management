@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/features/auth/application/auth_cubit.dart';
 import 'package:parking_management/features/auth/domain/entities/user.dart';
+import 'package:parking_management/features/check_out/domain/entities/today_summary.dart';
 import 'package:parking_management/features/check_out/domain/entities/open_session.dart';
 import 'package:parking_management/features/home/application/dashboard_cubit.dart';
 import 'package:parking_management/features/home/presentation/home_page.dart';
@@ -20,6 +21,7 @@ Future<FakeCheckOutRepository> _pump(
   WidgetTester tester, {
   UserRole role = UserRole.operator,
   Failure? error,
+  TodaySummary today = TodaySummary.empty,
 }) async {
   final sessions = FakeCheckOutRepository(
     sessions: [
@@ -27,6 +29,7 @@ Future<FakeCheckOutRepository> _pump(
         OpenSession(id: i, vehicleId: i, entryTime: DateTime(2026)),
     ],
     listError: error,
+    today: today,
   );
   final auth = AuthCubit(FakeAuthRepository(sessionToRestore: sessionFor(role)));
   await auth.restore();
@@ -120,5 +123,25 @@ void main() {
     await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
     await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
     await expectLater(tester, meetsGuideline(textContrastGuideline));
+  });
+
+  testWidgets('Success: today card shows revenue and traffic', (tester) async {
+    await _pump(
+      tester,
+      today: const TodaySummary(
+        revenue: 45000,
+        cashRevenue: 30000,
+        passRevenue: 80000,
+        entries: 6,
+        exits: 5,
+      ),
+    );
+
+    expect(find.text('Hoy'), findsOneWidget);
+    expect(find.textContaining('45.000'), findsOneWidget);
+    expect(find.text('6'), findsOneWidget);
+    expect(find.text('5'), findsOneWidget);
+    expect(find.textContaining('30.000'), findsOneWidget);
+    expect(find.text('Mensualidades'), findsOneWidget);
   });
 }

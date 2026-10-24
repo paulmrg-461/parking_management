@@ -8,6 +8,7 @@ import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/features/check_out/domain/entities/check_out_receipt.dart';
 import 'package:parking_management/features/check_out/domain/entities/open_session.dart';
 import 'package:parking_management/features/check_out/domain/entities/occupancy_snapshot.dart';
+import 'package:parking_management/features/check_out/domain/entities/today_summary.dart';
 import 'package:parking_management/features/check_out/infrastructure/check_out_remote_data_source.dart';
 import 'package:parking_management/features/check_out/infrastructure/check_out_repository_impl.dart';
 
@@ -23,6 +24,9 @@ class _FakeRemote implements CheckOutRemoteDataSource {
   String? paymentMethodUsed;
   int discountAmountUsed = 0;
   String? discountReasonUsed;
+
+  @override
+  Future<TodaySummary> todaySummary() async => TodaySummary.empty;
 
   @override
   Future<OccupancySnapshot> occupancy() async =>

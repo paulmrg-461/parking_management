@@ -58,6 +58,7 @@ VehicleHistory sampleHistory({String plate = 'ABC123'}) => VehicleHistory(
   visits: 2,
   totalSpent: 12000,
   openSessions: 0,
+  currentLotVisits: 1,
   sessions: [
     VehicleHistorySession(
       id: 2,
@@ -68,6 +69,8 @@ VehicleHistory sampleHistory({String plate = 'ABC123'}) => VehicleHistory(
       ticketNumber: 'TCK-000002',
       paymentMethod: 'card',
       durationSeconds: 7200,
+      lotId: 1,
+      lotName: 'Central',
     ),
     VehicleHistorySession(
       id: 1,
@@ -78,6 +81,8 @@ VehicleHistory sampleHistory({String plate = 'ABC123'}) => VehicleHistory(
       ticketNumber: 'TCK-000001',
       paymentMethod: 'cash',
       durationSeconds: 3600,
+      lotId: 2,
+      lotName: 'North',
     ),
   ],
 );
