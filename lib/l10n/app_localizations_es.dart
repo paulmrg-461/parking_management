@@ -255,6 +255,70 @@ class AppLocalizationsEs extends AppLocalizations {
   String get navAudit => 'Auditoría';
 
   @override
+  String get navDiagnostics => 'Diagnóstico';
+
+  @override
+  String get diagnosticsTitle => 'Diagnóstico';
+
+  @override
+  String get diagnosticsSystem => 'Sistema';
+
+  @override
+  String diagnosticsMigrations(int count) {
+    return 'Migraciones aplicadas ($count)';
+  }
+
+  @override
+  String diagnosticsLots(int active, int total) {
+    return 'Sedes activas: $active de $total';
+  }
+
+  @override
+  String get diagnosticsOpenSessions => 'Sesiones abiertas';
+
+  @override
+  String get diagnosticsStaleSessions => 'Sesiones abiertas +24 h';
+
+  @override
+  String get diagnosticsOpenShifts => 'Turnos abiertos +12 h';
+
+  @override
+  String get diagnosticsPendingPayments => 'Pagos de mensualidad pendientes';
+
+  @override
+  String get diagnosticsReservations => 'Reservas activas';
+
+  @override
+  String get diagnosticsIdempotency => 'Claves de idempotencia';
+
+  @override
+  String get diagnosticsNotifications => 'Notificaciones';
+
+  @override
+  String get diagnosticsPendingPush => 'Pendientes de push';
+
+  @override
+  String get diagnosticsDeadPush => 'Fallidas tras 3 intentos';
+
+  @override
+  String get diagnosticsUnread => 'Sin leer / total';
+
+  @override
+  String get diagnosticsStorage => 'Almacenamiento';
+
+  @override
+  String diagnosticsErrors(int count) {
+    return 'Errores de la app ($count)';
+  }
+
+  @override
+  String get diagnosticsErrorsEmpty =>
+      'Sin errores reportados en los últimos 7 días';
+
+  @override
+  String get diagnosticsErrorDetail => 'Detalle del error';
+
+  @override
   String get auditTitle => 'Auditoría';
 
   @override

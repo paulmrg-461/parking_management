@@ -7,6 +7,11 @@ begin;
 -- runs against the default lot unless a block switches it.
 set local request.headers = '{"x-lot-id":"1"}';
 
+-- migrate.sh records applied files; the suite applies them directly, so seed
+-- the row the diagnostics snapshot counts.
+insert into public.schema_migrations (name) values ('0001_core_schema.sql')
+on conflict (name) do nothing;
+
 create temp table _results (
     session_json jsonb,
     receipt jsonb
@@ -514,6 +519,45 @@ begin
         raise exception 'negative evidence retention was accepted';
     exception when check_violation then
         null;
+    end;
+end $$;
+
+-- Diagnostics are admin-only read models over the operational backlog.
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    snapshot jsonb := public.diagnostics_snapshot();
+    errors jsonb := public.list_client_error_reports(10, 7);
+begin
+    if (snapshot ->> 'migrations')::integer < 1 then
+        raise exception 'diagnostics snapshot has no migrations';
+    end if;
+    if not (snapshot ? 'notifications') or not (snapshot ? 'storage') then
+        raise exception 'diagnostics snapshot is missing sections';
+    end if;
+    if jsonb_typeof(errors) <> 'array' then
+        raise exception 'client error reports were not listed';
+    end if;
+end $$;
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    begin
+        perform public.diagnostics_snapshot();
+        raise exception 'operator read the diagnostics snapshot';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then
+            raise;
+        end if;
+    end;
+    begin
+        perform public.list_client_error_reports(10, 7);
+        raise exception 'operator read the client error reports';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then
+            raise;
+        end if;
     end;
 end $$;
 

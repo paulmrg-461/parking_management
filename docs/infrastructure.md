@@ -103,6 +103,9 @@ sh supabase/healthcheck.sh     # services, HTTP endpoints, backlog; exit 1 on fa
 sh supabase/diagnostics.sh     # tables/rows/sizes, stuck sessions, shifts, backlog
 ```
 
+Admins can also open `/diagnostics` in the app for the same counters plus the
+client error reports (no shell access needed).
+
 `healthcheck.sh` verifies running services, `/auth/v1/health`, a REST query and
 `/storage/v1/status`, then warns about sessions open >48 h, shifts open >12 h,
 notifications that exhausted their push attempts, a push backlog (only when

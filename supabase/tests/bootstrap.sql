@@ -1,6 +1,12 @@
 -- Minimal Supabase stubs for running the migrations against the
 -- supabase/postgres image in CI (no GoTrue/Storage/Realtime containers).
 create schema if not exists auth;
+-- Created by supabase/migrate.sh in production; the diagnostics RPC reads it.
+create table if not exists public.schema_migrations (
+    name       text        primary key,
+    applied_at timestamptz not null default now()
+);
+
 create schema if not exists storage;
 
 create table if not exists auth.users (
@@ -31,7 +37,9 @@ create table if not exists storage.objects (
     id uuid primary key default gen_random_uuid(),
     bucket_id text not null,
     name text not null,
-    owner uuid
+    owner uuid,
+    -- Mirrors the production column the diagnostics snapshot reads.
+    metadata jsonb not null default '{}'::jsonb
 );
 
 -- Realtime publication is created by the Realtime service in production.

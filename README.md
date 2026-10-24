@@ -195,6 +195,16 @@ DAYS=30 sh supabase/evidence-archive.sh    # override every site
 Backups (`supabase/backup.sh`) are the archive of record: take one before
 shrinking a retention window.
 
+## Diagnostics
+
+Admins have `/diagnostics`: migrations applied, active sites, open sessions
+(and those open over 24 h), shifts open over 12 h, pending pass payments,
+reservations, idempotency keys, notification backlog (pending/dead push),
+storage usage per bucket and the client error reports of the last 7 days with
+stack and context. It reads `rpc/diagnostics_snapshot` and
+`rpc/list_client_error_reports`; the host script `supabase/diagnostics.sh`
+prints the same data from a shell.
+
 ## Audit log
 
 Admins have `/audit`: every change to users, categories, tariffs, vehicles,

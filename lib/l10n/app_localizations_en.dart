@@ -250,6 +250,69 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navAudit => 'Audit log';
 
   @override
+  String get navDiagnostics => 'Diagnostics';
+
+  @override
+  String get diagnosticsTitle => 'Diagnostics';
+
+  @override
+  String get diagnosticsSystem => 'System';
+
+  @override
+  String diagnosticsMigrations(int count) {
+    return 'Applied migrations ($count)';
+  }
+
+  @override
+  String diagnosticsLots(int active, int total) {
+    return 'Active sites: $active of $total';
+  }
+
+  @override
+  String get diagnosticsOpenSessions => 'Open sessions';
+
+  @override
+  String get diagnosticsStaleSessions => 'Sessions open +24 h';
+
+  @override
+  String get diagnosticsOpenShifts => 'Shifts open +12 h';
+
+  @override
+  String get diagnosticsPendingPayments => 'Pending pass payments';
+
+  @override
+  String get diagnosticsReservations => 'Active reservations';
+
+  @override
+  String get diagnosticsIdempotency => 'Idempotency keys';
+
+  @override
+  String get diagnosticsNotifications => 'Notifications';
+
+  @override
+  String get diagnosticsPendingPush => 'Pending push';
+
+  @override
+  String get diagnosticsDeadPush => 'Failed after 3 attempts';
+
+  @override
+  String get diagnosticsUnread => 'Unread / total';
+
+  @override
+  String get diagnosticsStorage => 'Storage';
+
+  @override
+  String diagnosticsErrors(int count) {
+    return 'App errors ($count)';
+  }
+
+  @override
+  String get diagnosticsErrorsEmpty => 'No errors reported in the last 7 days';
+
+  @override
+  String get diagnosticsErrorDetail => 'Error detail';
+
+  @override
   String get auditTitle => 'Audit log';
 
   @override

@@ -106,6 +106,10 @@ granted to `authenticated` only.
 `record_audit` (trigger on categories, tariffs, vehicles, monthly passes,
 settings, lots and memberships).
 
+**Diagnostics**
+`diagnostics_snapshot` (counters + storage usage), `list_client_error_reports`
+(admin-only, last N days).
+
 **Notifications and push**
 `mark_notifications_read`, `notify_session_event` (trigger),
 `notify_overstays`, `register_device_token`, `unregister_device_token`,

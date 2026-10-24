@@ -536,6 +536,120 @@ abstract class AppLocalizations {
   /// **'Auditoría'**
   String get navAudit;
 
+  /// No description provided for @navDiagnostics.
+  ///
+  /// In es, this message translates to:
+  /// **'Diagnóstico'**
+  String get navDiagnostics;
+
+  /// No description provided for @diagnosticsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Diagnóstico'**
+  String get diagnosticsTitle;
+
+  /// No description provided for @diagnosticsSystem.
+  ///
+  /// In es, this message translates to:
+  /// **'Sistema'**
+  String get diagnosticsSystem;
+
+  /// No description provided for @diagnosticsMigrations.
+  ///
+  /// In es, this message translates to:
+  /// **'Migraciones aplicadas ({count})'**
+  String diagnosticsMigrations(int count);
+
+  /// No description provided for @diagnosticsLots.
+  ///
+  /// In es, this message translates to:
+  /// **'Sedes activas: {active} de {total}'**
+  String diagnosticsLots(int active, int total);
+
+  /// No description provided for @diagnosticsOpenSessions.
+  ///
+  /// In es, this message translates to:
+  /// **'Sesiones abiertas'**
+  String get diagnosticsOpenSessions;
+
+  /// No description provided for @diagnosticsStaleSessions.
+  ///
+  /// In es, this message translates to:
+  /// **'Sesiones abiertas +24 h'**
+  String get diagnosticsStaleSessions;
+
+  /// No description provided for @diagnosticsOpenShifts.
+  ///
+  /// In es, this message translates to:
+  /// **'Turnos abiertos +12 h'**
+  String get diagnosticsOpenShifts;
+
+  /// No description provided for @diagnosticsPendingPayments.
+  ///
+  /// In es, this message translates to:
+  /// **'Pagos de mensualidad pendientes'**
+  String get diagnosticsPendingPayments;
+
+  /// No description provided for @diagnosticsReservations.
+  ///
+  /// In es, this message translates to:
+  /// **'Reservas activas'**
+  String get diagnosticsReservations;
+
+  /// No description provided for @diagnosticsIdempotency.
+  ///
+  /// In es, this message translates to:
+  /// **'Claves de idempotencia'**
+  String get diagnosticsIdempotency;
+
+  /// No description provided for @diagnosticsNotifications.
+  ///
+  /// In es, this message translates to:
+  /// **'Notificaciones'**
+  String get diagnosticsNotifications;
+
+  /// No description provided for @diagnosticsPendingPush.
+  ///
+  /// In es, this message translates to:
+  /// **'Pendientes de push'**
+  String get diagnosticsPendingPush;
+
+  /// No description provided for @diagnosticsDeadPush.
+  ///
+  /// In es, this message translates to:
+  /// **'Fallidas tras 3 intentos'**
+  String get diagnosticsDeadPush;
+
+  /// No description provided for @diagnosticsUnread.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin leer / total'**
+  String get diagnosticsUnread;
+
+  /// No description provided for @diagnosticsStorage.
+  ///
+  /// In es, this message translates to:
+  /// **'Almacenamiento'**
+  String get diagnosticsStorage;
+
+  /// No description provided for @diagnosticsErrors.
+  ///
+  /// In es, this message translates to:
+  /// **'Errores de la app ({count})'**
+  String diagnosticsErrors(int count);
+
+  /// No description provided for @diagnosticsErrorsEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin errores reportados en los últimos 7 días'**
+  String get diagnosticsErrorsEmpty;
+
+  /// No description provided for @diagnosticsErrorDetail.
+  ///
+  /// In es, this message translates to:
+  /// **'Detalle del error'**
+  String get diagnosticsErrorDetail;
+
   /// No description provided for @auditTitle.
   ///
   /// In es, this message translates to:

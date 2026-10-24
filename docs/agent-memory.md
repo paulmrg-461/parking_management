@@ -127,6 +127,15 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   `postgres`), so scheduling stays in the host cron; the README documents how
   to enable pg_cron if the deployment supports `cron.database_name`.
 
+## Admin diagnostics (latest)
+
+- `0036`: `diagnostics_snapshot()` (admin) returns counters + storage usage;
+  `list_client_error_reports(limit, days)` lists the reported errors.
+- Flutter `/diagnostics` (admin nav) renders both; the SQL suite bootstraps
+  `schema_migrations` and `storage.objects.metadata` so the snapshot works in
+  tests.
+- `supabase/diagnostics.sh` remains the shell equivalent; keep counters in sync.
+
 ## Evidence retention (latest)
 
 - `0033`: `parking_settings.evidence_retention_days` (0 = keep, ≤3650) + UI

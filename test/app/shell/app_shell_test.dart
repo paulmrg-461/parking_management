@@ -43,12 +43,22 @@ void main() {
 
     await tester.tap(find.text('Más'));
     await tester.pumpAndSettle();
-    await tester.tap(
-      find.descendant(
+    final usuarios = find.descendant(
+      of: find.byType(BottomSheet),
+      matching: find.text('Usuarios'),
+    );
+    // The management sheet has more entries than fit on screen.
+    await tester.scrollUntilVisible(
+      usuarios,
+      200,
+      scrollable: find.descendant(
         of: find.byType(BottomSheet),
-        matching: find.text('Usuarios'),
+        matching: find.byType(Scrollable),
       ),
     );
+    await tester.ensureVisible(usuarios);
+    await tester.pumpAndSettle();
+    await tester.tap(usuarios);
     await tester.pumpAndSettle();
 
     expect(find.widgetWithText(AppBar, 'Usuarios'), findsOneWidget);

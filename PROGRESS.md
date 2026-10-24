@@ -225,6 +225,12 @@ The app is now a Supabase-only stack: FastAPI, Alembic, Dio and Redis are gone.
   membership-based `can_read_evidence()` helper, since the Storage API does not
   forward `x-lot-id`.
 
+- **Admin diagnostics screen**: `/diagnostics` shows migrations, active sites,
+  open sessions/shifts with age warnings, pending payments, reservations,
+  idempotency keys, notification backlog, storage usage per bucket and the last
+  7 days of client error reports (stack + context). Backed by
+  `rpc/diagnostics_snapshot` and `rpc/list_client_error_reports`.
+
 ## Infra/tooling (not OpenSpec capabilities — repo scaffolding)
 
 - **Docker**: root `docker-compose.yml` includes the official self-hosted
@@ -265,7 +271,7 @@ The app is now a Supabase-only stack: FastAPI, Alembic, Dio and Redis are gone.
 
 ## Test counts
 
-- Flutter (`flutter test`): 503 passed (plus 1 integration test that runs only against a live stack). `flutter analyze`: 0 errors/warnings
+- Flutter (`flutter test`): 511 passed (plus 1 integration test that runs only against a live stack). `flutter analyze`: 0 errors/warnings
   (98 SDK-deprecation/const infos under the local Flutter 3.50 beta; CI pins
   3.49 where the baseline is clean).
 - SQL/compose: validated against the running Supabase stack and by
