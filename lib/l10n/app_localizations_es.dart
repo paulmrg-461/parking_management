@@ -709,6 +709,9 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get actionReprintTicket => 'Reimprimir ticket';
+
+  @override
   String get vehicleHistorySessions => 'Movimientos';
 
   @override

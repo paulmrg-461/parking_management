@@ -238,6 +238,7 @@
   "vehicleHistoryAllLots": "Todas las sedes",
   "@vehicleHistoryCurrentLotVisits": {"placeholders": {"count": {"type": "int"}}},
   "vehicleHistoryCurrentLotVisits": "En esta sede: {count}",
+  "actionReprintTicket": "Reimprimir ticket",
   "vehicleHistorySessions": "Movimientos",
   "vehicleHistoryNoSessions": "Sin movimientos registrados",
   "vehicleHistoryDuration": "Duración: {duration}",

@@ -1388,6 +1388,12 @@ abstract class AppLocalizations {
   /// **'En esta sede: {count}'**
   String vehicleHistoryCurrentLotVisits(int count);
 
+  /// No description provided for @actionReprintTicket.
+  ///
+  /// In es, this message translates to:
+  /// **'Reimprimir ticket'**
+  String get actionReprintTicket;
+
   /// No description provided for @vehicleHistorySessions.
   ///
   /// In es, this message translates to:

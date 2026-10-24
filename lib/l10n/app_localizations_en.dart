@@ -705,6 +705,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get actionReprintTicket => 'Reprint ticket';
+
+  @override
   String get vehicleHistorySessions => 'Sessions';
 
   @override

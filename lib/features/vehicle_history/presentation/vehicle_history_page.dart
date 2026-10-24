@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/l10n/failure_messages.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/receipt/payment_method.dart';
+import '../../../core/receipt/receipt_data.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/confirm_dialog.dart';
@@ -12,7 +13,9 @@ import '../../../core/widgets/submission_feedback.dart';
 import '../../auth/application/auth_cubit.dart';
 import '../../auth/domain/entities/user.dart';
 import '../../../core/widgets/money_text.dart';
+import '../../../core/widgets/receipt_card.dart';
 import '../../../core/widgets/status_chip.dart';
+import '../../receipt_printing/presentation/receipt_print_sheet.dart';
 import '../application/vehicle_history_cubit.dart';
 import '../domain/entities/vehicle_history.dart';
 
@@ -390,7 +393,8 @@ class _HistoryBodyState extends State<_HistoryBody> {
             child: Text(l10n.vehicleHistoryNoSessions),
           )
         else
-          for (final session in _sessions) _SessionTile(session: session),
+          for (final session in _sessions)
+            _SessionTile(session: session, plate: history.plate),
       ],
     );
   }
@@ -416,9 +420,28 @@ class _Metric extends StatelessWidget {
 }
 
 class _SessionTile extends StatelessWidget {
-  const _SessionTile({required this.session});
+  const _SessionTile({required this.session, required this.plate});
 
   final VehicleHistorySession session;
+  final String plate;
+
+  ReceiptData get _receipt => ReceiptData(
+    kind: ReceiptKind.checkOut,
+    plate: plate,
+    entryTime: session.entryTime,
+    exitTime: session.exitTime,
+    amountCharged: session.amountCharged,
+    ticketNumber: session.ticketNumber,
+    paymentMethod: session.paymentMethod,
+    discountAmount: session.discountAmount,
+    discountReason: session.discountReason,
+  );
+
+  Future<void> _reprint(BuildContext context) => showReceiptSummary(
+    context,
+    _receipt,
+    onPrint: () => showReceiptPrintSheet(context, _receipt),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -459,6 +482,13 @@ class _SessionTile extends StatelessWidget {
                   ),
                   const SizedBox(width: Space.xs),
                 ],
+                if (!session.isOpen && session.ticketNumber != null)
+                  IconButton(
+                    tooltip: l10n.actionReprintTicket,
+                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(Icons.receipt_long_outlined),
+                    onPressed: () => _reprint(context),
+                  ),
                 StatusChip(
                   label: session.isOpen ? l10n.statusOpen : l10n.statusClosed,
                   tone: session.isOpen

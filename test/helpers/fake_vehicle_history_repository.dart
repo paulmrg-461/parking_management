@@ -71,6 +71,8 @@ VehicleHistory sampleHistory({String plate = 'ABC123'}) => VehicleHistory(
       durationSeconds: 7200,
       lotId: 1,
       lotName: 'Central',
+      discountAmount: 1000,
+      discountReason: 'cortesia',
     ),
     VehicleHistorySession(
       id: 1,

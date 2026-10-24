@@ -174,7 +174,9 @@ stored with the session and revenue reports show the discounted total. Receipts
 The `/history` screen (also linked from Home) looks up a plate and shows its
 visits, total spent, open-session flag and the latest sessions, with an offline
 cache per plate. Every session is tagged with its site, and when the plate has
-visited more than one site a filter narrows the timeline to one of them. Check-out searches plates **server-side** with pagination, so
+visited more than one site a filter narrows the timeline to one of them. A
+closed session can **reprint its ticket**: the same amounts (including any
+discount) and ticket number are rebuilt from history and can be printed again. Check-out searches plates **server-side** with pagination, so
 a vehicle outside the first page is still found; the query shows a proper
 "no plate matches" state. Discounts appear in the report with their reason,
 admin and timestamp.

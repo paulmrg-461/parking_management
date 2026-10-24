@@ -180,4 +180,37 @@ void main() {
     expect(find.text('TCK-000001'), findsOneWidget);
     expect(find.text('TCK-000002'), findsNothing);
   });
+
+  testWidgets('Success: a closed session can reprint its ticket', (
+    tester,
+  ) async {
+    final repository = FakeVehicleHistoryRepository(history: sampleHistory());
+    final cubit = VehicleHistoryCubit(repository);
+    addTearDown(cubit.close);
+    await tester.pumpWidget(
+      testApp(
+        BlocProvider.value(
+          value: cubit,
+          child: const VehicleHistoryPage(initialPlate: 'ABC123'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final reprint = find.byTooltip('Reimprimir ticket').first;
+    await tester.ensureVisible(reprint);
+    await tester.pumpAndSettle();
+    await tester.tap(reprint);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Generar recibo'), findsOneWidget);
+    // The summary rebuilds the same numbers as the original receipt.
+    expect(
+      find.descendant(
+        of: find.byType(Dialog),
+        matching: find.textContaining('7.000'),
+      ),
+      findsOneWidget,
+    );
+  });
 }

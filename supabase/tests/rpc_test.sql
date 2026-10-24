@@ -614,6 +614,25 @@ begin
     end if;
 end $$;
 
+-- Vehicle history exposes the discount for reprints.
+do $$
+declare
+    entry jsonb;
+begin
+    select item into entry
+      from jsonb_array_elements(
+             public.vehicle_history('TEST001') -> 'sessions'
+           ) item
+     where item ->> 'status' = 'closed'
+     limit 1;
+    if entry is null or not (entry ? 'discount_amount') then
+        raise exception 'vehicle history does not expose the discount';
+    end if;
+    if (entry ->> 'discount_amount')::integer <> 1000 then
+        raise exception 'vehicle history lost the discount amount';
+    end if;
+end $$;
+
 -- Branding is per lot: only the active lot's row changes.
 set local request.headers = '{"x-lot-id":"2"}';
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';

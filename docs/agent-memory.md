@@ -127,6 +127,14 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   `postgres`), so scheduling stays in the host cron; the README documents how
   to enable pg_cron if the deployment supports `cron.database_name`.
 
+## Ticket reprint (latest)
+
+- `0040`: `vehicle_history` sessions include `discount_amount`/`discount_reason`
+  so a reprint matches the original receipt.
+- The history tile has a receipt icon (closed sessions with a ticket) that
+  opens `showReceiptSummary` with a `ReceiptData` rebuilt from the session and
+  the print sheet as `onPrint`.
+
 ## Site comparison (latest)
 
 - `0039`: `report_revenue_all` by_lot now includes `tickets` and `avg_ticket`

@@ -13,6 +13,8 @@ class VehicleHistorySession extends Equatable {
     this.lostTicket = false,
     this.lotId,
     this.lotName,
+    this.discountAmount = 0,
+    this.discountReason,
   });
 
   final int id;
@@ -26,6 +28,8 @@ class VehicleHistorySession extends Equatable {
   final bool lostTicket;
   final int? lotId;
   final String? lotName;
+  final int discountAmount;
+  final String? discountReason;
 
   bool get isOpen => status == 'open';
 
@@ -44,6 +48,8 @@ class VehicleHistorySession extends Equatable {
         lostTicket: json['lost_ticket'] == true,
         lotId: (json['lot_id'] as num?)?.toInt(),
         lotName: json['lot_name'] as String?,
+        discountAmount: (json['discount_amount'] as num?)?.toInt() ?? 0,
+        discountReason: json['discount_reason'] as String?,
       );
 
   Map<String, dynamic> toJson() => {
@@ -58,6 +64,8 @@ class VehicleHistorySession extends Equatable {
     'lost_ticket': lostTicket,
     'lot_id': lotId,
     'lot_name': lotName,
+    'discount_amount': discountAmount,
+    'discount_reason': discountReason,
   };
 
   @override
@@ -73,6 +81,8 @@ class VehicleHistorySession extends Equatable {
     lostTicket,
     lotId,
     lotName,
+    discountAmount,
+    discountReason,
   ];
 }
 

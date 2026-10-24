@@ -227,6 +227,7 @@
   "vehicleHistoryAllLots": "All sites",
   "@vehicleHistoryCurrentLotVisits": {"placeholders": {"count": {"type": "int"}}},
   "vehicleHistoryCurrentLotVisits": "At this site: {count}",
+  "actionReprintTicket": "Reprint ticket",
   "vehicleHistorySessions": "Sessions",
   "vehicleHistoryNoSessions": "No sessions recorded",
   "vehicleHistoryDuration": "Duration: {duration}",
