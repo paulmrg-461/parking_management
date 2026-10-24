@@ -13,6 +13,7 @@ import '../../../core/widgets/async_view.dart';
 import '../../../core/widgets/money_text.dart';
 import '../../../core/widgets/sync_badge.dart';
 import '../application/reports_cubit.dart';
+import '../domain/entities/whatsapp_report.dart';
 import 'report_pdf.dart';
 import 'widgets/category_bar_list.dart';
 import 'widgets/lot_comparison.dart';
@@ -287,6 +288,47 @@ class _ReportsBody extends StatelessWidget {
           ),
           const SizedBox(height: Space.lg),
         ],
+        if (loaded.whatsapp.hasData) ...[
+          _SectionTitle(l10n.reportsWhatsapp),
+          Row(
+            children: [
+              Expanded(
+                child: _WhatsappMetric(
+                  label: l10n.reportsWhatsappSent,
+                  value: '${loaded.whatsapp.sent}',
+                ),
+              ),
+              Expanded(
+                child: _WhatsappMetric(
+                  label: l10n.reportsWhatsappFailed,
+                  value: '${loaded.whatsapp.failed}',
+                  warning: loaded.whatsapp.failed > 0,
+                ),
+              ),
+              Expanded(
+                child: _WhatsappMetric(
+                  label: l10n.reportsWhatsappPending,
+                  value: '${loaded.whatsapp.pending}',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: Space.sm),
+          for (final day in loaded.whatsapp.byDay)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Row(
+                children: [
+                  Expanded(child: Text(Formatters.date(day.date))),
+                  Text(
+                    l10n.reportsWhatsappDay(day.sent, day.failed),
+                    style: textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+          const SizedBox(height: Space.lg),
+        ],
         _SectionTitle(l10n.reportsOccupancy),
         Text(
           occupancy.totalCapacity > 0
@@ -329,4 +371,31 @@ class _SectionTitle extends StatelessWidget {
       child: Text(text, style: Theme.of(context).textTheme.titleMedium),
     ),
   );
+}
+
+class _WhatsappMetric extends StatelessWidget {
+  const _WhatsappMetric({
+    required this.label,
+    required this.value,
+    this.warning = false,
+  });
+
+  final String label;
+  final String value;
+  final bool warning;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final color = warning
+        ? Theme.of(context).colorScheme.error
+        : textTheme.titleSmall?.color;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: textTheme.labelSmall),
+        Text(value, style: textTheme.titleMedium?.copyWith(color: color)),
+      ],
+    );
+  }
 }

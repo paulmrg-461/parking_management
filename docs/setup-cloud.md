@@ -222,13 +222,15 @@ Automated customer messages go through Meta, not the phone:
 2. Create two message templates (Spanish/English as needed):
    - `receipt` with body params `{{1}}` plate, `{{2}}` amount, `{{3}}` ticket.
    - `pass_expiry` with `{{1}}` plate, `{{2}}` date.
+   - `vehicle_ready` with `{{1}}` plate (open session, "ready for pickup").
 3. Put the values in `.env` (`WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`,
    optional `WHATSAPP_API_VERSION`/`WHATSAPP_TEMPLATE_*`) and restart
    `functions`.
 4. Enable **WhatsApp automático** in the site settings. From then on the
    receipt/pass actions enqueue rows in `whatsapp_messages`; the cron calls
    `whatsapp-dispatch`, which retries up to 3 times and marks failures.
-5. Watch the queue in `/diagnostics` (WhatsApp section, with the failure
+5. Delivery metrics per day are in the revenue report (`report_whatsapp`).
+6. Watch the queue in `/diagnostics` (WhatsApp section, with the failure
    reason) or with SQL:
    `select status, count(*) from whatsapp_messages group by status;`
    `healthcheck.sh` also warns when messages failed after 3 attempts.

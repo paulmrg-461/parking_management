@@ -1,5 +1,6 @@
 import '../entities/occupancy_report.dart';
 import '../entities/revenue_report.dart';
+import '../entities/whatsapp_report.dart';
 
 abstract class ReportRepository {
   /// [allLots] asks for the consolidated admin report (every site plus a
@@ -11,4 +12,9 @@ abstract class ReportRepository {
   });
 
   Future<OccupancyReport> getOccupancyReport();
+
+  Future<WhatsappReport> getWhatsappReport({
+    required DateTime startDate,
+    required DateTime endDate,
+  });
 }

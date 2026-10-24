@@ -105,7 +105,8 @@ RPCs own business logic and the Flutter client calls Supabase directly.
   drops `pin_hash`). Admins read it at `/audit` (filters by table/actor/date,
   exports PDF/CSV) or `rpc/list_audit_log`.
 - Diagnostics: `/diagnostics` (admins) reads `rpc/diagnostics_snapshot`,
-  `rpc/list_client_error_reports` and `rpc/list_whatsapp_messages`; keep it in
+  `rpc/list_client_error_reports`, `rpc/list_whatsapp_messages` and
+  `rpc/report_whatsapp`; keep it in
   sync with
   `supabase/diagnostics.sql` when adding a new counter.
 - Observability: uncaught errors go through `core/observability` into
@@ -116,9 +117,11 @@ RPCs own business logic and the Flutter client calls Supabase directly.
   browser push uses `web/push-sw.js` + VAPID (`web_push_subscriptions`);
   `FCM_SERVICE_ACCOUNT_JSON` + `supabase/notifications-cron.sh` enable
   background FCM. `push-dispatch` is service-role-only; never expose the key.
-- Tests: `flutter test` (538, plus a live-stack e2e) + `flutter analyze`; CI
+- Tests: `flutter test` (540, plus a live-stack e2e) + `flutter analyze`; CI
   validates compose and runs `supabase/tests/run.sh` (real migrations +
-  RPC/RLS tests) against `supabase/postgres`.
+  RPC/RLS tests) against `supabase/postgres`. The only expected analyzer output
+  is SDK `deprecated_member_use` infos from the pinned beta channel (no other
+  infos, warnings or errors).
 - E2E: `sh supabase/tests/e2e.sh` and
   `SUPABASE_URL=... SUPABASE_ANON_KEY=... flutter test test/integration`
   exercise the real stack; update them when an RPC contract changes.

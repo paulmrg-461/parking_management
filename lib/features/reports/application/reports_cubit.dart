@@ -3,6 +3,7 @@ import 'package:equatable/equatable.dart';
 import '../../../core/error/failure.dart';
 import '../domain/entities/occupancy_report.dart';
 import '../domain/entities/revenue_report.dart';
+import '../domain/entities/whatsapp_report.dart';
 import '../domain/repositories/report_repository.dart';
 import '../../../core/state/resilient_cubit.dart';
 
@@ -25,17 +26,19 @@ class ReportsLoaded extends ReportsState {
   const ReportsLoaded(
     this.revenue,
     this.occupancy, {
+    this.whatsapp = WhatsappReport.empty,
     this.allLots = false,
   });
 
   final RevenueReport revenue;
   final OccupancyReport occupancy;
+  final WhatsappReport whatsapp;
 
   /// `true` while the consolidated (every lot) view is selected.
   final bool allLots;
 
   @override
-  List<Object?> get props => [revenue, occupancy, allLots];
+  List<Object?> get props => [revenue, occupancy, whatsapp, allLots];
 }
 
 class ReportsFailure extends ReportsState {
@@ -72,11 +75,16 @@ class ReportsCubit extends ResilientCubit<ReportsState> {
           allLots: allLots,
         ),
         _repository.getOccupancyReport(),
+        _repository.getWhatsappReport(
+          startDate: startDate,
+          endDate: endDate,
+        ),
       ]);
       emit(
         ReportsLoaded(
           results[0] as RevenueReport,
           results[1] as OccupancyReport,
+          whatsapp: results[2] as WhatsappReport,
           allLots: allLots,
         ),
       );

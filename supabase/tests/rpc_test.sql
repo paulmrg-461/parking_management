@@ -760,6 +760,21 @@ begin
     end;
 end $$;
 
+-- WhatsApp delivery metrics for the consolidated admin report.
+set local request.headers = '{"x-lot-id":"2"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    report jsonb := public.report_whatsapp(current_date, current_date);
+begin
+    if (report ->> 'sent')::integer < 1 then
+        raise exception 'whatsapp report ignored sent messages';
+    end if;
+    if jsonb_typeof(report -> 'by_day') <> 'array' then
+        raise exception 'whatsapp report has no daily breakdown';
+    end if;
+end $$;
+
 -- Branding is per lot: only the active lot's row changes.
 set local request.headers = '{"x-lot-id":"2"}';
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';

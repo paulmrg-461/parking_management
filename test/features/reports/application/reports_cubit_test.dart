@@ -3,6 +3,7 @@ import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/features/reports/application/reports_cubit.dart';
 import 'package:parking_management/features/reports/domain/entities/occupancy_report.dart';
 import 'package:parking_management/features/reports/domain/entities/revenue_report.dart';
+import 'package:parking_management/features/reports/domain/entities/whatsapp_report.dart';
 import 'package:parking_management/features/reports/domain/repositories/report_repository.dart';
 
 class _FakeReportRepository implements ReportRepository {
@@ -28,6 +29,12 @@ class _FakeReportRepository implements ReportRepository {
     }
     return revenueToReturn!;
   }
+
+  @override
+  Future<WhatsappReport> getWhatsappReport({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async => WhatsappReport.empty;
 
   @override
   Future<OccupancyReport> getOccupancyReport() async {

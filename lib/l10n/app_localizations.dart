@@ -1358,6 +1358,18 @@ abstract class AppLocalizations {
   /// **'Enviar recibo por WhatsApp'**
   String get vehicleSendWhatsapp;
 
+  /// No description provided for @vehicleWhatsappReady.
+  ///
+  /// In es, this message translates to:
+  /// **'Hola, tu vehículo {plate} está listo para retirar.'**
+  String vehicleWhatsappReady(String plate);
+
+  /// No description provided for @vehicleWhatsappReadyAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Avisar que está listo'**
+  String get vehicleWhatsappReadyAction;
+
   /// No description provided for @vehicleWhatsappReceipt.
   ///
   /// In es, this message translates to:
@@ -2893,6 +2905,36 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Ingresos por categoría'**
   String get reportsRevenueByCategory;
+
+  /// No description provided for @reportsWhatsapp.
+  ///
+  /// In es, this message translates to:
+  /// **'WhatsApp'**
+  String get reportsWhatsapp;
+
+  /// No description provided for @reportsWhatsappSent.
+  ///
+  /// In es, this message translates to:
+  /// **'Enviados'**
+  String get reportsWhatsappSent;
+
+  /// No description provided for @reportsWhatsappFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'Fallidos'**
+  String get reportsWhatsappFailed;
+
+  /// No description provided for @reportsWhatsappPending.
+  ///
+  /// In es, this message translates to:
+  /// **'En cola'**
+  String get reportsWhatsappPending;
+
+  /// No description provided for @reportsWhatsappDay.
+  ///
+  /// In es, this message translates to:
+  /// **'{sent} enviados · {failed} fallidos'**
+  String reportsWhatsappDay(int sent, int failed);
 
   /// No description provided for @reportsOccupancy.
   ///

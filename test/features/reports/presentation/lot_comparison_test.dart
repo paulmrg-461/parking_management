@@ -10,8 +10,8 @@ void main() {
   ) async {
     await tester.pumpWidget(
       testApp(
-        LotComparison(
-          lots: const [
+        const LotComparison(
+          lots: [
             LotRevenue(lotId: 1, lotName: 'Central', amount: 100, tickets: 2, avgTicket: 50),
             LotRevenue(lotId: 2, lotName: 'North', amount: 300, tickets: 3, avgTicket: 100),
             LotRevenue(lotId: 3, lotName: 'Empty', amount: 0),

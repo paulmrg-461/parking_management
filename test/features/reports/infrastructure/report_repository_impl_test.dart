@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/features/reports/domain/entities/occupancy_report.dart';
 import 'package:parking_management/features/reports/domain/entities/revenue_report.dart';
+import 'package:parking_management/features/reports/domain/entities/whatsapp_report.dart';
 import 'package:parking_management/features/reports/infrastructure/report_remote_data_source.dart';
 import 'package:parking_management/features/reports/infrastructure/report_repository_impl.dart';
 
@@ -24,6 +25,12 @@ class _FakeRemote implements ReportRemoteDataSource {
     }
     return revenueToReturn!;
   }
+
+  @override
+  Future<WhatsappReport> getWhatsappReport({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async => WhatsappReport.empty;
 
   @override
   Future<OccupancyReport> getOccupancyReport() async {

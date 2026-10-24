@@ -690,6 +690,14 @@ class AppLocalizationsEs extends AppLocalizations {
   String get vehicleSendWhatsapp => 'Enviar recibo por WhatsApp';
 
   @override
+  String vehicleWhatsappReady(String plate) {
+    return 'Hola, tu vehículo $plate está listo para retirar.';
+  }
+
+  @override
+  String get vehicleWhatsappReadyAction => 'Avisar que está listo';
+
+  @override
   String vehicleWhatsappReceipt(String plate) {
     return 'Hola, te compartimos el recibo del vehículo $plate:';
   }
@@ -1573,6 +1581,23 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get reportsRevenueByCategory => 'Ingresos por categoría';
+
+  @override
+  String get reportsWhatsapp => 'WhatsApp';
+
+  @override
+  String get reportsWhatsappSent => 'Enviados';
+
+  @override
+  String get reportsWhatsappFailed => 'Fallidos';
+
+  @override
+  String get reportsWhatsappPending => 'En cola';
+
+  @override
+  String reportsWhatsappDay(int sent, int failed) {
+    return '$sent enviados · $failed fallidos';
+  }
 
   @override
   String get reportsOccupancy => 'Ocupación';

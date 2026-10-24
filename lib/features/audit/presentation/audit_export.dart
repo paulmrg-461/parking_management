@@ -66,7 +66,7 @@ Future<Uint8List> buildAuditPdf({
                   pw.Text(
                     '${Formatters.dateTime(entry.createdAt)} · '
                     '${entry.actor ?? '-'} · ${entry.action}',
-                    style: pw.TextStyle(
+                    style: const pw.TextStyle(
                       fontSize: 10,
                       fontWeight: pw.FontWeight.bold,
                     ),

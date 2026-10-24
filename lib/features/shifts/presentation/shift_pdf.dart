@@ -19,7 +19,7 @@ Future<Uint8List> buildShiftPdf({
   final builder = PdfDocumentBuilder(
     title: '${l10n.shiftTitle} #${shift.id}',
     subtitle: [
-      if (lotName != null) lotName,
+      ?lotName,
       '${Formatters.dateTime(shift.openedAt)}'
           '${shift.closedAt == null ? '' : ' — ${Formatters.dateTime(shift.closedAt!)}'}',
     ].join(' · '),

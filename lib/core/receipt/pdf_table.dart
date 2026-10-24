@@ -14,7 +14,7 @@ class PdfDocumentBuilder {
     children: [
       pw.Text(
         title,
-        style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
+        style: const pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
       ),
       if (subtitle != null) ...[
         pw.SizedBox(height: 2),
@@ -32,7 +32,7 @@ class PdfDocumentBuilder {
       pw.SizedBox(height: 10),
       pw.Text(
         title,
-        style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
+        style: const pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
       ),
       pw.SizedBox(height: 4),
       ...rows,
@@ -41,7 +41,7 @@ class PdfDocumentBuilder {
 
   static pw.Widget row(String label, String value, {bool bold = false}) {
     final style = bold
-        ? pw.TextStyle(fontWeight: pw.FontWeight.bold)
+        ? const pw.TextStyle(fontWeight: pw.FontWeight.bold)
         : null;
     return pw.Padding(
       padding: const pw.EdgeInsets.symmetric(vertical: 1),

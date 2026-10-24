@@ -169,6 +169,15 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 - `LotComparison` widget (reports) sorts by revenue and shows a bar, the
   percentage of the total and `N exits · average X`; only in consolidated mode.
 
+## WhatsApp round-out (latest)
+
+- `vehicle_ready` template (params: plate) + an action on open sessions with a
+  phone; dispatch maps `WHATSAPP_TEMPLATE_READY`.
+- `0044`: `report_whatsapp(start, end)` (admin, active lot) with sent/failed/
+  pending and by-day; the reports page shows it when there is data.
+- Analyzer baseline: 0 non-deprecation infos; the ~112 remaining are SDK
+  `deprecated_member_use` from the pinned beta channel.
+
 ## Secrets runbook (latest)
 
 - `supabase/rotate-pin.sh <user> <pin>`: GoTrue admin API with the service key

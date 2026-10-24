@@ -6,7 +6,6 @@ import '../../../core/error/failure.dart';
 import '../../../core/l10n/failure_messages.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/receipt/payment_method.dart';
-import '../../../core/receipt/receipt_data.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/utils/whatsapp_launcher.dart';
@@ -511,6 +510,39 @@ class _SessionTile extends StatelessWidget {
     await openWhatsapp(context, url);
   }
 
+  Future<void> _notifyReady(BuildContext context) async {
+    if (whatsappAutoEnabled(context)) {
+      await _queueReady(context);
+      return;
+    }
+    final url = whatsappUrl(
+      phone!,
+      text: vehicleReadyWhatsappMessage(l10n: context.l10n, plate: plate),
+    );
+    await openWhatsapp(context, url);
+  }
+
+  Future<void> _queueReady(BuildContext context) async {
+    final l10n = context.l10n;
+    if (!serviceLocator.isRegistered<CustomerMessageRepository>()) {
+      return;
+    }
+    try {
+      await serviceLocator<CustomerMessageRepository>().enqueueWhatsapp(
+        phone: phone!,
+        template: 'vehicle_ready',
+        params: [plate],
+      );
+      if (context.mounted) {
+        showInfoSnack(context, l10n.whatsappQueued);
+      }
+    } on Failure catch (failure) {
+      if (context.mounted) {
+        showErrorSnack(context, l10n.failure(failure));
+      }
+    }
+  }
+
   /// Automated path: the dispatcher sends it through the WhatsApp API.
   Future<void> _queueReceipt(BuildContext context) async {
     final l10n = context.l10n;
@@ -595,6 +627,13 @@ class _SessionTile extends StatelessWidget {
                     visualDensity: VisualDensity.compact,
                     icon: const Icon(Icons.chat_outlined),
                     onPressed: () => _sendWhatsapp(context),
+                  ),
+                if (session.isOpen && phone != null)
+                  IconButton(
+                    tooltip: l10n.vehicleWhatsappReadyAction,
+                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(Icons.notifications_active_outlined),
+                    onPressed: () => _notifyReady(context),
                   ),
                 StatusChip(
                   label: session.isOpen ? l10n.statusOpen : l10n.statusClosed,

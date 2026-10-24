@@ -5,6 +5,7 @@ import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/features/auth/application/auth_cubit.dart';
 import 'package:parking_management/features/auth/domain/entities/user.dart';
 import 'package:parking_management/features/vehicle_history/application/vehicle_history_cubit.dart';
+import 'package:parking_management/features/vehicle_history/domain/entities/vehicle_history.dart';
 import 'package:parking_management/features/vehicle_history/presentation/vehicle_history_page.dart';
 
 import '../../../helpers/app_harness.dart';
@@ -260,5 +261,42 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(repository.lastOwnerPhone, '+57 300 111 2233');
+  });
+
+  testWidgets('Success: an open session can notify that the car is ready', (
+    tester,
+  ) async {
+    final repository = FakeVehicleHistoryRepository(
+      history: VehicleHistory(
+        plate: 'ABC123',
+        vehicleId: 1,
+        categoryName: 'car',
+        visits: 1,
+        totalSpent: 0,
+        openSessions: 1,
+        ownerPhone: '+57 300 111 2233',
+        sessions: [
+          VehicleHistorySession(
+            id: 9,
+            entryTime: DateTime.utc(2026, 10, 24, 8),
+            status: 'open',
+          ),
+        ],
+      ),
+    );
+    final cubit = VehicleHistoryCubit(repository);
+    addTearDown(cubit.close);
+    await tester.pumpWidget(
+      testApp(
+        BlocProvider.value(
+          value: cubit,
+          child: const VehicleHistoryPage(initialPlate: 'ABC123'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('Avisar que está listo'), findsOneWidget);
+    expect(find.byTooltip('Enviar recibo por WhatsApp'), findsNothing);
   });
 }

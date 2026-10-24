@@ -64,7 +64,7 @@ class SystemDialogReceiptPrinter implements ReceiptPrinter {
     Uint8List? logo,
     ReceiptLabels labels,
   ) {
-    final bold = pw.TextStyle(fontWeight: pw.FontWeight.bold);
+    const bold = pw.TextStyle(fontWeight: pw.FontWeight.bold);
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.stretch,
       children: [
@@ -122,7 +122,7 @@ class SystemDialogReceiptPrinter implements ReceiptPrinter {
   }
 
   pw.Widget _title(Uint8List? logo, ParkingSettings? settings) {
-    final bold = pw.TextStyle(fontWeight: pw.FontWeight.bold);
+    const bold = pw.TextStyle(fontWeight: pw.FontWeight.bold);
     return pw.Column(
       children: [
         if (logo != null)
@@ -164,7 +164,7 @@ class SystemDialogReceiptPrinter implements ReceiptPrinter {
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: [
           pw.Text(label),
-          pw.Text(value, style: bold ? pw.TextStyle(fontWeight: pw.FontWeight.bold) : null),
+          pw.Text(value, style: bold ? const pw.TextStyle(fontWeight: pw.FontWeight.bold) : null),
         ],
       ),
     );

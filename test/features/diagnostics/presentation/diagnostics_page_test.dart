@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/features/diagnostics/application/diagnostics_cubit.dart';
+import 'package:parking_management/features/diagnostics/domain/entities/whatsapp_message.dart';
 import 'package:parking_management/features/diagnostics/presentation/diagnostics_page.dart';
 
 import '../../../helpers/fake_diagnostics_repository.dart';
@@ -13,7 +14,7 @@ Future<void> pumpPage(
   int staleSessions = 0,
   int deadPush = 0,
   List<dynamic> errors = const [],
-  List<dynamic> whatsapp = const [],
+  List<WhatsappMessage> whatsapp = const [],
 }) async {
   final cubit = DiagnosticsCubit(
     FakeDiagnosticsRepository(
@@ -24,7 +25,7 @@ Future<void> pumpPage(
         whatsappFailed: whatsapp.where((m) => m.status == 'failed').length,
       ),
       errors: [for (final error in errors) error],
-      whatsapp: [for (final message in whatsapp) message],
+      whatsapp: whatsapp,
     ),
   );
   addTearDown(cubit.close);

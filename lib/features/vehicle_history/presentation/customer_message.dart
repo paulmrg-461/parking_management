@@ -40,3 +40,9 @@ String generalWhatsappMessage({
   required AppLocalizations l10n,
   required String plate,
 }) => l10n.vehicleWhatsappHello(plate);
+
+/// Short notice for an open session: the car is ready to be picked up.
+String vehicleReadyWhatsappMessage({
+  required AppLocalizations l10n,
+  required String plate,
+}) => l10n.vehicleWhatsappReady(plate);

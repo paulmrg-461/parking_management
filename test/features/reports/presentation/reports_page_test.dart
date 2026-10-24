@@ -6,6 +6,7 @@ import 'package:parking_management/core/theme/contrast.dart';
 import 'package:parking_management/features/reports/application/reports_cubit.dart';
 import 'package:parking_management/features/reports/domain/entities/occupancy_report.dart';
 import 'package:parking_management/features/reports/domain/entities/revenue_report.dart';
+import 'package:parking_management/features/reports/domain/entities/whatsapp_report.dart';
 import 'package:parking_management/features/reports/domain/repositories/report_repository.dart';
 import 'package:parking_management/features/reports/presentation/report_colors.dart';
 import 'package:parking_management/features/reports/presentation/reports_page.dart';
@@ -19,6 +20,12 @@ class _FakeReportRepository implements ReportRepository {
   final OccupancyReport occupancy;
   Failure? error;
   bool? lastAllLots;
+  WhatsappReport whatsapp = WhatsappReport(
+    sent: 8,
+    failed: 1,
+    pending: 2,
+    byDay: [WhatsappDaily(date: DateTime(2026, 1, 1), sent: 8, failed: 1)],
+  );
 
   @override
   Future<RevenueReport> getRevenueReport({
@@ -29,6 +36,12 @@ class _FakeReportRepository implements ReportRepository {
     lastAllLots = allLots;
     return error == null ? revenue : throw error!;
   }
+
+  @override
+  Future<WhatsappReport> getWhatsappReport({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async => whatsapp;
 
   @override
   Future<OccupancyReport> getOccupancyReport() async => occupancy;
@@ -136,5 +149,17 @@ void main() {
     expect(find.text('Ingresos por sede'), findsOneWidget);
     expect(find.text('Central'), findsOneWidget);
     expect(find.text('80% del total'), findsOneWidget);
+  });
+
+  testWidgets('Success: WhatsApp delivery metrics are shown', (tester) async {
+    await _pump(tester);
+
+    await tester.scrollUntilVisible(find.text('WhatsApp'), 300);
+    expect(find.text('Enviados'), findsOneWidget);
+    expect(find.text('Fallidos'), findsOneWidget);
+    expect(find.text('En cola'), findsOneWidget);
+
+    await tester.scrollUntilVisible(find.textContaining('8 enviados'), 300);
+    expect(find.textContaining('8 enviados'), findsOneWidget);
   });
 }
