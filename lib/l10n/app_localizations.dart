@@ -1286,6 +1286,72 @@ abstract class AppLocalizations {
   /// **'Este vehículo está bloqueado; un administrador debe desbloquearlo'**
   String get errorVehicleBlacklisted;
 
+  /// No description provided for @vehiclePhone.
+  ///
+  /// In es, this message translates to:
+  /// **'Teléfono del cliente'**
+  String get vehiclePhone;
+
+  /// No description provided for @vehiclePhoneHint.
+  ///
+  /// In es, this message translates to:
+  /// **'+57 300 111 2233'**
+  String get vehiclePhoneHint;
+
+  /// No description provided for @vehiclePhoneTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Teléfono para avisos'**
+  String get vehiclePhoneTitle;
+
+  /// No description provided for @vehicleAddPhone.
+  ///
+  /// In es, this message translates to:
+  /// **'Agregar teléfono'**
+  String get vehicleAddPhone;
+
+  /// No description provided for @vehicleEditPhone.
+  ///
+  /// In es, this message translates to:
+  /// **'Editar teléfono'**
+  String get vehicleEditPhone;
+
+  /// No description provided for @vehicleSendWhatsapp.
+  ///
+  /// In es, this message translates to:
+  /// **'Enviar recibo por WhatsApp'**
+  String get vehicleSendWhatsapp;
+
+  /// No description provided for @vehicleWhatsappReceipt.
+  ///
+  /// In es, this message translates to:
+  /// **'Hola, te compartimos el recibo del vehículo {plate}:'**
+  String vehicleWhatsappReceipt(String plate);
+
+  /// No description provided for @vehicleWhatsappHello.
+  ///
+  /// In es, this message translates to:
+  /// **'Hola, te escribimos del parqueadero por el vehículo {plate}.'**
+  String vehicleWhatsappHello(String plate);
+
+  /// No description provided for @vehicleWhatsappThanks.
+  ///
+  /// In es, this message translates to:
+  /// **'¡Gracias por tu visita!'**
+  String get vehicleWhatsappThanks;
+
+  /// No description provided for @errorInvalidPhone.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe un teléfono válido (7 a 15 dígitos)'**
+  String get errorInvalidPhone;
+
+  /// No description provided for @errorWhatsappUnavailable.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo abrir WhatsApp en este dispositivo'**
+  String get errorWhatsappUnavailable;
+
   /// No description provided for @vehicleNotes.
   ///
   /// In es, this message translates to:

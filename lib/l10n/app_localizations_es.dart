@@ -651,6 +651,44 @@ class AppLocalizationsEs extends AppLocalizations {
       'Este vehículo está bloqueado; un administrador debe desbloquearlo';
 
   @override
+  String get vehiclePhone => 'Teléfono del cliente';
+
+  @override
+  String get vehiclePhoneHint => '+57 300 111 2233';
+
+  @override
+  String get vehiclePhoneTitle => 'Teléfono para avisos';
+
+  @override
+  String get vehicleAddPhone => 'Agregar teléfono';
+
+  @override
+  String get vehicleEditPhone => 'Editar teléfono';
+
+  @override
+  String get vehicleSendWhatsapp => 'Enviar recibo por WhatsApp';
+
+  @override
+  String vehicleWhatsappReceipt(String plate) {
+    return 'Hola, te compartimos el recibo del vehículo $plate:';
+  }
+
+  @override
+  String vehicleWhatsappHello(String plate) {
+    return 'Hola, te escribimos del parqueadero por el vehículo $plate.';
+  }
+
+  @override
+  String get vehicleWhatsappThanks => '¡Gracias por tu visita!';
+
+  @override
+  String get errorInvalidPhone => 'Escribe un teléfono válido (7 a 15 dígitos)';
+
+  @override
+  String get errorWhatsappUnavailable =>
+      'No se pudo abrir WhatsApp en este dispositivo';
+
+  @override
   String get vehicleNotes => 'Notas del vehículo';
 
   @override

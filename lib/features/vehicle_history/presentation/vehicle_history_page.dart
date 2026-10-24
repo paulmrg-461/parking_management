@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/l10n/failure_messages.dart';
 import '../../../core/l10n/l10n.dart';
@@ -12,12 +13,14 @@ import '../../../core/widgets/error_state.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../../auth/application/auth_cubit.dart';
 import '../../auth/domain/entities/user.dart';
+import '../../settings/domain/whatsapp_url.dart';
 import '../../../core/widgets/money_text.dart';
 import '../../../core/widgets/receipt_card.dart';
 import '../../../core/widgets/status_chip.dart';
 import '../../receipt_printing/presentation/receipt_print_sheet.dart';
 import '../application/vehicle_history_cubit.dart';
 import '../domain/entities/vehicle_history.dart';
+import 'customer_message.dart';
 
 class VehicleHistoryPage extends StatefulWidget {
   const VehicleHistoryPage({super.key, this.initialPlate});
@@ -201,6 +204,28 @@ class _HistoryBodyState extends State<_HistoryBody> {
     }
   }
 
+  Future<void> _editPhone(BuildContext context) async {
+    final phone = await showDialog<String>(
+      context: context,
+      builder: (_) => _PhoneDialog(initial: history.ownerPhone ?? ''),
+    );
+    if (phone != null && context.mounted) {
+      await context.read<VehicleHistoryCubit>().updateFlags(ownerPhone: phone);
+    }
+  }
+
+  Future<void> _writeOnWhatsapp(BuildContext context) async {
+    final phone = history.ownerPhone;
+    if (phone == null) {
+      return;
+    }
+    final url = whatsappUrl(
+      phone,
+      text: generalWhatsappMessage(l10n: context.l10n, plate: history.plate),
+    );
+    await _openWhatsapp(context, url);
+  }
+
   Future<void> _toggleBlacklist(BuildContext context) async {
     final l10n = context.l10n;
     final blocking = !history.isBlacklisted;
@@ -320,7 +345,26 @@ class _HistoryBodyState extends State<_HistoryBody> {
           alignment: Alignment.centerLeft,
           child: Wrap(
             spacing: Space.sm,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
+              if (history.ownerPhone != null)
+                ActionChip(
+                  avatar: const Icon(Icons.phone, size: 18),
+                  label: Text(history.ownerPhone!),
+                  onPressed: () => _writeOnWhatsapp(context),
+                )
+              else
+                ActionChip(
+                  avatar: const Icon(Icons.add_ic_call_outlined, size: 18),
+                  label: Text(l10n.vehicleAddPhone),
+                  onPressed: () => _editPhone(context),
+                ),
+              if (history.ownerPhone != null)
+                IconButton(
+                  tooltip: l10n.vehicleEditPhone,
+                  icon: const Icon(Icons.edit_outlined, size: 18),
+                  onPressed: () => _editPhone(context),
+                ),
               TextButton.icon(
                 onPressed: () => _editNotes(context),
                 icon: const Icon(Icons.notes_outlined),
@@ -394,7 +438,11 @@ class _HistoryBodyState extends State<_HistoryBody> {
           )
         else
           for (final session in _sessions)
-            _SessionTile(session: session, plate: history.plate),
+            _SessionTile(
+              session: session,
+              plate: history.plate,
+              phone: history.ownerPhone,
+            ),
       ],
     );
   }
@@ -420,10 +468,15 @@ class _Metric extends StatelessWidget {
 }
 
 class _SessionTile extends StatelessWidget {
-  const _SessionTile({required this.session, required this.plate});
+  const _SessionTile({
+    required this.session,
+    required this.plate,
+    this.phone,
+  });
 
   final VehicleHistorySession session;
   final String plate;
+  final String? phone;
 
   ReceiptData get _receipt => ReceiptData(
     kind: ReceiptKind.checkOut,
@@ -436,6 +489,18 @@ class _SessionTile extends StatelessWidget {
     discountAmount: session.discountAmount,
     discountReason: session.discountReason,
   );
+
+  Future<void> _sendWhatsapp(BuildContext context) async {
+    final url = whatsappUrl(
+      phone!,
+      text: receiptWhatsappMessage(
+        l10n: context.l10n,
+        plate: plate,
+        session: session,
+      ),
+    );
+    await _openWhatsapp(context, url);
+  }
 
   Future<void> _reprint(BuildContext context) => showReceiptSummary(
     context,
@@ -489,6 +554,13 @@ class _SessionTile extends StatelessWidget {
                     icon: const Icon(Icons.receipt_long_outlined),
                     onPressed: () => _reprint(context),
                   ),
+                if (!session.isOpen && phone != null)
+                  IconButton(
+                    tooltip: l10n.vehicleSendWhatsapp,
+                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(Icons.chat_outlined),
+                    onPressed: () => _sendWhatsapp(context),
+                  ),
                 StatusChip(
                   label: session.isOpen ? l10n.statusOpen : l10n.statusClosed,
                   tone: session.isOpen
@@ -537,6 +609,87 @@ class _SessionTile extends StatelessWidget {
   }
 }
 
+
+/// Opens a `wa.me` link; a device without WhatsApp shows a snack instead of
+/// crashing the screen.
+Future<void> _openWhatsapp(BuildContext context, String? url) async {
+  if (url == null) {
+    return;
+  }
+  try {
+    final opened = await launchUrl(
+      Uri.parse(url),
+      mode: LaunchMode.externalApplication,
+    );
+    if (!opened && context.mounted) {
+      showErrorSnack(context, context.l10n.errorWhatsappUnavailable);
+    }
+  } catch (_) {
+    if (context.mounted) {
+      showErrorSnack(context, context.l10n.errorWhatsappUnavailable);
+    }
+  }
+}
+
+class _PhoneDialog extends StatefulWidget {
+  const _PhoneDialog({required this.initial});
+
+  final String initial;
+
+  @override
+  State<_PhoneDialog> createState() => _PhoneDialogState();
+}
+
+class _PhoneDialogState extends State<_PhoneDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late final _controller = TextEditingController(text: widget.initial);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return AlertDialog(
+      title: Text(l10n.vehiclePhoneTitle),
+      content: Form(
+        key: _formKey,
+        child: TextFormField(
+          controller: _controller,
+          autofocus: true,
+          keyboardType: TextInputType.phone,
+          decoration: InputDecoration(
+            labelText: l10n.vehiclePhone,
+            hintText: l10n.vehiclePhoneHint,
+          ),
+          validator: (value) {
+            final digits = (value ?? '').replaceAll(RegExp(r'\D'), '');
+            return digits.length >= 7 && digits.length <= 15
+                ? null
+                : l10n.errorInvalidPhone;
+          },
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.actionCancel),
+        ),
+        FilledButton(
+          onPressed: () {
+            if (_formKey.currentState!.validate()) {
+              Navigator.of(context).pop(_controller.text.trim());
+            }
+          },
+          child: Text(l10n.actionSave),
+        ),
+      ],
+    );
+  }
+}
 
 class _NotesDialog extends StatefulWidget {
   const _NotesDialog({required this.initial});

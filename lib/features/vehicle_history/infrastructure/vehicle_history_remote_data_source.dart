@@ -11,6 +11,7 @@ abstract class VehicleHistoryRemoteDataSource {
     String plate, {
     bool? blacklisted,
     String? notes,
+    String? ownerPhone,
   });
 }
 
@@ -40,6 +41,7 @@ class SupabaseVehicleHistoryRemoteDataSource
     String plate, {
     bool? blacklisted,
     String? notes,
+    String? ownerPhone,
   }) async {
     try {
       final result = await _client.rpc(
@@ -48,6 +50,7 @@ class SupabaseVehicleHistoryRemoteDataSource
           'p_plate': plate,
           'p_blacklisted': ?blacklisted,
           'p_notes': notes,
+          'p_owner_phone': ownerPhone,
         },
       );
       return VehicleFlags.fromJson(Map<String, dynamic>.from(result as Map));

@@ -633,6 +633,34 @@ begin
     end if;
 end $$;
 
+-- Customer phone: valid values are stored, invalid ones rejected, and the
+-- history exposes it for the WhatsApp action.
+select public.update_vehicle_flags('BLK001', null, null, '+57 300 111 2233');
+
+do $$
+begin
+    if (select owner_phone from public.vehicles where plate = 'BLK001')
+        is distinct from '+57 300 111 2233' then
+        raise exception 'owner phone was not stored';
+    end if;
+    if (public.vehicle_history('BLK001') ->> 'owner_phone')
+        is distinct from '+57 300 111 2233' then
+        raise exception 'vehicle history does not expose the phone';
+    end if;
+    begin
+        perform public.update_vehicle_flags('BLK001', null, null, '123');
+        raise exception 'invalid phone was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidPhoneError%' then
+            raise;
+        end if;
+    end;
+    perform public.update_vehicle_flags('BLK001', null, null, '');
+    if (select owner_phone from public.vehicles where plate = 'BLK001') is not null then
+        raise exception 'empty phone did not clear the field';
+    end if;
+end $$;
+
 -- Branding is per lot: only the active lot's row changes.
 set local request.headers = '{"x-lot-id":"2"}';
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';

@@ -49,7 +49,7 @@ erDiagram
 | `users` | Profile mirror of `auth.users` (username, display name, platform role, active). | no |
 | `categories` | Vehicle category per site (`unique (lot_id, name)`) with optional capacity (0 = unlimited). | yes |
 | `tariffs` | Hourly/daily/nightly/monthly amounts per category, with the night window. | yes |
-| `vehicles` | Global plate registry (category, color, brand, notes, blacklist). A plate can park anywhere. | no |
+| `vehicles` | Global plate registry (category, color, brand, notes, blacklist, customer phone). A plate can park anywhere. | no |
 | `parking_sessions` | A stay: entry/exit, amount, payment method, discount audit, lost ticket, shift, lot, ticket number. | yes |
 | `evidence_photos` | Check-in photos (storage path per session). | via session |
 | `shifts` | Operator cash shift per site: opening float, counted cash, expected, difference. | yes |
@@ -79,7 +79,7 @@ granted to `authenticated` only.
 
 **Check-in / check-out**
 `check_in`, `check_out`, `calculate_fare`, `vehicle_history`,
-`update_vehicle_flags`.
+`update_vehicle_flags` (notes, blacklist, owner phone).
 
 **Billing and reports**
 `report_revenue` (active lot), `report_revenue_all` (platform admins),

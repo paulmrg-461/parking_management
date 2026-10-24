@@ -213,4 +213,52 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('Success: a customer phone offers the WhatsApp actions', (
+    tester,
+  ) async {
+    final repository = FakeVehicleHistoryRepository(
+      history: sampleHistory(ownerPhone: '+57 300 111 2233'),
+    );
+    final cubit = VehicleHistoryCubit(repository);
+    addTearDown(cubit.close);
+    await tester.pumpWidget(
+      testApp(
+        BlocProvider.value(
+          value: cubit,
+          child: const VehicleHistoryPage(initialPlate: 'ABC123'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('+57 300 111 2233'), findsOneWidget);
+    expect(find.byTooltip('Enviar recibo por WhatsApp'), findsWidgets);
+    expect(find.text('Agregar teléfono'), findsNothing);
+  });
+
+  testWidgets('Success: a plate without a phone can add one', (tester) async {
+    final repository = FakeVehicleHistoryRepository(history: sampleHistory());
+    final cubit = VehicleHistoryCubit(repository);
+    addTearDown(cubit.close);
+    await tester.pumpWidget(
+      testApp(
+        BlocProvider.value(
+          value: cubit,
+          child: const VehicleHistoryPage(initialPlate: 'ABC123'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Agregar teléfono'), findsOneWidget);
+
+    await tester.tap(find.text('Agregar teléfono'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField), '+57 300 111 2233');
+    await tester.tap(find.text('Guardar'));
+    await tester.pumpAndSettle();
+
+    expect(repository.lastOwnerPhone, '+57 300 111 2233');
+  });
 }

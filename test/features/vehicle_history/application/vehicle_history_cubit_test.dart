@@ -89,4 +89,16 @@ void main() {
     expect(repository.lastBlacklisted, isNull);
     expect(cubit.state.status, VehicleHistoryStatus.initial);
   });
+
+  test('Success: the customer phone round-trips through the flags', () async {
+    final repository = FakeVehicleHistoryRepository(history: sampleHistory());
+    final cubit = VehicleHistoryCubit(repository);
+    addTearDown(cubit.close);
+    await cubit.search('ABC123');
+
+    await cubit.updateFlags(ownerPhone: '+57 300 111 2233');
+
+    expect(repository.lastOwnerPhone, '+57 300 111 2233');
+    expect(cubit.state.history?.ownerPhone, '+57 300 111 2233');
+  });
 }

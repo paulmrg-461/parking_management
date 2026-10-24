@@ -69,6 +69,7 @@ extension FailureMessages on AppLocalizations {
     'ConflictError' => errorConflict,
     'VehicleNotRegisteredError' => errorVehicleNotRegistered,
     'VehicleBlacklistedError' => errorVehicleBlacklisted,
+    'InvalidPhoneError' => errorInvalidPhone,
     'InvalidPhotoError' => errorInvalidPhoto,
     'InvalidDataError' || 'InvalidUsername' => errorInvalidData,
     'InvalidPin' => pinInvalid,

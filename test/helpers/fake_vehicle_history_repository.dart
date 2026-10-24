@@ -11,6 +11,7 @@ class FakeVehicleHistoryRepository implements VehicleHistoryRepository {
   final List<String> lookups = [];
   bool? lastBlacklisted;
   String? lastNotes;
+  String? lastOwnerPhone;
 
   @override
   Future<VehicleHistory> lookup(String plate) async {
@@ -27,6 +28,7 @@ class FakeVehicleHistoryRepository implements VehicleHistoryRepository {
     String plate, {
     bool? blacklisted,
     String? notes,
+    String? ownerPhone,
   }) async {
     final error = flagsError;
     if (error != null) {
@@ -34,22 +36,29 @@ class FakeVehicleHistoryRepository implements VehicleHistoryRepository {
     }
     lastBlacklisted = blacklisted;
     lastNotes = notes;
+    lastOwnerPhone = ownerPhone;
     final current = history;
     final next = current?.withFlags(
       isBlacklisted: blacklisted,
       notes: notes,
       replaceNotes: true,
+      ownerPhone: ownerPhone,
+      replaceOwnerPhone: true,
     );
     history = next;
     return VehicleFlags(
       plate: plate,
       isBlacklisted: next?.isBlacklisted ?? false,
       notes: next?.notes,
+      ownerPhone: next?.ownerPhone,
     );
   }
 }
 
-VehicleHistory sampleHistory({String plate = 'ABC123'}) => VehicleHistory(
+VehicleHistory sampleHistory({
+  String plate = 'ABC123',
+  String? ownerPhone,
+}) => VehicleHistory(
   plate: plate,
   vehicleId: 1,
   categoryName: 'car',
@@ -59,6 +68,7 @@ VehicleHistory sampleHistory({String plate = 'ABC123'}) => VehicleHistory(
   totalSpent: 12000,
   openSessions: 0,
   currentLotVisits: 1,
+  ownerPhone: ownerPhone,
   sessions: [
     VehicleHistorySession(
       id: 2,

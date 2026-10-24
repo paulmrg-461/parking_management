@@ -127,6 +127,16 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   `postgres`), so scheduling stays in the host cron; the README documents how
   to enable pg_cron if the deployment supports `cron.database_name`.
 
+## WhatsApp receipts (latest)
+
+- `0041`: `vehicles.owner_phone` (+ check 7–15 digits) and
+  `update_vehicle_flags(plate, blacklisted, notes, owner_phone)` (old 3-arg
+  signature dropped); `vehicle_history` returns `owner_phone`.
+- History: phone chip (opens a greeting) or "Add phone"; closed sessions have a
+  chat icon that builds `receiptWhatsappMessage` and opens `wa.me` with text.
+- `whatsappUrl(raw, text:)` encodes the message; launching failures show a snack.
+- Pass-expiry WhatsApp is not wired yet (needs the phone in the passes list).
+
 ## Ticket reprint (latest)
 
 - `0040`: `vehicle_history` sessions include `discount_amount`/`discount_reason`

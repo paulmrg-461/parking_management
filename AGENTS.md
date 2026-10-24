@@ -89,6 +89,10 @@ RPCs own business logic and the Flutter client calls Supabase directly.
   call `current_lot_id()`. Never trust a client lot id except through
   `resolve_lot()`. New site data must be stamped with the lot and filtered in
   reads; queued mutations capture `lot_id` at enqueue time.
+- Customer contact: `vehicles.owner_phone` (optional, 7–15 digits) is set
+  through `update_vehicle_flags`; receipts are shared as `wa.me` links with a
+  prefilled message (no WhatsApp provider is integrated). Missing WhatsApp is a
+  snack, never a crash.
 - Evidence: `parking_settings.evidence_retention_days` (0 = keep) drives the
   `evidence-archive` Edge Function (Storage delete + row delete, service-role
   only, daily cron). Storage cannot see `x-lot-id`, so the bucket policy uses
@@ -109,7 +113,7 @@ RPCs own business logic and the Flutter client calls Supabase directly.
   browser push uses `web/push-sw.js` + VAPID (`web_push_subscriptions`);
   `FCM_SERVICE_ACCOUNT_JSON` + `supabase/notifications-cron.sh` enable
   background FCM. `push-dispatch` is service-role-only; never expose the key.
-- Tests: `flutter test` (523, plus a live-stack e2e) + `flutter analyze`; CI
+- Tests: `flutter test` (531, plus a live-stack e2e) + `flutter analyze`; CI
   validates compose and runs `supabase/tests/run.sh` (real migrations +
   RPC/RLS tests) against `supabase/postgres`.
 - E2E: `sh supabase/tests/e2e.sh` and

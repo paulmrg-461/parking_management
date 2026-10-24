@@ -30,5 +30,11 @@ class VehicleHistoryRepositoryImpl implements VehicleHistoryRepository {
     String plate, {
     bool? blacklisted,
     String? notes,
-  }) => _remote.updateFlags(plate, blacklisted: blacklisted, notes: notes);
+    String? ownerPhone,
+  }) => _remote.updateFlags(
+    plate,
+    blacklisted: blacklisted,
+    notes: notes,
+    ownerPhone: ownerPhone,
+  );
 }

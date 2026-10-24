@@ -5,16 +5,19 @@ class VehicleFlags {
     required this.plate,
     required this.isBlacklisted,
     this.notes,
+    this.ownerPhone,
   });
 
   final String plate;
   final bool isBlacklisted;
   final String? notes;
+  final String? ownerPhone;
 
   factory VehicleFlags.fromJson(Map<String, dynamic> json) => VehicleFlags(
     plate: json['plate'] as String,
     isBlacklisted: json['is_blacklisted'] == true,
     notes: json['notes'] as String?,
+    ownerPhone: json['owner_phone'] as String?,
   );
 }
 
@@ -27,5 +30,6 @@ abstract class VehicleHistoryRepository {
     String plate, {
     bool? blacklisted,
     String? notes,
+    String? ownerPhone,
   });
 }

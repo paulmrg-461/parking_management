@@ -31,7 +31,11 @@ class VehicleHistoryCubit extends ResilientCubit<VehicleHistoryState> {
 
   /// `blacklisted` null keeps the flag; `notes` null keeps the current text
   /// and an empty string clears it.
-  Future<void> updateFlags({bool? blacklisted, String? notes}) async {
+  Future<void> updateFlags({
+    bool? blacklisted,
+    String? notes,
+    String? ownerPhone,
+  }) async {
     final history = state.history;
     if (history == null) {
       return;
@@ -41,6 +45,7 @@ class VehicleHistoryCubit extends ResilientCubit<VehicleHistoryState> {
         history.plate,
         blacklisted: blacklisted,
         notes: notes,
+        ownerPhone: ownerPhone,
       );
       emit(VehicleHistoryState(
         status: VehicleHistoryStatus.loaded,
@@ -48,6 +53,8 @@ class VehicleHistoryCubit extends ResilientCubit<VehicleHistoryState> {
           isBlacklisted: flags.isBlacklisted,
           notes: flags.notes,
           replaceNotes: true,
+          ownerPhone: flags.ownerPhone,
+          replaceOwnerPhone: true,
         ),
       ));
     } on Failure catch (failure) {

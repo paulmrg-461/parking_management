@@ -100,6 +100,7 @@ class VehicleHistory extends Equatable {
     this.isBlacklisted = false,
     this.notes,
     this.currentLotVisits = 0,
+    this.ownerPhone,
   });
 
   final String plate;
@@ -116,6 +117,9 @@ class VehicleHistory extends Equatable {
 
   /// Visits at the lot the app is currently working in.
   final int currentLotVisits;
+
+  /// Customer phone for WhatsApp receipts (optional).
+  final String? ownerPhone;
 
   /// Distinct sites the plate has visited, for the history filter.
   List<({int id, String name})> get lots {
@@ -136,6 +140,8 @@ class VehicleHistory extends Equatable {
     bool? isBlacklisted,
     String? notes,
     bool replaceNotes = false,
+    String? ownerPhone,
+    bool replaceOwnerPhone = false,
   }) =>
       VehicleHistory(
         plate: plate,
@@ -150,6 +156,9 @@ class VehicleHistory extends Equatable {
         isBlacklisted: isBlacklisted ?? this.isBlacklisted,
         notes: replaceNotes ? notes : (notes ?? this.notes),
         currentLotVisits: currentLotVisits,
+        ownerPhone: replaceOwnerPhone
+            ? ownerPhone
+            : (ownerPhone ?? this.ownerPhone),
       );
 
   factory VehicleHistory.fromJson(Map<String, dynamic> json) => VehicleHistory(
@@ -161,6 +170,7 @@ class VehicleHistory extends Equatable {
     isBlacklisted: json['is_blacklisted'] == true,
     notes: json['notes'] as String?,
     currentLotVisits: (json['current_lot_visits'] as num?)?.toInt() ?? 0,
+    ownerPhone: json['owner_phone'] as String?,
     visits: (json['visits'] as num).toInt(),
     totalSpent: (json['total_spent'] as num).toInt(),
     openSessions: (json['open_sessions'] as num).toInt(),
@@ -179,6 +189,7 @@ class VehicleHistory extends Equatable {
     'is_blacklisted': isBlacklisted,
     'notes': notes,
     'current_lot_visits': currentLotVisits,
+    'owner_phone': ownerPhone,
     'visits': visits,
     'total_spent': totalSpent,
     'open_sessions': openSessions,
@@ -199,5 +210,6 @@ class VehicleHistory extends Equatable {
     isBlacklisted,
     notes,
     currentLotVisits,
+    ownerPhone,
   ];
 }
