@@ -127,6 +127,18 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   `postgres`), so scheduling stays in the host cron; the README documents how
   to enable pg_cron if the deployment supports `cron.database_name`.
 
+## Restore drill (latest)
+
+- `supabase/restore-drill.sh [backups/<stamp>]`: creates a scratch DB, restores
+  with `pg_restore -U supabase_admin --no-owner` (as `postgres` every ACL fails
+  — this was a real bug in `restore.sh`, now fixed), compares
+  schema_migrations, core RPCs, RLS policy count, `authenticated` grants, row
+  counts and the storage tar, then drops the scratch DB.
+- `docs/runbook-restore.md`: monthly drill, production restore, new-host
+  recovery (keep JWT keys or devices must log in again), rollback and cadence.
+- CI's `supabase-e2e` job runs backup + drill, so the dump is exercised on
+  every push.
+
 ## Product polish (latest)
 
 - Vehicle history: sessions carry `lotId`/`lotName`; the page shows a site chip

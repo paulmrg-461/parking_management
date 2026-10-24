@@ -340,11 +340,16 @@ sh supabase/backup.sh
 # -> backups/<UTC timestamp>/{parking.dump,storage.tgz,manifest.txt}
 
 RESTORE_CONFIRM=yes sh supabase/restore.sh backups/<timestamp>
+
+# prove the backup is restorable without touching production
+sh supabase/restore-drill.sh
 ```
 
 The database dump is `pg_dump -Fc`; storage is the `supabase/volumes/storage`
 directory. `.env` is intentionally **not** included: back it up separately so the
-JWT/API keys survive a restore. Run backups from host cron, e.g. daily at 02:00.
+JWT/API keys survive a restore. Run backups from host cron, e.g. daily at 02:00,
+and the drill monthly — the full procedure (including a restore on a new host)
+is in [`docs/runbook-restore.md`](docs/runbook-restore.md).
 
 ## CI and SQL tests
 

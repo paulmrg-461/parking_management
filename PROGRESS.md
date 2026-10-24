@@ -240,6 +240,14 @@ The app is now a Supabase-only stack: FastAPI, Alembic, Dio and Redis are gone.
   everywhere); home gained a "today" card with revenue, cash, pass collections,
   entries and exits (`rpc/dashboard_today`, local-midnight window).
 
+- **Restore drill**: `supabase/restore-drill.sh` restores the latest (or a
+  given) backup into a scratch database and compares migrations, RPCs, RLS
+  policies, grants, row counts and the storage archive, without touching
+  production. The real restore now runs `pg_restore` as `supabase_admin`
+  (restoring as `postgres` lost every grant), and
+  `docs/runbook-restore.md` documents the drill, the production restore, a
+  new-host recovery and the verification checklist. CI runs the drill.
+
 ## Infra/tooling (not OpenSpec capabilities — repo scaffolding)
 
 - **Docker**: root `docker-compose.yml` includes the official self-hosted

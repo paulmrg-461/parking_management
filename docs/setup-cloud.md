@@ -161,14 +161,16 @@ directory; `supabase/restore.sh` restores it (destructive, guarded by
 15 4 * * * rclone copy /var/backups/parking remote:parking-backups   # or rsync/scp
 ```
 
-**Drill the restore** on a scratch host before you need it:
+**Drill the restore monthly** (safe: it restores into a scratch database and
+never touches production):
 
 ```bash
-RESTORE_CONFIRM=yes sh supabase/restore.sh /var/backups/parking/<stamp>
-docker compose restart rest auth storage realtime functions
+sh supabase/restore-drill.sh
 ```
 
-Back up before every upgrade and before rotating secrets.
+A real restore (destructive) and the post-restore checklist live in
+[`runbook-restore.md`](runbook-restore.md). Back up before every upgrade and
+before rotating secrets.
 
 ## 7. Scheduled jobs
 

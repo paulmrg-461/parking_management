@@ -105,6 +105,11 @@ jobs:
           docker compose logs --tail=20 supabase-migrate
           sh supabase/create-operator.sh admin 123456 admin
 
+      - name: Backup + restore drill
+        run: |
+          sh supabase/backup.sh
+          sh supabase/restore-drill.sh
+
       - name: API e2e (curl)
         run: sh supabase/tests/e2e.sh
 

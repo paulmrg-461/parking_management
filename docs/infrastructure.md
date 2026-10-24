@@ -141,7 +141,8 @@ Recommended crons:
 | Pass renewal, expiry/overstay alerts, stale-notification/reservation/client-error/audit purge, idempotency purge, push flush | `supabase/notifications-cron.sh` (host cron) or `pg_cron` when available | every minute / daily |
 | Evidence retention (deletes objects + rows) | `supabase/evidence-archive.sh` → `functions/evidence-archive` | daily, after the backup |
 | Database + storage backup | `supabase/backup.sh` | nightly (see `setup-cloud.md`) |
-| Restore drill | `supabase/restore.sh` on a scratch host | quarterly |
+| Restore drill | `supabase/restore-drill.sh` (scratch DB, no downtime) | monthly |
+| Real restore | `supabase/restore.sh` (see `runbook-restore.md`) | as needed |
 
 ## 9. Scaling notes
 

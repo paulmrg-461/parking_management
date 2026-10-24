@@ -25,7 +25,10 @@ docker compose stop auth rest realtime storage functions supavisor >/dev/null 2>
 echo "restoring database $DB_NAME..."
 docker compose exec -T db psql -U postgres -d postgres -v ON_ERROR_STOP=1 \
   -c "select pg_terminate_backend(pid) from pg_stat_activity where datname = '$DB_NAME' and pid <> pg_backend_pid();" >/dev/null
-docker compose exec -T db pg_restore -U postgres -d "$DB_NAME" --clean --if-exists --no-owner < "$BACKUP/parking.dump"
+# `supabase_admin` owns the app objects and was the grantor in the dump;
+# restoring as postgres makes every ACL fail ("grant options cannot be granted
+# back to your own grantor").
+docker compose exec -T db pg_restore -U supabase_admin -d "$DB_NAME" --clean --if-exists --no-owner < "$BACKUP/parking.dump"
 
 if [ -s "$BACKUP/storage.tgz" ]; then
   echo "restoring storage..."

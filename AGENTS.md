@@ -115,8 +115,10 @@ RPCs own business logic and the Flutter client calls Supabase directly.
 - E2E: `sh supabase/tests/e2e.sh` and
   `SUPABASE_URL=... SUPABASE_ANON_KEY=... flutter test test/integration`
   exercise the real stack; update them when an RPC contract changes.
-- Backups: `sh supabase/backup.sh` (DB dump + Storage); restore with
+- Backups: drill them with `sh supabase/restore-drill.sh` (scratch DB, safe)
+  at least monthly; restore with
   `RESTORE_CONFIRM=yes sh supabase/restore.sh <dir>`. `.env` is not included.
+  The full procedure is `docs/runbook-restore.md`.
 - Known operational notes: pre-migration data needs a manual `pg_dump`/restore;
   Android release requires HTTPS in front of Envoy; `idempotency_keys` has no
   automatic TTL purge yet.
