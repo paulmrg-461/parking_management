@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/features/audit/application/audit_cubit.dart';
@@ -37,6 +38,32 @@ void main() {
     await pumpPage(tester);
 
     expect(find.text('Sin cambios registrados'), findsOneWidget);
+  });
+
+  testWidgets('Success: the export menu offers PDF and CSV', (tester) async {
+    await pumpPage(tester, entries: [sampleAudit()]);
+
+    await tester.tap(find.byIcon(Icons.ios_share));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Exportar PDF'), findsOneWidget);
+    expect(find.text('Copiar CSV'), findsOneWidget);
+  });
+
+  testWidgets('Success: the actor filter reloads with the selection', (
+    tester,
+  ) async {
+    final repository = await pumpPage(
+      tester,
+      entries: [sampleAudit(), sampleAudit(id: 2, actor: 'juan')],
+    );
+
+    await tester.tap(find.text('Todos').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('juan').last);
+    await tester.pumpAndSettle();
+
+    expect(repository.lastActor, 'juan');
   });
 
   testWidgets('Success: the table filter reloads with the selection', (

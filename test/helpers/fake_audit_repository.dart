@@ -11,6 +11,7 @@ class FakeAuditRepository implements AuditRepository {
   DateTime? lastFrom;
   DateTime? lastTo;
   String? lastTable;
+  String? lastActor;
 
   @override
   Future<List<AuditEntry>> list({
@@ -18,10 +19,12 @@ class FakeAuditRepository implements AuditRepository {
     DateTime? from,
     DateTime? to,
     String? table,
+    String? actor,
   }) async {
     lastFrom = from;
     lastTo = to;
     lastTable = table;
+    lastActor = actor;
     final failure = error;
     if (failure != null) {
       throw failure;

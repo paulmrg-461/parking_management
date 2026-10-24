@@ -650,6 +650,42 @@ abstract class AppLocalizations {
   /// **'Detalle del error'**
   String get diagnosticsErrorDetail;
 
+  /// No description provided for @auditExport.
+  ///
+  /// In es, this message translates to:
+  /// **'Exportar'**
+  String get auditExport;
+
+  /// No description provided for @auditExportPdf.
+  ///
+  /// In es, this message translates to:
+  /// **'Exportar PDF'**
+  String get auditExportPdf;
+
+  /// No description provided for @auditExportCsv.
+  ///
+  /// In es, this message translates to:
+  /// **'Copiar CSV'**
+  String get auditExportCsv;
+
+  /// No description provided for @auditCopied.
+  ///
+  /// In es, this message translates to:
+  /// **'CSV copiado al portapapeles'**
+  String get auditCopied;
+
+  /// No description provided for @auditActor.
+  ///
+  /// In es, this message translates to:
+  /// **'Actor'**
+  String get auditActor;
+
+  /// No description provided for @auditAllActors.
+  ///
+  /// In es, this message translates to:
+  /// **'Todos'**
+  String get auditAllActors;
+
   /// No description provided for @auditTitle.
   ///
   /// In es, this message translates to:

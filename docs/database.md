@@ -102,7 +102,8 @@ granted to `authenticated` only.
 `list_lot_members`, `set_branding_logo`.
 
 **Audit**
-`list_audit_log` (filters: limit, date range, table), `purge_audit_log`,
+`list_audit_log` (filters: limit, date range, table, actor username),
+`purge_audit_log`,
 `record_audit` (trigger on categories, tariffs, vehicles, monthly passes,
 settings, lots and memberships).
 

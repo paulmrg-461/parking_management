@@ -561,6 +561,22 @@ begin
     end;
 end $$;
 
+-- Audit log filters: by actor, and the unfiltered call still works.
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+begin
+    if jsonb_array_length(
+           public.list_audit_log(50, null, null, null, 'admin')
+       ) < 1 then
+        raise exception 'audit actor filter returned nothing';
+    end if;
+    if jsonb_array_length(
+           public.list_audit_log(50, null, null, null, 'ghost')
+       ) <> 0 then
+        raise exception 'audit actor filter ignored the name';
+    end if;
+end $$;
+
 -- Branding is per lot: only the active lot's row changes.
 set local request.headers = '{"x-lot-id":"2"}';
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';

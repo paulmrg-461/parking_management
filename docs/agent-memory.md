@@ -127,6 +127,14 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   `postgres`), so scheduling stays in the host cron; the README documents how
   to enable pg_cron if the deployment supports `cron.database_name`.
 
+## Audit export (latest)
+
+- `0037`: `list_audit_log(limit, start, end, table, actor)` (actor = username,
+  case-insensitive) dropped/recreated — PostgREST needs the migration applied.
+- `/audit` exports the visible page as PDF (`buildAuditPdf`) or CSV
+  (`auditCsv`, copied to the clipboard); actor dropdown derives from the
+  loaded page.
+
 ## Admin diagnostics (latest)
 
 - `0036`: `diagnostics_snapshot()` (admin) returns counters + storage usage;

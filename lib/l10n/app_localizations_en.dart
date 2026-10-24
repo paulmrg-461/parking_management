@@ -313,6 +313,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get diagnosticsErrorDetail => 'Error detail';
 
   @override
+  String get auditExport => 'Export';
+
+  @override
+  String get auditExportPdf => 'Export PDF';
+
+  @override
+  String get auditExportCsv => 'Copy CSV';
+
+  @override
+  String get auditCopied => 'CSV copied to the clipboard';
+
+  @override
+  String get auditActor => 'Actor';
+
+  @override
+  String get auditAllActors => 'All';
+
+  @override
   String get auditTitle => 'Audit log';
 
   @override

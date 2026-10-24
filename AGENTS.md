@@ -96,7 +96,8 @@ RPCs own business logic and the Flutter client calls Supabase directly.
 - Audit: reference-data tables have `trg_audit_row` (actor from `auth.uid()`,
   changed columns only); user changes are audited inside `admin-users` because
   service-role writes have no `auth.uid()`. Never store secrets (the trigger
-  drops `pin_hash`). Admins read the trail at `/audit` or `rpc/list_audit_log`.
+  drops `pin_hash`). Admins read it at `/audit` (filters by table/actor/date,
+  exports PDF/CSV) or `rpc/list_audit_log`.
 - Diagnostics: `/diagnostics` (admins) reads `rpc/diagnostics_snapshot` and
   `rpc/list_client_error_reports`; keep it in sync with
   `supabase/diagnostics.sql` when adding a new counter.
@@ -108,7 +109,7 @@ RPCs own business logic and the Flutter client calls Supabase directly.
   browser push uses `web/push-sw.js` + VAPID (`web_push_subscriptions`);
   `FCM_SERVICE_ACCOUNT_JSON` + `supabase/notifications-cron.sh` enable
   background FCM. `push-dispatch` is service-role-only; never expose the key.
-- Tests: `flutter test` (511, plus a live-stack e2e) + `flutter analyze`; CI
+- Tests: `flutter test` (516, plus a live-stack e2e) + `flutter analyze`; CI
   validates compose and runs `supabase/tests/run.sh` (real migrations +
   RPC/RLS tests) against `supabase/postgres`.
 - E2E: `sh supabase/tests/e2e.sh` and

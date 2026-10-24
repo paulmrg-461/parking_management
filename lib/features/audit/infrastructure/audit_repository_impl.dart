@@ -13,5 +13,12 @@ class AuditRepositoryImpl implements AuditRepository {
     DateTime? from,
     DateTime? to,
     String? table,
-  }) => _remote.list(limit: limit, from: from, to: to, table: table);
+    String? actor,
+  }) => _remote.list(
+    limit: limit,
+    from: from,
+    to: to,
+    table: table,
+    actor: actor,
+  );
 }

@@ -26,15 +26,26 @@ final class AuditLoaded extends AuditState {
     this.from,
     this.to,
     this.table,
+    this.actor,
   });
 
   final List<AuditEntry> entries;
   final DateTime? from;
   final DateTime? to;
   final String? table;
+  final String? actor;
+
+  /// Distinct actors in the current page, for the filter dropdown.
+  List<String> get actors {
+    final names = {
+      for (final entry in entries)
+        if (entry.actor != null && entry.actor!.isNotEmpty) entry.actor!,
+    }.toList()..sort();
+    return names;
+  }
 
   @override
-  List<Object?> get props => [entries, from, to, table];
+  List<Object?> get props => [entries, from, to, table, actor];
 }
 
 final class AuditFailure extends AuditState {
@@ -59,6 +70,7 @@ class AuditCubit extends ResilientCubit<AuditState> {
     DateTime? from,
     DateTime? to,
     String? table,
+    String? actor,
     bool clearFilters = false,
   }) async {
     final current = state;
@@ -66,6 +78,7 @@ class AuditCubit extends ResilientCubit<AuditState> {
     final nextFrom = clearFilters ? null : (from ?? previous?.from);
     final nextTo = clearFilters ? null : (to ?? previous?.to);
     final nextTable = clearFilters ? null : (table ?? previous?.table);
+    final nextActor = clearFilters ? null : (actor ?? previous?.actor);
 
     emit(const AuditLoading());
     try {
@@ -73,8 +86,15 @@ class AuditCubit extends ResilientCubit<AuditState> {
         from: nextFrom,
         to: nextTo,
         table: nextTable,
+        actor: nextActor,
       );
-      emit(AuditLoaded(entries, from: nextFrom, to: nextTo, table: nextTable));
+      emit(AuditLoaded(
+        entries,
+        from: nextFrom,
+        to: nextTo,
+        table: nextTable,
+        actor: nextActor,
+      ));
     } on Failure catch (failure) {
       emit(AuditFailure.of(failure));
     }

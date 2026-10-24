@@ -6,5 +6,6 @@ abstract class AuditRepository {
     DateTime? from,
     DateTime? to,
     String? table,
+    String? actor,
   });
 }

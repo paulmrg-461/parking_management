@@ -210,8 +210,9 @@ prints the same data from a shell.
 Admins have `/audit`: every change to users, categories, tariffs, vehicles,
 monthly passes, settings, sites and memberships is stored with the actor, the
 lot, the affected row and the changed columns. Money-related actions keep their
-own audit (discounts, shift corrections, pass payments). Filter by table and
-date, and open an entry to see the before/after payload.
+own audit (discounts, shift corrections, pass payments). Filter by table, actor
+and date, open an entry to see the before/after payload, and export the current
+view as PDF (share/print) or CSV (clipboard).
 
 ## Reports and shifts
 

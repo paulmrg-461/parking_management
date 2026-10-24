@@ -2,9 +2,11 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/l10n/failure_messages.dart';
+import '../../../core/receipt/pdf_share.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/formatters.dart';
@@ -12,6 +14,7 @@ import '../../../core/widgets/error_state.dart';
 import '../../../core/widgets/skeleton.dart';
 import '../application/audit_cubit.dart';
 import '../domain/entities/audit_entry.dart';
+import 'audit_export.dart';
 
 /// Admin audit trail: who changed which reference data, when and where.
 class AuditPage extends StatefulWidget {
@@ -58,6 +61,40 @@ class _AuditPageState extends State<AuditPage> {
     }
   }
 
+  Future<void> _exportPdf(BuildContext context, AuditState state) async {
+    if (state is! AuditLoaded || state.entries.isEmpty) {
+      return;
+    }
+    final bytes = await buildAuditPdf(
+      l10n: context.l10n,
+      entries: state.entries,
+      subtitle: [
+        if (state.table != null) state.table!,
+        if (state.actor != null) state.actor!,
+      ].join(' · '),
+    );
+    if (!context.mounted) {
+      return;
+    }
+    await sharePdfBytes(
+      context,
+      bytes: bytes,
+      filename: auditPdfFileName(DateTime.now()),
+    );
+  }
+
+  Future<void> _copyCsv(BuildContext context, AuditState state) async {
+    if (state is! AuditLoaded || state.entries.isEmpty) {
+      return;
+    }
+    await Clipboard.setData(ClipboardData(text: auditCsv(state.entries)));
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.auditCopied)),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -65,6 +102,25 @@ class _AuditPageState extends State<AuditPage> {
       appBar: AppBar(
         title: Text(l10n.auditTitle),
         actions: [
+          BlocBuilder<AuditCubit, AuditState>(
+            builder: (context, state) => PopupMenuButton<String>(
+              tooltip: l10n.auditExport,
+              icon: const Icon(Icons.ios_share),
+              onSelected: (value) => value == 'pdf'
+                  ? _exportPdf(context, state)
+                  : _copyCsv(context, state),
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                  value: 'pdf',
+                  child: Text(l10n.auditExportPdf),
+                ),
+                PopupMenuItem(
+                  value: 'csv',
+                  child: Text(l10n.auditExportCsv),
+                ),
+              ],
+            ),
+          ),
           BlocBuilder<AuditCubit, AuditState>(
             builder: (context, state) => IconButton(
               tooltip: l10n.auditFilterDates,
@@ -91,6 +147,7 @@ class _AuditPageState extends State<AuditPage> {
                     Expanded(
                       child: DropdownButtonFormField<String?>(
                         initialValue: table,
+                        isExpanded: true,
                         decoration: InputDecoration(
                           labelText: l10n.auditTable,
                           isDense: true,
@@ -107,8 +164,37 @@ class _AuditPageState extends State<AuditPage> {
                             context.read<AuditCubit>().load(table: value),
                       ),
                     ),
+                    if (state is AuditLoaded && state.actors.isNotEmpty) ...[
+                      const SizedBox(width: Space.sm),
+                      Expanded(
+                        child: DropdownButtonFormField<String?>(
+                          initialValue: state.actor,
+                          isExpanded: true,
+                          decoration: InputDecoration(
+                            labelText: l10n.auditActor,
+                            isDense: true,
+                          ),
+                          items: [
+                            DropdownMenuItem(
+                              value: null,
+                              child: Text(l10n.auditAllActors),
+                            ),
+                            for (final actor in state.actors)
+                              DropdownMenuItem(
+                                value: actor,
+                                child: Text(actor),
+                              ),
+                          ],
+                          onChanged: (value) => context
+                              .read<AuditCubit>()
+                              .load(actor: value),
+                        ),
+                      ),
+                    ],
                     if (state is AuditLoaded &&
-                        (state.from != null || state.table != null))
+                        (state.from != null ||
+                            state.table != null ||
+                            state.actor != null))
                       TextButton(
                         onPressed: () => context
                             .read<AuditCubit>()

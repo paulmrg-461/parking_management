@@ -28,11 +28,13 @@ void main() {
     final from = DateTime(2026, 10, 1);
     final to = DateTime(2026, 10, 31);
 
-    await cubit.load(from: from, to: to, table: 'users');
+    await cubit.load(from: from, to: to, table: 'users', actor: 'admin');
 
     expect(repository.lastFrom, from);
     expect(repository.lastTable, 'users');
+    expect(repository.lastActor, 'admin');
     expect((cubit.state as AuditLoaded).table, 'users');
+    expect((cubit.state as AuditLoaded).actor, 'admin');
   });
 
   test('Success: clearing filters drops the previous selection', () async {
@@ -41,7 +43,9 @@ void main() {
     await cubit.load(clearFilters: true);
 
     expect(repository.lastTable, isNull);
+    expect(repository.lastActor, isNull);
     expect((cubit.state as AuditLoaded).table, isNull);
+    expect((cubit.state as AuditLoaded).actor, isNull);
   });
 
   test('Failure: a rejected load is an AuditFailure with the code', () async {

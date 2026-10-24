@@ -9,6 +9,7 @@ abstract class AuditRemoteDataSource {
     DateTime? from,
     DateTime? to,
     String? table,
+    String? actor,
   });
 }
 
@@ -23,6 +24,7 @@ class SupabaseAuditRemoteDataSource implements AuditRemoteDataSource {
     DateTime? from,
     DateTime? to,
     String? table,
+    String? actor,
   }) async {
     try {
       final result = await _client.rpc(
@@ -32,6 +34,7 @@ class SupabaseAuditRemoteDataSource implements AuditRemoteDataSource {
           if (from != null) 'p_start_date': _date(from),
           if (to != null) 'p_end_date': _date(to),
           'p_table': ?table,
+          'p_actor': ?actor,
         },
       );
       return [

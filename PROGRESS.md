@@ -231,6 +231,10 @@ The app is now a Supabase-only stack: FastAPI, Alembic, Dio and Redis are gone.
   7 days of client error reports (stack + context). Backed by
   `rpc/diagnostics_snapshot` and `rpc/list_client_error_reports`.
 
+- **Audit exports**: `/audit` filters by actor (`p_actor` on
+  `list_audit_log`) and exports the current view as PDF (share/print) or CSV
+  (clipboard).
+
 ## Infra/tooling (not OpenSpec capabilities — repo scaffolding)
 
 - **Docker**: root `docker-compose.yml` includes the official self-hosted
@@ -271,7 +275,7 @@ The app is now a Supabase-only stack: FastAPI, Alembic, Dio and Redis are gone.
 
 ## Test counts
 
-- Flutter (`flutter test`): 511 passed (plus 1 integration test that runs only against a live stack). `flutter analyze`: 0 errors/warnings
+- Flutter (`flutter test`): 516 passed (plus 1 integration test that runs only against a live stack). `flutter analyze`: 0 errors/warnings
   (98 SDK-deprecation/const infos under the local Flutter 3.50 beta; CI pins
   3.49 where the baseline is clean).
 - SQL/compose: validated against the running Supabase stack and by
