@@ -13,6 +13,7 @@ Future<void> pumpPage(
   int staleSessions = 0,
   int deadPush = 0,
   List<dynamic> errors = const [],
+  List<dynamic> whatsapp = const [],
 }) async {
   final cubit = DiagnosticsCubit(
     FakeDiagnosticsRepository(
@@ -20,8 +21,10 @@ Future<void> pumpPage(
         staleSessions: staleSessions,
         deadPush: deadPush,
         clientErrors: errors.length,
+        whatsappFailed: whatsapp.where((m) => m.status == 'failed').length,
       ),
       errors: [for (final error in errors) error],
+      whatsapp: [for (final message in whatsapp) message],
     ),
   );
   addTearDown(cubit.close);
@@ -78,5 +81,27 @@ void main() {
     // attention; the values themselves are covered by the counter test.
     expect(find.byIcon(Icons.warning_amber_outlined), findsOneWidget);
     expect(find.text('Sesiones abiertas +24 h'), findsOneWidget);
+  });
+
+  testWidgets('Success: the WhatsApp queue shows failures and messages', (
+    tester,
+  ) async {
+    await pumpPage(tester, whatsapp: [sampleWhatsapp()]);
+
+    expect(find.text('WhatsApp'), findsOneWidget);
+    expect(find.text('Fallidos'), findsOneWidget);
+    expect(find.text('receipt · 573001112233'), findsOneWidget);
+    expect(find.textContaining('401: invalid token'), findsOneWidget);
+  });
+
+  testWidgets('Empty: no WhatsApp messages shows its empty state', (
+    tester,
+  ) async {
+    await pumpPage(tester);
+
+    expect(
+      find.text('Sin mensajes de WhatsApp en el periodo'),
+      findsOneWidget,
+    );
   });
 }

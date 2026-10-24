@@ -50,6 +50,10 @@ select count(*) as hits, platform, left(message, 120) as message
  order by hits desc
  limit 10;
 
+\echo '== whatsapp queue'
+select status, count(*), max(created_at) as newest
+  from public.whatsapp_messages group by status order by status;
+
 \echo '== idempotency keys'
 select count(*) as keys, min(created_at) as oldest from public.idempotency_keys;
 

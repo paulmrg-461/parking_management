@@ -3,6 +3,7 @@ import 'package:equatable/equatable.dart';
 import '../../../core/error/failure.dart';
 import '../../../core/state/resilient_cubit.dart';
 import '../domain/entities/client_error_report.dart';
+import '../domain/entities/whatsapp_message.dart';
 import '../domain/entities/diagnostics_snapshot.dart';
 import '../domain/repositories/diagnostics_repository.dart';
 
@@ -22,13 +23,14 @@ final class DiagnosticsLoading extends DiagnosticsState {
 }
 
 final class DiagnosticsLoaded extends DiagnosticsState {
-  const DiagnosticsLoaded(this.snapshot, this.errors);
+  const DiagnosticsLoaded(this.snapshot, this.errors, this.whatsapp);
 
   final DiagnosticsSnapshot snapshot;
   final List<ClientErrorReport> errors;
+  final List<WhatsappMessage> whatsapp;
 
   @override
-  List<Object?> get props => [snapshot, errors];
+  List<Object?> get props => [snapshot, errors, whatsapp];
 }
 
 final class DiagnosticsFailure extends DiagnosticsState {
@@ -55,11 +57,13 @@ class DiagnosticsCubit extends ResilientCubit<DiagnosticsState> {
       final results = await Future.wait([
         _repository.snapshot(),
         _repository.clientErrors(),
+        _repository.whatsappMessages(),
       ]);
       emit(
         DiagnosticsLoaded(
           results[0] as DiagnosticsSnapshot,
           results[1] as List<ClientErrorReport>,
+          results[2] as List<WhatsappMessage>,
         ),
       );
     } on Failure catch (failure) {

@@ -109,7 +109,8 @@ client error reports (no shell access needed).
 `healthcheck.sh` verifies running services, `/auth/v1/health`, a REST query and
 `/storage/v1/status`, then warns about sessions open >48 h, shifts open >12 h,
 notifications that exhausted their push attempts, a push backlog (only when
-push is configured), client error reports and an oversized idempotency table.
+push is configured), failed WhatsApp messages, client error reports and an
+oversized idempotency table.
 Set `HEALTHCHECK_WEBHOOK` to a Slack-compatible endpoint to alert on failures.
 
 Client errors are stored in `public.client_error_reports` (admins can select

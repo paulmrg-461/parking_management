@@ -113,8 +113,9 @@ settings, lots and memberships).
 `whatsapp_auto`), `purge_whatsapp_messages`.
 
 **Diagnostics**
-`diagnostics_snapshot` (counters + storage usage), `list_client_error_reports`
-(admin-only, last N days).
+`diagnostics_snapshot` (counters, storage usage and the WhatsApp queue),
+`list_client_error_reports` and `list_whatsapp_messages` (admin-only, last N
+days).
 
 **Notifications and push**
 `mark_notifications_read`, `notify_session_event` (trigger),

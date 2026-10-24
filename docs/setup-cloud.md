@@ -228,8 +228,10 @@ Automated customer messages go through Meta, not the phone:
 4. Enable **WhatsApp automático** in the site settings. From then on the
    receipt/pass actions enqueue rows in `whatsapp_messages`; the cron calls
    `whatsapp-dispatch`, which retries up to 3 times and marks failures.
-5. Watch the queue in `/diagnostics` (notifications section) or with SQL:
+5. Watch the queue in `/diagnostics` (WhatsApp section, with the failure
+   reason) or with SQL:
    `select status, count(*) from whatsapp_messages group by status;`
+   `healthcheck.sh` also warns when messages failed after 3 attempts.
 
 Without credentials the dispatcher returns `{configured:false}` and the app
 keeps opening `wa.me` on the device.

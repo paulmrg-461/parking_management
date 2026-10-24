@@ -13,6 +13,7 @@ import '../../../core/widgets/skeleton.dart';
 import '../application/diagnostics_cubit.dart';
 import '../domain/entities/client_error_report.dart';
 import '../domain/entities/diagnostics_snapshot.dart';
+import '../domain/entities/whatsapp_message.dart';
 
 /// Admin operational panel: backlog counters plus the client error reports.
 /// The host script `supabase/diagnostics.sh` prints the same data.
@@ -53,7 +54,11 @@ class _DiagnosticsPageState extends State<DiagnosticsPage> {
           ),
           final DiagnosticsLoaded loaded => RefreshIndicator(
             onRefresh: () => context.read<DiagnosticsCubit>().load(),
-            child: _Body(snapshot: loaded.snapshot, errors: loaded.errors),
+            child: _Body(
+              snapshot: loaded.snapshot,
+              errors: loaded.errors,
+              whatsapp: loaded.whatsapp,
+            ),
           ),
         },
       ),
@@ -62,10 +67,15 @@ class _DiagnosticsPageState extends State<DiagnosticsPage> {
 }
 
 class _Body extends StatelessWidget {
-  const _Body({required this.snapshot, required this.errors});
+  const _Body({
+    required this.snapshot,
+    required this.errors,
+    required this.whatsapp,
+  });
 
   final DiagnosticsSnapshot snapshot;
   final List<ClientErrorReport> errors;
+  final List<WhatsappMessage> whatsapp;
 
   @override
   Widget build(BuildContext context) {
@@ -133,6 +143,34 @@ class _Body extends StatelessWidget {
             ),
           ],
         ),
+        _Section(
+          title: l10n.diagnosticsWhatsapp,
+          icon: snapshot.whatsappFailed > 0
+              ? Icons.warning_amber_outlined
+              : Icons.chat_outlined,
+          rows: [
+            _Metric(
+              l10n.diagnosticsWhatsappPending,
+              '${snapshot.whatsappPending}',
+            ),
+            _Metric(
+              l10n.diagnosticsWhatsappFailedCount,
+              '${snapshot.whatsappFailed}',
+              warning: snapshot.whatsappFailed > 0,
+            ),
+            _Metric(
+              l10n.diagnosticsWhatsappSent,
+              '${snapshot.whatsappSent24h}',
+            ),
+          ],
+        ),
+        if (whatsapp.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: Space.md),
+            child: Text(l10n.diagnosticsWhatsappEmpty),
+          )
+        else
+          for (final message in whatsapp) _WhatsappTile(message: message),
         if (snapshot.storage.isNotEmpty)
           _Section(
             title: l10n.diagnosticsStorage,
@@ -226,6 +264,42 @@ class _Metric extends StatelessWidget {
           const SizedBox(width: Space.sm),
           Text(value, style: style),
         ],
+      ),
+    );
+  }
+}
+
+class _WhatsappTile extends StatelessWidget {
+  const _WhatsappTile({required this.message});
+
+  final WhatsappMessage message;
+
+  IconData get _icon => switch (message.status) {
+    'sent' => Icons.check_circle_outline,
+    'failed' => Icons.error_outline,
+    _ => Icons.schedule,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final subtitle = [
+      if (message.actor != null) message.actor!,
+      if (message.lot != null) message.lot!,
+      Formatters.dateTime(message.createdAt),
+      if (message.attempts > 0) l10n.diagnosticsWhatsappAttempts(message.attempts),
+    ].join(' · ');
+    return Card(
+      margin: const EdgeInsets.only(bottom: Space.sm),
+      child: ListTile(
+        leading: Icon(_icon),
+        title: Text('${message.template} · ${message.toPhone}'),
+        subtitle: Text(
+          message.error == null || message.error!.isEmpty
+              ? subtitle
+              : '${message.error}\n$subtitle',
+        ),
+        isThreeLine: message.error != null && message.error!.isNotEmpty,
       ),
     );
   }

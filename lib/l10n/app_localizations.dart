@@ -548,6 +548,42 @@ abstract class AppLocalizations {
   /// **'Diagnóstico'**
   String get diagnosticsTitle;
 
+  /// No description provided for @diagnosticsWhatsapp.
+  ///
+  /// In es, this message translates to:
+  /// **'WhatsApp'**
+  String get diagnosticsWhatsapp;
+
+  /// No description provided for @diagnosticsWhatsappPending.
+  ///
+  /// In es, this message translates to:
+  /// **'En cola'**
+  String get diagnosticsWhatsappPending;
+
+  /// No description provided for @diagnosticsWhatsappFailedCount.
+  ///
+  /// In es, this message translates to:
+  /// **'Fallidos'**
+  String get diagnosticsWhatsappFailedCount;
+
+  /// No description provided for @diagnosticsWhatsappSent.
+  ///
+  /// In es, this message translates to:
+  /// **'Enviados (24 h)'**
+  String get diagnosticsWhatsappSent;
+
+  /// No description provided for @diagnosticsWhatsappEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin mensajes de WhatsApp en el periodo'**
+  String get diagnosticsWhatsappEmpty;
+
+  /// No description provided for @diagnosticsWhatsappAttempts.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} intentos'**
+  String diagnosticsWhatsappAttempts(int count);
+
   /// No description provided for @diagnosticsSystem.
   ///
   /// In es, this message translates to:

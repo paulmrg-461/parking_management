@@ -256,6 +256,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get diagnosticsTitle => 'Diagnostics';
 
   @override
+  String get diagnosticsWhatsapp => 'WhatsApp';
+
+  @override
+  String get diagnosticsWhatsappPending => 'Queued';
+
+  @override
+  String get diagnosticsWhatsappFailedCount => 'Failed';
+
+  @override
+  String get diagnosticsWhatsappSent => 'Sent (24 h)';
+
+  @override
+  String get diagnosticsWhatsappEmpty => 'No WhatsApp messages in the period';
+
+  @override
+  String diagnosticsWhatsappAttempts(int count) {
+    return '$count attempts';
+  }
+
+  @override
   String get diagnosticsSystem => 'System';
 
   @override

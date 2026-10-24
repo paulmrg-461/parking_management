@@ -137,6 +137,9 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 - App: `BrandingCubit.settingsOrNull.whatsappAuto` decides between enqueue
   (`whatsappQueued` snack) and `wa.me`; `CustomerMessageRepository` is the port.
 - Passes/history UI tests cover both branches (fake repo + branding).
+- `/diagnostics` shows the queue (pending/failed/sent 24 h) and the recent
+  messages; `healthcheck.sh` warns on failed ones; `diagnostics.sql` has a
+  matching section.
 
 ## WhatsApp receipts (latest)
 

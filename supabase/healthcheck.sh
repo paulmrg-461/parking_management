@@ -75,6 +75,11 @@ if [ "${client_errors:-0}" -gt 0 ] 2>/dev/null; then
   warn "$client_errors client error report(s) in the last 24h (see diagnostics.sql)"
 fi
 
+whatsapp_failed=$(sql "select count(*) from public.whatsapp_messages where status = 'failed'" || true)
+if [ "${whatsapp_failed:-0}" -gt 0 ] 2>/dev/null; then
+  warn "$whatsapp_failed WhatsApp message(s) failed after 3 attempts"
+fi
+
 idempotency=$(sql "select count(*) from public.idempotency_keys" || true)
 if [ "${idempotency:-0}" -gt 100000 ] 2>/dev/null; then
   warn "$idempotency idempotency keys stored (purge job not running?)"

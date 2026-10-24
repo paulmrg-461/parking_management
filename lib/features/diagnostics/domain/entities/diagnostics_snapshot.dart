@@ -39,6 +39,9 @@ class DiagnosticsSnapshot extends Equatable {
     required this.totalNotifications,
     required this.clientErrors24h,
     required this.idempotencyKeys,
+    this.whatsappPending = 0,
+    this.whatsappFailed = 0,
+    this.whatsappSent24h = 0,
     this.lastMigrationAt,
     this.storage = const [],
   });
@@ -58,17 +61,24 @@ class DiagnosticsSnapshot extends Equatable {
   final int totalNotifications;
   final int clientErrors24h;
   final int idempotencyKeys;
+  final int whatsappPending;
+  final int whatsappFailed;
+  final int whatsappSent24h;
   final List<StorageUsage> storage;
 
   bool get hasWarnings =>
       staleSessions24h > 0 ||
       openShifts12h > 0 ||
       deadPush > 0 ||
-      clientErrors24h > 0;
+      clientErrors24h > 0 ||
+      whatsappFailed > 0;
 
   factory DiagnosticsSnapshot.fromJson(Map<String, dynamic> json) {
     final notifications = Map<String, dynamic>.from(
       json['notifications'] as Map? ?? const {},
+    );
+    final whatsapp = Map<String, dynamic>.from(
+      json['whatsapp'] as Map? ?? const {},
     );
     int count(Object? value) => (value as num?)?.toInt() ?? 0;
     return DiagnosticsSnapshot(
@@ -90,6 +100,9 @@ class DiagnosticsSnapshot extends Equatable {
       totalNotifications: count(notifications['total']),
       clientErrors24h: count(json['client_errors_24h']),
       idempotencyKeys: count(json['idempotency_keys']),
+      whatsappPending: count(whatsapp['pending']),
+      whatsappFailed: count(whatsapp['failed']),
+      whatsappSent24h: count(whatsapp['sent_24h']),
       storage: [
         for (final item in (json['storage'] as List<dynamic>? ?? const []))
           StorageUsage.fromJson(Map<String, dynamic>.from(item as Map)),
@@ -114,6 +127,9 @@ class DiagnosticsSnapshot extends Equatable {
     totalNotifications,
     clientErrors24h,
     idempotencyKeys,
+    whatsappPending,
+    whatsappFailed,
+    whatsappSent24h,
     storage,
   ];
 }

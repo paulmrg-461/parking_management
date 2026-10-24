@@ -104,8 +104,9 @@ RPCs own business logic and the Flutter client calls Supabase directly.
   service-role writes have no `auth.uid()`. Never store secrets (the trigger
   drops `pin_hash`). Admins read it at `/audit` (filters by table/actor/date,
   exports PDF/CSV) or `rpc/list_audit_log`.
-- Diagnostics: `/diagnostics` (admins) reads `rpc/diagnostics_snapshot` and
-  `rpc/list_client_error_reports`; keep it in sync with
+- Diagnostics: `/diagnostics` (admins) reads `rpc/diagnostics_snapshot`,
+  `rpc/list_client_error_reports` and `rpc/list_whatsapp_messages`; keep it in
+  sync with
   `supabase/diagnostics.sql` when adding a new counter.
 - Observability: uncaught errors go through `core/observability` into
   `client_error_reports` (never report expected `Failure`s, never throw from
@@ -115,7 +116,7 @@ RPCs own business logic and the Flutter client calls Supabase directly.
   browser push uses `web/push-sw.js` + VAPID (`web_push_subscriptions`);
   `FCM_SERVICE_ACCOUNT_JSON` + `supabase/notifications-cron.sh` enable
   background FCM. `push-dispatch` is service-role-only; never expose the key.
-- Tests: `flutter test` (536, plus a live-stack e2e) + `flutter analyze`; CI
+- Tests: `flutter test` (538, plus a live-stack e2e) + `flutter analyze`; CI
   validates compose and runs `supabase/tests/run.sh` (real migrations +
   RPC/RLS tests) against `supabase/postgres`.
 - E2E: `sh supabase/tests/e2e.sh` and

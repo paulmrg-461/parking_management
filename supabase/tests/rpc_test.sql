@@ -719,6 +719,47 @@ begin
 end $$;
 reset role;
 
+-- Diagnostics expose the WhatsApp queue; admins can list it.
+set local request.headers = '{"x-lot-id":"2"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    snapshot jsonb;
+    queued jsonb;
+begin
+    perform public.enqueue_whatsapp_message('573001112233', 'receipt', '[]'::jsonb);
+    snapshot := public.diagnostics_snapshot();
+    queued := public.list_whatsapp_messages(10, 7);
+    if not (snapshot ? 'whatsapp') then
+        raise exception 'diagnostics snapshot has no whatsapp section';
+    end if;
+    if (snapshot -> 'whatsapp' ->> 'pending')::integer < 1 then
+        raise exception 'whatsapp pending count is wrong';
+    end if;
+    if jsonb_typeof(queued) <> 'array' then
+        raise exception 'whatsapp messages were not listed';
+    end if;
+    if not exists (
+        select 1 from jsonb_array_elements(queued) item
+         where item ->> 'to_phone' = '573001112233'
+    ) then
+        raise exception 'queued whatsapp message is missing from the list';
+    end if;
+end $$;
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    begin
+        perform public.list_whatsapp_messages(10, 7);
+        raise exception 'operator listed the whatsapp queue';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then
+            raise;
+        end if;
+    end;
+end $$;
+
 -- Branding is per lot: only the active lot's row changes.
 set local request.headers = '{"x-lot-id":"2"}';
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
