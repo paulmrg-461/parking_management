@@ -8,8 +8,8 @@ commands, invariants and known gotchas. Update it when a batch lands.
 Deployment and design docs live in `docs/` (`README.md` indexes them):
 `environment-guide.en.md` / `environment-guide.md` (onboarding, EN/ES),
 `setup-local.md`, `setup-cloud.md`, `architecture.md`, `infrastructure.md` and
-`database.md`; `QUICKSTART.md` at the root is the one-page command sheet. Keep the Mermaid
-diagrams in sync with schema/service changes.
+`database.md`; `QUICKSTART.md` at the root is the one-page command sheet. Keep
+the Mermaid diagrams in sync with schema/service changes.
 
 ## Overview
 
