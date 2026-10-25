@@ -6,8 +6,9 @@ Read `docs/agent-memory.md` at the start of a session: current branch state,
 commands, invariants and known gotchas. Update it when a batch lands.
 
 Deployment and design docs live in `docs/` (`README.md` indexes them):
-`setup-local.md`, `setup-cloud.md`, `architecture.md`, `infrastructure.md` and
-`database.md`. Keep the Mermaid diagrams in sync with schema/service changes.
+`environment-guide.md` (Spanish onboarding), `setup-local.md`, `setup-cloud.md`,
+`architecture.md`, `infrastructure.md` and `database.md`. Keep the Mermaid
+diagrams in sync with schema/service changes.
 
 ## Overview
 

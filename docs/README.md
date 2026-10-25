@@ -5,6 +5,7 @@ Start here, then open the page you need.
 
 | Document | What it answers |
 |---|---|
+| [`environment-guide.md`](environment-guide.md) | **Spanish onboarding guide**: Docker, Supabase, mobile and web, optional integrations, what is free and what costs money. |
 | [`setup-local.md`](setup-local.md) | How to run the whole stack on a laptop from zero (Docker + Flutter + admin user + tests). |
 | [`setup-cloud.md`](setup-cloud.md) | How to put it in production on a VM with a domain, HTTPS, backups and push credentials. |
 | [`architecture.md`](architecture.md) | How the system is put together: components, Flutter layers, and the flows for check-in, billing, shifts, notifications and multi-site. |

@@ -53,8 +53,9 @@ Last updated: 2026-10-23, branch `feature/supabase` (post-hardening).
 
 ## Documentation map
 
-`docs/README.md` indexes the set: `setup-local.md`, `setup-cloud.md`,
-`architecture.md`, `infrastructure.md`, `database.md`. Diagrams are Mermaid in
+`docs/README.md` indexes the set: `environment-guide.md` (Spanish onboarding,
+free-vs-paid), `setup-local.md`, `setup-cloud.md`, `architecture.md`,
+`infrastructure.md`, `database.md`. Diagrams are Mermaid in
 Markdown; update the diagram with the code change (new table → `database.md`,
 new service/port → `infrastructure.md`, new flow → `architecture.md`).
 
