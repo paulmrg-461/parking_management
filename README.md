@@ -18,7 +18,9 @@ Storage directly, and business rules live in PostgreSQL functions.
 
 | Guide | Contents |
 |---|---|
-| [`docs/environment-guide.md`](docs/environment-guide.md) | Guía en español: montar Docker + Supabase + app móvil/web, integraciones opcionales y qué es gratis. |
+| [`QUICKSTART.md`](QUICKSTART.md) | One page of commands: stack, admin user, run web/Android, verify. |
+| [`docs/environment-guide.en.md`](docs/environment-guide.en.md) | Onboarding: Docker + Supabase + mobile/web, optional integrations, free vs paid. |
+| [`docs/environment-guide.md`](docs/environment-guide.md) | La misma guía de entorno en español. |
 | [`docs/setup-local.md`](docs/setup-local.md) | Full local setup from zero: secrets, stack, admin user, Flutter, tests, troubleshooting. |
 | [`docs/setup-cloud.md`](docs/setup-cloud.md) | Production on a VM: TLS proxy, hardening, backups, cron, push credentials, Android release, upgrades. |
 | [`docs/architecture.md`](docs/architecture.md) | Components, Flutter layers and the check-in/billing/shift/notification/multi-site flows. |

@@ -5,7 +5,8 @@ Start here, then open the page you need.
 
 | Document | What it answers |
 |---|---|
-| [`environment-guide.md`](environment-guide.md) | **Spanish onboarding guide**: Docker, Supabase, mobile and web, optional integrations, what is free and what costs money. |
+| [`environment-guide.en.md`](environment-guide.en.md) | **Onboarding guide (English)**: Docker, Supabase, mobile and web, optional integrations, what is free and what costs money. |
+| [`environment-guide.md`](environment-guide.md) | The same onboarding guide in Spanish. |
 | [`setup-local.md`](setup-local.md) | How to run the whole stack on a laptop from zero (Docker + Flutter + admin user + tests). |
 | [`setup-cloud.md`](setup-cloud.md) | How to put it in production on a VM with a domain, HTTPS, backups and push credentials. |
 | [`architecture.md`](architecture.md) | How the system is put together: components, Flutter layers, and the flows for check-in, billing, shifts, notifications and multi-site. |
@@ -14,6 +15,7 @@ Start here, then open the page you need.
 | [`runbook-restore.md`](runbook-restore.md) | Backup contents, monthly restore drill, production restore and verification checklist. |
 | [`runbook-secrets.md`](runbook-secrets.md) | Secret inventory, quarterly review, PIN/JWT/DB rotation procedures and leak response. |
 | [`agent-memory.md`](agent-memory.md) | Current state, invariants and gotchas for whoever (human or agent) picks the work up next. |
+| [`../QUICKSTART.md`](../QUICKSTART.md) | One page, commands only: stack up, admin user, run web/Android, verify. |
 
 For product decisions and the delivered/planned roadmap see
 [`../PROGRESS.md`](../PROGRESS.md); for coding rules see

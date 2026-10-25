@@ -1,6 +1,8 @@
 # Guía de entorno: Docker, Supabase, app móvil y web
 
-Guía práctica en español para levantar todo el sistema en tu máquina. Resumen
+Guía práctica en español para levantar todo el sistema en tu máquina.
+Versión en inglés: [`environment-guide.en.md`](environment-guide.en.md) · Chuleta
+de comandos: [`../QUICKSTART.md`](../QUICKSTART.md). Resumen
 rápido: **sí, puedes montar y usar todo en local gratis**. Solo pagas cuando
 publicas en internet o cuando activas integraciones externas (WhatsApp
 automático, push real, tienda de apps).
