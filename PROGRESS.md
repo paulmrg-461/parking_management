@@ -286,6 +286,12 @@ The app is now a Supabase-only stack: FastAPI, Alembic, Dio and Redis are gone.
 - Hive codegen: single `@GenerateAdapters` file at `lib/app/di/hive_adapters.dart`.
 - Home occupancy: `DashboardCubit` is provided at the go_router `ShellRoute` (not on the `/` route), so the check-in/check-out pages can refresh the "Vehículos dentro" count after a submission; a failed refresh keeps the last known count instead of blanking the card (provider `create` runs once, so the bloc survives in-shell navigation).
 
+## Executive summary and changelog
+
+[`docs/project-overview.md`](docs/project-overview.md) summarizes modules,
+status, verified quality and limitations; [`CHANGELOG.md`](CHANGELOG.md) lists
+notable changes and the migration history.
+
 ## Test counts
 
 - Flutter (`flutter test`): 540 passed (plus 1 integration test that runs only against a live stack). `flutter analyze`: 0 errors/warnings

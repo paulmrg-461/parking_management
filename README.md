@@ -18,6 +18,8 @@ Storage directly, and business rules live in PostgreSQL functions.
 
 | Guide | Contents |
 |---|---|
+| [`docs/project-overview.md`](docs/project-overview.md) | Executive summary: modules, status, verified quality, limitations. |
+| [`CHANGELOG.md`](CHANGELOG.md) | Notable changes and the migration history. |
 | [`QUICKSTART.md`](QUICKSTART.md) | One page of commands: stack, admin user, run web/Android, verify. |
 | [`docs/environment-guide.en.md`](docs/environment-guide.en.md) | Onboarding: Docker + Supabase + mobile/web, optional integrations, free vs paid. |
 | [`docs/environment-guide.md`](docs/environment-guide.md) | La misma guía de entorno en español. |
