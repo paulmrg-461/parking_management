@@ -854,6 +854,12 @@ abstract class AppLocalizations {
   /// **'Notas (opcional)'**
   String get reservationNotes;
 
+  /// No description provided for @reservationCheckIn.
+  ///
+  /// In es, this message translates to:
+  /// **'Registrar entrada'**
+  String get reservationCheckIn;
+
   /// No description provided for @reservationCancel.
   ///
   /// In es, this message translates to:

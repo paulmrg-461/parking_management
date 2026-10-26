@@ -145,6 +145,7 @@
   "reservationUntilLabel": "Reservar hasta {when}",
   "@reservationUntilLabel": {"placeholders": {"when": {"type": "String"}}},
   "reservationNotes": "Notas (opcional)",
+  "reservationCheckIn": "Registrar entrada",
   "reservationCancel": "Cancelar reserva",
   "reservationCancelTitle": "¿Cancelar la reserva?",
   "reservationCancelBody": "Se liberará el cupo reservado para {plate}.",

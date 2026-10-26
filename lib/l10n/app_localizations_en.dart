@@ -425,6 +425,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reservationNotes => 'Notes (optional)';
 
   @override
+  String get reservationCheckIn => 'Register entry';
+
+  @override
   String get reservationCancel => 'Cancel reservation';
 
   @override

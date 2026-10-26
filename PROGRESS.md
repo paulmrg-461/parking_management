@@ -264,7 +264,8 @@ The app is now a Supabase-only stack: FastAPI, Alembic, Dio and Redis are gone.
   is ignored (left to the platform) when the screen has none. The exported
   report PDF includes the comparison rows when the previous window loaded.
   Reservations list the soonest expiry first and flag holds that lapse within
-  two hours ("Vence en 30 min") with a warning chip.
+  two hours ("Vence en 30 min") with a warning chip. A reservation can jump
+  straight to check-in with its plate prefilled (`/check-in?plate=…`).
 
 ## Infra/tooling (not OpenSpec capabilities — repo scaffolding)
 
@@ -312,7 +313,7 @@ notable changes and the migration history.
 
 ## Test counts
 
-- Flutter (`flutter test`): 581 passed (plus 1 integration test that runs only against a live stack). `flutter analyze`: 0 errors/warnings
+- Flutter (`flutter test`): 583 passed (plus 1 integration test that runs only against a live stack). `flutter analyze`: 0 errors/warnings
   (98 SDK-deprecation/const infos under the local Flutter 3.50 beta; CI pins
   3.49 where the baseline is clean).
 - SQL/compose: validated against the running Supabase stack and by

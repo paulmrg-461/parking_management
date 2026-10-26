@@ -13,6 +13,7 @@ void main() {
   Future<FakeReservationRepository> pumpPage(
     WidgetTester tester, {
     List<dynamic> reservations = const [],
+    void Function(BuildContext context, String plate)? onCheckIn,
   }) async {
     final repository = FakeReservationRepository([
       for (final reservation in reservations) reservation,
@@ -26,7 +27,7 @@ void main() {
       testApp(
         BlocProvider.value(
           value: cubit,
-          child: const ReservationsPage(),
+          child: ReservationsPage(onCheckIn: onCheckIn),
         ),
       ),
     );
@@ -112,5 +113,21 @@ void main() {
     final first = tester.getTopLeft(find.text('SOON01')).dy;
     final second = tester.getTopLeft(find.text('LATE01')).dy;
     expect(first, lessThan(second));
+  });
+
+  testWidgets('Success: a reservation opens check-in with its plate', (
+    tester,
+  ) async {
+    String? requested;
+    await pumpPage(
+      tester,
+      reservations: [sampleReservation(plate: 'ABC123')],
+      onCheckIn: (_, plate) => requested = plate,
+    );
+
+    await tester.tap(find.byTooltip('Registrar entrada'));
+    await tester.pumpAndSettle();
+
+    expect(requested, 'ABC123');
   });
 }

@@ -208,6 +208,9 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   (`opened/closed/movement/adjusted`) after a confirmed cash action; the page
   announces it and shows an info snack. Do not revert it to `SubmissionIdle`,
   the confirmation depends on the transition.
+- `CheckInPage(initialPlate:)` prefills the field and runs the lookup on the
+  first frame; the router reads it from `/check-in?plate=`. Reservations pass
+  their plate to it (`onCheckIn` is injectable for widget tests).
 - Reservations: `Reservation.expiresSoon({now, window})` (default 2 h,
   expired holds excluded) drives a warning chip; `sortedByExpiry` returns a new
   soonest-first list used by the page (never sorts the state list in place).

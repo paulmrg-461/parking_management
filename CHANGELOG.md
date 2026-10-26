@@ -101,7 +101,8 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   passes first, then upcoming, then expired.
 - Empty lists (reservations, sites, audit) use the same friendly empty-state
   component instead of bare text. Reservations sort by expiry and flag holds
-  that lapse within two hours with a "expires in …" warning chip.
+  that lapse within two hours with a "expires in …" warning chip, and each
+  reservation opens check-in with its plate already prefilled.
 - The home "today" card shows a quiet-day message instead of a row of zeros
   before the first movement, with a cross-fade between both states.
 - Vehicles list has a server-side plate search (debounced), a no-match state
@@ -174,7 +175,7 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Tests
 
-- 581 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
+- 583 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
   integration test that runs only against a live stack.
 - SQL/RLS/RPC regressions covering capacity, shifts, discounts, passes,
   reservations, multi-site isolation, audit, diagnostics and retention.
@@ -204,7 +205,7 @@ Captured on 2026-10-24 against the local self-hosted stack:
 
 | Check | Result |
 |---|---|
-| `flutter test` | 581 passed (+1 live-stack integration skipped) |
+| `flutter test` | 583 passed (+1 live-stack integration skipped) |
 | `flutter analyze` | 0 errors, 0 warnings (only SDK deprecation infos) |
 | `flutter build web --release` | OK |
 | `supabase/tests/run.sh` | Passed (migrations + RPC/RLS regressions) |

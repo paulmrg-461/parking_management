@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/l10n/l10n.dart';
 import '../../../core/state/submission.dart';
@@ -18,7 +19,11 @@ import '../domain/entities/reservation.dart';
 import 'reservation_dialog.dart';
 
 class ReservationsPage extends StatefulWidget {
-  const ReservationsPage({super.key});
+  const ReservationsPage({super.key, this.onCheckIn});
+
+  /// Sends the operator to check-in with the plate prefilled. Injectable so a
+  /// widget test can record it without a router.
+  final void Function(BuildContext context, String plate)? onCheckIn;
 
   @override
   State<ReservationsPage> createState() => _ReservationsPageState();
@@ -49,7 +54,10 @@ class _ReservationsPageState extends State<ReservationsPage> {
               message: message,
               onRetry: context.read<ReservationsCubit>().load,
             ),
-            final ReservationsLoaded loaded => _List(loaded: loaded),
+            final ReservationsLoaded loaded => _List(
+              loaded: loaded,
+              onCheckIn: widget.onCheckIn ?? _checkInWithPlate,
+            ),
           },
         ),
       ),
@@ -80,10 +88,15 @@ class _ReservationsPageState extends State<ReservationsPage> {
   }
 }
 
+void _checkInWithPlate(BuildContext context, String plate) => context.push(
+  '/check-in?plate=${Uri.encodeQueryComponent(plate)}',
+);
+
 class _List extends StatelessWidget {
-  const _List({required this.loaded});
+  const _List({required this.loaded, required this.onCheckIn});
 
   final ReservationsLoaded loaded;
+  final void Function(BuildContext context, String plate) onCheckIn;
 
   @override
   Widget build(BuildContext context) {
@@ -96,16 +109,19 @@ class _List extends StatelessWidget {
     final reservations = sortedByExpiry(loaded.reservations);
     return ListView.builder(
       itemCount: reservations.length,
-      itemBuilder: (context, index) =>
-          _ReservationTile(reservation: reservations[index]),
+      itemBuilder: (context, index) => _ReservationTile(
+        reservation: reservations[index],
+        onCheckIn: onCheckIn,
+      ),
     );
   }
 }
 
 class _ReservationTile extends StatelessWidget {
-  const _ReservationTile({required this.reservation});
+  const _ReservationTile({required this.reservation, required this.onCheckIn});
 
   final Reservation reservation;
+  final void Function(BuildContext context, String plate) onCheckIn;
 
   @override
   Widget build(BuildContext context) {
@@ -145,10 +161,20 @@ class _ReservationTile extends StatelessWidget {
               ),
           ],
         ),
-        trailing: IconButton(
-          tooltip: l10n.reservationCancel,
-          icon: const Icon(Icons.close),
-          onPressed: () => _cancel(context),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              tooltip: l10n.reservationCheckIn,
+              icon: const Icon(Icons.login),
+              onPressed: () => onCheckIn(context, reservation.plate),
+            ),
+            IconButton(
+              tooltip: l10n.reservationCancel,
+              icon: const Icon(Icons.close),
+              onPressed: () => _cancel(context),
+            ),
+          ],
         ),
       ),
     );

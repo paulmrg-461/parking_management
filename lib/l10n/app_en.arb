@@ -135,6 +135,7 @@
   "reservationUntilLabel": "Hold until {when}",
   "@reservationUntilLabel": {"placeholders": {"when": {"type": "String"}}},
   "reservationNotes": "Notes (optional)",
+  "reservationCheckIn": "Register entry",
   "reservationCancel": "Cancel reservation",
   "reservationCancelTitle": "Cancel this reservation?",
   "reservationCancelBody": "The slot held for {plate} will be released.",

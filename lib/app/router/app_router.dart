@@ -119,6 +119,7 @@ GoRoute _homeRoute(AuthCubit auth) => GoRoute(
         child: CheckInPage(
           capture: serviceLocator<PlateImageCapture>(),
           canScan: serviceLocator<PlateScanner>().isSupported,
+          initialPlate: state.uri.queryParameters['plate'],
         ),
       ),
     ),

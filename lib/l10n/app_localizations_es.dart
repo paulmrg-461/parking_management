@@ -432,6 +432,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get reservationNotes => 'Notas (opcional)';
 
   @override
+  String get reservationCheckIn => 'Registrar entrada';
+
+  @override
   String get reservationCancel => 'Cancelar reserva';
 
   @override

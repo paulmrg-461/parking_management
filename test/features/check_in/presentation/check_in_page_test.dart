@@ -184,6 +184,7 @@ void main() {
     bool photos = false,
     _FakeScanner? scanner,
     List<CategoryOccupancySnapshot> occupancyCategories = const [],
+    String? initialPlate,
   }) async {
     checkIns = _FakeCheckInRepository();
     occupancy = FakeCheckOutRepository(categories: occupancyCategories);
@@ -211,6 +212,7 @@ void main() {
           child: CheckInPage(
             capture: _FakeCapture(returnsPhoto: photos),
             canScan: canScan,
+            initialPlate: initialPlate,
           ),
         ),
       ),
@@ -540,5 +542,14 @@ void main() {
     await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
     await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
     await expectLater(tester, meetsGuideline(textContrastGuideline));
+  });
+
+  testWidgets('Success: an initial plate is prefilled and looked up', (
+    tester,
+  ) async {
+    await pumpPage(tester, initialPlate: 'abc123');
+
+    expect(tester.widget<TextField>(plateField()).controller!.text, 'abc123');
+    expect(find.text('Vehículo registrado'), findsOneWidget);
   });
 }

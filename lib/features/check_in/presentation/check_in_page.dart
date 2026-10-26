@@ -36,7 +36,12 @@ import 'widgets/vehicle_lookup_section.dart';
 /// looked up (debounced) so a registered vehicle is shown read-only and an
 /// unknown one can be registered with the check-in.
 class CheckInPage extends StatefulWidget {
-  const CheckInPage({super.key, required this.capture, this.canScan = true});
+  const CheckInPage({
+    super.key,
+    required this.capture,
+    this.canScan = true,
+    this.initialPlate,
+  });
 
   /// Camera port (injected by the router from get_it; fakes in tests).
   final PlateImageCapture capture;
@@ -44,6 +49,10 @@ class CheckInPage extends StatefulWidget {
   /// `false` where on-device plate OCR is unavailable (web): the scan
   /// button is hidden and the plate is typed.
   final bool canScan;
+
+  /// Plate to prefill (e.g. from a reservation): the vehicle lookup runs as
+  /// soon as the page opens, saving a retype.
+  final String? initialPlate;
 
   @override
   State<CheckInPage> createState() => _CheckInPageState();
@@ -89,6 +98,7 @@ class _CheckInPageState extends State<CheckInPage> {
         // Isolated tests may not provide the dashboard cubit.
       }
       _restoreLastPlate();
+      _prefillPlate();
     });
   }
 
@@ -130,6 +140,19 @@ class _CheckInPageState extends State<CheckInPage> {
     }
     _plateFocus.requestFocus();
     showErrorSnack(context, message);
+  }
+
+  void _prefillPlate() {
+    final plate = widget.initialPlate?.trim();
+    if (plate == null || plate.isEmpty) {
+      return;
+    }
+    _plateController.text = plate;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _lookupNow();
+      }
+    });
   }
 
   void _restoreLastPlate() {
