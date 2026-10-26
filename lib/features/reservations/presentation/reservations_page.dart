@@ -11,6 +11,7 @@ import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_state.dart';
 import '../../../core/widgets/list_page_scaffold.dart';
 import '../../../core/widgets/skeleton.dart';
+import '../../../core/widgets/status_chip.dart';
 import '../../../core/widgets/submission_listener.dart';
 import '../application/reservations_cubit.dart';
 import '../domain/entities/reservation.dart';
@@ -92,10 +93,11 @@ class _List extends StatelessWidget {
         icon: Icons.event_available_outlined,
       );
     }
+    final reservations = sortedByExpiry(loaded.reservations);
     return ListView.builder(
-      itemCount: loaded.reservations.length,
+      itemCount: reservations.length,
       itemBuilder: (context, index) =>
-          _ReservationTile(reservation: loaded.reservations[index]),
+          _ReservationTile(reservation: reservations[index]),
     );
   }
 }
@@ -108,19 +110,40 @@ class _ReservationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final now = DateTime.now();
     return Card(
       margin: const EdgeInsets.fromLTRB(Space.md, Space.xs, Space.md, Space.xs),
       child: ListTile(
         title: Text(reservation.plate),
-        subtitle: Text(
-          [
-            if (reservation.categoryName.isNotEmpty) reservation.categoryName,
-            l10n.reservationUntil(
-              Formatters.dateTime(reservation.reservedUntil.toLocal()),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              [
+                if (reservation.categoryName.isNotEmpty)
+                  reservation.categoryName,
+                l10n.reservationUntil(
+                  Formatters.dateTime(reservation.reservedUntil.toLocal()),
+                ),
+                if (reservation.notes != null && reservation.notes!.isNotEmpty)
+                  reservation.notes!,
+              ].join(' · '),
             ),
-            if (reservation.notes != null && reservation.notes!.isNotEmpty)
-              reservation.notes!,
-          ].join(' · '),
+            if (reservation.expiresSoon(now: now))
+              Padding(
+                padding: const EdgeInsets.only(top: Space.xs),
+                child: StatusChip(
+                  label: l10n.reservationExpiresIn(
+                    Formatters.duration(
+                      l10n,
+                      reservation.reservedUntil.difference(now),
+                    ),
+                  ),
+                  tone: StatusTone.warning,
+                  icon: Icons.schedule,
+                ),
+              ),
+          ],
         ),
         trailing: IconButton(
           tooltip: l10n.reservationCancel,

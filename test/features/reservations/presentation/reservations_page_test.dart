@@ -65,4 +65,52 @@ void main() {
     expect(repository.cancelledId, 1);
     expect(find.text('No hay reservas activas'), findsOneWidget);
   });
+
+  testWidgets('Success: a hold about to lapse is flagged', (tester) async {
+    await pumpPage(
+      tester,
+      reservations: [
+        sampleReservation(
+          reservedUntil: DateTime.now().add(const Duration(minutes: 30)),
+        ),
+      ],
+    );
+
+    expect(find.textContaining('Vence en'), findsOneWidget);
+  });
+
+  testWidgets('Failure: a distant hold is not flagged', (tester) async {
+    await pumpPage(
+      tester,
+      reservations: [
+        sampleReservation(
+          reservedUntil: DateTime.now().add(const Duration(hours: 5)),
+        ),
+      ],
+    );
+
+    expect(find.textContaining('Vence en'), findsNothing);
+  });
+
+  testWidgets('Success: the soonest expiry is listed first', (tester) async {
+    await pumpPage(
+      tester,
+      reservations: [
+        sampleReservation(
+          id: 2,
+          plate: 'LATE01',
+          reservedUntil: DateTime.now().add(const Duration(hours: 6)),
+        ),
+        sampleReservation(
+          id: 1,
+          plate: 'SOON01',
+          reservedUntil: DateTime.now().add(const Duration(minutes: 15)),
+        ),
+      ],
+    );
+
+    final first = tester.getTopLeft(find.text('SOON01')).dy;
+    final second = tester.getTopLeft(find.text('LATE01')).dy;
+    expect(first, lessThan(second));
+  });
 }

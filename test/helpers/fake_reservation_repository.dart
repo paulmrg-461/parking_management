@@ -59,11 +59,12 @@ Reservation sampleReservation({
   String plate = 'ABC123',
   String categoryName = 'car',
   String? notes,
+  DateTime? reservedUntil,
 }) => Reservation(
   id: id,
   plate: plate,
   categoryId: 2,
   categoryName: categoryName,
-  reservedUntil: DateTime.now().add(const Duration(hours: 2)),
+  reservedUntil: reservedUntil ?? DateTime.now().add(const Duration(hours: 2)),
   notes: notes,
 );

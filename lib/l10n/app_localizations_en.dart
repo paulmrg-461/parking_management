@@ -407,6 +407,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reservationsEmpty => 'No active reservations';
 
   @override
+  String reservationExpiresIn(String duration) {
+    return 'Expires in $duration';
+  }
+
+  @override
   String reservationUntil(String when) {
     return 'Until $when';
   }

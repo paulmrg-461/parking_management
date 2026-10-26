@@ -830,6 +830,12 @@ abstract class AppLocalizations {
   /// **'No hay reservas activas'**
   String get reservationsEmpty;
 
+  /// No description provided for @reservationExpiresIn.
+  ///
+  /// In es, this message translates to:
+  /// **'Vence en {duration}'**
+  String reservationExpiresIn(String duration);
+
   /// No description provided for @reservationUntil.
   ///
   /// In es, this message translates to:

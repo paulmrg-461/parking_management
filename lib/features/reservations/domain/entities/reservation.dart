@@ -22,7 +22,22 @@ class Reservation extends Equatable {
   final String status;
   final String? notes;
 
-  bool get isExpired => reservedUntil.isBefore(DateTime.now());
+  /// Holds that lapse within this window are flagged on the list.
+  static const expiringWindow = Duration(hours: 2);
+
+  bool get isExpired => isExpiredAt(DateTime.now());
+
+  bool isExpiredAt(DateTime now) => !reservedUntil.isAfter(now);
+
+  /// About to lapse (but still holding capacity). Expired holds are not
+  /// "soon": they are already gone.
+  bool expiresSoon({DateTime? now, Duration window = expiringWindow}) {
+    final current = now ?? DateTime.now();
+    if (isExpiredAt(current)) {
+      return false;
+    }
+    return reservedUntil.difference(current) <= window;
+  }
 
   factory Reservation.fromJson(Map<String, dynamic> json) {
     final category = json['categories'];
@@ -43,3 +58,9 @@ class Reservation extends Equatable {
   List<Object?> get props =>
       [id, plate, categoryId, categoryName, reservedUntil, status, notes];
 }
+
+/// Soonest expiry first, so the holds about to lapse are seen at the top.
+/// Returns a new list (the state list is never mutated in place).
+List<Reservation> sortedByExpiry(Iterable<Reservation> reservations) =>
+    [...reservations]
+      ..sort((a, b) => a.reservedUntil.compareTo(b.reservedUntil));

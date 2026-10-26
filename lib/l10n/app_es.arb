@@ -138,6 +138,8 @@
   "reservationsTitle": "Reservas de cupo",
   "reservationAdd": "Nueva reserva",
   "reservationsEmpty": "No hay reservas activas",
+  "reservationExpiresIn": "Vence en {duration}",
+  "@reservationExpiresIn": {"placeholders": {"duration": {"type": "String"}}},
   "reservationUntil": "Hasta {when}",
   "@reservationUntil": {"placeholders": {"when": {"type": "String"}}},
   "reservationUntilLabel": "Reservar hasta {when}",
