@@ -4,19 +4,19 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-10-23, branch `feature/supabase` (post-hardening).
+Last updated: 2026-10-26, branch `feature/supabase` (post-UI/UX polish).
 
 ## Where we are
 
 - Stack: Flutter (android + web) + self-hosted Supabase only. No FastAPI,
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
-- `supabase/migrations/0001..0026` are the schema owner (applied by
+- `supabase/migrations/0001..0046` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 480 tests green, `flutter analyze` reports only SDK
-  deprecation/const infos from the local beta channel (0 errors/warnings).
-  Web build green. `supabase/tests/run.sh` green.
-- OpenSpec: `openspec/changes/add-multi-parking-lot` is 24/25 done (only the
-  header-fallback "contract" migration remains, intentionally later).
+- Flutter: 618 tests green, `flutter analyze` reports only SDK deprecation
+  infos from the pinned beta channel (0 errors/warnings). Web build green.
+  `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
+- OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
+  item is the manual smoke for `add-parking-settings` (task 10.4).
 
 ## What shipped recently
 
@@ -377,6 +377,23 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 - Ops: `healthcheck.sh` (exit 1 on failure, `HEALTHCHECK_WEBHOOK` alerts) and
   `diagnostics.sh` (stuck sessions/shifts, backlog, client errors, sizes).
 
+## Dev environment running (2026-10-26)
+
+- Backend: `docker compose up -d` from the repo root; all services healthy,
+  gateway/Studio on <http://localhost:8000>; migrations up to date.
+- Flutter web: `flutter run -d chrome --dart-define=SUPABASE_URL=http://localhost:8000
+  --dart-define=SUPABASE_ANON_KEY=<ANON_KEY>` (log: `/tmp/opencode/flutter-web.log`).
+- Android (Samsung S901E over wireless adb): `sh tool/run-android.sh` — it
+  re-applies `adb reverse` and runs with `SUPABASE_URL=http://localhost:8000`.
+  Install-only alternative: `flutter build apk --debug --dart-define=...` then
+  `adb install -r ... && adb shell am start -n
+  pro.devpaul.parking_management/.MainActivity`.
+- Login: `admin` / `123456`. Dev data: lot 1 "Parqueadero" (categories + data)
+  and lot 2 "Sede Norte" (member `norte2`, **no categories**: a new vehicle
+  cannot be registered there until categories/tariffs are created).
+- The apps use `localhost:8000`; if the phone shows "cannot reach the server",
+  check `adb reverse --list` first (see below), not `ufw`.
+
 ## Android over adb
 
 - `tool/run-android.sh [serial]` re-applies `adb reverse tcp:8000 tcp:8000` and
@@ -429,14 +446,22 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   remember payment method, shift confirmations + mismatch guard, Ctrl/Cmd+K,
   reservations expiry chip + jump to check-in, continuous "Nuevo cobro",
   shared plate input, staggered rows, users role filter, passes plate search,
-  monthly-pass chip on check-out, device appearance, and the "already inside"
-  check-in warning.
+  monthly-pass chip on check-out, device appearance, the "already inside"
+  check-in warning, the app mark/launcher icons, and the site switcher moved
+  from a shell strip into a compact home chip.
+- Hardware run found and fixed two boot bugs: Hive now initializes before the
+  Supabase session cleanup, and evidence uploads are insert-only (see above).
+- Current HEAD after the polish: `21f0149` (site switcher) on top of
+  `dece16c` (branding) and `9d4225e` (run-android helper).
 
 ## Backlog / next moves
 
 - `5.4` contract migration: drop the missing-header fallback once every client
   sends `x-lot-id`.
-- Optional polish: per-lot receipt footer beyond settings, lot filter on the
-  vehicle history UI, audit-log export, admin diagnostics screen.
-- Dev DB artifacts from smoke tests: lot `NORTH` ("Sede Norte") and user
-  `norte2` (operator, PIN `123456`, member of lot 2). Safe to delete.
+- Optional polish: per-lot receipt footer beyond settings, audit free-text
+  search, configurable shifts; the lot switcher could later live in an app-bar
+  menu instead of the home chip.
+- Dev DB artifacts from smoke tests: lot `NORTH` ("Sede Norte", no categories)
+  and user `norte2` (operator, PIN `123456`, member of lot 2). Safe to delete.
+- Closed dev sessions from probing (`PERMTEST1`, `PHOTOE2E`) were checked out and
+  are only history rows; storage probes were test artifacts.
