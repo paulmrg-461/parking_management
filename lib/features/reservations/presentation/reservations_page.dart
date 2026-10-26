@@ -12,6 +12,7 @@ import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_state.dart';
 import '../../../core/widgets/list_page_scaffold.dart';
 import '../../../core/widgets/skeleton.dart';
+import '../../../core/widgets/staggered_list_item.dart';
 import '../../../core/widgets/status_chip.dart';
 import '../../../core/widgets/submission_listener.dart';
 import '../application/reservations_cubit.dart';
@@ -109,9 +110,13 @@ class _List extends StatelessWidget {
     final reservations = sortedByExpiry(loaded.reservations);
     return ListView.builder(
       itemCount: reservations.length,
-      itemBuilder: (context, index) => _ReservationTile(
-        reservation: reservations[index],
-        onCheckIn: onCheckIn,
+      itemBuilder: (context, index) => StaggeredListItem(
+        key: ValueKey(reservations[index].id),
+        index: index,
+        child: _ReservationTile(
+          reservation: reservations[index],
+          onCheckIn: onCheckIn,
+        ),
       ),
     );
   }

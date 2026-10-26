@@ -211,6 +211,9 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   (`opened/closed/movement/adjusted`) after a confirmed cash action; the page
   announces it and shows an info snack. Do not revert it to `SubmissionIdle`,
   the confirmation depends on the transition.
+- `core/widgets/staggered_list_item.dart` wraps list rows (vehicles,
+  reservations) with a one-shot fade+slide keyed by the row id; it renders the
+  bare child when `MediaQuery.disableAnimationsOf` is true.
 - `core/widgets/plate_input_field.dart` is the single plate input (check-in,
   reservation dialog, vehicle creation): its formatter uppercases and strips
   blanks live and caps at 20, the column width. Do not add another formatter.

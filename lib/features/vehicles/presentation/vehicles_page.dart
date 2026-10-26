@@ -14,6 +14,7 @@ import '../../../core/widgets/list_page_scaffold.dart';
 import '../../../core/widgets/load_more_tile.dart';
 import '../../../core/widgets/plate_text.dart';
 import '../../../core/widgets/search_field.dart';
+import '../../../core/widgets/staggered_list_item.dart';
 import '../../../core/widgets/submission_listener.dart';
 import '../../categories/domain/entities/category.dart';
 import '../application/vehicles_cubit.dart';
@@ -136,9 +137,13 @@ class _VehicleList extends StatelessWidget {
             onLoad: context.read<VehiclesCubit>().loadMore,
           );
         }
-        return _VehicleTile(
-          vehicle: vehicles[index],
-          categoryName: _categoryName(context, vehicles[index]),
+        return StaggeredListItem(
+          key: ValueKey(vehicles[index].id),
+          index: index,
+          child: _VehicleTile(
+            vehicle: vehicles[index],
+            categoryName: _categoryName(context, vehicles[index]),
+          ),
         );
       },
     );
