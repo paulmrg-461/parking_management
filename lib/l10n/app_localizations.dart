@@ -170,6 +170,30 @@ abstract class AppLocalizations {
   /// **'Editar'**
   String get actionEdit;
 
+  /// No description provided for @themeMode.
+  ///
+  /// In es, this message translates to:
+  /// **'Apariencia'**
+  String get themeMode;
+
+  /// No description provided for @themeSystem.
+  ///
+  /// In es, this message translates to:
+  /// **'Sistema'**
+  String get themeSystem;
+
+  /// No description provided for @themeLight.
+  ///
+  /// In es, this message translates to:
+  /// **'Claro'**
+  String get themeLight;
+
+  /// No description provided for @themeDark.
+  ///
+  /// In es, this message translates to:
+  /// **'Oscuro'**
+  String get themeDark;
+
   /// No description provided for @actionLogout.
   ///
   /// In es, this message translates to:

@@ -46,6 +46,18 @@ class AppLocalizationsEs extends AppLocalizations {
   String get actionEdit => 'Editar';
 
   @override
+  String get themeMode => 'Apariencia';
+
+  @override
+  String get themeSystem => 'Sistema';
+
+  @override
+  String get themeLight => 'Claro';
+
+  @override
+  String get themeDark => 'Oscuro';
+
+  @override
   String get actionLogout => 'Cerrar sesión';
 
   @override

@@ -9,6 +9,8 @@ import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/app_icon_button.dart';
 import '../../../core/widgets/sync_badge.dart';
+import '../../../core/theme/theme_cubit.dart';
+import '../../../core/widgets/theme_mode_button.dart';
 import '../../auth/application/auth_cubit.dart';
 import '../../auth/domain/entities/auth_session.dart';
 import '../../auth/domain/entities/user.dart';
@@ -27,6 +29,16 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
+bool _hasThemeCubit(BuildContext context) {
+  try {
+    context.read<ThemeCubit>();
+    return true;
+  } on ProviderNotFoundException {
+    // Isolated tests may not provide the appearance cubit.
+    return false;
+  }
+}
+
 class _HomePageState extends State<HomePage> {
   @override
   void initState() {
@@ -40,13 +52,12 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          context.select<BrandingCubit, String>(
-            (c) => c.state.titleFor(l10n),
-          ),
+          context.select<BrandingCubit, String>((c) => c.state.titleFor(l10n)),
         ),
         actions: [
           const NotificationBell(),
           const SyncBadge(),
+          if (_hasThemeCubit(context)) const ThemeModeButton(),
           AppIconButton(
             icon: Icons.logout,
             tooltip: l10n.actionLogout,
@@ -75,9 +86,9 @@ class _Dashboard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final user = session.user;
-    final management = destinationsFor(
-      user.role,
-    ).where(managementDestinations.contains).toList();
+    final management = destinationsFor(user.role)
+        .where(managementDestinations.contains)
+        .toList();
     return RefreshIndicator(
       onRefresh: context.read<DashboardCubit>().load,
       child: ListView(

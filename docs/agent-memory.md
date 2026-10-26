@@ -219,6 +219,9 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 - `core/widgets/plate_input_field.dart` is the single plate input (check-in,
   reservation dialog, vehicle creation): its formatter uppercases and strips
   blanks live and caps at 20, the column width. Do not add another formatter.
+- `ThemeCubit` (`preferences/theme_mode`, system/light/dark) is optional in
+  `ParkingApp` so tests stay on the system theme; `ThemeModeButton` lives in the
+  home app bar and is hidden when the cubit is not provided.
 - `VehiclesCubit.create` reports `SubmissionSucceeded(vehicle)` (update/delete
   stay idle); the page shows a snack with a "Registrar entrada" action that
   pushes `/check-in?plate=` (`onCheckIn` is injectable for widget tests).

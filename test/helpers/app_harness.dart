@@ -5,6 +5,7 @@ import 'package:parking_management/app/app.dart';
 import 'package:parking_management/app/di/injection.dart';
 import 'package:parking_management/core/network/connectivity_cubit.dart';
 import 'package:parking_management/core/sync/sync_status_cubit.dart';
+import 'package:parking_management/core/theme/theme_cubit.dart';
 import 'package:parking_management/features/auth/application/auth_cubit.dart';
 import 'package:parking_management/features/auth/domain/entities/auth_session.dart';
 import 'package:parking_management/features/auth/domain/entities/user.dart';
@@ -84,6 +85,8 @@ Future<AuthCubit> pumpApp(
     );
   addTearDown(serviceLocator.reset);
   final syncOutbox = outbox ?? FakeSyncOutbox();
+  final themeCubit = ThemeCubit(FakeKeyValueStore());
+  addTearDown(themeCubit.close);
   final auth = AuthCubit(repository);
   await auth.restore();
   final syncStatus = SyncStatusCubit(syncOutbox, syncOutbox.remove);
@@ -96,6 +99,7 @@ Future<AuthCubit> pumpApp(
           branding ?? BrandingCubit(FakeParkingSettingsRepository()),
       connectivityCubit: connectivity,
       lotsCubit: serviceLocator<LotsCubit>(),
+      themeCubit: themeCubit,
     ),
   );
   await tester.pumpAndSettle();

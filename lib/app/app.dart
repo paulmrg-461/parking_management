@@ -8,6 +8,7 @@ import '../core/l10n/l10n.dart';
 import '../core/network/connectivity_cubit.dart';
 import '../core/sync/sync_status_cubit.dart';
 import '../core/theme/app_theme.dart';
+import '../core/theme/theme_cubit.dart';
 import '../core/widgets/search_shortcuts.dart';
 import '../features/auth/application/auth_cubit.dart';
 import '../features/lots/application/lots_cubit.dart';
@@ -25,6 +26,7 @@ class ParkingApp extends StatefulWidget {
     required this.brandingCubit,
     this.connectivityCubit,
     this.lotsCubit,
+    this.themeCubit,
   });
 
   final AuthCubit authCubit;
@@ -33,6 +35,9 @@ class ParkingApp extends StatefulWidget {
 
   /// Multi-lot context; optional so single-lot tests can omit it.
   final LotsCubit? lotsCubit;
+
+  /// Device appearance preference; optional so tests keep the system theme.
+  final ThemeCubit? themeCubit;
 
   /// Drives the offline banner; optional so tests can omit it.
   final ConnectivityCubit? connectivityCubit;
@@ -55,6 +60,7 @@ class _ParkingAppState extends State<ParkingApp> {
     if (widget.lotsCubit case final lots?) {
       unawaited(lots.load());
     }
+    widget.themeCubit?.restore();
   }
 
   @override
@@ -75,20 +81,29 @@ class _ParkingAppState extends State<ParkingApp> {
           BlocProvider<LotsCubit>.value(value: lots),
         if (widget.connectivityCubit case final connectivity?)
           BlocProvider<ConnectivityCubit>.value(value: connectivity),
+        if (widget.themeCubit case final theme?)
+          BlocProvider<ThemeCubit>.value(value: theme),
       ],
       child: SearchShortcuts(
-        child: MaterialApp.router(
-          onGenerateTitle: (context) =>
-              context.read<BrandingCubit>().state.titleFor(context.l10n),
-          theme: AppTheme.light(),
-          darkTheme: AppTheme.dark(),
-          themeMode: ThemeMode.system,
-          locale: defaultLocale,
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          routerConfig: _router,
-        ),
+        child: widget.themeCubit == null
+            ? _app(ThemeMode.system)
+            : BlocBuilder<ThemeCubit, ThemeMode>(
+                bloc: widget.themeCubit,
+                builder: (context, mode) => _app(mode),
+              ),
       ),
     );
   }
+
+  Widget _app(ThemeMode mode) => MaterialApp.router(
+    onGenerateTitle: (context) =>
+        context.read<BrandingCubit>().state.titleFor(context.l10n),
+    theme: AppTheme.light(),
+    darkTheme: AppTheme.dark(),
+    themeMode: mode,
+    locale: defaultLocale,
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    routerConfig: _router,
+  );
 }
