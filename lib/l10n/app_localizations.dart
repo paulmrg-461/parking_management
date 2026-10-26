@@ -2054,6 +2054,12 @@ abstract class AppLocalizations {
   /// **'Repetir entrada {plate}'**
   String checkInRepeat(String plate);
 
+  /// No description provided for @checkInAlreadyInside.
+  ///
+  /// In es, this message translates to:
+  /// **'Este vehículo ya figura dentro ({plate}). Verifica antes de registrarlo de nuevo.'**
+  String checkInAlreadyInside(String plate);
+
   /// No description provided for @checkInSubmit.
   ///
   /// In es, this message translates to:

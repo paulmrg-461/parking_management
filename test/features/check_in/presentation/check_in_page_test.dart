@@ -578,4 +578,28 @@ void main() {
       'A' * 20,
     );
   });
+
+  testWidgets('Success: a plate already inside is flagged before submitting', (
+    tester,
+  ) async {
+    await pumpPage(tester);
+
+    await tester.enterText(plateField(), 'open01');
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('ya figura dentro'), findsOneWidget);
+  });
+
+  testWidgets('Failure: an unknown plate has no duplicate warning', (
+    tester,
+  ) async {
+    await pumpPage(tester);
+
+    await tester.enterText(plateField(), 'ZZZ999');
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('ya figura dentro'), findsNothing);
+  });
 }

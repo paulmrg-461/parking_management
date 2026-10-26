@@ -121,6 +121,7 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   web/desktop, a clear button and `Esc` to reset. `Ctrl/Cmd+K` focuses the
   search of the current screen from anywhere in the app.
 - Screen readers announce successful check-ins and check-outs.
+- Check-in warns inline when the plate is already inside, before submitting.
 - Check-in remembers the last plate and offers a one-tap "repeat entry" chip;
   plate fields normalize while typing through the shared `PlateInputField`
   (uppercase, no blanks) and cap at the 20-char column width.
@@ -196,7 +197,7 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Tests
 
-- 612 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
+- 614 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
   integration test that runs only against a live stack.
 - SQL/RLS/RPC regressions covering capacity, shifts, discounts, passes,
   reservations, multi-site isolation, audit, diagnostics and retention.
@@ -226,7 +227,7 @@ Captured on 2026-10-24 against the local self-hosted stack:
 
 | Check | Result |
 |---|---|
-| `flutter test` | 612 passed (+1 live-stack integration skipped) |
+| `flutter test` | 614 passed (+1 live-stack integration skipped) |
 | `flutter analyze` | 0 errors, 0 warnings (only SDK deprecation infos) |
 | `flutter build web --release` | OK |
 | `supabase/tests/run.sh` | Passed (migrations + RPC/RLS regressions) |

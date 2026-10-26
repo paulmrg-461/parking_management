@@ -1075,6 +1075,11 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String checkInAlreadyInside(String plate) {
+    return 'Este vehículo ya figura dentro ($plate). Verifica antes de registrarlo de nuevo.';
+  }
+
+  @override
   String get checkInSubmit => 'Registrar entrada';
 
   @override

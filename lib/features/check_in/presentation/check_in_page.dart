@@ -330,8 +330,28 @@ class _CheckInPageState extends State<CheckInPage> {
     );
   }
 
+  /// Open session for the typed plate, if the local list knows it.
+  ParkingSession? _openSessionFor(String plate) {
+    final normalized = plate.replaceAll(RegExp(r'\s'), '').toUpperCase();
+    if (normalized.isEmpty) {
+      return null;
+    }
+    try {
+      final state = context.watch<CheckInCubit>().state;
+      for (final session in state.sessions) {
+        if (session.plate.toUpperCase() == normalized) {
+          return session;
+        }
+      }
+    } on ProviderNotFoundException {
+      // Isolated tests may not provide the sessions cubit.
+    }
+    return null;
+  }
+
   Widget _buildFormFields(BuildContext context, VehicleLookupState lookup) {
     final l10n = context.l10n;
+    final openSession = _openSessionFor(_plateController.text);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -352,6 +372,28 @@ class _CheckInPageState extends State<CheckInPage> {
           onChanged: _onPlateChanged,
           onSubmitted: (_) => _lookupNow(),
         ),
+        if (openSession != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  size: 18,
+                  color: Theme.of(context).colorScheme.error,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    l10n.checkInAlreadyInside(openSession.plate),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         if (_lastPlate != null && _plateController.text.trim().isEmpty)
           Align(
             alignment: Alignment.centerLeft,

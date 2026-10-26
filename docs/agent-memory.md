@@ -237,6 +237,9 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 - `CheckOutPage(initialQuery:)` + `SearchField(initialValue:)` prefill and
   filter the check-out list from `/check-out?plate=`; the vehicle history sends
   open sessions there (`onCharge` is injectable for widget tests).
+- Check-in compares the typed plate (normalized) with `CheckInState.sessions`
+  and shows a non-blocking warning (`checkInAlreadyInside`); the submit stays
+  enabled because the local list may be stale.
 - `CheckInPage(initialPlate:)` prefills the field and runs the lookup on the
   first frame; the router reads it from `/check-in?plate=`. Reservations pass
   their plate to it (`onCheckIn` is injectable for widget tests).
