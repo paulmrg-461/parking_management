@@ -1371,6 +1371,14 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String vehicleCreated(String plate) {
+    return 'Vehículo creado: $plate';
+  }
+
+  @override
+  String get vehicleCheckInAction => 'Registrar entrada';
+
+  @override
   String get vehiclesTitle => 'Vehículos';
 
   @override

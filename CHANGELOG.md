@@ -99,6 +99,8 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   check-out flags stays over 24 h.
 - Monthly passes show a status chip (active/upcoming/expired) and sort active
   passes first, then upcoming, then expired.
+- Creating a vehicle confirms it with a snack that offers to register its
+  check-in straight away.
 - The users list filters by role (All / Admin / Operator) and monthly passes
   have a plate search (pending payments included), both with a no-match state.
 - Empty lists (reservations, sites, audit) use the same friendly empty-state
@@ -190,7 +192,7 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Tests
 
-- 603 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
+- 605 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
   integration test that runs only against a live stack.
 - SQL/RLS/RPC regressions covering capacity, shifts, discounts, passes,
   reservations, multi-site isolation, audit, diagnostics and retention.
@@ -220,7 +222,7 @@ Captured on 2026-10-24 against the local self-hosted stack:
 
 | Check | Result |
 |---|---|
-| `flutter test` | 603 passed (+1 live-stack integration skipped) |
+| `flutter test` | 605 passed (+1 live-stack integration skipped) |
 | `flutter analyze` | 0 errors, 0 warnings (only SDK deprecation infos) |
 | `flutter build web --release` | OK |
 | `supabase/tests/run.sh` | Passed (migrations + RPC/RLS regressions) |

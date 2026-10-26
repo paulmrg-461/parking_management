@@ -20,6 +20,7 @@ void main() {
       Vehicle(id: 1, plate: 'ABC123', categoryId: 1, brand: 'Mazda'),
     ],
     Failure? listError,
+    void Function(BuildContext context, String plate)? onCheckIn,
   }) async {
     vehicles = FakeVehicleRepository(initial)..listError = listError;
     await tester.pumpWidget(
@@ -28,7 +29,7 @@ void main() {
           vehicles,
           FakeCategoryRepository(const [Category(id: 1, name: 'carro')]),
         ),
-        child: testApp(const VehiclesPage()),
+        child: testApp(VehiclesPage(onCheckIn: onCheckIn)),
       ),
     );
     await tester.pumpAndSettle();
@@ -136,5 +137,30 @@ void main() {
 
     expect(find.text('ABC123'), findsNothing);
     expect(find.text('XYZ999'), findsOneWidget);
+  });
+
+  testWidgets('Success: creating a vehicle offers to check it in', (
+    tester,
+  ) async {
+    String? requested;
+    await pumpPage(tester, onCheckIn: (_, plate) => requested = plate);
+
+    await tester.tap(find.byTooltip('Agregar vehículo'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.byType(TextField),
+      ).first,
+      'xyz 999',
+    );
+    await tester.tap(find.text('Crear'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Vehículo creado: XYZ999'), findsOneWidget);
+    await tester.tap(find.text('Registrar entrada'));
+    await tester.pumpAndSettle();
+
+    expect(requested, 'XYZ999');
   });
 }

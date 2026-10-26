@@ -2546,6 +2546,18 @@ abstract class AppLocalizations {
   /// **'No hay vehículos para «{query}»'**
   String vehiclesNoMatch(String query);
 
+  /// No description provided for @vehicleCreated.
+  ///
+  /// In es, this message translates to:
+  /// **'Vehículo creado: {plate}'**
+  String vehicleCreated(String plate);
+
+  /// No description provided for @vehicleCheckInAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Registrar entrada'**
+  String get vehicleCheckInAction;
+
   /// No description provided for @vehiclesTitle.
   ///
   /// In es, this message translates to:

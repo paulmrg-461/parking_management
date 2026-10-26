@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/l10n/failure_messages.dart';
 import '../../../core/l10n/l10n.dart';
@@ -14,6 +15,7 @@ import '../../../core/widgets/list_page_scaffold.dart';
 import '../../../core/widgets/load_more_tile.dart';
 import '../../../core/widgets/plate_text.dart';
 import '../../../core/widgets/search_field.dart';
+import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/widgets/staggered_list_item.dart';
 import '../../../core/widgets/submission_listener.dart';
 import '../../categories/domain/entities/category.dart';
@@ -22,7 +24,10 @@ import '../domain/entities/vehicle.dart';
 import 'create_vehicle_dialog.dart';
 
 class VehiclesPage extends StatefulWidget {
-  const VehiclesPage({super.key});
+  const VehiclesPage({super.key, this.onCheckIn});
+
+  /// Opens check-in with the plate prefilled (injectable for widget tests).
+  final void Function(BuildContext context, String plate)? onCheckIn;
 
   @override
   State<VehiclesPage> createState() => _VehiclesPageState();
@@ -44,6 +49,7 @@ class _VehiclesPageState extends State<VehiclesPage> {
       onRefresh: context.read<VehiclesCubit>().load,
       body: SubmissionListener<VehiclesCubit, VehiclesState>(
         submissionOf: _submissionOf,
+        onSuccess: _onCreated,
         child: Column(
           children: [
             Padding(
@@ -103,6 +109,23 @@ class _VehiclesPageState extends State<VehiclesPage> {
   static Submission? _submissionOf(VehiclesState state) =>
       state is VehiclesLoaded ? state.submission : null;
 
+  void _onCreated(BuildContext context, Object? result) {
+    if (result is! Vehicle) {
+      return;
+    }
+    final l10n = context.l10n;
+    final message = l10n.vehicleCreated(result.plate);
+    showActionSnack(
+      context,
+      message: message,
+      actionLabel: l10n.vehicleCheckInAction,
+      onAction: () => (widget.onCheckIn ?? _checkInWithPlate)(
+        context,
+        result.plate,
+      ),
+    );
+  }
+
   void _showCreateDialog(BuildContext context) {
     final cubit = context.read<VehiclesCubit>();
     final state = cubit.state;
@@ -118,6 +141,10 @@ class _VehiclesPageState extends State<VehiclesPage> {
     );
   }
 }
+
+void _checkInWithPlate(BuildContext context, String plate) => context.push(
+  '/check-in?plate=${Uri.encodeQueryComponent(plate)}',
+);
 
 class _VehicleList extends StatelessWidget {
   const _VehicleList({required this.state});
