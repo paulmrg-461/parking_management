@@ -5,6 +5,7 @@ import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../app/di/injection.dart';
 import '../../../core/l10n/failure_messages.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/state/submission.dart';
@@ -26,6 +27,7 @@ import '../../notifications/presentation/notification_bell.dart';
 import '../application/check_out_cubit.dart';
 import '../domain/entities/check_out_receipt.dart';
 import '../../../core/receipt/payment_method.dart';
+import '../../../core/storage/key_value_store.dart';
 import '../domain/entities/open_session.dart';
 import 'payment_method_dialog.dart';
 
@@ -40,10 +42,53 @@ class CheckOutPage extends StatefulWidget {
 }
 
 class _CheckOutPageState extends State<CheckOutPage> {
+  static const _prefsBox = 'preferences';
+  static const _lastPaymentKey = 'last_payment_method';
+
+  PaymentMethod? _rememberedMethod;
+  PaymentMethod? _pendingMethod;
+
   @override
   void initState() {
     super.initState();
     unawaited(context.read<CheckOutCubit>().loadOpenSessions());
+    _restoreRememberedMethod();
+  }
+
+  /// The last method the operator charged with, so a fleet that always pays
+  /// the same way does not re-pick it every time. A monthly pass is never
+  /// preselected without an active pass (the server would reject it).
+  void _restoreRememberedMethod() {
+    if (!serviceLocator.isRegistered<KeyValueStore>()) {
+      return;
+    }
+    final stored = serviceLocator<KeyValueStore>().get(
+      _prefsBox,
+      _lastPaymentKey,
+    );
+    if (stored is String && stored.isNotEmpty) {
+      setState(() => _rememberedMethod = paymentMethodFromWire(stored));
+    }
+  }
+
+  void _chooseMethod(PaymentMethod method) {
+    // Persisted only once the server confirms the check-out.
+    _pendingMethod = method;
+  }
+
+  Future<void> _rememberMethod(PaymentMethod method) async {
+    if (!serviceLocator.isRegistered<KeyValueStore>()) {
+      return;
+    }
+    try {
+      await serviceLocator<KeyValueStore>().put(
+        _prefsBox,
+        _lastPaymentKey,
+        method.wire,
+      );
+    } catch (_) {
+      // A preference is not worth an error dialog.
+    }
   }
 
   @override
@@ -74,7 +119,12 @@ class _CheckOutPageState extends State<CheckOutPage> {
               ),
             ),
             const _ShiftBanner(),
-            const Expanded(child: _SessionsList()),
+            Expanded(
+              child: _SessionsList(
+                rememberedMethod: _rememberedMethod,
+                onMethodChosen: _chooseMethod,
+              ),
+            ),
           ],
         ),
       ),
@@ -87,6 +137,12 @@ class _CheckOutPageState extends State<CheckOutPage> {
   void _onSubmission(BuildContext context, CheckOutState state) {
     switch (_submissionOf(state)) {
       case SubmissionSucceeded<CheckOutReceipt>(:final result):
+        final method = _pendingMethod;
+        _pendingMethod = null;
+        if (method != null) {
+          setState(() => _rememberedMethod = method);
+          unawaited(_rememberMethod(method));
+        }
         SemanticsService.announce(
           '${context.l10n.receiptDoneTitle}: ${result.plate}',
           Directionality.of(context),
@@ -134,7 +190,13 @@ class _CheckOutPageState extends State<CheckOutPage> {
 
 /// Rebuilds only when what it renders changes (not on submission status).
 class _SessionsList extends StatelessWidget {
-  const _SessionsList();
+  const _SessionsList({
+    required this.rememberedMethod,
+    required this.onMethodChosen,
+  });
+
+  final PaymentMethod? rememberedMethod;
+  final ValueChanged<PaymentMethod> onMethodChosen;
 
   static const _loadMoreThreshold = 200.0;
 
@@ -191,6 +253,8 @@ class _SessionsList extends StatelessWidget {
                     context.l10n.unknownVehicle(
                       state.visible[index].vehicleId,
                     ),
+                rememberedMethod: rememberedMethod,
+                onMethodChosen: onMethodChosen,
               ),
       ),
     );
@@ -198,10 +262,17 @@ class _SessionsList extends StatelessWidget {
 }
 
 class _SessionTile extends StatelessWidget {
-  const _SessionTile({required this.session, required this.plate});
+  const _SessionTile({
+    required this.session,
+    required this.plate,
+    required this.rememberedMethod,
+    required this.onMethodChosen,
+  });
 
   final OpenSession session;
   final String plate;
+  final PaymentMethod? rememberedMethod;
+  final ValueChanged<PaymentMethod> onMethodChosen;
 
   @override
   Widget build(BuildContext context) {
@@ -263,16 +334,21 @@ class _SessionTile extends StatelessWidget {
     if (!context.mounted) {
       return;
     }
+    final hasPass = preview?.hasPass ?? false;
     final choice = await showCheckoutDialog(
       context,
       plate: plate,
       canDiscount: canDiscount,
       estimatedAmount: preview?.amount,
-      hasPass: preview?.hasPass ?? false,
+      hasPass: hasPass,
+      initialMethod: hasPass
+          ? PaymentMethod.monthlyPass
+          : _basePaymentMethod(rememberedMethod),
     );
     if (choice == null) {
       return;
     }
+    onMethodChosen(choice.method);
     await cubit.checkOut(
       session.id,
       paymentMethod: choice.method.wire,
@@ -349,3 +425,10 @@ class _ShiftBanner extends StatelessWidget {
     );
   }
 }
+
+/// The method preselected before a pass is detected. A remembered monthly
+/// pass is meaningless without an active pass, so it falls back to cash.
+PaymentMethod _basePaymentMethod(PaymentMethod? remembered) =>
+    remembered == null || remembered == PaymentMethod.monthlyPass
+    ? PaymentMethod.cash
+    : remembered;

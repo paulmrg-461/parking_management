@@ -201,6 +201,10 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 - Check-in stores `last_plate` in `KeyValueStore` (box `preferences`) after a
   success and offers a repeat chip; guarded by `serviceLocator.isRegistered`
   so page tests can skip it or inject a fake store.
+- Check-out stores `last_payment_method` in `KeyValueStore` (box
+  `preferences`) only after the server confirms; `_SessionTile` receives the
+  remembered method and falls back to cash when it is `monthly_pass` or the
+  preview has no pass.
 - Reports load the previous, equally long window in the same `Future.wait`
   (`onError: null`); `ReportsLoaded.previousTotal/deltaPercent` drive the
   `_DeltaRow`. A failed previous window degrades to no delta, never an error.

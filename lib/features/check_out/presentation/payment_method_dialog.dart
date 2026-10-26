@@ -29,6 +29,7 @@ Future<CheckoutChoice?> showCheckoutDialog(
   required bool canDiscount,
   int? estimatedAmount,
   bool hasPass = false,
+  PaymentMethod initialMethod = PaymentMethod.cash,
 }) => showDialog<CheckoutChoice>(
   context: context,
   builder: (_) => _CheckoutDialog(
@@ -36,6 +37,7 @@ Future<CheckoutChoice?> showCheckoutDialog(
     canDiscount: canDiscount,
     estimatedAmount: estimatedAmount,
     hasPass: hasPass,
+    initialMethod: initialMethod,
   ),
 );
 
@@ -45,19 +47,21 @@ class _CheckoutDialog extends StatefulWidget {
     required this.canDiscount,
     this.estimatedAmount,
     this.hasPass = false,
+    this.initialMethod = PaymentMethod.cash,
   });
 
   final String plate;
   final bool canDiscount;
   final int? estimatedAmount;
   final bool hasPass;
+  final PaymentMethod initialMethod;
 
   @override
   State<_CheckoutDialog> createState() => _CheckoutDialogState();
 }
 
 class _CheckoutDialogState extends State<_CheckoutDialog> {
-  PaymentMethod _selected = PaymentMethod.cash;
+  late PaymentMethod _selected = widget.initialMethod;
   final _discountController = TextEditingController();
   final _reasonController = TextEditingController();
   final _lostReasonController = TextEditingController();

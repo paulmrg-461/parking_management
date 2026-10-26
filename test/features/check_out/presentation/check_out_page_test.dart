@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:parking_management/app/di/injection.dart';
 import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/core/pagination/paged_result.dart';
+import 'package:parking_management/core/receipt/payment_method.dart';
+import 'package:parking_management/core/storage/key_value_store.dart';
 import 'package:parking_management/features/check_out/application/check_out_cubit.dart';
 import 'package:parking_management/features/check_out/application/check_out_vehicle.dart';
 import 'package:parking_management/features/check_out/domain/entities/check_out_preview.dart';
@@ -16,12 +19,14 @@ import 'package:parking_management/features/home/application/dashboard_cubit.dar
 import 'package:parking_management/features/vehicles/domain/entities/vehicle.dart';
 
 import '../../../helpers/fake_check_out_repository.dart';
+import '../../../helpers/fake_key_value_store.dart';
 import '../../../helpers/fake_vehicle_repository.dart';
 import '../../../helpers/test_app.dart';
 
 class _FakeCheckOutRepository implements CheckOutRepository {
   Failure? checkOutError;
   Failure? previewError;
+  bool hasPass = false;
   bool? lastLostTicket;
   String? lastLostTicketReason;
 
@@ -48,7 +53,11 @@ class _FakeCheckOutRepository implements CheckOutRepository {
     if (error != null) {
       throw error;
     }
-    return CheckOutPreview(sessionId: sessionId, amount: 5000);
+    return CheckOutPreview(
+      sessionId: sessionId,
+      amount: hasPass ? 0 : 5000,
+      hasPass: hasPass,
+    );
   }
 
 
@@ -247,6 +256,86 @@ void main() {
 
     expect(find.textContaining('Total estimado'), findsNothing);
     expect(find.text('Efectivo'), findsOneWidget);
+
+    await tester.tap(find.text('Confirmar'));
+    await tester.pumpAndSettle();
+  });
+
+  RadioListTile<PaymentMethod> methodTile(
+    WidgetTester tester,
+    String label,
+  ) => tester.widget<RadioListTile<PaymentMethod>>(
+    find.widgetWithText(RadioListTile<PaymentMethod>, label),
+  );
+
+  testWidgets('Success: the last payment method is preselected', (
+    tester,
+  ) async {
+    final store = FakeKeyValueStore()
+      ..values['preferences/last_payment_method'] = 'card';
+    serviceLocator.registerSingleton<KeyValueStore>(store);
+    addTearDown(serviceLocator.reset);
+
+    await pumpPage(tester);
+    await tester.tap(find.widgetWithText(FilledButton, 'Cobrar').first);
+    await tester.pumpAndSettle();
+
+    expect(methodTile(tester, 'Tarjeta').groupValue, PaymentMethod.card);
+
+    await tester.tap(find.text('Confirmar'));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('Success: a completed check-out remembers the method', (
+    tester,
+  ) async {
+    final store = FakeKeyValueStore();
+    serviceLocator.registerSingleton<KeyValueStore>(store);
+    addTearDown(serviceLocator.reset);
+
+    await pumpPage(tester);
+    await tester.tap(find.widgetWithText(FilledButton, 'Cobrar').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Transferencia'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Confirmar'));
+    await tester.pumpAndSettle();
+
+    expect(store.values['preferences/last_payment_method'], 'transfer');
+  });
+
+  testWidgets('Security: no remembered monthly pass is reused without one', (
+    tester,
+  ) async {
+    final store = FakeKeyValueStore()
+      ..values['preferences/last_payment_method'] = 'monthly_pass';
+    serviceLocator.registerSingleton<KeyValueStore>(store);
+    addTearDown(serviceLocator.reset);
+
+    await pumpPage(tester);
+    await tester.tap(find.widgetWithText(FilledButton, 'Cobrar').first);
+    await tester.pumpAndSettle();
+
+    expect(methodTile(tester, 'Efectivo').groupValue, PaymentMethod.cash);
+
+    await tester.tap(find.text('Confirmar'));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('Success: a pass-covered session preselects the pass', (
+    tester,
+  ) async {
+    await pumpPage(tester);
+    repository.hasPass = true;
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Cobrar').first);
+    await tester.pumpAndSettle();
+
+    expect(
+      methodTile(tester, 'Mensualidad').groupValue,
+      PaymentMethod.monthlyPass,
+    );
+    expect(find.textContaining('sin cobro'), findsOneWidget);
 
     await tester.tap(find.text('Confirmar'));
     await tester.pumpAndSettle();
