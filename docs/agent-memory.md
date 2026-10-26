@@ -374,9 +374,30 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 - Ops: `healthcheck.sh` (exit 1 on failure, `HEALTHCHECK_WEBHOOK` alerts) and
   `diagnostics.sh` (stuck sessions/shifts, backlog, client errors, sizes).
 
+## Boot order (fresh installs)
+
+- `configureDependencies()` initializes `KeyValueStore` (Hive) **before**
+  `_initSupabase`: the boot clears a stale cached session through Hive, which
+  needs `Hive.init(path)` on mobile (web needs no path, so the bug only showed
+  on a fresh Android install).
+- Android over adb: `adb reverse tcp:8000 tcp:8000` + `SUPABASE_URL=
+  http://localhost:8000`; no firewall/Wi-Fi involved. Both are documented in
+  QUICKSTART and the environment guides.
+
+## Evidence uploads
+
+- Storage evidence is **insert-only** from the client: the SELECT policy uses
+  `can_read_evidence(name)`, which is true only after `check_in` inserts the
+  `evidence_photos` row. `upsert: true` therefore fails (INSERT ... ON CONFLICT
+  needs to read the row) with a misleading "permission" error.
+- `isDuplicateUpload` treats storage `409`/`Duplicate` as success: a replay of
+  the same queued entry already stored that exact path. Never swallow 403.
+- Verified against the live stack: insert 200 → duplicate 409 → `check_in` with
+  the photo path returns `photo_count: 1`.
+
 ## Latest verification (2026-10-26)
 
-- `flutter test`: 614 passed (+1 live-stack integration skipped); `flutter
+- `flutter test`: 618 passed (+1 live-stack integration skipped); `flutter
   analyze` 129 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
 - `supabase/tests/run.sh` passed (migrations `0001`–`0046`); `e2e.sh` passed

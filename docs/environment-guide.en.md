@@ -157,7 +157,17 @@ flutter run -d emulator-5554 \
   --dart-define=SUPABASE_ANON_KEY=<ANON_KEY>
 ```
 
-**Physical phone on the same Wi-Fi:**
+**Physical phone over adb** (USB or wireless adb; recommended):
+
+```bash
+adb devices                       # find the serial, e.g. 192.168.0.2:38333
+adb reverse tcp:8000 tcp:8000     # the phone's localhost:8000 reaches this PC
+flutter run -d <serial> \
+  --dart-define=SUPABASE_URL=http://localhost:8000 \
+  --dart-define=SUPABASE_ANON_KEY=<ANON_KEY>
+```
+
+If `adb reverse` is not an option, use the same Wi-Fi instead:
 
 1. `ip addr` (or `ipconfig`) to find your machine IP, e.g. `192.168.1.50`.
 2. `flutter run -d <device> --dart-define=SUPABASE_URL=http://192.168.1.50:8000 --dart-define=SUPABASE_ANON_KEY=<ANON_KEY>`.
@@ -185,7 +195,7 @@ flutter build appbundle --release \
 ## 4. Verify it works
 
 ```bash
-flutter test                 # 615 tests
+flutter test                 # 618 tests
 flutter analyze              # only SDK deprecation infos from the beta channel
 sh supabase/healthcheck.sh   # services, endpoints, backlog (exit 1 on failure)
 sh supabase/tests/e2e.sh     # login → check-in → check-out → report → history

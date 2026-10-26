@@ -155,6 +155,12 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   `ReceiptLabels`; ticket numbers include the site code (`TCK-<LOT>-000123`).
 - List screens use skeleton loaders that honour the reduce-motion setting.
 - Reports accept an "all sites" view for platform admins.
+- Check-in with evidence photos works again on a real device: uploads are
+  insert-only (the evidence SELECT policy only exposes a photo after
+  `check_in` records it), and a replayed upload accepts the existing object.
+- Hive initializes before the Supabase boot, so a **fresh Android install**
+  can open its boxes (the cached-session cleanup used to throw `HiveError` on
+  first launch; web was unaffected).
 - `restore.sh` now runs `pg_restore` as `supabase_admin` (restoring as
   `postgres` silently lost every grant).
 
@@ -198,7 +204,7 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Tests
 
-- 615 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
+- 618 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
   integration test that runs only against a live stack.
 - SQL/RLS/RPC regressions covering capacity, shifts, discounts, passes,
   reservations, multi-site isolation, audit, diagnostics and retention.
@@ -228,7 +234,7 @@ Captured on 2026-10-24 against the local self-hosted stack:
 
 | Check | Result |
 |---|---|
-| `flutter test` | 615 passed (+1 live-stack integration skipped) |
+| `flutter test` | 618 passed (+1 live-stack integration skipped) |
 | `flutter analyze` | 0 errors, 0 warnings (only SDK deprecation infos) |
 | `flutter build web --release` | OK |
 | `supabase/tests/run.sh` | Passed (migrations + RPC/RLS regressions) |

@@ -41,6 +41,12 @@ flutter run -d chrome \
 flutter run -d emulator-5554 \
   --dart-define=SUPABASE_URL=http://10.0.2.2:8000 \
   --dart-define=SUPABASE_ANON_KEY=<ANON_KEY>
+
+# Physical phone over adb (USB or wireless): reverse the port and use localhost
+adb reverse tcp:8000 tcp:8000
+flutter run -d <serial> \
+  --dart-define=SUPABASE_URL=http://localhost:8000 \
+  --dart-define=SUPABASE_ANON_KEY=<ANON_KEY>
 ```
 
 Log in with `admin` / `123456`.
