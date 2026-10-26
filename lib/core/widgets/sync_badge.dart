@@ -81,6 +81,15 @@ class _SyncDetailsSheet extends StatelessWidget {
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: Space.sm),
+            if (status.pendingCount > 0)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () => context.read<SyncStatusCubit>().syncNow(),
+                  icon: const Icon(Icons.sync),
+                  label: Text(context.l10n.syncNow),
+                ),
+              ),
             Text(context.l10n.syncQueued(status.pendingCount)),
             for (final entry in status.deadLetters) _DeadLetterTile(entry),
           ],
@@ -102,6 +111,7 @@ class _DeadLetterTile extends StatelessWidget {
         MutationEntity.category => l10n.entityCategory,
         MutationEntity.checkIn => l10n.entityCheckIn,
         MutationEntity.checkOut => l10n.entityCheckOut,
+        MutationEntity.settings => l10n.entitySettings,
       };
 
   @override

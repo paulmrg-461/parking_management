@@ -16,6 +16,7 @@ class _FakeRemote implements CheckInRemoteDataSource {
   List<XFile>? photos;
   NewVehicleInfo? newVehicle;
   String? idempotencyKey;
+  DateTime? clientEntryTime;
 
   @override
   Future<ParkingSession> createCheckIn({
@@ -23,11 +24,13 @@ class _FakeRemote implements CheckInRemoteDataSource {
     required List<XFile> photos,
     NewVehicleInfo? newVehicle,
     String? idempotencyKey,
+    DateTime? clientEntryTime,
   }) async {
     this.plate = plate;
     this.photos = photos;
     this.newVehicle = newVehicle;
     this.idempotencyKey = idempotencyKey;
+    this.clientEntryTime = clientEntryTime;
     if (error != null) {
       throw error!;
     }
@@ -87,6 +90,7 @@ void main() {
       const NewVehicleInfo(categoryId: 2, color: 'Blue'),
     );
     expect(remote.idempotencyKey, 'ref-2');
+    expect(remote.clientEntryTime, DateTime.parse('2026-01-01T00:00:00.000'));
     expect(photos.deleted, ['ref-2']);
   });
 

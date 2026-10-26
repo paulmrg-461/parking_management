@@ -168,6 +168,40 @@ class EvidencePhotoModel(Base):
     )
 
 
+class ParkingSettingsModel(Base):
+    """Singleton (id = 1) parking identity: name, contact, logo metadata."""
+
+    __tablename__ = "parking_settings"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=False)
+    name: Mapped[str] = mapped_column(
+        String(80), nullable=False, server_default="Parqueadero"
+    )
+    address: Mapped[str] = mapped_column(
+        String(160), nullable=False, server_default=""
+    )
+    schedule: Mapped[str] = mapped_column(
+        String(120), nullable=False, server_default=""
+    )
+    phone: Mapped[str] = mapped_column(String(32), nullable=False, server_default="")
+    website: Mapped[str] = mapped_column(
+        String(200), nullable=False, server_default=""
+    )
+    whatsapp: Mapped[str] = mapped_column(
+        String(32), nullable=False, server_default=""
+    )
+    logo_version: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default="0"
+    )
+    logo_path: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+
 class IdempotencyKeyModel(Base):
     """Stored outcome of a write keyed by the client's Idempotency-Key."""
 

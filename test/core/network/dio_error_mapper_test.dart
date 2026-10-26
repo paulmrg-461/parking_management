@@ -85,15 +85,17 @@ void main() {
     );
 
     test(
-      'Security: 401/403 keep generic auth messages regardless of detail',
+      'Security: 401 stays an auth failure; 403 is a per-request refusal',
       () {
         expect(
           mapDioError(_errorWith(401, {'detail': 'user admin not found'})),
           const AuthenticationFailure('Invalid credentials'),
         );
+        // 403 must not look like an expired session: the outbox would stop
+        // draining forever instead of dead-lettering the forbidden mutation.
         expect(
           mapDioError(_errorWith(403, {'detail': 'role x'})),
-          const AuthenticationFailure('Forbidden'),
+          const ValidationFailure('Forbidden'),
         );
       },
     );

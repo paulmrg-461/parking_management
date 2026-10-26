@@ -16,6 +16,7 @@ class _FakeCheckOutRepository implements CheckOutRepository {
   int? total;
   Failure? listError;
   Failure? checkOutError;
+  Object? unexpected;
   CheckOutReceipt? receipt;
   final List<int> offsets = [];
 
@@ -38,6 +39,10 @@ class _FakeCheckOutRepository implements CheckOutRepository {
   Future<CheckOutReceipt> checkOut(int sessionId) async {
     if (checkOutError != null) {
       throw checkOutError!;
+    }
+    final unexpected = this.unexpected;
+    if (unexpected != null) {
+      throw unexpected;
     }
     sessions = sessions.where((s) => s.id != sessionId).toList();
     return receipt!;
@@ -197,4 +202,47 @@ void main() {
       expect(loaded().sessions, hasLength(2));
     },
   );
+
+  test(
+    'Security: removing a closed row does not shift the next page offset',
+    () async {
+      repository
+        ..sessions = [_session(1, 10), _session(2, 20), _session(3, 30)]
+        ..total = 3;
+      final paged = CheckOutCubit(
+        CheckOutVehicle(repository),
+        repository,
+        vehicles,
+        searchDebounce: Duration.zero,
+        pageSize: 2,
+      );
+      addTearDown(paged.close);
+      await paged.loadOpenSessions();
+      repository.listError = const NetworkFailure('offline');
+
+      await paged.checkOut(2);
+
+      repository
+        ..listError = null
+        ..offsets.clear();
+      await paged.loadMore();
+
+      // The server still has 3 sessions; offset must stay at the 2 fetched.
+      expect(repository.offsets, [2]);
+    },
+  );
+
+  test('Failure: an unexpected error still clears the in-progress submission', () async {
+    await cubit.loadOpenSessions();
+    repository.unexpected = StateError('hive');
+
+    await cubit.checkOut(1);
+
+    final submission = loaded().submission;
+    expect(submission, isA<SubmissionFailed>());
+    expect(
+      (submission as SubmissionFailed).failure?.code,
+      ClientFailureCodes.unexpected,
+    );
+  });
 }

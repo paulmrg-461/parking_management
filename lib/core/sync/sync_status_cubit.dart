@@ -1,9 +1,9 @@
 import 'dart:async';
 
 import 'package:equatable/equatable.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'sync_outbox.dart';
+import '../state/resilient_cubit.dart';
 
 typedef DeadLetterDiscarder = Future<void> Function(int key);
 
@@ -23,13 +23,18 @@ class SyncStatus extends Equatable {
 
 /// Exposes the outbox size (pending + dead letters) for the `SyncBadge`
 /// and lets the operator discard a dead letter.
-class SyncStatusCubit extends Cubit<SyncStatus> {
-  SyncStatusCubit(this._outbox, this._discard) : super(const SyncStatus()) {
+class SyncStatusCubit extends ResilientCubit<SyncStatus> {
+  SyncStatusCubit(
+    this._outbox,
+    this._discard, [
+    this._flush,
+  ]) : super(const SyncStatus()) {
     _subscription = _outbox.watch().listen((_) => load());
   }
 
   final SyncOutbox _outbox;
   final DeadLetterDiscarder _discard;
+  final Future<void> Function()? _flush;
   late final StreamSubscription<void> _subscription;
 
   Future<void> load() async {
@@ -42,6 +47,13 @@ class SyncStatusCubit extends Cubit<SyncStatus> {
 
   Future<void> discard(int key) async {
     await _discard(key);
+    await load();
+  }
+
+  /// Manual "retry now" for a queue that is waiting on a backoff timer or a
+  /// login that already happened.
+  Future<void> syncNow() async {
+    await _flush?.call();
     await load();
   }
 

@@ -1,6 +1,5 @@
 import 'package:cross_file/cross_file.dart';
 import 'package:equatable/equatable.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/error/failure.dart';
 import '../../../core/state/submission.dart';
@@ -8,6 +7,7 @@ import '../domain/entities/new_vehicle_info.dart';
 import '../domain/entities/parking_session.dart';
 import '../domain/repositories/check_in_repository.dart';
 import 'create_check_in.dart';
+import '../../../core/state/resilient_cubit.dart';
 
 enum SessionsStatus { loading, loaded, failure }
 
@@ -53,7 +53,7 @@ class CheckInState extends Equatable {
   ];
 }
 
-class CheckInCubit extends Cubit<CheckInState> {
+class CheckInCubit extends ResilientCubit<CheckInState> {
   CheckInCubit(this._createCheckIn, this._repository)
     : super(const CheckInState());
 
@@ -99,6 +99,16 @@ class CheckInCubit extends Cubit<CheckInState> {
       );
     } on Failure catch (failure) {
       emit(state.copyWith(submission: SubmissionFailed.of(failure)));
+    } catch (_) {
+      // A non-Failure throw (unreadable photo, Hive write error) used to leave
+      // the form spinning forever with no state change.
+      emit(
+        state.copyWith(
+          submission: SubmissionFailed.of(
+            const ValidationFailure('', ClientFailureCodes.unexpected),
+          ),
+        ),
+      );
     }
   }
 

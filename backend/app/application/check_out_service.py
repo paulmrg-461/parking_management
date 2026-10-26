@@ -1,12 +1,12 @@
 """Check-out use case: close an open parking session and charge its fare."""
 
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 
 from app.application.billing_service import FareService, StayQuery
 from app.application.commands import CheckOutCommand
 from app.domain.billing import FareCalculator
-from app.domain.clock import Clock, system_clock
+from app.domain.clock import MAX_CLIENT_CLOCK_SKEW, Clock, system_clock
 from app.domain.errors import (
     InvalidExitTimeError,
     SessionAlreadyClosedError,
@@ -31,9 +31,6 @@ __all__ = [
     "SessionAlreadyClosedError",
     "SessionNotFoundError",
 ]
-
-# Tolerated client clock drift for offline-queued check-outs.
-MAX_CLIENT_CLOCK_SKEW = timedelta(minutes=5)
 
 
 @dataclass

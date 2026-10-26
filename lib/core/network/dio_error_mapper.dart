@@ -22,7 +22,10 @@ Failure mapDioError(DioException error) {
     return AuthenticationFailure('Invalid credentials', code);
   }
   if (status == 403) {
-    return AuthenticationFailure('Forbidden', code);
+    // Forbidden is a per-request permission problem, not an expired session.
+    // Mapping it to AuthenticationFailure made one queued admin mutation
+    // stop the whole offline drain (and never retry under another user).
+    return ValidationFailure('Forbidden', code);
   }
   if (status == 429) {
     return _rateLimited(response, code);

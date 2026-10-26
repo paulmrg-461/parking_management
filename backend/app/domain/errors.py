@@ -129,6 +129,10 @@ class InvalidExitTimeError(InvalidBillingPeriodError):
     """client_exit_time outside (entry_time, now + allowed clock skew]."""
 
 
+class InvalidEntryTimeError(InvalidBillingPeriodError):
+    """client_entry_time is naive or more than the allowed skew in the future."""
+
+
 class InvalidReportRangeError(DomainValidationError):
     pass
 

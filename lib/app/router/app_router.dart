@@ -19,8 +19,10 @@ import '../../features/plate_scanning/presentation/plate_scan_page.dart';
 import '../di/injection.dart';
 import '../shell/app_shell.dart';
 import 'deferred/categories_entry.dart' deferred as categories;
+import 'deferred/contact_entry.dart' deferred as contact;
 import 'deferred/monthly_passes_entry.dart' deferred as monthly_passes;
 import 'deferred/reports_entry.dart' deferred as reports;
+import 'deferred/settings_entry.dart' deferred as settings;
 import 'deferred/tariffs_entry.dart' deferred as tariffs;
 import 'deferred/users_entry.dart' deferred as users;
 import 'deferred/vehicles_entry.dart' deferred as vehicles;
@@ -47,8 +49,10 @@ GoRouter buildRouter(AuthCubit auth, Listenable refresh) => GoRouter(
       ),
     ),
     ShellRoute(
-      builder: (context, state, child) =>
-          AppShell(location: state.uri.path, child: child),
+      builder: (context, state, child) => BlocProvider<DashboardCubit>(
+        create: (_) => serviceLocator<DashboardCubit>(),
+        child: AppShell(location: state.uri.path, child: child),
+      ),
       routes: [_homeRoute],
     ),
   ],
@@ -56,10 +60,7 @@ GoRouter buildRouter(AuthCubit auth, Listenable refresh) => GoRouter(
 
 final GoRoute _homeRoute = GoRoute(
   path: homePath,
-  builder: (context, state) => BlocProvider<DashboardCubit>(
-    create: (_) => serviceLocator<DashboardCubit>(),
-    child: const HomePage(),
-  ),
+  builder: (context, state) => const HomePage(),
   routes: [
     GoRoute(
       path: 'check-in',
@@ -70,6 +71,9 @@ final GoRoute _homeRoute = GoRoute(
           ),
           BlocProvider<VehicleLookupCubit>(
             create: (_) => serviceLocator<VehicleLookupCubit>(),
+          ),
+          BlocProvider<PlateScanningCubit>(
+            create: (_) => serviceLocator<PlateScanningCubit>(),
           ),
         ],
         child: CheckInPage(
@@ -111,6 +115,16 @@ final GoRoute _homeRoute = GoRoute(
       'reports',
       reports.loadLibrary,
       () => reports.buildReportsEntry(),
+    ),
+    _deferred(
+      'settings',
+      settings.loadLibrary,
+      () => settings.buildSettingsEntry(),
+    ),
+    _deferred(
+      'contact',
+      contact.loadLibrary,
+      () => contact.buildContactEntry(),
     ),
   ],
 );

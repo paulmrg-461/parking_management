@@ -3,10 +3,16 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../core/l10n/failure_messages.dart';
+import '../../../core/l10n/l10n.dart';
 import '../../../core/state/submission.dart';
-import '../../../core/utils/cop_formatter.dart';
+import '../../../core/utils/formatters.dart';
+import '../../../core/widgets/error_state.dart';
+import '../../../core/widgets/receipt_card.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/widgets/sync_badge.dart';
+import '../../home/application/dashboard_cubit.dart';
+import '../../receipt_printing/presentation/receipt_print_sheet.dart';
 import '../application/check_out_cubit.dart';
 import '../domain/entities/check_out_receipt.dart';
 import '../domain/entities/open_session.dart';
@@ -32,7 +38,7 @@ class _CheckOutPageState extends State<CheckOutPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Check-out'),
+        title: Text(context.l10n.checkOutTitle),
         actions: const [SyncBadge()],
       ),
       body: BlocListener<CheckOutCubit, CheckOutState>(
@@ -51,9 +57,9 @@ class _CheckOutPageState extends State<CheckOutPage> {
             Padding(
               padding: const EdgeInsets.all(16),
               child: TextField(
-                decoration: const InputDecoration(
-                  labelText: 'Search by plate',
-                  prefixIcon: Icon(Icons.search),
+                decoration: InputDecoration(
+                  labelText: context.l10n.searchPlate,
+                  prefixIcon: const Icon(Icons.search),
                 ),
                 textCapitalization: TextCapitalization.characters,
                 onChanged: context.read<CheckOutCubit>().search,
@@ -72,50 +78,33 @@ class _CheckOutPageState extends State<CheckOutPage> {
   void _onSubmission(BuildContext context, CheckOutState state) {
     switch (_submissionOf(state)) {
       case SubmissionSucceeded<CheckOutReceipt>(:final result):
+        unawaited(context.read<DashboardCubit>().load());
         unawaited(_showReceipt(context, result));
-      case SubmissionFailed(:final message):
-        showErrorSnack(context, message);
+      case SubmissionFailed(:final message, :final failure):
+        showErrorSnack(context, context.l10n.errorText(message, failure));
       default:
         break;
     }
   }
 
   Future<void> _showReceipt(BuildContext context, CheckOutReceipt receipt) {
-    return showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Check-out complete'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: _receiptLines(receipt),
-        ),
-        actions: [
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Done'),
-          ),
-        ],
-      ),
+    final data = _receiptData(receipt);
+    return showReceiptSummary(
+      context,
+      data,
+      onPrint: () => showReceiptPrintSheet(context, data),
     );
   }
 
-  /// A queued (`pendingSync`) check-out has no amount/ticket yet — this
-  /// project never shows a client-computed fare guess, so the dialog shows a
-  /// pending notice instead of the numeric receipt.
-  List<Widget> _receiptLines(CheckOutReceipt receipt) {
-    if (receipt.pendingSync) {
-      return const [Text('Queued — amount pending sync')];
-    }
-    return [
-      Text('Plate: ${receipt.plate}'),
-      Text('Entry: ${receipt.entryTime.toLocal()}'),
-      Text('Exit: ${receipt.exitTime.toLocal()}'),
-      Text('Amount: ${CopFormatter.format(receipt.amountCharged!)}'),
-      Text('Ticket: ${receipt.ticketNumber}'),
-    ];
-  }
+  ReceiptData _receiptData(CheckOutReceipt receipt) => ReceiptData(
+    kind: ReceiptKind.checkOut,
+    plate: receipt.plate,
+    entryTime: receipt.entryTime,
+    exitTime: receipt.exitTime,
+    amountCharged: receipt.amountCharged,
+    ticketNumber: receipt.ticketNumber,
+    pendingSync: receipt.pendingSync,
+  );
 }
 
 /// Rebuilds only when what it renders changes (not on submission status).
@@ -137,7 +126,11 @@ class _SessionsList extends StatelessWidget {
       builder: (context, state) => switch (state) {
         CheckOutInitial() ||
         CheckOutLoading() => const Center(child: CircularProgressIndicator()),
-        CheckOutFailure(:final message) => Center(child: Text(message)),
+        CheckOutFailure(:final message, :final failure) => ErrorState(
+          message: context.l10n.errorText(message, failure),
+          onRetry: () =>
+              unawaited(context.read<CheckOutCubit>().loadOpenSessions()),
+        ),
         final CheckOutLoaded loaded => _buildList(context, loaded),
       },
     );
@@ -145,7 +138,7 @@ class _SessionsList extends StatelessWidget {
 
   Widget _buildList(BuildContext context, CheckOutLoaded state) {
     if (state.visible.isEmpty) {
-      return const Center(child: Text('No open sessions'));
+      return Center(child: Text(context.l10n.openSessionsEmpty));
     }
     final showFooter = state.hasMore && state.query.isEmpty;
     return NotificationListener<ScrollNotification>(
@@ -162,7 +155,11 @@ class _SessionsList extends StatelessWidget {
             ? _LoadMoreTile(loading: state.loadingMore)
             : _SessionTile(
                 session: state.visible[index],
-                plate: state.plateOf(state.visible[index]),
+                plate:
+                    state.plates[state.visible[index].vehicleId] ??
+                    context.l10n.unknownVehicle(
+                      state.visible[index].vehicleId,
+                    ),
               ),
       ),
     );
@@ -179,10 +176,12 @@ class _SessionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       title: Text(plate),
-      subtitle: Text('Entry: ${session.entryTime.toLocal()}'),
+      subtitle: Text(
+        context.l10n.sessionEntry(Formatters.dateTime(session.entryTime)),
+      ),
       trailing: FilledButton(
         onPressed: () => _confirmCheckOut(context),
-        child: const Text('Check out'),
+        child: Text(context.l10n.checkOutCharge),
       ),
     );
   }
@@ -192,16 +191,16 @@ class _SessionTile extends StatelessWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Check out'),
-        content: Text('Check out vehicle $plate?'),
+        title: Text(context.l10n.checkOutCharge),
+        content: Text(context.l10n.checkOutConfirm(plate)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancel'),
+            child: Text(context.l10n.actionCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Confirm'),
+            child: Text(context.l10n.actionConfirm),
           ),
         ],
       ),
@@ -226,7 +225,7 @@ class _LoadMoreTile extends StatelessWidget {
             ? const CircularProgressIndicator()
             : OutlinedButton(
                 onPressed: () => context.read<CheckOutCubit>().loadMore(),
-                child: const Text('Load more'),
+                child: Text(context.l10n.actionLoadMore),
               ),
       ),
     );

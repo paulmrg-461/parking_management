@@ -17,6 +17,7 @@ class _FakeRemote implements CheckOutRemoteDataSource {
   final CheckOutReceipt? receiptToReturn;
   final Failure? error;
   DateTime? clientExitTimeUsed;
+  String? idempotencyKeyUsed;
 
   @override
   Future<PagedResult<OpenSession>> listOpenSessions({
@@ -31,6 +32,7 @@ class _FakeRemote implements CheckOutRemoteDataSource {
     String? idempotencyKey,
   }) async {
     clientExitTimeUsed = clientExitTime;
+    idempotencyKeyUsed = idempotencyKey;
     final error = this.error;
     if (error != null) {
       throw error;
@@ -49,7 +51,7 @@ void main() {
     ticketNumber: 'TCK-000001',
   );
 
-  test('Success: checkOut returns the remote-mapped CheckOutReceipt, no clientExitTime sent', () async {
+  test('Success: checkOut sends an Idempotency-Key but no clientExitTime', () async {
     final remote = _FakeRemote(receiptToReturn: receipt);
     final repository = CheckOutRepositoryImpl(remote, FakeSyncOutbox());
 
@@ -57,6 +59,7 @@ void main() {
 
     expect(result, receipt);
     expect(remote.clientExitTimeUsed, isNull);
+    expect(remote.idempotencyKeyUsed, isNotEmpty);
   });
 
   test('Failure: NetworkFailure queues a checkOut/close mutation and returns a pending receipt instead of rethrowing', () async {
@@ -76,7 +79,7 @@ void main() {
     final payload =
         jsonDecode(outbox.enqueued.single.payloadJson!) as Map<String, dynamic>;
     expect(payload['client_exit_time'], endsWith('Z'));
-    expect(payload['client_ref'], isA<String>());
+    expect(payload['client_ref'], remote.idempotencyKeyUsed);
   });
 
   test(

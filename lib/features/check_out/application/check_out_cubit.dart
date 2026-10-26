@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:equatable/equatable.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/error/failure.dart';
 import '../../../core/pagination/paged_result.dart';
@@ -12,6 +11,7 @@ import '../domain/entities/check_out_receipt.dart';
 import '../domain/entities/open_session.dart';
 import '../domain/repositories/check_out_repository.dart';
 import 'check_out_vehicle.dart';
+import '../../../core/state/resilient_cubit.dart';
 
 sealed class CheckOutState extends Equatable {
   const CheckOutState();
@@ -112,7 +112,7 @@ final class CheckOutFailure extends CheckOutState {
 /// Check-out flow: paginated open sessions with plates resolved once,
 /// debounced plate search, and closing a session without ever dropping the
 /// list (the outcome is reported through [CheckOutLoaded.submission]).
-class CheckOutCubit extends Cubit<CheckOutState> {
+class CheckOutCubit extends ResilientCubit<CheckOutState> {
   CheckOutCubit(
     this._checkOutVehicle,
     this._repository,
@@ -128,11 +128,16 @@ class CheckOutCubit extends Cubit<CheckOutState> {
   final int pageSize;
   Timer? _searchTimer;
 
+  /// Server offset already fetched. Never derive it from `sessions.length`:
+  /// removing a closed row would shift it and duplicate/skip the next page.
+  int _loadedCount = 0;
+
   Future<void> loadOpenSessions() async {
     emit(const CheckOutLoading());
     final plates = _plates();
     try {
       final page = await _firstPage();
+      _loadedCount = page.items.length;
       emit(
         CheckOutLoaded(
           sessions: page.items,
@@ -154,9 +159,10 @@ class CheckOutCubit extends Cubit<CheckOutState> {
     emit(current.copyWith(loadingMore: true));
     try {
       final page = await _repository.listOpenSessions(
-        offset: current.sessions.length,
+        offset: _loadedCount,
         limit: pageSize,
       );
+      _loadedCount += page.items.length;
       emit(
         _latest(current).copyWith(
           sessions: [...current.sessions, ...page.items],
@@ -200,6 +206,14 @@ class CheckOutCubit extends Cubit<CheckOutState> {
         _latest(current)
             .copyWith(submission: SubmissionFailed.of(failure)),
       );
+    } catch (_) {
+      emit(
+        _latest(current).copyWith(
+          submission: SubmissionFailed.of(
+            const ValidationFailure('', ClientFailureCodes.unexpected),
+          ),
+        ),
+      );
     }
   }
 
@@ -242,7 +256,9 @@ class CheckOutCubit extends Cubit<CheckOutState> {
   /// is simply removed from what is on screen.
   Future<List<OpenSession>> _sessionsAfterCheckOut(int sessionId) async {
     try {
-      return (await _firstPage()).items;
+      final items = (await _firstPage()).items;
+      _loadedCount = items.length;
+      return items;
     } on Failure {
       final current = state;
       final sessions = current is CheckOutLoaded

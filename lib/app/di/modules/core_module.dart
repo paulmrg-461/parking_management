@@ -10,6 +10,7 @@ import '../../../core/network/etag_cache_interceptor.dart';
 import '../../../core/network/session_reader.dart';
 import '../../../core/storage/hive_key_value_store.dart';
 import '../../../core/storage/key_value_store.dart';
+import '../../../core/storage/session_cache_cleaner.dart';
 import '../../../core/sync/sync_outbox.dart';
 import '../../../features/auth/application/auth_cubit.dart';
 
@@ -19,8 +20,15 @@ void registerCoreModule(GetIt sl, AppConfig config) {
     // Conditional GETs for reference data that rarely changes.
     ..registerLazySingleton<EtagCacheInterceptor>(
       () => EtagCacheInterceptor(
-        cacheablePaths: const {'/api/categories', '/api/tariffs'},
+        cacheablePaths: const {
+          '/api/categories',
+          '/api/tariffs',
+          '/api/settings',
+        },
       ),
+    )
+    ..registerLazySingleton<SessionCacheCleaner>(
+      () => SessionCacheCleaner(sl<EtagCacheInterceptor>()),
     )
     ..registerLazySingleton<DioClient>(
       () => DioClient(

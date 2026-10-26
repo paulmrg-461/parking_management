@@ -55,6 +55,27 @@ void main() {
     await cubit.close();
   });
 
+  test('Success: syncNow drains the queue and refreshes the count', () async {
+    final outbox = FakeSyncOutbox();
+    await outbox.enqueue(_mutation());
+    var flushed = 0;
+    final cubit = SyncStatusCubit(
+      outbox,
+      outbox.remove,
+      () async {
+        flushed++;
+        await outbox.remove(0);
+      },
+    );
+    await cubit.load();
+
+    await cubit.syncNow();
+
+    expect(flushed, 1);
+    expect(cubit.state.pendingCount, 0);
+    await cubit.close();
+  });
+
   test('Security: close cancels the outbox subscription', () async {
     final outbox = FakeSyncOutbox();
     final cubit = SyncStatusCubit(outbox, outbox.remove);

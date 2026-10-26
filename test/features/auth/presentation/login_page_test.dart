@@ -1,15 +1,16 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/features/auth/application/auth_cubit.dart';
 import 'package:parking_management/features/auth/presentation/login_page.dart';
+import 'package:parking_management/features/settings/application/branding_cubit.dart';
 
 import '../../../helpers/fake_auth_repository.dart';
+import '../../../helpers/fake_settings_repository.dart';
 import '../../../helpers/test_app.dart';
 
 Widget _wrap(AuthCubit cubit) {
@@ -20,9 +21,12 @@ Widget _wrap(AuthCubit cubit) {
       GoRoute(path: '/', builder: (_, _) => const Scaffold(body: Text('home'))),
     ],
   );
-  return BlocProvider<AuthCubit>.value(
-    value: cubit,
-    child: testRouterApp(router),
+  return BlocProvider<BrandingCubit>.value(
+    value: BrandingCubit(FakeParkingSettingsRepository()),
+    child: BlocProvider<AuthCubit>.value(
+      value: cubit,
+      child: testRouterApp(router),
+    ),
   );
 }
 
@@ -96,7 +100,7 @@ void main() {
 
     final error = find.text('Usuario o PIN incorrectos');
     expect(error, findsOneWidget);
-    expect(tester.getSemantics(error), containsSemantics(isLiveRegion: true));
+    expect(tester.getSemantics(error), isSemantics(isLiveRegion: true));
   });
 
   testWidgets('A11y: button shows a spinner and is disabled while signing in', (

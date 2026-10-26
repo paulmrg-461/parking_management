@@ -29,17 +29,29 @@ class CheckOutRepositoryImpl implements CheckOutRepository {
 
   @override
   Future<CheckOutReceipt> checkOut(int sessionId) async {
+    // Same key for the online attempt and any queued replay: a response lost
+    // after the server committed must not become a dead letter on retry.
+    final clientRef = newClientRef();
+    final exitTime = DateTime.now().toUtc();
     try {
-      return await _remote.checkOut(sessionId);
+      return await _remote.checkOut(sessionId, idempotencyKey: clientRef);
     } on NetworkFailure {
-      return _queueCheckOut(sessionId);
+      return _queueCheckOut(
+        sessionId,
+        clientRef: clientRef,
+        exitTime: exitTime,
+      );
     }
   }
 
-  /// Captures the attempt time NOW (never at replay) plus a `client_ref`
-  /// that becomes the `Idempotency-Key` of every replay attempt.
-  Future<CheckOutReceipt> _queueCheckOut(int sessionId) async {
-    final exitTime = DateTime.now().toUtc();
+  /// Queues the attempt time captured BEFORE the first request (never at
+  /// replay) plus the `client_ref` used by that attempt, which becomes the
+  /// `Idempotency-Key` of every replay.
+  Future<CheckOutReceipt> _queueCheckOut(
+    int sessionId, {
+    required String clientRef,
+    required DateTime exitTime,
+  }) async {
     await _outbox.enqueue(
       PendingMutation(
         entityType: MutationEntity.checkOut,
@@ -47,7 +59,7 @@ class CheckOutRepositoryImpl implements CheckOutRepository {
         entityId: sessionId,
         payloadJson: jsonEncode({
           'client_exit_time': exitTime.toIso8601String(),
-          'client_ref': newClientRef(),
+          'client_ref': clientRef,
         }),
         enqueuedAt: exitTime,
       ),

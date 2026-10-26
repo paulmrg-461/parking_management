@@ -13,6 +13,7 @@ import 'core/network/connectivity_cubit.dart';
 import 'core/sync/sync_service.dart';
 import 'core/sync/sync_status_cubit.dart';
 import 'features/auth/application/auth_cubit.dart';
+import 'features/settings/application/branding_cubit.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,9 +22,11 @@ Future<void> main() async {
   await initializeDateFormatting(formatLocale);
   Hive.registerAdapters();
   await configureDependencies();
-  serviceLocator<SyncService>().start();
   final authCubit = serviceLocator<AuthCubit>();
+  // Restore the token BEFORE the outbox drains: otherwise a cold start with
+  // queued work would fire token-less requests and stop on 401.
   await authCubit.restore();
+  serviceLocator<SyncService>().start();
   final syncStatus = serviceLocator<SyncStatusCubit>();
   unawaited(syncStatus.load());
   final connectivity = serviceLocator<ConnectivityCubit>();
@@ -32,6 +35,7 @@ Future<void> main() async {
     ParkingApp(
       authCubit: authCubit,
       syncStatusCubit: syncStatus,
+      brandingCubit: serviceLocator<BrandingCubit>(),
       connectivityCubit: connectivity,
     ),
   );

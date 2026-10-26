@@ -428,6 +428,12 @@ abstract class AppLocalizations {
   /// **'Cambios sin sincronizar'**
   String get syncSheetTitle;
 
+  /// No description provided for @syncNow.
+  ///
+  /// In es, this message translates to:
+  /// **'Reintentar ahora'**
+  String get syncNow;
+
   /// No description provided for @syncQueued.
   ///
   /// In es, this message translates to:
@@ -475,6 +481,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Salida'**
   String get entityCheckOut;
+
+  /// No description provided for @entitySettings.
+  ///
+  /// In es, this message translates to:
+  /// **'Configuración'**
+  String get entitySettings;
 
   /// No description provided for @navHome.
   ///
@@ -530,6 +542,18 @@ abstract class AppLocalizations {
   /// **'Reportes'**
   String get navReports;
 
+  /// No description provided for @navSettings.
+  ///
+  /// In es, this message translates to:
+  /// **'Configuración'**
+  String get navSettings;
+
+  /// No description provided for @navContact.
+  ///
+  /// In es, this message translates to:
+  /// **'Contacto'**
+  String get navContact;
+
   /// No description provided for @navMore.
   ///
   /// In es, this message translates to:
@@ -541,6 +565,90 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Más secciones de gestión'**
   String get navMoreTooltip;
+
+  /// No description provided for @settingsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Configuración del parqueadero'**
+  String get settingsTitle;
+
+  /// No description provided for @settingsName.
+  ///
+  /// In es, this message translates to:
+  /// **'Nombre'**
+  String get settingsName;
+
+  /// No description provided for @settingsAddress.
+  ///
+  /// In es, this message translates to:
+  /// **'Dirección'**
+  String get settingsAddress;
+
+  /// No description provided for @settingsSchedule.
+  ///
+  /// In es, this message translates to:
+  /// **'Horario'**
+  String get settingsSchedule;
+
+  /// No description provided for @settingsPhone.
+  ///
+  /// In es, this message translates to:
+  /// **'Teléfono'**
+  String get settingsPhone;
+
+  /// No description provided for @settingsWebsite.
+  ///
+  /// In es, this message translates to:
+  /// **'Sitio web'**
+  String get settingsWebsite;
+
+  /// No description provided for @settingsWhatsapp.
+  ///
+  /// In es, this message translates to:
+  /// **'Número de WhatsApp'**
+  String get settingsWhatsapp;
+
+  /// No description provided for @settingsSaved.
+  ///
+  /// In es, this message translates to:
+  /// **'Configuración guardada'**
+  String get settingsSaved;
+
+  /// No description provided for @settingsLogoSection.
+  ///
+  /// In es, this message translates to:
+  /// **'Logo'**
+  String get settingsLogoSection;
+
+  /// No description provided for @settingsLogoPick.
+  ///
+  /// In es, this message translates to:
+  /// **'Elegir logo'**
+  String get settingsLogoPick;
+
+  /// No description provided for @settingsWebsiteInvalid.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresa una URL válida'**
+  String get settingsWebsiteInvalid;
+
+  /// No description provided for @contactTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Contacto'**
+  String get contactTitle;
+
+  /// No description provided for @contactWhatsApp.
+  ///
+  /// In es, this message translates to:
+  /// **'WhatsApp'**
+  String get contactWhatsApp;
+
+  /// No description provided for @whatsappTooltip.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribir por WhatsApp'**
+  String get whatsappTooltip;
 
   /// No description provided for @loginSubtitle.
   ///
@@ -890,6 +998,12 @@ abstract class AppLocalizations {
   /// **'Cobrar salida de {plate}'**
   String checkOutChargeTooltip(String plate);
 
+  /// No description provided for @checkOutConfirm.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Cobrar la salida del vehículo {plate}?'**
+  String checkOutConfirm(String plate);
+
   /// No description provided for @unknownVehicle.
   ///
   /// In es, this message translates to:
@@ -973,6 +1087,90 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'{minutes} min'**
   String durationMinutes(int minutes);
+
+  /// No description provided for @receiptGenerate.
+  ///
+  /// In es, this message translates to:
+  /// **'Generar recibo'**
+  String get receiptGenerate;
+
+  /// No description provided for @receiptView.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver recibo'**
+  String get receiptView;
+
+  /// No description provided for @receiptClose.
+  ///
+  /// In es, this message translates to:
+  /// **'Cerrar'**
+  String get receiptClose;
+
+  /// No description provided for @printReceipt.
+  ///
+  /// In es, this message translates to:
+  /// **'Imprimir'**
+  String get printReceipt;
+
+  /// No description provided for @printSystem.
+  ///
+  /// In es, this message translates to:
+  /// **'Impresora del sistema (PDF)'**
+  String get printSystem;
+
+  /// No description provided for @printBluetooth.
+  ///
+  /// In es, this message translates to:
+  /// **'Impresoras Bluetooth'**
+  String get printBluetooth;
+
+  /// No description provided for @printScan.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscar impresoras'**
+  String get printScan;
+
+  /// No description provided for @printScanning.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscando impresoras...'**
+  String get printScanning;
+
+  /// No description provided for @printNoPrinters.
+  ///
+  /// In es, this message translates to:
+  /// **'No se encontraron impresoras Bluetooth'**
+  String get printNoPrinters;
+
+  /// No description provided for @printSuccess.
+  ///
+  /// In es, this message translates to:
+  /// **'Recibo enviado a la impresora'**
+  String get printSuccess;
+
+  /// No description provided for @printError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo imprimir'**
+  String get printError;
+
+  /// No description provided for @receiptPhotos.
+  ///
+  /// In es, this message translates to:
+  /// **'Fotos de evidencia'**
+  String get receiptPhotos;
+
+  /// No description provided for @checkInReceiptTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Entrada registrada'**
+  String get checkInReceiptTitle;
+
+  /// No description provided for @receiptGeneratedAt.
+  ///
+  /// In es, this message translates to:
+  /// **'Generado el {time}'**
+  String receiptGeneratedAt(String time);
 
   /// No description provided for @scanTitle.
   ///

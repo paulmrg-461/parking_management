@@ -16,8 +16,10 @@ import 'sync_outbox.dart';
 /// - [ServerFailure] (5xx/429/timeout) or unknown [Failure] → retried with
 ///   exponential backoff (2^n s, capped at [maxBackoff]); dead-lettered after
 ///   [maxAttempts]
-/// - [ValidationFailure] (409/422/…) or unexpected error → dead-lettered at once
-/// - [NetworkFailure] / [AuthenticationFailure] → drain stops, entry untouched
+/// - [ValidationFailure] (409/422/403/…) or unexpected error → dead-lettered
+///   at once (a 403 must never stall the rest of the queue)
+/// - [NetworkFailure] / [AuthenticationFailure] → drain stops, entry untouched;
+///   the next connectivity event, login or manual retry flushes again
 ///
 /// A dead letter never blocks the queue: the loop continues with the next
 /// entry. Concurrent [flush] calls share a single in-flight drain.

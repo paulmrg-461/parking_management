@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:parking_management/app/di/injection.dart';
+import 'package:parking_management/app/di/modules/sync_module.dart';
 import 'package:parking_management/app/di/modules/platform_module_io.dart'
     as io;
 import 'package:parking_management/app/di/modules/platform_module_web.dart'
@@ -9,6 +10,7 @@ import 'package:parking_management/core/config/app_config.dart';
 import 'package:parking_management/core/network/session_reader.dart';
 import 'package:parking_management/core/sync/file_pending_photo_storage.dart';
 import 'package:parking_management/core/sync/hive_pending_photo_storage.dart';
+import 'package:parking_management/core/sync/pending_mutation.dart';
 import 'package:parking_management/core/sync/pending_photo_storage.dart';
 import 'package:parking_management/core/sync/sync_service.dart';
 import 'package:parking_management/features/auth/infrastructure/auth_local_data_source.dart';
@@ -46,6 +48,18 @@ void main() {
       expect(sl<SyncService>(), isA<SyncService>());
     },
   );
+
+  test('Success: every queued entity type has a registered replayer', () {
+    registerAllModules(sl, _config);
+
+    final entities = buildMutationReplayers(
+      sl,
+    ).map((replayer) => replayer.entity).toSet();
+
+    // SyncService throws StateError on replay for a missing entry, so the
+    // replayer set must cover every queued entity exactly.
+    expect(entities, MutationEntity.values.toSet());
+  });
 
   test('Success: mobile platform module wires ML Kit and file photos', () {
     io.registerPlatformModule(sl);

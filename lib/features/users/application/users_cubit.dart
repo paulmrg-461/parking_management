@@ -1,5 +1,4 @@
 import 'package:equatable/equatable.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/error/failure.dart';
 import '../../../core/state/submission.dart';
@@ -7,6 +6,7 @@ import '../../auth/domain/entities/user.dart';
 import '../domain/commands/create_user_command.dart';
 import '../domain/commands/update_user_command.dart';
 import '../domain/repositories/user_repository.dart';
+import '../../../core/state/resilient_cubit.dart';
 
 sealed class UsersState extends Equatable {
   const UsersState();
@@ -49,7 +49,7 @@ final class UsersFailure extends UsersState {
   List<Object?> get props => [message, failure?.code];
 }
 
-class UsersCubit extends Cubit<UsersState> {
+class UsersCubit extends ResilientCubit<UsersState> {
   UsersCubit(this._repository) : super(const UsersInitial());
 
   final UserRepository _repository;

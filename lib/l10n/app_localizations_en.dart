@@ -192,6 +192,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get syncSheetTitle => 'Unsynced changes';
 
   @override
+  String get syncNow => 'Retry now';
+
+  @override
   String syncQueued(int count) {
     return '$count queued, retried automatically.';
   }
@@ -216,6 +219,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get entityCheckOut => 'Check-out';
+
+  @override
+  String get entitySettings => 'Settings';
 
   @override
   String get navHome => 'Home';
@@ -245,10 +251,58 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navReports => 'Reports';
 
   @override
+  String get navSettings => 'Settings';
+
+  @override
+  String get navContact => 'Contact';
+
+  @override
   String get navMore => 'More';
 
   @override
   String get navMoreTooltip => 'More management sections';
+
+  @override
+  String get settingsTitle => 'Parking settings';
+
+  @override
+  String get settingsName => 'Name';
+
+  @override
+  String get settingsAddress => 'Address';
+
+  @override
+  String get settingsSchedule => 'Schedule';
+
+  @override
+  String get settingsPhone => 'Phone';
+
+  @override
+  String get settingsWebsite => 'Website';
+
+  @override
+  String get settingsWhatsapp => 'WhatsApp number';
+
+  @override
+  String get settingsSaved => 'Settings saved';
+
+  @override
+  String get settingsLogoSection => 'Logo';
+
+  @override
+  String get settingsLogoPick => 'Choose logo';
+
+  @override
+  String get settingsWebsiteInvalid => 'Enter a valid URL';
+
+  @override
+  String get contactTitle => 'Contact';
+
+  @override
+  String get contactWhatsApp => 'WhatsApp';
+
+  @override
+  String get whatsappTooltip => 'Chat on WhatsApp';
 
   @override
   String get loginSubtitle => 'Sign in to continue';
@@ -456,6 +510,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String checkOutConfirm(String plate) {
+    return 'Charge the check-out for vehicle $plate?';
+  }
+
+  @override
   String unknownVehicle(int id) {
     return 'Vehicle #$id';
   }
@@ -504,6 +563,50 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String durationMinutes(int minutes) {
     return '$minutes min';
+  }
+
+  @override
+  String get receiptGenerate => 'Generate receipt';
+
+  @override
+  String get receiptView => 'View receipt';
+
+  @override
+  String get receiptClose => 'Close';
+
+  @override
+  String get printReceipt => 'Print';
+
+  @override
+  String get printSystem => 'System printer (PDF)';
+
+  @override
+  String get printBluetooth => 'Bluetooth printers';
+
+  @override
+  String get printScan => 'Search for printers';
+
+  @override
+  String get printScanning => 'Searching for printers...';
+
+  @override
+  String get printNoPrinters => 'No Bluetooth printers found';
+
+  @override
+  String get printSuccess => 'Receipt sent to the printer';
+
+  @override
+  String get printError => 'Could not print';
+
+  @override
+  String get receiptPhotos => 'Evidence photos';
+
+  @override
+  String get checkInReceiptTitle => 'Check-in complete';
+
+  @override
+  String receiptGeneratedAt(String time) {
+    return 'Generated at $time';
   }
 
   @override

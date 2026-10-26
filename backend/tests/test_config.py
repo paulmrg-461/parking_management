@@ -28,6 +28,22 @@ def test_production_rejects_short_secret():
         _settings(environment="production", secret_key="x" * 31)
 
 
+def test_production_rejects_the_example_env_secret():
+    """The documented `cp .env.example .env` must not boot with a public key."""
+    example_value = "REPLACE_WITH_A_RANDOM_32+_BYTE_SECRET"
+
+    with pytest.raises(ValidationError, match="SECRET_KEY"):
+        _settings(environment="production", secret_key=example_value)
+
+
+@pytest.mark.parametrize(
+    "secret", ["replace-me-with-something-longer-than-32", "change-me-" + "x" * 40]
+)
+def test_production_rejects_placeholder_prefixes(secret):
+    with pytest.raises(ValidationError, match="SECRET_KEY"):
+        _settings(environment="production", secret_key=secret)
+
+
 def test_default_environment_is_production_secure_by_default(monkeypatch):
     monkeypatch.delenv("ENVIRONMENT", raising=False)
 

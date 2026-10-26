@@ -25,6 +25,10 @@ class CheckInMutationReplayer extends MutationReplayer {
       photos: await _photos.load(paths),
       newVehicle: _newVehicleFrom(payload),
       idempotencyKey: clientRef,
+      clientEntryTime: switch (payload['client_entry_time']) {
+        final String value => DateTime.parse(value),
+        _ => null, // legacy queue entry written before this field existed
+      },
     );
     await _photos.deleteFor(clientRef);
   }

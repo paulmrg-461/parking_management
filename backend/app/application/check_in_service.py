@@ -2,13 +2,15 @@
 
 from collections import defaultdict
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 
 from app.application.commands import CheckInCommand, NewVehicleData
-from app.domain.clock import Clock, system_clock
+from app.domain.clock import MAX_CLIENT_CLOCK_SKEW, Clock, system_clock
 from app.domain.errors import (
     CategoryNotFoundError,
     DuplicateOpenSessionError,
     DuplicatePlateError,
+    InvalidEntryTimeError,
     VehicleNotFoundError,
     VehicleNotRegisteredError,
 )
@@ -31,6 +33,7 @@ __all__ = [
     "CheckInService",
     "CheckInView",
     "DuplicateOpenSessionError",
+    "InvalidEntryTimeError",
     "NewVehicleData",
     "VehicleNotFoundError",
     "VehicleNotRegisteredError",
@@ -61,16 +64,30 @@ class CheckInService:
         self._clock = clock
 
     async def create_check_in(self, command: CheckInCommand) -> CheckInView:
+        entry_time = self._resolve_entry_time(command.client_entry_time)
         vehicle = await self._resolve_vehicle(command)
         if await self._ports.sessions.get_open_by_vehicle_id(vehicle.id) is not None:
             raise DuplicateOpenSessionError()
         session = await self._ports.sessions.create(
             ParkingSession(id=None, vehicle_id=vehicle.id, operator_id=command.operator_id,
-                           entry_time=self._clock())
+                           entry_time=entry_time)
         )
         # Files are written only after every domain check has passed.
         photos = await self._store_photos(session, command.photos)
         return CheckInView(session, vehicle.plate, photos)
+
+    def _resolve_entry_time(self, client: datetime | None) -> datetime:
+        """Offline replays keep the operator's entry time; online uses now."""
+        if client is None:
+            return self._clock()
+        if client.tzinfo is None:
+            raise InvalidEntryTimeError("client_entry_time must include a timezone offset")
+        now = self._clock()
+        if client > now + MAX_CLIENT_CLOCK_SKEW:
+            raise InvalidEntryTimeError(
+                "client_entry_time must be at most 5 minutes in the future"
+            )
+        return client.astimezone(UTC)
 
     async def list_open(self, page: PageRequest) -> Page[CheckInView]:
         sessions = await self._ports.sessions.list_open_page(page)

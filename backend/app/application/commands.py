@@ -22,6 +22,9 @@ class CheckInCommand:
     operator_id: int
     photos: list[PhotoUpload] = field(default_factory=list)
     new_vehicle: NewVehicleData = field(default_factory=NewVehicleData)
+    # Set by offline replays: the moment the operator actually checked the
+    # vehicle in, so billing starts then, not when the device reconnects.
+    client_entry_time: datetime | None = None
 
 
 @dataclass(frozen=True)

@@ -10,7 +10,9 @@ import 'modules/core_module.dart';
 import 'modules/monthly_passes_module.dart';
 import 'modules/plate_scanning_module.dart';
 import 'modules/platform_module.dart';
+import 'modules/receipt_printing_module.dart';
 import 'modules/reports_module.dart';
+import 'modules/settings_module.dart';
 import 'modules/sync_module.dart';
 import 'modules/tariffs_module.dart';
 import 'modules/users_module.dart';
@@ -37,9 +39,11 @@ void registerAllModules(GetIt sl, AppConfig config) {
   registerTariffsModule(sl);
   registerVehiclesModule(sl);
   registerPlateScanningModule(sl);
+  registerReceiptPrintingModule(sl);
   registerCheckInModule(sl);
   registerCheckOutModule(sl);
   registerMonthlyPassesModule(sl);
   registerReportsModule(sl);
+  registerSettingsModule(sl);
   registerSyncModule(sl);
 }

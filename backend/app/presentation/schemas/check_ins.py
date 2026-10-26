@@ -3,7 +3,7 @@
 from datetime import datetime
 
 from fastapi import Form
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
 from app.application.check_in_service import CheckInView
 from app.application.commands import CheckInCommand, NewVehicleData
@@ -53,6 +53,7 @@ class CheckInForm(BaseModel):
     category_id: int | None = None
     color: str | None = Field(default=None, max_length=30)
     brand: str | None = Field(default=None, max_length=50)
+    client_entry_time: AwareDatetime | None = None
 
     @classmethod
     def as_form(
@@ -61,8 +62,15 @@ class CheckInForm(BaseModel):
         category_id: int | None = Form(default=None),
         color: str | None = Form(default=None, max_length=30),
         brand: str | None = Form(default=None, max_length=50),
+        client_entry_time: AwareDatetime | None = Form(default=None),
     ) -> "CheckInForm":
-        return cls(plate=plate, category_id=category_id, color=color, brand=brand)
+        return cls(
+            plate=plate,
+            category_id=category_id,
+            color=color,
+            brand=brand,
+            client_entry_time=client_entry_time,
+        )
 
     def to_command(self, operator_id: int, photos: list[PhotoUpload]) -> CheckInCommand:
         return CheckInCommand(
@@ -70,4 +78,5 @@ class CheckInForm(BaseModel):
             operator_id=operator_id,
             photos=photos,
             new_vehicle=NewVehicleData(self.category_id, self.color, self.brand),
+            client_entry_time=self.client_entry_time,
         )

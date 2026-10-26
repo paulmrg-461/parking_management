@@ -7,6 +7,15 @@ from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 PLACEHOLDER_SECRET_KEY = "change-me-in-production-use-a-32-byte-secret-minimum"
+# Values shipped in docs/examples. They are long enough to pass the byte
+# check, so they must be rejected explicitly: they are public knowledge.
+KNOWN_PLACEHOLDER_SECRETS = frozenset(
+    {
+        PLACEHOLDER_SECRET_KEY,
+        "REPLACE_WITH_A_RANDOM_32+_BYTE_SECRET",
+    }
+)
+_PLACEHOLDER_PREFIXES = ("change-me", "changeme", "replace", "your-secret")
 _MIN_SECRET_BYTES = 32
 _INSECURE_ALLOWED_ENVIRONMENTS = frozenset({"development", "test"})
 
@@ -30,6 +39,8 @@ class Settings(BaseSettings):
     evidence_storage_path: str = "./data/evidence"
     evidence_max_bytes: int = 5 * 1024 * 1024
     evidence_max_files: int = 5
+    # Uploaded parking logo files (PNG/JPEG), same cap as evidence photos.
+    settings_storage_path: str = "./data/settings"
     # IANA zone used for billing day boundaries, night windows and reports.
     business_timezone: str = "America/Bogota"
     # Comma-separated explicit origins (Flutter web dev, e.g.
@@ -62,12 +73,17 @@ class Settings(BaseSettings):
         if self.environment in _INSECURE_ALLOWED_ENVIRONMENTS:
             return self
         weak = len(self.secret_key.encode()) < _MIN_SECRET_BYTES
-        if weak or self.secret_key == PLACEHOLDER_SECRET_KEY:
+        if weak or self._is_placeholder_secret():
             raise ValueError(
                 "SECRET_KEY must be set to a random value of at least 32 bytes "
                 f"when ENVIRONMENT={self.environment!r}"
             )
         return self
+
+    def _is_placeholder_secret(self) -> bool:
+        value = self.secret_key.strip().casefold()
+        known = {placeholder.casefold() for placeholder in KNOWN_PLACEHOLDER_SECRETS}
+        return value in known or value.startswith(_PLACEHOLDER_PREFIXES)
 
 
 settings = Settings()

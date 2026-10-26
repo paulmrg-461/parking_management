@@ -6,6 +6,7 @@ import 'package:parking_management/core/sync/sync_status_cubit.dart';
 import 'package:parking_management/core/widgets/sync_badge.dart';
 
 import '../../helpers/fake_sync_outbox.dart';
+import '../../helpers/test_app.dart';
 
 PendingMutation _mutation({bool dead = false}) => PendingMutation(
   entityType: MutationEntity.checkOut,
@@ -24,8 +25,8 @@ Future<SyncStatusCubit> _pump(
   final cubit = SyncStatusCubit(outbox, outbox.remove);
   await tester.runAsync(cubit.load);
   await tester.pumpWidget(
-    MaterialApp(
-      home: BlocProvider.value(
+    testApp(
+      BlocProvider.value(
         value: cubit,
         child: Scaffold(appBar: AppBar(actions: const [SyncBadge()])),
       ),

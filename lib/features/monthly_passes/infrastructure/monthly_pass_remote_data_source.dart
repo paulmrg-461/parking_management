@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../../../core/network/dio_error_mapper.dart';
+import '../../../core/network/pagination.dart';
 import '../domain/entities/monthly_pass.dart';
 import 'models/monthly_pass_dto.dart';
 
@@ -23,19 +24,32 @@ class DioMonthlyPassRemoteDataSource implements MonthlyPassRemoteDataSource {
 
   @override
   Future<List<MonthlyPass>> list({int? vehicleId}) async {
+    // The list feeds dropdowns/caches, not a paged UI: collect every page so
+    // passes beyond the backend's default page are not lost.
+    const pageSize = 500;
+    final passes = <MonthlyPass>[];
     try {
-      final response = await _dio.get(
-        _path,
-        queryParameters: vehicleId != null ? {'vehicle_id': vehicleId} : null,
-      );
-      final data = response.data as List<dynamic>;
-      return data
-          .map(
+      while (true) {
+        final response = await _dio.get(
+          _path,
+          queryParameters: {
+            'vehicle_id': ?vehicleId,
+            ...pageQuery(limit: pageSize, offset: passes.length),
+          },
+        );
+        final data = response.data as List<dynamic>;
+        passes.addAll(
+          data.map(
             (item) =>
                 MonthlyPassDto.fromJson(item as Map<String, dynamic>)
                     .toDomain(),
-          )
-          .toList();
+          ),
+        );
+        final total = totalCountOf(response);
+        if (data.isEmpty || total == null || passes.length >= total) {
+          return passes;
+        }
+      }
     } on DioException catch (error) {
       throw mapDioError(error);
     }

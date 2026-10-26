@@ -59,13 +59,13 @@ void main() {
       expect(tariffs.single.startTime, '18:00');
     });
 
-    test('create maps 403 to an authentication failure', () async {
+    test('create maps 403 to a non-retryable validation failure', () async {
       final dio = _dioWith(
         (options) async => _json({'detail': 'Forbidden'}, 403),
       );
       final source = DioTariffRemoteDataSource(dio);
 
-      expect(() => source.create({}), throwsA(isA<AuthenticationFailure>()));
+      expect(() => source.create({}), throwsA(isA<ValidationFailure>()));
     });
 
     test('list maps connection errors to a network failure', () async {

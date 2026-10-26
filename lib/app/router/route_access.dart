@@ -7,7 +7,13 @@ const homePath = '/';
 /// Operators get an ALLOWLIST (secure by default: any new route is
 /// admin-only until added here). Check-in reads categories/vehicles through
 /// repositories, so operators never need the management routes themselves.
-const operatorRoutes = {homePath, '/check-in', '/check-out', '/scan'};
+const operatorRoutes = {
+  homePath,
+  '/check-in',
+  '/check-out',
+  '/scan',
+  '/contact',
+};
 
 bool canAccess(UserRole role, String location) =>
     role == UserRole.admin || operatorRoutes.contains(_normalize(location));

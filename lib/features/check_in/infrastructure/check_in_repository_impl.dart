@@ -29,17 +29,25 @@ class CheckInRepositoryImpl implements CheckInRepository {
     required List<XFile> photos,
     NewVehicleInfo? newVehicle,
   }) async {
+    // Generated BEFORE the first attempt: if the server commits but the
+    // response is lost, the queued replay sends the same key and gets the
+    // original session back instead of a 409 that dead-letters the entry.
+    final clientRef = newClientRef();
+    final entryTime = DateTime.now().toUtc();
     try {
       return await _remote.createCheckIn(
         plate: plate,
         photos: photos,
         newVehicle: newVehicle,
+        idempotencyKey: clientRef,
       );
     } on NetworkFailure {
       return _queueCheckIn(
         plate: plate,
         photos: photos,
         newVehicle: newVehicle,
+        clientRef: clientRef,
+        entryTime: entryTime,
       );
     }
   }
@@ -51,9 +59,9 @@ class CheckInRepositoryImpl implements CheckInRepository {
     required String plate,
     required List<XFile> photos,
     NewVehicleInfo? newVehicle,
+    required String clientRef,
+    required DateTime entryTime,
   }) async {
-    final clientRef = newClientRef();
-    final entryTime = DateTime.now().toUtc();
     final persistedPaths = await _photos.persist(
       clientRef: clientRef,
       photos: photos,

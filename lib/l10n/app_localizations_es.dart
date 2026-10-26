@@ -196,6 +196,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get syncSheetTitle => 'Cambios sin sincronizar';
 
   @override
+  String get syncNow => 'Reintentar ahora';
+
+  @override
   String syncQueued(int count) {
     return '$count en cola, se reintentarán solos.';
   }
@@ -220,6 +223,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get entityCheckOut => 'Salida';
+
+  @override
+  String get entitySettings => 'Configuración';
 
   @override
   String get navHome => 'Inicio';
@@ -249,10 +255,58 @@ class AppLocalizationsEs extends AppLocalizations {
   String get navReports => 'Reportes';
 
   @override
+  String get navSettings => 'Configuración';
+
+  @override
+  String get navContact => 'Contacto';
+
+  @override
   String get navMore => 'Más';
 
   @override
   String get navMoreTooltip => 'Más secciones de gestión';
+
+  @override
+  String get settingsTitle => 'Configuración del parqueadero';
+
+  @override
+  String get settingsName => 'Nombre';
+
+  @override
+  String get settingsAddress => 'Dirección';
+
+  @override
+  String get settingsSchedule => 'Horario';
+
+  @override
+  String get settingsPhone => 'Teléfono';
+
+  @override
+  String get settingsWebsite => 'Sitio web';
+
+  @override
+  String get settingsWhatsapp => 'Número de WhatsApp';
+
+  @override
+  String get settingsSaved => 'Configuración guardada';
+
+  @override
+  String get settingsLogoSection => 'Logo';
+
+  @override
+  String get settingsLogoPick => 'Elegir logo';
+
+  @override
+  String get settingsWebsiteInvalid => 'Ingresa una URL válida';
+
+  @override
+  String get contactTitle => 'Contacto';
+
+  @override
+  String get contactWhatsApp => 'WhatsApp';
+
+  @override
+  String get whatsappTooltip => 'Escribir por WhatsApp';
 
   @override
   String get loginSubtitle => 'Inicia sesión para continuar';
@@ -460,6 +514,11 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String checkOutConfirm(String plate) {
+    return '¿Cobrar la salida del vehículo $plate?';
+  }
+
+  @override
   String unknownVehicle(int id) {
     return 'Vehículo #$id';
   }
@@ -508,6 +567,50 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String durationMinutes(int minutes) {
     return '$minutes min';
+  }
+
+  @override
+  String get receiptGenerate => 'Generar recibo';
+
+  @override
+  String get receiptView => 'Ver recibo';
+
+  @override
+  String get receiptClose => 'Cerrar';
+
+  @override
+  String get printReceipt => 'Imprimir';
+
+  @override
+  String get printSystem => 'Impresora del sistema (PDF)';
+
+  @override
+  String get printBluetooth => 'Impresoras Bluetooth';
+
+  @override
+  String get printScan => 'Buscar impresoras';
+
+  @override
+  String get printScanning => 'Buscando impresoras...';
+
+  @override
+  String get printNoPrinters => 'No se encontraron impresoras Bluetooth';
+
+  @override
+  String get printSuccess => 'Recibo enviado a la impresora';
+
+  @override
+  String get printError => 'No se pudo imprimir';
+
+  @override
+  String get receiptPhotos => 'Fotos de evidencia';
+
+  @override
+  String get checkInReceiptTitle => 'Entrada registrada';
+
+  @override
+  String receiptGeneratedAt(String time) {
+    return 'Generado el $time';
   }
 
   @override

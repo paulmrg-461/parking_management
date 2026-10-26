@@ -12,6 +12,7 @@ import '../../../core/widgets/sync_badge.dart';
 import '../../auth/application/auth_cubit.dart';
 import '../../auth/domain/entities/auth_session.dart';
 import '../../auth/domain/entities/user.dart';
+import '../../settings/application/branding_cubit.dart';
 import '../application/dashboard_cubit.dart';
 import 'widgets/dashboard_widgets.dart';
 
@@ -37,7 +38,11 @@ class _HomePageState extends State<HomePage> {
     final l10n = context.l10n;
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.appTitle),
+        title: Text(
+          context.select<BrandingCubit, String>(
+            (c) => c.state.titleFor(l10n),
+          ),
+        ),
         actions: [
           const SyncBadge(),
           AppIconButton(

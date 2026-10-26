@@ -24,9 +24,14 @@ def _matches(if_none_match: str | None, etag: str) -> bool:
     return "*" in candidates or etag in candidates or opaque in candidates
 
 
-def conditional_json(request: Request, items: Sequence[BaseModel], headers: dict) -> Response:
-    """200 JSON with validators, or an empty 304 when the client copy is fresh."""
-    body = json.dumps(jsonable_encoder(items), separators=(",", ":")).encode()
+def conditional_json(
+    request: Request, payload: BaseModel | Sequence[BaseModel], headers: dict
+) -> Response:
+    """200 JSON with validators, or an empty 304 when the client copy is fresh.
+
+    Accepts a single model or a sequence (paged lists).
+    """
+    body = json.dumps(jsonable_encoder(payload), separators=(",", ":")).encode()
     etag = _weak_etag(body)
     all_headers = {**headers, "ETag": etag, "Cache-Control": CACHE_CONTROL}
     if _matches(request.headers.get("if-none-match"), etag):

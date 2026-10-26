@@ -29,11 +29,16 @@ Dio _dioWith(Future<ResponseBody> Function(RequestOptions) handler) {
   return dio;
 }
 
-ResponseBody _json(Object body, int statusCode) => ResponseBody.fromString(
+ResponseBody _json(
+  Object body,
+  int statusCode, {
+  Map<String, List<String>> headers = const {},
+}) => ResponseBody.fromString(
   jsonEncode(body),
   statusCode,
   headers: {
     Headers.contentTypeHeader: [Headers.jsonContentType],
+    ...headers,
   },
 );
 
@@ -59,13 +64,38 @@ void main() {
       expect(vehicles.single.color, 'red');
     });
 
-    test('create maps 403 to an authentication failure', () async {
+    test('list walks every page instead of truncating at the first one', () async {
+      final requests = <RequestOptions>[];
+      final dio = _dioWith((options) async {
+        requests.add(options);
+        final offset =
+            int.tryParse(options.uri.queryParameters['offset'] ?? '0') ?? 0;
+        return _json([
+          {
+            'id': offset + 1,
+            'plate': 'PLT00${offset + 1}',
+            'category_id': 1,
+            'color': null,
+            'brand': null,
+          },
+        ], 200, headers: {'x-total-count': ['2']});
+      });
+      final source = DioVehicleRemoteDataSource(dio);
+
+      final vehicles = await source.list();
+
+      expect(vehicles, hasLength(2));
+      expect(requests, hasLength(2));
+      expect(requests.last.uri.queryParameters['offset'], '1');
+    });
+
+    test('create maps 403 to a non-retryable validation failure', () async {
       final dio = _dioWith(
         (options) async => _json({'detail': 'Forbidden'}, 403),
       );
       final source = DioVehicleRemoteDataSource(dio);
 
-      expect(() => source.create({}), throwsA(isA<AuthenticationFailure>()));
+      expect(() => source.create({}), throwsA(isA<ValidationFailure>()));
     });
 
     test('list maps connection errors to a network failure', () async {

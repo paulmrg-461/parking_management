@@ -13,6 +13,7 @@ class _FakeCheckInRepository implements CheckInRepository {
 
   final ParkingSession? sessionToReturn;
   final Failure? error;
+  Object? unexpected;
   Failure? listError;
   List<ParkingSession> open = const [];
   bool createCheckInCalled = false;
@@ -29,6 +30,10 @@ class _FakeCheckInRepository implements CheckInRepository {
     final error = this.error;
     if (error != null) {
       throw error;
+    }
+    final unexpected = this.unexpected;
+    if (unexpected != null) {
+      throw unexpected;
     }
     return sessionToReturn!;
   }
@@ -48,6 +53,24 @@ void main() {
     status: ParkingSessionStatus.open,
     entryTime: DateTime(2026, 1, 1),
     photoCount: 2,
+  );
+
+  test(
+    'Failure: an unexpected error still clears the in-progress submission',
+    () async {
+      final repository = _FakeCheckInRepository()..unexpected = StateError('hive');
+      final cubit = _cubit(repository);
+
+      await cubit.submitCheckIn(plate: 'ABC123', photos: const []);
+
+      final submission = cubit.state.submission;
+      expect(submission, isA<SubmissionFailed>());
+      expect(
+        (submission as SubmissionFailed).failure?.code,
+        ClientFailureCodes.unexpected,
+      );
+      expect(submission.isInProgress, isFalse);
+    },
   );
 
   test(
