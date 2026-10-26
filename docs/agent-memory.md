@@ -211,10 +211,9 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   (`opened/closed/movement/adjusted`) after a confirmed cash action; the page
   announces it and shows an info snack. Do not revert it to `SubmissionIdle`,
   the confirmation depends on the transition.
-- `core/utils/text_formatters.dart` (`UpperCaseTextFormatter`) is shared by the
-  check-in and reservation plate fields; both cap input at 20 (the column
-  width). Check-in shows `checkInPlateNormalized` when whitespace would be
-  stripped.
+- `core/widgets/plate_input_field.dart` is the single plate input (check-in,
+  reservation dialog, vehicle creation): its formatter uppercases and strips
+  blanks live and caps at 20, the column width. Do not add another formatter.
 - `CheckInPage(initialPlate:)` prefills the field and runs the lookup on the
   first frame; the router reads it from `/check-in?plate=`. Reservations pass
   their plate to it (`onCheckIn` is injectable for widget tests).

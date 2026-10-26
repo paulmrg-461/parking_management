@@ -553,7 +553,7 @@ void main() {
     expect(find.text('Vehículo registrado'), findsOneWidget);
   });
 
-  testWidgets('Success: the plate is uppercased and its stored form is shown', (
+  testWidgets('Success: the plate is normalized to uppercase without spaces', (
     tester,
   ) async {
     await pumpPage(tester);
@@ -562,8 +562,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 600));
     await tester.pumpAndSettle();
 
-    expect(tester.widget<TextField>(plateField()).controller!.text, 'AB 123');
-    expect(find.text('Se guardará como AB123'), findsOneWidget);
+    expect(tester.widget<TextField>(plateField()).controller!.text, 'AB123');
   });
 
   testWidgets('Security: the plate field cannot exceed the column width', (

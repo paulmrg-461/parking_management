@@ -359,8 +359,6 @@
   "@photosMaxReached": {"placeholders": {"max": {"type": "int"}}},
   "@checkInRepeat": {"placeholders": {"plate": {"type": "String"}}},
   "checkInRepeat": "Repetir entrada {plate}",
-  "checkInPlateNormalized": "Se guardará como {plate}",
-  "@checkInPlateNormalized": {"placeholders": {"plate": {"type": "String"}}},
   "checkInSubmit": "Registrar entrada",
   "checkInSuccess": "Entrada registrada: {plate}",
   "@checkInSuccess": {"placeholders": {"plate": {"type": "String"}}},

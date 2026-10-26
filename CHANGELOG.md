@@ -114,8 +114,8 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   search of the current screen from anywhere in the app.
 - Screen readers announce successful check-ins and check-outs.
 - Check-in remembers the last plate and offers a one-tap "repeat entry" chip;
-  plate fields uppercase while typing, cap at 20 chars and say how the plate
-  will be stored when the input has blanks.
+  plate fields normalize while typing through the shared `PlateInputField`
+  (uppercase, no blanks) and cap at the 20-char column width.
 - The occupancy bar and the monthly-pass status chip animate their changes.
 - Shift cash actions (open, close, movement, correction) confirm with a
   SnackBar and a screen-reader announcement instead of happening silently.

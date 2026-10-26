@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/tokens.dart';
-import '../../../core/utils/text_formatters.dart';
+import '../../../core/widgets/plate_input_field.dart';
 import '../../categories/domain/entities/category.dart';
 
 class ReservationDraft {
@@ -100,19 +99,7 @@ class _ReservationDialogState extends State<ReservationDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              TextFormField(
-                controller: _plate,
-                autofocus: true,
-                textCapitalization: TextCapitalization.characters,
-                inputFormatters: [
-                  const UpperCaseTextFormatter(),
-                  LengthLimitingTextInputFormatter(20),
-                ],
-                decoration: InputDecoration(labelText: l10n.plateLabel),
-                validator: (value) => (value ?? '').trim().isEmpty
-                    ? l10n.fieldRequired
-                    : null,
-              ),
+              PlateInputField(controller: _plate, autofocus: true),
               const SizedBox(height: Space.md),
               DropdownButtonFormField<int>(
                 initialValue: _categoryId,

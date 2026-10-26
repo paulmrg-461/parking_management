@@ -1041,11 +1041,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String checkInPlateNormalized(String plate) {
-    return 'Saved as $plate';
-  }
-
-  @override
   String get checkInSubmit => 'Register check-in';
 
   @override

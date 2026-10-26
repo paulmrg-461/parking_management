@@ -268,8 +268,8 @@ The app is now a Supabase-only stack: FastAPI, Alembic, Dio and Redis are gone.
   straight to check-in with its plate prefilled (`/check-in?plate=…`). The
   post-checkout summary offers "Nuevo cobro": it clears the search and returns
   focus to it, so a queue of cars is charged without leaving the screen. Plate
-  inputs uppercase while typing, cap at the column width (20) and warn when the
-  stored form drops blanks ("Se guardará como AB123").
+  inputs normalize while typing through the shared `PlateInputField` (uppercase,
+  no blanks) and cap at the column width (20).
 
 ## Infra/tooling (not OpenSpec capabilities — repo scaffolding)
 
