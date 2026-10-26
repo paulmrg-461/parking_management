@@ -1220,6 +1220,18 @@ abstract class AppLocalizations {
   /// **'Cerrar turno'**
   String get shiftClose;
 
+  /// No description provided for @shiftDifferenceConfirmTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'El arqueo no cuadra'**
+  String get shiftDifferenceConfirmTitle;
+
+  /// No description provided for @shiftDifferenceConfirmBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Diferencia de {amount} frente al efectivo esperado. ¿Cerrar el turno igualmente?'**
+  String shiftDifferenceConfirmBody(String amount);
+
   /// No description provided for @shiftClosedTitle.
   ///
   /// In es, this message translates to:

@@ -121,6 +121,8 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - The occupancy bar and the monthly-pass status chip animate their changes, and
   vehicle/reservation rows fade-slide in once when a list appears (disabled
   under `reduce motion`).
+- Closing a shift whose counted cash differs from the expected amount asks for
+  confirmation, showing the difference.
 - Shift cash actions (open, close, movement, correction) confirm with a
   SnackBar and a screen-reader announcement instead of happening silently.
 - An open session in the vehicle history offers "Cobrar en caja", opening
@@ -188,7 +190,7 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Tests
 
-- 602 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
+- 603 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
   integration test that runs only against a live stack.
 - SQL/RLS/RPC regressions covering capacity, shifts, discounts, passes,
   reservations, multi-site isolation, audit, diagnostics and retention.
@@ -218,7 +220,7 @@ Captured on 2026-10-24 against the local self-hosted stack:
 
 | Check | Result |
 |---|---|
-| `flutter test` | 602 passed (+1 live-stack integration skipped) |
+| `flutter test` | 603 passed (+1 live-stack integration skipped) |
 | `flutter analyze` | 0 errors, 0 warnings (only SDK deprecation infos) |
 | `flutter build web --release` | OK |
 | `supabase/tests/run.sh` | Passed (migrations + RPC/RLS regressions) |

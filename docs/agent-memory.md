@@ -207,6 +207,8 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 - Check-in stores `last_plate` in `KeyValueStore` (box `preferences`) after a
   success and offers a repeat chip; guarded by `serviceLocator.isRegistered`
   so page tests can skip it or inject a fake store.
+- The shift close dialog result is checked against `expectedCash`; a mismatch
+  goes through `ConfirmDialog` (destructive) before `closeShift` is called.
 - `ShiftCubit._submit` emits `SubmissionSucceeded(shift)` + `lastAction`
   (`opened/closed/movement/adjusted`) after a confirmed cash action; the page
   announces it and shows an info snack. Do not revert it to `SubmissionIdle`,

@@ -622,6 +622,14 @@ class AppLocalizationsEs extends AppLocalizations {
   String get shiftClose => 'Cerrar turno';
 
   @override
+  String get shiftDifferenceConfirmTitle => 'El arqueo no cuadra';
+
+  @override
+  String shiftDifferenceConfirmBody(String amount) {
+    return 'Diferencia de $amount frente al efectivo esperado. ¿Cerrar el turno igualmente?';
+  }
+
+  @override
   String get shiftClosedTitle => 'Turno cerrado';
 
   @override

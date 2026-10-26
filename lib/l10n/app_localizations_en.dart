@@ -615,6 +615,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shiftClose => 'Close shift';
 
   @override
+  String get shiftDifferenceConfirmTitle => 'The cash count does not match';
+
+  @override
+  String shiftDifferenceConfirmBody(String amount) {
+    return 'Difference of $amount against the expected cash. Close the shift anyway?';
+  }
+
+  @override
   String get shiftClosedTitle => 'Shift closed';
 
   @override
