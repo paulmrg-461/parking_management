@@ -20,6 +20,8 @@ class _FakeReportRepository implements ReportRepository {
   final OccupancyReport occupancy;
   Failure? error;
   bool? lastAllLots;
+  DateTime? lastStart;
+  DateTime? lastEnd;
   WhatsappReport whatsapp = WhatsappReport(
     sent: 8,
     failed: 1,
@@ -34,6 +36,8 @@ class _FakeReportRepository implements ReportRepository {
     bool allLots = false,
   }) async {
     lastAllLots = allLots;
+    lastStart = startDate;
+    lastEnd = endDate;
     return error == null ? revenue : throw error!;
   }
 
@@ -87,6 +91,18 @@ Future<_FakeReportRepository> _pump(
   return repository;
 }
 
+/// The page has two scrollables now (preset row + report list): target the
+/// list inside the refresh indicator.
+Future<void> _scrollTo(WidgetTester tester, Finder finder) =>
+    tester.scrollUntilVisible(
+      finder,
+      200,
+      scrollable: find.descendant(
+        of: find.byType(RefreshIndicator),
+        matching: find.byType(Scrollable),
+      ),
+    );
+
 void main() {
   testWidgets('Success: renders total revenue and occupancy in Spanish', (
     tester,
@@ -95,10 +111,10 @@ void main() {
 
     expect(find.text('\$150.000'), findsOneWidget);
     expect(find.text('Ingresos por categoría'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('Efectivo'), 200);
+    await _scrollTo(tester, find.text('Efectivo'));
     expect(find.text('Ingresos por método de pago'), findsOneWidget);
     expect(find.text('Efectivo'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('Vehículos dentro: 7'), 200);
+    await _scrollTo(tester, find.text('Vehículos dentro: 7'));
     expect(find.text('Vehículos dentro: 7'), findsOneWidget);
   });
 
@@ -154,12 +170,28 @@ void main() {
   testWidgets('Success: WhatsApp delivery metrics are shown', (tester) async {
     await _pump(tester);
 
-    await tester.scrollUntilVisible(find.text('WhatsApp'), 300);
+    await _scrollTo(tester, find.text('WhatsApp'));
+    expect(find.text('WhatsApp'), findsOneWidget);
+
+    await _scrollTo(tester, find.text('Enviados'));
     expect(find.text('Enviados'), findsOneWidget);
     expect(find.text('Fallidos'), findsOneWidget);
     expect(find.text('En cola'), findsOneWidget);
 
-    await tester.scrollUntilVisible(find.textContaining('8 enviados'), 300);
+    await _scrollTo(tester, find.textContaining('8 enviados'));
     expect(find.textContaining('8 enviados'), findsOneWidget);
+  });
+
+  testWidgets('Success: a preset reloads with the matching range', (
+    tester,
+  ) async {
+    final repository = await _pump(tester);
+
+    await tester.tap(find.text('Hoy'));
+    await tester.pumpAndSettle();
+
+    final today = DateTime.now();
+    expect(repository.lastStart, DateTime(today.year, today.month, today.day));
+    expect(repository.lastEnd, DateTime(today.year, today.month, today.day));
   });
 }

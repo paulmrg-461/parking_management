@@ -28,8 +28,11 @@ class ReportsPage extends StatefulWidget {
   State<ReportsPage> createState() => _ReportsPageState();
 }
 
+enum _RangePreset { today, last7, last30 }
+
 class _ReportsPageState extends State<ReportsPage> {
   late DateTimeRange _range;
+  _RangePreset? _preset = _RangePreset.last30;
   bool _allLots = false;
   bool _exporting = false;
 
@@ -42,6 +45,24 @@ class _ReportsPageState extends State<ReportsPage> {
       start: today.subtract(const Duration(days: 29)),
       end: today,
     );
+    _load();
+  }
+
+  void _selectPreset(_RangePreset preset) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final days = switch (preset) {
+      _RangePreset.today => 0,
+      _RangePreset.last7 => 6,
+      _RangePreset.last30 => 29,
+    };
+    setState(() {
+      _preset = preset;
+      _range = DateTimeRange(
+        start: today.subtract(Duration(days: days)),
+        end: today,
+      );
+    });
     _load();
   }
 
@@ -105,7 +126,10 @@ class _ReportsPageState extends State<ReportsPage> {
       initialDateRange: _range,
     );
     if (picked != null) {
-      setState(() => _range = picked);
+      setState(() {
+        _range = picked;
+        _preset = null;
+      });
       _load();
     }
   }
@@ -132,6 +156,34 @@ class _ReportsPageState extends State<ReportsPage> {
       ),
       body: Column(
         children: [
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.fromLTRB(Space.md, Space.sm, Space.md, 0),
+            child: SegmentedButton<_RangePreset>(
+              segments: [
+                ButtonSegment(
+                  value: _RangePreset.today,
+                  label: Text(l10n.reportsToday),
+                ),
+                ButtonSegment(
+                  value: _RangePreset.last7,
+                  label: Text(l10n.reportsLast7),
+                ),
+                ButtonSegment(
+                  value: _RangePreset.last30,
+                  label: Text(l10n.reportsLast30),
+                ),
+              ],
+              selected: {?_preset},
+              emptySelectionAllowed: true,
+              showSelectedIcon: false,
+              onSelectionChanged: (selection) {
+                if (selection.isNotEmpty) {
+                  _selectPreset(selection.first);
+                }
+              },
+            ),
+          ),
           SwitchListTile(
             value: _allLots,
             onChanged: (value) {

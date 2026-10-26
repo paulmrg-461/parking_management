@@ -33,18 +33,30 @@ class VehicleRepositoryImpl implements VehicleRepository {
   Future<PagedResult<Vehicle>> listPage({
     int offset = 0,
     int limit = defaultPageSize,
+    String? plate,
   }) async {
     try {
-      final page = await _remote.listPage(limit: limit, offset: offset);
+      final page = await _remote.listPage(
+        limit: limit,
+        offset: offset,
+        plate: plate,
+      );
       for (final vehicle in page.items) {
         await _local.upsert(vehicle);
       }
       return page;
     } on NetworkFailure {
       final cached = await _local.readAll();
+      final term = plate?.trim().toUpperCase() ?? '';
+      final filtered = term.isEmpty
+          ? cached
+          : [
+              for (final vehicle in cached)
+                if (vehicle.plate.toUpperCase().contains(term)) vehicle,
+            ];
       return PagedResult(
-        cached.skip(offset).take(limit).toList(),
-        total: cached.length,
+        filtered.skip(offset).take(limit).toList(),
+        total: filtered.length,
       );
     }
   }

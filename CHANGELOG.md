@@ -102,7 +102,11 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - Empty lists (reservations, sites, audit) use the same friendly empty-state
   component instead of bare text.
 - The home "today" card shows a quiet-day message instead of a row of zeros
-  before the first movement.
+  before the first movement, with a cross-fade between both states.
+- Vehicles list has a server-side plate search (debounced), a no-match state
+  and keeps the term when refreshing.
+- Reports have quick ranges (Today / 7 days / 30 days) next to the calendar
+  picker, and picking a custom range clears the preset.
 
 - The app selects the active lot **before** exposing an authenticated session,
   so the first request already carries `x-lot-id`.
@@ -153,7 +157,7 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Tests
 
-- 547 Flutter tests (unit/widget/cubit/router/a11y) across 108 files, plus one
+- 552 Flutter tests (unit/widget/cubit/router/a11y) across 108 files, plus one
   integration test that runs only against a live stack.
 - SQL/RLS/RPC regressions covering capacity, shifts, discounts, passes,
   reservations, multi-site isolation, audit, diagnostics and retention.
@@ -183,7 +187,7 @@ Captured on 2026-10-24 against the local self-hosted stack:
 
 | Check | Result |
 |---|---|
-| `flutter test` | 547 passed (+1 live-stack integration skipped) |
+| `flutter test` | 552 passed (+1 live-stack integration skipped) |
 | `flutter analyze` | 0 errors, 0 warnings (only SDK deprecation infos) |
 | `flutter build web --release` | OK |
 | `supabase/tests/run.sh` | Passed (migrations + RPC/RLS regressions) |

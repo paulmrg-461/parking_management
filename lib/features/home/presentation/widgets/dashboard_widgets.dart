@@ -349,35 +349,49 @@ class TodayCard extends StatelessWidget {
               children: [
                 Text(l10n.homeToday, style: textTheme.labelLarge),
                 const SizedBox(height: Space.xs),
-                if (quiet)
-                  Text(l10n.homeTodayEmpty, style: textTheme.bodyMedium)
-                else ...[
-                  MoneyText(today.revenue, style: textTheme.headlineMedium),
-                  const SizedBox(height: Space.sm),
-                  Wrap(
-                    spacing: Space.lg,
-                    runSpacing: Space.xs,
-                    children: [
-                      _TodayMetric(
-                        label: l10n.homeTodayEntries,
-                        value: '${today.entries}',
-                      ),
-                      _TodayMetric(
-                        label: l10n.homeTodayExits,
-                        value: '${today.exits}',
-                      ),
-                      _TodayMetric(
-                        label: l10n.homeTodayCash,
-                        value: Formatters.money(today.cashRevenue),
-                      ),
-                      if (today.passRevenue > 0)
-                        _TodayMetric(
-                          label: l10n.homeTodayPasses,
-                          value: Formatters.money(today.passRevenue),
+                AnimatedSwitcher(
+                  duration: Motion.short,
+                  child: quiet
+                      ? Text(
+                          l10n.homeTodayEmpty,
+                          key: const ValueKey('quiet'),
+                          style: textTheme.bodyMedium,
+                        )
+                      : Column(
+                          key: const ValueKey('data'),
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            MoneyText(
+                              today.revenue,
+                              style: textTheme.headlineMedium,
+                            ),
+                            const SizedBox(height: Space.sm),
+                            Wrap(
+                              spacing: Space.lg,
+                              runSpacing: Space.xs,
+                              children: [
+                                _TodayMetric(
+                                  label: l10n.homeTodayEntries,
+                                  value: '${today.entries}',
+                                ),
+                                _TodayMetric(
+                                  label: l10n.homeTodayExits,
+                                  value: '${today.exits}',
+                                ),
+                                _TodayMetric(
+                                  label: l10n.homeTodayCash,
+                                  value: Formatters.money(today.cashRevenue),
+                                ),
+                                if (today.passRevenue > 0)
+                                  _TodayMetric(
+                                    label: l10n.homeTodayPasses,
+                                    value: Formatters.money(today.passRevenue),
+                                  ),
+                              ],
+                            ),
+                          ],
                         ),
-                    ],
-                  ),
-                ],
+                ),
               ],
             ),
           ),

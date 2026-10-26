@@ -189,6 +189,11 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   expired, soonest first) and a status chip in the tile.
 - `EmptyState` is now used by reservations, lots and audit lists; the home
   "today" card has a quiet-day message when every counter is zero.
+- Vehicles: `listPage(plate:)` filters server-side (`ilike`), the cubit debounces
+  `search()` and keeps the term across refreshes; the list has a no-match state.
+- Reports: segmented presets (Today / 7 / 30 days) next to the calendar; a custom
+  range clears the preset. Tests must pass the vertical `Scrollable` explicitly
+  (the preset row adds a second one).
 
 ## Secrets runbook (latest)
 

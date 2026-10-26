@@ -11,6 +11,7 @@ abstract class VehicleRemoteDataSource {
   Future<PagedResult<Vehicle>> listPage({
     required int limit,
     required int offset,
+    String? plate,
   });
 
   Future<Vehicle> create(Map<String, dynamic> payload);
@@ -56,11 +57,15 @@ class SupabaseVehicleRemoteDataSource implements VehicleRemoteDataSource {
   Future<PagedResult<Vehicle>> listPage({
     required int limit,
     required int offset,
+    String? plate,
   }) async {
     try {
-      final response = await _client
-          .from(_table)
-          .select()
+      var query = _client.from(_table).select();
+      final term = plate?.trim() ?? '';
+      if (term.isNotEmpty) {
+        query = query.ilike('plate', '%$term%');
+      }
+      final response = await query
           .order('id')
           .range(offset, offset + limit - 1)
           .count(CountOption.exact);

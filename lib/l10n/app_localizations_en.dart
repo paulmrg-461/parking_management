@@ -1311,6 +1311,14 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get vehiclesSearch => 'Search plate';
+
+  @override
+  String vehiclesNoMatch(String query) {
+    return 'No vehicles match \"$query\"';
+  }
+
+  @override
   String get vehiclesTitle => 'Vehicles';
 
   @override
@@ -1553,6 +1561,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reportsByLot => 'Revenue by site';
+
+  @override
+  String get reportsToday => 'Today';
+
+  @override
+  String get reportsLast7 => '7 days';
+
+  @override
+  String get reportsLast30 => '30 days';
 
   @override
   String get reportsTitle => 'Reports';

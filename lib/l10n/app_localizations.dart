@@ -2456,6 +2456,18 @@ abstract class AppLocalizations {
   /// **'Categoría {id}'**
   String categoryFallback(int id);
 
+  /// No description provided for @vehiclesSearch.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscar placa'**
+  String get vehiclesSearch;
+
+  /// No description provided for @vehiclesNoMatch.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay vehículos para «{query}»'**
+  String vehiclesNoMatch(String query);
+
   /// No description provided for @vehiclesTitle.
   ///
   /// In es, this message translates to:
@@ -2869,6 +2881,24 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Ingresos por sede'**
   String get reportsByLot;
+
+  /// No description provided for @reportsToday.
+  ///
+  /// In es, this message translates to:
+  /// **'Hoy'**
+  String get reportsToday;
+
+  /// No description provided for @reportsLast7.
+  ///
+  /// In es, this message translates to:
+  /// **'7 días'**
+  String get reportsLast7;
+
+  /// No description provided for @reportsLast30.
+  ///
+  /// In es, this message translates to:
+  /// **'30 días'**
+  String get reportsLast30;
 
   /// No description provided for @reportsTitle.
   ///

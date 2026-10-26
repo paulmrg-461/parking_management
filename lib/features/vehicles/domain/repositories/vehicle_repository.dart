@@ -12,6 +12,7 @@ abstract class VehicleRepository {
   Future<PagedResult<Vehicle>> listPage({
     int offset = 0,
     int limit = defaultPageSize,
+    String? plate,
   });
 
   Future<Vehicle?> findByPlate(String plate);
