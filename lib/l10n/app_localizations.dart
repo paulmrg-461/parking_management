@@ -824,6 +824,18 @@ abstract class AppLocalizations {
   /// **'Nueva reserva'**
   String get reservationAdd;
 
+  /// No description provided for @reservationCreated.
+  ///
+  /// In es, this message translates to:
+  /// **'Reserva creada'**
+  String get reservationCreated;
+
+  /// No description provided for @reservationCancelled.
+  ///
+  /// In es, this message translates to:
+  /// **'Reserva cancelada'**
+  String get reservationCancelled;
+
   /// No description provided for @reservationsEmpty.
   ///
   /// In es, this message translates to:
@@ -2875,6 +2887,24 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Ninguna mensualidad coincide con «{query}»'**
   String monthlyPassesNoMatch(String query);
+
+  /// No description provided for @monthlyPassCreated.
+  ///
+  /// In es, this message translates to:
+  /// **'Mensualidad creada'**
+  String get monthlyPassCreated;
+
+  /// No description provided for @monthlyPassDeleted.
+  ///
+  /// In es, this message translates to:
+  /// **'Mensualidad eliminada'**
+  String get monthlyPassDeleted;
+
+  /// No description provided for @monthlyPassPaymentDone.
+  ///
+  /// In es, this message translates to:
+  /// **'Pago de mensualidad registrado'**
+  String get monthlyPassPaymentDone;
 
   /// No description provided for @monthlyPassesEmpty.
   ///

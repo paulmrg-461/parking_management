@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/error/failure.dart';
@@ -62,6 +63,7 @@ class _MonthlyPassesPageState extends State<MonthlyPassesPage> {
       onRefresh: context.read<MonthlyPassesCubit>().load,
       body: SubmissionListener<MonthlyPassesCubit, MonthlyPassesState>(
         submissionOf: _submissionOf,
+        onSuccess: (context, _) => _confirmAction(context),
         child: BlocBuilder<MonthlyPassesCubit, MonthlyPassesState>(
           buildWhen: (previous, current) =>
               previous is! MonthlyPassesLoaded ||
@@ -157,6 +159,25 @@ class _MonthlyPassesPageState extends State<MonthlyPassesPage> {
 
   static Submission? _submissionOf(MonthlyPassesState state) =>
       state is MonthlyPassesLoaded ? state.submission : null;
+
+  /// Confirms creates, edits, deletes and payment collections in text and to
+  /// screen readers.
+  void _confirmAction(BuildContext context) {
+    final state = context.read<MonthlyPassesCubit>().state;
+    final action = state is MonthlyPassesLoaded ? state.lastAction : null;
+    final l10n = context.l10n;
+    final message = switch (action) {
+      MonthlyPassAction.created => l10n.monthlyPassCreated,
+      MonthlyPassAction.deleted => l10n.monthlyPassDeleted,
+      MonthlyPassAction.payment => l10n.monthlyPassPaymentDone,
+      null => null,
+    };
+    if (message == null) {
+      return;
+    }
+    SemanticsService.announce(message, Directionality.of(context));
+    showInfoSnack(context, message);
+  }
 
   void _showCreateDialog(BuildContext context) {
     final cubit = context.read<MonthlyPassesCubit>();

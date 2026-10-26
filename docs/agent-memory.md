@@ -222,6 +222,10 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 - `VehiclesCubit.create` reports `SubmissionSucceeded(vehicle)` (update/delete
   stay idle); the page shows a snack with a "Registrar entrada" action that
   pushes `/check-in?plate=` (`onCheckIn` is injectable for widget tests).
+- `MonthlyPassesCubit` reports `lastAction` (`created/deleted/payment`) and the
+  page confirms it; `update` (activation toggle) stays idle on purpose because
+  that tile shows an undo snack. `ReservationsCubit` does the same with
+  `created/cancelled`.
 - Monthly passes: the page filters passes and pending payments client-side by
   plate (`plateOf`), with `monthlyPassesNoMatch` when nothing matches.
 - Users list filters client-side by role with a `SegmentedButton`; the empty

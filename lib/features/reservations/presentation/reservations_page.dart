@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -14,6 +15,7 @@ import '../../../core/widgets/list_page_scaffold.dart';
 import '../../../core/widgets/skeleton.dart';
 import '../../../core/widgets/staggered_list_item.dart';
 import '../../../core/widgets/status_chip.dart';
+import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/widgets/submission_listener.dart';
 import '../application/reservations_cubit.dart';
 import '../domain/entities/reservation.dart';
@@ -42,6 +44,7 @@ class _ReservationsPageState extends State<ReservationsPage> {
     final l10n = context.l10n;
     return SubmissionListener<ReservationsCubit, ReservationsState>(
       submissionOf: _submissionOf,
+      onSuccess: (context, _) => _confirmAction(context),
       child: ListPageScaffold(
         title: l10n.reservationsTitle,
         addTooltip: l10n.reservationAdd,
@@ -67,6 +70,22 @@ class _ReservationsPageState extends State<ReservationsPage> {
 
   static Submission? _submissionOf(ReservationsState state) =>
       state is ReservationsLoaded ? state.submission : null;
+
+  void _confirmAction(BuildContext context) {
+    final state = context.read<ReservationsCubit>().state;
+    final action = state is ReservationsLoaded ? state.lastAction : null;
+    final l10n = context.l10n;
+    final message = switch (action) {
+      ReservationsAction.created => l10n.reservationCreated,
+      ReservationsAction.cancelled => l10n.reservationCancelled,
+      null => null,
+    };
+    if (message == null) {
+      return;
+    }
+    SemanticsService.announce(message, Directionality.of(context));
+    showInfoSnack(context, message);
+  }
 
   Future<void> _add() async {
     final cubit = context.read<ReservationsCubit>();

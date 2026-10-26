@@ -9,6 +9,7 @@ import 'package:parking_management/features/customer_messages/domain/repositorie
 import 'package:parking_management/features/settings/application/branding_cubit.dart';
 import 'package:parking_management/features/settings/domain/entities/parking_settings.dart';
 import 'package:parking_management/features/monthly_passes/domain/entities/monthly_pass.dart';
+import 'package:parking_management/features/monthly_passes/domain/entities/monthly_pass_payment.dart';
 import 'package:parking_management/features/vehicles/domain/entities/vehicle.dart';
 
 import '../../../helpers/fake_customer_message_repository.dart';
@@ -27,10 +28,14 @@ void main() {
     bool whatsappAuto = false,
     List<Vehicle>? vehicles,
     List<MonthlyPass>? passes,
+    List<MonthlyPassPayment>? pending,
   }) async {
     repository = FakeMonthlyPassRepository()..listError = listError;
     if (passes != null) {
       repository.passes = passes;
+    }
+    if (pending != null) {
+      repository.pending = pending;
     }
     final branding = BrandingCubit(
       FakeParkingSettingsRepository(
@@ -223,5 +228,19 @@ void main() {
       find.text('Ninguna mensualidad coincide con «QQQ»'),
       findsOneWidget,
     );
+  });
+
+  testWidgets('Success: collecting a pending payment is confirmed', (
+    tester,
+  ) async {
+    await pumpPage(tester, pending: [samplePayment]);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Cobrar'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Confirmar'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Pago de mensualidad registrado'), findsOneWidget);
+    expect(repository.paid, [7]);
   });
 }

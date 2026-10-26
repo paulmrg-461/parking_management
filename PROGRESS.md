@@ -280,7 +280,9 @@ The app is now a Supabase-only stack: FastAPI, Alembic, Dio and Redis are gone.
   the pending payments and shows a no-match state. Closing a shift with a
   cash mismatch asks for confirmation (with the difference) before closing.
   Creating a vehicle confirms with a snack that offers to register its entry
-  ("Registrar entrada", `/check-in?plate=…`).
+  ("Registrar entrada", `/check-in?plate=…`). Monthly-pass create/delete/payment
+  and reservation create/cancel confirm with a snack and a screen-reader
+  announcement (pass activation keeps its undo snack).
 
 ## Infra/tooling (not OpenSpec capabilities — repo scaffolding)
 
@@ -328,7 +330,7 @@ notable changes and the migration history.
 
 ## Test counts
 
-- Flutter (`flutter test`): 605 passed (plus 1 integration test that runs only against a live stack). `flutter analyze`: 0 errors/warnings
+- Flutter (`flutter test`): 607 passed (plus 1 integration test that runs only against a live stack). `flutter analyze`: 0 errors/warnings
   (98 SDK-deprecation/const infos under the local Flutter 3.50 beta; CI pins
   3.49 where the baseline is clean).
 - SQL/compose: validated against the running Supabase stack and by

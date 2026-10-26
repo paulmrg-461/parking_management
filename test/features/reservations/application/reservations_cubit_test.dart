@@ -44,6 +44,7 @@ void main() {
     final state = cubit.state as ReservationsLoaded;
     expect(state.reservations.length, 2);
     expect(state.submission, isA<SubmissionSucceeded<Object?>>());
+    expect(state.lastAction, ReservationsAction.created);
   });
 
   test('Failure: a full category is reported without dropping the list',

@@ -65,6 +65,7 @@ void main() {
 
     expect(repository.cancelledId, 1);
     expect(find.text('No hay reservas activas'), findsOneWidget);
+    expect(find.text('Reserva cancelada'), findsOneWidget);
   });
 
   testWidgets('Success: a hold about to lapse is flagged', (tester) async {

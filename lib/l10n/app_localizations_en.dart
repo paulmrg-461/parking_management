@@ -404,6 +404,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reservationAdd => 'New reservation';
 
   @override
+  String get reservationCreated => 'Reservation created';
+
+  @override
+  String get reservationCancelled => 'Reservation cancelled';
+
+  @override
   String get reservationsEmpty => 'No active reservations';
 
   @override
@@ -1552,6 +1558,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String monthlyPassesNoMatch(String query) {
     return 'No monthly pass matches “$query”';
   }
+
+  @override
+  String get monthlyPassCreated => 'Monthly pass created';
+
+  @override
+  String get monthlyPassDeleted => 'Monthly pass deleted';
+
+  @override
+  String get monthlyPassPaymentDone => 'Monthly pass payment recorded';
 
   @override
   String get monthlyPassesEmpty => 'No monthly passes yet';
