@@ -13,7 +13,6 @@ import '../../features/auth/application/auth_cubit.dart';
 import '../../features/auth/domain/entities/user.dart';
 import '../../features/home/application/dashboard_cubit.dart';
 import '../../features/lots/application/lots_cubit.dart';
-import '../../features/lots/presentation/lot_bar.dart';
 import '../../features/notifications/application/notifications_cubit.dart';
 import '../../features/shifts/application/shift_cubit.dart';
 import '../../features/settings/application/branding_cubit.dart';
@@ -62,7 +61,6 @@ class AppShell extends StatelessWidget {
       child: Column(
         children: [
           const OfflineBanner(),
-          const LotBar(),
           Expanded(
             child: Center(
               child: ConstrainedBox(

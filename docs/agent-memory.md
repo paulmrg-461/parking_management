@@ -222,6 +222,9 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 - `core/widgets/plate_input_field.dart` is the single plate input (check-in,
   reservation dialog, vehicle creation): its formatter uppercases and strips
   blanks live and caps at 20, the column width. Do not add another formatter.
+- `LotSwitcher` (formerly `LotBar`) is a chip inside the home content, shown
+  only when the user belongs to more than one site; it is **not** part of the
+  shell, so no strip sits above the pages' app bars.
 - `ThemeCubit` (`preferences/theme_mode`, system/light/dark) is optional in
   `ParkingApp` so tests stay on the system theme; `ThemeModeButton` lives in the
   home app bar and is hidden when the cubit is not provided.

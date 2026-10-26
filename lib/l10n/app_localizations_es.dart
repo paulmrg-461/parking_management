@@ -406,9 +406,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get lotsEmpty => 'Aún no hay sedes';
 
   @override
-  String get lotSwitch => 'Cambiar';
-
-  @override
   String lotMembers(int count) {
     return '$count usuarios';
   }
@@ -1677,6 +1674,14 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get reportsTitle => 'Reportes';
+
+  @override
+  String get lotSwitchTitle => 'Cambiar de sede';
+
+  @override
+  String lotSwitchTooltip(String site) {
+    return 'Sede actual: $site. Toca para cambiar.';
+  }
 
   @override
   String get reportsRangeTooltip => 'Cambiar rango de fechas';

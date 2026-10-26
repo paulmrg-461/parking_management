@@ -14,6 +14,7 @@ import '../../../core/widgets/theme_mode_button.dart';
 import '../../auth/application/auth_cubit.dart';
 import '../../auth/domain/entities/auth_session.dart';
 import '../../auth/domain/entities/user.dart';
+import '../../lots/presentation/lot_switcher.dart';
 import '../../notifications/presentation/notification_bell.dart';
 import '../../settings/application/branding_cubit.dart';
 import '../application/dashboard_cubit.dart';
@@ -100,7 +101,9 @@ class _Dashboard extends StatelessWidget {
                 ? l10n.roleAdmin
                 : l10n.roleOperator,
           ),
-          const SizedBox(height: Space.lg),
+          const SizedBox(height: Space.sm),
+          const LotSwitcher(),
+          const SizedBox(height: Space.md),
           const OccupancyCard(),
           const SizedBox(height: Space.md),
           const TodayCard(),

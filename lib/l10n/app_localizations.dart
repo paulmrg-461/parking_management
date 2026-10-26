@@ -818,12 +818,6 @@ abstract class AppLocalizations {
   /// **'Aún no hay sedes'**
   String get lotsEmpty;
 
-  /// No description provided for @lotSwitch.
-  ///
-  /// In es, this message translates to:
-  /// **'Cambiar'**
-  String get lotSwitch;
-
   /// No description provided for @lotMembers.
   ///
   /// In es, this message translates to:
@@ -3073,6 +3067,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Reportes'**
   String get reportsTitle;
+
+  /// No description provided for @lotSwitchTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Cambiar de sede'**
+  String get lotSwitchTitle;
+
+  /// No description provided for @lotSwitchTooltip.
+  ///
+  /// In es, this message translates to:
+  /// **'Sede actual: {site}. Toca para cambiar.'**
+  String lotSwitchTooltip(String site);
 
   /// No description provided for @reportsRangeTooltip.
   ///

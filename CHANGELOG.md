@@ -103,6 +103,8 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   check-in straight away.
 - Creating, deleting or collecting a monthly pass and creating or cancelling a
   reservation confirm with a SnackBar and a screen-reader announcement.
+- The multi-site indicator is now a compact chip in the home content (it used
+  to be a full-width strip above the app bar that read like a notification).
 - The home app bar picks the device appearance (system / light / dark); the
   choice is stored locally and survives restarts.
 - The users list filters by role (All / Admin / Operator) and monthly passes

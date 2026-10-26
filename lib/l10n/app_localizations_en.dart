@@ -399,9 +399,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get lotsEmpty => 'No sites yet';
 
   @override
-  String get lotSwitch => 'Switch';
-
-  @override
   String lotMembers(int count) {
     return '$count users';
   }
@@ -1671,6 +1668,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reportsTitle => 'Reports';
+
+  @override
+  String get lotSwitchTitle => 'Switch site';
+
+  @override
+  String lotSwitchTooltip(String site) {
+    return 'Current site: $site. Tap to switch.';
+  }
 
   @override
   String get reportsRangeTooltip => 'Change date range';

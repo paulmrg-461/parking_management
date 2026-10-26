@@ -6,10 +6,10 @@ import '../../../core/theme/tokens.dart';
 import '../application/lots_cubit.dart';
 import '../domain/entities/parking_lot.dart';
 
-/// Compact active-lot indicator with a switcher. Rendered only when the user
-/// belongs to more than one site.
-class LotBar extends StatelessWidget {
-  const LotBar({super.key});
+/// Compact active-site chip with a switcher (only for members of more than one
+/// site). It lives inside the page content, not as a strip above the app bar.
+class LotSwitcher extends StatelessWidget {
+  const LotSwitcher({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -27,35 +27,13 @@ class LotBar extends StatelessWidget {
     if (active == null) {
       return const SizedBox.shrink();
     }
-    final scheme = Theme.of(context).colorScheme;
-    return Material(
-      color: scheme.surfaceContainerHighest,
-      child: InkWell(
-        onTap: () => _open(context, state.lots, active),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: Space.md,
-            vertical: Space.xs,
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.location_on_outlined, size: 18, color: scheme.primary),
-              const SizedBox(width: Space.xs),
-              Expanded(
-                child: Text(
-                  active.name,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.labelLarge,
-                ),
-              ),
-              Text(
-                context.l10n.lotSwitch,
-                style: Theme.of(context).textTheme.labelMedium,
-              ),
-              const Icon(Icons.expand_more, size: 18),
-            ],
-          ),
-        ),
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: ActionChip(
+        avatar: const Icon(Icons.location_on_outlined, size: 18),
+        label: Text(active.name),
+        tooltip: context.l10n.lotSwitchTooltip(active.name),
+        onPressed: () => _open(context, state.lots, active),
       ),
     );
   }
@@ -73,6 +51,18 @@ class LotBar extends StatelessWidget {
         child: ListView(
           shrinkWrap: true,
           children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                Space.md,
+                Space.xs,
+                Space.md,
+                Space.sm,
+              ),
+              child: Text(
+                context.l10n.lotSwitchTitle,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
             for (final lot in lots)
               ListTile(
                 leading: Icon(
