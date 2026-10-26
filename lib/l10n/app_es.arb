@@ -537,6 +537,8 @@
   "monthlyPassAutoRenew": "Renovación automática",
   "monthlyPassAutoRenewHint": "Se renueva por el mismo periodo y valor al vencer",
   "monthlyPassesTitle": "Mensualidades",
+  "monthlyPassesNoMatch": "Ninguna mensualidad coincide con «{query}»",
+  "@monthlyPassesNoMatch": {"placeholders": {"query": {"type": "String"}}},
   "monthlyPassesEmpty": "Aún no hay mensualidades",
   "monthlyPassNew": "Nueva mensualidad",
   "monthlyPassEdit": "Editar mensualidad",

@@ -2846,6 +2846,12 @@ abstract class AppLocalizations {
   /// **'Mensualidades'**
   String get monthlyPassesTitle;
 
+  /// No description provided for @monthlyPassesNoMatch.
+  ///
+  /// In es, this message translates to:
+  /// **'Ninguna mensualidad coincide con «{query}»'**
+  String monthlyPassesNoMatch(String query);
+
   /// No description provided for @monthlyPassesEmpty.
   ///
   /// In es, this message translates to:

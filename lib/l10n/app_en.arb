@@ -481,6 +481,8 @@
   "monthlyPassAutoRenew": "Auto-renew",
   "monthlyPassAutoRenewHint": "Renews for the same period and amount on expiry",
   "monthlyPassesTitle": "Monthly passes",
+  "monthlyPassesNoMatch": "No monthly pass matches “{query}”",
+  "@monthlyPassesNoMatch": {"placeholders": {"query": {"type": "String"}}},
   "monthlyPassesEmpty": "No monthly passes yet",
   "monthlyPassNew": "New monthly pass",
   "monthlyPassEdit": "Edit monthly pass",

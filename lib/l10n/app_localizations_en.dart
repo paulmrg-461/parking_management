@@ -1533,6 +1533,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get monthlyPassesTitle => 'Monthly passes';
 
   @override
+  String monthlyPassesNoMatch(String query) {
+    return 'No monthly pass matches “$query”';
+  }
+
+  @override
   String get monthlyPassesEmpty => 'No monthly passes yet';
 
   @override

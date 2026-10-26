@@ -14,7 +14,9 @@ import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/app_icon_button.dart';
 import '../../../core/widgets/async_view.dart';
 import '../../../core/widgets/confirm_dialog.dart';
+import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/list_page_scaffold.dart';
+import '../../../core/widgets/search_field.dart';
 import '../../../app/di/injection.dart';
 import '../../../core/utils/whatsapp_launcher.dart';
 import '../../../core/widgets/plate_text.dart';
@@ -43,6 +45,8 @@ class MonthlyPassesPage extends StatefulWidget {
 }
 
 class _MonthlyPassesPageState extends State<MonthlyPassesPage> {
+  String _query = '';
+
   @override
   void initState() {
     super.initState();
@@ -67,39 +71,70 @@ class _MonthlyPassesPageState extends State<MonthlyPassesPage> {
               previous.plates != current.plates,
           builder: (context, state) => AsyncView<MonthlyPassesLoaded>(
             status: _status(context, state),
-            builder: (loaded) => ListView(
-              padding: const EdgeInsets.only(bottom: Space.xxl * 2),
+            builder: (loaded) => Column(
               children: [
-                if (loaded.pendingPayments.isNotEmpty) ...[
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      Space.md,
-                      Space.md,
-                      Space.md,
-                      Space.sm,
-                    ),
-                    child: Text(
-                      context.l10n.monthlyPassPendingTitle,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
+                Padding(
+                  padding: const EdgeInsets.all(Space.md),
+                  child: SearchField(
+                    label: context.l10n.searchPlate,
+                    onChanged: (value) => setState(() => _query = value),
                   ),
-                  for (final payment in loaded.pendingPayments)
-                    _PendingPaymentTile(payment: payment),
-                  const Divider(),
-                ],
-                for (final pass in loaded.monthlyPasses)
-                  _MonthlyPassTile(
-                    monthlyPass: pass,
-                    plate:
-                        loaded.plates[pass.vehicleId] ??
-                        context.l10n.unknownVehicle(pass.vehicleId),
-                    phone: loaded.phoneOf(pass),
-                  ),
+                ),
+                Expanded(child: _buildList(context, loaded)),
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+
+  bool _matches(String plate) =>
+      _query.trim().isEmpty ||
+      plate.toLowerCase().contains(_query.trim().toLowerCase());
+
+  Widget _buildList(BuildContext context, MonthlyPassesLoaded loaded) {
+    final l10n = context.l10n;
+    final payments = [
+      for (final payment in loaded.pendingPayments)
+        if (_matches(payment.plate)) payment,
+    ];
+    final passes = [
+      for (final pass in loaded.monthlyPasses)
+        if (_matches(loaded.plateOf(pass))) pass,
+    ];
+    if (payments.isEmpty && passes.isEmpty) {
+      return EmptyState(
+        message: l10n.monthlyPassesNoMatch(_query.trim()),
+        icon: Icons.search_off,
+      );
+    }
+    return ListView(
+      padding: const EdgeInsets.only(bottom: Space.xxl * 2),
+      children: [
+        if (payments.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              Space.md,
+              Space.sm,
+              Space.md,
+              Space.sm,
+            ),
+            child: Text(
+              l10n.monthlyPassPendingTitle,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+          ),
+          for (final payment in payments) _PendingPaymentTile(payment: payment),
+          const Divider(),
+        ],
+        for (final pass in passes)
+          _MonthlyPassTile(
+            monthlyPass: pass,
+            plate: loaded.plateOf(pass),
+            phone: loaded.phoneOf(pass),
+          ),
+      ],
     );
   }
 

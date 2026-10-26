@@ -1538,6 +1538,11 @@ class AppLocalizationsEs extends AppLocalizations {
   String get monthlyPassesTitle => 'Mensualidades';
 
   @override
+  String monthlyPassesNoMatch(String query) {
+    return 'Ninguna mensualidad coincide con «$query»';
+  }
+
+  @override
   String get monthlyPassesEmpty => 'Aún no hay mensualidades';
 
   @override
