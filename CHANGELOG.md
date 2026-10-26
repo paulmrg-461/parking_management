@@ -125,7 +125,8 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - Check-in remembers the last plate and offers a one-tap "repeat entry" chip;
   plate fields normalize while typing through the shared `PlateInputField`
   (uppercase, no blanks) and cap at the 20-char column width.
-- The occupancy bar and the monthly-pass status chip animate their changes, and
+- The occupancy bar honours `reduce motion` (fills instantly), and the same bar
+  plus the monthly-pass status chip animate their changes, while
   vehicle/reservation rows fade-slide in once when a list appears (disabled
   under `reduce motion`).
 - Closing a shift whose counted cash differs from the expected amount asks for
@@ -197,7 +198,7 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Tests
 
-- 614 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
+- 615 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
   integration test that runs only against a live stack.
 - SQL/RLS/RPC regressions covering capacity, shifts, discounts, passes,
   reservations, multi-site isolation, audit, diagnostics and retention.
@@ -227,7 +228,7 @@ Captured on 2026-10-24 against the local self-hosted stack:
 
 | Check | Result |
 |---|---|
-| `flutter test` | 614 passed (+1 live-stack integration skipped) |
+| `flutter test` | 615 passed (+1 live-stack integration skipped) |
 | `flutter analyze` | 0 errors, 0 warnings (only SDK deprecation infos) |
 | `flutter build web --release` | OK |
 | `supabase/tests/run.sh` | Passed (migrations + RPC/RLS regressions) |

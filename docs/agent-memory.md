@@ -213,6 +213,9 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   (`opened/closed/movement/adjusted`) after a confirmed cash action; the page
   announces it and shows an info snack. Do not revert it to `SubmissionIdle`,
   the confirmation depends on the transition.
+- The occupancy bar animates through `TweenAnimationBuilder` only when
+  `MediaQuery.disableAnimationsOf` is false (same rule as `StaggeredListItem`
+  and the skeleton loaders).
 - `core/widgets/staggered_list_item.dart` wraps list rows (vehicles,
   reservations) with a one-shot fade+slide keyed by the row id; it renders the
   bare child when `MediaQuery.disableAnimationsOf` is true.

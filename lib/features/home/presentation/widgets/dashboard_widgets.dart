@@ -100,17 +100,11 @@ class OccupancyCard extends StatelessWidget {
                             ),
                             if (totalCapacity > 0) ...[
                               const SizedBox(height: Space.xs),
-                              TweenAnimationBuilder<double>(
-                                tween: Tween(
-                                  begin: 0,
-                                  end: (openSessions / totalCapacity).clamp(
-                                    0,
-                                    1,
-                                  ),
+                              _OccupancyBar(
+                                fraction: (openSessions / totalCapacity).clamp(
+                                  0,
+                                  1,
                                 ),
-                                duration: Motion.short,
-                                builder: (context, value, _) =>
-                                    LinearProgressIndicator(value: value),
                               ),
                             ],
                             if (categories.any((c) => c.isFull)) ...[
@@ -422,6 +416,26 @@ class _TodayMetric extends StatelessWidget {
         Text(label, style: textTheme.labelSmall),
         Text(value, style: textTheme.titleSmall),
       ],
+    );
+  }
+}
+
+/// Fills the occupancy bar, animating the change unless the platform asks for
+/// reduced motion.
+class _OccupancyBar extends StatelessWidget {
+  const _OccupancyBar({required this.fraction});
+
+  final double fraction;
+
+  @override
+  Widget build(BuildContext context) {
+    if (MediaQuery.disableAnimationsOf(context)) {
+      return LinearProgressIndicator(value: fraction);
+    }
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: fraction),
+      duration: Motion.short,
+      builder: (context, value, _) => LinearProgressIndicator(value: value),
     );
   }
 }

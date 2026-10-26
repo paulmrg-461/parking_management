@@ -22,8 +22,10 @@ Future<FakeCheckOutRepository> _pump(
   UserRole role = UserRole.operator,
   Failure? error,
   TodaySummary today = TodaySummary.empty,
+  int capacity = 0,
 }) async {
   final sessions = FakeCheckOutRepository(
+    capacity: capacity,
     sessions: [
       for (var i = 1; i <= 4; i++)
         OpenSession(id: i, vehicleId: i, entryTime: DateTime(2026)),
@@ -152,5 +154,27 @@ void main() {
     expect(find.text('5'), findsOneWidget);
     expect(find.textContaining('30.000'), findsOneWidget);
     expect(find.text('Mensualidades'), findsOneWidget);
+  });
+
+  testWidgets('A11y: reduced motion fills the occupancy bar immediately', (
+    tester,
+  ) async {
+    tester.platformDispatcher.accessibilityFeaturesTestValue =
+        const FakeAccessibilityFeatures(disableAnimations: true);
+    addTearDown(
+      tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+    );
+
+    await _pump(tester, capacity: 8);
+
+    expect(find.byType(TweenAnimationBuilder<double>), findsNothing);
+    expect(
+      tester
+          .widget<LinearProgressIndicator>(
+            find.byType(LinearProgressIndicator),
+          )
+          .value,
+      0.5,
+    );
   });
 }
