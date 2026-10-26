@@ -185,7 +185,7 @@ flutter build appbundle --release \
 ## 4. Verify it works
 
 ```bash
-flutter test                 # 591 tests
+flutter test                 # 595 tests
 flutter analyze              # only SDK deprecation infos from the beta channel
 sh supabase/healthcheck.sh   # services, endpoints, backlog (exit 1 on failure)
 sh supabase/tests/e2e.sh     # login → check-in → check-out → report → history

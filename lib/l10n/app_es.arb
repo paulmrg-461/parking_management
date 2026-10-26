@@ -574,6 +574,8 @@
   "@reportsPreviousTotal": {"placeholders": {"amount": {"type": "String"}}},
   "reportsVariationLabel": "Variación vs. periodo anterior",
   "reportsPreviousLabel": "Periodo anterior",
+  "reportsExportCsv": "Copiar CSV",
+  "reportsCsvCopied": "CSV copiado al portapapeles",
   "reportsTotalRevenue": "Ingresos totales",
   "reportsRevenueByDay": "Ingresos por día",
   "reportsPassRevenue": "Mensualidades cobradas",

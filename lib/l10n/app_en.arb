@@ -511,6 +511,8 @@
   "@reportsPreviousTotal": {"placeholders": {"amount": {"type": "String"}}},
   "reportsVariationLabel": "Change vs. previous period",
   "reportsPreviousLabel": "Previous period",
+  "reportsExportCsv": "Copy CSV",
+  "reportsCsvCopied": "CSV copied to the clipboard",
   "reportsTotalRevenue": "Total revenue",
   "reportsRevenueByDay": "Revenue by day",
   "reportsPassRevenue": "Monthly pass revenue",

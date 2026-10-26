@@ -2996,6 +2996,18 @@ abstract class AppLocalizations {
   /// **'Periodo anterior'**
   String get reportsPreviousLabel;
 
+  /// No description provided for @reportsExportCsv.
+  ///
+  /// In es, this message translates to:
+  /// **'Copiar CSV'**
+  String get reportsExportCsv;
+
+  /// No description provided for @reportsCsvCopied.
+  ///
+  /// In es, this message translates to:
+  /// **'CSV copiado al portapapeles'**
+  String get reportsCsvCopied;
+
   /// No description provided for @reportsTotalRevenue.
   ///
   /// In es, this message translates to:

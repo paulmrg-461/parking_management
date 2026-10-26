@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/l10n/failure_messages.dart';
@@ -11,8 +12,10 @@ import '../../lots/application/lots_cubit.dart';
 import '../../../core/widgets/app_icon_button.dart';
 import '../../../core/widgets/async_view.dart';
 import '../../../core/widgets/money_text.dart';
+import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/widgets/sync_badge.dart';
 import '../application/reports_cubit.dart';
+import 'report_csv.dart';
 import 'report_pdf.dart';
 import 'widgets/category_bar_list.dart';
 import 'widgets/lot_comparison.dart';
@@ -119,6 +122,25 @@ class _ReportsPageState extends State<ReportsPage> {
     }
   }
 
+  Future<void> _copyCsv(BuildContext context) async {
+    final state = context.read<ReportsCubit>().state;
+    if (state is! ReportsLoaded) {
+      return;
+    }
+    await Clipboard.setData(
+      ClipboardData(
+        text: reportCsv(
+          revenue: state.revenue,
+          previousTotal: state.previousTotal,
+          deltaPercent: state.deltaPercent,
+        ),
+      ),
+    );
+    if (context.mounted) {
+      showInfoSnack(context, context.l10n.reportsCsvCopied);
+    }
+  }
+
   Future<void> _pickRange(BuildContext context) async {
     final now = DateTime.now();
     final picked = await showDateRangePicker(
@@ -147,6 +169,11 @@ class _ReportsPageState extends State<ReportsPage> {
             icon: Icons.ios_share,
             tooltip: l10n.actionExportPdf,
             onPressed: () => _export(context),
+          ),
+          AppIconButton(
+            icon: Icons.table_view_outlined,
+            tooltip: l10n.reportsExportCsv,
+            onPressed: () => _copyCsv(context),
           ),
           AppIconButton(
             icon: Icons.date_range,

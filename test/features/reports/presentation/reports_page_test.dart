@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/error/failure.dart';
@@ -226,5 +227,31 @@ void main() {
 
     expect(find.text('+50 % vs. periodo anterior'), findsOneWidget);
     expect(find.text('Antes: \$100.000'), findsOneWidget);
+  });
+
+  testWidgets('Success: the CSV button copies the report', (tester) async {
+    final calls = <MethodCall>[];
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        calls.add(call);
+        return null;
+      },
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
+    );
+
+    await _pump(tester);
+    await tester.tap(find.byTooltip('Copiar CSV'));
+    await tester.pumpAndSettle();
+
+    final copy = calls.firstWhere((c) => c.method == 'Clipboard.setData');
+    final text = (copy.arguments as Map)['text'] as String;
+    expect(text, contains('summary,total,150000'));
+    expect(find.text('CSV copiado al portapapeles'), findsOneWidget);
   });
 }

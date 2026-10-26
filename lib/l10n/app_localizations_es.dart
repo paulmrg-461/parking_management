@@ -1636,6 +1636,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get reportsPreviousLabel => 'Periodo anterior';
 
   @override
+  String get reportsExportCsv => 'Copiar CSV';
+
+  @override
+  String get reportsCsvCopied => 'CSV copiado al portapapeles';
+
+  @override
   String get reportsTotalRevenue => 'Ingresos totales';
 
   @override

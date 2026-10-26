@@ -1630,6 +1630,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportsPreviousLabel => 'Previous period';
 
   @override
+  String get reportsExportCsv => 'Copy CSV';
+
+  @override
+  String get reportsCsvCopied => 'CSV copied to the clipboard';
+
+  @override
   String get reportsTotalRevenue => 'Total revenue';
 
   @override

@@ -227,6 +227,9 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   `preferences`) only after the server confirms; `_SessionTile` receives the
   remembered method and falls back to cash when it is `monthly_pass` or the
   preview has no pass.
+- `reportCsv` (reports) emits `section,label,value` rows with raw numbers and
+  RFC 4180 quoting; the page copies it to the clipboard (audit already does the
+  same for its own CSV).
 - `reportComparisonRows` builds the PDF comparison lines (variation + previous
   total) and returns them empty when the previous window is unknown; the page
   passes `previousTotal`/`deltaPercent` to `buildRevenueReportPdf`.
