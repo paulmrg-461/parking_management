@@ -1958,6 +1958,12 @@ abstract class AppLocalizations {
   /// **'Máximo {max} fotos por entrada'**
   String photosMaxReached(int max);
 
+  /// No description provided for @checkInRepeat.
+  ///
+  /// In es, this message translates to:
+  /// **'Repetir entrada {plate}'**
+  String checkInRepeat(String plate);
+
   /// No description provided for @checkInSubmit.
   ///
   /// In es, this message translates to:

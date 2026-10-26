@@ -1021,6 +1021,11 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String checkInRepeat(String plate) {
+    return 'Repetir entrada $plate';
+  }
+
+  @override
   String get checkInSubmit => 'Registrar entrada';
 
   @override

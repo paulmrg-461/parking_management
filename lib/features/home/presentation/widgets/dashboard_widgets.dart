@@ -100,11 +100,17 @@ class OccupancyCard extends StatelessWidget {
                             ),
                             if (totalCapacity > 0) ...[
                               const SizedBox(height: Space.xs),
-                              LinearProgressIndicator(
-                                value: (openSessions / totalCapacity).clamp(
-                                  0,
-                                  1,
+                              TweenAnimationBuilder<double>(
+                                tween: Tween(
+                                  begin: 0,
+                                  end: (openSessions / totalCapacity).clamp(
+                                    0,
+                                    1,
+                                  ),
                                 ),
+                                duration: Motion.short,
+                                builder: (context, value, _) =>
+                                    LinearProgressIndicator(value: value),
                               ),
                             ],
                             if (categories.any((c) => c.isFull)) ...[

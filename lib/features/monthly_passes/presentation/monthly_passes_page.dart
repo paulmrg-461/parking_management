@@ -222,7 +222,14 @@ class _MonthlyPassTile extends StatelessWidget {
         children: [
           PlateText(plate),
           const SizedBox(width: Space.sm),
-          StatusChip(label: statusLabel, tone: statusTone),
+          AnimatedSwitcher(
+            duration: Motion.short,
+            child: StatusChip(
+              key: ValueKey(statusLabel),
+              label: statusLabel,
+              tone: statusTone,
+            ),
+          ),
         ],
       ),
       subtitle: Text(

@@ -328,6 +328,8 @@
   "removePhoto": "Remove photo",
   "photoLabel": "Photo {index}",
   "photosMaxReached": "Maximum {max} photos per check-in",
+  "@checkInRepeat": {"placeholders": {"plate": {"type": "String"}}},
+  "checkInRepeat": "Repeat entry {plate}",
   "checkInSubmit": "Register check-in",
   "checkInSuccess": "Check-in created for {plate}",
   "checkInQueued": "Check-in saved offline: {plate}",

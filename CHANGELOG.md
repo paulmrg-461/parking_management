@@ -110,6 +110,8 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - Shared `SearchField` (vehicles and check-out): type-to-search autofocus on
   web/desktop, a clear button and `Esc` to reset.
 - Screen readers announce successful check-ins and check-outs.
+- Check-in remembers the last plate and offers a one-tap "repeat entry" chip.
+- The occupancy bar and the monthly-pass status chip animate their changes.
 - Check-out shows the **estimated fare before charging**
   (`rpc/check_out_preview`) and "monthly pass: no charge" when a pass covers the
   stay; a failed preview still opens the payment dialog.
@@ -163,7 +165,7 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Tests
 
-- 558 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
+- 559 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
   integration test that runs only against a live stack.
 - SQL/RLS/RPC regressions covering capacity, shifts, discounts, passes,
   reservations, multi-site isolation, audit, diagnostics and retention.
@@ -193,7 +195,7 @@ Captured on 2026-10-24 against the local self-hosted stack:
 
 | Check | Result |
 |---|---|
-| `flutter test` | 558 passed (+1 live-stack integration skipped) |
+| `flutter test` | 559 passed (+1 live-stack integration skipped) |
 | `flutter analyze` | 0 errors, 0 warnings (only SDK deprecation infos) |
 | `flutter build web --release` | OK |
 | `supabase/tests/run.sh` | Passed (migrations + RPC/RLS regressions) |

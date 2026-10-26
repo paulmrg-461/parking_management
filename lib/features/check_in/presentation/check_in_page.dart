@@ -11,10 +11,12 @@ import '../../../core/l10n/l10n.dart';
 import '../../../core/state/submission.dart';
 import '../../../core/utils/elapsed.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/storage/key_value_store.dart';
 import '../../../core/widgets/photo_strip.dart';
 import '../../../core/widgets/receipt_card.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/widgets/sync_badge.dart';
+import '../../../app/di/injection.dart';
 import '../../home/application/dashboard_cubit.dart';
 import '../../plate_scanning/application/plate_scanning_cubit.dart';
 import '../../plate_scanning/domain/repositories/plate_image_capture.dart';
@@ -65,6 +67,9 @@ class _CheckInPageState extends State<CheckInPage> {
   final List<_Photo> _photos = [];
   Timer? _debounce;
   int? _categoryId;
+  String? _lastPlate;
+  static const _prefsBox = 'preferences';
+  static const _lastPlateKey = 'last_plate';
 
   bool get _photoLimitReached => _photos.length >= EvidencePolicy.maxPhotos;
 
@@ -83,6 +88,7 @@ class _CheckInPageState extends State<CheckInPage> {
       } on ProviderNotFoundException {
         // Isolated tests may not provide the dashboard cubit.
       }
+      _restoreLastPlate();
     });
   }
 
@@ -126,7 +132,46 @@ class _CheckInPageState extends State<CheckInPage> {
     showErrorSnack(context, message);
   }
 
+  void _restoreLastPlate() {
+    if (!serviceLocator.isRegistered<KeyValueStore>()) {
+      return;
+    }
+    final stored = serviceLocator<KeyValueStore>().get(
+      _prefsBox,
+      _lastPlateKey,
+    );
+    if (stored is String && stored.isNotEmpty && mounted) {
+      setState(() => _lastPlate = stored);
+    }
+  }
+
+  Future<void> _rememberLastPlate(String plate) async {
+    if (!serviceLocator.isRegistered<KeyValueStore>()) {
+      return;
+    }
+    try {
+      await serviceLocator<KeyValueStore>().put(
+        _prefsBox,
+        _lastPlateKey,
+        plate,
+      );
+    } catch (_) {
+      // A preference is not worth an error dialog.
+    }
+  }
+
+  void _repeatLastPlate() {
+    final plate = _lastPlate;
+    if (plate == null) {
+      return;
+    }
+    setState(() => _plateController.text = plate);
+    _lookupNow();
+    _plateFocus.requestFocus();
+  }
+
   void _onPlateChanged(String _) {
+    setState(() {});
     _debounce?.cancel();
     _debounce = Timer(_lookupDebounce, _lookupNow);
   }
@@ -206,6 +251,8 @@ class _CheckInPageState extends State<CheckInPage> {
         HapticFeedback.mediumImpact();
         _resetForm();
         _plateFocus.requestFocus();
+        setState(() => _lastPlate = result.plate);
+        unawaited(_rememberLastPlate(result.plate));
         unawaited(context.read<DashboardCubit>().load());
         final message = context.l10n.checkInSuccess(result.plate);
         SemanticsService.announce(message, Directionality.of(context));
@@ -284,6 +331,15 @@ class _CheckInPageState extends State<CheckInPage> {
           onChanged: _onPlateChanged,
           onSubmitted: (_) => _lookupNow(),
         ),
+        if (_lastPlate != null && _plateController.text.trim().isEmpty)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: ActionChip(
+              avatar: const Icon(Icons.replay, size: 18),
+              label: Text(l10n.checkInRepeat(_lastPlate!)),
+              onPressed: _repeatLastPlate,
+            ),
+          ),
         const SizedBox(height: 8),
         VehicleLookupSection(state: lookup, registration: _buildRegistration),
         const SizedBox(height: 16),

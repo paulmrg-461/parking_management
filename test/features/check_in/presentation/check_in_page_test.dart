@@ -14,7 +14,9 @@ import 'package:parking_management/features/check_in/domain/entities/new_vehicle
 import 'package:parking_management/features/check_in/domain/entities/parking_session.dart';
 import 'package:parking_management/features/check_in/domain/repositories/check_in_repository.dart';
 import 'package:parking_management/features/check_in/presentation/check_in_page.dart';
+import 'package:parking_management/app/di/injection.dart';
 import 'package:parking_management/core/error/failure.dart';
+import 'package:parking_management/core/storage/key_value_store.dart';
 import 'package:parking_management/features/home/application/dashboard_cubit.dart';
 import 'package:parking_management/features/plate_scanning/application/plate_scanning_cubit.dart';
 import 'package:parking_management/features/plate_scanning/domain/entities/plate_scan_result.dart';
@@ -26,6 +28,7 @@ import 'package:parking_management/features/vehicles/domain/entities/vehicle.dar
 import 'package:parking_management/features/vehicles/domain/repositories/vehicle_repository.dart';
 
 import '../../../helpers/fake_check_out_repository.dart';
+import '../../../helpers/fake_key_value_store.dart';
 import '../../../helpers/test_app.dart';
 import '../../../helpers/test_png.dart';
 
@@ -318,6 +321,29 @@ void main() {
     expect(field.controller!.text, isEmpty);
     expect(field.focusNode!.hasFocus, isTrue);
     expect(hapticFired(), isTrue);
+    // The plate is offered again for the next entry.
+    expect(find.text('Repetir entrada ABC123'), findsOneWidget);
+  });
+
+  testWidgets('Success: the last plate can be repeated with one tap', (
+    tester,
+  ) async {
+    final store = FakeKeyValueStore()
+      ..values['preferences/last_plate'] = 'ABC123';
+    serviceLocator.registerSingleton<KeyValueStore>(store);
+    addTearDown(serviceLocator.reset);
+
+    await pumpPage(tester);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Repetir entrada ABC123'), findsOneWidget);
+    await tester.tap(find.text('Repetir entrada ABC123'));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.widget<TextField>(plateField()).controller!.text,
+      'ABC123',
+    );
   });
 
   testWidgets(
