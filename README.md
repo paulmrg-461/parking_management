@@ -1,5 +1,7 @@
 # Parking Management
 
+<img src="assets/branding/logo.png" width="96" alt="Parking Management logo">
+
 Offline-first parking management system: vehicle check-in/check-out, time-based
 billing (hourly/daily/nightly rates, per-day caps), vehicle categories, monthly
 passes, evidence photos, license-plate OCR scanning, and admin revenue/occupancy

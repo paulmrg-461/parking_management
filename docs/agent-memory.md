@@ -384,6 +384,15 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   http://localhost:8000`; no firewall/Wi-Fi involved. Both are documented in
   QUICKSTART and the environment guides.
 
+## Branding assets
+
+- `assets/branding/logo.png` is the app mark; `tool/generate_branding.py`
+  regenerates it plus the Android mipmaps, web icons/favicon and maskable
+  variants (deterministic, Pillow). The login header uses the per-lot logo when
+  `BrandingCubit.logoOrNull` has bytes, else this asset, else the parking icon.
+- `web/manifest.json`/`index.html` use the asphalt background (`#0B0D10`);
+  keep them in sync if the mark changes.
+
 ## Evidence uploads
 
 - Storage evidence is **insert-only** from the client: the SELECT policy uses

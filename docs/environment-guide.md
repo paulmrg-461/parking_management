@@ -178,7 +178,17 @@ Si no puedes usar `adb reverse`, usa la misma red Wi-Fi:
 Los builds **debug** permiten HTTP en claro (el `AndroidManifest` de debug lo
 habilita). Los builds **release** exigen HTTPS.
 
-### 3.7 Builds de producción
+### 3.7 Identidad visual
+
+La app trae un logo por defecto (`assets/branding/logo.png`) que usa el login
+hasta que un admin sube el logo de su sede (Ajustes → logo). Para regenerar los
+iconos del launcher y de la web tras cambiar el diseño:
+
+```bash
+python3 tool/generate_branding.py   # requiere Pillow
+```
+
+### 3.8 Builds de producción
 
 ```bash
 # Web estático (sirve cualquier hosting; recuerda HTTPS en producción)

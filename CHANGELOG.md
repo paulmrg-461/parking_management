@@ -158,6 +158,10 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - Check-in with evidence photos works again on a real device: uploads are
   insert-only (the evidence SELECT policy only exposes a photo after
   `check_in` records it), and a replayed upload accepts the existing object.
+- New app mark: dark asphalt badge, chunky safety-yellow "P" and a hazard
+  curb; it ships as the Android launcher icon, the web/PWA icons and favicon,
+  and the login header fallback until a site uploads its own logo. Regenerate
+  with `python3 tool/generate_branding.py` (Pillow).
 - Hive initializes before the Supabase boot, so a **fresh Android install**
   can open its boxes (the cached-session cleanup used to throw `HiveError` on
   first launch; web was unaffected).

@@ -150,10 +150,20 @@ class _Header extends StatelessWidget {
               ),
             )
           else
-            Icon(
-              Icons.local_parking_rounded,
-              size: Space.xxl,
-              color: theme.colorScheme.primary,
+            ClipRRect(
+              borderRadius: BorderRadius.circular(Space.sm),
+              child: Image.asset(
+                'assets/branding/logo.png',
+                width: Space.xxl,
+                height: Space.xxl,
+                fit: BoxFit.cover,
+                semanticLabel: context.l10n.appTitle,
+                errorBuilder: (_, _, _) => Icon(
+                  Icons.local_parking_rounded,
+                  size: Space.xxl,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
             ),
           const SizedBox(height: Space.md),
           Semantics(

@@ -176,7 +176,17 @@ If `adb reverse` is not an option, use the same Wi-Fi instead:
 **Debug** builds allow cleartext HTTP (the debug `AndroidManifest` enables it).
 **Release** builds require HTTPS.
 
-### 3.7 Production builds
+### 3.7 Branding
+
+The app ships a default mark (`assets/branding/logo.png`) used by the login
+header until an admin uploads a logo per site (Ajustes → logo). To regenerate
+the launcher/web icons after editing the design:
+
+```bash
+python3 tool/generate_branding.py   # needs Pillow
+```
+
+### 3.8 Production builds
 
 ```bash
 # Static web (any host; use HTTPS in production)
