@@ -568,6 +568,8 @@
   "@reportsVsPrevious": {"placeholders": {"percent": {"type": "String"}}},
   "reportsPreviousTotal": "Antes: {amount}",
   "@reportsPreviousTotal": {"placeholders": {"amount": {"type": "String"}}},
+  "reportsVariationLabel": "Variación vs. periodo anterior",
+  "reportsPreviousLabel": "Periodo anterior",
   "reportsTotalRevenue": "Ingresos totales",
   "reportsRevenueByDay": "Ingresos por día",
   "reportsPassRevenue": "Mensualidades cobradas",

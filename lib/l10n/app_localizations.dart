@@ -2966,6 +2966,18 @@ abstract class AppLocalizations {
   /// **'Antes: {amount}'**
   String reportsPreviousTotal(String amount);
 
+  /// No description provided for @reportsVariationLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Variación vs. periodo anterior'**
+  String get reportsVariationLabel;
+
+  /// No description provided for @reportsPreviousLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Periodo anterior'**
+  String get reportsPreviousLabel;
+
   /// No description provided for @reportsTotalRevenue.
   ///
   /// In es, this message translates to:

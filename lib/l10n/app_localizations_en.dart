@@ -1613,6 +1613,12 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get reportsVariationLabel => 'Change vs. previous period';
+
+  @override
+  String get reportsPreviousLabel => 'Previous period';
+
+  @override
   String get reportsTotalRevenue => 'Total revenue';
 
   @override

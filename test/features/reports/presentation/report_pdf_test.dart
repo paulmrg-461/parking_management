@@ -26,10 +26,42 @@ void main() {
       revenue: _revenue,
       headline: 'Reportes',
       lotName: 'Central',
+      previousTotal: 100000,
+      deltaPercent: 50,
     );
 
     expect(bytes, isNotEmpty);
     expect(String.fromCharCodes(bytes.take(4)), '%PDF');
+  });
+
+  test('Success: the comparison rows carry the variation and total', () async {
+    final rows = reportComparisonRows(
+      l10n: await AppLocalizations.delegate.load(defaultLocale),
+      previousTotal: 100000,
+      deltaPercent: 50,
+    );
+
+    expect(rows, hasLength(2));
+    expect(rows.first.value, '+50 %');
+    expect(rows.last.value, '\$100.000');
+  });
+
+  test('Failure: without a previous window there is no comparison', () async {
+    final rows = reportComparisonRows(
+      l10n: await AppLocalizations.delegate.load(defaultLocale),
+    );
+
+    expect(rows, isEmpty);
+  });
+
+  test('Security: a zero previous total never yields a division result', () async {
+    final rows = reportComparisonRows(
+      l10n: await AppLocalizations.delegate.load(defaultLocale),
+      previousTotal: 0,
+      deltaPercent: null,
+    );
+
+    expect(rows, isEmpty);
   });
 
   test('Security: an empty report still produces a readable PDF', () async {

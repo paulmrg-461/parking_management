@@ -16,6 +16,8 @@ Future<Uint8List> buildRevenueReportPdf({
   required RevenueReport revenue,
   required String headline,
   String? lotName,
+  int? previousTotal,
+  int? deltaPercent,
 }) {
   final doc = pw.Document();
   final builder = PdfDocumentBuilder(
@@ -44,6 +46,12 @@ Future<Uint8List> buildRevenueReportPdf({
             CopFormatter.format(revenue.total),
             bold: true,
           ),
+          for (final row in reportComparisonRows(
+            l10n: l10n,
+            previousTotal: previousTotal,
+            deltaPercent: deltaPercent,
+          ))
+            PdfDocumentBuilder.row(row.label, row.value),
           if (revenue.totalDiscounts > 0)
             PdfDocumentBuilder.row(
               l10n.reportsTotalDiscounts,
@@ -102,4 +110,23 @@ Future<Uint8List> buildRevenueReportPdf({
     ),
   );
   return doc.save();
+}
+
+/// The period-over-period lines of the PDF. Empty when the previous window is
+/// unknown, so the report never invents a comparison.
+List<({String label, String value})> reportComparisonRows({
+  required AppLocalizations l10n,
+  int? previousTotal,
+  int? deltaPercent,
+}) {
+  final previous = previousTotal;
+  final delta = deltaPercent;
+  if (previous == null || delta == null) {
+    return const [];
+  }
+  final sign = delta > 0 ? '+' : '';
+  return [
+    (label: l10n.reportsVariationLabel, value: '$sign$delta %'),
+    (label: l10n.reportsPreviousLabel, value: CopFormatter.format(previous)),
+  ];
 }

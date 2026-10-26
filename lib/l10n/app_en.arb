@@ -505,6 +505,8 @@
   "@reportsVsPrevious": {"placeholders": {"percent": {"type": "String"}}},
   "reportsPreviousTotal": "Before: {amount}",
   "@reportsPreviousTotal": {"placeholders": {"amount": {"type": "String"}}},
+  "reportsVariationLabel": "Change vs. previous period",
+  "reportsPreviousLabel": "Previous period",
   "reportsTotalRevenue": "Total revenue",
   "reportsRevenueByDay": "Revenue by day",
   "reportsPassRevenue": "Monthly pass revenue",

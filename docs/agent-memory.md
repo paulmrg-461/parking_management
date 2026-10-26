@@ -212,6 +212,9 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   `preferences`) only after the server confirms; `_SessionTile` receives the
   remembered method and falls back to cash when it is `monthly_pass` or the
   preview has no pass.
+- `reportComparisonRows` builds the PDF comparison lines (variation + previous
+  total) and returns them empty when the previous window is unknown; the page
+  passes `previousTotal`/`deltaPercent` to `buildRevenueReportPdf`.
 - Reports load the previous, equally long window in the same `Future.wait`
   (`onError: null`); `ReportsLoaded.previousTotal/deltaPercent` drive the
   `_DeltaRow`. A failed previous window degrades to no delta, never an error.

@@ -261,7 +261,8 @@ The app is now a Supabase-only stack: FastAPI, Alembic, Dio and Redis are gone.
   session really has one). Cash actions on the shift screen (open, close,
   movement, correction) now confirm with a SnackBar and a screen-reader
   announcement. `Ctrl/Cmd+K` focuses the search field of the current screen and
-  is ignored (left to the platform) when the screen has none.
+  is ignored (left to the platform) when the screen has none. The exported
+  report PDF includes the comparison rows when the previous window loaded.
 
 ## Infra/tooling (not OpenSpec capabilities — repo scaffolding)
 
@@ -309,7 +310,7 @@ notable changes and the migration history.
 
 ## Test counts
 
-- Flutter (`flutter test`): 571 passed (plus 1 integration test that runs only against a live stack). `flutter analyze`: 0 errors/warnings
+- Flutter (`flutter test`): 574 passed (plus 1 integration test that runs only against a live stack). `flutter analyze`: 0 errors/warnings
   (98 SDK-deprecation/const infos under the local Flutter 3.50 beta; CI pins
   3.49 where the baseline is clean).
 - SQL/compose: validated against the running Supabase stack and by

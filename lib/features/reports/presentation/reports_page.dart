@@ -101,6 +101,8 @@ class _ReportsPageState extends State<ReportsPage> {
         revenue: state.revenue,
         headline: context.l10n.reportsTitle,
         lotName: _lotName(context, state.allLots),
+        previousTotal: state.previousTotal,
+        deltaPercent: state.deltaPercent,
       );
       if (!context.mounted) {
         return;
