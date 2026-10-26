@@ -423,6 +423,7 @@
   "@durationMinutes": {"placeholders": {"minutes": {"type": "int"}}},
   "receiptGenerate": "Generar recibo",
   "receiptView": "Ver recibo",
+  "receiptNewCharge": "Nuevo cobro",
   "receiptClose": "Cerrar",
   "printReceipt": "Imprimir",
   "printSystem": "Impresora del sistema (PDF)",

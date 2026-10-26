@@ -1226,6 +1226,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get receiptView => 'View receipt';
 
   @override
+  String get receiptNewCharge => 'New charge';
+
+  @override
   String get receiptClose => 'Close';
 
   @override

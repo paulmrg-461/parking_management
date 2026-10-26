@@ -389,6 +389,7 @@
   "durationMinutes": "{minutes} min",
   "receiptGenerate": "Generate receipt",
   "receiptView": "View receipt",
+  "receiptNewCharge": "New charge",
   "receiptClose": "Close",
   "printReceipt": "Print",
   "printSystem": "System printer (PDF)",

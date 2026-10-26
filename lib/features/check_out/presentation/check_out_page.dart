@@ -171,6 +171,13 @@ class _CheckOutPageState extends State<CheckOutPage> {
       context,
       data,
       onPrint: () => showReceiptPrintSheet(context, data),
+      nextActionLabel: context.l10n.receiptNewCharge,
+      onNextAction: () {
+        // Back to a clean list with the cursor ready for the next plate.
+        if (!resetActiveSearchField()) {
+          context.read<CheckOutCubit>().search('');
+        }
+      },
     );
   }
 

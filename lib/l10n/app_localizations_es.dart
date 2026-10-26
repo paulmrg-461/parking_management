@@ -1231,6 +1231,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get receiptView => 'Ver recibo';
 
   @override
+  String get receiptNewCharge => 'Nuevo cobro';
+
+  @override
   String get receiptClose => 'Cerrar';
 
   @override

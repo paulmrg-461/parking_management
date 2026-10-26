@@ -340,4 +340,28 @@ void main() {
     await tester.tap(find.text('Confirmar'));
     await tester.pumpAndSettle();
   });
+
+  testWidgets('Success: Nuevo cobro clears the search for the next car', (
+    tester,
+  ) async {
+    await pumpPage(tester);
+    await tester.enterText(find.byType(TextField).first, 'XYZ');
+    await tester.pumpAndSettle();
+    expect(find.text('ABC123'), findsNothing);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Cobrar'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Confirmar'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Nuevo cobro'));
+    await tester.pumpAndSettle();
+
+    // Dialog closed, query cleared and the cursor is ready for the next plate.
+    expect(find.text('Nuevo cobro'), findsNothing);
+    expect(find.text('ABC123'), findsOneWidget);
+    final field = tester.widget<TextField>(find.byType(TextField).first);
+    expect(field.controller!.text, isEmpty);
+    expect(field.focusNode!.hasFocus, isTrue);
+  });
 }

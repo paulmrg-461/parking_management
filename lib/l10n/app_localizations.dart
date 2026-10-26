@@ -2306,6 +2306,12 @@ abstract class AppLocalizations {
   /// **'Ver recibo'**
   String get receiptView;
 
+  /// No description provided for @receiptNewCharge.
+  ///
+  /// In es, this message translates to:
+  /// **'Nuevo cobro'**
+  String get receiptNewCharge;
+
   /// No description provided for @receiptClose.
   ///
   /// In es, this message translates to:

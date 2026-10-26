@@ -4,16 +4,28 @@ import 'package:flutter/services.dart';
 
 /// The search field currently on screen (`null` when the page has none), so
 /// the global Ctrl/Cmd+K shortcut knows where to send focus.
-FocusNode? _activeSearchFocus;
+_SearchFieldState? _activeSearchField;
 
 /// Focuses the visible search field. Returns `true` when there was one, so the
 /// shortcut can let the platform handle the key otherwise.
 bool focusActiveSearchField() {
-  final focus = _activeSearchFocus;
-  if (focus == null) {
+  final field = _activeSearchField;
+  if (field == null) {
     return false;
   }
-  focus.requestFocus();
+  field._focus.requestFocus();
+  return true;
+}
+
+/// Empties the visible search field and reports `''` (the next check-out after
+/// a receipt starts from a clean list).
+bool resetActiveSearchField() {
+  final field = _activeSearchField;
+  if (field == null) {
+    return false;
+  }
+  field._clear();
+  field._focus.requestFocus();
   return true;
 }
 
@@ -57,13 +69,13 @@ class _SearchFieldState extends State<SearchField> {
   void initState() {
     super.initState();
     // The last field mounted wins; go_router keeps one page alive at a time.
-    _activeSearchFocus = _focus;
+    _activeSearchField = this;
   }
 
   @override
   void dispose() {
-    if (identical(_activeSearchFocus, _focus)) {
-      _activeSearchFocus = null;
+    if (identical(_activeSearchField, this)) {
+      _activeSearchField = null;
     }
     _focus.dispose();
     _controller.dispose();

@@ -194,6 +194,9 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 - Reports: segmented presets (Today / 7 / 30 days) next to the calendar; a custom
   range clears the preset. Tests must pass the vertical `Scrollable` explicitly
   (the preset row adds a second one).
+- `showReceiptSummary(..., nextActionLabel, onNextAction)` adds a "keep
+  working" button (closes the dialog then runs the callback). Check-out uses it
+  with `resetActiveSearchField()` (clears + refocuses the visible field).
 - `core/widgets/search_field.dart`: shared search input (autofocus only on
   web/desktop so mobile keyboards do not pop up, clear button, `Esc` resets);
   used by vehicles and check-out. The last mounted field registers itself as

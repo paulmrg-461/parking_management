@@ -92,4 +92,35 @@ void main() {
     expect(find.text('2 fotos'), findsOneWidget);
     expect(find.text('Salida registrada'), findsNothing);
   });
+
+  testWidgets('the summary can offer a next action that closes it', (
+    tester,
+  ) async {
+    var started = 0;
+    await tester.pumpWidget(
+      testApp(
+        Scaffold(
+          body: Builder(
+            builder: (context) => FilledButton(
+              onPressed: () => showReceiptSummary(
+                context,
+                _checkOutData(),
+                nextActionLabel: 'Nuevo cobro',
+                onNextAction: () => started++,
+              ),
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Nuevo cobro'));
+    await tester.pumpAndSettle();
+
+    expect(started, 1);
+    expect(find.text('Nuevo cobro'), findsNothing);
+  });
 }
