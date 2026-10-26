@@ -194,6 +194,10 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 - Reports: segmented presets (Today / 7 / 30 days) next to the calendar; a custom
   range clears the preset. Tests must pass the vertical `Scrollable` explicitly
   (the preset row adds a second one).
+- `core/widgets/search_field.dart`: shared search input (autofocus only on
+  web/desktop so mobile keyboards do not pop up, clear button, `Esc` resets);
+  used by vehicles and check-out. Success handlers call `SemanticsService.announce`
+  in addition to the snack/dialog.
 
 ## Secrets runbook (latest)
 

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -11,6 +12,7 @@ import '../../../core/utils/elapsed.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/error_state.dart';
 import '../../../core/widgets/receipt_card.dart';
+import '../../../core/widgets/search_field.dart';
 import '../../../core/widgets/status_chip.dart';
 import '../../../core/widgets/skeleton.dart';
 import '../../../core/widgets/submission_feedback.dart';
@@ -66,12 +68,8 @@ class _CheckOutPageState extends State<CheckOutPage> {
           children: [
             Padding(
               padding: const EdgeInsets.all(16),
-              child: TextField(
-                decoration: InputDecoration(
-                  labelText: context.l10n.searchPlate,
-                  prefixIcon: const Icon(Icons.search),
-                ),
-                textCapitalization: TextCapitalization.characters,
+              child: SearchField(
+                label: context.l10n.searchPlate,
                 onChanged: context.read<CheckOutCubit>().search,
               ),
             ),
@@ -89,6 +87,10 @@ class _CheckOutPageState extends State<CheckOutPage> {
   void _onSubmission(BuildContext context, CheckOutState state) {
     switch (_submissionOf(state)) {
       case SubmissionSucceeded<CheckOutReceipt>(:final result):
+        SemanticsService.announce(
+          '${context.l10n.receiptDoneTitle}: ${result.plate}',
+          Directionality.of(context),
+        );
         unawaited(context.read<DashboardCubit>().load());
         _refreshShift(context);
         unawaited(_showReceipt(context, result));

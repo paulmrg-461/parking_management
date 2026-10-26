@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:cross_file/cross_file.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -206,7 +207,9 @@ class _CheckInPageState extends State<CheckInPage> {
         _resetForm();
         _plateFocus.requestFocus();
         unawaited(context.read<DashboardCubit>().load());
-        showInfoSnack(context, context.l10n.checkInSuccess(result.plate));
+        final message = context.l10n.checkInSuccess(result.plate);
+        SemanticsService.announce(message, Directionality.of(context));
+        showInfoSnack(context, message);
       case SubmissionFailed(:final message, :final failure):
         showErrorSnack(context, context.l10n.errorText(message, failure));
       default:

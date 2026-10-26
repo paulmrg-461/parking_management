@@ -13,6 +13,7 @@ import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/list_page_scaffold.dart';
 import '../../../core/widgets/load_more_tile.dart';
 import '../../../core/widgets/plate_text.dart';
+import '../../../core/widgets/search_field.dart';
 import '../../../core/widgets/submission_listener.dart';
 import '../../categories/domain/entities/category.dart';
 import '../application/vehicles_cubit.dart';
@@ -51,13 +52,9 @@ class _VehiclesPageState extends State<VehiclesPage> {
                 Space.md,
                 0,
               ),
-              child: TextField(
-                key: const Key('vehicles_search'),
-                textCapitalization: TextCapitalization.characters,
-                decoration: InputDecoration(
-                  labelText: context.l10n.vehiclesSearch,
-                  prefixIcon: const Icon(Icons.search),
-                ),
+              child: SearchField(
+                fieldKey: const Key('vehicles_search'),
+                label: context.l10n.vehiclesSearch,
                 onChanged: context.read<VehiclesCubit>().search,
               ),
             ),
