@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -50,6 +51,24 @@ class _ShiftPageState extends State<ShiftPage> {
     });
   }
 
+  /// Cash actions are silent otherwise; confirm them in text and to screen
+  /// readers so the operator knows the shift really changed.
+  void _confirmSuccess(BuildContext context, ShiftAction? action) {
+    final l10n = context.l10n;
+    final message = switch (action) {
+      ShiftAction.opened => l10n.shiftOpenedDone,
+      ShiftAction.closed => l10n.shiftClosedDone,
+      ShiftAction.movement => l10n.shiftMovementDone,
+      ShiftAction.adjusted => l10n.shiftAdjustedDone,
+      null => null,
+    };
+    if (message == null) {
+      return;
+    }
+    SemanticsService.announce(message, Directionality.of(context));
+    showInfoSnack(context, message);
+  }
+
   bool _online(BuildContext context) {
     try {
       return context.watch<ConnectivityCubit>().state;
@@ -64,10 +83,16 @@ class _ShiftPageState extends State<ShiftPage> {
     final online = _online(context);
     return BlocListener<ShiftCubit, ShiftState>(
       listenWhen: (previous, current) =>
-          submissionJustFailed(previous.submission, current.submission),
+          submissionJustFailed(previous.submission, current.submission) ||
+          submissionJustSucceeded(previous.submission, current.submission),
       listener: (context, state) {
-        if (state.submission case SubmissionFailed(:final message, :final failure)) {
-          showErrorSnack(context, l10n.errorText(message, failure));
+        switch (state.submission) {
+          case SubmissionFailed(:final message, :final failure):
+            showErrorSnack(context, l10n.errorText(message, failure));
+          case SubmissionSucceeded():
+            _confirmSuccess(context, state.lastAction);
+          default:
+            break;
         }
       },
       child: Scaffold(

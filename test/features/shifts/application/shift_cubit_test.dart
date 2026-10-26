@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/error/failure.dart';
+import 'package:parking_management/core/state/submission.dart';
 import 'package:parking_management/features/shifts/application/shift_cubit.dart';
 
 import '../../../helpers/fake_shift_repository.dart';
@@ -16,6 +17,21 @@ void main() {
     expect(cubit.state.current, isNotNull);
     expect(cubit.state.current?.openingFloat, 20000);
     expect(cubit.state.current?.expectedCash, 25000);
+    expect(cubit.state.lastAction, ShiftAction.opened);
+    expect(cubit.state.submission, isA<SubmissionSucceeded>());
+  });
+
+  test('Failure: a rejected opening reports a failed submission', () async {
+    final repository = FakeShiftRepository()
+      ..error = const ValidationFailure('Shift already open');
+    final cubit = ShiftCubit(repository);
+    addTearDown(cubit.close);
+
+    await cubit.open(10000);
+
+    expect(cubit.state.submission, isA<SubmissionFailed>());
+    expect(cubit.state.lastAction, isNull);
+    expect(cubit.state.current, isNull);
   });
 
   test('Success: closing stores the lastClosed summary', () async {
@@ -29,6 +45,7 @@ void main() {
     expect(cubit.state.current, isNull);
     expect(cubit.state.lastClosed?.countedCash, 15000);
     expect(cubit.state.lastClosed?.notes, 'ok');
+    expect(cubit.state.lastAction, ShiftAction.closed);
   });
 
   test('Failure: a backend error keeps the shift and reports it', () async {

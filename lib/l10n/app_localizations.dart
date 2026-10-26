@@ -1106,6 +1106,30 @@ abstract class AppLocalizations {
   /// **'Turno abierto'**
   String get shiftOpenTitle;
 
+  /// No description provided for @shiftOpenedDone.
+  ///
+  /// In es, this message translates to:
+  /// **'Turno abierto correctamente'**
+  String get shiftOpenedDone;
+
+  /// No description provided for @shiftClosedDone.
+  ///
+  /// In es, this message translates to:
+  /// **'Turno cerrado correctamente'**
+  String get shiftClosedDone;
+
+  /// No description provided for @shiftMovementDone.
+  ///
+  /// In es, this message translates to:
+  /// **'Movimiento de caja registrado'**
+  String get shiftMovementDone;
+
+  /// No description provided for @shiftAdjustedDone.
+  ///
+  /// In es, this message translates to:
+  /// **'Cierre del turno corregido'**
+  String get shiftAdjustedDone;
+
   /// No description provided for @shiftOpenedAt.
   ///
   /// In es, this message translates to:

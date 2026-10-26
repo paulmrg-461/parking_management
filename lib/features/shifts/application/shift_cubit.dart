@@ -8,6 +8,9 @@ import '../domain/repositories/shift_repository.dart';
 
 enum ShiftStatus { initial, loading, loaded, failure }
 
+/// What the last successful submit did, so the page can confirm it.
+enum ShiftAction { opened, closed, movement, adjusted }
+
 class ShiftState extends Equatable {
   const ShiftState({
     this.status = ShiftStatus.initial,
@@ -15,6 +18,7 @@ class ShiftState extends Equatable {
     this.history = const [],
     this.lastClosed,
     this.submission = const SubmissionIdle(),
+    this.lastAction,
     this.error,
     this.historyFrom,
     this.historyTo,
@@ -25,6 +29,7 @@ class ShiftState extends Equatable {
   final List<ShiftSummary> history;
   final ShiftSummary? lastClosed;
   final Submission submission;
+  final ShiftAction? lastAction;
   final Failure? error;
 
   /// Active admin-history filter (`null` = everything).
@@ -38,6 +43,7 @@ class ShiftState extends Equatable {
     List<ShiftSummary>? history,
     ShiftSummary? lastClosed,
     Submission? submission,
+    ShiftAction? lastAction,
     Failure? error,
     DateTime? historyFrom,
     DateTime? historyTo,
@@ -48,6 +54,7 @@ class ShiftState extends Equatable {
     history: history ?? this.history,
     lastClosed: lastClosed ?? this.lastClosed,
     submission: submission ?? this.submission,
+    lastAction: lastAction ?? this.lastAction,
     error: error,
     historyFrom: clearHistoryRange ? null : (historyFrom ?? this.historyFrom),
     historyTo: clearHistoryRange ? null : (historyTo ?? this.historyTo),
@@ -61,6 +68,7 @@ class ShiftState extends Equatable {
         history,
         lastClosed,
         submission,
+        lastAction,
         error,
         historyFrom,
         historyTo,
@@ -107,11 +115,13 @@ class ShiftCubit extends ResilientCubit<ShiftState> {
 
   Future<void> open(int openingFloat) => _submit(
     () => _repository.open(openingFloat),
+    action: ShiftAction.opened,
   );
 
   Future<void> closeShift({required int countedCash, String? notes}) async {
     await _submit(
       () => _repository.close(countedCash: countedCash, notes: notes),
+      action: ShiftAction.closed,
       onSuccess: (shift) => emit(
         state.copyWith(
           current: null,
@@ -133,6 +143,7 @@ class ShiftCubit extends ResilientCubit<ShiftState> {
         countedCash: countedCash,
         reason: reason,
       ),
+      action: ShiftAction.adjusted,
     );
     await load(admin: true);
   }
@@ -143,18 +154,21 @@ class ShiftCubit extends ResilientCubit<ShiftState> {
     required String reason,
   }) => _submit(
     () => _repository.addMovement(type: type, amount: amount, reason: reason),
+    action: ShiftAction.movement,
   );
 
   Future<void> _submit(
-    Future<ShiftSummary> Function() action, {
+    Future<ShiftSummary> Function() perform, {
+    required ShiftAction action,
     void Function(ShiftSummary)? onSuccess,
   }) async {
     emit(state.copyWith(submission: const SubmissionInProgress(), error: null));
     try {
-      final shift = await action();
+      final shift = await perform();
       emit(
         state.copyWith(
-          submission: const SubmissionIdle(),
+          submission: SubmissionSucceeded(shift),
+          lastAction: action,
           current: shift.isOpen ? shift : null,
           clearCurrent: !shift.isOpen,
         ),

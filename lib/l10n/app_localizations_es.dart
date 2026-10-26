@@ -561,6 +561,18 @@ class AppLocalizationsEs extends AppLocalizations {
   String get shiftOpenTitle => 'Turno abierto';
 
   @override
+  String get shiftOpenedDone => 'Turno abierto correctamente';
+
+  @override
+  String get shiftClosedDone => 'Turno cerrado correctamente';
+
+  @override
+  String get shiftMovementDone => 'Movimiento de caja registrado';
+
+  @override
+  String get shiftAdjustedDone => 'Cierre del turno corregido';
+
+  @override
   String shiftOpenedAt(String time) {
     return 'Abierto: $time';
   }

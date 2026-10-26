@@ -554,6 +554,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shiftOpenTitle => 'Open shift';
 
   @override
+  String get shiftOpenedDone => 'Shift opened successfully';
+
+  @override
+  String get shiftClosedDone => 'Shift closed successfully';
+
+  @override
+  String get shiftMovementDone => 'Cash movement recorded';
+
+  @override
+  String get shiftAdjustedDone => 'Shift close corrected';
+
+  @override
   String shiftOpenedAt(String time) {
     return 'Opened: $time';
   }

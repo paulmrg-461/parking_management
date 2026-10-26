@@ -33,6 +33,7 @@ void main() {
     expect(find.text('Turno abierto'), findsOneWidget);
     expect(find.text('Efectivo esperado'), findsOneWidget);
     expect(find.text('Cerrar turno'), findsOneWidget);
+    expect(find.text('Turno abierto correctamente'), findsOneWidget);
   });
 
   testWidgets('Security: an operator does not see the admin history', (
@@ -54,5 +55,34 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Turnos recientes'), findsNothing);
+  });
+
+  testWidgets('Success: closing a shift confirms it in a SnackBar', (
+    tester,
+  ) async {
+    final repository = FakeShiftRepository(currentShift: sampleShift());
+    final cubit = ShiftCubit(repository);
+    addTearDown(cubit.close);
+    await tester.pumpWidget(
+      testApp(
+        BlocProvider.value(
+          value: cubit,
+          child: const ShiftPage(isAdmin: false),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Cerrar turno'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Efectivo contado'),
+      '25000',
+    );
+    await tester.tap(find.text('Confirmar'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Turno cerrado correctamente'), findsOneWidget);
+    expect(find.text('No hay turno abierto'), findsOneWidget);
   });
 }

@@ -112,6 +112,8 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - Screen readers announce successful check-ins and check-outs.
 - Check-in remembers the last plate and offers a one-tap "repeat entry" chip.
 - The occupancy bar and the monthly-pass status chip animate their changes.
+- Shift cash actions (open, close, movement, correction) confirm with a
+  SnackBar and a screen-reader announcement instead of happening silently.
 - Check-out remembers the last payment method and preselects it (a pass only
   preselects "monthly pass" when the session is actually covered).
 - Reports compare the selected period with the previous, equally long one:
@@ -170,7 +172,7 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Tests
 
-- 566 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
+- 568 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
   integration test that runs only against a live stack.
 - SQL/RLS/RPC regressions covering capacity, shifts, discounts, passes,
   reservations, multi-site isolation, audit, diagnostics and retention.
@@ -200,7 +202,7 @@ Captured on 2026-10-24 against the local self-hosted stack:
 
 | Check | Result |
 |---|---|
-| `flutter test` | 566 passed (+1 live-stack integration skipped) |
+| `flutter test` | 568 passed (+1 live-stack integration skipped) |
 | `flutter analyze` | 0 errors, 0 warnings (only SDK deprecation infos) |
 | `flutter build web --release` | OK |
 | `supabase/tests/run.sh` | Passed (migrations + RPC/RLS regressions) |
