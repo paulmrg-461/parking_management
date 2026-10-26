@@ -226,8 +226,7 @@ class _SessionsList extends StatelessWidget {
           previous.hasMore != current.hasMore ||
           previous.loadingMore != current.loadingMore,
       builder: (context, state) => switch (state) {
-        CheckOutInitial() ||
-        CheckOutLoading() => const SkeletonList(),
+        CheckOutInitial() || CheckOutLoading() => const SkeletonList(),
         CheckOutFailure(:final message, :final failure) => ErrorState(
           message: context.l10n.errorText(message, failure),
           onRetry: () =>
@@ -265,9 +264,7 @@ class _SessionsList extends StatelessWidget {
                 session: state.visible[index],
                 plate:
                     state.plates[state.visible[index].vehicleId] ??
-                    context.l10n.unknownVehicle(
-                      state.visible[index].vehicleId,
-                    ),
+                    context.l10n.unknownVehicle(state.visible[index].vehicleId),
                 rememberedMethod: rememberedMethod,
                 onMethodChosen: onMethodChosen,
               ),
@@ -318,6 +315,14 @@ class _SessionTile extends StatelessWidget {
                   icon: Icons.warning_amber_outlined,
                 ),
               ],
+              if (session.hasPass) ...[
+                const SizedBox(width: 8),
+                StatusChip(
+                  label: l10n.paymentMonthlyPass,
+                  tone: StatusTone.success,
+                  icon: Icons.card_membership,
+                ),
+              ],
             ],
           ),
         ],
@@ -333,8 +338,8 @@ class _SessionTile extends StatelessWidget {
     try {
       final auth = context.read<AuthCubit>();
       return switch (auth.state) {
-          AuthAuthenticated(:final session) =>
-            session.user.role == UserRole.admin,
+        AuthAuthenticated(:final session) =>
+          session.user.role == UserRole.admin,
         _ => false,
       };
     } on ProviderNotFoundException {
@@ -395,7 +400,6 @@ class _LoadMoreTile extends StatelessWidget {
     );
   }
 }
-
 
 class _ShiftBanner extends StatelessWidget {
   const _ShiftBanner();

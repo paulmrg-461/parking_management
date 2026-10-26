@@ -40,8 +40,7 @@ class CheckOutRepositoryImpl implements CheckOutRepository {
   Future<TodaySummary> todaySummary() => _remote.todaySummary();
 
   @override
-  Future<CheckOutPreview> preview(int sessionId) =>
-      _remote.preview(sessionId);
+  Future<CheckOutPreview> preview(int sessionId) => _remote.preview(sessionId);
 
   @override
   Future<CheckOutReceipt> checkOut(

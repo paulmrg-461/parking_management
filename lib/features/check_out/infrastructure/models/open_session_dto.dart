@@ -10,6 +10,7 @@ class OpenSessionDto {
     required this.id,
     required this.vehicleId,
     required this.entryTime,
+    this.hasPass = false,
   });
 
   factory OpenSessionDto.fromJson(Map<String, dynamic> json) =>
@@ -23,11 +24,15 @@ class OpenSessionDto {
   @JsonKey(name: 'entry_time')
   final DateTime entryTime;
 
+  @JsonKey(name: 'has_pass', defaultValue: false)
+  final bool hasPass;
+
   Map<String, dynamic> toJson() => _$OpenSessionDtoToJson(this);
 
   OpenSession toDomain() => OpenSession(
-        id: id,
-        vehicleId: vehicleId,
-        entryTime: entryTime,
-      );
+    id: id,
+    vehicleId: vehicleId,
+    entryTime: entryTime,
+    hasPass: hasPass,
+  );
 }

@@ -50,10 +50,9 @@ class OccupancySnapshot extends Equatable {
         totalOpen: (json['total_open'] as num).toInt(),
         totalCapacity: (json['total_capacity'] as num?)?.toInt() ?? 0,
         byCategory: [
-          for (final item in (json['by_category'] as List<dynamic>? ?? const []))
-            CategoryOccupancySnapshot.fromJson(
-              item as Map<String, dynamic>,
-            ),
+          for (final item
+              in (json['by_category'] as List<dynamic>? ?? const []))
+            CategoryOccupancySnapshot.fromJson(item as Map<String, dynamic>),
         ],
       );
 

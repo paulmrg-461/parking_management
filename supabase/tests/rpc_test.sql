@@ -814,6 +814,13 @@ begin
        or not (with_pass ->> 'has_pass')::boolean then
         raise exception 'fare preview ignored the active pass';
     end if;
+
+    if not (
+        select has_pass from public.open_sessions_view
+         where id = (preview ->> 'session_id')::integer
+    ) then
+        raise exception 'open sessions view did not report the active pass';
+    end if;
 end $$;
 
 -- Branding is per lot: only the active lot's row changes.

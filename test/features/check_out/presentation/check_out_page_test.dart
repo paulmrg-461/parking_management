@@ -37,13 +37,20 @@ class _FakeCheckOutRepository implements CheckOutRepository {
   Future<OccupancySnapshot> occupancy() async =>
       const OccupancySnapshot(totalOpen: 0, totalCapacity: 0);
 
+  bool firstHasPass = false;
+
   @override
   Future<PagedResult<OpenSession>> listOpenSessions({
     int offset = 0,
     int limit = defaultPageSize,
     String? plate,
   }) async => PagedResult([
-    OpenSession(id: 1, vehicleId: 1, entryTime: DateTime(2026, 1, 1)),
+    OpenSession(
+      id: 1,
+      vehicleId: 1,
+      entryTime: DateTime(2026, 1, 1),
+      hasPass: firstHasPass,
+    ),
     OpenSession(id: 2, vehicleId: 2, entryTime: DateTime(2026, 1, 1)),
   ]);
 
@@ -89,8 +96,12 @@ void main() {
   late _FakeCheckOutRepository repository;
   late FakeCheckOutRepository occupancy;
 
-  Future<void> pumpPage(WidgetTester tester, {String? initialQuery}) async {
-    repository = _FakeCheckOutRepository();
+  Future<void> pumpPage(
+    WidgetTester tester, {
+    String? initialQuery,
+    bool firstHasPass = false,
+  }) async {
+    repository = _FakeCheckOutRepository()..firstHasPass = firstHasPass;
     occupancy = FakeCheckOutRepository();
     final vehicles = FakeVehicleRepository(const [
       Vehicle(id: 1, plate: 'ABC123', categoryId: 1),
@@ -376,5 +387,13 @@ void main() {
       tester.widget<TextField>(find.byType(TextField).first).controller!.text,
       'XYZ',
     );
+  });
+
+  testWidgets('Success: a car with an active pass is flagged in the list', (
+    tester,
+  ) async {
+    await pumpPage(tester, firstHasPass: true);
+
+    expect(find.text('Mensualidad'), findsOneWidget);
   });
 }

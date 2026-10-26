@@ -33,6 +33,12 @@ class TodaySummary extends Equatable {
   }
 
   @override
-  List<Object?> get props =>
-      [revenue, cashRevenue, passRevenue, entries, exits, openNow];
+  List<Object?> get props => [
+    revenue,
+    cashRevenue,
+    passRevenue,
+    entries,
+    exits,
+    openNow,
+  ];
 }

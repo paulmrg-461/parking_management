@@ -229,6 +229,9 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 - Reservations: `Reservation.expiresSoon({now, window})` (default 2 h,
   expired holds excluded) drives a warning chip; `sortedByExpiry` returns a new
   soonest-first list used by the page (never sorts the state list in place).
+- `0046` rewrites `open_sessions_view` with `has_pass` (same pass rule as the
+  preview, lot timezone via a lateral settings join). The list shows a
+  "Mensualidad" chip so the car is known to be free before the dialog.
 - Check-out stores `last_payment_method` in `KeyValueStore` (box
   `preferences`) only after the server confirms; `_SessionTile` receives the
   remembered method and falls back to cash when it is `monthly_pass` or the

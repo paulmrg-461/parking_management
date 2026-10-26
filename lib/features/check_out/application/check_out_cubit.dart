@@ -229,10 +229,7 @@ class CheckOutCubit extends ResilientCubit<CheckOutState> {
         ),
       );
     } on Failure catch (failure) {
-      emit(
-        _latest(current)
-            .copyWith(submission: SubmissionFailed.of(failure)),
-      );
+      emit(_latest(current).copyWith(submission: SubmissionFailed.of(failure)));
     } catch (_) {
       emit(
         _latest(current).copyWith(
@@ -295,11 +292,7 @@ class CheckOutCubit extends ResilientCubit<CheckOutState> {
   }
 
   Future<PagedResult<OpenSession>> _firstPage({String? plate}) =>
-      _repository.listOpenSessions(
-        offset: 0,
-        limit: pageSize,
-        plate: plate,
-      );
+      _repository.listOpenSessions(offset: 0, limit: pageSize, plate: plate);
 
   /// Plates are best-effort: a failure falls back to "Vehicle #id" rows.
   Future<Map<int, String>> _plates() async {
@@ -321,9 +314,8 @@ class CheckOutCubit extends ResilientCubit<CheckOutState> {
     final current = state;
     final query = current is CheckOutLoaded ? current.query.trim() : '';
     try {
-      final items = (await _firstPage(
-        plate: query.isEmpty ? null : query,
-      )).items;
+      final items = (await _firstPage(plate: query.isEmpty ? null : query))
+          .items;
       _loadedCount = items.length;
       return items;
     } on Failure {

@@ -7,12 +7,17 @@ class OpenSession extends Equatable {
     required this.id,
     required this.vehicleId,
     required this.entryTime,
+    this.hasPass = false,
   });
 
   final int id;
   final int vehicleId;
   final DateTime entryTime;
 
+  /// The vehicle has an active monthly pass right now (`has_pass` in the
+  /// view), so the check-out will not charge the stay.
+  final bool hasPass;
+
   @override
-  List<Object?> get props => [id, vehicleId, entryTime];
+  List<Object?> get props => [id, vehicleId, entryTime, hasPass];
 }

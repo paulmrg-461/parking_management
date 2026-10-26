@@ -52,7 +52,7 @@ class SupabaseCheckOutRemoteDataSource implements CheckOutRemoteDataSource {
     try {
       var query = _client
           .from(_view)
-          .select('id, vehicle_id, entry_time');
+          .select('id, vehicle_id, entry_time, has_pass');
       if (plate != null && plate.trim().isNotEmpty) {
         query = query.ilike('plate', '%${plate.trim()}%');
       }
@@ -89,9 +89,7 @@ class SupabaseCheckOutRemoteDataSource implements CheckOutRemoteDataSource {
         'check_out_preview',
         params: {'p_session_id': sessionId},
       );
-      return CheckOutPreview.fromJson(
-        Map<String, dynamic>.from(result as Map),
-      );
+      return CheckOutPreview.fromJson(Map<String, dynamic>.from(result as Map));
     } catch (error) {
       throw mapSupabaseError(error);
     }
