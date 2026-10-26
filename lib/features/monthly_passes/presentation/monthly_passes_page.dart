@@ -18,6 +18,7 @@ import '../../../core/widgets/list_page_scaffold.dart';
 import '../../../app/di/injection.dart';
 import '../../../core/utils/whatsapp_launcher.dart';
 import '../../../core/widgets/plate_text.dart';
+import '../../../core/widgets/status_chip.dart';
 import '../../customer_messages/domain/repositories/customer_message_repository.dart';
 import '../../settings/application/whatsapp_mode.dart';
 import '../../settings/domain/whatsapp_url.dart';
@@ -204,8 +205,26 @@ class _MonthlyPassTile extends StatelessWidget {
       Formatters.date(monthlyPass.startDate),
       Formatters.date(monthlyPass.endDate),
     );
+    final status = monthlyPassStatus(monthlyPass, DateTime.now());
+    final (statusLabel, statusTone) = switch (status) {
+      MonthlyPassStatus.active => (l10n.monthlyPassStatusActive, StatusTone.success),
+      MonthlyPassStatus.upcoming => (
+        l10n.monthlyPassStatusUpcoming,
+        StatusTone.warning,
+      ),
+      MonthlyPassStatus.expired => (
+        l10n.monthlyPassStatusExpired,
+        StatusTone.neutral,
+      ),
+    };
     return ListTile(
-      title: PlateText(plate),
+      title: Row(
+        children: [
+          PlateText(plate),
+          const SizedBox(width: Space.sm),
+          StatusChip(label: statusLabel, tone: statusTone),
+        ],
+      ),
       subtitle: Text(
         '$period · ${Formatters.money(monthlyPass.amount)}'
         '${monthlyPass.autoRenew ? ' · ${l10n.monthlyPassAutoRenew}' : ''}',

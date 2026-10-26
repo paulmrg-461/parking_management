@@ -13,7 +13,6 @@ import '../../../core/widgets/async_view.dart';
 import '../../../core/widgets/money_text.dart';
 import '../../../core/widgets/sync_badge.dart';
 import '../application/reports_cubit.dart';
-import '../domain/entities/whatsapp_report.dart';
 import 'report_pdf.dart';
 import 'widgets/category_bar_list.dart';
 import 'widgets/lot_comparison.dart';

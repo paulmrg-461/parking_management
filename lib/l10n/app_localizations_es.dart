@@ -888,6 +888,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get roleOperator => 'Operador';
 
   @override
+  String get homeTodayEmpty => 'Sin movimientos hoy';
+
+  @override
   String get homeToday => 'Hoy';
 
   @override
@@ -1072,6 +1075,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String checkOutNoMatch(String query) {
     return 'Ninguna placa coincide con «$query»';
   }
+
+  @override
+  String get checkOutLongStay => 'Más de 24 h';
 
   @override
   String get checkOutCharge => 'Cobrar';
@@ -1452,6 +1458,15 @@ class AppLocalizationsEs extends AppLocalizations {
   String monthlyPassWhatsappMessage(String plate, String date) {
     return 'Hola, te recordamos que la mensualidad del vehículo $plate vence el $date.';
   }
+
+  @override
+  String get monthlyPassStatusActive => 'Vigente';
+
+  @override
+  String get monthlyPassStatusUpcoming => 'Próxima';
+
+  @override
+  String get monthlyPassStatusExpired => 'Vencida';
 
   @override
   String get monthlyPassCharge => 'Cobrar';

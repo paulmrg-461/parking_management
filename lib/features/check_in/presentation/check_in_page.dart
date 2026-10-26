@@ -8,6 +8,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/l10n/failure_messages.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/state/submission.dart';
+import '../../../core/utils/elapsed.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/photo_strip.dart';
 import '../../../core/widgets/receipt_card.dart';
@@ -472,6 +473,7 @@ class _SessionTile extends StatelessWidget {
       title: Text(session.plate),
       subtitle: Text(
         '${l10n.sessionEntry(Formatters.dateTime(session.entryTime))}'
+        ' · ${elapsedLabel(l10n, session.entryTime)}'
         ' · ${l10n.sessionPhotos(session.photoCount)}',
       ),
       trailing: session.status == ParkingSessionStatus.pendingSync

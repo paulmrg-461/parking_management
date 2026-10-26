@@ -336,6 +336,11 @@ class TodayCard extends StatelessWidget {
           return const SizedBox.shrink();
         }
         final today = state.today;
+        final quiet =
+            today.revenue == 0 &&
+            today.entries == 0 &&
+            today.exits == 0 &&
+            today.passRevenue == 0;
         return Card(
           child: Padding(
             padding: const EdgeInsets.all(Space.md),
@@ -344,31 +349,35 @@ class TodayCard extends StatelessWidget {
               children: [
                 Text(l10n.homeToday, style: textTheme.labelLarge),
                 const SizedBox(height: Space.xs),
-                MoneyText(today.revenue, style: textTheme.headlineMedium),
-                const SizedBox(height: Space.sm),
-                Wrap(
-                  spacing: Space.lg,
-                  runSpacing: Space.xs,
-                  children: [
-                    _TodayMetric(
-                      label: l10n.homeTodayEntries,
-                      value: '${today.entries}',
-                    ),
-                    _TodayMetric(
-                      label: l10n.homeTodayExits,
-                      value: '${today.exits}',
-                    ),
-                    _TodayMetric(
-                      label: l10n.homeTodayCash,
-                      value: Formatters.money(today.cashRevenue),
-                    ),
-                    if (today.passRevenue > 0)
+                if (quiet)
+                  Text(l10n.homeTodayEmpty, style: textTheme.bodyMedium)
+                else ...[
+                  MoneyText(today.revenue, style: textTheme.headlineMedium),
+                  const SizedBox(height: Space.sm),
+                  Wrap(
+                    spacing: Space.lg,
+                    runSpacing: Space.xs,
+                    children: [
                       _TodayMetric(
-                        label: l10n.homeTodayPasses,
-                        value: Formatters.money(today.passRevenue),
+                        label: l10n.homeTodayEntries,
+                        value: '${today.entries}',
                       ),
-                  ],
-                ),
+                      _TodayMetric(
+                        label: l10n.homeTodayExits,
+                        value: '${today.exits}',
+                      ),
+                      _TodayMetric(
+                        label: l10n.homeTodayCash,
+                        value: Formatters.money(today.cashRevenue),
+                      ),
+                      if (today.passRevenue > 0)
+                        _TodayMetric(
+                          label: l10n.homeTodayPasses,
+                          value: Formatters.money(today.passRevenue),
+                        ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),

@@ -883,6 +883,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get roleOperator => 'Operator';
 
   @override
+  String get homeTodayEmpty => 'No activity yet today';
+
+  @override
   String get homeToday => 'Today';
 
   @override
@@ -1067,6 +1070,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String checkOutNoMatch(String query) {
     return 'No plate matches “$query”';
   }
+
+  @override
+  String get checkOutLongStay => 'Over 24 h';
 
   @override
   String get checkOutCharge => 'Charge';
@@ -1447,6 +1453,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String monthlyPassWhatsappMessage(String plate, String date) {
     return 'Hi, a reminder that the monthly pass for plate $plate expires on $date.';
   }
+
+  @override
+  String get monthlyPassStatusActive => 'Active';
+
+  @override
+  String get monthlyPassStatusUpcoming => 'Upcoming';
+
+  @override
+  String get monthlyPassStatusExpired => 'Expired';
 
   @override
   String get monthlyPassCharge => 'Collect';

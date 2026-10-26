@@ -125,6 +125,15 @@ void main() {
     await expectLater(tester, meetsGuideline(textContrastGuideline));
   });
 
+  testWidgets('Success: a quiet day shows a friendly zero state', (
+    tester,
+  ) async {
+    await _pump(tester);
+
+    expect(find.text('Hoy'), findsOneWidget);
+    expect(find.text('Sin movimientos hoy'), findsOneWidget);
+  });
+
   testWidgets('Success: today card shows revenue and traffic', (tester) async {
     await _pump(
       tester,

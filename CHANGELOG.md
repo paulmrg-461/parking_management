@@ -93,6 +93,17 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Changed
 
+**UI/UX**
+
+- Check-out and check-in lists show how long each car has been parked, and
+  check-out flags stays over 24 h.
+- Monthly passes show a status chip (active/upcoming/expired) and sort active
+  passes first, then upcoming, then expired.
+- Empty lists (reservations, sites, audit) use the same friendly empty-state
+  component instead of bare text.
+- The home "today" card shows a quiet-day message instead of a row of zeros
+  before the first movement.
+
 - The app selects the active lot **before** exposing an authenticated session,
   so the first request already carries `x-lot-id`.
 - Printed receipts (PDF and thermal) follow the app language via
@@ -142,7 +153,7 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Tests
 
-- 540 Flutter tests (unit/widget/cubit/router/a11y) across 106 files, plus one
+- 547 Flutter tests (unit/widget/cubit/router/a11y) across 108 files, plus one
   integration test that runs only against a live stack.
 - SQL/RLS/RPC regressions covering capacity, shifts, discounts, passes,
   reservations, multi-site isolation, audit, diagnostics and retention.
@@ -172,7 +183,7 @@ Captured on 2026-10-24 against the local self-hosted stack:
 
 | Check | Result |
 |---|---|
-| `flutter test` | 540 passed (+1 live-stack integration skipped) |
+| `flutter test` | 547 passed (+1 live-stack integration skipped) |
 | `flutter analyze` | 0 errors, 0 warnings (only SDK deprecation infos) |
 | `flutter build web --release` | OK |
 | `supabase/tests/run.sh` | Passed (migrations + RPC/RLS regressions) |

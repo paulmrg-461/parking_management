@@ -7,9 +7,11 @@ import 'package:go_router/go_router.dart';
 import '../../../core/l10n/failure_messages.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/state/submission.dart';
+import '../../../core/utils/elapsed.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/error_state.dart';
 import '../../../core/widgets/receipt_card.dart';
+import '../../../core/widgets/status_chip.dart';
 import '../../../core/widgets/skeleton.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/widgets/sync_badge.dart';
@@ -201,14 +203,40 @@ class _SessionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final longStay = isLongStay(session.entryTime);
     return ListTile(
+      isThreeLine: true,
       title: Text(plate),
-      subtitle: Text(
-        context.l10n.sessionEntry(Formatters.dateTime(session.entryTime)),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l10n.sessionEntry(Formatters.dateTime(session.entryTime))),
+          const SizedBox(height: 2),
+          Row(
+            children: [
+              Icon(
+                Icons.timer_outlined,
+                size: 14,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 4),
+              Text(elapsedLabel(l10n, session.entryTime)),
+              if (longStay) ...[
+                const SizedBox(width: 8),
+                StatusChip(
+                  label: l10n.checkOutLongStay,
+                  tone: StatusTone.warning,
+                  icon: Icons.warning_amber_outlined,
+                ),
+              ],
+            ],
+          ),
+        ],
       ),
       trailing: FilledButton(
         onPressed: () => _confirmCheckOut(context),
-        child: Text(context.l10n.checkOutCharge),
+        child: Text(l10n.checkOutCharge),
       ),
     );
   }

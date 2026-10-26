@@ -1712,6 +1712,12 @@ abstract class AppLocalizations {
   /// **'Operador'**
   String get roleOperator;
 
+  /// No description provided for @homeTodayEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin movimientos hoy'**
+  String get homeTodayEmpty;
+
   /// No description provided for @homeToday.
   ///
   /// In es, this message translates to:
@@ -2029,6 +2035,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Ninguna placa coincide con «{query}»'**
   String checkOutNoMatch(String query);
+
+  /// No description provided for @checkOutLongStay.
+  ///
+  /// In es, this message translates to:
+  /// **'Más de 24 h'**
+  String get checkOutLongStay;
 
   /// No description provided for @checkOutCharge.
   ///
@@ -2695,6 +2707,24 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Hola, te recordamos que la mensualidad del vehículo {plate} vence el {date}.'**
   String monthlyPassWhatsappMessage(String plate, String date);
+
+  /// No description provided for @monthlyPassStatusActive.
+  ///
+  /// In es, this message translates to:
+  /// **'Vigente'**
+  String get monthlyPassStatusActive;
+
+  /// No description provided for @monthlyPassStatusUpcoming.
+  ///
+  /// In es, this message translates to:
+  /// **'Próxima'**
+  String get monthlyPassStatusUpcoming;
+
+  /// No description provided for @monthlyPassStatusExpired.
+  ///
+  /// In es, this message translates to:
+  /// **'Vencida'**
+  String get monthlyPassStatusExpired;
 
   /// No description provided for @monthlyPassCharge.
   ///

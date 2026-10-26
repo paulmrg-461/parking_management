@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/state/submission.dart';
 import '../../../core/theme/tokens.dart';
+import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_state.dart';
 import '../../../core/widgets/list_page_scaffold.dart';
 import '../../../core/widgets/skeleton.dart';
@@ -47,7 +48,10 @@ class _LotsPageState extends State<LotsPage> {
               onRetry: context.read<LotsCubit>().load,
             ),
             final LotsLoaded loaded => loaded.lots.isEmpty
-                ? Center(child: Text(l10n.lotsEmpty))
+                ? EmptyState(
+                    message: l10n.lotsEmpty,
+                    icon: Icons.location_city_outlined,
+                  )
                 : ListView.builder(
                     itemCount: loaded.lots.length,
                     itemBuilder: (context, index) =>

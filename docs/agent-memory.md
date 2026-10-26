@@ -181,6 +181,15 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 - Analyzer baseline: 0 non-deprecation infos; the ~112 remaining are SDK
   `deprecated_member_use` from the pinned beta channel.
 
+## UI/UX polish (latest)
+
+- `core/utils/elapsed.dart`: `elapsedLabel` / `isLongStay` (24 h) feed check-out
+  and check-in lists; check-out shows a "Más de 24 h" warning chip.
+- Monthly passes: `monthlyPassStatus` + `sortMonthlyPasses` (active → upcoming →
+  expired, soonest first) and a status chip in the tile.
+- `EmptyState` is now used by reservations, lots and audit lists; the home
+  "today" card has a quiet-day message when every counter is zero.
+
 ## Secrets runbook (latest)
 
 - `supabase/rotate-pin.sh <user> <pin>`: GoTrue admin API with the service key

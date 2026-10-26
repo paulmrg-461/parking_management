@@ -67,6 +67,8 @@ void main() {
     expect(find.text('Mensualidades'), findsOneWidget);
     expect(find.text('ABC123'), findsOneWidget);
     expect(find.text('1/1/2026 – 31/1/2026 · \$100.000'), findsOneWidget);
+    // The sample pass ended in January, so it is shown as expired.
+    expect(find.text('Vencida'), findsOneWidget);
   });
 
   testWidgets('Failure: a failed toggle keeps the list and shows a SnackBar', (

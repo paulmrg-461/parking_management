@@ -107,7 +107,7 @@ class MonthlyPassesCubit extends ResilientCubit<MonthlyPassesState> {
       final loadedVehicles = await vehicles;
       emit(
         MonthlyPassesLoaded(
-          monthlyPasses: passes,
+          monthlyPasses: sortMonthlyPasses(passes),
           pendingPayments: pending,
           vehicles: loadedVehicles,
           plates: {

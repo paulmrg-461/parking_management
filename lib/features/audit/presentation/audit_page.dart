@@ -10,6 +10,7 @@ import '../../../core/receipt/pdf_share.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_state.dart';
 import '../../../core/widgets/skeleton.dart';
 import '../application/audit_cubit.dart';
@@ -212,7 +213,10 @@ class _AuditPageState extends State<AuditPage> {
                     onRetry: () => context.read<AuditCubit>().load(),
                   ),
                   final AuditLoaded loaded => loaded.entries.isEmpty
-                      ? Center(child: Text(l10n.auditEmpty))
+                      ? EmptyState(
+                          message: l10n.auditEmpty,
+                          icon: Icons.history,
+                        )
                       : RefreshIndicator(
                           onRefresh: () => context.read<AuditCubit>().load(),
                           child: ListView.builder(

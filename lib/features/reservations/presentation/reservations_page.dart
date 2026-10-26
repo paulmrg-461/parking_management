@@ -7,6 +7,7 @@ import '../../../core/l10n/l10n.dart';
 import '../../../core/state/submission.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_state.dart';
 import '../../../core/widgets/list_page_scaffold.dart';
 import '../../../core/widgets/skeleton.dart';
@@ -86,16 +87,9 @@ class _List extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (loaded.reservations.isEmpty) {
-      return ListView(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(Space.xl),
-            child: Text(
-              context.l10n.reservationsEmpty,
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ],
+      return EmptyState(
+        message: context.l10n.reservationsEmpty,
+        icon: Icons.event_available_outlined,
       );
     }
     return ListView.builder(

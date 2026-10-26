@@ -107,6 +107,9 @@ void main() {
     expect(find.text('XYZ999'), findsOneWidget);
     expect(find.widgetWithText(FilledButton, 'Cobrar'), findsNWidgets(2));
     expect(find.text('Buscar por placa'), findsOneWidget);
+    // Sessions entered in 2026-01 are long stays by the test clock.
+    expect(find.text('Más de 24 h'), findsNWidgets(2));
+    expect(find.textContaining('h'), findsWidgets);
   });
 
   testWidgets('Success: searching filters the list through the cubit', (
