@@ -371,6 +371,21 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 - Ops: `healthcheck.sh` (exit 1 on failure, `HEALTHCHECK_WEBHOOK` alerts) and
   `diagnostics.sh` (stuck sessions/shifts, backlog, client errors, sizes).
 
+## Latest verification (2026-10-26)
+
+- `flutter test`: 614 passed (+1 live-stack integration skipped); `flutter
+  analyze` 129 infos, all SDK `deprecated_member_use` (zero warnings/errors);
+  `flutter build web --release` OK.
+- `supabase/tests/run.sh` passed (migrations `0001`–`0046`); `e2e.sh` passed
+  (login → check-in → check-out → report → history).
+- `healthcheck.sh`: 0 failures (one warning for a dev shift left open >12 h).
+- UI/UX batches landed this session: reports comparison (screen, PDF, CSV),
+  remember payment method, shift confirmations + mismatch guard, Ctrl/Cmd+K,
+  reservations expiry chip + jump to check-in, continuous "Nuevo cobro",
+  shared plate input, staggered rows, users role filter, passes plate search,
+  monthly-pass chip on check-out, device appearance, and the "already inside"
+  check-in warning.
+
 ## Backlog / next moves
 
 - `5.4` contract migration: drop the missing-header fallback once every client
