@@ -229,6 +229,7 @@
   "vehicleSendWhatsapp": "Send receipt via WhatsApp",
   "vehicleWhatsappReady": "Hi, your vehicle {plate} is ready for pickup.",
   "@vehicleWhatsappReady": {"placeholders": {"plate": {"type": "String"}}},
+  "vehicleChargeAction": "Charge at checkout",
   "vehicleWhatsappReadyAction": "Notify it is ready",
   "vehicleWhatsappReceipt": "Hi, here is the receipt for plate {plate}:",
   "@vehicleWhatsappReceipt": {"placeholders": {"plate": {"type": "String"}}},

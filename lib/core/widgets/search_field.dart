@@ -39,6 +39,7 @@ class SearchField extends StatefulWidget {
     required this.onChanged,
     this.fieldKey,
     this.hint,
+    this.initialValue,
     this.textCapitalization = TextCapitalization.characters,
   });
 
@@ -46,6 +47,7 @@ class SearchField extends StatefulWidget {
   final String? hint;
   final ValueChanged<String> onChanged;
   final Key? fieldKey;
+  final String? initialValue;
   final TextCapitalization textCapitalization;
 
   @override
@@ -70,6 +72,10 @@ class _SearchFieldState extends State<SearchField> {
     super.initState();
     // The last field mounted wins; go_router keeps one page alive at a time.
     _activeSearchField = this;
+    final initial = widget.initialValue?.trim();
+    if (initial != null && initial.isNotEmpty) {
+      _controller.text = initial;
+    }
   }
 
   @override

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 
 import '../../../core/error/failure.dart';
@@ -27,7 +28,11 @@ import '../domain/entities/vehicle_history.dart';
 import 'customer_message.dart';
 
 class VehicleHistoryPage extends StatefulWidget {
-  const VehicleHistoryPage({super.key, this.initialPlate});
+  const VehicleHistoryPage({super.key, this.initialPlate, this.onCharge});
+
+  /// Opens check-out filtered by the plate. Injectable so a widget test can
+  /// record it without a router.
+  final void Function(BuildContext context, String plate)? onCharge;
 
   final String? initialPlate;
 
@@ -133,6 +138,7 @@ class _VehicleHistoryPageState extends State<VehicleHistoryPage> {
                   key: ValueKey(state.history!.plate),
                   history: state.history!,
                   canManage: _canManage(context),
+                  onCharge: widget.onCharge ?? _chargeInCheckOut,
                 ),
               },
             ),
@@ -171,15 +177,21 @@ class _Hint extends StatelessWidget {
   }
 }
 
+void _chargeInCheckOut(BuildContext context, String plate) => context.push(
+  '/check-out?plate=${Uri.encodeQueryComponent(plate)}',
+);
+
 class _HistoryBody extends StatefulWidget {
   const _HistoryBody({
     super.key,
     required this.history,
     required this.canManage,
+    required this.onCharge,
   });
 
   final VehicleHistory history;
   final bool canManage;
+  final void Function(BuildContext context, String plate) onCharge;
 
   @override
   State<_HistoryBody> createState() => _HistoryBodyState();
@@ -446,6 +458,7 @@ class _HistoryBodyState extends State<_HistoryBody> {
               session: session,
               plate: history.plate,
               phone: history.ownerPhone,
+              onCharge: widget.onCharge,
             ),
       ],
     );
@@ -475,11 +488,13 @@ class _SessionTile extends StatelessWidget {
   const _SessionTile({
     required this.session,
     required this.plate,
+    required this.onCharge,
     this.phone,
   });
 
   final VehicleHistorySession session;
   final String plate;
+  final void Function(BuildContext context, String plate) onCharge;
   final String? phone;
 
   ReceiptData get _receipt => ReceiptData(
@@ -627,6 +642,13 @@ class _SessionTile extends StatelessWidget {
                     visualDensity: VisualDensity.compact,
                     icon: const Icon(Icons.chat_outlined),
                     onPressed: () => _sendWhatsapp(context),
+                  ),
+                if (session.isOpen)
+                  IconButton(
+                    tooltip: l10n.vehicleChargeAction,
+                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(Icons.point_of_sale_outlined),
+                    onPressed: () => onCharge(context, plate),
                   ),
                 if (session.isOpen && phone != null)
                   IconButton(

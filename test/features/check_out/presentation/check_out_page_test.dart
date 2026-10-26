@@ -89,7 +89,7 @@ void main() {
   late _FakeCheckOutRepository repository;
   late FakeCheckOutRepository occupancy;
 
-  Future<void> pumpPage(WidgetTester tester) async {
+  Future<void> pumpPage(WidgetTester tester, {String? initialQuery}) async {
     repository = _FakeCheckOutRepository();
     occupancy = FakeCheckOutRepository();
     final vehicles = FakeVehicleRepository(const [
@@ -112,7 +112,7 @@ void main() {
               create: (_) => DashboardCubit(occupancy),
             ),
           ],
-          child: const CheckOutPage(),
+          child: CheckOutPage(initialQuery: initialQuery),
         ),
       ),
     );
@@ -363,5 +363,18 @@ void main() {
     final field = tester.widget<TextField>(find.byType(TextField).first);
     expect(field.controller!.text, isEmpty);
     expect(field.focusNode!.hasFocus, isTrue);
+  });
+
+  testWidgets('Success: an initial plate arrives filtered and prefilled', (
+    tester,
+  ) async {
+    await pumpPage(tester, initialQuery: 'XYZ');
+
+    expect(find.text('ABC123'), findsNothing);
+    expect(find.text('XYZ999'), findsOneWidget);
+    expect(
+      tester.widget<TextField>(find.byType(TextField).first).controller!.text,
+      'XYZ',
+    );
   });
 }

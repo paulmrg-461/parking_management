@@ -35,7 +35,10 @@ import 'payment_method_dialog.dart';
 /// lets an operator search by plate (debounced in the cubit) and close one
 /// out, showing a receipt on success. Long lists page in on scroll.
 class CheckOutPage extends StatefulWidget {
-  const CheckOutPage({super.key});
+  const CheckOutPage({super.key, this.initialQuery});
+
+  /// Plate to filter by (e.g. arriving from the vehicle history).
+  final String? initialQuery;
 
   @override
   State<CheckOutPage> createState() => _CheckOutPageState();
@@ -53,6 +56,10 @@ class _CheckOutPageState extends State<CheckOutPage> {
     super.initState();
     unawaited(context.read<CheckOutCubit>().loadOpenSessions());
     _restoreRememberedMethod();
+    final query = widget.initialQuery?.trim();
+    if (query != null && query.isNotEmpty) {
+      context.read<CheckOutCubit>().search(query);
+    }
   }
 
   /// The last method the operator charged with, so a fleet that always pays
@@ -115,6 +122,7 @@ class _CheckOutPageState extends State<CheckOutPage> {
               padding: const EdgeInsets.all(16),
               child: SearchField(
                 label: context.l10n.searchPlate,
+                initialValue: widget.initialQuery,
                 onChanged: context.read<CheckOutCubit>().search,
               ),
             ),

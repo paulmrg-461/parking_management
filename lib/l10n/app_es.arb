@@ -240,6 +240,7 @@
   "vehicleSendWhatsapp": "Enviar recibo por WhatsApp",
   "vehicleWhatsappReady": "Hola, tu vehículo {plate} está listo para retirar.",
   "@vehicleWhatsappReady": {"placeholders": {"plate": {"type": "String"}}},
+  "vehicleChargeAction": "Cobrar en caja",
   "vehicleWhatsappReadyAction": "Avisar que está listo",
   "vehicleWhatsappReceipt": "Hola, te compartimos el recibo del vehículo {plate}:",
   "@vehicleWhatsappReceipt": {"placeholders": {"plate": {"type": "String"}}},

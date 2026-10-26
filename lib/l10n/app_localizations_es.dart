@@ -715,6 +715,9 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get vehicleChargeAction => 'Cobrar en caja';
+
+  @override
   String get vehicleWhatsappReadyAction => 'Avisar que está listo';
 
   @override

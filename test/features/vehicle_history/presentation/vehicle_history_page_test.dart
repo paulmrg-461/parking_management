@@ -299,4 +299,32 @@ void main() {
     expect(find.byTooltip('Avisar que está listo'), findsOneWidget);
     expect(find.byTooltip('Enviar recibo por WhatsApp'), findsNothing);
   });
+
+  testWidgets('Success: an open session offers to charge it in check-out', (
+    tester,
+  ) async {
+    String? charged;
+    final repository = FakeVehicleHistoryRepository(
+      history: sampleHistory(withOpenSession: true),
+    );
+    final cubit = VehicleHistoryCubit(repository);
+    addTearDown(cubit.close);
+    await tester.pumpWidget(
+      testApp(
+        BlocProvider.value(
+          value: cubit,
+          child: VehicleHistoryPage(
+            initialPlate: 'ABC123',
+            onCharge: (_, plate) => charged = plate,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Cobrar en caja'));
+    await tester.pumpAndSettle();
+
+    expect(charged, 'ABC123');
+  });
 }

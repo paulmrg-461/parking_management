@@ -121,6 +121,8 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   under `reduce motion`).
 - Shift cash actions (open, close, movement, correction) confirm with a
   SnackBar and a screen-reader announcement instead of happening silently.
+- An open session in the vehicle history offers "Cobrar en caja", opening
+  check-out filtered by that plate.
 - The check-out receipt offers "Nuevo cobro", which clears the search and
   refocuses it so the next car can be charged without leaving the screen.
 - Check-out remembers the last payment method and preselects it (a pass only
@@ -182,7 +184,7 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Tests
 
-- 595 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
+- 597 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
   integration test that runs only against a live stack.
 - SQL/RLS/RPC regressions covering capacity, shifts, discounts, passes,
   reservations, multi-site isolation, audit, diagnostics and retention.
@@ -212,7 +214,7 @@ Captured on 2026-10-24 against the local self-hosted stack:
 
 | Check | Result |
 |---|---|
-| `flutter test` | 595 passed (+1 live-stack integration skipped) |
+| `flutter test` | 597 passed (+1 live-stack integration skipped) |
 | `flutter analyze` | 0 errors, 0 warnings (only SDK deprecation infos) |
 | `flutter build web --release` | OK |
 | `supabase/tests/run.sh` | Passed (migrations + RPC/RLS regressions) |

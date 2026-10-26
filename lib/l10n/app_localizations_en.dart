@@ -710,6 +710,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get vehicleChargeAction => 'Charge at checkout';
+
+  @override
   String get vehicleWhatsappReadyAction => 'Notify it is ready';
 
   @override

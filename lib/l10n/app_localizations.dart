@@ -1400,6 +1400,12 @@ abstract class AppLocalizations {
   /// **'Hola, tu vehículo {plate} está listo para retirar.'**
   String vehicleWhatsappReady(String plate);
 
+  /// No description provided for @vehicleChargeAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Cobrar en caja'**
+  String get vehicleChargeAction;
+
   /// No description provided for @vehicleWhatsappReadyAction.
   ///
   /// In es, this message translates to:

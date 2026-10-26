@@ -127,7 +127,7 @@ GoRoute _homeRoute(AuthCubit auth) => GoRoute(
       path: 'check-out',
       builder: (context, state) => BlocProvider<CheckOutCubit>(
         create: (_) => serviceLocator<CheckOutCubit>(),
-        child: const CheckOutPage(),
+        child: CheckOutPage(initialQuery: state.uri.queryParameters['plate']),
       ),
     ),
     GoRoute(
