@@ -3,7 +3,7 @@ import '../../../core/sync/pending_mutation.dart';
 import 'parking_settings_local_data_source.dart';
 import 'parking_settings_remote_data_source.dart';
 
-/// Replays a queued settings edit as `PATCH /api/settings` and refreshes the
+/// Replays a queued settings edit through PostgREST and refreshes the
 /// cache with the authoritative merged record.
 class ParkingSettingsMutationReplayer extends MutationReplayer {
   ParkingSettingsMutationReplayer(this._remote, this._local);

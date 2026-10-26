@@ -28,4 +28,19 @@ abstract final class Formatters {
         ? l10n.durationMinutes(minutes)
         : l10n.durationHoursMinutes(hours, minutes % 60);
   }
+
+  /// Human-readable size for diagnostics/storage counters.
+  static String bytes(int value) {
+    if (value < 1024) {
+      return '$value B';
+    }
+    const units = ['KB', 'MB', 'GB', 'TB'];
+    var size = value / 1024;
+    var unit = 0;
+    while (size >= 1024 && unit < units.length - 1) {
+      size /= 1024;
+      unit++;
+    }
+    return '${size.toStringAsFixed(size >= 10 ? 0 : 1)} ${units[unit]}';
+  }
 }

@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../app/di/injection.dart';
 import '../../../../core/l10n/l10n.dart';
 import '../../../../core/receipt/receipt_data.dart';
+import '../../../../core/receipt/receipt_labels.dart';
 import '../../../../core/widgets/submission_feedback.dart';
 import '../application/printer_cubit.dart';
 import '../domain/entities/print_outcome.dart';
@@ -69,7 +70,10 @@ class _ReceiptPrintSheetContent extends StatelessWidget {
               icon: const Icon(Icons.print),
               label: Text(l10n.printSystem),
               onPressed: () async {
-                await printer.printPdf(data);
+                await printer.printPdf(
+                  data,
+                  ReceiptLabels.forLanguage(l10n.localeName),
+                );
                 if (context.mounted) {
                   Navigator.of(context).pop();
                 }
@@ -136,7 +140,11 @@ class _BluetoothPrinterList extends StatelessWidget {
                 title: Text(printer.name),
                 subtitle: Text(printer.address),
                 onTap: () =>
-                    context.read<PrinterCubit>().print(printer, data),
+                    context.read<PrinterCubit>().print(
+                      printer,
+                      data,
+                      ReceiptLabels.forLanguage(l10n.localeName),
+                    ),
               ),
         ],
       ),

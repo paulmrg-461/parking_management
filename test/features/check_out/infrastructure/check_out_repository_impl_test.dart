@@ -1,11 +1,15 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:parking_management/core/lot/lot_session.dart';
 import 'package:parking_management/core/pagination/paged_result.dart';
 import 'package:parking_management/core/sync/pending_mutation.dart';
 import 'package:parking_management/core/error/failure.dart';
+import 'package:parking_management/features/check_out/domain/entities/check_out_preview.dart';
 import 'package:parking_management/features/check_out/domain/entities/check_out_receipt.dart';
 import 'package:parking_management/features/check_out/domain/entities/open_session.dart';
+import 'package:parking_management/features/check_out/domain/entities/occupancy_snapshot.dart';
+import 'package:parking_management/features/check_out/domain/entities/today_summary.dart';
 import 'package:parking_management/features/check_out/infrastructure/check_out_remote_data_source.dart';
 import 'package:parking_management/features/check_out/infrastructure/check_out_repository_impl.dart';
 
@@ -18,21 +22,46 @@ class _FakeRemote implements CheckOutRemoteDataSource {
   final Failure? error;
   DateTime? clientExitTimeUsed;
   String? idempotencyKeyUsed;
+  String? paymentMethodUsed;
+  int discountAmountUsed = 0;
+  String? discountReasonUsed;
+
+  @override
+  Future<TodaySummary> todaySummary() async => TodaySummary.empty;
+
+  @override
+  Future<OccupancySnapshot> occupancy() async =>
+      const OccupancySnapshot(totalOpen: 0, totalCapacity: 0);
 
   @override
   Future<PagedResult<OpenSession>> listOpenSessions({
     required int limit,
     required int offset,
+    String? plate,
   }) async => const PagedResult([]);
+
+  @override
+  Future<CheckOutPreview> preview(int sessionId) async =>
+      CheckOutPreview(sessionId: sessionId, amount: 5000);
+
 
   @override
   Future<CheckOutReceipt> checkOut(
     int sessionId, {
     DateTime? clientExitTime,
     String? idempotencyKey,
+    String paymentMethod = 'cash',
+    int discountAmount = 0,
+    String? discountReason,
+    bool lostTicket = false,
+    String? lostTicketReason,
+    int? lotId,
   }) async {
     clientExitTimeUsed = clientExitTime;
     idempotencyKeyUsed = idempotencyKey;
+    paymentMethodUsed = paymentMethod;
+    discountAmountUsed = discountAmount;
+    discountReasonUsed = discountReason;
     final error = this.error;
     if (error != null) {
       throw error;
@@ -53,19 +82,28 @@ void main() {
 
   test('Success: checkOut sends an Idempotency-Key but no clientExitTime', () async {
     final remote = _FakeRemote(receiptToReturn: receipt);
-    final repository = CheckOutRepositoryImpl(remote, FakeSyncOutbox());
+    final repository = CheckOutRepositoryImpl(remote, FakeSyncOutbox(), LotSession());
 
-    final result = await repository.checkOut(1);
+    final result = await repository.checkOut(
+      1,
+      paymentMethod: 'card',
+      discountAmount: 1000,
+      discountReason: 'cortesia',
+    );
 
     expect(result, receipt);
     expect(remote.clientExitTimeUsed, isNull);
     expect(remote.idempotencyKeyUsed, isNotEmpty);
+    expect(remote.paymentMethodUsed, 'card');
+    expect(remote.discountAmountUsed, 1000);
+    expect(remote.discountReasonUsed, 'cortesia');
   });
 
   test('Failure: NetworkFailure queues a checkOut/close mutation and returns a pending receipt instead of rethrowing', () async {
     final remote = _FakeRemote(error: const NetworkFailure('offline'));
     final outbox = FakeSyncOutbox();
-    final repository = CheckOutRepositoryImpl(remote, outbox);
+    final lots = LotSession()..select(2);
+    final repository = CheckOutRepositoryImpl(remote, outbox, lots);
 
     final result = await repository.checkOut(1);
 
@@ -78,8 +116,10 @@ void main() {
     expect(outbox.enqueued.single.entityId, 1);
     final payload =
         jsonDecode(outbox.enqueued.single.payloadJson!) as Map<String, dynamic>;
+    expect(payload['lot_id'], 2);
     expect(payload['client_exit_time'], endsWith('Z'));
     expect(payload['client_ref'], remote.idempotencyKeyUsed);
+    expect(payload['payment_method'], 'cash');
   });
 
   test(
@@ -87,7 +127,7 @@ void main() {
     () async {
       final remote = _FakeRemote(error: const NetworkFailure('offline'));
       final outbox = FakeSyncOutbox();
-      final repository = CheckOutRepositoryImpl(remote, outbox);
+      final repository = CheckOutRepositoryImpl(remote, outbox, LotSession());
 
       await repository.checkOut(1);
       await repository.checkOut(2);
@@ -102,7 +142,7 @@ void main() {
   test('Security/robustness: the queued client_exit_time is the attempt time, captured at call time', () async {
     final remote = _FakeRemote(error: const NetworkFailure('offline'));
     final outbox = FakeSyncOutbox();
-    final repository = CheckOutRepositoryImpl(remote, outbox);
+    final repository = CheckOutRepositoryImpl(remote, outbox, LotSession());
 
     final before = DateTime.now();
     await repository.checkOut(1);
@@ -119,7 +159,7 @@ void main() {
   test('Failure: a non-network failure still propagates un-queued', () async {
     final remote = _FakeRemote(error: const ValidationFailure('Conflict'));
     final outbox = FakeSyncOutbox();
-    final repository = CheckOutRepositoryImpl(remote, outbox);
+    final repository = CheckOutRepositoryImpl(remote, outbox, LotSession());
 
     await expectLater(
       repository.checkOut(1),
@@ -135,7 +175,7 @@ void main() {
       final remote = _FakeRemote(
         error: const AuthenticationFailure('Invalid credentials'),
       );
-      final repository = CheckOutRepositoryImpl(remote, outbox);
+      final repository = CheckOutRepositoryImpl(remote, outbox, LotSession());
 
       await expectLater(
         repository.checkOut(1),

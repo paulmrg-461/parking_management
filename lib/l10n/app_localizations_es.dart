@@ -13,6 +13,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get appTitle => 'Parqueadero';
 
   @override
+  String get actionClose => 'Cerrar';
+
+  @override
   String get actionCancel => 'Cancelar';
 
   @override
@@ -228,6 +231,218 @@ class AppLocalizationsEs extends AppLocalizations {
   String get entitySettings => 'Configuración';
 
   @override
+  String get categoryFullHint =>
+      'Las categorías llenas aparecen deshabilitadas.';
+
+  @override
+  String get navLots => 'Sedes';
+
+  @override
+  String lotMembersTitle(String name) {
+    return 'Miembros de $name';
+  }
+
+  @override
+  String get lotMembersEmpty => 'Esta sede no tiene usuarios';
+
+  @override
+  String get userInactive => 'inactivo';
+
+  @override
+  String get lotsTitle => 'Sedes del parqueadero';
+
+  @override
+  String get navAudit => 'Auditoría';
+
+  @override
+  String get navDiagnostics => 'Diagnóstico';
+
+  @override
+  String get diagnosticsTitle => 'Diagnóstico';
+
+  @override
+  String get diagnosticsWhatsapp => 'WhatsApp';
+
+  @override
+  String get diagnosticsWhatsappPending => 'En cola';
+
+  @override
+  String get diagnosticsWhatsappFailedCount => 'Fallidos';
+
+  @override
+  String get diagnosticsWhatsappSent => 'Enviados (24 h)';
+
+  @override
+  String get diagnosticsWhatsappEmpty =>
+      'Sin mensajes de WhatsApp en el periodo';
+
+  @override
+  String diagnosticsWhatsappAttempts(int count) {
+    return '$count intentos';
+  }
+
+  @override
+  String get diagnosticsSystem => 'Sistema';
+
+  @override
+  String diagnosticsMigrations(int count) {
+    return 'Migraciones aplicadas ($count)';
+  }
+
+  @override
+  String diagnosticsLots(int active, int total) {
+    return 'Sedes activas: $active de $total';
+  }
+
+  @override
+  String get diagnosticsOpenSessions => 'Sesiones abiertas';
+
+  @override
+  String get diagnosticsStaleSessions => 'Sesiones abiertas +24 h';
+
+  @override
+  String get diagnosticsOpenShifts => 'Turnos abiertos +12 h';
+
+  @override
+  String get diagnosticsPendingPayments => 'Pagos de mensualidad pendientes';
+
+  @override
+  String get diagnosticsReservations => 'Reservas activas';
+
+  @override
+  String get diagnosticsIdempotency => 'Claves de idempotencia';
+
+  @override
+  String get diagnosticsNotifications => 'Notificaciones';
+
+  @override
+  String get diagnosticsPendingPush => 'Pendientes de push';
+
+  @override
+  String get diagnosticsDeadPush => 'Fallidas tras 3 intentos';
+
+  @override
+  String get diagnosticsUnread => 'Sin leer / total';
+
+  @override
+  String get diagnosticsStorage => 'Almacenamiento';
+
+  @override
+  String diagnosticsErrors(int count) {
+    return 'Errores de la app ($count)';
+  }
+
+  @override
+  String get diagnosticsErrorsEmpty =>
+      'Sin errores reportados en los últimos 7 días';
+
+  @override
+  String get diagnosticsErrorDetail => 'Detalle del error';
+
+  @override
+  String get auditExport => 'Exportar';
+
+  @override
+  String get auditExportPdf => 'Exportar PDF';
+
+  @override
+  String get auditExportCsv => 'Copiar CSV';
+
+  @override
+  String get auditCopied => 'CSV copiado al portapapeles';
+
+  @override
+  String get auditActor => 'Actor';
+
+  @override
+  String get auditAllActors => 'Todos';
+
+  @override
+  String get auditTitle => 'Auditoría';
+
+  @override
+  String get auditTable => 'Tabla';
+
+  @override
+  String get auditAllTables => 'Todas';
+
+  @override
+  String get auditFilterDates => 'Filtrar por fecha';
+
+  @override
+  String get auditEmpty => 'Sin cambios registrados';
+
+  @override
+  String get auditChangesTitle => 'Cambios';
+
+  @override
+  String get lotAdd => 'Nueva sede';
+
+  @override
+  String get lotCode => 'Código (2-10 letras/números)';
+
+  @override
+  String get lotLabel => 'Sede';
+
+  @override
+  String get lotName => 'Nombre de la sede';
+
+  @override
+  String get lotAddress => 'Dirección (opcional)';
+
+  @override
+  String get lotsEmpty => 'Aún no hay sedes';
+
+  @override
+  String get lotSwitch => 'Cambiar';
+
+  @override
+  String lotMembers(int count) {
+    return '$count usuarios';
+  }
+
+  @override
+  String get navReservations => 'Reservas';
+
+  @override
+  String get reservationsTitle => 'Reservas de cupo';
+
+  @override
+  String get reservationAdd => 'Nueva reserva';
+
+  @override
+  String get reservationsEmpty => 'No hay reservas activas';
+
+  @override
+  String reservationExpiresIn(String duration) {
+    return 'Vence en $duration';
+  }
+
+  @override
+  String reservationUntil(String when) {
+    return 'Hasta $when';
+  }
+
+  @override
+  String reservationUntilLabel(String when) {
+    return 'Reservar hasta $when';
+  }
+
+  @override
+  String get reservationNotes => 'Notas (opcional)';
+
+  @override
+  String get reservationCancel => 'Cancelar reserva';
+
+  @override
+  String get reservationCancelTitle => '¿Cancelar la reserva?';
+
+  @override
+  String reservationCancelBody(String plate) {
+    return 'Se liberará el cupo reservado para $plate.';
+  }
+
+  @override
   String get navHome => 'Inicio';
 
   @override
@@ -261,6 +476,340 @@ class AppLocalizationsEs extends AppLocalizations {
   String get navContact => 'Contacto';
 
   @override
+  String get navNotifications => 'Avisos';
+
+  @override
+  String get webPushTitle => 'Notificaciones del navegador';
+
+  @override
+  String get webPushSubtitle => 'Recibe avisos aunque la pestaña esté cerrada.';
+
+  @override
+  String get webPushDenied =>
+      'El navegador no dio permiso para las notificaciones';
+
+  @override
+  String get notificationsTitle => 'Notificaciones';
+
+  @override
+  String get notificationsEmpty => 'No hay notificaciones';
+
+  @override
+  String get notificationsMarkAll => 'Marcar todo leído';
+
+  @override
+  String get navHistory => 'Historial';
+
+  @override
+  String get homeShift => 'Turno / Caja';
+
+  @override
+  String get checkOutNoShift =>
+      'No hay turno abierto: este cobro no entrará en el arqueo.';
+
+  @override
+  String get shiftUnavailable => 'Turno no disponible';
+
+  @override
+  String get shiftOffline =>
+      'Necesitas conexión para operar la caja y el arqueo.';
+
+  @override
+  String get shiftHistoryFilter => 'Filtrar por fecha';
+
+  @override
+  String get shiftHistoryClearFilter => 'Quitar filtro';
+
+  @override
+  String get shiftHistoryEmpty => 'No hay turnos en el rango seleccionado';
+
+  @override
+  String get shiftCardSales => 'Ventas con tarjeta';
+
+  @override
+  String get shiftTransferSales => 'Ventas por transferencia';
+
+  @override
+  String get shiftPassSales => 'Mensualidades';
+
+  @override
+  String get shiftSessionCount => 'Salidas cobradas';
+
+  @override
+  String get shiftCashMovements => 'Movimientos de caja';
+
+  @override
+  String get shiftReconciliation => 'Arqueo';
+
+  @override
+  String get shiftNotesTitle => 'Notas';
+
+  @override
+  String get actionExportPdf => 'Exportar PDF';
+
+  @override
+  String get actionShare => 'Compartir';
+
+  @override
+  String get shiftTitle => 'Turno / Caja';
+
+  @override
+  String get shiftNoOpen => 'No hay turno abierto';
+
+  @override
+  String get shiftOpeningFloat => 'Base inicial (COP)';
+
+  @override
+  String get shiftOpen => 'Abrir turno';
+
+  @override
+  String get shiftOpenTitle => 'Turno abierto';
+
+  @override
+  String get shiftOpenedDone => 'Turno abierto correctamente';
+
+  @override
+  String get shiftClosedDone => 'Turno cerrado correctamente';
+
+  @override
+  String get shiftMovementDone => 'Movimiento de caja registrado';
+
+  @override
+  String get shiftAdjustedDone => 'Cierre del turno corregido';
+
+  @override
+  String shiftOpenedAt(String time) {
+    return 'Abierto: $time';
+  }
+
+  @override
+  String get shiftSales => 'Ventas';
+
+  @override
+  String get shiftCashSales => 'Ventas en efectivo';
+
+  @override
+  String get shiftWithdrawals => 'Retiros';
+
+  @override
+  String get shiftDeposits => 'Ingresos de efectivo';
+
+  @override
+  String get shiftDiscounts => 'Descuentos';
+
+  @override
+  String get shiftPassPayments => 'Mensualidades cobradas';
+
+  @override
+  String get shiftPassCash => 'Mensualidades en efectivo';
+
+  @override
+  String get shiftExpectedCash => 'Efectivo esperado';
+
+  @override
+  String get shiftSessions => 'Salidas';
+
+  @override
+  String get shiftWithdraw => 'Retirar efectivo';
+
+  @override
+  String get shiftDeposit => 'Ingresar efectivo';
+
+  @override
+  String get shiftClose => 'Cerrar turno';
+
+  @override
+  String get shiftClosedTitle => 'Turno cerrado';
+
+  @override
+  String get shiftAdjust => 'Corregir cierre de turno';
+
+  @override
+  String get shiftCountedCash => 'Efectivo contado';
+
+  @override
+  String get shiftDifference => 'Diferencia';
+
+  @override
+  String get shiftNotes => 'Notas';
+
+  @override
+  String get shiftReason => 'Motivo';
+
+  @override
+  String get shiftHistory => 'Turnos recientes';
+
+  @override
+  String get errorShiftAlreadyOpen => 'Ya tienes un turno abierto';
+
+  @override
+  String get errorNoOpenShift => 'No hay un turno abierto';
+
+  @override
+  String get errorShiftNotFound => 'Turno no encontrado';
+
+  @override
+  String get errorLastAdmin => 'No puedes dejar el sistema sin administradores';
+
+  @override
+  String get errorCannotDeleteSelf => 'No puedes eliminar tu propia cuenta';
+
+  @override
+  String get errorPaymentNotFound => 'Pago no encontrado';
+
+  @override
+  String get errorPaymentAlreadyProcessed => 'Este pago ya fue procesado';
+
+  @override
+  String get errorShiftStillOpen => 'El turno sigue abierto';
+
+  @override
+  String get errorShiftAdjustReason => 'Indica el motivo de la corrección';
+
+  @override
+  String get errorInvalidOpeningFloat => 'La base inicial no es válida';
+
+  @override
+  String get errorInvalidCountedCash => 'El efectivo contado no es válido';
+
+  @override
+  String get errorInvalidCashMovement => 'El movimiento de caja no es válido';
+
+  @override
+  String get errorCashMovementReason => 'Indica el motivo del movimiento';
+
+  @override
+  String get errorInvalidDiscount => 'El descuento no es válido';
+
+  @override
+  String get errorDiscountReason => 'Indica el motivo del descuento';
+
+  @override
+  String get errorVehicleBlacklisted =>
+      'Este vehículo está bloqueado; un administrador debe desbloquearlo';
+
+  @override
+  String get vehiclePhone => 'Teléfono del cliente';
+
+  @override
+  String get vehiclePhoneHint => '+57 300 111 2233';
+
+  @override
+  String get vehiclePhoneTitle => 'Teléfono para avisos';
+
+  @override
+  String get vehicleAddPhone => 'Agregar teléfono';
+
+  @override
+  String get vehicleEditPhone => 'Editar teléfono';
+
+  @override
+  String get vehicleSendWhatsapp => 'Enviar recibo por WhatsApp';
+
+  @override
+  String vehicleWhatsappReady(String plate) {
+    return 'Hola, tu vehículo $plate está listo para retirar.';
+  }
+
+  @override
+  String get vehicleWhatsappReadyAction => 'Avisar que está listo';
+
+  @override
+  String vehicleWhatsappReceipt(String plate) {
+    return 'Hola, te compartimos el recibo del vehículo $plate:';
+  }
+
+  @override
+  String vehicleWhatsappHello(String plate) {
+    return 'Hola, te escribimos del parqueadero por el vehículo $plate.';
+  }
+
+  @override
+  String get vehicleWhatsappThanks => '¡Gracias por tu visita!';
+
+  @override
+  String get errorInvalidPhone => 'Escribe un teléfono válido (7 a 15 dígitos)';
+
+  @override
+  String get errorWhatsappUnavailable =>
+      'No se pudo abrir WhatsApp en este dispositivo';
+
+  @override
+  String get vehicleNotes => 'Notas del vehículo';
+
+  @override
+  String get vehicleNotesHint => 'Rayones, incidentes, acuerdos…';
+
+  @override
+  String get vehicleAddNotes => 'Agregar nota';
+
+  @override
+  String get vehicleEditNotes => 'Editar nota';
+
+  @override
+  String get vehicleBlacklist => 'Bloquear vehículo';
+
+  @override
+  String get vehicleUnblock => 'Desbloquear';
+
+  @override
+  String get vehicleBlacklisted => 'Bloqueado';
+
+  @override
+  String get vehicleBlacklistTitle => '¿Bloquear vehículo?';
+
+  @override
+  String vehicleBlacklistBody(String plate) {
+    return '$plate no podrá ingresar hasta que un administrador lo desbloquee.';
+  }
+
+  @override
+  String get vehicleUnblockTitle => '¿Desbloquear vehículo?';
+
+  @override
+  String vehicleUnblockBody(String plate) {
+    return '$plate podrá volver a ingresar al parqueadero.';
+  }
+
+  @override
+  String get vehicleHistoryTitle => 'Historial de vehículo';
+
+  @override
+  String get vehicleHistoryPrompt =>
+      'Busca una placa para ver sus entradas y salidas';
+
+  @override
+  String get vehicleHistoryVisits => 'Visitas';
+
+  @override
+  String get vehicleHistoryTotalSpent => 'Total pagado';
+
+  @override
+  String get vehicleHistoryAllLots => 'Todas las sedes';
+
+  @override
+  String vehicleHistoryCurrentLotVisits(int count) {
+    return 'En esta sede: $count';
+  }
+
+  @override
+  String get actionReprintTicket => 'Reimprimir ticket';
+
+  @override
+  String get vehicleHistorySessions => 'Movimientos';
+
+  @override
+  String get vehicleHistoryNoSessions => 'Sin movimientos registrados';
+
+  @override
+  String vehicleHistoryDuration(String duration) {
+    return 'Duración: $duration';
+  }
+
+  @override
+  String get vehicleHistoryOpen => 'En curso';
+
+  @override
   String get navMore => 'Más';
 
   @override
@@ -268,6 +817,27 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get settingsTitle => 'Configuración del parqueadero';
+
+  @override
+  String get settingsEvidenceRetention => 'Retención de evidencias (días)';
+
+  @override
+  String get settingsEvidenceRetentionHint =>
+      '0 = conservar siempre. Las fotos más antiguas se borran automáticamente.';
+
+  @override
+  String get settingsWhatsappAuto => 'WhatsApp automático';
+
+  @override
+  String get settingsWhatsappAutoHint =>
+      'Envía los avisos por la API de WhatsApp (requiere credenciales en el servidor). Si está apagado, se abre WhatsApp en el teléfono.';
+
+  @override
+  String get whatsappQueued => 'Mensaje en cola de WhatsApp';
+
+  @override
+  String get errorWhatsappDisabled =>
+      'El WhatsApp automático está desactivado en esta sede';
 
   @override
   String get settingsName => 'Nombre';
@@ -333,6 +903,24 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get roleOperator => 'Operador';
+
+  @override
+  String get homeTodayEmpty => 'Sin movimientos hoy';
+
+  @override
+  String get homeToday => 'Hoy';
+
+  @override
+  String get homeTodayEntries => 'Entradas';
+
+  @override
+  String get homeTodayExits => 'Salidas';
+
+  @override
+  String get homeTodayCash => 'Efectivo';
+
+  @override
+  String get homeTodayPasses => 'Mensualidades';
 
   @override
   String get homeOccupancy => 'Vehículos dentro';
@@ -450,6 +1038,11 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String checkInRepeat(String plate) {
+    return 'Repetir entrada $plate';
+  }
+
+  @override
   String get checkInSubmit => 'Registrar entrada';
 
   @override
@@ -506,6 +1099,17 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get checkOutLongStay => 'Más de 24 h';
+
+  @override
+  String checkOutEstimate(String amount) {
+    return 'Total estimado: $amount';
+  }
+
+  @override
+  String get checkOutPassCovered => 'Mensualidad activa: sin cobro';
+
+  @override
   String get checkOutCharge => 'Cobrar';
 
   @override
@@ -545,6 +1149,54 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get receiptAmount => 'Total cobrado';
+
+  @override
+  String get receiptPayment => 'Pago';
+
+  @override
+  String get receiptDiscount => 'Descuento';
+
+  @override
+  String get paymentMethodTitle => 'Método de pago';
+
+  @override
+  String get paymentCash => 'Efectivo';
+
+  @override
+  String get paymentCard => 'Tarjeta';
+
+  @override
+  String get paymentTransfer => 'Transferencia';
+
+  @override
+  String get paymentMonthlyPass => 'Mensualidad';
+
+  @override
+  String get paymentExempt => 'Exento';
+
+  @override
+  String get lostTicket => 'Ticket perdido';
+
+  @override
+  String get lostTicketHint => 'Se cobra la tarifa completa del día.';
+
+  @override
+  String get lostTicketReason => 'Motivo (ticket perdido)';
+
+  @override
+  String get lostTicketReasonRequired => 'Indica el motivo del ticket perdido';
+
+  @override
+  String get discountAmount => 'Descuento (COP)';
+
+  @override
+  String get discountReason => 'Motivo del descuento';
+
+  @override
+  String get discountReasonRequired => 'Indica el motivo del descuento';
+
+  @override
+  String get paymentUnknown => 'Otro';
 
   @override
   String get receiptTicket => 'Ticket';
@@ -641,6 +1293,38 @@ class AppLocalizationsEs extends AppLocalizations {
   String get categoryRename => 'Renombrar categoría';
 
   @override
+  String categoryCapacity(int count) {
+    return 'Capacidad: $count';
+  }
+
+  @override
+  String get categoryCapacityUnlimited => 'Sin límite de capacidad';
+
+  @override
+  String categoryCapacityTitle(String name) {
+    return 'Capacidad de $name';
+  }
+
+  @override
+  String get categoryCapacityLabel => 'Capacidad';
+
+  @override
+  String get errorCategoryFull => 'La categoría está llena';
+
+  @override
+  String get homeFull => 'Lleno';
+
+  @override
+  String homeFullCategories(String names) {
+    return 'Categorías llenas: $names';
+  }
+
+  @override
+  String reportsOccupancyOf(int open, int capacity) {
+    return 'Vehículos dentro: $open / $capacity';
+  }
+
+  @override
   String categoryDeleteTooltip(String name) {
     return 'Eliminar categoría $name';
   }
@@ -659,6 +1343,14 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String categoryFallback(int id) {
     return 'Categoría $id';
+  }
+
+  @override
+  String get vehiclesSearch => 'Buscar placa';
+
+  @override
+  String vehiclesNoMatch(String query) {
+    return 'No hay vehículos para «$query»';
   }
 
   @override
@@ -752,6 +1444,31 @@ class AppLocalizationsEs extends AppLocalizations {
   String get userAddTooltip => 'Agregar usuario';
 
   @override
+  String get userActions => 'Acciones';
+
+  @override
+  String get userResetPin => 'Restablecer PIN';
+
+  @override
+  String userResetPinTitle(String name) {
+    return 'Nuevo PIN para $name';
+  }
+
+  @override
+  String get userNewPin => 'Nuevo PIN (6 dígitos)';
+
+  @override
+  String get userDelete => 'Eliminar usuario';
+
+  @override
+  String get userDeleteTitle => '¿Eliminar usuario?';
+
+  @override
+  String userDeleteBody(String name) {
+    return 'Se eliminará la cuenta de $name. Esta acción no se puede deshacer.';
+  }
+
+  @override
   String userActiveLabel(String name) {
     return 'Usuario activo: $name';
   }
@@ -762,7 +1479,45 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get pinInvalid => 'El PIN debe tener de 4 a 6 dígitos';
+  String get pinInvalid => 'El PIN debe tener 6 dígitos';
+
+  @override
+  String get monthlyPassPendingTitle => 'Pagos pendientes';
+
+  @override
+  String monthlyPassDue(String date) {
+    return 'Vence: $date';
+  }
+
+  @override
+  String get monthlyPassWhatsapp => 'Avisar por WhatsApp';
+
+  @override
+  String monthlyPassWhatsappMessage(String plate, String date) {
+    return 'Hola, te recordamos que la mensualidad del vehículo $plate vence el $date.';
+  }
+
+  @override
+  String get monthlyPassStatusActive => 'Vigente';
+
+  @override
+  String get monthlyPassStatusUpcoming => 'Próxima';
+
+  @override
+  String get monthlyPassStatusExpired => 'Vencida';
+
+  @override
+  String get monthlyPassCharge => 'Cobrar';
+
+  @override
+  String get monthlyPassRenewalMethod => 'Método para renovación';
+
+  @override
+  String get monthlyPassAutoRenew => 'Renovación automática';
+
+  @override
+  String get monthlyPassAutoRenewHint =>
+      'Se renueva por el mismo periodo y valor al vencer';
 
   @override
   String get monthlyPassesTitle => 'Mensualidades';
@@ -820,10 +1575,59 @@ class AppLocalizationsEs extends AppLocalizations {
       'La fecha de fin debe ser posterior a la de inicio';
 
   @override
+  String get reportsAllLots => 'Todas las sedes';
+
+  @override
+  String get reportsAllLotsHint => 'Suma las ventas de todas las sedes';
+
+  @override
+  String reportsLotTickets(int count) {
+    return '$count salidas';
+  }
+
+  @override
+  String reportsLotAverage(String amount) {
+    return 'promedio $amount';
+  }
+
+  @override
+  String reportsLotShare(int percent) {
+    return '$percent% del total';
+  }
+
+  @override
+  String get reportsByLot => 'Ingresos por sede';
+
+  @override
+  String get reportsToday => 'Hoy';
+
+  @override
+  String get reportsLast7 => '7 días';
+
+  @override
+  String get reportsLast30 => '30 días';
+
+  @override
   String get reportsTitle => 'Reportes';
 
   @override
   String get reportsRangeTooltip => 'Cambiar rango de fechas';
+
+  @override
+  String reportsVsPrevious(String percent) {
+    return '$percent % vs. periodo anterior';
+  }
+
+  @override
+  String reportsPreviousTotal(String amount) {
+    return 'Antes: $amount';
+  }
+
+  @override
+  String get reportsVariationLabel => 'Variación vs. periodo anterior';
+
+  @override
+  String get reportsPreviousLabel => 'Periodo anterior';
 
   @override
   String get reportsTotalRevenue => 'Ingresos totales';
@@ -832,7 +1636,46 @@ class AppLocalizationsEs extends AppLocalizations {
   String get reportsRevenueByDay => 'Ingresos por día';
 
   @override
+  String get reportsPassRevenue => 'Mensualidades cobradas';
+
+  @override
+  String get reportsRevenueByPayment => 'Ingresos por método de pago';
+
+  @override
+  String get reportsTotalDiscounts => 'Descuentos aplicados';
+
+  @override
+  String get reportsDiscountLog => 'Detalle de descuentos';
+
+  @override
+  String reportsDiscountBy(String admin) {
+    return 'por $admin';
+  }
+
+  @override
+  String reportsDiscountedSessions(int count) {
+    return '$count salidas con descuento';
+  }
+
+  @override
   String get reportsRevenueByCategory => 'Ingresos por categoría';
+
+  @override
+  String get reportsWhatsapp => 'WhatsApp';
+
+  @override
+  String get reportsWhatsappSent => 'Enviados';
+
+  @override
+  String get reportsWhatsappFailed => 'Fallidos';
+
+  @override
+  String get reportsWhatsappPending => 'En cola';
+
+  @override
+  String reportsWhatsappDay(int sent, int failed) {
+    return '$sent enviados · $failed fallidos';
+  }
 
   @override
   String get reportsOccupancy => 'Ocupación';

@@ -173,17 +173,20 @@ class CategoryAdapter extends TypeAdapter<Category> {
     return Category(
       id: (fields[0] as num?)?.toInt(),
       name: fields[1] as String,
+      capacity: fields[2] == null ? 0 : (fields[2] as num).toInt(),
     );
   }
 
   @override
   void write(BinaryWriter writer, Category obj) {
     writer
-      ..writeByte(2)
+      ..writeByte(3)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
-      ..write(obj.name);
+      ..write(obj.name)
+      ..writeByte(2)
+      ..write(obj.capacity);
   }
 
   @override
@@ -310,13 +313,14 @@ class VehicleAdapter extends TypeAdapter<Vehicle> {
       categoryId: (fields[2] as num).toInt(),
       color: fields[3] as String?,
       brand: fields[4] as String?,
+      ownerPhone: fields[5] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Vehicle obj) {
     writer
-      ..writeByte(5)
+      ..writeByte(6)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -326,7 +330,9 @@ class VehicleAdapter extends TypeAdapter<Vehicle> {
       ..writeByte(3)
       ..write(obj.color)
       ..writeByte(4)
-      ..write(obj.brand);
+      ..write(obj.brand)
+      ..writeByte(5)
+      ..write(obj.ownerPhone);
   }
 
   @override
@@ -357,13 +363,15 @@ class MonthlyPassAdapter extends TypeAdapter<MonthlyPass> {
       endDate: fields[3] as DateTime,
       amount: (fields[4] as num).toInt(),
       active: fields[5] == null ? true : fields[5] as bool,
+      autoRenew: fields[6] == null ? false : fields[6] as bool,
+      autoRenewPaymentMethod: fields[7] == null ? 'cash' : fields[7] as String,
     );
   }
 
   @override
   void write(BinaryWriter writer, MonthlyPass obj) {
     writer
-      ..writeByte(6)
+      ..writeByte(8)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -375,7 +383,11 @@ class MonthlyPassAdapter extends TypeAdapter<MonthlyPass> {
       ..writeByte(4)
       ..write(obj.amount)
       ..writeByte(5)
-      ..write(obj.active);
+      ..write(obj.active)
+      ..writeByte(6)
+      ..write(obj.autoRenew)
+      ..writeByte(7)
+      ..write(obj.autoRenewPaymentMethod);
   }
 
   @override
@@ -407,13 +419,15 @@ class ParkingSettingsAdapter extends TypeAdapter<ParkingSettings> {
       website: fields[4] == null ? '' : fields[4] as String,
       whatsapp: fields[5] == null ? '' : fields[5] as String,
       logoVersion: fields[6] == null ? 0 : (fields[6] as num).toInt(),
+      evidenceRetentionDays: fields[7] == null ? 0 : (fields[7] as num).toInt(),
+      whatsappAuto: fields[8] == null ? false : fields[8] as bool,
     );
   }
 
   @override
   void write(BinaryWriter writer, ParkingSettings obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
@@ -427,7 +441,11 @@ class ParkingSettingsAdapter extends TypeAdapter<ParkingSettings> {
       ..writeByte(5)
       ..write(obj.whatsapp)
       ..writeByte(6)
-      ..write(obj.logoVersion);
+      ..write(obj.logoVersion)
+      ..writeByte(7)
+      ..write(obj.evidenceRetentionDays)
+      ..writeByte(8)
+      ..write(obj.whatsappAuto);
   }
 
   @override

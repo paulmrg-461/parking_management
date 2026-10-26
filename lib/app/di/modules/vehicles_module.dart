@@ -1,4 +1,4 @@
-import 'package:dio/dio.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:get_it/get_it.dart';
 
 import '../../../core/sync/sync_outbox.dart';
@@ -15,7 +15,7 @@ void registerVehiclesModule(GetIt sl) {
       HiveVehicleLocalDataSource.new,
     )
     ..registerLazySingleton<VehicleRemoteDataSource>(
-      () => DioVehicleRemoteDataSource(sl<Dio>()),
+      () => SupabaseVehicleRemoteDataSource(sl<SupabaseClient>()),
     )
     ..registerLazySingleton<VehicleRepository>(
       () => VehicleRepositoryImpl(

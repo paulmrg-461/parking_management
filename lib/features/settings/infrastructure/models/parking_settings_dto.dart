@@ -14,6 +14,8 @@ class ParkingSettingsDto {
     required this.website,
     required this.whatsapp,
     this.logoVersion = 0,
+    this.evidenceRetentionDays = 0,
+    this.whatsappAuto = false,
   });
 
   factory ParkingSettingsDto.fromJson(Map<String, dynamic> json) =>
@@ -26,6 +28,8 @@ class ParkingSettingsDto {
   final String website;
   final String whatsapp;
   final int logoVersion;
+  final int evidenceRetentionDays;
+  final bool whatsappAuto;
 
   Map<String, dynamic> toJson() => _$ParkingSettingsDtoToJson(this);
 
@@ -37,5 +41,7 @@ class ParkingSettingsDto {
     website: website,
     whatsapp: whatsapp,
     logoVersion: logoVersion,
+    evidenceRetentionDays: evidenceRetentionDays,
+    whatsappAuto: whatsappAuto,
   );
 }

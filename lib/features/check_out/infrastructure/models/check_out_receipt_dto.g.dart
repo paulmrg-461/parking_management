@@ -14,6 +14,10 @@ CheckOutReceiptDto _$CheckOutReceiptDtoFromJson(Map<String, dynamic> json) =>
       exitTime: DateTime.parse(json['exit_time'] as String),
       amountCharged: (json['amount_charged'] as num).toInt(),
       ticketNumber: json['ticket_number'] as String,
+      paymentMethod: json['payment_method'] as String?,
+      discountAmount: (json['discount_amount'] as num?)?.toInt() ?? 0,
+      discountReason: json['discount_reason'] as String?,
+      lostTicket: json['lost_ticket'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$CheckOutReceiptDtoToJson(CheckOutReceiptDto instance) =>
@@ -24,4 +28,8 @@ Map<String, dynamic> _$CheckOutReceiptDtoToJson(CheckOutReceiptDto instance) =>
       'exit_time': instance.exitTime.toIso8601String(),
       'amount_charged': instance.amountCharged,
       'ticket_number': instance.ticketNumber,
+      'payment_method': instance.paymentMethod,
+      'discount_amount': instance.discountAmount,
+      'discount_reason': instance.discountReason,
+      'lost_ticket': instance.lostTicket,
     };

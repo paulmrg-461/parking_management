@@ -19,7 +19,15 @@ class CategoryMutationReplayer extends MutationReplayer {
     if (mutation.operation == MutationOperation.delete) {
       return _remote.delete(id);
     }
-    final name = mutation.decodePayload()['name'] as String;
-    await _local.upsert(await _remote.update(id, name));
+    final payload = mutation.decodePayload();
+    final name = payload['name'] as String?;
+    if (name != null) {
+      await _local.upsert(await _remote.update(id, name));
+      return;
+    }
+    final capacity = payload['capacity'] as int?;
+    if (capacity != null) {
+      await _local.upsert(await _remote.setCapacity(id, capacity));
+    }
   }
 }

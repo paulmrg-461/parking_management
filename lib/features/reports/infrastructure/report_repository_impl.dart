@@ -1,5 +1,6 @@
 import '../domain/entities/occupancy_report.dart';
 import '../domain/entities/revenue_report.dart';
+import '../domain/entities/whatsapp_report.dart';
 import '../domain/repositories/report_repository.dart';
 import 'report_remote_data_source.dart';
 
@@ -14,12 +15,28 @@ class ReportRepositoryImpl implements ReportRepository {
   Future<RevenueReport> getRevenueReport({
     required DateTime startDate,
     required DateTime endDate,
+    bool allLots = false,
   }) async {
-    return _remote.getRevenueReport(startDate: startDate, endDate: endDate);
+    return _remote.getRevenueReport(
+      startDate: startDate,
+      endDate: endDate,
+      allLots: allLots,
+    );
   }
 
   @override
   Future<OccupancyReport> getOccupancyReport() async {
     return _remote.getOccupancyReport();
+  }
+
+  @override
+  Future<WhatsappReport> getWhatsappReport({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    return _remote.getWhatsappReport(
+      startDate: startDate,
+      endDate: endDate,
+    );
   }
 }

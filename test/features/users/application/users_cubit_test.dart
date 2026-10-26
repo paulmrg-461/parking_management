@@ -47,13 +47,29 @@ class _FakeUserRepository implements UserRepository {
     lastUpdate = command;
     return _ana;
   }
+
+  @override
+  Future<User> resetPin(int id, String pin) async {
+    if (writeError != null) {
+      throw writeError!;
+    }
+    return _ana;
+  }
+
+  @override
+  Future<void> delete(int id) async {
+    if (writeError != null) {
+      throw writeError!;
+    }
+    users.removeWhere((u) => u.id == id);
+  }
 }
 
 const _command = CreateUserCommand(
   username: 'op',
   displayName: 'Op',
   role: UserRole.operator,
-  pin: '1234',
+  pin: '123456',
 );
 
 void main() {
@@ -122,5 +138,41 @@ void main() {
 
     expect(repository.lastUpdate?.isActive, isFalse);
     expect(repository.lastUpdate?.id, 1);
+  });
+
+  test('Success: resetPin and delete go through the repository', () async {
+    await cubit.load();
+
+    await cubit.resetPin(_op, '654321');
+    await cubit.delete(_op);
+
+    expect(repository.users.map((u) => u.id), [1]);
+    expect(cubit.state, const UsersLoaded([_ana]));
+  });
+
+  test('Failure: a rejected resetPin keeps the list and reports it', () async {
+    await cubit.load();
+    repository.writeError = const ValidationFailure('InvalidPin');
+
+    await cubit.resetPin(_op, '1');
+
+    expect(
+      cubit.state,
+      const UsersLoaded([
+        _ana,
+      ], submission: SubmissionFailed('InvalidPin')),
+    );
+  });
+
+  test('Security: delete without a server id never calls the repository',
+      () async {
+    await cubit.load();
+
+    await cubit.delete(
+      const User(username: 'x', displayName: 'X', role: UserRole.operator),
+    );
+
+    expect(repository.users.map((u) => u.id), [1]);
+    expect(cubit.state, const UsersLoaded([_ana]));
   });
 }

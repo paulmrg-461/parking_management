@@ -1,10 +1,12 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:parking_management/core/lot/lot_session.dart';
 import 'package:hive_ce/hive_ce.dart';
 import 'package:parking_management/app/di/hive_registrar.g.dart';
 import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/features/monthly_passes/domain/entities/monthly_pass.dart';
+import 'package:parking_management/features/monthly_passes/domain/entities/monthly_pass_payment.dart';
 import 'package:parking_management/features/monthly_passes/infrastructure/monthly_pass_local_data_source.dart';
 import 'package:parking_management/features/monthly_passes/infrastructure/monthly_pass_remote_data_source.dart';
 import 'package:parking_management/features/monthly_passes/infrastructure/monthly_pass_repository_impl.dart';
@@ -45,6 +47,13 @@ class _FakeRemote implements MonthlyPassRemoteDataSource {
   Future<void> delete(int id) async {
     deleteCalls++;
   }
+
+  @override
+  Future<List<MonthlyPassPayment>> pendingPayments() async => const [];
+
+  @override
+  Future<MonthlyPassPayment> registerPayment(int id, String method) async =>
+      throw UnimplementedError();
 }
 
 void main() {
@@ -65,7 +74,7 @@ void main() {
   });
 
   MonthlyPassRepositoryImpl repository(_FakeRemote remote) =>
-      MonthlyPassRepositoryImpl(remote, HiveMonthlyPassLocalDataSource());
+      MonthlyPassRepositoryImpl(remote, HiveMonthlyPassLocalDataSource(LotSession()));
 
   test('Success: list returns remote monthly passes and caches them', () async {
     final result = await repository(_FakeRemote()).list();
@@ -76,7 +85,7 @@ void main() {
   test(
     'Failure: list falls back to the local cache on network failure',
     () async {
-      final local = HiveMonthlyPassLocalDataSource();
+      final local = HiveMonthlyPassLocalDataSource(LotSession());
       await MonthlyPassRepositoryImpl(_FakeRemote(), local).list();
 
       final offline = MonthlyPassRepositoryImpl(
@@ -91,7 +100,7 @@ void main() {
   test('Security: list with no cached data and no network returns empty, never throws', () async {
     final repo = MonthlyPassRepositoryImpl(
       _FakeRemote(failWithNetwork: true),
-      HiveMonthlyPassLocalDataSource(),
+      HiveMonthlyPassLocalDataSource(LotSession()),
     );
 
     expect(await repo.list(), isEmpty);

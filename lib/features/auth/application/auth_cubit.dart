@@ -48,7 +48,7 @@ class AuthFailure extends AuthState {
 }
 
 class AuthCubit extends ResilientCubit<AuthState> {
-  AuthCubit(this._repository, [this._onAuthenticated])
+  AuthCubit(this._repository, [this._onAuthenticated, this._onSessionReady])
     : super(const AuthInitial());
 
   final AuthRepository _repository;
@@ -56,9 +56,17 @@ class AuthCubit extends ResilientCubit<AuthState> {
   /// Lets the composition root kick the offline outbox once a token exists.
   final Future<void> Function()? _onAuthenticated;
 
+  /// Awaited BEFORE the app sees an authenticated session: it selects the
+  /// active lot, so the very first request already carries `x-lot-id` (the
+  /// database rejects lot-scoped requests without it).
+  final Future<void> Function()? _onSessionReady;
+
   Future<void> restore() async {
     emit(const AuthLoading());
     final session = await _repository.restoreSession();
+    if (session != null) {
+      await _sessionReady();
+    }
     emit(
       session == null
           ? const AuthUnauthenticated()
@@ -66,10 +74,21 @@ class AuthCubit extends ResilientCubit<AuthState> {
     );
   }
 
+  /// A broken lot lookup must not block sign-in: requests then fail closed
+  /// with `LotRequiredError` until the next refresh.
+  Future<void> _sessionReady() async {
+    try {
+      await _onSessionReady?.call();
+    } on Object {
+      // Handled by the lot cubit (it keeps its failure state).
+    }
+  }
+
   Future<void> login(String username, String pin) async {
     emit(const AuthLoading());
     try {
       final session = await _repository.login(username, pin);
+      await _sessionReady();
       emit(AuthAuthenticated(session));
       // The queue may have been waiting on a 401; now that there is a token,
       // replay it without waiting for another connectivity event.

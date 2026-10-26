@@ -66,6 +66,20 @@ class UsersCubit extends ResilientCubit<UsersState> {
   Future<void> create(CreateUserCommand command) =>
       _submit(() => _repository.create(command));
 
+  Future<void> resetPin(User user, String pin) async {
+    final id = user.id;
+    if (id != null) {
+      await _submit(() => _repository.resetPin(id, pin));
+    }
+  }
+
+  Future<void> delete(User user) async {
+    final id = user.id;
+    if (id != null) {
+      await _submit(() => _repository.delete(id));
+    }
+  }
+
   Future<void> toggleActive(User user) async {
     final id = user.id;
     if (id == null) {

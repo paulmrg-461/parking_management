@@ -1,6 +1,8 @@
 import 'package:equatable/equatable.dart';
 
 import '../../../core/error/failure.dart';
+import '../../check_out/domain/entities/occupancy_snapshot.dart';
+import '../../check_out/domain/entities/today_summary.dart';
 import '../../check_out/domain/repositories/check_out_repository.dart';
 import '../../../core/state/resilient_cubit.dart';
 
@@ -16,13 +18,24 @@ final class DashboardLoading extends DashboardState {
 }
 
 final class DashboardLoaded extends DashboardState {
-  const DashboardLoaded({required this.openSessions});
+  const DashboardLoaded({
+    required this.openSessions,
+    this.totalCapacity = 0,
+    this.categories = const [],
+    this.today = TodaySummary.empty,
+  });
 
   /// Vehicles currently inside (open sessions).
   final int openSessions;
+  final int totalCapacity;
+  final List<CategoryOccupancySnapshot> categories;
+  final TodaySummary today;
+
+  bool get isFull => totalCapacity > 0 && openSessions >= totalCapacity;
 
   @override
-  List<Object?> get props => [openSessions];
+  List<Object?> get props =>
+      [openSessions, totalCapacity, categories, today];
 }
 
 final class DashboardFailure extends DashboardState {
@@ -46,8 +59,19 @@ class DashboardCubit extends ResilientCubit<DashboardState> {
       emit(const DashboardLoading());
     }
     try {
-      final page = await _sessions.listOpenSessions(limit: 1);
-      _emit(DashboardLoaded(openSessions: page.total ?? page.items.length));
+      final snapshot = await _sessions.occupancy();
+      // The summary is a nice-to-have: a failure keeps zeros, not an error.
+      final today = await _sessions
+          .todaySummary()
+          .catchError((Object _) => TodaySummary.empty);
+      _emit(
+        DashboardLoaded(
+          openSessions: snapshot.totalOpen,
+          totalCapacity: snapshot.totalCapacity,
+          categories: snapshot.byCategory,
+          today: today,
+        ),
+      );
     } on Failure catch (failure) {
       if (state is! DashboardLoaded) {
         _emit(DashboardFailure(failure));

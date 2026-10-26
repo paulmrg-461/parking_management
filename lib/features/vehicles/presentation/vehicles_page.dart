@@ -13,6 +13,7 @@ import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/list_page_scaffold.dart';
 import '../../../core/widgets/load_more_tile.dart';
 import '../../../core/widgets/plate_text.dart';
+import '../../../core/widgets/search_field.dart';
 import '../../../core/widgets/submission_listener.dart';
 import '../../categories/domain/entities/category.dart';
 import '../application/vehicles_cubit.dart';
@@ -42,18 +43,38 @@ class _VehiclesPageState extends State<VehiclesPage> {
       onRefresh: context.read<VehiclesCubit>().load,
       body: SubmissionListener<VehiclesCubit, VehiclesState>(
         submissionOf: _submissionOf,
-        child: BlocBuilder<VehiclesCubit, VehiclesState>(
-          buildWhen: (previous, current) =>
-              previous is! VehiclesLoaded ||
-              current is! VehiclesLoaded ||
-              previous.vehicles != current.vehicles ||
-              previous.categoryNames != current.categoryNames ||
-              previous.hasMore != current.hasMore ||
-              previous.loadingMore != current.loadingMore,
-          builder: (context, state) => AsyncView<VehiclesLoaded>(
-            status: _status(context, state),
-            builder: (loaded) => _VehicleList(state: loaded),
-          ),
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                Space.md,
+                Space.sm,
+                Space.md,
+                0,
+              ),
+              child: SearchField(
+                fieldKey: const Key('vehicles_search'),
+                label: context.l10n.vehiclesSearch,
+                onChanged: context.read<VehiclesCubit>().search,
+              ),
+            ),
+            Expanded(
+              child: BlocBuilder<VehiclesCubit, VehiclesState>(
+                buildWhen: (previous, current) =>
+                    previous is! VehiclesLoaded ||
+                    current is! VehiclesLoaded ||
+                    previous.vehicles != current.vehicles ||
+                    previous.categoryNames != current.categoryNames ||
+                    previous.hasMore != current.hasMore ||
+                    previous.loadingMore != current.loadingMore ||
+                    previous.query != current.query,
+                builder: (context, state) => AsyncView<VehiclesLoaded>(
+                  status: _status(context, state),
+                  builder: (loaded) => _VehicleList(state: loaded),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -68,10 +89,13 @@ class _VehiclesPageState extends State<VehiclesPage> {
       context.l10n.errorText(message, failure),
       context.read<VehiclesCubit>().load,
     ),
-    VehiclesLoaded(:final vehicles) when vehicles.isEmpty => AsyncEmpty(
-      context.l10n.vehiclesEmpty,
-      icon: Icons.directions_car_outlined,
-    ),
+    VehiclesLoaded(:final vehicles, :final query) when vehicles.isEmpty =>
+      AsyncEmpty(
+        query.isEmpty
+            ? context.l10n.vehiclesEmpty
+            : context.l10n.vehiclesNoMatch(query),
+        icon: Icons.directions_car_outlined,
+      ),
     final VehiclesLoaded loaded => AsyncReady(loaded),
   };
 

@@ -27,14 +27,22 @@ class FakeVehicleRepository implements VehicleRepository {
   Future<PagedResult<Vehicle>> listPage({
     int offset = 0,
     int limit = defaultPageSize,
+    String? plate,
   }) async {
     pageRequests.add((offset, limit));
     if (listError != null) {
       throw listError!;
     }
+    final term = plate?.trim().toUpperCase() ?? '';
+    final matched = term.isEmpty
+        ? vehicles
+        : [
+            for (final vehicle in vehicles)
+              if (vehicle.plate.toUpperCase().contains(term)) vehicle,
+          ];
     return PagedResult(
-      vehicles.skip(offset).take(limit).toList(),
-      total: total,
+      matched.skip(offset).take(limit).toList(),
+      total: total ?? matched.length,
     );
   }
 

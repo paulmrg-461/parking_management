@@ -31,11 +31,22 @@ String _users(AppLocalizations l) => l.navUsers;
 String _reports(AppLocalizations l) => l.navReports;
 String _settings(AppLocalizations l) => l.navSettings;
 String _contact(AppLocalizations l) => l.navContact;
+String _notifications(AppLocalizations l) => l.navNotifications;
+String _reservations(AppLocalizations l) => l.navReservations;
+String _lots(AppLocalizations l) => l.navLots;
+String _audit(AppLocalizations l) => l.navAudit;
+String _diagnostics(AppLocalizations l) => l.navDiagnostics;
 
 const primaryDestinations = [
   AppDestination(homePath, _home, Icons.home_outlined, Icons.home),
   AppDestination('/check-in', _checkIn, Icons.login_outlined, Icons.login),
   AppDestination('/check-out', _checkOut, Icons.logout_outlined, Icons.logout),
+  AppDestination(
+    '/notifications',
+    _notifications,
+    Icons.notifications_outlined,
+    Icons.notifications,
+  ),
   AppDestination(
     '/contact',
     _contact,
@@ -62,6 +73,30 @@ const managementDestinations = [
     _categories,
     Icons.category_outlined,
     Icons.category,
+  ),
+  AppDestination(
+    '/diagnostics',
+    _diagnostics,
+    Icons.monitor_heart_outlined,
+    Icons.monitor_heart,
+  ),
+  AppDestination(
+    '/audit',
+    _audit,
+    Icons.history_outlined,
+    Icons.history,
+  ),
+  AppDestination(
+    '/lots',
+    _lots,
+    Icons.location_city_outlined,
+    Icons.location_city,
+  ),
+  AppDestination(
+    '/reservations',
+    _reservations,
+    Icons.event_available_outlined,
+    Icons.event_available,
   ),
   AppDestination(
     '/monthly-passes',

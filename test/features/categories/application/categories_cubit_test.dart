@@ -57,6 +57,15 @@ void main() {
     },
   );
 
+  test('Success: capacity is saved and reflected in the list', () async {
+    await cubit.load();
+
+    await cubit.setCapacity(_car, 12);
+
+    final state = cubit.state as CategoriesLoaded;
+    expect(state.categories.firstWhere((c) => c.id == 1).capacity, 12);
+  });
+
   test('Security: categories without a server id are never mutated', () async {
     await cubit.load();
 

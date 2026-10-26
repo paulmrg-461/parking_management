@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:bluetooth_print_plus/bluetooth_print_plus.dart';
 
 import '../../../core/receipt/receipt_data.dart';
+import '../../../core/receipt/receipt_labels.dart';
 import '../../settings/domain/entities/parking_settings.dart';
 import '../../settings/domain/repositories/parking_settings_repository.dart';
 import '../domain/entities/bluetooth_printer.dart';
@@ -51,7 +52,11 @@ class BluetoothPrintScanner implements BluetoothPrinterScanner {
   Future<void> stopScan() => BluetoothPrintPlus.stopScan();
 
   @override
-  Future<PrintOutcome> print(BluetoothPrinter printer, ReceiptData data) async {
+  Future<PrintOutcome> print(
+    BluetoothPrinter printer,
+    ReceiptData data,
+    ReceiptLabels labels,
+  ) async {
     final device = _byAddress[printer.address];
     if (device == null) {
       return PrintOutcome.printerNotSelected;
@@ -60,7 +65,7 @@ class BluetoothPrintScanner implements BluetoothPrinterScanner {
       await _reconnectTo(device);
       final settings = await _cachedSettings();
       await BluetoothPrintPlus.write(
-        Uint8List.fromList(_generator.build(data, settings)),
+        Uint8List.fromList(_generator.build(data, settings, labels)),
       );
       return PrintOutcome.success;
     } on TimeoutException {

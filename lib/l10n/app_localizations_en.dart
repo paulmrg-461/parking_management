@@ -13,6 +13,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appTitle => 'Parking';
 
   @override
+  String get actionClose => 'Close';
+
+  @override
   String get actionCancel => 'Cancel';
 
   @override
@@ -224,6 +227,215 @@ class AppLocalizationsEn extends AppLocalizations {
   String get entitySettings => 'Settings';
 
   @override
+  String get categoryFullHint => 'Full categories are disabled.';
+
+  @override
+  String get navLots => 'Sites';
+
+  @override
+  String lotMembersTitle(String name) {
+    return 'Members of $name';
+  }
+
+  @override
+  String get lotMembersEmpty => 'This site has no users';
+
+  @override
+  String get userInactive => 'inactive';
+
+  @override
+  String get lotsTitle => 'Parking sites';
+
+  @override
+  String get navAudit => 'Audit log';
+
+  @override
+  String get navDiagnostics => 'Diagnostics';
+
+  @override
+  String get diagnosticsTitle => 'Diagnostics';
+
+  @override
+  String get diagnosticsWhatsapp => 'WhatsApp';
+
+  @override
+  String get diagnosticsWhatsappPending => 'Queued';
+
+  @override
+  String get diagnosticsWhatsappFailedCount => 'Failed';
+
+  @override
+  String get diagnosticsWhatsappSent => 'Sent (24 h)';
+
+  @override
+  String get diagnosticsWhatsappEmpty => 'No WhatsApp messages in the period';
+
+  @override
+  String diagnosticsWhatsappAttempts(int count) {
+    return '$count attempts';
+  }
+
+  @override
+  String get diagnosticsSystem => 'System';
+
+  @override
+  String diagnosticsMigrations(int count) {
+    return 'Applied migrations ($count)';
+  }
+
+  @override
+  String diagnosticsLots(int active, int total) {
+    return 'Active sites: $active of $total';
+  }
+
+  @override
+  String get diagnosticsOpenSessions => 'Open sessions';
+
+  @override
+  String get diagnosticsStaleSessions => 'Sessions open +24 h';
+
+  @override
+  String get diagnosticsOpenShifts => 'Shifts open +12 h';
+
+  @override
+  String get diagnosticsPendingPayments => 'Pending pass payments';
+
+  @override
+  String get diagnosticsReservations => 'Active reservations';
+
+  @override
+  String get diagnosticsIdempotency => 'Idempotency keys';
+
+  @override
+  String get diagnosticsNotifications => 'Notifications';
+
+  @override
+  String get diagnosticsPendingPush => 'Pending push';
+
+  @override
+  String get diagnosticsDeadPush => 'Failed after 3 attempts';
+
+  @override
+  String get diagnosticsUnread => 'Unread / total';
+
+  @override
+  String get diagnosticsStorage => 'Storage';
+
+  @override
+  String diagnosticsErrors(int count) {
+    return 'App errors ($count)';
+  }
+
+  @override
+  String get diagnosticsErrorsEmpty => 'No errors reported in the last 7 days';
+
+  @override
+  String get diagnosticsErrorDetail => 'Error detail';
+
+  @override
+  String get auditExport => 'Export';
+
+  @override
+  String get auditExportPdf => 'Export PDF';
+
+  @override
+  String get auditExportCsv => 'Copy CSV';
+
+  @override
+  String get auditCopied => 'CSV copied to the clipboard';
+
+  @override
+  String get auditActor => 'Actor';
+
+  @override
+  String get auditAllActors => 'All';
+
+  @override
+  String get auditTitle => 'Audit log';
+
+  @override
+  String get auditTable => 'Table';
+
+  @override
+  String get auditAllTables => 'All';
+
+  @override
+  String get auditFilterDates => 'Filter by date';
+
+  @override
+  String get auditEmpty => 'No changes recorded';
+
+  @override
+  String get auditChangesTitle => 'Changes';
+
+  @override
+  String get lotAdd => 'New site';
+
+  @override
+  String get lotCode => 'Code (2-10 letters/digits)';
+
+  @override
+  String get lotLabel => 'Site';
+
+  @override
+  String get lotName => 'Site name';
+
+  @override
+  String get lotAddress => 'Address (optional)';
+
+  @override
+  String get lotsEmpty => 'No sites yet';
+
+  @override
+  String get lotSwitch => 'Switch';
+
+  @override
+  String lotMembers(int count) {
+    return '$count users';
+  }
+
+  @override
+  String get navReservations => 'Reservations';
+
+  @override
+  String get reservationsTitle => 'Capacity reservations';
+
+  @override
+  String get reservationAdd => 'New reservation';
+
+  @override
+  String get reservationsEmpty => 'No active reservations';
+
+  @override
+  String reservationExpiresIn(String duration) {
+    return 'Expires in $duration';
+  }
+
+  @override
+  String reservationUntil(String when) {
+    return 'Until $when';
+  }
+
+  @override
+  String reservationUntilLabel(String when) {
+    return 'Hold until $when';
+  }
+
+  @override
+  String get reservationNotes => 'Notes (optional)';
+
+  @override
+  String get reservationCancel => 'Cancel reservation';
+
+  @override
+  String get reservationCancelTitle => 'Cancel this reservation?';
+
+  @override
+  String reservationCancelBody(String plate) {
+    return 'The slot held for $plate will be released.';
+  }
+
+  @override
   String get navHome => 'Home';
 
   @override
@@ -257,6 +469,342 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navContact => 'Contact';
 
   @override
+  String get navNotifications => 'Alerts';
+
+  @override
+  String get webPushTitle => 'Browser notifications';
+
+  @override
+  String get webPushSubtitle => 'Get alerts even when the tab is closed.';
+
+  @override
+  String get webPushDenied =>
+      'The browser did not grant notification permission';
+
+  @override
+  String get notificationsTitle => 'Notifications';
+
+  @override
+  String get notificationsEmpty => 'No notifications yet';
+
+  @override
+  String get notificationsMarkAll => 'Mark all read';
+
+  @override
+  String get navHistory => 'History';
+
+  @override
+  String get homeShift => 'Shift / Cash';
+
+  @override
+  String get checkOutNoShift =>
+      'No open shift: this payment will not be part of the cash reconciliation.';
+
+  @override
+  String get shiftUnavailable => 'Shift unavailable';
+
+  @override
+  String get shiftOffline =>
+      'You need a connection to operate the cash drawer.';
+
+  @override
+  String get shiftHistoryFilter => 'Filter by date';
+
+  @override
+  String get shiftHistoryClearFilter => 'Clear filter';
+
+  @override
+  String get shiftHistoryEmpty => 'No shifts in the selected range';
+
+  @override
+  String get shiftCardSales => 'Card sales';
+
+  @override
+  String get shiftTransferSales => 'Transfer sales';
+
+  @override
+  String get shiftPassSales => 'Monthly passes';
+
+  @override
+  String get shiftSessionCount => 'Paid exits';
+
+  @override
+  String get shiftCashMovements => 'Cash movements';
+
+  @override
+  String get shiftReconciliation => 'Reconciliation';
+
+  @override
+  String get shiftNotesTitle => 'Notes';
+
+  @override
+  String get actionExportPdf => 'Export PDF';
+
+  @override
+  String get actionShare => 'Share';
+
+  @override
+  String get shiftTitle => 'Shift / Cash';
+
+  @override
+  String get shiftNoOpen => 'No open shift';
+
+  @override
+  String get shiftOpeningFloat => 'Opening float (COP)';
+
+  @override
+  String get shiftOpen => 'Open shift';
+
+  @override
+  String get shiftOpenTitle => 'Open shift';
+
+  @override
+  String get shiftOpenedDone => 'Shift opened successfully';
+
+  @override
+  String get shiftClosedDone => 'Shift closed successfully';
+
+  @override
+  String get shiftMovementDone => 'Cash movement recorded';
+
+  @override
+  String get shiftAdjustedDone => 'Shift close corrected';
+
+  @override
+  String shiftOpenedAt(String time) {
+    return 'Opened: $time';
+  }
+
+  @override
+  String get shiftSales => 'Sales';
+
+  @override
+  String get shiftCashSales => 'Cash sales';
+
+  @override
+  String get shiftWithdrawals => 'Withdrawals';
+
+  @override
+  String get shiftDeposits => 'Cash deposits';
+
+  @override
+  String get shiftDiscounts => 'Discounts';
+
+  @override
+  String get shiftPassPayments => 'Pass payments';
+
+  @override
+  String get shiftPassCash => 'Pass payments in cash';
+
+  @override
+  String get shiftExpectedCash => 'Expected cash';
+
+  @override
+  String get shiftSessions => 'Check-outs';
+
+  @override
+  String get shiftWithdraw => 'Withdraw cash';
+
+  @override
+  String get shiftDeposit => 'Deposit cash';
+
+  @override
+  String get shiftClose => 'Close shift';
+
+  @override
+  String get shiftClosedTitle => 'Shift closed';
+
+  @override
+  String get shiftAdjust => 'Correct shift close';
+
+  @override
+  String get shiftCountedCash => 'Counted cash';
+
+  @override
+  String get shiftDifference => 'Difference';
+
+  @override
+  String get shiftNotes => 'Notes';
+
+  @override
+  String get shiftReason => 'Reason';
+
+  @override
+  String get shiftHistory => 'Recent shifts';
+
+  @override
+  String get errorShiftAlreadyOpen => 'You already have an open shift';
+
+  @override
+  String get errorNoOpenShift => 'There is no open shift';
+
+  @override
+  String get errorShiftNotFound => 'Shift not found';
+
+  @override
+  String get errorLastAdmin =>
+      'You cannot leave the system without administrators';
+
+  @override
+  String get errorCannotDeleteSelf => 'You cannot delete your own account';
+
+  @override
+  String get errorPaymentNotFound => 'Payment not found';
+
+  @override
+  String get errorPaymentAlreadyProcessed =>
+      'This payment was already processed';
+
+  @override
+  String get errorShiftStillOpen => 'The shift is still open';
+
+  @override
+  String get errorShiftAdjustReason => 'Enter the correction reason';
+
+  @override
+  String get errorInvalidOpeningFloat => 'The opening float is not valid';
+
+  @override
+  String get errorInvalidCountedCash => 'The counted cash is not valid';
+
+  @override
+  String get errorInvalidCashMovement => 'The cash movement is not valid';
+
+  @override
+  String get errorCashMovementReason => 'Enter the movement reason';
+
+  @override
+  String get errorInvalidDiscount => 'The discount is not valid';
+
+  @override
+  String get errorDiscountReason => 'Enter the discount reason';
+
+  @override
+  String get errorVehicleBlacklisted =>
+      'This vehicle is blocked; an admin must unblock it';
+
+  @override
+  String get vehiclePhone => 'Customer phone';
+
+  @override
+  String get vehiclePhoneHint => '+57 300 111 2233';
+
+  @override
+  String get vehiclePhoneTitle => 'Notification phone';
+
+  @override
+  String get vehicleAddPhone => 'Add phone';
+
+  @override
+  String get vehicleEditPhone => 'Edit phone';
+
+  @override
+  String get vehicleSendWhatsapp => 'Send receipt via WhatsApp';
+
+  @override
+  String vehicleWhatsappReady(String plate) {
+    return 'Hi, your vehicle $plate is ready for pickup.';
+  }
+
+  @override
+  String get vehicleWhatsappReadyAction => 'Notify it is ready';
+
+  @override
+  String vehicleWhatsappReceipt(String plate) {
+    return 'Hi, here is the receipt for plate $plate:';
+  }
+
+  @override
+  String vehicleWhatsappHello(String plate) {
+    return 'Hi, this is the parking lot writing about plate $plate.';
+  }
+
+  @override
+  String get vehicleWhatsappThanks => 'Thanks for your visit!';
+
+  @override
+  String get errorInvalidPhone => 'Enter a valid phone (7 to 15 digits)';
+
+  @override
+  String get errorWhatsappUnavailable =>
+      'WhatsApp could not be opened on this device';
+
+  @override
+  String get vehicleNotes => 'Vehicle notes';
+
+  @override
+  String get vehicleNotesHint => 'Scratches, incidents, agreements…';
+
+  @override
+  String get vehicleAddNotes => 'Add note';
+
+  @override
+  String get vehicleEditNotes => 'Edit note';
+
+  @override
+  String get vehicleBlacklist => 'Block vehicle';
+
+  @override
+  String get vehicleUnblock => 'Unblock';
+
+  @override
+  String get vehicleBlacklisted => 'Blocked';
+
+  @override
+  String get vehicleBlacklistTitle => 'Block this vehicle?';
+
+  @override
+  String vehicleBlacklistBody(String plate) {
+    return '$plate will not be able to enter until an admin unblocks it.';
+  }
+
+  @override
+  String get vehicleUnblockTitle => 'Unblock this vehicle?';
+
+  @override
+  String vehicleUnblockBody(String plate) {
+    return '$plate will be able to enter the parking lot again.';
+  }
+
+  @override
+  String get vehicleHistoryTitle => 'Vehicle history';
+
+  @override
+  String get vehicleHistoryPrompt =>
+      'Search a plate to see its entries and exits';
+
+  @override
+  String get vehicleHistoryVisits => 'Visits';
+
+  @override
+  String get vehicleHistoryTotalSpent => 'Total paid';
+
+  @override
+  String get vehicleHistoryAllLots => 'All sites';
+
+  @override
+  String vehicleHistoryCurrentLotVisits(int count) {
+    return 'At this site: $count';
+  }
+
+  @override
+  String get actionReprintTicket => 'Reprint ticket';
+
+  @override
+  String get vehicleHistorySessions => 'Sessions';
+
+  @override
+  String get vehicleHistoryNoSessions => 'No sessions recorded';
+
+  @override
+  String vehicleHistoryDuration(String duration) {
+    return 'Duration: $duration';
+  }
+
+  @override
+  String get vehicleHistoryOpen => 'In progress';
+
+  @override
   String get navMore => 'More';
 
   @override
@@ -264,6 +812,27 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsTitle => 'Parking settings';
+
+  @override
+  String get settingsEvidenceRetention => 'Evidence retention (days)';
+
+  @override
+  String get settingsEvidenceRetentionHint =>
+      '0 = keep forever. Older photos are deleted automatically.';
+
+  @override
+  String get settingsWhatsappAuto => 'Automated WhatsApp';
+
+  @override
+  String get settingsWhatsappAutoHint =>
+      'Sends notices through the WhatsApp API (requires server credentials). When off, WhatsApp opens on the device.';
+
+  @override
+  String get whatsappQueued => 'Message queued for WhatsApp';
+
+  @override
+  String get errorWhatsappDisabled =>
+      'Automated WhatsApp is disabled for this site';
 
   @override
   String get settingsName => 'Name';
@@ -329,6 +898,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get roleOperator => 'Operator';
+
+  @override
+  String get homeTodayEmpty => 'No activity yet today';
+
+  @override
+  String get homeToday => 'Today';
+
+  @override
+  String get homeTodayEntries => 'Entries';
+
+  @override
+  String get homeTodayExits => 'Exits';
+
+  @override
+  String get homeTodayCash => 'Cash';
+
+  @override
+  String get homeTodayPasses => 'Monthly passes';
 
   @override
   String get homeOccupancy => 'Vehicles parked';
@@ -446,6 +1033,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String checkInRepeat(String plate) {
+    return 'Repeat entry $plate';
+  }
+
+  @override
   String get checkInSubmit => 'Register check-in';
 
   @override
@@ -502,6 +1094,17 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get checkOutLongStay => 'Over 24 h';
+
+  @override
+  String checkOutEstimate(String amount) {
+    return 'Estimated total: $amount';
+  }
+
+  @override
+  String get checkOutPassCovered => 'Active monthly pass: no charge';
+
+  @override
   String get checkOutCharge => 'Charge';
 
   @override
@@ -541,6 +1144,54 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get receiptAmount => 'Amount charged';
+
+  @override
+  String get receiptPayment => 'Payment';
+
+  @override
+  String get receiptDiscount => 'Discount';
+
+  @override
+  String get paymentMethodTitle => 'Payment method';
+
+  @override
+  String get paymentCash => 'Cash';
+
+  @override
+  String get paymentCard => 'Card';
+
+  @override
+  String get paymentTransfer => 'Transfer';
+
+  @override
+  String get paymentMonthlyPass => 'Monthly pass';
+
+  @override
+  String get paymentExempt => 'Exempt';
+
+  @override
+  String get lostTicket => 'Lost ticket';
+
+  @override
+  String get lostTicketHint => 'The full daily rate is charged.';
+
+  @override
+  String get lostTicketReason => 'Reason (lost ticket)';
+
+  @override
+  String get lostTicketReasonRequired => 'Enter the lost ticket reason';
+
+  @override
+  String get discountAmount => 'Discount (COP)';
+
+  @override
+  String get discountReason => 'Discount reason';
+
+  @override
+  String get discountReasonRequired => 'Enter the discount reason';
+
+  @override
+  String get paymentUnknown => 'Other';
 
   @override
   String get receiptTicket => 'Ticket';
@@ -637,6 +1288,38 @@ class AppLocalizationsEn extends AppLocalizations {
   String get categoryRename => 'Rename category';
 
   @override
+  String categoryCapacity(int count) {
+    return 'Capacity: $count';
+  }
+
+  @override
+  String get categoryCapacityUnlimited => 'No capacity limit';
+
+  @override
+  String categoryCapacityTitle(String name) {
+    return 'Capacity for $name';
+  }
+
+  @override
+  String get categoryCapacityLabel => 'Capacity';
+
+  @override
+  String get errorCategoryFull => 'This category is full';
+
+  @override
+  String get homeFull => 'Full';
+
+  @override
+  String homeFullCategories(String names) {
+    return 'Full categories: $names';
+  }
+
+  @override
+  String reportsOccupancyOf(int open, int capacity) {
+    return 'Vehicles inside: $open / $capacity';
+  }
+
+  @override
   String categoryDeleteTooltip(String name) {
     return 'Delete category $name';
   }
@@ -655,6 +1338,14 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String categoryFallback(int id) {
     return 'Category $id';
+  }
+
+  @override
+  String get vehiclesSearch => 'Search plate';
+
+  @override
+  String vehiclesNoMatch(String query) {
+    return 'No vehicles match \"$query\"';
   }
 
   @override
@@ -748,6 +1439,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String get userAddTooltip => 'Add user';
 
   @override
+  String get userActions => 'Actions';
+
+  @override
+  String get userResetPin => 'Reset PIN';
+
+  @override
+  String userResetPinTitle(String name) {
+    return 'New PIN for $name';
+  }
+
+  @override
+  String get userNewPin => 'New PIN (6 digits)';
+
+  @override
+  String get userDelete => 'Delete user';
+
+  @override
+  String get userDeleteTitle => 'Delete user?';
+
+  @override
+  String userDeleteBody(String name) {
+    return '$name\'s account will be removed. This cannot be undone.';
+  }
+
+  @override
   String userActiveLabel(String name) {
     return 'User active: $name';
   }
@@ -758,7 +1474,45 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get pinInvalid => 'The PIN must have 4 to 6 digits';
+  String get pinInvalid => 'The PIN must have 6 digits';
+
+  @override
+  String get monthlyPassPendingTitle => 'Pending payments';
+
+  @override
+  String monthlyPassDue(String date) {
+    return 'Due: $date';
+  }
+
+  @override
+  String get monthlyPassWhatsapp => 'Notify via WhatsApp';
+
+  @override
+  String monthlyPassWhatsappMessage(String plate, String date) {
+    return 'Hi, a reminder that the monthly pass for plate $plate expires on $date.';
+  }
+
+  @override
+  String get monthlyPassStatusActive => 'Active';
+
+  @override
+  String get monthlyPassStatusUpcoming => 'Upcoming';
+
+  @override
+  String get monthlyPassStatusExpired => 'Expired';
+
+  @override
+  String get monthlyPassCharge => 'Collect';
+
+  @override
+  String get monthlyPassRenewalMethod => 'Renewal payment method';
+
+  @override
+  String get monthlyPassAutoRenew => 'Auto-renew';
+
+  @override
+  String get monthlyPassAutoRenewHint =>
+      'Renews for the same period and amount on expiry';
 
   @override
   String get monthlyPassesTitle => 'Monthly passes';
@@ -815,10 +1569,59 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dateRangeInvalid => 'The end date must be after the start date';
 
   @override
+  String get reportsAllLots => 'All sites';
+
+  @override
+  String get reportsAllLotsHint => 'Adds up every site\'s revenue';
+
+  @override
+  String reportsLotTickets(int count) {
+    return '$count exits';
+  }
+
+  @override
+  String reportsLotAverage(String amount) {
+    return 'average $amount';
+  }
+
+  @override
+  String reportsLotShare(int percent) {
+    return '$percent% of total';
+  }
+
+  @override
+  String get reportsByLot => 'Revenue by site';
+
+  @override
+  String get reportsToday => 'Today';
+
+  @override
+  String get reportsLast7 => '7 days';
+
+  @override
+  String get reportsLast30 => '30 days';
+
+  @override
   String get reportsTitle => 'Reports';
 
   @override
   String get reportsRangeTooltip => 'Change date range';
+
+  @override
+  String reportsVsPrevious(String percent) {
+    return '$percent% vs. previous period';
+  }
+
+  @override
+  String reportsPreviousTotal(String amount) {
+    return 'Before: $amount';
+  }
+
+  @override
+  String get reportsVariationLabel => 'Change vs. previous period';
+
+  @override
+  String get reportsPreviousLabel => 'Previous period';
 
   @override
   String get reportsTotalRevenue => 'Total revenue';
@@ -827,7 +1630,46 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportsRevenueByDay => 'Revenue by day';
 
   @override
+  String get reportsPassRevenue => 'Monthly pass revenue';
+
+  @override
+  String get reportsRevenueByPayment => 'Revenue by payment method';
+
+  @override
+  String get reportsTotalDiscounts => 'Discounts applied';
+
+  @override
+  String get reportsDiscountLog => 'Discount details';
+
+  @override
+  String reportsDiscountBy(String admin) {
+    return 'by $admin';
+  }
+
+  @override
+  String reportsDiscountedSessions(int count) {
+    return '$count discounted check-outs';
+  }
+
+  @override
   String get reportsRevenueByCategory => 'Revenue by category';
+
+  @override
+  String get reportsWhatsapp => 'WhatsApp';
+
+  @override
+  String get reportsWhatsappSent => 'Sent';
+
+  @override
+  String get reportsWhatsappFailed => 'Failed';
+
+  @override
+  String get reportsWhatsappPending => 'Queued';
+
+  @override
+  String reportsWhatsappDay(int sent, int failed) {
+    return '$sent sent · $failed failed';
+  }
 
   @override
   String get reportsOccupancy => 'Occupancy';

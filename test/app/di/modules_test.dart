@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:parking_management/app/di/injection.dart';
 import 'package:parking_management/app/di/modules/sync_module.dart';
 import 'package:parking_management/app/di/modules/platform_module_io.dart'
@@ -7,13 +8,11 @@ import 'package:parking_management/app/di/modules/platform_module_io.dart'
 import 'package:parking_management/app/di/modules/platform_module_web.dart'
     as web;
 import 'package:parking_management/core/config/app_config.dart';
-import 'package:parking_management/core/network/session_reader.dart';
 import 'package:parking_management/core/sync/file_pending_photo_storage.dart';
 import 'package:parking_management/core/sync/hive_pending_photo_storage.dart';
 import 'package:parking_management/core/sync/pending_mutation.dart';
 import 'package:parking_management/core/sync/pending_photo_storage.dart';
 import 'package:parking_management/core/sync/sync_service.dart';
-import 'package:parking_management/features/auth/infrastructure/auth_local_data_source.dart';
 import 'package:parking_management/features/check_in/application/check_in_cubit.dart';
 import 'package:parking_management/features/check_out/application/check_out_cubit.dart';
 import 'package:parking_management/features/monthly_passes/application/monthly_passes_cubit.dart';
@@ -26,7 +25,18 @@ import 'package:parking_management/features/tariffs/application/tariffs_cubit.da
 import 'package:parking_management/features/users/application/users_cubit.dart';
 import 'package:parking_management/features/vehicles/application/vehicles_cubit.dart';
 
-const _config = AppConfig(appName: 'test', apiBaseUrl: 'http://localhost');
+const _config = AppConfig(
+  appName: 'test',
+  supabaseUrl: 'http://localhost:8000',
+  supabaseAnonKey: 'test-anon-key',
+);
+
+void _register(GetIt sl) {
+  sl.registerSingleton<SupabaseClient>(
+    SupabaseClient(_config.supabaseUrl, _config.supabaseAnonKey),
+  );
+  registerAllModules(sl, _config);
+}
 
 void main() {
   late GetIt sl;
@@ -36,7 +46,7 @@ void main() {
   test(
     'Success: every module registers without duplicates and cubits resolve',
     () {
-      registerAllModules(sl, _config);
+      _register(sl);
 
       expect(sl<UsersCubit>(), isA<UsersCubit>());
       expect(sl<VehiclesCubit>(), isA<VehiclesCubit>());
@@ -50,7 +60,7 @@ void main() {
   );
 
   test('Success: every queued entity type has a registered replayer', () {
-    registerAllModules(sl, _config);
+    _register(sl);
 
     final entities = buildMutationReplayers(
       sl,
@@ -78,12 +88,4 @@ void main() {
     expect(sl<PendingPhotoStorage>(), isA<HivePendingPhotoStorage>());
   });
 
-  test(
-    'Security: the token reader and the auth store share one cached instance',
-    () {
-      registerAllModules(sl, _config);
-
-      expect(identical(sl<SessionReader>(), sl<AuthLocalDataSource>()), isTrue);
-    },
-  );
 }

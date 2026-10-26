@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:parking_management/core/lot/lot_session.dart';
 import 'package:parking_management/core/sync/pending_mutation.dart';
 import 'package:hive_ce/hive_ce.dart';
 import 'package:parking_management/app/di/hive_registrar.g.dart';
@@ -78,7 +79,7 @@ void main() {
   });
 
   TariffRepositoryImpl repository(_FakeRemote remote) =>
-      TariffRepositoryImpl(remote, HiveTariffLocalDataSource(), outbox);
+      TariffRepositoryImpl(remote, HiveTariffLocalDataSource(LotSession()), outbox);
 
   test('list returns remote tariffs and caches them', () async {
     final result = await repository(_FakeRemote()).list();
@@ -87,7 +88,7 @@ void main() {
   });
 
   test('list falls back to the local cache on network failure', () async {
-    final local = HiveTariffLocalDataSource();
+    final local = HiveTariffLocalDataSource(LotSession());
     await TariffRepositoryImpl(_FakeRemote(), local, outbox).list();
 
     final offline = TariffRepositoryImpl(
@@ -109,7 +110,7 @@ void main() {
   });
 
   test('update queues the mutation and returns an optimistic result on network failure', () async {
-    final local = HiveTariffLocalDataSource();
+    final local = HiveTariffLocalDataSource(LotSession());
     await TariffRepositoryImpl(_FakeRemote(), local, outbox).list();
 
     final offline = TariffRepositoryImpl(
@@ -132,7 +133,7 @@ void main() {
   });
 
   test('delete removes the local cache entry and queues the mutation on network failure', () async {
-    final local = HiveTariffLocalDataSource();
+    final local = HiveTariffLocalDataSource(LotSession());
     await TariffRepositoryImpl(_FakeRemote(), local, outbox).list();
 
     final offline = TariffRepositoryImpl(
@@ -155,7 +156,7 @@ void main() {
     () async {
       final offline = TariffRepositoryImpl(
         _FakeRemote(failWithNetwork: true),
-        HiveTariffLocalDataSource(),
+        HiveTariffLocalDataSource(LotSession()),
         outbox,
       );
 
@@ -170,7 +171,7 @@ void main() {
   test(
     'Security: offline update never invents categoryId 0 in the cache',
     () async {
-      final local = HiveTariffLocalDataSource();
+      final local = HiveTariffLocalDataSource(LotSession());
       final offline = TariffRepositoryImpl(
         _FakeRemote(failWithNetwork: true),
         local,

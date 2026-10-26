@@ -7,6 +7,7 @@ import '../../../core/pagination/paged_result.dart';
 import '../../../core/state/submission.dart';
 import '../../vehicles/domain/entities/vehicle.dart';
 import '../../vehicles/domain/repositories/vehicle_repository.dart';
+import '../domain/entities/check_out_preview.dart';
 import '../domain/entities/check_out_receipt.dart';
 import '../domain/entities/open_session.dart';
 import '../domain/repositories/check_out_repository.dart';
@@ -131,8 +132,10 @@ class CheckOutCubit extends ResilientCubit<CheckOutState> {
   /// Server offset already fetched. Never derive it from `sessions.length`:
   /// removing a closed row would shift it and duplicate/skip the next page.
   int _loadedCount = 0;
+  int _searchToken = 0;
 
   Future<void> loadOpenSessions() async {
+    _searchToken++;
     emit(const CheckOutLoading());
     final plates = _plates();
     try {
@@ -161,6 +164,7 @@ class CheckOutCubit extends ResilientCubit<CheckOutState> {
       final page = await _repository.listOpenSessions(
         offset: _loadedCount,
         limit: pageSize,
+        plate: current.query.trim().isEmpty ? null : current.query.trim(),
       );
       _loadedCount += page.items.length;
       emit(
@@ -187,14 +191,37 @@ class CheckOutCubit extends ResilientCubit<CheckOutState> {
     _searchTimer = Timer(searchDebounce, () => _applySearch(query));
   }
 
-  Future<void> checkOut(int sessionId) async {
+  /// Best effort: a failed preview opens the dialog without an estimate.
+  Future<CheckOutPreview?> preview(int sessionId) async {
+    try {
+      return await _repository.preview(sessionId);
+    } on Failure {
+      return null;
+    }
+  }
+
+  Future<void> checkOut(
+    int sessionId, {
+    String paymentMethod = 'cash',
+    int discountAmount = 0,
+    String? discountReason,
+    bool lostTicket = false,
+    String? lostTicketReason,
+  }) async {
     final current = state;
     if (current is! CheckOutLoaded) {
       return;
     }
     emit(current.copyWith(submission: const SubmissionInProgress()));
     try {
-      final receipt = await _checkOutVehicle(sessionId);
+      final receipt = await _checkOutVehicle(
+        sessionId,
+        paymentMethod: paymentMethod,
+        discountAmount: discountAmount,
+        discountReason: discountReason,
+        lostTicket: lostTicket,
+        lostTicketReason: lostTicketReason,
+      );
       emit(
         _latest(current).copyWith(
           sessions: await _sessionsAfterCheckOut(sessionId),
@@ -223,10 +250,42 @@ class CheckOutCubit extends ResilientCubit<CheckOutState> {
     return super.close();
   }
 
-  void _applySearch(String query) {
+  Future<void> _applySearch(String query) async {
     final current = state;
-    if (!isClosed && current is CheckOutLoaded) {
-      emit(current.copyWith(query: query));
+    if (isClosed || current is! CheckOutLoaded) {
+      return;
+    }
+    final token = ++_searchToken;
+    final trimmed = query.trim();
+    emit(current.copyWith(query: query, loadingMore: true));
+    try {
+      final page = await _repository.listOpenSessions(
+        offset: 0,
+        limit: pageSize,
+        plate: trimmed.isEmpty ? null : trimmed,
+      );
+      if (isClosed || token != _searchToken) {
+        return;
+      }
+      _loadedCount = page.items.length;
+      emit(
+        current.copyWith(
+          sessions: page.items,
+          query: query,
+          total: page.total,
+          loadingMore: false,
+        ),
+      );
+    } on Failure catch (failure) {
+      if (isClosed || token != _searchToken) {
+        return;
+      }
+      emit(
+        current.copyWith(
+          loadingMore: false,
+          submission: SubmissionFailed.of(failure),
+        ),
+      );
     }
   }
 
@@ -235,8 +294,12 @@ class CheckOutCubit extends ResilientCubit<CheckOutState> {
     return current is CheckOutLoaded ? current : fallback;
   }
 
-  Future<PagedResult<OpenSession>> _firstPage() =>
-      _repository.listOpenSessions(offset: 0, limit: pageSize);
+  Future<PagedResult<OpenSession>> _firstPage({String? plate}) =>
+      _repository.listOpenSessions(
+        offset: 0,
+        limit: pageSize,
+        plate: plate,
+      );
 
   /// Plates are best-effort: a failure falls back to "Vehicle #id" rows.
   Future<Map<int, String>> _plates() async {
@@ -255,12 +318,15 @@ class CheckOutCubit extends ResilientCubit<CheckOutState> {
   /// Refetches the first page; offline (queued check-out) the closed session
   /// is simply removed from what is on screen.
   Future<List<OpenSession>> _sessionsAfterCheckOut(int sessionId) async {
+    final current = state;
+    final query = current is CheckOutLoaded ? current.query.trim() : '';
     try {
-      final items = (await _firstPage()).items;
+      final items = (await _firstPage(
+        plate: query.isEmpty ? null : query,
+      )).items;
       _loadedCount = items.length;
       return items;
     } on Failure {
-      final current = state;
       final sessions = current is CheckOutLoaded
           ? current.sessions
           : const <OpenSession>[];

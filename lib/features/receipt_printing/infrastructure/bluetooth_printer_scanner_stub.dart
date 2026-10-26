@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import '../../../core/receipt/receipt_data.dart';
+import '../../../core/receipt/receipt_labels.dart';
 import '../domain/entities/bluetooth_printer.dart';
 import '../domain/entities/print_outcome.dart';
 import '../domain/repositories/receipt_printer.dart';
@@ -28,6 +29,9 @@ class UnsupportedBluetoothPrinterScanner implements BluetoothPrinterScanner {
   Future<void> stopScan() async {}
 
   @override
-  Future<PrintOutcome> print(BluetoothPrinter printer, ReceiptData data) async =>
-      PrintOutcome.failed;
+  Future<PrintOutcome> print(
+    BluetoothPrinter printer,
+    ReceiptData data,
+    ReceiptLabels labels,
+  ) async => PrintOutcome.failed;
 }

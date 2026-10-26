@@ -8,9 +8,13 @@ import '../../../core/l10n/l10n.dart';
 import '../../../core/state/submission.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/async_view.dart';
+import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/list_page_scaffold.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/widgets/submission_listener.dart';
+import '../../auth/application/auth_cubit.dart';
+import '../../lots/application/lots_cubit.dart';
+import '../../lots/domain/entities/parking_lot.dart';
 import '../../auth/domain/entities/user.dart';
 import '../application/users_cubit.dart';
 import 'create_user_dialog.dart';
@@ -30,18 +34,38 @@ class _UsersPageState extends State<UsersPage> {
     unawaited(context.read<UsersCubit>().load());
   }
 
+  /// The lot list only matters when the installation has more than one site.
+  ({List<ParkingLot> lots, int? activeId}) _lotOptions(BuildContext context) {
+    try {
+      final state = context.read<LotsCubit>().state;
+      if (state is LotsLoaded) {
+        return (lots: state.lots, activeId: state.activeId);
+      }
+    } on ProviderNotFoundException {
+      // Isolated tests do not provide the lot cubit.
+    }
+    return (lots: const [], activeId: null);
+  }
+
+  Future<void> _addUser(BuildContext context, UsersCubit cubit) async {
+    final options = _lotOptions(context);
+    await showDialog<void>(
+      context: context,
+      builder: (_) => CreateUserDialog(
+        onCreate: cubit.create,
+        lots: options.lots,
+        initialLotId: options.activeId,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cubit = context.read<UsersCubit>();
     return ListPageScaffold(
       title: context.l10n.usersTitle,
       addTooltip: context.l10n.userAddTooltip,
-      onAdd: () => unawaited(
-        showDialog<void>(
-          context: context,
-          builder: (_) => CreateUserDialog(onCreate: cubit.create),
-        ),
-      ),
+      onAdd: () => unawaited(_addUser(context, cubit)),
       onRefresh: cubit.load,
       body: SubmissionListener<UsersCubit, UsersState>(
         submissionOf: _submissionOf,
@@ -94,14 +118,80 @@ class _UserTile extends StatelessWidget {
       leading: const Icon(Icons.person_outline),
       title: Text(user.displayName),
       subtitle: Text('${user.username} · ${user.role.label(l10n)}'),
-      trailing: Semantics(
-        label: l10n.userActiveLabel(user.displayName),
-        child: Switch(
-          value: user.isActive,
-          onChanged: (_) => _toggle(context),
-        ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Semantics(
+            label: l10n.userActiveLabel(user.displayName),
+            child: Switch(
+              value: user.isActive,
+              onChanged: (_) => _toggle(context),
+            ),
+          ),
+          PopupMenuButton<String>(
+            tooltip: l10n.userActions,
+            onSelected: (action) => _onAction(context, action),
+            itemBuilder: (_) => [
+              PopupMenuItem(
+                value: 'pin',
+                child: Text(l10n.userResetPin),
+              ),
+              if (!_isSelf(context))
+                PopupMenuItem(
+                  value: 'delete',
+                  child: Text(l10n.userDelete),
+                ),
+            ],
+          ),
+        ],
       ),
     );
+  }
+
+  bool _isSelf(BuildContext context) {
+    try {
+      final auth = context.read<AuthCubit>();
+      return switch (auth.state) {
+        AuthAuthenticated(:final session) => session.user.id == user.id,
+        _ => false,
+      };
+    } on ProviderNotFoundException {
+      return false;
+    }
+  }
+
+  void _onAction(BuildContext context, String action) {
+    if (action == 'pin') {
+      _resetPin(context);
+    } else if (action == 'delete') {
+      _delete(context);
+    }
+  }
+
+  Future<void> _resetPin(BuildContext context) async {
+    final pin = await showDialog<String>(
+      context: context,
+      builder: (_) => _ResetPinDialog(displayName: user.displayName),
+    );
+    if (pin != null && context.mounted) {
+      await context.read<UsersCubit>().resetPin(user, pin);
+    }
+  }
+
+  Future<void> _delete(BuildContext context) async {
+    final l10n = context.l10n;
+    final confirmed = await ConfirmDialog.show(
+      context,
+      ConfirmDialog(
+        title: l10n.userDeleteTitle,
+        body: l10n.userDeleteBody(user.displayName),
+        confirmLabel: l10n.actionDelete,
+        destructive: true,
+      ),
+    );
+    if (confirmed && context.mounted) {
+      await context.read<UsersCubit>().delete(user);
+    }
   }
 
   /// Deactivation is reversible, so it gets an undo instead of a dialog.
@@ -122,5 +212,61 @@ class _UserTile extends StatelessWidget {
         onUndo: () => cubit.toggleActive(toggled),
       );
     }
+  }
+}
+
+
+class _ResetPinDialog extends StatefulWidget {
+  const _ResetPinDialog({required this.displayName});
+
+  final String displayName;
+
+  @override
+  State<_ResetPinDialog> createState() => _ResetPinDialogState();
+}
+
+class _ResetPinDialogState extends State<_ResetPinDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+    Navigator.of(context).pop(_controller.text.trim());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return AlertDialog(
+      title: Text(l10n.userResetPinTitle(widget.displayName)),
+      content: Form(
+        key: _formKey,
+        child: TextFormField(
+          controller: _controller,
+          autofocus: true,
+          obscureText: true,
+          keyboardType: TextInputType.number,
+          maxLength: 6,
+          decoration: InputDecoration(labelText: l10n.userNewPin),
+          validator: (value) =>
+              (value ?? '').trim().length == 6 ? null : l10n.pinInvalid,
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.actionCancel),
+        ),
+        FilledButton(onPressed: _save, child: Text(l10n.actionSave)),
+      ],
+    );
   }
 }

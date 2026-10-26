@@ -2,11 +2,15 @@ import 'dart:convert';
 
 import '../../../core/error/failure.dart';
 import '../../../core/pagination/paged_result.dart';
+import '../../../core/lot/lot_session.dart';
 import '../../../core/sync/client_ref.dart';
 import '../../../core/sync/pending_mutation.dart';
 import '../../../core/sync/sync_outbox.dart';
+import '../domain/entities/check_out_preview.dart';
 import '../domain/entities/check_out_receipt.dart';
+import '../domain/entities/occupancy_snapshot.dart';
 import '../domain/entities/open_session.dart';
+import '../domain/entities/today_summary.dart';
 import '../domain/repositories/check_out_repository.dart';
 import 'check_out_remote_data_source.dart';
 
@@ -16,30 +20,62 @@ import 'check_out_remote_data_source.dart';
 /// the operator actually acted, not whenever the device reconnects (see
 /// `design.md`). The immediate result is a pending receipt with no amount.
 class CheckOutRepositoryImpl implements CheckOutRepository {
-  CheckOutRepositoryImpl(this._remote, this._outbox);
+  CheckOutRepositoryImpl(this._remote, this._outbox, this._lots);
 
   final CheckOutRemoteDataSource _remote;
   final SyncOutbox _outbox;
+  final LotSession _lots;
 
   @override
   Future<PagedResult<OpenSession>> listOpenSessions({
     int offset = 0,
     int limit = defaultPageSize,
-  }) => _remote.listOpenSessions(limit: limit, offset: offset);
+    String? plate,
+  }) => _remote.listOpenSessions(limit: limit, offset: offset, plate: plate);
 
   @override
-  Future<CheckOutReceipt> checkOut(int sessionId) async {
+  Future<OccupancySnapshot> occupancy() => _remote.occupancy();
+
+  @override
+  Future<TodaySummary> todaySummary() => _remote.todaySummary();
+
+  @override
+  Future<CheckOutPreview> preview(int sessionId) =>
+      _remote.preview(sessionId);
+
+  @override
+  Future<CheckOutReceipt> checkOut(
+    int sessionId, {
+    String paymentMethod = 'cash',
+    int discountAmount = 0,
+    String? discountReason,
+    bool lostTicket = false,
+    String? lostTicketReason,
+  }) async {
     // Same key for the online attempt and any queued replay: a response lost
     // after the server committed must not become a dead letter on retry.
     final clientRef = newClientRef();
     final exitTime = DateTime.now().toUtc();
     try {
-      return await _remote.checkOut(sessionId, idempotencyKey: clientRef);
+      return await _remote.checkOut(
+        sessionId,
+        idempotencyKey: clientRef,
+        paymentMethod: paymentMethod,
+        discountAmount: discountAmount,
+        discountReason: discountReason,
+        lostTicket: lostTicket,
+        lostTicketReason: lostTicketReason,
+      );
     } on NetworkFailure {
       return _queueCheckOut(
         sessionId,
         clientRef: clientRef,
         exitTime: exitTime,
+        paymentMethod: paymentMethod,
+        discountAmount: discountAmount,
+        discountReason: discountReason,
+        lostTicket: lostTicket,
+        lostTicketReason: lostTicketReason,
       );
     }
   }
@@ -51,6 +87,11 @@ class CheckOutRepositoryImpl implements CheckOutRepository {
     int sessionId, {
     required String clientRef,
     required DateTime exitTime,
+    required String paymentMethod,
+    required int discountAmount,
+    required String? discountReason,
+    required bool lostTicket,
+    required String? lostTicketReason,
   }) async {
     await _outbox.enqueue(
       PendingMutation(
@@ -60,6 +101,14 @@ class CheckOutRepositoryImpl implements CheckOutRepository {
         payloadJson: jsonEncode({
           'client_exit_time': exitTime.toIso8601String(),
           'client_ref': clientRef,
+          'lot_id': ?_lots.activeLotId,
+          'payment_method': paymentMethod,
+          'discount_amount': discountAmount,
+          'discount_reason': ?discountReason,
+          if (lostTicket) ...{
+            'lost_ticket': true,
+            'lost_ticket_reason': ?lostTicketReason,
+          },
         }),
         enqueuedAt: exitTime,
       ),
@@ -74,6 +123,10 @@ class CheckOutRepositoryImpl implements CheckOutRepository {
       exitTime: exitTime,
       amountCharged: null,
       ticketNumber: null,
+      paymentMethod: paymentMethod,
+      discountAmount: discountAmount,
+      discountReason: discountReason,
+      lostTicket: lostTicket,
       pendingSync: true,
     );
   }

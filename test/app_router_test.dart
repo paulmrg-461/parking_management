@@ -46,6 +46,85 @@ void main() {
       expect(find.widgetWithText(AppBar, 'Usuarios'), findsOneWidget);
     });
 
+    testWidgets('Success: admin can open /diagnostics', (tester) async {
+      await pumpApp(tester, role: UserRole.admin);
+
+      await goTo(tester, '/diagnostics');
+
+      expect(find.widgetWithText(AppBar, 'Diagnóstico'), findsOneWidget);
+    });
+
+    testWidgets('Security: operator typing /diagnostics is redirected home', (
+      tester,
+    ) async {
+      await pumpApp(tester, role: UserRole.operator);
+
+      await goTo(tester, '/diagnostics');
+
+      expect(find.widgetWithText(AppBar, 'Diagnóstico'), findsNothing);
+      expect(find.text('Hola, Juan'), findsOneWidget);
+    });
+
+    testWidgets('Success: admin can open /audit', (tester) async {
+      await pumpApp(tester, role: UserRole.admin);
+
+      await goTo(tester, '/audit');
+
+      expect(find.widgetWithText(AppBar, 'Auditoría'), findsOneWidget);
+    });
+
+    testWidgets('Security: operator typing /audit is redirected home', (
+      tester,
+    ) async {
+      await pumpApp(tester, role: UserRole.operator);
+
+      await goTo(tester, '/audit');
+
+      expect(find.widgetWithText(AppBar, 'Auditoría'), findsNothing);
+      expect(find.text('Hola, Juan'), findsOneWidget);
+    });
+
+    testWidgets('Success: admin can open /lots', (tester) async {
+      await pumpApp(tester, role: UserRole.admin);
+
+      await goTo(tester, '/lots');
+
+      expect(find.widgetWithText(AppBar, 'Sedes del parqueadero'), findsOneWidget);
+    });
+
+    testWidgets('Security: operator typing /lots is redirected home', (
+      tester,
+    ) async {
+      await pumpApp(tester, role: UserRole.operator);
+
+      await goTo(tester, '/lots');
+
+      expect(
+        find.widgetWithText(AppBar, 'Sedes del parqueadero'),
+        findsNothing,
+      );
+      expect(find.text('Hola, Juan'), findsOneWidget);
+    });
+
+    testWidgets('Success: admin can open /reservations', (tester) async {
+      await pumpApp(tester, role: UserRole.admin);
+
+      await goTo(tester, '/reservations');
+
+      expect(find.widgetWithText(AppBar, 'Reservas de cupo'), findsOneWidget);
+    });
+
+    testWidgets('Security: operator typing /reservations is redirected home', (
+      tester,
+    ) async {
+      await pumpApp(tester, role: UserRole.operator);
+
+      await goTo(tester, '/reservations');
+
+      expect(find.widgetWithText(AppBar, 'Reservas de cupo'), findsNothing);
+      expect(find.text('Hola, Juan'), findsOneWidget);
+    });
+
     testWidgets('Security: operator typing /users is redirected home', (tester) async {
       await pumpApp(tester, role: UserRole.operator);
 

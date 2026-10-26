@@ -26,6 +26,11 @@ Future<void> pumpPage(
   BrandingCubit? branding,
   Future<Uint8List?> Function()? pickLogo,
 }) async {
+  // Tall viewport: the settings form (logo + 8 fields + save) must fit
+  // without fighting ListView's lazy children while tapping.
+  tester.view.physicalSize = const Size(800, 1600);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
   await tester.pumpWidget(
     MultiBlocProvider(
       providers: [
@@ -40,13 +45,6 @@ Future<void> pumpPage(
   await tester.pumpAndSettle();
 }
 
-/// The form is taller than the viewport: bring the save button on screen.
-Future<void> scrollToSave(WidgetTester tester) => tester.scrollUntilVisible(
-  find.widgetWithText(FilledButton, 'Guardar'),
-  300,
-  scrollable: find.byType(Scrollable).first,
-);
-
 void main() {
   testWidgets('Success: saves the edited identity and confirms', (tester) async {
     final repository = FakeParkingSettingsRepository(_configured);
@@ -56,7 +54,6 @@ void main() {
       find.byKey(const Key('settings_name')),
       'Parqueadero Sur',
     );
-    await scrollToSave(tester);
     await tester.tap(find.widgetWithText(FilledButton, 'Guardar'));
     await tester.pumpAndSettle();
 
@@ -72,7 +69,6 @@ void main() {
     await pumpPage(tester, repository: repository);
 
     await tester.enterText(find.byKey(const Key('settings_name')), 'Nope');
-    await scrollToSave(tester);
     await tester.tap(find.widgetWithText(FilledButton, 'Guardar'));
     await tester.pumpAndSettle();
 

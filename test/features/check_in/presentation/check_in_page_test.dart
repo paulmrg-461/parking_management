@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/pagination/paged_result.dart';
 import 'package:parking_management/features/categories/domain/entities/category.dart';
+import 'package:parking_management/features/check_out/domain/entities/occupancy_snapshot.dart';
 import 'package:parking_management/features/categories/domain/repositories/category_repository.dart';
 import 'package:parking_management/features/check_in/application/check_in_cubit.dart';
 import 'package:parking_management/features/check_in/application/create_check_in.dart';
@@ -13,7 +14,9 @@ import 'package:parking_management/features/check_in/domain/entities/new_vehicle
 import 'package:parking_management/features/check_in/domain/entities/parking_session.dart';
 import 'package:parking_management/features/check_in/domain/repositories/check_in_repository.dart';
 import 'package:parking_management/features/check_in/presentation/check_in_page.dart';
+import 'package:parking_management/app/di/injection.dart';
 import 'package:parking_management/core/error/failure.dart';
+import 'package:parking_management/core/storage/key_value_store.dart';
 import 'package:parking_management/features/home/application/dashboard_cubit.dart';
 import 'package:parking_management/features/plate_scanning/application/plate_scanning_cubit.dart';
 import 'package:parking_management/features/plate_scanning/domain/entities/plate_scan_result.dart';
@@ -25,6 +28,7 @@ import 'package:parking_management/features/vehicles/domain/entities/vehicle.dar
 import 'package:parking_management/features/vehicles/domain/repositories/vehicle_repository.dart';
 
 import '../../../helpers/fake_check_out_repository.dart';
+import '../../../helpers/fake_key_value_store.dart';
 import '../../../helpers/test_app.dart';
 import '../../../helpers/test_png.dart';
 
@@ -81,6 +85,7 @@ class _FakeVehicleRepository implements VehicleRepository {
   Future<PagedResult<Vehicle>> listPage({
     int offset = 0,
     int limit = defaultPageSize,
+    String? plate,
   }) => throw UnimplementedError();
 
   @override
@@ -114,6 +119,10 @@ class _FakeCategoryRepository implements CategoryRepository {
 
   @override
   Future<Category> update(int id, String name) => throw UnimplementedError();
+
+  @override
+  Future<Category> setCapacity(int id, int capacity) =>
+      throw UnimplementedError();
 
   @override
   Future<void> delete(int id) => throw UnimplementedError();
@@ -174,9 +183,10 @@ void main() {
     bool canScan = true,
     bool photos = false,
     _FakeScanner? scanner,
+    List<CategoryOccupancySnapshot> occupancyCategories = const [],
   }) async {
     checkIns = _FakeCheckInRepository();
-    occupancy = FakeCheckOutRepository();
+    occupancy = FakeCheckOutRepository(categories: occupancyCategories);
     await tester.pumpWidget(
       testApp(
         MultiBlocProvider(
@@ -232,6 +242,37 @@ void main() {
         scrollable: find.byType(Scrollable).first,
       );
 
+  testWidgets('Success: a full category is disabled in the dropdown', (
+    tester,
+  ) async {
+    await pumpPage(
+      tester,
+      occupancyCategories: const [
+        CategoryOccupancySnapshot(
+          categoryId: 1,
+          name: 'Car',
+          count: 1,
+          capacity: 1,
+          isFull: true,
+        ),
+      ],
+    );
+
+    await enterPlate(tester, 'NEW999');
+    await scrollTo(tester, categoryField());
+    await tester.tap(categoryField());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Car · La categoría está llena'), findsOneWidget);
+    expect(find.text('Motorcycle'), findsOneWidget);
+
+    await tester.tap(find.text('Car · La categoría está llena'));
+    await tester.pumpAndSettle();
+
+    // A disabled item does not select anything, so the menu stays open.
+    expect(find.text('Car · La categoría está llena'), findsOneWidget);
+  });
+
   testWidgets('Success: renders the open sessions list and the check-in form', (
     tester,
   ) async {
@@ -280,6 +321,29 @@ void main() {
     expect(field.controller!.text, isEmpty);
     expect(field.focusNode!.hasFocus, isTrue);
     expect(hapticFired(), isTrue);
+    // The plate is offered again for the next entry.
+    expect(find.text('Repetir entrada ABC123'), findsOneWidget);
+  });
+
+  testWidgets('Success: the last plate can be repeated with one tap', (
+    tester,
+  ) async {
+    final store = FakeKeyValueStore()
+      ..values['preferences/last_plate'] = 'ABC123';
+    serviceLocator.registerSingleton<KeyValueStore>(store);
+    addTearDown(serviceLocator.reset);
+
+    await pumpPage(tester);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Repetir entrada ABC123'), findsOneWidget);
+    await tester.tap(find.text('Repetir entrada ABC123'));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.widget<TextField>(plateField()).controller!.text,
+      'ABC123',
+    );
   });
 
   testWidgets(
@@ -291,7 +355,9 @@ void main() {
       await tester.tap(submitButton());
       await tester.pumpAndSettle();
 
-      expect(occupancy.listCalls, 1);
+      // One snapshot on open (for the capacity-aware category dropdown) plus
+    // one refresh after the successful entry.
+    expect(occupancy.occupancyCalls, 2);
     },
   );
 
@@ -308,7 +374,9 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Session already open for this plate'), findsOneWidget);
-      expect(occupancy.listCalls, 0);
+      // Only the snapshot taken when the page opened; a rejected entry never
+    // refreshes occupancy.
+    expect(occupancy.occupancyCalls, 1);
     },
   );
 

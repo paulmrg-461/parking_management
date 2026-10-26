@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:parking_management/core/lot/lot_session.dart';
 import 'package:parking_management/core/sync/pending_mutation.dart';
 import 'package:hive_ce/hive_ce.dart';
 import 'package:parking_management/app/di/hive_registrar.g.dart';
@@ -27,6 +28,10 @@ class _FakeRemote implements CategoryRemoteDataSource {
 
   @override
   Future<Category> create(String name) async => Category(id: 2, name: name);
+
+  @override
+  Future<Category> setCapacity(int id, int capacity) async =>
+      Category(id: id, name: 'x', capacity: capacity);
 
   @override
   Future<Category> update(int id, String name) async {
@@ -64,7 +69,7 @@ void main() {
   });
 
   CategoryRepositoryImpl repository(_FakeRemote remote) =>
-      CategoryRepositoryImpl(remote, HiveCategoryLocalDataSource(), outbox);
+      CategoryRepositoryImpl(remote, HiveCategoryLocalDataSource(LotSession()), outbox);
 
   test('list returns remote categories and caches them', () async {
     final repo = repository(_FakeRemote());
@@ -75,7 +80,7 @@ void main() {
   });
 
   test('list falls back to the local cache on network failure', () async {
-    final local = HiveCategoryLocalDataSource();
+    final local = HiveCategoryLocalDataSource(LotSession());
     await CategoryRepositoryImpl(_FakeRemote(), local, outbox).list();
 
     final offline = CategoryRepositoryImpl(
@@ -97,7 +102,7 @@ void main() {
   });
 
   test('update queues the mutation and returns an optimistic result on network failure', () async {
-    final local = HiveCategoryLocalDataSource();
+    final local = HiveCategoryLocalDataSource(LotSession());
     await CategoryRepositoryImpl(_FakeRemote(), local, outbox).list();
 
     final offline = CategoryRepositoryImpl(
@@ -117,7 +122,7 @@ void main() {
   });
 
   test('delete removes the local cache entry and queues the mutation on network failure', () async {
-    final local = HiveCategoryLocalDataSource();
+    final local = HiveCategoryLocalDataSource(LotSession());
     await CategoryRepositoryImpl(_FakeRemote(), local, outbox).list();
 
     final offline = CategoryRepositoryImpl(

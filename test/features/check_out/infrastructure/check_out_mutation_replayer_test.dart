@@ -2,9 +2,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/pagination/paged_result.dart';
 import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/core/sync/pending_mutation.dart';
+import 'package:parking_management/features/check_out/domain/entities/check_out_preview.dart';
 import 'package:parking_management/features/check_out/domain/entities/check_out_receipt.dart';
 import 'package:parking_management/features/check_out/domain/entities/open_session.dart';
 import 'package:parking_management/features/check_out/infrastructure/check_out_mutation_replayer.dart';
+import 'package:parking_management/features/check_out/domain/entities/occupancy_snapshot.dart';
+import 'package:parking_management/features/check_out/domain/entities/today_summary.dart';
 import 'package:parking_management/features/check_out/infrastructure/check_out_remote_data_source.dart';
 
 class _FakeRemote implements CheckOutRemoteDataSource {
@@ -14,22 +17,47 @@ class _FakeRemote implements CheckOutRemoteDataSource {
   int? sessionId;
   DateTime? clientExitTime;
   String? idempotencyKey;
+  String? paymentMethod;
+  int discountAmount = 0;
+  String? discountReason;
+
+  @override
+  Future<TodaySummary> todaySummary() async => TodaySummary.empty;
+
+  @override
+  Future<OccupancySnapshot> occupancy() async =>
+      const OccupancySnapshot(totalOpen: 0, totalCapacity: 0);
 
   @override
   Future<PagedResult<OpenSession>> listOpenSessions({
     required int limit,
     required int offset,
+    String? plate,
   }) async => const PagedResult([]);
+
+  @override
+  Future<CheckOutPreview> preview(int sessionId) async =>
+      CheckOutPreview(sessionId: sessionId, amount: 5000);
+
 
   @override
   Future<CheckOutReceipt> checkOut(
     int sessionId, {
     DateTime? clientExitTime,
     String? idempotencyKey,
+    String paymentMethod = 'cash',
+    int discountAmount = 0,
+    String? discountReason,
+    bool lostTicket = false,
+    String? lostTicketReason,
+    int? lotId,
   }) async {
     this.sessionId = sessionId;
     this.clientExitTime = clientExitTime;
     this.idempotencyKey = idempotencyKey;
+    this.paymentMethod = paymentMethod;
+    this.discountAmount = discountAmount;
+    this.discountReason = discountReason;
     if (error != null) {
       throw error!;
     }
@@ -60,13 +88,16 @@ void main() {
 
       await CheckOutMutationReplayer(remote).replay(
         _queued(
-          '{"client_exit_time":"2026-01-01T10:00:00.000","client_ref":"k1"}',
+          '{"client_exit_time":"2026-01-01T10:00:00.000","client_ref":"k1","payment_method":"card","discount_amount":1000,"discount_reason":"cortesia"}',
         ),
       );
 
       expect(remote.sessionId, 5);
       expect(remote.clientExitTime, DateTime.parse('2026-01-01T10:00:00.000'));
       expect(remote.idempotencyKey, 'k1');
+      expect(remote.paymentMethod, 'card');
+      expect(remote.discountAmount, 1000);
+      expect(remote.discountReason, 'cortesia');
     },
   );
 
@@ -78,7 +109,7 @@ void main() {
     await expectLater(
       CheckOutMutationReplayer(remote).replay(
         _queued(
-          '{"client_exit_time":"2026-01-01T10:00:00.000","client_ref":"k1"}',
+          '{"client_exit_time":"2026-01-01T10:00:00.000","client_ref":"k1","payment_method":"card","discount_amount":1000,"discount_reason":"cortesia"}',
         ),
       ),
       throwsA(const ValidationFailure('Session already closed')),

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:cross_file/cross_file.dart';
 
 import '../../../core/error/failure.dart';
+import '../../../core/lot/lot_session.dart';
 import '../../../core/sync/client_ref.dart';
 import '../../../core/sync/pending_mutation.dart';
 import '../../../core/sync/pending_photo_storage.dart';
@@ -17,11 +18,12 @@ import 'check_in_remote_data_source.dart';
 /// mutation, and returns an optimistic session instead of rethrowing (see
 /// `design.md` for why the synthetic id needs no reconciliation).
 class CheckInRepositoryImpl implements CheckInRepository {
-  CheckInRepositoryImpl(this._remote, this._outbox, this._photos);
+  CheckInRepositoryImpl(this._remote, this._outbox, this._photos, this._lots);
 
   final CheckInRemoteDataSource _remote;
   final SyncOutbox _outbox;
   final PendingPhotoStorage _photos;
+  final LotSession _lots;
 
   @override
   Future<ParkingSession> createCheckIn({
@@ -77,6 +79,7 @@ class CheckInRepositoryImpl implements CheckInRepository {
           'photo_paths': persistedPaths,
           'client_entry_time': entryTime.toIso8601String(),
           'client_ref': clientRef,
+          'lot_id': ?_lots.activeLotId,
           ..._newVehiclePayload(newVehicle),
         }),
         enqueuedAt: DateTime.now(),

@@ -1,9 +1,7 @@
 import 'package:cross_file/cross_file.dart';
-import 'package:dio/dio.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../../core/network/dio_error_mapper.dart';
-import '../../../core/network/idempotency.dart';
-import '../../../core/network/pagination.dart';
+import '../../../core/network/supabase_error_mapper.dart';
 import '../../../core/sync/pending_photo_storage.dart';
 import '../domain/entities/new_vehicle_info.dart';
 import '../domain/entities/parking_session.dart';
@@ -16,17 +14,19 @@ abstract class CheckInRemoteDataSource {
     NewVehicleInfo? newVehicle,
     String? idempotencyKey,
     DateTime? clientEntryTime,
+    int? lotId,
   });
 
   Future<List<ParkingSession>> listOpenSessions();
 }
 
-class DioCheckInRemoteDataSource implements CheckInRemoteDataSource {
-  DioCheckInRemoteDataSource(this._dio);
+class SupabaseCheckInRemoteDataSource implements CheckInRemoteDataSource {
+  SupabaseCheckInRemoteDataSource(this._client);
 
-  final Dio _dio;
+  final SupabaseClient _client;
 
-  static const _path = '/api/check-ins';
+  static const _bucket = 'evidence';
+  static const _view = 'open_sessions_view';
 
   @override
   Future<ParkingSession> createCheckIn({
@@ -35,79 +35,87 @@ class DioCheckInRemoteDataSource implements CheckInRemoteDataSource {
     NewVehicleInfo? newVehicle,
     String? idempotencyKey,
     DateTime? clientEntryTime,
+    int? lotId,
   }) async {
     try {
-      final formData = FormData.fromMap({
-        'plate': plate,
-        if (clientEntryTime != null)
-          'client_entry_time': clientEntryTime.toUtc().toIso8601String(),
-        ..._newVehicleFields(newVehicle),
-        'photos': [
-          for (var i = 0; i < photos.length; i++) await _part(photos[i], i),
-        ],
-      });
-      final response = await _dio.post(
-        _path,
-        data: formData,
-        options: idempotencyOptions(idempotencyKey),
+      final paths = await _uploadPhotos(photos, existingIdempotencyKey: idempotencyKey);
+      final result = await _client.rpc(
+        'check_in',
+        params: {
+          'p_plate': plate,
+          if (newVehicle?.categoryId != null)
+            'p_category_id': newVehicle!.categoryId,
+          if (newVehicle?.color != null) 'p_color': newVehicle!.color,
+          if (newVehicle?.brand != null) 'p_brand': newVehicle!.brand,
+          'p_photos': [
+            for (final path in paths)
+              {
+                'path': path,
+                'taken_at': DateTime.now().toUtc().toIso8601String(),
+              },
+          ],
+          'p_idempotency_key': ?idempotencyKey,
+          if (clientEntryTime != null)
+            'p_client_entry_time': clientEntryTime.toUtc().toIso8601String(),
+          'p_lot_id': ?lotId,
+        },
       );
-      return ParkingSessionDto.fromJson(response.data as Map<String, dynamic>)
-          .toDomain();
-    } on DioException catch (error) {
-      throw mapDioError(error);
+      return ParkingSessionDto.fromJson(
+        Map<String, dynamic>.from(result as Map),
+      ).toDomain();
+    } catch (error) {
+      throw mapSupabaseError(error);
     }
+  }
+
+  Future<List<String>> _uploadPhotos(
+    List<XFile> photos, {
+    String? existingIdempotencyKey,
+  }) async {
+    if (photos.isEmpty) {
+      return const [];
+    }
+    final folder = existingIdempotencyKey ?? DateTime.now().microsecondsSinceEpoch;
+    final paths = <String>[];
+    for (var i = 0; i < photos.length; i++) {
+      final photo = photos[i];
+      final extension = photoExtensionOf(photo);
+      final path = '$folder/${i}_${DateTime.now().microsecondsSinceEpoch}$extension';
+      await _client.storage.from(_bucket).uploadBinary(
+        path,
+        await photo.readAsBytes(),
+        fileOptions: FileOptions(
+          contentType: photoMimeType(extension),
+          upsert: true,
+        ),
+      );
+      paths.add(path);
+    }
+    return paths;
   }
 
   @override
   Future<List<ParkingSession>> listOpenSessions() async {
-    // The backend caps every page (100 by default): keep requesting pages so
-    // an occupied lot never silently loses vehicles past the first one.
     const pageSize = 500;
     final sessions = <ParkingSession>[];
     var offset = 0;
     try {
       while (true) {
-        final response = await _dio.get(
-          _path,
-          queryParameters: pageQuery(limit: pageSize, offset: offset),
-        );
-        final data = response.data as List<dynamic>;
+        final rows = await _client
+            .from(_view)
+            .select()
+            .order('entry_time')
+            .range(offset, offset + pageSize - 1);
         sessions.addAll(
-          data.map(
-            (item) =>
-                ParkingSessionDto.fromJson(item as Map<String, dynamic>)
-                    .toDomain(),
-          ),
+          rows.map((row) => ParkingSessionDto.fromJson(row).toDomain()),
         );
-        if (data.length < pageSize) {
+        if (rows.length < pageSize) {
           return sessions;
         }
-        offset += data.length;
+        offset += rows.length;
       }
-    } on DioException catch (error) {
-      throw mapDioError(error);
+    } catch (error) {
+      throw mapSupabaseError(error);
     }
-  }
-
-  /// Bytes-based (works on web). The file name is synthetic so no device
-  /// path leaks to the server; the MIME type drives backend validation.
-  Future<MultipartFile> _part(XFile photo, int index) async {
-    final extension = photoExtensionOf(photo);
-    return MultipartFile.fromBytes(
-      await photo.readAsBytes(),
-      filename: 'photo_$index$extension',
-      contentType: DioMediaType.parse(photoMimeType(extension)),
-    );
-  }
-
-  Map<String, Object> _newVehicleFields(NewVehicleInfo? info) {
-    if (info == null) {
-      return const {};
-    }
-    return {
-      'category_id': info.categoryId,
-      if (info.color != null) 'color': info.color!,
-      if (info.brand != null) 'brand': info.brand!,
-    };
   }
 }

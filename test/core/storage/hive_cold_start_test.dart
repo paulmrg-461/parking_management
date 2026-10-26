@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:parking_management/core/lot/lot_session.dart';
 import 'package:hive_ce/hive_ce.dart';
 import 'package:parking_management/app/di/hive_registrar.g.dart';
 import 'package:parking_management/features/auth/domain/entities/auth_session.dart';
@@ -94,21 +95,66 @@ void main() {
           amount: 10,
         );
         await HiveVehicleLocalDataSource().cacheAll([vehicle]);
-        await HiveCategoryLocalDataSource().cacheAll([category]);
-        await HiveTariffLocalDataSource().cacheAll([tariff]);
-        await HiveMonthlyPassLocalDataSource().cacheAll([pass]);
+        await HiveCategoryLocalDataSource(LotSession()).cacheAll([category]);
+        await HiveTariffLocalDataSource(LotSession()).cacheAll([tariff]);
+        await HiveMonthlyPassLocalDataSource(LotSession()).cacheAll([pass]);
         await _coldStart();
 
         expect(await HiveVehicleLocalDataSource().readAll(), [vehicle]);
-        expect(await HiveCategoryLocalDataSource().readAll(), [category]);
-        expect(await HiveTariffLocalDataSource().readAll(), [tariff]);
-        expect(await HiveMonthlyPassLocalDataSource().readAll(), [pass]);
+        expect(await HiveCategoryLocalDataSource(LotSession()).readAll(), [category]);
+        expect(await HiveTariffLocalDataSource(LotSession()).readAll(), [tariff]);
+        expect(await HiveMonthlyPassLocalDataSource(LotSession()).readAll(), [pass]);
       },
     );
 
     test('Failure: empty caches read as empty lists, not errors', () async {
       expect(await HiveVehicleLocalDataSource().readAll(), isEmpty);
-      expect(await HiveCategoryLocalDataSource().readAll(), isEmpty);
+      expect(await HiveCategoryLocalDataSource(LotSession()).readAll(), isEmpty);
+    });
+  });
+
+  group('lot-scoped reference-data caches', () {
+    test('Security: categories, tariffs and passes never mix lots', () async {
+      final session = LotSession()..select(1);
+      final categories = HiveCategoryLocalDataSource(session);
+      final tariffs = HiveTariffLocalDataSource(session);
+      final passes = HiveMonthlyPassLocalDataSource(session);
+
+      await categories.cacheAll(const [Category(id: 1, name: 'Car')]);
+      await tariffs.cacheAll(const [
+        Tariff(
+          id: 1,
+          categoryId: 1,
+          type: TariffType.hourly,
+          amount: 5000,
+        ),
+      ]);
+      await passes.cacheAll([
+        MonthlyPass(
+          id: 1,
+          vehicleId: 1,
+          startDate: DateTime(2026),
+          endDate: DateTime(2026, 2),
+          amount: 80000,
+        ),
+      ]);
+
+      session.select(2);
+      expect(await categories.readAll(), isEmpty);
+      expect(await tariffs.readAll(), isEmpty);
+      expect(await passes.readAll(), isEmpty);
+
+      await categories.cacheAll(const [Category(id: 9, name: 'Bus')]);
+      expect((await categories.readAll()).single.name, 'Bus');
+
+      session.select(1);
+      expect((await categories.readAll()).single.name, 'Car');
+      expect((await tariffs.readAll()).single.amount, 5000);
+      expect((await passes.readAll()).single.amount, 80000);
+
+      // Switching back to lot 2 still has its own rows.
+      session.select(2);
+      expect((await categories.readAll()).single.name, 'Bus');
     });
   });
 }

@@ -9,7 +9,12 @@ part of 'category_dto.dart';
 CategoryDto _$CategoryDtoFromJson(Map<String, dynamic> json) => CategoryDto(
   id: (json['id'] as num?)?.toInt(),
   name: json['name'] as String,
+  capacity: (json['capacity'] as num?)?.toInt() ?? 0,
 );
 
 Map<String, dynamic> _$CategoryDtoToJson(CategoryDto instance) =>
-    <String, dynamic>{'id': instance.id, 'name': instance.name};
+    <String, dynamic>{
+      'id': instance.id,
+      'name': instance.name,
+      'capacity': instance.capacity,
+    };

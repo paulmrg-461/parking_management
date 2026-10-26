@@ -10,13 +10,27 @@ class CheckOutVehicle {
 
   final CheckOutRepository _repository;
 
-  Future<CheckOutReceipt> call(int sessionId) async {
+  Future<CheckOutReceipt> call(
+    int sessionId, {
+    String paymentMethod = 'cash',
+    int discountAmount = 0,
+    String? discountReason,
+    bool lostTicket = false,
+    String? lostTicketReason,
+  }) async {
     if (sessionId <= 0) {
       throw const ValidationFailure(
         'This check-in is still waiting to sync; try again once online',
         ClientFailureCodes.pendingSyncCheckOut,
       );
     }
-    return _repository.checkOut(sessionId);
+    return _repository.checkOut(
+      sessionId,
+      paymentMethod: paymentMethod,
+      discountAmount: discountAmount,
+      discountReason: discountReason,
+      lostTicket: lostTicket,
+      lostTicketReason: lostTicketReason,
+    );
   }
 }

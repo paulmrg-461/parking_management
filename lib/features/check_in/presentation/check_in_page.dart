@@ -2,22 +2,27 @@ import 'dart:async';
 
 import 'package:cross_file/cross_file.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/l10n/failure_messages.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/state/submission.dart';
+import '../../../core/utils/elapsed.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/storage/key_value_store.dart';
 import '../../../core/widgets/photo_strip.dart';
 import '../../../core/widgets/receipt_card.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/widgets/sync_badge.dart';
+import '../../../app/di/injection.dart';
 import '../../home/application/dashboard_cubit.dart';
 import '../../plate_scanning/application/plate_scanning_cubit.dart';
 import '../../plate_scanning/domain/repositories/plate_image_capture.dart';
 import '../../plate_scanning/presentation/inline_plate_scan.dart';
 import '../../receipt_printing/presentation/receipt_print_sheet.dart';
+import '../../notifications/presentation/notification_bell.dart';
 import '../application/check_in_cubit.dart';
 import '../application/vehicle_lookup_cubit.dart';
 import '../domain/entities/new_vehicle_info.dart';
@@ -62,6 +67,9 @@ class _CheckInPageState extends State<CheckInPage> {
   final List<_Photo> _photos = [];
   Timer? _debounce;
   int? _categoryId;
+  String? _lastPlate;
+  static const _prefsBox = 'preferences';
+  static const _lastPlateKey = 'last_plate';
 
   bool get _photoLimitReached => _photos.length >= EvidencePolicy.maxPhotos;
 
@@ -69,6 +77,19 @@ class _CheckInPageState extends State<CheckInPage> {
   void initState() {
     super.initState();
     unawaited(context.read<CheckInCubit>().loadOpenSessions());
+    // Fresh capacity snapshot so full categories are disabled in the
+    // registration dropdown even on a deep link.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      try {
+        unawaited(context.read<DashboardCubit>().load());
+      } on ProviderNotFoundException {
+        // Isolated tests may not provide the dashboard cubit.
+      }
+      _restoreLastPlate();
+    });
   }
 
   @override
@@ -111,7 +132,46 @@ class _CheckInPageState extends State<CheckInPage> {
     showErrorSnack(context, message);
   }
 
+  void _restoreLastPlate() {
+    if (!serviceLocator.isRegistered<KeyValueStore>()) {
+      return;
+    }
+    final stored = serviceLocator<KeyValueStore>().get(
+      _prefsBox,
+      _lastPlateKey,
+    );
+    if (stored is String && stored.isNotEmpty && mounted) {
+      setState(() => _lastPlate = stored);
+    }
+  }
+
+  Future<void> _rememberLastPlate(String plate) async {
+    if (!serviceLocator.isRegistered<KeyValueStore>()) {
+      return;
+    }
+    try {
+      await serviceLocator<KeyValueStore>().put(
+        _prefsBox,
+        _lastPlateKey,
+        plate,
+      );
+    } catch (_) {
+      // A preference is not worth an error dialog.
+    }
+  }
+
+  void _repeatLastPlate() {
+    final plate = _lastPlate;
+    if (plate == null) {
+      return;
+    }
+    setState(() => _plateController.text = plate);
+    _lookupNow();
+    _plateFocus.requestFocus();
+  }
+
   void _onPlateChanged(String _) {
+    setState(() {});
     _debounce?.cancel();
     _debounce = Timer(_lookupDebounce, _lookupNow);
   }
@@ -191,8 +251,12 @@ class _CheckInPageState extends State<CheckInPage> {
         HapticFeedback.mediumImpact();
         _resetForm();
         _plateFocus.requestFocus();
+        setState(() => _lastPlate = result.plate);
+        unawaited(_rememberLastPlate(result.plate));
         unawaited(context.read<DashboardCubit>().load());
-        showInfoSnack(context, context.l10n.checkInSuccess(result.plate));
+        final message = context.l10n.checkInSuccess(result.plate);
+        SemanticsService.announce(message, Directionality.of(context));
+        showInfoSnack(context, message);
       case SubmissionFailed(:final message, :final failure):
         showErrorSnack(context, context.l10n.errorText(message, failure));
       default:
@@ -206,7 +270,7 @@ class _CheckInPageState extends State<CheckInPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.checkInTitle),
-        actions: const [SyncBadge()],
+        actions: const [NotificationBell(), SyncBadge()],
       ),
       body: PlateScanListener(
         onDetected: _onPlateDetected,
@@ -267,6 +331,15 @@ class _CheckInPageState extends State<CheckInPage> {
           onChanged: _onPlateChanged,
           onSubmitted: (_) => _lookupNow(),
         ),
+        if (_lastPlate != null && _plateController.text.trim().isEmpty)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: ActionChip(
+              avatar: const Icon(Icons.replay, size: 18),
+              label: Text(l10n.checkInRepeat(_lastPlate!)),
+              onPressed: _repeatLastPlate,
+            ),
+          ),
         const SizedBox(height: 8),
         VehicleLookupSection(state: lookup, registration: _buildRegistration),
         const SizedBox(height: 16),
@@ -305,8 +378,26 @@ class _CheckInPageState extends State<CheckInPage> {
     );
   }
 
+  /// Category ids that already reached their capacity (reservations
+  /// included). Empty when the dashboard snapshot is unavailable.
+  Set<int> _fullCategories(BuildContext context) {
+    try {
+      final state = context.watch<DashboardCubit>().state;
+      if (state is! DashboardLoaded) {
+        return const {};
+      }
+      return {
+        for (final category in state.categories)
+          if (category.isFull) category.categoryId,
+      };
+    } on ProviderNotFoundException {
+      return const {};
+    }
+  }
+
   Widget _buildRegistration(VehicleLookupNotFound lookup) {
     final l10n = context.l10n;
+    final full = _fullCategories(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -329,14 +420,21 @@ class _CheckInPageState extends State<CheckInPage> {
             initialValue: _categoryId,
             decoration: InputDecoration(
               labelText: l10n.fieldCategory,
-              helperText: l10n.categoryRequiredHelper,
+              helperText: full.isEmpty
+                  ? l10n.categoryRequiredHelper
+                  : l10n.categoryFullHint,
             ),
             items: [
               for (final category in lookup.categories)
                 if (category.id != null)
                   DropdownMenuItem(
                     value: category.id,
-                    child: Text(category.name),
+                    enabled: !full.contains(category.id),
+                    child: Text(
+                      full.contains(category.id)
+                          ? '${category.name} · ${l10n.errorCategoryFull}'
+                          : category.name,
+                    ),
                   ),
             ],
             onChanged: (value) => setState(() => _categoryId = value),
@@ -434,6 +532,7 @@ class _SessionTile extends StatelessWidget {
       title: Text(session.plate),
       subtitle: Text(
         '${l10n.sessionEntry(Formatters.dateTime(session.entryTime))}'
+        ' · ${elapsedLabel(l10n, session.entryTime)}'
         ' · ${l10n.sessionPhotos(session.photoCount)}',
       ),
       trailing: session.status == ParkingSessionStatus.pendingSync

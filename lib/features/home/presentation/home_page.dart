@@ -12,6 +12,7 @@ import '../../../core/widgets/sync_badge.dart';
 import '../../auth/application/auth_cubit.dart';
 import '../../auth/domain/entities/auth_session.dart';
 import '../../auth/domain/entities/user.dart';
+import '../../notifications/presentation/notification_bell.dart';
 import '../../settings/application/branding_cubit.dart';
 import '../application/dashboard_cubit.dart';
 import 'widgets/dashboard_widgets.dart';
@@ -44,6 +45,7 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
         actions: [
+          const NotificationBell(),
           const SyncBadge(),
           AppIconButton(
             icon: Icons.logout,
@@ -89,10 +91,30 @@ class _Dashboard extends StatelessWidget {
           ),
           const SizedBox(height: Space.lg),
           const OccupancyCard(),
+          const SizedBox(height: Space.md),
+          const TodayCard(),
+          const SizedBox(height: Space.md),
+          const ShiftCard(),
           const SizedBox(height: Space.lg),
           PrimaryActions(
             onEntry: () => context.go('/check-in'),
             onExit: () => context.go('/check-out'),
+          ),
+          const SizedBox(height: Space.sm),
+          Wrap(
+            spacing: Space.sm,
+            children: [
+              TextButton.icon(
+                onPressed: () => context.go('/history'),
+                icon: const Icon(Icons.history),
+                label: Text(l10n.navHistory),
+              ),
+              TextButton.icon(
+                onPressed: () => context.go('/shift'),
+                icon: const Icon(Icons.point_of_sale),
+                label: Text(l10n.homeShift),
+              ),
+            ],
           ),
           if (management.isNotEmpty) ...[
             const SizedBox(height: Space.xl),

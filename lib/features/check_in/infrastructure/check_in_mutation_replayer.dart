@@ -29,6 +29,7 @@ class CheckInMutationReplayer extends MutationReplayer {
         final String value => DateTime.parse(value),
         _ => null, // legacy queue entry written before this field existed
       },
+      lotId: (payload['lot_id'] as num?)?.toInt(),
     );
     await _photos.deleteFor(clientRef);
   }
