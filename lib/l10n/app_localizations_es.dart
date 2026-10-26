@@ -1597,6 +1597,16 @@ class AppLocalizationsEs extends AppLocalizations {
   String get reportsRangeTooltip => 'Cambiar rango de fechas';
 
   @override
+  String reportsVsPrevious(String percent) {
+    return '$percent % vs. periodo anterior';
+  }
+
+  @override
+  String reportsPreviousTotal(String amount) {
+    return 'Antes: $amount';
+  }
+
+  @override
   String get reportsTotalRevenue => 'Ingresos totales';
 
   @override

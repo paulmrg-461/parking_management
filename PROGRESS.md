@@ -248,6 +248,16 @@ The app is now a Supabase-only stack: FastAPI, Alembic, Dio and Redis are gone.
   `docs/runbook-restore.md` documents the drill, the production restore, a
   new-host recovery and the verification checklist. CI runs the drill.
 
+- **UI/UX polish batches**: elapsed-stay labels and a >24 h flag on open
+  sessions; pass status chips (active-first sort); shared `EmptyState`; a
+  quiet-day home card; server-side plate search for vehicles; report presets;
+  shared `SearchField`; screen-reader announcements on check-in/check-out;
+  `check_out_preview` (estimated fare before charging); a one-tap "repeat
+  entry" chip that remembers the last plate; animated occupancy bar and pass
+  chip; and reports now show the **% variation against the previous, equally
+  long period** (the previous window is fetched alongside the current one and
+  hidden when it fails).
+
 ## Infra/tooling (not OpenSpec capabilities — repo scaffolding)
 
 - **Docker**: root `docker-compose.yml` includes the official self-hosted
@@ -294,7 +304,7 @@ notable changes and the migration history.
 
 ## Test counts
 
-- Flutter (`flutter test`): 552 passed (plus 1 integration test that runs only against a live stack). `flutter analyze`: 0 errors/warnings
+- Flutter (`flutter test`): 562 passed (plus 1 integration test that runs only against a live stack). `flutter analyze`: 0 errors/warnings
   (98 SDK-deprecation/const infos under the local Flutter 3.50 beta; CI pins
   3.49 where the baseline is clean).
 - SQL/compose: validated against the running Supabase stack and by

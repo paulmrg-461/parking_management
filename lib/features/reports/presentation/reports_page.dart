@@ -249,6 +249,10 @@ class _ReportsBody extends StatelessWidget {
         const SizedBox(height: Space.sm),
         Text(l10n.reportsTotalRevenue, style: textTheme.labelLarge),
         MoneyText(revenue.total, style: textTheme.headlineMedium),
+        if (loaded.deltaPercent case final delta?) ...[
+          const SizedBox(height: Space.xs),
+          _DeltaRow(delta: delta, previous: loaded.previousTotal!),
+        ],
         if (loaded.allLots && revenue.byLot.isNotEmpty) ...[
           const SizedBox(height: Space.lg),
           _SectionTitle(l10n.reportsByLot),
@@ -447,6 +451,49 @@ class _WhatsappMetric extends StatelessWidget {
         Text(label, style: textTheme.labelSmall),
         Text(value, style: textTheme.titleMedium?.copyWith(color: color)),
       ],
+    );
+  }
+}
+
+class _DeltaRow extends StatelessWidget {
+  const _DeltaRow({required this.delta, required this.previous});
+
+  final int delta;
+  final int previous;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final scheme = Theme.of(context).colorScheme;
+    final color = delta > 0
+        ? scheme.primary
+        : delta < 0
+        ? scheme.error
+        : scheme.onSurfaceVariant;
+    final sign = delta > 0 ? '+' : '';
+    return Semantics(
+      label: l10n.reportsVsPrevious('$sign$delta'),
+      child: Row(
+        children: [
+          Icon(
+            delta >= 0 ? Icons.trending_up : Icons.trending_down,
+            size: 18,
+            color: color,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            l10n.reportsVsPrevious('$sign$delta'),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: color),
+          ),
+          const SizedBox(width: Space.sm),
+          Text(
+            l10n.reportsPreviousTotal(Formatters.money(previous)),
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+      ),
     );
   }
 }

@@ -18,6 +18,7 @@ class _FakeReportRepository implements ReportRepository {
 
   final RevenueReport revenue;
   final OccupancyReport occupancy;
+  RevenueReport? previousRevenue;
   Failure? error;
   bool? lastAllLots;
   DateTime? lastStart;
@@ -29,16 +30,27 @@ class _FakeReportRepository implements ReportRepository {
     byDay: [WhatsappDaily(date: DateTime(2026, 1, 1), sent: 8, failed: 1)],
   );
 
+  int _revenueCalls = 0;
+
   @override
   Future<RevenueReport> getRevenueReport({
     required DateTime startDate,
     required DateTime endDate,
     bool allLots = false,
   }) async {
-    lastAllLots = allLots;
-    lastStart = startDate;
-    lastEnd = endDate;
-    return error == null ? revenue : throw error!;
+    // Each load asks once for the selected window and once for the previous,
+    // equally long one (the second call of the pair).
+    _revenueCalls++;
+    final isPrevious = _revenueCalls.isEven;
+    if (!isPrevious) {
+      lastAllLots = allLots;
+      lastStart = startDate;
+      lastEnd = endDate;
+    }
+    if (error != null) {
+      throw error!;
+    }
+    return isPrevious ? (previousRevenue ?? revenue) : revenue;
   }
 
   @override
@@ -76,9 +88,11 @@ const _occupancy = OccupancyReport(
 Future<_FakeReportRepository> _pump(
   WidgetTester tester, {
   Failure? error,
+  RevenueReport? previousRevenue,
 }) async {
   final repository = _FakeReportRepository(_revenue, _occupancy)
-    ..error = error;
+    ..error = error
+    ..previousRevenue = previousRevenue;
   await tester.pumpWidget(
     testApp(
       BlocProvider<ReportsCubit>(
@@ -110,6 +124,7 @@ void main() {
     await _pump(tester);
 
     expect(find.text('\$150.000'), findsOneWidget);
+    await _scrollTo(tester, find.text('Ingresos por categoría'));
     expect(find.text('Ingresos por categoría'), findsOneWidget);
     await _scrollTo(tester, find.text('Efectivo'));
     expect(find.text('Ingresos por método de pago'), findsOneWidget);
@@ -193,5 +208,23 @@ void main() {
     final today = DateTime.now();
     expect(repository.lastStart, DateTime(today.year, today.month, today.day));
     expect(repository.lastEnd, DateTime(today.year, today.month, today.day));
+  });
+
+  testWidgets('Success: the variation against the previous period is shown', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      previousRevenue: RevenueReport(
+        startDate: DateTime(2025, 12, 1),
+        endDate: DateTime(2025, 12, 31),
+        total: 100000,
+        byDay: const [],
+        byCategory: const [],
+      ),
+    );
+
+    expect(find.text('+50 % vs. periodo anterior'), findsOneWidget);
+    expect(find.text('Antes: \$100.000'), findsOneWidget);
   });
 }

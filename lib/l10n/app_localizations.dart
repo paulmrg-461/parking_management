@@ -2930,6 +2930,18 @@ abstract class AppLocalizations {
   /// **'Cambiar rango de fechas'**
   String get reportsRangeTooltip;
 
+  /// No description provided for @reportsVsPrevious.
+  ///
+  /// In es, this message translates to:
+  /// **'{percent} % vs. periodo anterior'**
+  String reportsVsPrevious(String percent);
+
+  /// No description provided for @reportsPreviousTotal.
+  ///
+  /// In es, this message translates to:
+  /// **'Antes: {amount}'**
+  String reportsPreviousTotal(String amount);
+
   /// No description provided for @reportsTotalRevenue.
   ///
   /// In es, this message translates to:
