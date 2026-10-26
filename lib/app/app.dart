@@ -8,6 +8,7 @@ import '../core/l10n/l10n.dart';
 import '../core/network/connectivity_cubit.dart';
 import '../core/sync/sync_status_cubit.dart';
 import '../core/theme/app_theme.dart';
+import '../core/widgets/search_shortcuts.dart';
 import '../features/auth/application/auth_cubit.dart';
 import '../features/lots/application/lots_cubit.dart';
 import '../features/settings/application/branding_cubit.dart';
@@ -75,16 +76,18 @@ class _ParkingAppState extends State<ParkingApp> {
         if (widget.connectivityCubit case final connectivity?)
           BlocProvider<ConnectivityCubit>.value(value: connectivity),
       ],
-      child: MaterialApp.router(
-        onGenerateTitle: (context) =>
-            context.read<BrandingCubit>().state.titleFor(context.l10n),
-        theme: AppTheme.light(),
-        darkTheme: AppTheme.dark(),
-        themeMode: ThemeMode.system,
-        locale: defaultLocale,
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        routerConfig: _router,
+      child: SearchShortcuts(
+        child: MaterialApp.router(
+          onGenerateTitle: (context) =>
+              context.read<BrandingCubit>().state.titleFor(context.l10n),
+          theme: AppTheme.light(),
+          darkTheme: AppTheme.dark(),
+          themeMode: ThemeMode.system,
+          locale: defaultLocale,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          routerConfig: _router,
+        ),
       ),
     );
   }

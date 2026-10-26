@@ -108,7 +108,8 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - Reports have quick ranges (Today / 7 days / 30 days) next to the calendar
   picker, and picking a custom range clears the preset.
 - Shared `SearchField` (vehicles and check-out): type-to-search autofocus on
-  web/desktop, a clear button and `Esc` to reset.
+  web/desktop, a clear button and `Esc` to reset. `Ctrl/Cmd+K` focuses the
+  search of the current screen from anywhere in the app.
 - Screen readers announce successful check-ins and check-outs.
 - Check-in remembers the last plate and offers a one-tap "repeat entry" chip.
 - The occupancy bar and the monthly-pass status chip animate their changes.
@@ -172,7 +173,7 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Tests
 
-- 568 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
+- 571 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
   integration test that runs only against a live stack.
 - SQL/RLS/RPC regressions covering capacity, shifts, discounts, passes,
   reservations, multi-site isolation, audit, diagnostics and retention.
@@ -202,7 +203,7 @@ Captured on 2026-10-24 against the local self-hosted stack:
 
 | Check | Result |
 |---|---|
-| `flutter test` | 568 passed (+1 live-stack integration skipped) |
+| `flutter test` | 571 passed (+1 live-stack integration skipped) |
 | `flutter analyze` | 0 errors, 0 warnings (only SDK deprecation infos) |
 | `flutter build web --release` | OK |
 | `supabase/tests/run.sh` | Passed (migrations + RPC/RLS regressions) |

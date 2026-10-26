@@ -2,6 +2,21 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+/// The search field currently on screen (`null` when the page has none), so
+/// the global Ctrl/Cmd+K shortcut knows where to send focus.
+FocusNode? _activeSearchFocus;
+
+/// Focuses the visible search field. Returns `true` when there was one, so the
+/// shortcut can let the platform handle the key otherwise.
+bool focusActiveSearchField() {
+  final focus = _activeSearchFocus;
+  if (focus == null) {
+    return false;
+  }
+  focus.requestFocus();
+  return true;
+}
+
 /// Search input used by list screens. On web/desktop it takes focus
 /// automatically (type-to-search) and `Esc` clears it; on touch devices it
 /// behaves like a normal field so the keyboard does not pop up uninvited.
@@ -27,6 +42,7 @@ class SearchField extends StatefulWidget {
 
 class _SearchFieldState extends State<SearchField> {
   final _controller = TextEditingController();
+  final _focus = FocusNode();
 
   static bool get _desktop =>
       kIsWeb ||
@@ -38,7 +54,18 @@ class _SearchFieldState extends State<SearchField> {
       };
 
   @override
+  void initState() {
+    super.initState();
+    // The last field mounted wins; go_router keeps one page alive at a time.
+    _activeSearchFocus = _focus;
+  }
+
+  @override
   void dispose() {
+    if (identical(_activeSearchFocus, _focus)) {
+      _activeSearchFocus = null;
+    }
+    _focus.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -52,12 +79,11 @@ class _SearchFieldState extends State<SearchField> {
   @override
   Widget build(BuildContext context) {
     return CallbackShortcuts(
-      bindings: {
-        const SingleActivator(LogicalKeyboardKey.escape): _clear,
-      },
+      bindings: {const SingleActivator(LogicalKeyboardKey.escape): _clear},
       child: TextField(
         key: widget.fieldKey,
         controller: _controller,
+        focusNode: _focus,
         autofocus: _desktop,
         textCapitalization: widget.textCapitalization,
         decoration: InputDecoration(
@@ -67,7 +93,8 @@ class _SearchFieldState extends State<SearchField> {
           suffixIcon: _controller.text.isEmpty
               ? null
               : IconButton(
-                  tooltip: MaterialLocalizations.of(context).deleteButtonTooltip,
+                  tooltip: MaterialLocalizations.of(context)
+                      .deleteButtonTooltip,
                   icon: const Icon(Icons.clear),
                   onPressed: _clear,
                 ),

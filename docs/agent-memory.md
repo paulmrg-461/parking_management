@@ -196,7 +196,10 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   (the preset row adds a second one).
 - `core/widgets/search_field.dart`: shared search input (autofocus only on
   web/desktop so mobile keyboards do not pop up, clear button, `Esc` resets);
-  used by vehicles and check-out. Success handlers call `SemanticsService.announce`
+  used by vehicles and check-out. The last mounted field registers itself as
+  `_activeSearchFocus`; `SearchShortcuts` (wraps `MaterialApp.router`) binds
+  Ctrl/Cmd+K to `focusActiveSearchField()` through a `HardwareKeyboard`
+  handler, so the shortcut works regardless of focus. Success handlers call `SemanticsService.announce`
   in addition to the snack/dialog.
 - Check-in stores `last_plate` in `KeyValueStore` (box `preferences`) after a
   success and offers a repeat chip; guarded by `serviceLocator.isRegistered`
