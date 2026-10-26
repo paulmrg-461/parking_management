@@ -5,6 +5,7 @@ import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/core/pagination/paged_result.dart';
 import 'package:parking_management/features/check_out/application/check_out_cubit.dart';
 import 'package:parking_management/features/check_out/application/check_out_vehicle.dart';
+import 'package:parking_management/features/check_out/domain/entities/check_out_preview.dart';
 import 'package:parking_management/features/check_out/domain/entities/check_out_receipt.dart';
 import 'package:parking_management/features/check_out/domain/entities/open_session.dart';
 import 'package:parking_management/features/check_out/domain/entities/occupancy_snapshot.dart';
@@ -20,6 +21,7 @@ import '../../../helpers/test_app.dart';
 
 class _FakeCheckOutRepository implements CheckOutRepository {
   Failure? checkOutError;
+  Failure? previewError;
   bool? lastLostTicket;
   String? lastLostTicketReason;
 
@@ -39,6 +41,16 @@ class _FakeCheckOutRepository implements CheckOutRepository {
     OpenSession(id: 1, vehicleId: 1, entryTime: DateTime(2026, 1, 1)),
     OpenSession(id: 2, vehicleId: 2, entryTime: DateTime(2026, 1, 1)),
   ]);
+
+  @override
+  Future<CheckOutPreview> preview(int sessionId) async {
+    final error = previewError;
+    if (error != null) {
+      throw error;
+    }
+    return CheckOutPreview(sessionId: sessionId, amount: 5000);
+  }
+
 
   @override
   Future<CheckOutReceipt> checkOut(
@@ -208,4 +220,35 @@ void main() {
       expect(occupancy.occupancyCalls, 1);
     },
   );
+
+  testWidgets('Success: the checkout dialog shows the estimated fare', (
+    tester,
+  ) async {
+    await pumpPage(tester);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Cobrar').first);
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Total estimado'), findsOneWidget);
+    expect(find.textContaining('5.000'), findsOneWidget);
+
+    await tester.tap(find.text('Confirmar'));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('Failure: a broken preview still opens the payment dialog', (
+    tester,
+  ) async {
+    await pumpPage(tester);
+    repository.previewError = const NetworkFailure('offline');
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Cobrar').first);
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Total estimado'), findsNothing);
+    expect(find.text('Efectivo'), findsOneWidget);
+
+    await tester.tap(find.text('Confirmar'));
+    await tester.pumpAndSettle();
+  });
 }

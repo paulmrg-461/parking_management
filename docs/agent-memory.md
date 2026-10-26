@@ -198,6 +198,9 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   web/desktop so mobile keyboards do not pop up, clear button, `Esc` resets);
   used by vehicles and check-out. Success handlers call `SemanticsService.announce`
   in addition to the snack/dialog.
+- `0045` `check_out_preview(session)`: same `calculate_fare` as check-out,
+  read-only; the checkout dialog shows the estimate (or pass coverage). The
+  cubit returns `null` on a failed preview so the dialog still opens.
 
 ## Secrets runbook (latest)
 

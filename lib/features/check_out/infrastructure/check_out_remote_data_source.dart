@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/network/supabase_error_mapper.dart';
 import '../../../core/pagination/paged_result.dart';
+import '../domain/entities/check_out_preview.dart';
 import '../domain/entities/check_out_receipt.dart';
 import '../domain/entities/occupancy_snapshot.dart';
 import '../domain/entities/open_session.dart';
@@ -31,6 +32,8 @@ abstract class CheckOutRemoteDataSource {
   Future<OccupancySnapshot> occupancy();
 
   Future<TodaySummary> todaySummary();
+
+  Future<CheckOutPreview> preview(int sessionId);
 }
 
 class SupabaseCheckOutRemoteDataSource implements CheckOutRemoteDataSource {
@@ -72,6 +75,21 @@ class SupabaseCheckOutRemoteDataSource implements CheckOutRemoteDataSource {
     try {
       final result = await _client.rpc('occupancy_snapshot');
       return OccupancySnapshot.fromJson(
+        Map<String, dynamic>.from(result as Map),
+      );
+    } catch (error) {
+      throw mapSupabaseError(error);
+    }
+  }
+
+  @override
+  Future<CheckOutPreview> preview(int sessionId) async {
+    try {
+      final result = await _client.rpc(
+        'check_out_preview',
+        params: {'p_session_id': sessionId},
+      );
+      return CheckOutPreview.fromJson(
         Map<String, dynamic>.from(result as Map),
       );
     } catch (error) {

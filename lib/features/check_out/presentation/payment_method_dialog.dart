@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../../core/l10n/l10n.dart';
 import '../../../core/receipt/payment_method.dart';
+import '../../../core/utils/cop_formatter.dart';
 
 class CheckoutChoice {
   const CheckoutChoice({
@@ -26,16 +27,30 @@ Future<CheckoutChoice?> showCheckoutDialog(
   BuildContext context, {
   required String plate,
   required bool canDiscount,
+  int? estimatedAmount,
+  bool hasPass = false,
 }) => showDialog<CheckoutChoice>(
   context: context,
-  builder: (_) => _CheckoutDialog(plate: plate, canDiscount: canDiscount),
+  builder: (_) => _CheckoutDialog(
+    plate: plate,
+    canDiscount: canDiscount,
+    estimatedAmount: estimatedAmount,
+    hasPass: hasPass,
+  ),
 );
 
 class _CheckoutDialog extends StatefulWidget {
-  const _CheckoutDialog({required this.plate, required this.canDiscount});
+  const _CheckoutDialog({
+    required this.plate,
+    required this.canDiscount,
+    this.estimatedAmount,
+    this.hasPass = false,
+  });
 
   final String plate;
   final bool canDiscount;
+  final int? estimatedAmount;
+  final bool hasPass;
 
   @override
   State<_CheckoutDialog> createState() => _CheckoutDialogState();
@@ -96,6 +111,19 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(context.l10n.checkOutConfirm(widget.plate)),
+            const SizedBox(height: 8),
+            if (widget.hasPass)
+              _Estimate(
+                icon: Icons.card_membership,
+                text: context.l10n.checkOutPassCovered,
+              )
+            else if (widget.estimatedAmount != null)
+              _Estimate(
+                icon: Icons.payments_outlined,
+                text: context.l10n.checkOutEstimate(
+                  CopFormatter.format(widget.estimatedAmount!),
+                ),
+              ),
             const SizedBox(height: 8),
             for (final method in PaymentMethod.values)
               RadioListTile<PaymentMethod>(
@@ -162,6 +190,32 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
         FilledButton(
           onPressed: _confirm,
           child: Text(context.l10n.actionConfirm),
+        ),
+      ],
+    );
+  }
+}
+
+class _Estimate extends StatelessWidget {
+  const _Estimate({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: scheme.primary),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            text,
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(color: scheme.primary),
+          ),
         ),
       ],
     );

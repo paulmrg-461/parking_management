@@ -259,10 +259,16 @@ class _SessionTile extends StatelessWidget {
   Future<void> _confirmCheckOut(BuildContext context) async {
     final cubit = context.read<CheckOutCubit>();
     final canDiscount = _canDiscount(context);
+    final preview = await cubit.preview(session.id);
+    if (!context.mounted) {
+      return;
+    }
     final choice = await showCheckoutDialog(
       context,
       plate: plate,
       canDiscount: canDiscount,
+      estimatedAmount: preview?.amount,
+      hasPass: preview?.hasPass ?? false,
     );
     if (choice == null) {
       return;

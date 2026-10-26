@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/core/pagination/paged_result.dart';
 import 'package:parking_management/features/check_out/application/check_out_vehicle.dart';
+import 'package:parking_management/features/check_out/domain/entities/check_out_preview.dart';
 import 'package:parking_management/features/check_out/domain/entities/check_out_receipt.dart';
 import 'package:parking_management/features/check_out/domain/entities/open_session.dart';
 import 'package:parking_management/features/check_out/domain/entities/occupancy_snapshot.dart';
@@ -24,6 +25,11 @@ class _FakeRepository implements CheckOutRepository {
     int limit = defaultPageSize,
     String? plate,
   }) async => const PagedResult([]);
+
+  @override
+  Future<CheckOutPreview> preview(int sessionId) async =>
+      CheckOutPreview(sessionId: sessionId, amount: 5000);
+
 
   @override
   Future<CheckOutReceipt> checkOut(

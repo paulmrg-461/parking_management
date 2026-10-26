@@ -79,8 +79,8 @@ All RPCs are `security definer`, derive the actor from `auth.uid()`, and are
 granted to `authenticated` only.
 
 **Check-in / check-out**
-`check_in`, `check_out`, `calculate_fare`, `vehicle_history`,
-`update_vehicle_flags` (notes, blacklist, owner phone).
+`check_in`, `check_out`, `check_out_preview`, `calculate_fare`,
+`vehicle_history`, `update_vehicle_flags` (notes, blacklist, owner phone).
 
 **Billing and reports**
 `report_revenue` (active lot), `report_revenue_all` (platform admins),

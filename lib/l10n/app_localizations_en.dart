@@ -1075,6 +1075,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get checkOutLongStay => 'Over 24 h';
 
   @override
+  String checkOutEstimate(String amount) {
+    return 'Estimated total: $amount';
+  }
+
+  @override
+  String get checkOutPassCovered => 'Active monthly pass: no charge';
+
+  @override
   String get checkOutCharge => 'Charge';
 
   @override

@@ -7,6 +7,7 @@ import '../../../core/pagination/paged_result.dart';
 import '../../../core/state/submission.dart';
 import '../../vehicles/domain/entities/vehicle.dart';
 import '../../vehicles/domain/repositories/vehicle_repository.dart';
+import '../domain/entities/check_out_preview.dart';
 import '../domain/entities/check_out_receipt.dart';
 import '../domain/entities/open_session.dart';
 import '../domain/repositories/check_out_repository.dart';
@@ -188,6 +189,15 @@ class CheckOutCubit extends ResilientCubit<CheckOutState> {
   void search(String query) {
     _searchTimer?.cancel();
     _searchTimer = Timer(searchDebounce, () => _applySearch(query));
+  }
+
+  /// Best effort: a failed preview opens the dialog without an estimate.
+  Future<CheckOutPreview?> preview(int sessionId) async {
+    try {
+      return await _repository.preview(sessionId);
+    } on Failure {
+      return null;
+    }
   }
 
   Future<void> checkOut(

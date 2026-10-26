@@ -1,4 +1,5 @@
 import '../../../../core/pagination/paged_result.dart';
+import '../entities/check_out_preview.dart';
 import '../entities/check_out_receipt.dart';
 import '../entities/occupancy_snapshot.dart';
 import '../entities/open_session.dart';
@@ -23,6 +24,9 @@ abstract class CheckOutRepository {
     bool lostTicket = false,
     String? lostTicketReason,
   });
+
+  /// Fare the customer would pay right now (no side effects).
+  Future<CheckOutPreview> preview(int sessionId);
 
   /// Open sessions + capacity per category (any signed-in user).
   Future<OccupancySnapshot> occupancy();

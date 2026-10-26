@@ -775,6 +775,47 @@ begin
     end if;
 end $$;
 
+-- Fare preview: same math as check-out, no side effects.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+declare
+    preview jsonb;
+    with_pass jsonb;
+begin
+    -- Entry in the past: the preview runs in the same transaction, and `now()`
+    -- is constant there, so entry == now would be an empty billing period.
+    insert into _results (session_json)
+    select public.check_in(
+        'PREVIEW1', 2, null, null, '[]'::jsonb, null,
+        now() - interval '1 hour'
+    );
+
+    preview := public.check_out_preview(
+        (select (session_json ->> 'id')::integer from _results
+          where session_json ->> 'plate' = 'PREVIEW1')
+    );
+    if (preview ->> 'amount')::integer <> 5000 then
+        raise exception 'fare preview did not match the hourly tariff';
+    end if;
+    if (preview ->> 'has_pass')::boolean then
+        raise exception 'fare preview invented a pass';
+    end if;
+    if (select status from public.parking_sessions
+         where id = (preview ->> 'session_id')::integer) <> 'open' then
+        raise exception 'fare preview closed the session';
+    end if;
+
+    insert into public.monthly_passes (vehicle_id, start_date, end_date, amount)
+    select id, current_date, current_date + 30, 80000
+      from public.vehicles where plate = 'PREVIEW1';
+    with_pass := public.check_out_preview((preview ->> 'session_id')::integer);
+    if (with_pass ->> 'amount')::integer <> 0
+       or not (with_pass ->> 'has_pass')::boolean then
+        raise exception 'fare preview ignored the active pass';
+    end if;
+end $$;
+
 -- Branding is per lot: only the active lot's row changes.
 set local request.headers = '{"x-lot-id":"2"}';
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';

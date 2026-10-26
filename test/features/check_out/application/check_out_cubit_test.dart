@@ -4,6 +4,7 @@ import 'package:parking_management/core/pagination/paged_result.dart';
 import 'package:parking_management/core/state/submission.dart';
 import 'package:parking_management/features/check_out/application/check_out_cubit.dart';
 import 'package:parking_management/features/check_out/application/check_out_vehicle.dart';
+import 'package:parking_management/features/check_out/domain/entities/check_out_preview.dart';
 import 'package:parking_management/features/check_out/domain/entities/check_out_receipt.dart';
 import 'package:parking_management/features/check_out/domain/entities/open_session.dart';
 import 'package:parking_management/features/check_out/domain/entities/occupancy_snapshot.dart';
@@ -18,6 +19,7 @@ class _FakeCheckOutRepository implements CheckOutRepository {
   int? total;
   Failure? listError;
   Failure? checkOutError;
+  Failure? previewError;
   Object? unexpected;
   CheckOutReceipt? receipt;
   final List<int> offsets = [];
@@ -46,6 +48,16 @@ class _FakeCheckOutRepository implements CheckOutRepository {
       total: total,
     );
   }
+
+  @override
+  Future<CheckOutPreview> preview(int sessionId) async {
+    final error = previewError;
+    if (error != null) {
+      throw error;
+    }
+    return CheckOutPreview(sessionId: sessionId, amount: 5000);
+  }
+
 
   @override
   Future<CheckOutReceipt> checkOut(
@@ -264,5 +276,15 @@ void main() {
       (submission as SubmissionFailed).failure?.code,
       ClientFailureCodes.unexpected,
     );
+  });
+
+  test('Failure: a failed preview is null, not an error state', () async {
+    await cubit.loadOpenSessions();
+    repository.previewError = const NetworkFailure('offline');
+
+    final preview = await cubit.preview(1);
+
+    expect(preview, isNull);
+    expect(cubit.state, isA<CheckOutLoaded>());
   });
 }

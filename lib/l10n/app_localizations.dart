@@ -2042,6 +2042,18 @@ abstract class AppLocalizations {
   /// **'Más de 24 h'**
   String get checkOutLongStay;
 
+  /// No description provided for @checkOutEstimate.
+  ///
+  /// In es, this message translates to:
+  /// **'Total estimado: {amount}'**
+  String checkOutEstimate(String amount);
+
+  /// No description provided for @checkOutPassCovered.
+  ///
+  /// In es, this message translates to:
+  /// **'Mensualidad activa: sin cobro'**
+  String get checkOutPassCovered;
+
   /// No description provided for @checkOutCharge.
   ///
   /// In es, this message translates to:

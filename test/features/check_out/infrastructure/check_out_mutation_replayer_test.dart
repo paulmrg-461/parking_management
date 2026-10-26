@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/pagination/paged_result.dart';
 import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/core/sync/pending_mutation.dart';
+import 'package:parking_management/features/check_out/domain/entities/check_out_preview.dart';
 import 'package:parking_management/features/check_out/domain/entities/check_out_receipt.dart';
 import 'package:parking_management/features/check_out/domain/entities/open_session.dart';
 import 'package:parking_management/features/check_out/infrastructure/check_out_mutation_replayer.dart';
@@ -33,6 +34,11 @@ class _FakeRemote implements CheckOutRemoteDataSource {
     required int offset,
     String? plate,
   }) async => const PagedResult([]);
+
+  @override
+  Future<CheckOutPreview> preview(int sessionId) async =>
+      CheckOutPreview(sessionId: sessionId, amount: 5000);
+
 
   @override
   Future<CheckOutReceipt> checkOut(
