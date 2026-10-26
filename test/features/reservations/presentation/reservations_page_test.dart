@@ -130,4 +130,20 @@ void main() {
 
     expect(requested, 'ABC123');
   });
+
+  testWidgets('Success: the reservation plate is uppercased while typing', (
+    tester,
+  ) async {
+    await pumpPage(tester);
+
+    await tester.tap(find.byTooltip('Nueva reserva'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).first, 'abc123');
+    await tester.pump();
+
+    expect(
+      tester.widget<TextField>(find.byType(TextField).first).controller!.text,
+      'ABC123',
+    );
+  });
 }

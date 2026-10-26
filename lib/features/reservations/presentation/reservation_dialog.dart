@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/tokens.dart';
+import '../../../core/utils/text_formatters.dart';
 import '../../categories/domain/entities/category.dart';
 
 class ReservationDraft {
@@ -103,7 +104,10 @@ class _ReservationDialogState extends State<ReservationDialog> {
                 controller: _plate,
                 autofocus: true,
                 textCapitalization: TextCapitalization.characters,
-                inputFormatters: [LengthLimitingTextInputFormatter(20)],
+                inputFormatters: [
+                  const UpperCaseTextFormatter(),
+                  LengthLimitingTextInputFormatter(20),
+                ],
                 decoration: InputDecoration(labelText: l10n.plateLabel),
                 validator: (value) => (value ?? '').trim().isEmpty
                     ? l10n.fieldRequired

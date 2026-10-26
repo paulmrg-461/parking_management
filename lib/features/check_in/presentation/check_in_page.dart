@@ -12,6 +12,7 @@ import '../../../core/state/submission.dart';
 import '../../../core/utils/elapsed.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/storage/key_value_store.dart';
+import '../../../core/utils/text_formatters.dart';
 import '../../../core/widgets/photo_strip.dart';
 import '../../../core/widgets/receipt_card.dart';
 import '../../../core/widgets/submission_feedback.dart';
@@ -193,6 +194,19 @@ class _CheckInPageState extends State<CheckInPage> {
     _plateFocus.requestFocus();
   }
 
+  /// Explains what will be stored when the typed plate has blanks the server
+  /// strips anyway (e.g. `AB 123` → `AB123`).
+  String? _normalizedHint(AppLocalizations l10n) {
+    final typed = _plateController.text;
+    if (typed.trim().isEmpty) {
+      return null;
+    }
+    final normalized = typed.replaceAll(RegExp(r'\s'), '').toUpperCase();
+    return normalized == typed.toUpperCase()
+        ? null
+        : l10n.checkInPlateNormalized(normalized);
+  }
+
   void _onPlateChanged(String _) {
     setState(() {});
     _debounce?.cancel();
@@ -348,7 +362,14 @@ class _CheckInPageState extends State<CheckInPage> {
         TextField(
           controller: _plateController,
           focusNode: _plateFocus,
-          decoration: InputDecoration(labelText: l10n.plateLabel),
+          decoration: InputDecoration(
+            labelText: l10n.plateLabel,
+            helperText: _normalizedHint(l10n),
+          ),
+          inputFormatters: [
+            const UpperCaseTextFormatter(),
+            LengthLimitingTextInputFormatter(20),
+          ],
           textCapitalization: TextCapitalization.characters,
           textInputAction: TextInputAction.done,
           onChanged: _onPlateChanged,

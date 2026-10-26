@@ -552,4 +552,31 @@ void main() {
     expect(tester.widget<TextField>(plateField()).controller!.text, 'abc123');
     expect(find.text('Vehículo registrado'), findsOneWidget);
   });
+
+  testWidgets('Success: the plate is uppercased and its stored form is shown', (
+    tester,
+  ) async {
+    await pumpPage(tester);
+
+    await tester.enterText(plateField(), 'ab 123');
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.pumpAndSettle();
+
+    expect(tester.widget<TextField>(plateField()).controller!.text, 'AB 123');
+    expect(find.text('Se guardará como AB123'), findsOneWidget);
+  });
+
+  testWidgets('Security: the plate field cannot exceed the column width', (
+    tester,
+  ) async {
+    await pumpPage(tester);
+
+    await tester.enterText(plateField(), 'A' * 25);
+    await tester.pump();
+
+    expect(
+      tester.widget<TextField>(plateField()).controller!.text,
+      'A' * 20,
+    );
+  });
 }

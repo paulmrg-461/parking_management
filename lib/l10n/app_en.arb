@@ -337,6 +337,8 @@
   "photosMaxReached": "Maximum {max} photos per check-in",
   "@checkInRepeat": {"placeholders": {"plate": {"type": "String"}}},
   "checkInRepeat": "Repeat entry {plate}",
+  "checkInPlateNormalized": "Saved as {plate}",
+  "@checkInPlateNormalized": {"placeholders": {"plate": {"type": "String"}}},
   "checkInSubmit": "Register check-in",
   "checkInSuccess": "Check-in created for {plate}",
   "checkInQueued": "Check-in saved offline: {plate}",
