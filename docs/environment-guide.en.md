@@ -167,6 +167,10 @@ flutter run -d <serial> \
   --dart-define=SUPABASE_ANON_KEY=<ANON_KEY>
 ```
 
+Re-run `adb reverse tcp:8000 tcp:8000` (or `sh tool/run-android.sh`) after a
+wireless adb reconnect: the device comes back on a new port and the tunnel is
+gone, which looks like "cannot reach the server".
+
 If `adb reverse` is not an option, use the same Wi-Fi instead:
 
 1. `ip addr` (or `ipconfig`) to find your machine IP, e.g. `192.168.1.50`.

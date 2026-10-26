@@ -43,11 +43,18 @@ flutter run -d emulator-5554 \
   --dart-define=SUPABASE_ANON_KEY=<ANON_KEY>
 
 # Physical phone over adb (USB or wireless): reverse the port and use localhost
+sh tool/run-android.sh            # re-applies adb reverse, then flutter run
+# equivalent by hand:
 adb reverse tcp:8000 tcp:8000
 flutter run -d <serial> \
   --dart-define=SUPABASE_URL=http://localhost:8000 \
   --dart-define=SUPABASE_ANON_KEY=<ANON_KEY>
 ```
+
+> Wireless adb reconnects on a new port and **loses `adb reverse`**: if the app
+> says it cannot reach the server, re-run `adb reverse tcp:8000 tcp:8000` (or
+> `tool/run-android.sh`). A LAN URL (`http://<your-ip>:8000`) instead needs
+> `sudo ufw allow 8000/tcp` when ufw is enabled.
 
 Log in with `admin` / `123456`.
 

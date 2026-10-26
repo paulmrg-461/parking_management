@@ -169,6 +169,10 @@ flutter run -d <serial> \
   --dart-define=SUPABASE_ANON_KEY=<ANON_KEY>
 ```
 
+Repite `adb reverse tcp:8000 tcp:8000` (o `sh tool/run-android.sh`) cuando el
+adb inalámbrico se reconecte: el teléfono vuelve en otro puerto y el túnel se
+pierde, lo que se ve como "no conecta con el servidor".
+
 Si no puedes usar `adb reverse`, usa la misma red Wi-Fi:
 
 1. `ip addr` (o `ipconfig`) para ver la IP de tu PC, por ejemplo `192.168.1.50`.

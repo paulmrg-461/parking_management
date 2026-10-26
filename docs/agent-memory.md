@@ -374,6 +374,16 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 - Ops: `healthcheck.sh` (exit 1 on failure, `HEALTHCHECK_WEBHOOK` alerts) and
   `diagnostics.sh` (stuck sessions/shifts, backlog, client errors, sizes).
 
+## Android over adb
+
+- `tool/run-android.sh [serial]` re-applies `adb reverse tcp:8000 tcp:8000` and
+  runs Flutter with `SUPABASE_URL=http://localhost:8000`. **Wireless adb
+  reconnects on a new port and drops every reverse mapping** — the app then
+  cannot reach the backend until the reverse is re-applied. No `ufw` rule is
+  involved on that path; only a LAN URL needs `ufw allow 8000/tcp`.
+- `adb shell curl -s -o /dev/null -w '%{http_code}' http://localhost:8000/rest/v1/`
+  must answer `401` (reachable); `000` means the tunnel is missing.
+
 ## Boot order (fresh installs)
 
 - `configureDependencies()` initializes `KeyValueStore` (Hive) **before**
