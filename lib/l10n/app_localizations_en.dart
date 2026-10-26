@@ -1439,6 +1439,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get usersTitle => 'Users';
 
   @override
+  String get usersFilterAll => 'All';
+
+  @override
+  String get usersFilterEmpty => 'No users match this filter';
+
+  @override
   String get usersEmpty => 'No users yet';
 
   @override

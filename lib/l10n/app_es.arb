@@ -503,6 +503,8 @@
   "invalidAmount": "Ingresa un valor mayor a 0",
 
   "usersTitle": "Usuarios",
+  "usersFilterAll": "Todos",
+  "usersFilterEmpty": "No hay usuarios con este filtro",
   "usersEmpty": "Aún no hay usuarios",
   "userNew": "Nuevo usuario",
   "userAddTooltip": "Agregar usuario",

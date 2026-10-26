@@ -273,7 +273,8 @@ The app is now a Supabase-only stack: FastAPI, Alembic, Dio and Redis are gone.
   fade/slide in once (honouring reduce motion; stable keys per id). Reports
   copy a spreadsheet-ready CSV (raw numbers, comparison rows included). An open
   session in the vehicle history jumps to check-out filtered by its plate
-  (`/check-out?plate=…`, prefilled search).
+  (`/check-out?plate=…`, prefilled search). The users list filters by role
+  with a segmented control and a dedicated no-match state.
 
 ## Infra/tooling (not OpenSpec capabilities — repo scaffolding)
 
@@ -321,7 +322,7 @@ notable changes and the migration history.
 
 ## Test counts
 
-- Flutter (`flutter test`): 597 passed (plus 1 integration test that runs only against a live stack). `flutter analyze`: 0 errors/warnings
+- Flutter (`flutter test`): 599 passed (plus 1 integration test that runs only against a live stack). `flutter analyze`: 0 errors/warnings
   (98 SDK-deprecation/const infos under the local Flutter 3.50 beta; CI pins
   3.49 where the baseline is clean).
 - SQL/compose: validated against the running Supabase stack and by

@@ -9,6 +9,7 @@ import '../../../core/state/submission.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/async_view.dart';
 import '../../../core/widgets/confirm_dialog.dart';
+import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/list_page_scaffold.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/widgets/submission_listener.dart';
@@ -27,7 +28,11 @@ class UsersPage extends StatefulWidget {
   State<UsersPage> createState() => _UsersPageState();
 }
 
+enum _RoleFilter { all, admin, operator }
+
 class _UsersPageState extends State<UsersPage> {
+  _RoleFilter _filter = _RoleFilter.all;
+
   @override
   void initState() {
     super.initState();
@@ -76,11 +81,10 @@ class _UsersPageState extends State<UsersPage> {
               previous.users != current.users,
           builder: (context, state) => AsyncView<List<User>>(
             status: _status(context, state),
-            builder: (users) => ListView.separated(
-              padding: const EdgeInsets.only(bottom: Space.xxl * 2),
-              itemCount: users.length,
-              separatorBuilder: (_, _) => const Divider(height: 1),
-              itemBuilder: (context, index) => _UserTile(user: users[index]),
+            builder: (users) => _UsersList(
+              users: users,
+              filter: _filter,
+              onFilter: (filter) => setState(() => _filter = filter),
             ),
           ),
         ),
@@ -104,6 +108,80 @@ class _UsersPageState extends State<UsersPage> {
 
   static Submission? _submissionOf(UsersState state) =>
       state is UsersLoaded ? state.submission : null;
+}
+
+class _UsersList extends StatelessWidget {
+  const _UsersList({
+    required this.users,
+    required this.filter,
+    required this.onFilter,
+  });
+
+  final List<User> users;
+  final _RoleFilter filter;
+  final ValueChanged<_RoleFilter> onFilter;
+
+  List<User> get _visible => switch (filter) {
+    _RoleFilter.all => users,
+    _RoleFilter.admin => [
+      for (final user in users)
+        if (user.role == UserRole.admin) user,
+    ],
+    _RoleFilter.operator => [
+      for (final user in users)
+        if (user.role == UserRole.operator) user,
+    ],
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final visible = _visible;
+    return Column(
+      children: [
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.fromLTRB(Space.md, Space.sm, Space.md, 0),
+          child: SegmentedButton<_RoleFilter>(
+            showSelectedIcon: false,
+            segments: [
+              ButtonSegment(
+                value: _RoleFilter.all,
+                label: Text(l10n.usersFilterAll),
+              ),
+              ButtonSegment(
+                value: _RoleFilter.admin,
+                label: Text(l10n.roleAdmin),
+              ),
+              ButtonSegment(
+                value: _RoleFilter.operator,
+                label: Text(l10n.roleOperator),
+              ),
+            ],
+            selected: {filter},
+            onSelectionChanged: (selection) => onFilter(selection.first),
+          ),
+        ),
+        Expanded(
+          child: visible.isEmpty
+              ? EmptyState(
+                  message: l10n.usersFilterEmpty,
+                  icon: Icons.filter_alt_off_outlined,
+                )
+              : ListView.separated(
+                  padding: const EdgeInsets.only(
+                    top: Space.sm,
+                    bottom: Space.xxl * 2,
+                  ),
+                  itemCount: visible.length,
+                  separatorBuilder: (_, _) => const Divider(height: 1),
+                  itemBuilder: (context, index) =>
+                      _UserTile(user: visible[index]),
+                ),
+        ),
+      ],
+    );
+  }
 }
 
 class _UserTile extends StatelessWidget {
@@ -132,15 +210,9 @@ class _UserTile extends StatelessWidget {
             tooltip: l10n.userActions,
             onSelected: (action) => _onAction(context, action),
             itemBuilder: (_) => [
-              PopupMenuItem(
-                value: 'pin',
-                child: Text(l10n.userResetPin),
-              ),
+              PopupMenuItem(value: 'pin', child: Text(l10n.userResetPin)),
               if (!_isSelf(context))
-                PopupMenuItem(
-                  value: 'delete',
-                  child: Text(l10n.userDelete),
-                ),
+                PopupMenuItem(value: 'delete', child: Text(l10n.userDelete)),
             ],
           ),
         ],
@@ -214,7 +286,6 @@ class _UserTile extends StatelessWidget {
     }
   }
 }
-
 
 class _ResetPinDialog extends StatefulWidget {
   const _ResetPinDialog({required this.displayName});

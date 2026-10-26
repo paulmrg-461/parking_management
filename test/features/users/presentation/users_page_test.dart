@@ -90,4 +90,46 @@ void main() {
     await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
     await expectLater(tester, meetsGuideline(textContrastGuideline));
   });
+
+  testWidgets('Success: the role filter narrows the list', (tester) async {
+    await pumpPage(
+      tester,
+      users: const [
+        User(
+          id: 1,
+          username: 'ana',
+          displayName: 'Ana',
+          role: UserRole.admin,
+        ),
+        User(
+          id: 2,
+          username: 'beto',
+          displayName: 'Beto',
+          role: UserRole.operator,
+        ),
+      ],
+    );
+
+    await tester.tap(find.text('Administrador'));
+    await tester.pumpAndSettle();
+    expect(find.text('Ana'), findsOneWidget);
+    expect(find.text('Beto'), findsNothing);
+
+    await tester.tap(find.text('Todos'));
+    await tester.pumpAndSettle();
+    expect(find.text('Ana'), findsOneWidget);
+    expect(find.text('Beto'), findsOneWidget);
+  });
+
+  testWidgets('Failure: a filter with no matches explains itself', (
+    tester,
+  ) async {
+    await pumpPage(tester);
+
+    await tester.tap(find.text('Administrador'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('No hay usuarios con este filtro'), findsOneWidget);
+    expect(find.text('Ana'), findsNothing);
+  });
 }

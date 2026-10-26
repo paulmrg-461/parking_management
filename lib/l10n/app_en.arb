@@ -453,6 +453,8 @@
   "invalidTime": "Use HH:MM (24 h)",
   "invalidAmount": "Enter an amount greater than 0",
   "usersTitle": "Users",
+  "usersFilterAll": "All",
+  "usersFilterEmpty": "No users match this filter",
   "usersEmpty": "No users yet",
   "userNew": "New user",
   "userAddTooltip": "Add user",

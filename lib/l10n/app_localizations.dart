@@ -2684,6 +2684,18 @@ abstract class AppLocalizations {
   /// **'Usuarios'**
   String get usersTitle;
 
+  /// No description provided for @usersFilterAll.
+  ///
+  /// In es, this message translates to:
+  /// **'Todos'**
+  String get usersFilterAll;
+
+  /// No description provided for @usersFilterEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay usuarios con este filtro'**
+  String get usersFilterEmpty;
+
   /// No description provided for @usersEmpty.
   ///
   /// In es, this message translates to:
