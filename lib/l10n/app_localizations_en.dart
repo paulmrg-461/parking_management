@@ -452,6 +452,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reservationCheckIn => 'Register entry';
 
   @override
+  String get checkInHoldTitle => 'Active hold';
+
+  @override
   String get reservationCancel => 'Cancel reservation';
 
   @override
@@ -1010,6 +1013,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String homeReservedCount(int count) {
     return '$count held';
   }
+
+  @override
+  String homeReservationsActive(int count) {
+    return '$count active holds';
+  }
+
+  @override
+  String homeReservationsExpiring(int count) {
+    return '$count expiring soon';
+  }
+
+  @override
+  String get homeSeeReservations => 'See holds';
 
   @override
   String get homeNoLimit => 'no limit';

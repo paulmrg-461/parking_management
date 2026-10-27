@@ -8,6 +8,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/l10n/failure_messages.dart';
+import '../../../core/error/failure.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/state/submission.dart';
 import '../../../core/utils/elapsed.dart';
@@ -15,6 +16,7 @@ import '../../../core/utils/vehicle_groups.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/storage/key_value_store.dart';
 import '../../../core/theme/tokens.dart';
+import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/photo_strip.dart';
 import '../../../core/widgets/plate_input_field.dart';
 import '../../../core/widgets/receipt_card.dart';
@@ -26,6 +28,8 @@ import '../../plate_scanning/application/plate_scanning_cubit.dart';
 import '../../plate_scanning/domain/repositories/plate_image_capture.dart';
 import '../../plate_scanning/presentation/inline_plate_scan.dart';
 import '../../receipt_printing/presentation/receipt_print_sheet.dart';
+import '../../reservations/domain/entities/reservation.dart';
+import '../../reservations/domain/repositories/reservation_repository.dart';
 import '../../notifications/presentation/notification_bell.dart';
 import '../application/check_in_cubit.dart';
 import '../application/vehicle_lookup_cubit.dart';
@@ -46,6 +50,7 @@ class CheckInPage extends StatefulWidget {
     this.canScan = true,
     this.initialPlate,
     this.onMarkExit,
+    this.reservations,
   });
 
   /// Camera port (injected by the router from get_it; fakes in tests).
@@ -61,6 +66,10 @@ class CheckInPage extends StatefulWidget {
 
   /// Opens check-out for an open session (injectable for widget tests).
   final void Function(BuildContext context, String plate)? onMarkExit;
+
+  /// Active holds, so the operator can cancel one when the customer does not
+  /// arrive. Optional in tests.
+  final ReservationRepository? reservations;
 
   @override
   State<CheckInPage> createState() => _CheckInPageState();
@@ -87,6 +96,7 @@ class _CheckInPageState extends State<CheckInPage> {
   String? _lastPlate;
   bool _sessionsOpen = true;
   bool _leftKeys = false;
+  List<Reservation> _activeHolds = const [];
   static const _prefsBox = 'preferences';
   static const _lastPlateKey = 'last_plate';
 
@@ -96,6 +106,7 @@ class _CheckInPageState extends State<CheckInPage> {
   void initState() {
     super.initState();
     unawaited(context.read<CheckInCubit>().loadOpenSessions());
+    unawaited(_loadHolds());
     // Fresh capacity snapshot so full categories are disabled in the
     // registration dropdown even on a deep link.
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -203,6 +214,62 @@ class _CheckInPageState extends State<CheckInPage> {
     _plateFocus.requestFocus();
   }
 
+  Future<void> _loadHolds() async {
+    final repository = widget.reservations;
+    if (repository == null) {
+      return;
+    }
+    try {
+      final holds = await repository.listActive();
+      if (mounted) {
+        setState(() => _activeHolds = holds);
+      }
+    } catch (_) {
+      // The hold banner is an extra; check-in keeps working without it.
+    }
+  }
+
+  Reservation? _holdFor(String plate) {
+    final normalized = plate.replaceAll(RegExp(r'\s'), '').toUpperCase();
+    if (normalized.isEmpty) {
+      return null;
+    }
+    for (final hold in _activeHolds) {
+      if (hold.plate.toUpperCase() == normalized) {
+        return hold;
+      }
+    }
+    return null;
+  }
+
+  Future<void> _cancelHold(Reservation hold) async {
+    final l10n = context.l10n;
+    final confirmed = await ConfirmDialog.show(
+      context,
+      ConfirmDialog(
+        title: l10n.reservationCancelTitle,
+        body: l10n.reservationCancelBody(hold.plate),
+        confirmLabel: l10n.reservationCancel,
+        destructive: true,
+      ),
+    );
+    final repository = widget.reservations;
+    if (!confirmed || !mounted || repository == null) {
+      return;
+    }
+    try {
+      await repository.cancel(hold.id);
+      await _loadHolds();
+      if (mounted) {
+        showInfoSnack(context, l10n.reservationCancelled);
+      }
+    } on Failure catch (failure) {
+      if (mounted) {
+        showErrorSnack(context, context.l10n.failure(failure));
+      }
+    }
+  }
+
   void _onPlateChanged(String _) {
     setState(() {});
     _debounce?.cancel();
@@ -288,6 +355,7 @@ class _CheckInPageState extends State<CheckInPage> {
         _plateFocus.requestFocus();
         setState(() => _lastPlate = result.plate);
         unawaited(_rememberLastPlate(result.plate));
+        unawaited(_loadHolds());
         unawaited(context.read<DashboardCubit>().load());
         final message = context.l10n.checkInSuccess(result.plate);
         SemanticsService.announce(message, Directionality.of(context));
@@ -442,6 +510,10 @@ class _CheckInPageState extends State<CheckInPage> {
               onPressed: _repeatLastPlate,
             ),
           ),
+        if (_holdFor(_plateController.text) case final hold?) ...[
+          const SizedBox(height: 8),
+          _HoldBanner(hold: hold, onCancel: () => unawaited(_cancelHold(hold))),
+        ],
         const SizedBox(height: 8),
         VehicleLookupSection(state: lookup, registration: _buildRegistration),
         SwitchListTile(
@@ -797,6 +869,61 @@ class _SessionTile extends StatelessWidget {
       context,
       data,
       onPrint: () => showReceiptPrintSheet(context, data),
+    );
+  }
+}
+
+class _HoldBanner extends StatelessWidget {
+  const _HoldBanner({required this.hold, required this.onCancel});
+
+  final Reservation hold;
+  final VoidCallback onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: scheme.tertiaryContainer,
+      borderRadius: BorderRadius.circular(Radii.sm),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(Space.sm, Space.sm, Space.xs, Space.sm),
+        child: Row(
+          children: [
+            Icon(
+              Icons.event_available,
+              size: 20,
+              color: scheme.onTertiaryContainer,
+            ),
+            const SizedBox(width: Space.sm),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.checkInHoldTitle,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: scheme.onTertiaryContainer,
+                    ),
+                  ),
+                  Text(
+                    l10n.reservationUntil(
+                      Formatters.dateTime(hold.reservedUntil.toLocal()),
+                    ),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: scheme.onTertiaryContainer,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            TextButton(
+              onPressed: onCancel,
+              child: Text(l10n.reservationCancel),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

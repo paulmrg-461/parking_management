@@ -12,7 +12,7 @@ Last updated: 2026-10-26, branch `feature/supabase` (post-UI/UX polish).
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0046` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 665 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 668 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -459,6 +459,12 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 - `0049` makes active reservations count against the category and group
   capacities (walk-ins cannot take a held spot); the capacity trigger and
   `create_reservation` share the advisory locks and the same group name sets.
+- `0051` adds `reservations_active`/`reservations_expiring` (2 h) to
+  `capacity_snapshot`; the capacity card shows "N reservas activas"/"N por
+  vencer" and admins get a shortcut to `/reservations`.
+- Check-in loads the active holds (injected `ReservationRepository`) and shows
+  a banner for the typed plate with a cancellable hold; holds reload after a
+  check-in or cancellation.
 - `0050` adds `car_reserved`/`moto_reserved` to `capacity_snapshot()`; the
   capacity card renders them under the bar ("N reservados").
 - `0048 capacity_snapshot()` returns `car_open/car_capacity`,
@@ -539,7 +545,7 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 ## Latest verification (2026-10-26)
 
-- `flutter test`: 665 passed (+1 live-stack integration skipped); `flutter
+- `flutter test`: 668 passed (+1 live-stack integration skipped); `flutter
   analyze` 129 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
 - `supabase/tests/run.sh` passed (migrations `0001`–`0046`); `e2e.sh` passed

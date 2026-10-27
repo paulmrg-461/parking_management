@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/qr/qr_decoder.dart';
+import '../../features/reservations/domain/repositories/reservation_repository.dart';
 import '../../core/widgets/deferred_page.dart';
 import '../../features/audit/application/audit_cubit.dart';
 import '../../features/audit/presentation/audit_page.dart';
@@ -121,6 +122,7 @@ GoRoute _homeRoute(AuthCubit auth) => GoRoute(
           capture: serviceLocator<PlateImageCapture>(),
           canScan: serviceLocator<PlateScanner>().isSupported,
           initialPlate: state.uri.queryParameters['plate'],
+          reservations: serviceLocator<ReservationRepository>(),
         ),
       ),
     ),

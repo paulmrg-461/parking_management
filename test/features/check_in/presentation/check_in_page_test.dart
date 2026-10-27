@@ -20,6 +20,7 @@ import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/core/storage/key_value_store.dart';
 import 'package:parking_management/core/widgets/qr_code.dart';
 import 'package:parking_management/features/home/application/dashboard_cubit.dart';
+import 'package:parking_management/features/reservations/domain/repositories/reservation_repository.dart';
 import 'package:parking_management/features/plate_scanning/application/plate_scanning_cubit.dart';
 import 'package:parking_management/features/plate_scanning/domain/entities/plate_scan_result.dart';
 import 'package:parking_management/features/plate_scanning/domain/repositories/plate_image_capture.dart';
@@ -30,6 +31,7 @@ import 'package:parking_management/features/vehicles/domain/entities/vehicle.dar
 import 'package:parking_management/features/vehicles/domain/repositories/vehicle_repository.dart';
 
 import '../../../helpers/fake_check_out_repository.dart';
+import '../../../helpers/fake_reservation_repository.dart';
 import '../../../helpers/fake_key_value_store.dart';
 import '../../../helpers/test_app.dart';
 import '../../../helpers/test_png.dart';
@@ -192,6 +194,7 @@ void main() {
     CapacitySnapshot space = CapacitySnapshot.empty,
     String? initialPlate,
     void Function(BuildContext context, String plate)? onMarkExit,
+    ReservationRepository? reservations,
   }) async {
     // Tall viewport: the form, the keys switch and the sessions accordion must
     // fit without fighting the CustomScrollView while tapping.
@@ -227,6 +230,7 @@ void main() {
             canScan: canScan,
             initialPlate: initialPlate,
             onMarkExit: onMarkExit,
+            reservations: reservations,
           ),
         ),
       ),
@@ -724,5 +728,26 @@ void main() {
     expect(find.text('Car · quedan 2'), findsOneWidget);
     // Motorcycles have no configured limit, so the option stays plain.
     expect(find.text('Motorcycle'), findsOneWidget);
+  });
+
+  testWidgets('Success: an active hold can be cancelled from check-in', (
+    tester,
+  ) async {
+    final holds = FakeReservationRepository([
+      sampleReservation(plate: 'OPEN01'),
+    ]);
+    await pumpPage(tester, reservations: holds);
+
+    await enterPlate(tester, 'open01');
+    expect(find.text('Reserva activa'), findsOneWidget);
+
+    await tester.tap(find.text('Cancelar reserva'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Cancelar reserva'));
+    await tester.pumpAndSettle();
+
+    expect(holds.cancelledId, 1);
+    expect(find.text('Reserva activa'), findsNothing);
+    expect(find.text('Reserva cancelada'), findsOneWidget);
   });
 }

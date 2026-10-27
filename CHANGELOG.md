@@ -132,6 +132,10 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - The home is a real dashboard: a **capacity card** (cars/pickups, motorcycles
   and keys: inside vs. limit, with bars) and a **cars-inside list** with plates,
   elapsed time, pass/photo hints and "See all" to check-out.
+- The home capacity card summarizes active holds (and how many expire within
+  two hours) with a shortcut to the reservations screen for admins; the
+  check-in screen shows the plate's active hold and can cancel it when the
+  customer does not arrive.
 - The home capacity card shows spots on hold (active reservations) next to
   the occupied ones (`0050`).
 - Active reservations consume the configured **group spaces** too: a site
@@ -270,7 +274,7 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Tests
 
-- 665 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
+- 668 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
   integration test that runs only against a live stack.
 - SQL/RLS/RPC regressions covering capacity, shifts, discounts, passes,
   reservations, multi-site isolation, audit, diagnostics and retention.
@@ -307,7 +311,7 @@ Captured on 2026-10-24 against the local self-hosted stack:
 
 | Check | Result |
 |---|---|
-| `flutter test` | 665 passed (+1 live-stack integration skipped) |
+| `flutter test` | 668 passed (+1 live-stack integration skipped) |
 | `flutter analyze` | 0 errors, 0 warnings (only SDK deprecation infos) |
 | `flutter build web --release` | OK |
 | `supabase/tests/run.sh` | Passed (migrations + RPC/RLS regressions) |

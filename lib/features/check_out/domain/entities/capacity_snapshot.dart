@@ -12,6 +12,8 @@ class CapacitySnapshot extends Equatable {
     this.motoReserved = 0,
     this.keysOpen = 0,
     this.keyCapacity = 0,
+    this.reservationsActive = 0,
+    this.reservationsExpiring = 0,
   });
 
   final int carOpen;
@@ -24,6 +26,10 @@ class CapacitySnapshot extends Equatable {
   final int motoReserved;
   final int keysOpen;
   final int keyCapacity;
+
+  /// Active holds for the site, and those ending within two hours.
+  final int reservationsActive;
+  final int reservationsExpiring;
 
   static const empty = CapacitySnapshot();
 
@@ -41,6 +47,10 @@ class CapacitySnapshot extends Equatable {
         motoReserved: (json['moto_reserved'] as num?)?.toInt() ?? 0,
         keysOpen: (json['keys_open'] as num?)?.toInt() ?? 0,
         keyCapacity: (json['key_capacity'] as num?)?.toInt() ?? 0,
+        reservationsActive:
+            (json['reservations_active'] as num?)?.toInt() ?? 0,
+        reservationsExpiring:
+            (json['reservations_expiring'] as num?)?.toInt() ?? 0,
       );
 
   @override
@@ -53,5 +63,7 @@ class CapacitySnapshot extends Equatable {
     motoReserved,
     keysOpen,
     keyCapacity,
+    reservationsActive,
+    reservationsExpiring,
   ];
 }

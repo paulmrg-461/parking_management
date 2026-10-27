@@ -82,7 +82,7 @@ granted to `authenticated` only.
 `check_in` (incl. `p_left_keys`), `create_reservation` (holds consume group
 capacity), `check_out`, `check_out_preview`,
 `open_sessions_view` (`has_pass`, `left_keys`), `capacity_snapshot`
-(`car_open/capacity/reserved`, motos, keys),
+(`car_open/capacity/reserved`, motos, keys, active/expiring holds),
 `calculate_fare`,
 `vehicle_history`, `update_vehicle_flags` (notes, blacklist, owner phone).
 

@@ -908,6 +908,12 @@ abstract class AppLocalizations {
   /// **'Registrar entrada'**
   String get reservationCheckIn;
 
+  /// No description provided for @checkInHoldTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Reserva activa'**
+  String get checkInHoldTitle;
+
   /// No description provided for @reservationCancel.
   ///
   /// In es, this message translates to:
@@ -1957,6 +1963,24 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'{count} reservados'**
   String homeReservedCount(int count);
+
+  /// No description provided for @homeReservationsActive.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} reservas activas'**
+  String homeReservationsActive(int count);
+
+  /// No description provided for @homeReservationsExpiring.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} por vencer'**
+  String homeReservationsExpiring(int count);
+
+  /// No description provided for @homeSeeReservations.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver reservas'**
+  String get homeSeeReservations;
 
   /// No description provided for @homeNoLimit.
   ///

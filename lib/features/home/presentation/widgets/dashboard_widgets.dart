@@ -11,6 +11,8 @@ import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/app_icon_button.dart';
 import '../../../../core/widgets/money_text.dart';
 import '../../../../core/widgets/status_chip.dart';
+import '../../../auth/application/auth_cubit.dart';
+import '../../../auth/domain/entities/user.dart';
 import '../../../check_out/domain/entities/capacity_snapshot.dart';
 import '../../../shifts/application/shift_cubit.dart';
 import '../../application/dashboard_cubit.dart';
@@ -275,6 +277,45 @@ class CapacityCard extends StatelessWidget {
                   capacity: capacity.keyCapacity,
                   full: capacity.keysFull,
                 ),
+                if (capacity.reservationsActive > 0) ...[
+                  const Divider(height: Space.lg),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.event_available_outlined,
+                        size: 18,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          l10n.homeReservationsActive(
+                            capacity.reservationsActive,
+                          ),
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
+                      if (_isAdmin(context))
+                        TextButton(
+                          onPressed: () => context.go('/reservations'),
+                          child: Text(l10n.homeSeeReservations),
+                        ),
+                    ],
+                  ),
+                  if (capacity.reservationsExpiring > 0)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 24),
+                      child: Text(
+                        l10n.homeReservationsExpiring(
+                          capacity.reservationsExpiring,
+                        ),
+                        style: Theme.of(context).textTheme.labelSmall
+                            ?.copyWith(
+                              color: Theme.of(context).colorScheme.error,
+                            ),
+                      ),
+                    ),
+                ],
               ],
             ),
           ),
@@ -855,5 +896,18 @@ class _TodayMetric extends StatelessWidget {
         Text(value, style: textTheme.titleSmall),
       ],
     );
+  }
+}
+
+bool _isAdmin(BuildContext context) {
+  try {
+    final auth = context.read<AuthCubit>();
+    return switch (auth.state) {
+      AuthAuthenticated(:final session) =>
+        session.user.role == UserRole.admin,
+      _ => false,
+    };
+  } on ProviderNotFoundException {
+    return false;
   }
 }

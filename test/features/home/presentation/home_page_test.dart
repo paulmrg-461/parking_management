@@ -69,6 +69,10 @@ Future<FakeCheckOutRepository> _pump(
             path: 'check-out',
             builder: (_, _) => const Scaffold(body: Text('check-out page')),
           ),
+          GoRoute(
+            path: 'reservations',
+            builder: (_, _) => const Scaffold(body: Text('reservations page')),
+          ),
         ],
       ),
     ],
@@ -260,5 +264,38 @@ void main() {
       find.text('Capacidad del parqueadero'),
     ).dx;
     expect(panel, greaterThan(capacityCard));
+  });
+
+  testWidgets('Success: active holds are summarized with a shortcut', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      role: UserRole.admin,
+      capacity: 8,
+      space: const CapacitySnapshot(
+        reservationsActive: 3,
+        reservationsExpiring: 1,
+      ),
+    );
+
+    expect(find.text('3 reservas activas'), findsOneWidget);
+    expect(find.text('1 por vencer'), findsOneWidget);
+    await tester.tap(find.text('Ver reservas'));
+    await tester.pumpAndSettle();
+    expect(find.text('reservations page'), findsOneWidget);
+  });
+
+  testWidgets('Security: operators do not get the holds shortcut', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      capacity: 8,
+      space: const CapacitySnapshot(reservationsActive: 3),
+    );
+
+    expect(find.text('3 reservas activas'), findsOneWidget);
+    expect(find.text('Ver reservas'), findsNothing);
   });
 }
