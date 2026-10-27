@@ -267,6 +267,13 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - `flutter analyze` reports **zero errors, zero warnings** and only SDK
   `deprecated_member_use` infos from the pinned beta channel.
 
+### Cloud helpers
+
+- `supabase/apply-cloud.sh` applies every migration to a hosted project and
+  `supabase/create-cloud-operator.sh` creates a kiosk user through the Admin
+  API with a secret key; `docs/setup-cloud.md` documents the hosted checklist
+  (empty project → `PGRST205`/`invalid_credentials`).
+
 ## Database migrations
 
 Migrations are append-only and applied in filename order by `supabase-migrate`.

@@ -302,3 +302,45 @@ connection string, deploy the functions with the Supabase CLI, re-create the
 storage buckets, and re-point `.env` values). The VM path above is the
 supported one; if you go Cloud, keep the SQL suite in CI against a throwaway
 project before pointing production at it.
+
+### Hosted project checklist (Supabase Cloud)
+
+A new hosted project is **empty**: the app can reach it (`/auth/v1/health`
+returns 200) but every table fails with `PGRST205 Could not find the table` and
+login answers `invalid_credentials` because there is no schema or kiosk user
+yet. Opening `/rest/v1/` with the publishable key returning "Secret API key
+required" is normal (that root is admin-only).
+
+1. Project Settings → Database: copy the **session** connection string (port
+   5432) and the database password.
+2. Apply every migration (the same files the Compose stack uses):
+   ```bash
+   sh supabase/apply-cloud.sh \
+     "postgresql://postgres:<password>@db.<ref>.supabase.co:5432/postgres?sslmode=require"
+   ```
+   If a previous attempt left a partial `public` schema, reset it first as
+   `postgres`:
+   ```sql
+   drop schema public cascade;
+   create schema public;
+   grant usage on schema public to anon, authenticated, service_role;
+   ```
+3. Create the kiosk admin with a **secret** key (`sb_secret_...` or the
+   service_role JWT — never the publishable key, never in the app):
+   ```bash
+   sh supabase/create-cloud-operator.sh https://<ref>.supabase.co \
+     <secret-key> admin <6-digit-pin> admin
+   ```
+   The `auth.users` trigger mirrors the profile into `public.users` and joins
+   the default lot.
+4. Build/run the clients with the project URL and the **publishable** key:
+   ```bash
+   flutter run -d <device> \
+     --dart-define=SUPABASE_URL=https://<ref>.supabase.co \
+     --dart-define=SUPABASE_ANON_KEY=sb_publishable_...
+   ```
+5. Deploy the Edge Functions the app calls (`admin-users`, `evidence-archive`,
+   `push-dispatch`, `whatsapp-dispatch`) with the Supabase CLI; they are not
+   part of the SQL migrations.
+6. Check the bucket policies exist (`evidence`, `branding`) and run the SQL
+   suite against a throwaway cloud project before pointing production at it.

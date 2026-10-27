@@ -383,6 +383,19 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 - Ops: `healthcheck.sh` (exit 1 on failure, `HEALTHCHECK_WEBHOOK` alerts) and
   `diagnostics.sh` (stuck sessions/shifts, backlog, client errors, sizes).
 
+## Supabase Cloud (hosted) gotcha
+
+- A fresh Cloud project reaches Auth (`/auth/v1/health` 200) but has **no
+  parking schema**: queries return `PGRST205 Could not find the table` and
+  login returns `invalid_credentials` (no kiosk user). Apply
+  `supabase/migrations` with `sh supabase/apply-cloud.sh <session-db-url>` and
+  create the admin with `sh supabase/create-cloud-operator.sh <url>
+  <secret-key> admin <pin> admin`.
+- The publishable key (`sb_publishable_...`) works as `apikey`; `/rest/v1/`
+  answering "Secret API key required" with it is normal (admin-only root).
+- Never put `sb_secret_...`/service_role or third-party keys (Groq, etc.) in
+  the client or in `--dart-define`; only the publishable key ships.
+
 ## Dev environment running (2026-10-26)
 
 - Backend: `docker compose up -d` from the repo root; all services healthy,
