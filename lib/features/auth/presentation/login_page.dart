@@ -41,6 +41,14 @@ class _LoginPageState extends State<LoginPage> {
     cubit.login(_usernameController.text.trim(), _pinController.text.trim());
   }
 
+  String? _pin(String? value) {
+    final pin = (value ?? '').trim();
+    if (pin.isEmpty) {
+      return context.l10n.fieldRequired;
+    }
+    return pin.length == 6 ? null : context.l10n.pinInvalid;
+  }
+
   String? _required(String? value) =>
       (value ?? '').trim().isEmpty ? context.l10n.fieldRequired : null;
 
@@ -102,7 +110,11 @@ class _LoginPageState extends State<LoginPage> {
               autofillHints: const [AutofillHints.password],
               textInputAction: TextInputAction.done,
               onFieldSubmitted: (_) => _submit(),
-              validator: _required,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(6),
+              ],
+              validator: _pin,
             ),
             const SizedBox(height: Space.lg),
             _SubmitSection(onSubmit: _submit),
@@ -138,10 +150,20 @@ class _Header extends StatelessWidget {
               ),
             )
           else
-            Icon(
-              Icons.local_parking_rounded,
-              size: Space.xxl,
-              color: theme.colorScheme.primary,
+            ClipRRect(
+              borderRadius: BorderRadius.circular(Space.sm),
+              child: Image.asset(
+                'assets/branding/logo.png',
+                width: Space.xxl,
+                height: Space.xxl,
+                fit: BoxFit.cover,
+                semanticLabel: context.l10n.appTitle,
+                errorBuilder: (_, _, _) => Icon(
+                  Icons.local_parking_rounded,
+                  size: Space.xxl,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
             ),
           const SizedBox(height: Space.md),
           Semantics(

@@ -2,68 +2,10 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'feature/**']
   pull_request:
 
 jobs:
-  backend:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install uv
-        uses: astral-sh/setup-uv@v3
-        with:
-          version: "latest"
-      - name: Install dependencies
-        run: uv sync --all-groups
-      - name: Lint
-        run: uv run ruff check .
-      - name: Run tests
-        run: uv run pytest
-
-  backend-postgres:
-    # Behaviour SQLite cannot prove: partial unique indexes, VARCHAR(n)
-    # enforcement, timezone-aware report grouping, migrations on Postgres.
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: parking_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-    env:
-      ENVIRONMENT: test
-      TEST_DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/parking_test
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/parking_test
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install uv
-        uses: astral-sh/setup-uv@v3
-        with:
-          version: "latest"
-      - name: Install dependencies
-        run: uv sync --all-groups
-      - name: Migrations round-trip and drift check
-        run: |
-          uv run alembic upgrade head
-          uv run alembic check
-          uv run alembic downgrade base
-      - name: Run Postgres tests
-        run: uv run pytest -m postgres
-
   flutter:
     runs-on: ubuntu-latest
     steps:
@@ -82,3 +24,104 @@ jobs:
       # build (platform adapters are picked via conditional imports).
       - name: Build web (release)
         run: flutter build web --release
+
+  supabase-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate local secrets
+        run: |
+          cp .env.example .env
+          sh supabase/generate-env.sh
+      - name: Validate compose and migrations ordering
+        run: |
+          docker compose config -q
+          test -n "$(ls supabase/migrations/*.sql)"
+
+  supabase-sql:
+    # Real Postgres + migrations + RPC/RLS regression tests. This is the guard
+    # for the SQL that Flutter cannot exercise (capacity, shifts, discounts,
+    # auto-renewal, RLS).
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: supabase/postgres:17.6.1.136
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: parking
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U supabase_admin -d parking"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      PGHOST: localhost
+      PGUSER: supabase_admin
+      PGPASSWORD: postgres
+      PGDATABASE: parking
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install psql
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Apply migrations and run SQL tests
+        run: sh supabase/tests/run.sh
+
+  # Real stack: compose up, admin login, API e2e (curl) and the Flutter client
+  # e2e (pure-Dart Supabase client) against the same server the app talks to.
+  supabase-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate local secrets
+        run: |
+          cp .env.example .env
+          sh supabase/generate-env.sh
+
+      - name: Start the stack
+        run: docker compose up -d
+
+      - name: Wait for the API
+        run: |
+          anon=$(grep '^ANON_KEY=' .env | cut -d= -f2-)
+          for _ in $(seq 1 60); do
+            if curl -fsS -H "apikey: $anon" http://localhost:8000/auth/v1/health >/dev/null; then
+              echo "API is up"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "API did not become healthy in time" >&2
+          docker compose ps || true
+          docker compose logs --tail=80 || true
+          exit 1
+
+      - name: Apply migrations and create the admin
+        run: |
+          docker compose up -d supabase-migrate
+          docker compose logs --tail=20 supabase-migrate
+          sh supabase/create-operator.sh admin 123456 admin
+
+      - name: Backup + restore drill
+        run: |
+          sh supabase/backup.sh
+          sh supabase/restore-drill.sh
+
+      - name: API e2e (curl)
+        run: sh supabase/tests/e2e.sh
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: beta
+          flutter-version: 3.49.0-0.1.pre
+          cache: true
+      - run: flutter pub get
+
+      - name: Flutter ↔ Supabase e2e
+        run: |
+          export SUPABASE_URL=http://localhost:8000
+          export SUPABASE_ANON_KEY=$(grep '^ANON_KEY=' .env | cut -d= -f2-)
+          flutter test test/integration

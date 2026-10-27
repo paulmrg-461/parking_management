@@ -1,11 +1,12 @@
 import '../../../../core/receipt/receipt_data.dart';
+import '../../../../core/receipt/receipt_labels.dart';
 import '../entities/bluetooth_printer.dart';
 import '../entities/print_outcome.dart';
 
 /// Prints a receipt via the OS print/share dialog (PDF), available on every
 /// platform (Android, web, desktop).
 abstract class ReceiptPrinter {
-  Future<void> printPdf(ReceiptData data);
+  Future<void> printPdf(ReceiptData data, ReceiptLabels labels);
 }
 
 /// Discovers and prints to Bluetooth thermal printers (Android only).
@@ -21,5 +22,9 @@ abstract class BluetoothPrinterScanner {
 
   Future<void> stopScan();
 
-  Future<PrintOutcome> print(BluetoothPrinter printer, ReceiptData data);
+  Future<PrintOutcome> print(
+    BluetoothPrinter printer,
+    ReceiptData data,
+    ReceiptLabels labels,
+  );
 }

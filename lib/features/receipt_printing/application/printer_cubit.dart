@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:equatable/equatable.dart';
 
 import '../../../core/receipt/receipt_data.dart';
+import '../../../core/receipt/receipt_labels.dart';
 import '../domain/entities/bluetooth_printer.dart';
 import '../domain/entities/print_outcome.dart';
 import '../domain/repositories/receipt_printer.dart';
@@ -61,7 +62,11 @@ class PrinterCubit extends ResilientCubit<PrinterState> {
     _scanner.stopScan();
   }
 
-  Future<void> print(BluetoothPrinter printer, ReceiptData data) async {
+  Future<void> print(
+    BluetoothPrinter printer,
+    ReceiptData data,
+    ReceiptLabels labels,
+  ) async {
     if (state.printing) {
       return;
     }
@@ -72,7 +77,7 @@ class PrinterCubit extends ResilientCubit<PrinterState> {
         printing: true,
       ),
     );
-    final outcome = await _scanner.print(printer, data);
+    final outcome = await _scanner.print(printer, data, labels);
     emit(
       PrinterState(
         printers: state.printers,

@@ -3,6 +3,7 @@ import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/core/state/submission.dart';
 import 'package:parking_management/features/monthly_passes/application/monthly_passes_cubit.dart';
 import 'package:parking_management/features/monthly_passes/domain/commands/create_monthly_pass_command.dart';
+import 'package:parking_management/features/monthly_passes/domain/commands/update_monthly_pass_command.dart';
 import 'package:parking_management/features/vehicles/domain/entities/vehicle.dart';
 
 import '../../../helpers/fake_monthly_pass_repository.dart';
@@ -35,7 +36,7 @@ void main() {
     expect(loaded().vehicles, hasLength(1));
   });
 
-  test('Success: create reloads the list with Idle submission', () async {
+  test('Success: create reloads the list and reports it', () async {
     await cubit.load();
 
     await cubit.create(
@@ -48,7 +49,8 @@ void main() {
     );
 
     expect(loaded().monthlyPasses, hasLength(2));
-    expect(loaded().submission, const SubmissionIdle());
+    expect(loaded().submission, isA<SubmissionSucceeded<Object?>>());
+    expect(loaded().lastAction, MonthlyPassAction.created);
   });
 
   test('Failure: load failure emits failure state', () async {
@@ -84,11 +86,31 @@ void main() {
     },
   );
 
+  test('Success: collecting a pending pass payment removes it', () async {
+    repository.pending = [samplePayment];
+    await cubit.load();
+
+    expect(loaded().pendingPayments, [samplePayment]);
+
+    await cubit.registerPayment(samplePayment.id, 'cash');
+
+    expect(repository.paid, [samplePayment.id]);
+    expect(loaded().pendingPayments, isEmpty);
+  });
+
   test('Security: unknown vehicles fall back to the id label', () async {
     vehicles.listError = const NetworkFailure('offline');
 
     await cubit.load();
 
     expect(loaded().plateOf(_pass), 'Vehicle 1');
+  });
+
+  test('Success: toggling a pass keeps the submission idle for undo', () async {
+    await cubit.load();
+
+    await cubit.update(const UpdateMonthlyPassCommand(id: 1, active: false));
+
+    expect(loaded().submission, const SubmissionIdle());
   });
 }

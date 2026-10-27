@@ -1,6 +1,6 @@
-import 'package:dio/dio.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../../core/network/dio_error_mapper.dart';
+import '../../../core/network/supabase_error_mapper.dart';
 import '../domain/entities/category.dart';
 import 'models/category_dto.dart';
 
@@ -11,60 +11,72 @@ abstract class CategoryRemoteDataSource {
 
   Future<Category> update(int id, String name);
 
+  Future<Category> setCapacity(int id, int capacity);
+
   Future<void> delete(int id);
 }
 
-class DioCategoryRemoteDataSource implements CategoryRemoteDataSource {
-  DioCategoryRemoteDataSource(this._dio);
+class SupabaseCategoryRemoteDataSource implements CategoryRemoteDataSource {
+  SupabaseCategoryRemoteDataSource(this._client);
 
-  final Dio _dio;
+  final SupabaseClient _client;
 
-  static const _path = '/api/categories';
+  static const _table = 'categories';
 
   @override
   Future<List<Category>> list() async {
     try {
-      final response = await _dio.get(_path);
-      final data = response.data as List<dynamic>;
-      return data
-          .map(
-            (item) =>
-                CategoryDto.fromJson(item as Map<String, dynamic>).toDomain(),
-          )
+      final rows = await _client.from(_table).select().order('id');
+      return rows
+          .map((row) => CategoryDto.fromJson(row).toDomain())
           .toList();
-    } on DioException catch (error) {
-      throw mapDioError(error);
+    } catch (error) {
+      throw mapSupabaseError(error);
     }
   }
 
   @override
   Future<Category> create(String name) async {
     try {
-      final response = await _dio.post(_path, data: {'name': name});
-      return CategoryDto.fromJson(response.data as Map<String, dynamic>)
-          .toDomain();
-    } on DioException catch (error) {
-      throw mapDioError(error);
+      final row = await _client
+          .from(_table)
+          .insert({'name': name})
+          .select()
+          .single();
+      return CategoryDto.fromJson(row).toDomain();
+    } catch (error) {
+      throw mapSupabaseError(error);
     }
   }
 
   @override
-  Future<Category> update(int id, String name) async {
+  Future<Category> update(int id, String name) =>
+      _patch(id, {'name': name});
+
+  @override
+  Future<Category> setCapacity(int id, int capacity) =>
+      _patch(id, {'capacity': capacity});
+
+  Future<Category> _patch(int id, Map<String, dynamic> payload) async {
     try {
-      final response = await _dio.patch('$_path/$id', data: {'name': name});
-      return CategoryDto.fromJson(response.data as Map<String, dynamic>)
-          .toDomain();
-    } on DioException catch (error) {
-      throw mapDioError(error);
+      final row = await _client
+          .from(_table)
+          .update(payload)
+          .eq('id', id)
+          .select()
+          .single();
+      return CategoryDto.fromJson(row).toDomain();
+    } catch (error) {
+      throw mapSupabaseError(error);
     }
   }
 
   @override
   Future<void> delete(int id) async {
     try {
-      await _dio.delete('$_path/$id');
-    } on DioException catch (error) {
-      throw mapDioError(error);
+      await _client.from(_table).delete().eq('id', id);
+    } catch (error) {
+      throw mapSupabaseError(error);
     }
   }
 }

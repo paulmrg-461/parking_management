@@ -8,7 +8,10 @@ import '../core/l10n/l10n.dart';
 import '../core/network/connectivity_cubit.dart';
 import '../core/sync/sync_status_cubit.dart';
 import '../core/theme/app_theme.dart';
+import '../core/theme/theme_cubit.dart';
+import '../core/widgets/search_shortcuts.dart';
 import '../features/auth/application/auth_cubit.dart';
+import '../features/lots/application/lots_cubit.dart';
 import '../features/settings/application/branding_cubit.dart';
 import 'router/app_router.dart';
 import 'router/go_router_refresh_stream.dart';
@@ -22,11 +25,19 @@ class ParkingApp extends StatefulWidget {
     required this.syncStatusCubit,
     required this.brandingCubit,
     this.connectivityCubit,
+    this.lotsCubit,
+    this.themeCubit,
   });
 
   final AuthCubit authCubit;
   final SyncStatusCubit syncStatusCubit;
   final BrandingCubit brandingCubit;
+
+  /// Multi-lot context; optional so single-lot tests can omit it.
+  final LotsCubit? lotsCubit;
+
+  /// Device appearance preference; optional so tests keep the system theme.
+  final ThemeCubit? themeCubit;
 
   /// Drives the offline banner; optional so tests can omit it.
   final ConnectivityCubit? connectivityCubit;
@@ -46,6 +57,10 @@ class _ParkingAppState extends State<ParkingApp> {
     _router = buildRouter(widget.authCubit, _refresh);
     // Seed from Hive, then refresh: a no-network first run just stays put.
     unawaited(widget.brandingCubit.load());
+    if (widget.lotsCubit case final lots?) {
+      unawaited(lots.load());
+    }
+    widget.themeCubit?.restore();
   }
 
   @override
@@ -62,20 +77,33 @@ class _ParkingAppState extends State<ParkingApp> {
         BlocProvider<AuthCubit>.value(value: widget.authCubit),
         BlocProvider<SyncStatusCubit>.value(value: widget.syncStatusCubit),
         BlocProvider<BrandingCubit>.value(value: widget.brandingCubit),
+        if (widget.lotsCubit case final lots?)
+          BlocProvider<LotsCubit>.value(value: lots),
         if (widget.connectivityCubit case final connectivity?)
           BlocProvider<ConnectivityCubit>.value(value: connectivity),
+        if (widget.themeCubit case final theme?)
+          BlocProvider<ThemeCubit>.value(value: theme),
       ],
-      child: MaterialApp.router(
-        onGenerateTitle: (context) =>
-            context.read<BrandingCubit>().state.titleFor(context.l10n),
-        theme: AppTheme.light(),
-        darkTheme: AppTheme.dark(),
-        themeMode: ThemeMode.system,
-        locale: defaultLocale,
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        routerConfig: _router,
+      child: SearchShortcuts(
+        child: widget.themeCubit == null
+            ? _app(ThemeMode.system)
+            : BlocBuilder<ThemeCubit, ThemeMode>(
+                bloc: widget.themeCubit,
+                builder: (context, mode) => _app(mode),
+              ),
       ),
     );
   }
+
+  Widget _app(ThemeMode mode) => MaterialApp.router(
+    onGenerateTitle: (context) =>
+        context.read<BrandingCubit>().state.titleFor(context.l10n),
+    theme: AppTheme.light(),
+    darkTheme: AppTheme.dark(),
+    themeMode: mode,
+    locale: defaultLocale,
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    routerConfig: _router,
+  );
 }

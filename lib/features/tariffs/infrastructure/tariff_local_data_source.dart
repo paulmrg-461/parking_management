@@ -1,5 +1,6 @@
 import 'package:hive_ce/hive_ce.dart';
 
+import '../../../core/lot/lot_session.dart';
 import '../domain/entities/tariff.dart';
 
 abstract class TariffLocalDataSource {
@@ -13,7 +14,15 @@ abstract class TariffLocalDataSource {
 }
 
 class HiveTariffLocalDataSource implements TariffLocalDataSource {
+  HiveTariffLocalDataSource(this._lots);
+
+  final LotSession _lots;
+
   static const _boxName = 'tariffs';
+
+  int get _lotId => _lots.activeLotId ?? 1;
+
+  String _key(int id) => '${_lotId}_$id';
 
   /// Opens lazily on first use (returns the already-open box afterwards),
   /// so reads work on a cold start before any write happened.
@@ -22,17 +31,28 @@ class HiveTariffLocalDataSource implements TariffLocalDataSource {
   @override
   Future<void> cacheAll(List<Tariff> tariffs) async {
     final box = await _box();
-    await box.clear();
+    final prefix = '${_lotId}_';
+    for (final key in box.keys.toList()) {
+      if ('$key'.startsWith(prefix)) {
+        await box.delete(key);
+      }
+    }
     for (final tariff in tariffs) {
-      if (tariff.id != null) {
-        await box.put(tariff.id, tariff);
+      final id = tariff.id;
+      if (id != null) {
+        await box.put(_key(id), tariff);
       }
     }
   }
 
   @override
   Future<List<Tariff>> readAll() async {
-    return (await _box()).values.toList();
+    final box = await _box();
+    final prefix = '${_lotId}_';
+    return [
+      for (final key in box.keys)
+        if ('$key'.startsWith(prefix)) box.get(key)!,
+    ];
   }
 
   @override
@@ -42,12 +62,12 @@ class HiveTariffLocalDataSource implements TariffLocalDataSource {
       return;
     }
     final box = await _box();
-    await box.put(id, tariff);
+    await box.put(_key(id), tariff);
   }
 
   @override
   Future<void> remove(int id) async {
     final box = await _box();
-    await box.delete(id);
+    await box.delete(_key(id));
   }
 }

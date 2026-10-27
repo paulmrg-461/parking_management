@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:cross_file/cross_file.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:parking_management/core/lot/lot_session.dart';
 import 'package:parking_management/core/sync/pending_mutation.dart';
 import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/core/sync/file_pending_photo_storage.dart';
@@ -32,18 +33,22 @@ class _FakeRemote implements CheckInRemoteDataSource {
   NewVehicleInfo? newVehicleUsed;
   String? idempotencyKeyUsed;
   DateTime? clientEntryTimeUsed;
+  int? lotIdUsed;
 
   @override
   Future<ParkingSession> createCheckIn({
     required String plate,
     required List<XFile> photos,
     NewVehicleInfo? newVehicle,
+    bool leftKeys = false,
     String? idempotencyKey,
     DateTime? clientEntryTime,
+    int? lotId,
   }) async {
     newVehicleUsed = newVehicle;
     idempotencyKeyUsed = idempotencyKey;
     clientEntryTimeUsed = clientEntryTime;
+    lotIdUsed = lotId;
     final error = this.error;
     if (error != null) {
       throw error;
@@ -94,6 +99,7 @@ void main() {
         remote,
         FakeSyncOutbox(),
         FilePendingPhotoStorage(),
+        LotSession(),
       );
 
       final result = await repository.createCheckIn(
@@ -113,6 +119,7 @@ void main() {
         remote,
         FakeSyncOutbox(),
         FilePendingPhotoStorage(),
+        LotSession(),
       );
 
       await repository.createCheckIn(plate: 'ABC123', photos: const []);
@@ -132,6 +139,7 @@ void main() {
         remote,
         outbox,
         FilePendingPhotoStorage(),
+        LotSession(),
       );
 
       await repository.createCheckIn(plate: 'ABC123', photos: const []);
@@ -144,6 +152,27 @@ void main() {
     },
   );
 
+  test('Success: the queued entry keeps the keys flag', () async {
+    final remote = _FakeRemote(error: const NetworkFailure('offline'));
+    final outbox = FakeSyncOutbox();
+    final repository = CheckInRepositoryImpl(
+      remote,
+      outbox,
+      FilePendingPhotoStorage(),
+      LotSession(),
+    );
+
+    await repository.createCheckIn(
+      plate: 'ABC123',
+      photos: const [],
+      leftKeys: true,
+    );
+
+    final payload =
+        jsonDecode(outbox.enqueued.single.payloadJson!) as Map<String, dynamic>;
+    expect(payload['left_keys'], isTrue);
+  });
+
   test(
     'Success: createCheckIn forwards new-vehicle data to the remote',
     () async {
@@ -152,6 +181,7 @@ void main() {
         remote,
         FakeSyncOutbox(),
         FilePendingPhotoStorage(),
+        LotSession(),
       );
       const info = NewVehicleInfo(categoryId: 3, color: 'Red');
 
@@ -174,6 +204,7 @@ void main() {
         remote,
         outbox,
         FilePendingPhotoStorage(),
+        LotSession(),
       );
       const info = NewVehicleInfo(categoryId: 3, color: 'Red', brand: 'Kia');
 
@@ -199,6 +230,7 @@ void main() {
       remote,
       outbox,
       FilePendingPhotoStorage(),
+      LotSession(),
     );
 
     await repository.createCheckIn(plate: 'ABC123', photos: const []);
@@ -213,10 +245,12 @@ void main() {
   test('Failure: NetworkFailure persists photos, queues a checkIn/create mutation, and returns an optimistic pending session', () async {
     final remote = _FakeRemote(error: const NetworkFailure('offline'));
     final outbox = FakeSyncOutbox();
+    final lots = LotSession()..select(2);
     final repository = CheckInRepositoryImpl(
       remote,
       outbox,
       FilePendingPhotoStorage(),
+      lots,
     );
     final photo = sourcePhoto('evidence.jpg', 'evidence-bytes');
 
@@ -255,6 +289,7 @@ void main() {
       remote,
       outbox,
       FilePendingPhotoStorage(),
+      LotSession(),
     );
     final photo = sourcePhoto('evidence.jpg', 'evidence-bytes');
 
@@ -279,6 +314,7 @@ void main() {
       remote,
       outbox,
       FilePendingPhotoStorage(),
+      LotSession(),
     );
 
     await expectLater(
@@ -299,6 +335,7 @@ void main() {
         remote,
         outbox,
         FilePendingPhotoStorage(),
+        LotSession(),
       );
 
       await expectLater(

@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:parking_management/core/lot/lot_session.dart';
 import 'package:hive_ce/hive_ce.dart';
 import 'package:parking_management/app/di/hive_registrar.g.dart';
 import 'package:parking_management/core/error/failure.dart';
@@ -53,6 +54,9 @@ class _FakeRemote implements ParkingSettingsRemoteDataSource {
       phone: fields['phone'] as String? ?? settings.phone,
       website: fields['website'] as String? ?? settings.website,
       whatsapp: fields['whatsapp'] as String? ?? settings.whatsapp,
+      evidenceRetentionDays:
+          fields['evidence_retention_days'] as int? ??
+          settings.evidenceRetentionDays,
     );
     return settings;
   }
@@ -94,7 +98,7 @@ void main() {
   ParkingSettingsRepositoryImpl repository(_FakeRemote remote) =>
       ParkingSettingsRepositoryImpl(
         remote,
-        HiveParkingSettingsLocalDataSource(),
+        HiveParkingSettingsLocalDataSource(LotSession()),
         outbox,
       );
 
@@ -123,7 +127,7 @@ void main() {
   test(
     'Failure: offline load falls back to the cache and then to defaults',
     () async {
-      final local = HiveParkingSettingsLocalDataSource();
+      final local = HiveParkingSettingsLocalDataSource(LotSession());
       await ParkingSettingsRepositoryImpl(
         _FakeRemote(),
         local,
@@ -150,7 +154,7 @@ void main() {
   test(
     'Failure: offline save applies optimistically and enqueues a mutation',
     () async {
-      final local = HiveParkingSettingsLocalDataSource();
+      final local = HiveParkingSettingsLocalDataSource(LotSession());
       await ParkingSettingsRepositoryImpl(
         _FakeRemote(),
         local,
@@ -185,7 +189,7 @@ void main() {
   test(
     'Failure: offline logo upload throws and leaves the cache untouched',
     () async {
-      final local = HiveParkingSettingsLocalDataSource();
+      final local = HiveParkingSettingsLocalDataSource(LotSession());
       final online = ParkingSettingsRepositoryImpl(
         _FakeRemote(),
         local,
@@ -210,4 +214,57 @@ void main() {
       expect(outbox.enqueued, isEmpty);
     },
   );
+
+  test('Security: the settings cache never leaks across lots', () async {
+    final session = LotSession()..select(1);
+    final local = HiveParkingSettingsLocalDataSource(session);
+
+    await local.upsert(const ParkingSettings(name: 'Lot One'));
+    expect((await local.read())?.name, 'Lot One');
+
+    session.select(2);
+    expect(await local.read(), isNull);
+
+    await local.upsert(const ParkingSettings(name: 'Lot Two'));
+    expect((await local.read())?.name, 'Lot Two');
+
+    session.select(1);
+    expect((await local.read())?.name, 'Lot One');
+  });
+
+  test('Security: logo bytes are keyed by lot and version', () async {
+    final session = LotSession()..select(1);
+    final local = HiveParkingSettingsLocalDataSource(session);
+    final bytes = Uint8List.fromList([1, 2, 3]);
+
+    await local.putLogo(1, bytes);
+    expect(await local.readLogo(1), bytes);
+
+    session.select(2);
+    expect(await local.readLogo(1), isNull);
+  });
+
+  test('Security: each lot stores its logo under its own object', () {
+    expect(logoPathForLot(1), 'logo_1');
+    expect(logoPathForLot(2), 'logo_2');
+    expect(logoPathForLot(1), isNot(logoPathForLot(2)));
+  });
+
+  test('Success: evidence retention round-trips through the payload', () async {
+    final repo = ParkingSettingsRepositoryImpl(
+      _FakeRemote(),
+      HiveParkingSettingsLocalDataSource(LotSession()),
+      outbox,
+    );
+
+    final saved = await repo.save(
+      const ParkingSettings(
+        name: 'Parqueadero Central',
+        evidenceRetentionDays: 90,
+      ),
+    );
+
+    expect(saved.evidenceRetentionDays, 90);
+    expect((await repo.loadCached())?.evidenceRetentionDays, 90);
+  });
 }

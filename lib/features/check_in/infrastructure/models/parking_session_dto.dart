@@ -12,6 +12,7 @@ class ParkingSessionDto {
     required this.status,
     required this.entryTime,
     required this.photoCount,
+    this.leftKeys = false,
   });
 
   factory ParkingSessionDto.fromJson(Map<String, dynamic> json) =>
@@ -23,6 +24,9 @@ class ParkingSessionDto {
 
   @JsonKey(name: 'entry_time')
   final DateTime entryTime;
+
+  @JsonKey(name: 'left_keys', defaultValue: false)
+  final bool leftKeys;
 
   @JsonKey(name: 'photo_count')
   final int photoCount;
@@ -37,5 +41,6 @@ class ParkingSessionDto {
             : ParkingSessionStatus.open,
         entryTime: entryTime,
         photoCount: photoCount,
+        leftKeys: leftKeys,
       );
 }

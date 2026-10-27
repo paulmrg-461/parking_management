@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/receipt/receipt_data.dart';
+import 'package:parking_management/core/receipt/receipt_labels.dart';
 import 'package:parking_management/features/receipt_printing/infrastructure/esc_pos_generator.dart';
 import 'package:parking_management/features/settings/domain/entities/parking_settings.dart';
 
@@ -22,6 +23,24 @@ final _checkOut = ReceiptData(
   amountCharged: 12500,
   ticketNumber: 'TCK-000042',
 );
+
+bool _contains(List<int> bytes, List<int> needle) {
+  for (var i = 0; i + needle.length <= bytes.length; i++) {
+    var match = true;
+    for (var j = 0; j < needle.length; j++) {
+      if (bytes[i + j] != needle[j]) {
+        match = false;
+        break;
+      }
+    }
+    if (match) {
+      return true;
+    }
+  }
+  return false;
+}
+
+const _qrPrint = [0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30];
 
 void main() {
   test('Success: configured name and contact footer replace the literal', () {
@@ -85,5 +104,49 @@ void main() {
     expect(text, isNot(contains('8.000')));
     expect(text, isNot(contains('Total')));
     expect(text, isNot(contains('TCK-000043')));
+  });
+
+  test('Success: English labels print a fully translated receipt', () {
+    final bytes = const EscPosGenerator().build(
+      _checkOut,
+      _configured,
+      ReceiptLabels.english,
+    );
+
+    final text = _decode(bytes);
+    expect(text, contains('CHECK-OUT RECEIPT'));
+    expect(text, contains('Plate: ABC123'));
+    expect(text, contains('Duration: 3 h 15 min'));
+    expect(text, contains('Thank you for your visit'));
+    expect(text, isNot(contains('RECIBO DE SALIDA')));
+  });
+
+  test('Security: labels never emit characters the printer cannot encode', () {
+    for (final labels in [ReceiptLabels.spanish, ReceiptLabels.english]) {
+      final bytes = const EscPosGenerator().build(_checkOut, null, labels);
+      expect(bytes, isNotEmpty);
+      expect(bytes.every((b) => b <= 0xFF), isTrue);
+    }
+  });
+
+  test('Success: the entry receipt prints the exit QR with the plate', () {
+    final bytes = const EscPosGenerator().build(
+      ReceiptData(
+        kind: ReceiptKind.checkIn,
+        plate: 'ABC123',
+        entryTime: DateTime(2026, 1, 1, 8, 30),
+        photoCount: 1,
+      ),
+      _configured,
+    );
+
+    expect(_contains(bytes, _qrPrint), isTrue);
+    expect(_decode(bytes), contains('Presente este codigo al salir'));
+  });
+
+  test('Security: check-out receipts carry no exit QR', () {
+    final bytes = const EscPosGenerator().build(_checkOut, _configured);
+
+    expect(_contains(bytes, _qrPrint), isFalse);
   });
 }

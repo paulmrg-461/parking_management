@@ -23,6 +23,7 @@ class _FakeVehicleRepository implements VehicleRepository {
   Future<PagedResult<Vehicle>> listPage({
     int offset = 0,
     int limit = defaultPageSize,
+    String? plate,
   }) => throw UnimplementedError();
 
   @override
@@ -71,6 +72,10 @@ class _FakeCategoryRepository implements CategoryRepository {
 
   @override
   Future<Category> update(int id, String name) => throw UnimplementedError();
+
+  @override
+  Future<Category> setCapacity(int id, int capacity) =>
+      throw UnimplementedError();
 
   @override
   Future<void> delete(int id) => throw UnimplementedError();

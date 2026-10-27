@@ -1,13 +1,14 @@
 import 'dart:async';
-import 'dart:typed_data';
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../core/l10n/failure_messages.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/tokens.dart';
+import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/list_page_scaffold.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/widgets/submission_listener.dart';
@@ -39,7 +40,13 @@ class _SettingsPageState extends State<SettingsPage> {
   late final TextEditingController _phone;
   late final TextEditingController _website;
   late final TextEditingController _whatsapp;
+  late final TextEditingController _evidenceRetention;
+  late final TextEditingController _carCapacity;
+  late final TextEditingController _motoCapacity;
+  late final TextEditingController _keyCapacity;
   var _seeded = false;
+  bool _whatsappAuto = false;
+  List<String>? _baseline;
 
   @override
   void initState() {
@@ -50,6 +57,10 @@ class _SettingsPageState extends State<SettingsPage> {
     _phone = TextEditingController();
     _website = TextEditingController();
     _whatsapp = TextEditingController();
+    _evidenceRetention = TextEditingController();
+    _carCapacity = TextEditingController();
+    _motoCapacity = TextEditingController();
+    _keyCapacity = TextEditingController();
     unawaited(context.read<SettingsCubit>().load());
   }
 
@@ -61,6 +72,10 @@ class _SettingsPageState extends State<SettingsPage> {
     _phone.dispose();
     _website.dispose();
     _whatsapp.dispose();
+    _evidenceRetention.dispose();
+    _carCapacity.dispose();
+    _motoCapacity.dispose();
+    _keyCapacity.dispose();
     super.dispose();
   }
 
@@ -70,10 +85,17 @@ class _SettingsPageState extends State<SettingsPage> {
     return SubmissionListener<SettingsCubit, SettingsState>(
       submissionOf: (state) => state is SettingsLoaded ? state.submission : null,
       onSuccess: _onSaved,
-      child: ListPageScaffold(
-        title: context.l10n.settingsTitle,
-        onRefresh: cubit.load,
-        body: BlocConsumer<SettingsCubit, SettingsState>(
+      child: PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) {
+            unawaited(_confirmLeave(context));
+          }
+        },
+        child: ListPageScaffold(
+          title: context.l10n.settingsTitle,
+          onRefresh: cubit.load,
+          body: BlocConsumer<SettingsCubit, SettingsState>(
           listenWhen: (previous, current) =>
               current is SettingsLoaded && previous is! SettingsLoaded,
           listener: (context, state) =>
@@ -88,11 +110,49 @@ class _SettingsPageState extends State<SettingsPage> {
                 textAlign: TextAlign.center,
               ),
             ),
-            SettingsLoaded() => _form(context, state.settings),
-          },
+              SettingsLoaded() => _form(context, state.settings),
+            },
+          ),
         ),
       ),
     );
+  }
+
+  /// Every editable field, so "unsaved changes" needs no per-field listener.
+  List<String> _snapshot() => [
+    _name.text,
+    _address.text,
+    _schedule.text,
+    _phone.text,
+    _website.text,
+    _whatsapp.text,
+    _evidenceRetention.text,
+    _carCapacity.text,
+    _motoCapacity.text,
+    _keyCapacity.text,
+    '$_whatsappAuto',
+  ];
+
+  bool get _dirty => _baseline != null && !listEquals(_snapshot(), _baseline!);
+
+  /// Settings are a form; leaving by accident should not drop the edits.
+  Future<void> _confirmLeave(BuildContext context) async {
+    if (!_dirty) {
+      Navigator.of(context).pop();
+      return;
+    }
+    final discard = await ConfirmDialog.show(
+      context,
+      ConfirmDialog(
+        title: context.l10n.settingsDiscardTitle,
+        body: context.l10n.settingsDiscardBody,
+        confirmLabel: context.l10n.settingsDiscard,
+        destructive: true,
+      ),
+    );
+    if (discard && context.mounted) {
+      Navigator.of(context).pop();
+    }
   }
 
   void _seed(ParkingSettings settings) {
@@ -106,9 +166,16 @@ class _SettingsPageState extends State<SettingsPage> {
     _phone.text = settings.phone;
     _website.text = settings.website;
     _whatsapp.text = settings.whatsapp;
+    _evidenceRetention.text = settings.evidenceRetentionDays.toString();
+    _carCapacity.text = settings.carCapacity.toString();
+    _motoCapacity.text = settings.motoCapacity.toString();
+    _keyCapacity.text = settings.keyCapacity.toString();
+    _whatsappAuto = settings.whatsappAuto;
+    _baseline = _snapshot();
   }
 
   void _onSaved(BuildContext context, Object? result) {
+    _baseline = _snapshot();
     showInfoSnack(context, context.l10n.settingsSaved);
     unawaited(context.read<BrandingCubit>().load());
   }
@@ -170,6 +237,63 @@ class _SettingsPageState extends State<SettingsPage> {
             keyboardType: TextInputType.phone,
             decoration: InputDecoration(labelText: l10n.settingsWhatsapp),
           ),
+          TextFormField(
+            key: const Key('settings_evidence_retention'),
+            controller: _evidenceRetention,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: InputDecoration(
+              labelText: l10n.settingsEvidenceRetention,
+              helperText: l10n.settingsEvidenceRetentionHint,
+            ),
+            validator: (value) {
+              final days = int.tryParse((value ?? '').trim());
+              return days == null || days < 0 || days > 3650
+                  ? l10n.invalidAmount
+                  : null;
+            },
+          ),
+          TextFormField(
+            key: const Key('settings_car_capacity'),
+            controller: _carCapacity,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: InputDecoration(
+              labelText: l10n.settingsCarCapacity,
+              helperText: l10n.settingsCapacityHint,
+            ),
+            validator: _capacity,
+          ),
+          TextFormField(
+            key: const Key('settings_moto_capacity'),
+            controller: _motoCapacity,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: InputDecoration(
+              labelText: l10n.settingsMotoCapacity,
+              helperText: l10n.settingsCapacityHint,
+            ),
+            validator: _capacity,
+          ),
+          TextFormField(
+            key: const Key('settings_key_capacity'),
+            controller: _keyCapacity,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: InputDecoration(
+              labelText: l10n.settingsKeyCapacity,
+              helperText: l10n.settingsCapacityHint,
+            ),
+            validator: _capacity,
+          ),
+          SwitchListTile(
+            key: const Key('settings_whatsapp_auto'),
+            contentPadding: EdgeInsets.zero,
+            value: _whatsappAuto,
+            onChanged: (value) => setState(() => _whatsappAuto = value),
+            title: Text(l10n.settingsWhatsappAuto),
+            subtitle: Text(l10n.settingsWhatsappAutoHint),
+          ),
           const SizedBox(height: Space.md),
           FilledButton(
             onPressed: () => _save(context, settings),
@@ -230,8 +354,21 @@ class _SettingsPageState extends State<SettingsPage> {
         phone: _phone.text.trim(),
         website: _website.text.trim(),
         whatsapp: _whatsapp.text.trim(),
+        evidenceRetentionDays:
+            int.tryParse(_evidenceRetention.text.trim()) ?? 0,
+        whatsappAuto: _whatsappAuto,
+        carCapacity: int.tryParse(_carCapacity.text.trim()) ?? 0,
+        motoCapacity: int.tryParse(_motoCapacity.text.trim()) ?? 0,
+        keyCapacity: int.tryParse(_keyCapacity.text.trim()) ?? 0,
       ),
     );
+  }
+
+  String? _capacity(String? value) {
+    final spaces = int.tryParse((value ?? '0').trim());
+    return spaces == null || spaces < 0 || spaces > 10000
+        ? context.l10n.invalidAmount
+        : null;
   }
 
   Future<void> _uploadLogo() async {

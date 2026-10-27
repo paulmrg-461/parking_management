@@ -26,6 +26,11 @@ Future<void> pumpPage(
   BrandingCubit? branding,
   Future<Uint8List?> Function()? pickLogo,
 }) async {
+  // Tall viewport: the settings form (logo + 8 fields + save) must fit
+  // without fighting ListView's lazy children while tapping.
+  tester.view.physicalSize = const Size(800, 1600);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
   await tester.pumpWidget(
     MultiBlocProvider(
       providers: [
@@ -40,13 +45,6 @@ Future<void> pumpPage(
   await tester.pumpAndSettle();
 }
 
-/// The form is taller than the viewport: bring the save button on screen.
-Future<void> scrollToSave(WidgetTester tester) => tester.scrollUntilVisible(
-  find.widgetWithText(FilledButton, 'Guardar'),
-  300,
-  scrollable: find.byType(Scrollable).first,
-);
-
 void main() {
   testWidgets('Success: saves the edited identity and confirms', (tester) async {
     final repository = FakeParkingSettingsRepository(_configured);
@@ -56,7 +54,6 @@ void main() {
       find.byKey(const Key('settings_name')),
       'Parqueadero Sur',
     );
-    await scrollToSave(tester);
     await tester.tap(find.widgetWithText(FilledButton, 'Guardar'));
     await tester.pumpAndSettle();
 
@@ -72,7 +69,6 @@ void main() {
     await pumpPage(tester, repository: repository);
 
     await tester.enterText(find.byKey(const Key('settings_name')), 'Nope');
-    await scrollToSave(tester);
     await tester.tap(find.widgetWithText(FilledButton, 'Guardar'));
     await tester.pumpAndSettle();
 
@@ -102,5 +98,53 @@ void main() {
     expect(find.text('No hay conexión con el servidor'), findsOneWidget);
     expect(branding.state.logoOrNull, Uint8List.fromList(_logoBytes));
     expect(repository.logoBytes, Uint8List.fromList(_logoBytes));
+  });
+
+  testWidgets('Security: leaving with unsaved edits asks before discarding', (
+    tester,
+  ) async {
+    final repository = FakeParkingSettingsRepository(_configured);
+    await pumpPage(tester, repository: repository);
+
+    await tester.enterText(
+      find.byKey(const Key('settings_name')),
+      'Parqueadero Sur',
+    );
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    expect(find.text('¿Descartar cambios?'), findsOneWidget);
+    await tester.tap(find.text('Cancelar'));
+    await tester.pumpAndSettle();
+
+    // Still on the form with the edit intact and nothing saved.
+    expect(find.byKey(const Key('settings_name')), findsOneWidget);
+    expect(repository.settings.name, _configured.name);
+  });
+
+  testWidgets('Success: the space capacities are saved', (tester) async {
+    final repository = FakeParkingSettingsRepository(_configured);
+    await pumpPage(tester, repository: repository);
+
+    await tester.enterText(
+      find.byKey(const Key('settings_car_capacity')),
+      '12',
+    );
+    await tester.enterText(
+      find.byKey(const Key('settings_moto_capacity')),
+      '5',
+    );
+    await tester.enterText(
+      find.byKey(const Key('settings_key_capacity')),
+      '3',
+    );
+    await tester.ensureVisible(find.widgetWithText(FilledButton, 'Guardar'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Guardar'));
+    await tester.pumpAndSettle();
+
+    expect(repository.settings.carCapacity, 12);
+    expect(repository.settings.motoCapacity, 5);
+    expect(repository.settings.keyCapacity, 3);
   });
 }

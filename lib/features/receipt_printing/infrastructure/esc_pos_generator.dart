@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../../../core/receipt/receipt_data.dart';
+import '../../../core/receipt/receipt_labels.dart';
 import '../../../core/utils/cop_formatter.dart';
 import '../../settings/domain/entities/parking_settings.dart';
 
@@ -15,42 +16,95 @@ class EscPosGenerator {
 
   /// [settings] is null when nothing was ever cached: the header then falls
   /// back to `PARQUEADERO` so printing never fails.
-  List<int> build(ReceiptData data, ParkingSettings? settings) {
+  /// ESC/POS QR (GS ( k, model 2). Cheap 80 mm printers support it; the plate
+  /// is ASCII so the code page does not matter.
+  void _qr(List<int> bytes, String text) {
+    final payload = utf8.encode(text);
+    final length = payload.length + 3;
+    bytes.addAll([0x1D, 0x28, 0x6B, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00]);
+    bytes.addAll([0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, 0x06]);
+    bytes.addAll([0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x45, 0x31]);
+    bytes.addAll([
+      0x1D,
+      0x28,
+      0x6B,
+      length & 0xFF,
+      (length >> 8) & 0xFF,
+      0x31,
+      0x50,
+      0x30,
+      ...payload,
+    ]);
+    bytes.addAll([0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30]);
+    bytes.addAll([0x0A, 0x0A]);
+  }
+
+  List<int> build(
+    ReceiptData data,
+    ParkingSettings? settings, [
+    ReceiptLabels labels = ReceiptLabels.spanish,
+  ]) {
     final bytes = <int>[];
 
     bytes.addAll(_init);
     _text(bytes, _header(settings), align: 1, bold: true, doubleSize: true);
     _text(
       bytes,
-      data.isCheckOut ? 'RECIBO DE SALIDA' : 'RECIBO DE ENTRADA',
+      data.isCheckOut ? labels.checkOutTitle : labels.checkInTitle,
       align: 1,
     );
     _text(bytes, data.plate, align: 1, bold: true, doubleSize: true);
     _rule(bytes);
 
-    _row(bytes, 'Placa', data.plate);
-    _row(bytes, 'Entrada', _dateTime(data.entryTime));
+    _row(bytes, labels.plate, data.plate);
+    _row(bytes, labels.entry, _dateTime(data.entryTime));
     if (data.isCheckOut && data.exitTime != null) {
-      _row(bytes, 'Salida', _dateTime(data.exitTime!));
-      _row(bytes, 'Tiempo', _duration(data.exitTime!.difference(data.entryTime)));
+      _row(bytes, labels.exit, _dateTime(data.exitTime!));
+      _row(
+        bytes,
+        labels.duration,
+        _duration(data.exitTime!.difference(data.entryTime)),
+      );
     } else if (data.photoCount != null) {
-      _row(bytes, 'Fotos', '${data.photoCount}');
+      _row(bytes, labels.photos, '${data.photoCount}');
     }
 
     if (data.pendingSync) {
-      _text(bytes, 'PENDIENTE DE SINCRONIZAR', align: 1, bold: true);
+      _text(bytes, labels.pendingSync, align: 1, bold: true);
     } else if (data.isCheckOut && data.amountCharged != null) {
       _rule(bytes);
-      _row(bytes, 'Total', CopFormatter.format(data.amountCharged!), bold: true);
+      _row(
+        bytes,
+        labels.total,
+        CopFormatter.format(data.amountCharged!),
+        bold: true,
+      );
+    }
+
+    if (data.isCheckOut && !data.pendingSync && data.discountAmount > 0) {
+      _row(
+        bytes,
+        labels.discount,
+        '-${CopFormatter.format(data.discountAmount)}',
+      );
+    }
+
+    if (data.isCheckOut && !data.pendingSync && data.paymentMethod != null) {
+      _row(bytes, labels.payment, labels.paymentMethod(data.paymentMethod!));
     }
 
     if (data.isCheckOut && !data.pendingSync && data.ticketNumber != null) {
-      _row(bytes, 'Ticket', data.ticketNumber!);
+      _row(bytes, labels.ticket, data.ticketNumber!);
     }
 
-    _rule(bytes);
-    _text(bytes, 'Generado el ${_dateTime(DateTime.now())}', align: 1);
-    _text(bytes, 'Gracias por su visita', align: 1);
+    if (!data.isCheckOut) {
+      _qr(bytes, data.plate);
+      _text(bytes, labels.scanHint, align: 1);
+      _rule(bytes);
+    }
+
+    _text(bytes, '${labels.generatedOn} ${_dateTime(DateTime.now())}', align: 1);
+    _text(bytes, labels.thanks, align: 1);
     _footer(bytes, settings);
     _feed(bytes, 2);
     bytes.addAll(_cut);

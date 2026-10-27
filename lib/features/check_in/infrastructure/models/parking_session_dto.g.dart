@@ -12,6 +12,7 @@ ParkingSessionDto _$ParkingSessionDtoFromJson(Map<String, dynamic> json) =>
       plate: json['plate'] as String,
       status: json['status'] as String,
       entryTime: DateTime.parse(json['entry_time'] as String),
+      leftKeys: json['left_keys'] as bool? ?? false,
       photoCount: (json['photo_count'] as num).toInt(),
     );
 
@@ -21,5 +22,6 @@ Map<String, dynamic> _$ParkingSessionDtoToJson(ParkingSessionDto instance) =>
       'plate': instance.plate,
       'status': instance.status,
       'entry_time': instance.entryTime.toIso8601String(),
+      'left_keys': instance.leftKeys,
       'photo_count': instance.photoCount,
     };

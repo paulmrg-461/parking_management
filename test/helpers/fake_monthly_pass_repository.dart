@@ -2,6 +2,7 @@ import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/features/monthly_passes/domain/commands/create_monthly_pass_command.dart';
 import 'package:parking_management/features/monthly_passes/domain/commands/update_monthly_pass_command.dart';
 import 'package:parking_management/features/monthly_passes/domain/entities/monthly_pass.dart';
+import 'package:parking_management/features/monthly_passes/domain/entities/monthly_pass_payment.dart';
 import 'package:parking_management/features/monthly_passes/domain/repositories/monthly_pass_repository.dart';
 
 final samplePass = MonthlyPass(
@@ -12,6 +13,19 @@ final samplePass = MonthlyPass(
   amount: 100000,
 );
 
+final samplePayment = MonthlyPassPayment(
+  id: 7,
+  monthlyPassId: 1,
+  vehicleId: 1,
+  plate: 'ABC123',
+  startDate: DateTime(2026, 1, 1),
+  endDate: DateTime(2026, 1, 31),
+  amount: 100000,
+  paymentMethod: 'cash',
+  status: 'pending',
+  dueDate: DateTime(2026, 1, 1),
+);
+
 class FakeMonthlyPassRepository implements MonthlyPassRepository {
   List<MonthlyPass> passes = [samplePass];
   Failure? listError;
@@ -19,6 +33,8 @@ class FakeMonthlyPassRepository implements MonthlyPassRepository {
   final List<int> deleted = [];
   final List<UpdateMonthlyPassCommand> updates = [];
   CreateMonthlyPassCommand? created;
+  List<MonthlyPassPayment> pending = const [];
+  final List<int> paid = [];
 
   @override
   Future<List<MonthlyPass>> list({int? vehicleId}) async =>
@@ -50,6 +66,21 @@ class FakeMonthlyPassRepository implements MonthlyPassRepository {
   Future<void> delete(int id) async {
     _throwIfWriteFails();
     deleted.add(id);
+  }
+
+  @override
+  Future<List<MonthlyPassPayment>> pendingPayments() async {
+    _throwIfWriteFails();
+    return pending;
+  }
+
+  @override
+  Future<MonthlyPassPayment> registerPayment(int id, String method) async {
+    _throwIfWriteFails();
+    paid.add(id);
+    final payment = pending.firstWhere((p) => p.id == id);
+    pending = [for (final p in pending) if (p.id != id) p];
+    return payment;
   }
 
   void _throwIfWriteFails() {

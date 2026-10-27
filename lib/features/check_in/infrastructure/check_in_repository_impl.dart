@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:cross_file/cross_file.dart';
 
 import '../../../core/error/failure.dart';
+import '../../../core/lot/lot_session.dart';
 import '../../../core/sync/client_ref.dart';
 import '../../../core/sync/pending_mutation.dart';
 import '../../../core/sync/pending_photo_storage.dart';
@@ -17,17 +18,19 @@ import 'check_in_remote_data_source.dart';
 /// mutation, and returns an optimistic session instead of rethrowing (see
 /// `design.md` for why the synthetic id needs no reconciliation).
 class CheckInRepositoryImpl implements CheckInRepository {
-  CheckInRepositoryImpl(this._remote, this._outbox, this._photos);
+  CheckInRepositoryImpl(this._remote, this._outbox, this._photos, this._lots);
 
   final CheckInRemoteDataSource _remote;
   final SyncOutbox _outbox;
   final PendingPhotoStorage _photos;
+  final LotSession _lots;
 
   @override
   Future<ParkingSession> createCheckIn({
     required String plate,
     required List<XFile> photos,
     NewVehicleInfo? newVehicle,
+    bool leftKeys = false,
   }) async {
     // Generated BEFORE the first attempt: if the server commits but the
     // response is lost, the queued replay sends the same key and gets the
@@ -39,6 +42,7 @@ class CheckInRepositoryImpl implements CheckInRepository {
         plate: plate,
         photos: photos,
         newVehicle: newVehicle,
+        leftKeys: leftKeys,
         idempotencyKey: clientRef,
       );
     } on NetworkFailure {
@@ -46,6 +50,7 @@ class CheckInRepositoryImpl implements CheckInRepository {
         plate: plate,
         photos: photos,
         newVehicle: newVehicle,
+        leftKeys: leftKeys,
         clientRef: clientRef,
         entryTime: entryTime,
       );
@@ -59,6 +64,7 @@ class CheckInRepositoryImpl implements CheckInRepository {
     required String plate,
     required List<XFile> photos,
     NewVehicleInfo? newVehicle,
+    required bool leftKeys,
     required String clientRef,
     required DateTime entryTime,
   }) async {
@@ -77,6 +83,8 @@ class CheckInRepositoryImpl implements CheckInRepository {
           'photo_paths': persistedPaths,
           'client_entry_time': entryTime.toIso8601String(),
           'client_ref': clientRef,
+          'left_keys': leftKeys,
+          'lot_id': ?_lots.activeLotId,
           ..._newVehiclePayload(newVehicle),
         }),
         enqueuedAt: DateTime.now(),
@@ -89,6 +97,7 @@ class CheckInRepositoryImpl implements CheckInRepository {
       status: ParkingSessionStatus.pendingSync,
       entryTime: entryTime.toLocal(),
       photoCount: photos.length,
+      leftKeys: leftKeys,
     );
   }
 

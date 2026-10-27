@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../l10n/l10n.dart';
 import '../theme/tokens.dart';
 import 'empty_state.dart';
 import 'error_state.dart';
+import 'skeleton.dart';
 
 /// What a data screen can be showing. Pages map their cubit state to this.
 sealed class AsyncStatus<T> {
@@ -15,10 +15,17 @@ final class AsyncLoading<T> extends AsyncStatus<T> {
 }
 
 final class AsyncEmpty<T> extends AsyncStatus<T> {
-  const AsyncEmpty(this.message, {this.icon = Icons.inbox_outlined});
+  const AsyncEmpty(
+    this.message, {
+    this.icon = Icons.inbox_outlined,
+    this.action,
+  });
 
   final String message;
   final IconData icon;
+
+  /// Optional call to action (e.g. the first create button).
+  final Widget? action;
 }
 
 final class AsyncFailed<T> extends AsyncStatus<T> {
@@ -48,12 +55,11 @@ class AsyncView<T> extends StatelessWidget {
     child: KeyedSubtree(
       key: ValueKey(status.runtimeType),
       child: switch (status) {
-        AsyncLoading() => Center(
-          child: CircularProgressIndicator(semanticsLabel: context.l10n.loading),
-        ),
-        AsyncEmpty(:final message, :final icon) => EmptyState(
+        AsyncLoading() => const SkeletonList(),
+        AsyncEmpty(:final message, :final icon, :final action) => EmptyState(
           message: message,
           icon: icon,
+          action: action,
         ),
         AsyncFailed(:final message, :final retry) => ErrorState(
           message: message,

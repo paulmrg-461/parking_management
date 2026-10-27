@@ -4,6 +4,7 @@ import 'package:parking_management/core/state/submission.dart';
 import 'package:parking_management/features/categories/domain/entities/category.dart';
 import 'package:parking_management/features/vehicles/application/vehicles_cubit.dart';
 import 'package:parking_management/features/vehicles/domain/commands/create_vehicle_command.dart';
+import 'package:parking_management/features/vehicles/domain/commands/update_vehicle_command.dart';
 import 'package:parking_management/features/vehicles/domain/entities/vehicle.dart';
 
 import '../../../helpers/fake_category_repository.dart';
@@ -26,6 +27,12 @@ void main() {
 
   VehiclesLoaded loaded() => cubit.state as VehiclesLoaded;
 
+  VehiclesCubit fastCubit() => VehiclesCubit(
+    vehicles,
+    categories,
+    searchDebounce: Duration.zero,
+  );
+
   test(
     'Success: load emits vehicles with precomputed category names',
     () async {
@@ -45,7 +52,7 @@ void main() {
     expect(cubit.state, const VehiclesFailure('offline'));
   });
 
-  test('Success: create persists and reloads with Idle submission', () async {
+  test('Success: create persists and reports the new vehicle', () async {
     await cubit.load();
 
     await cubit.create(
@@ -53,6 +60,16 @@ void main() {
     );
 
     expect(loaded().vehicles.map((v) => v.plate), ['ABC123', 'XYZ789']);
+    final submission = loaded().submission;
+    expect(submission, isA<SubmissionSucceeded<Object?>>());
+    expect((submission as SubmissionSucceeded).result, isA<Vehicle>());
+  });
+
+  test('Success: updating keeps the submission idle (no snack)', () async {
+    await cubit.load();
+
+    await cubit.update(const UpdateVehicleCommand(id: 1, brand: 'Mazda'));
+
     expect(loaded().submission, const SubmissionIdle());
   });
 
@@ -106,4 +123,53 @@ void main() {
       expect(vehicles.pageRequests, [(0, 50)]);
     },
   );
+
+  test('Success: searching filters server-side and keeps the term', () async {
+    final searchCubit = fastCubit();
+    addTearDown(searchCubit.close);
+    vehicles.vehicles = const [
+      Vehicle(id: 1, plate: 'ABC123', categoryId: 1),
+      Vehicle(id: 2, plate: 'XYZ999', categoryId: 1),
+    ];
+    await searchCubit.load();
+
+    searchCubit.search('xyz');
+    await Future<void>.delayed(Duration.zero);
+
+    final state = searchCubit.state as VehiclesLoaded;
+    expect(state.query, 'xyz');
+    expect(state.vehicles.map((v) => v.plate), ['XYZ999']);
+  });
+
+  test('Success: a query with no matches loads an empty page', () async {
+    final searchCubit = fastCubit();
+    addTearDown(searchCubit.close);
+    await searchCubit.load();
+
+    searchCubit.search('zzz');
+    await Future<void>.delayed(Duration.zero);
+
+    final state = searchCubit.state as VehiclesLoaded;
+    expect(state.vehicles, isEmpty);
+    expect(state.query, 'zzz');
+  });
+
+  test('Success: refreshing keeps the active search term', () async {
+    final searchCubit = fastCubit();
+    addTearDown(searchCubit.close);
+    vehicles.vehicles = const [
+      Vehicle(id: 1, plate: 'ABC123', categoryId: 1),
+      Vehicle(id: 2, plate: 'XYZ999', categoryId: 1),
+    ];
+    await searchCubit.load();
+    searchCubit.search('abc');
+    await Future<void>.delayed(Duration.zero);
+
+    await searchCubit.load();
+
+    expect((searchCubit.state as VehiclesLoaded).query, 'abc');
+    expect((searchCubit.state as VehiclesLoaded).vehicles.map((v) => v.plate), [
+      'ABC123',
+    ]);
+  });
 }

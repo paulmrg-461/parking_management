@@ -1,5 +1,7 @@
-import 'package:dio/dio.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:get_it/get_it.dart';
+
+import '../../../core/lot/lot_session.dart';
 
 import '../../../core/sync/sync_outbox.dart';
 import '../../../features/categories/domain/repositories/category_repository.dart';
@@ -12,10 +14,10 @@ import '../../../features/tariffs/infrastructure/tariff_repository_impl.dart';
 void registerTariffsModule(GetIt sl) {
   sl
     ..registerLazySingleton<TariffLocalDataSource>(
-      HiveTariffLocalDataSource.new,
+      () => HiveTariffLocalDataSource(sl<LotSession>()),
     )
     ..registerLazySingleton<TariffRemoteDataSource>(
-      () => DioTariffRemoteDataSource(sl<Dio>()),
+      () => SupabaseTariffRemoteDataSource(sl<SupabaseClient>()),
     )
     ..registerLazySingleton<TariffRepository>(
       () => TariffRepositoryImpl(

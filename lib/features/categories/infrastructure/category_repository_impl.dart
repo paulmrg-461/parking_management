@@ -54,6 +54,30 @@ class CategoryRepositoryImpl implements CategoryRepository {
   }
 
   @override
+  Future<Category> setCapacity(int id, int capacity) async {
+    final current = (await _local.readAll()).where((c) => c.id == id);
+    final name = current.isEmpty ? '' : current.first.name;
+    try {
+      final updated = await _remote.setCapacity(id, capacity);
+      await _local.upsert(updated);
+      return updated;
+    } on NetworkFailure {
+      final optimistic = Category(id: id, name: name, capacity: capacity);
+      await _local.upsert(optimistic);
+      await _outbox.enqueue(
+        PendingMutation(
+          entityType: MutationEntity.category,
+          operation: MutationOperation.update,
+          entityId: id,
+          payloadJson: jsonEncode({'capacity': capacity}),
+          enqueuedAt: DateTime.now(),
+        ),
+      );
+      return optimistic;
+    }
+  }
+
+  @override
   Future<void> delete(int id) async {
     try {
       await _remote.delete(id);

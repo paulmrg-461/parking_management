@@ -27,8 +27,78 @@ class CategoryRevenue extends Equatable {
   List<Object?> get props => [categoryId, categoryName, amount];
 }
 
+/// Revenue of one parking lot, part of the consolidated `report_revenue_all`.
+class LotRevenue extends Equatable {
+  const LotRevenue({
+    required this.lotId,
+    required this.lotName,
+    required this.amount,
+    this.tickets = 0,
+    this.avgTicket = 0,
+  });
+
+  final int lotId;
+  final String lotName;
+  final int amount;
+
+  /// Charged exits at this site in the range.
+  final int tickets;
+
+  /// `amount / tickets` (0 when there were no exits).
+  final int avgTicket;
+
+  @override
+  List<Object?> get props => [lotId, lotName, amount, tickets, avgTicket];
+}
+
+/// Revenue collected through one payment method.
+class PaymentRevenue extends Equatable {
+  const PaymentRevenue({required this.paymentMethod, required this.amount});
+
+  final String paymentMethod;
+  final int amount;
+
+  @override
+  List<Object?> get props => [paymentMethod, amount];
+}
+
+/// One discounted check-out, for the audit trail.
+class DiscountAudit extends Equatable {
+  const DiscountAudit({
+    required this.sessionId,
+    required this.plate,
+    required this.amountCharged,
+    required this.discountAmount,
+    required this.discountAt,
+    required this.admin,
+    this.ticketNumber,
+    this.reason,
+  });
+
+  final int sessionId;
+  final String plate;
+  final int amountCharged;
+  final int discountAmount;
+  final DateTime discountAt;
+  final String admin;
+  final String? ticketNumber;
+  final String? reason;
+
+  @override
+  List<Object?> get props => [
+    sessionId,
+    plate,
+    amountCharged,
+    discountAmount,
+    discountAt,
+    admin,
+    ticketNumber,
+    reason,
+  ];
+}
+
 /// Revenue report for a date range, as returned by
-/// `GET /api/reports/revenue`.
+/// `rpc/report_revenue`.
 class RevenueReport extends Equatable {
   const RevenueReport({
     required this.startDate,
@@ -36,6 +106,13 @@ class RevenueReport extends Equatable {
     required this.total,
     required this.byDay,
     required this.byCategory,
+    this.byPayment = const [],
+    this.totalDiscounts = 0,
+    this.discountedSessions = 0,
+    this.discountAudit = const [],
+    this.passRevenue = 0,
+    this.passByPayment = const [],
+    this.byLot = const [],
   });
 
   final DateTime startDate;
@@ -43,7 +120,30 @@ class RevenueReport extends Equatable {
   final int total;
   final List<DailyRevenue> byDay;
   final List<CategoryRevenue> byCategory;
+  final List<PaymentRevenue> byPayment;
+  final int totalDiscounts;
+  final int discountedSessions;
+  final List<DiscountAudit> discountAudit;
+  final int passRevenue;
+  final List<PaymentRevenue> passByPayment;
+
+  /// Only populated by the consolidated admin report.
+  final List<LotRevenue> byLot;
 
   @override
-  List<Object?> get props => [startDate, endDate, total, byDay, byCategory];
+  List<Object?> get props =>
+      [
+        startDate,
+        endDate,
+        total,
+        byDay,
+        byCategory,
+        byPayment,
+        totalDiscounts,
+        discountedSessions,
+        discountAudit,
+        passRevenue,
+        passByPayment,
+        byLot,
+      ];
 }

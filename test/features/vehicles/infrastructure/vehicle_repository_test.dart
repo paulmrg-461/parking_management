@@ -35,6 +35,7 @@ class _FakeRemote implements VehicleRemoteDataSource {
   Future<PagedResult<Vehicle>> listPage({
     required int limit,
     required int offset,
+    String? plate,
   }) async {
     if (failWithNetwork) {
       throw const NetworkFailure('offline');

@@ -20,6 +20,7 @@ void main() {
       Vehicle(id: 1, plate: 'ABC123', categoryId: 1, brand: 'Mazda'),
     ],
     Failure? listError,
+    void Function(BuildContext context, String plate)? onCheckIn,
   }) async {
     vehicles = FakeVehicleRepository(initial)..listError = listError;
     await tester.pumpWidget(
@@ -28,7 +29,7 @@ void main() {
           vehicles,
           FakeCategoryRepository(const [Category(id: 1, name: 'carro')]),
         ),
-        child: testApp(const VehiclesPage()),
+        child: testApp(VehiclesPage(onCheckIn: onCheckIn)),
       ),
     );
     await tester.pumpAndSettle();
@@ -81,6 +82,10 @@ void main() {
     await tester.tap(find.text('Reintentar'));
     await tester.pumpAndSettle();
     expect(find.text('Aún no hay vehículos registrados'), findsOneWidget);
+
+    await tester.tap(find.text('Agregar vehículo'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsOneWidget);
   });
 
   testWidgets('Failure: create requires plate and normalizes it', (
@@ -122,5 +127,44 @@ void main() {
     await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
     await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
     await expectLater(tester, meetsGuideline(textContrastGuideline));
+  });
+
+  testWidgets('Success: typing a plate searches the list', (tester) async {
+    await pumpPage(tester, initial: const [
+      Vehicle(id: 1, plate: 'ABC123', categoryId: 1),
+      Vehicle(id: 2, plate: 'XYZ999', categoryId: 1),
+    ]);
+
+    await tester.enterText(find.byKey(const Key('vehicles_search')), 'xyz');
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+
+    expect(find.text('ABC123'), findsNothing);
+    expect(find.text('XYZ999'), findsOneWidget);
+  });
+
+  testWidgets('Success: creating a vehicle offers to check it in', (
+    tester,
+  ) async {
+    String? requested;
+    await pumpPage(tester, onCheckIn: (_, plate) => requested = plate);
+
+    await tester.tap(find.byTooltip('Agregar vehículo'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.byType(TextField),
+      ).first,
+      'xyz 999',
+    );
+    await tester.tap(find.text('Crear'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Vehículo creado: XYZ999'), findsOneWidget);
+    await tester.tap(find.text('Registrar entrada'));
+    await tester.pumpAndSettle();
+
+    expect(requested, 'XYZ999');
   });
 }

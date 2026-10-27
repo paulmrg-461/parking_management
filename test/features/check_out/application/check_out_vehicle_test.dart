@@ -2,21 +2,48 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/core/pagination/paged_result.dart';
 import 'package:parking_management/features/check_out/application/check_out_vehicle.dart';
+import 'package:parking_management/features/check_out/domain/entities/check_out_preview.dart';
 import 'package:parking_management/features/check_out/domain/entities/check_out_receipt.dart';
 import 'package:parking_management/features/check_out/domain/entities/open_session.dart';
+import 'package:parking_management/features/check_out/domain/entities/capacity_snapshot.dart';
+import 'package:parking_management/features/check_out/domain/entities/occupancy_snapshot.dart';
+import 'package:parking_management/features/check_out/domain/entities/today_summary.dart';
 import 'package:parking_management/features/check_out/domain/repositories/check_out_repository.dart';
 
 class _FakeRepository implements CheckOutRepository {
   final List<int> checkedOut = [];
 
   @override
+  Future<TodaySummary> todaySummary() async => TodaySummary.empty;
+
+  @override
+  Future<CapacitySnapshot> capacitySnapshot() async => CapacitySnapshot.empty;
+
+  @override
+  Future<OccupancySnapshot> occupancy() async =>
+      const OccupancySnapshot(totalOpen: 0, totalCapacity: 0);
+
+  @override
   Future<PagedResult<OpenSession>> listOpenSessions({
     int offset = 0,
     int limit = defaultPageSize,
+    String? plate,
   }) async => const PagedResult([]);
 
   @override
-  Future<CheckOutReceipt> checkOut(int sessionId) async {
+  Future<CheckOutPreview> preview(int sessionId) async =>
+      CheckOutPreview(sessionId: sessionId, amount: 5000);
+
+
+  @override
+  Future<CheckOutReceipt> checkOut(
+    int sessionId, {
+    String paymentMethod = 'cash',
+    int discountAmount = 0,
+    String? discountReason,
+    bool lostTicket = false,
+    String? lostTicketReason,
+  }) async {
     checkedOut.add(sessionId);
     return CheckOutReceipt(
       id: sessionId,

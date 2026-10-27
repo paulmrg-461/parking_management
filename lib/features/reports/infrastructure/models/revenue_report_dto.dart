@@ -49,6 +49,117 @@ class CategoryRevenueDto {
 }
 
 @JsonSerializable()
+class PaymentRevenueDto {
+  const PaymentRevenueDto({
+    required this.paymentMethod,
+    required this.amount,
+  });
+
+  factory PaymentRevenueDto.fromJson(Map<String, dynamic> json) =>
+      _$PaymentRevenueDtoFromJson(json);
+
+  @JsonKey(name: 'payment_method')
+  final String paymentMethod;
+
+  final int amount;
+
+  Map<String, dynamic> toJson() => _$PaymentRevenueDtoToJson(this);
+
+  PaymentRevenue toDomain() =>
+      PaymentRevenue(paymentMethod: paymentMethod, amount: amount);
+}
+
+@JsonSerializable()
+class LotRevenueDto {
+  const LotRevenueDto({
+    required this.lotId,
+    required this.lotName,
+    required this.amount,
+    this.tickets = 0,
+    this.avgTicket = 0,
+  });
+
+  factory LotRevenueDto.fromJson(Map<String, dynamic> json) =>
+      _$LotRevenueDtoFromJson(json);
+
+  @JsonKey(name: 'lot_id')
+  final int lotId;
+
+  @JsonKey(name: 'lot')
+  final String lotName;
+
+  final int amount;
+
+  @JsonKey(name: 'tickets', defaultValue: 0)
+  final int tickets;
+
+  @JsonKey(name: 'avg_ticket', defaultValue: 0)
+  final int avgTicket;
+
+  Map<String, dynamic> toJson() => _$LotRevenueDtoToJson(this);
+
+  LotRevenue toDomain() => LotRevenue(
+    lotId: lotId,
+    lotName: lotName,
+    amount: amount,
+    tickets: tickets,
+    avgTicket: avgTicket,
+  );
+}
+
+@JsonSerializable()
+class DiscountAuditDto {
+  const DiscountAuditDto({
+    required this.sessionId,
+    required this.plate,
+    required this.amountCharged,
+    required this.discountAmount,
+    required this.discountAt,
+    required this.admin,
+    this.ticketNumber,
+    this.reason,
+  });
+
+  factory DiscountAuditDto.fromJson(Map<String, dynamic> json) =>
+      _$DiscountAuditDtoFromJson(json);
+
+  @JsonKey(name: 'session_id')
+  final int sessionId;
+
+  final String plate;
+
+  @JsonKey(name: 'amount_charged')
+  final int amountCharged;
+
+  @JsonKey(name: 'discount_amount')
+  final int discountAmount;
+
+  @JsonKey(name: 'discount_at')
+  final DateTime discountAt;
+
+  final String admin;
+
+  @JsonKey(name: 'ticket_number')
+  final String? ticketNumber;
+
+  @JsonKey(name: 'discount_reason')
+  final String? reason;
+
+  Map<String, dynamic> toJson() => _$DiscountAuditDtoToJson(this);
+
+  DiscountAudit toDomain() => DiscountAudit(
+    sessionId: sessionId,
+    plate: plate,
+    amountCharged: amountCharged,
+    discountAmount: discountAmount,
+    discountAt: discountAt,
+    admin: admin,
+    ticketNumber: ticketNumber,
+    reason: reason,
+  );
+}
+
+@JsonSerializable()
 class RevenueReportDto {
   const RevenueReportDto({
     required this.startDate,
@@ -56,6 +167,13 @@ class RevenueReportDto {
     required this.total,
     required this.byDay,
     required this.byCategory,
+    this.byPayment = const [],
+    this.totalDiscounts = 0,
+    this.discountedSessions = 0,
+    this.discountAudit = const [],
+    this.passRevenue = 0,
+    this.passByPayment = const [],
+    this.byLot = const [],
   });
 
   factory RevenueReportDto.fromJson(Map<String, dynamic> json) =>
@@ -75,6 +193,27 @@ class RevenueReportDto {
   @JsonKey(name: 'by_category')
   final List<CategoryRevenueDto> byCategory;
 
+  @JsonKey(name: 'by_payment', defaultValue: [])
+  final List<PaymentRevenueDto> byPayment;
+
+  @JsonKey(name: 'total_discounts', defaultValue: 0)
+  final int totalDiscounts;
+
+  @JsonKey(name: 'discounted_sessions', defaultValue: 0)
+  final int discountedSessions;
+
+  @JsonKey(name: 'discount_audit', defaultValue: [])
+  final List<DiscountAuditDto> discountAudit;
+
+  @JsonKey(name: 'pass_revenue', defaultValue: 0)
+  final int passRevenue;
+
+  @JsonKey(name: 'pass_by_payment', defaultValue: [])
+  final List<PaymentRevenueDto> passByPayment;
+
+  @JsonKey(name: 'by_lot', defaultValue: [])
+  final List<LotRevenueDto> byLot;
+
   Map<String, dynamic> toJson() => _$RevenueReportDtoToJson(this);
 
   RevenueReport toDomain() => RevenueReport(
@@ -83,5 +222,12 @@ class RevenueReportDto {
     total: total,
     byDay: byDay.map((dto) => dto.toDomain()).toList(),
     byCategory: byCategory.map((dto) => dto.toDomain()).toList(),
+    byPayment: byPayment.map((dto) => dto.toDomain()).toList(),
+    totalDiscounts: totalDiscounts,
+    discountedSessions: discountedSessions,
+    discountAudit: discountAudit.map((dto) => dto.toDomain()).toList(),
+    passRevenue: passRevenue,
+    passByPayment: passByPayment.map((dto) => dto.toDomain()).toList(),
+    byLot: byLot.map((dto) => dto.toDomain()).toList(),
   );
 }

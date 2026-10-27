@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/app/app.dart';
+import 'package:parking_management/app/di/injection.dart';
+import 'package:parking_management/app/shell/app_sidebar.dart';
+import 'package:parking_management/core/storage/key_value_store.dart';
+import 'package:parking_management/core/theme/tokens.dart';
 import 'package:parking_management/core/network/connectivity_cubit.dart';
 import 'package:parking_management/core/network/connectivity_service.dart';
 import 'package:parking_management/core/sync/pending_mutation.dart';
 import 'package:parking_management/core/widgets/sync_badge.dart';
 import 'package:parking_management/features/auth/domain/entities/user.dart';
+import 'package:parking_management/features/home/presentation/widgets/dashboard_widgets.dart';
 
 import '../../helpers/app_harness.dart';
 import '../../helpers/fake_sync_outbox.dart';
@@ -25,16 +30,131 @@ void main() {
   });
 
   testWidgets(
-    'Success: wide screens show a NavigationRail with admin sections',
+    'Success: wide screens show the side navigation with admin sections',
     (tester) async {
       await pumpApp(tester, role: UserRole.admin, size: const Size(1200, 900));
 
-      expect(find.byType(NavigationRail), findsOneWidget);
+      expect(find.byType(AppSidebar), findsOneWidget);
       expect(find.byType(NavigationBar), findsNothing);
-      expect(find.widgetWithText(NavigationRail, 'Usuarios'), findsOneWidget);
-      expect(find.widgetWithText(NavigationRail, 'Reportes'), findsOneWidget);
+      final sidebar = find.byType(AppSidebar);
+      expect(
+        find.descendant(of: sidebar, matching: find.text('Usuarios')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: sidebar, matching: find.text('Reportes')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: sidebar, matching: find.text('Operación'.toUpperCase())),
+        findsOneWidget,
+      );
     },
   );
+
+  testWidgets('Success: wide home titles the page and keeps the brand aside', (
+    tester,
+  ) async {
+    await pumpApp(tester, role: UserRole.admin, size: const Size(1200, 900));
+
+    expect(find.widgetWithText(AppBar, 'Inicio'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(AppSidebar),
+        matching: find.text('Parqueadero'),
+      ),
+      findsOneWidget,
+    );
+    // Management lives in the sidebar, not duplicated as home shortcuts.
+    expect(find.byType(ManagementShortcuts), findsNothing);
+    // Signing out lives in the sidebar card on desktop.
+    expect(find.byTooltip('Cerrar sesión'), findsOneWidget);
+  });
+
+  testWidgets('Success: Gestión is an accordion that remembers its state', (
+    tester,
+  ) async {
+    await pumpApp(tester, role: UserRole.admin, size: const Size(1200, 900));
+    final sidebar = find.byType(AppSidebar);
+
+    expect(
+      find.descendant(of: sidebar, matching: find.text('Usuarios')),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const Key('sidebar_management_toggle')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.descendant(of: sidebar, matching: find.text('Usuarios')),
+      findsNothing,
+    );
+    expect(
+      serviceLocator<KeyValueStore>().get(
+        'preferences',
+        'sidebar_management_open',
+      ),
+      isFalse,
+    );
+
+    await tester.tap(find.byKey(const Key('sidebar_management_toggle')));
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(of: sidebar, matching: find.text('Usuarios')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('Success: collapsed sidebar keeps the management icons', (
+    tester,
+  ) async {
+    await pumpApp(tester, role: UserRole.admin, size: const Size(1400, 900));
+
+    await tester.tap(find.byTooltip('Contraer menú'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('sidebar_item_/reports')),
+      findsOneWidget,
+    );
+    expect(find.byType(AppSidebar), findsOneWidget);
+  });
+
+  testWidgets('Success: the sidebar user card signs out on desktop', (
+    tester,
+  ) async {
+    await pumpApp(tester, role: UserRole.admin, size: const Size(1200, 900));
+
+    await tester.tap(find.byTooltip('Cerrar sesión'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ingresar'), findsOneWidget);
+  });
+
+  testWidgets('Success: the side navigation collapses and remembers it', (
+    tester,
+  ) async {
+    await pumpApp(tester, role: UserRole.admin, size: const Size(1400, 900));
+    final sidebar = find.byType(AppSidebar);
+
+    expect(tester.getSize(sidebar).width, Layout.sidebar);
+    expect(
+      find.descendant(of: sidebar, matching: find.text('Usuarios')),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byTooltip('Contraer menú'));
+    await tester.pumpAndSettle();
+
+    expect(tester.getSize(sidebar).width, Layout.sidebarCollapsed);
+    expect(
+      find.descendant(of: sidebar, matching: find.text('Usuarios')),
+      findsNothing,
+    );
+    expect(
+      serviceLocator<KeyValueStore>().get('preferences', 'sidebar_collapsed'),
+      isTrue,
+    );
+  });
 
   testWidgets('Success: admin on a phone reaches management via "Más"', (
     tester,
@@ -43,37 +163,54 @@ void main() {
 
     await tester.tap(find.text('Más'));
     await tester.pumpAndSettle();
-    await tester.tap(
-      find.descendant(
+    final usuarios = find.descendant(
+      of: find.byType(BottomSheet),
+      matching: find.text('Usuarios'),
+    );
+    // The management sheet has more entries than fit on screen.
+    await tester.scrollUntilVisible(
+      usuarios,
+      200,
+      scrollable: find.descendant(
         of: find.byType(BottomSheet),
-        matching: find.text('Usuarios'),
+        matching: find.byType(Scrollable),
       ),
     );
+    await tester.ensureVisible(usuarios);
+    await tester.pumpAndSettle();
+    await tester.tap(usuarios);
     await tester.pumpAndSettle();
 
     expect(find.widgetWithText(AppBar, 'Usuarios'), findsOneWidget);
     expect(find.byType(BackButton), findsOneWidget);
   });
 
-  testWidgets('Failure: content width is capped at 840 on wide screens', (
+  testWidgets('Failure: content width is capped on wide screens', (
     tester,
   ) async {
     await pumpApp(tester, role: UserRole.operator, size: const Size(1600, 900));
 
     final home = tester.getSize(find.text('Hola, Juan').first);
-    expect(home.width, lessThanOrEqualTo(840));
+    expect(home.width, lessThanOrEqualTo(Layout.maxContent));
     final content = tester.getSize(find.byKey(const Key('app-shell-content')));
-    expect(content.width, lessThanOrEqualTo(840));
+    expect(content.width, lessThanOrEqualTo(Layout.maxContent));
   });
 
-  testWidgets('Security: operator rail never lists admin sections', (
+  testWidgets('Security: operator sidebar never lists admin sections', (
     tester,
   ) async {
     await pumpApp(tester, role: UserRole.operator, size: const Size(1200, 900));
+    final sidebar = find.byType(AppSidebar);
 
-    expect(find.widgetWithText(NavigationRail, 'Salida'), findsOneWidget);
+    expect(
+      find.descendant(of: sidebar, matching: find.text('Salida')),
+      findsOneWidget,
+    );
     for (final label in ['Usuarios', 'Reportes', 'Tarifas', 'Vehículos']) {
-      expect(find.widgetWithText(NavigationRail, label), findsNothing);
+      expect(
+        find.descendant(of: sidebar, matching: find.text(label)),
+        findsNothing,
+      );
     }
   });
 
@@ -110,6 +247,17 @@ void main() {
     await pumpApp(tester, role: UserRole.operator, connectivity: connectivity);
 
     expect(find.textContaining('Sin conexión'), findsOneWidget);
+  });
+
+  testWidgets('Success: the QR shortcut sits in the shell', (tester) async {
+    await pumpApp(tester, role: UserRole.operator);
+
+    expect(
+      find.byTooltip('Escanear QR y registrar salida'),
+      findsOneWidget,
+    );
+    expect(find.byIcon(Icons.qr_code_scanner), findsOneWidget);
+    expect(find.byIcon(Icons.chat), findsNothing);
   });
 
   testWidgets('Success: online hides the OfflineBanner', (tester) async {

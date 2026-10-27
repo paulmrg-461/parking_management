@@ -20,4 +20,15 @@ void main() {
       expect(RegExp(r'^https://wa\.me/\d+$').hasMatch(url), isTrue);
     });
   });
+
+  test('Success: a prefilled message is URL-encoded', () {
+    final url = whatsappUrl('+57 300 111 2233', text: 'Hola, total: \$5.000');
+
+    expect(url, startsWith('https://wa.me/573001112233?text='));
+    expect(url, contains('Hola%2C%20total'));
+  });
+
+  test('Security: an empty message keeps the plain link', () {
+    expect(whatsappUrl('3001112233', text: '   '), 'https://wa.me/3001112233');
+  });
 }

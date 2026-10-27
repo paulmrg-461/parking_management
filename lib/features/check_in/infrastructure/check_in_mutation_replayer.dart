@@ -24,11 +24,13 @@ class CheckInMutationReplayer extends MutationReplayer {
       plate: payload['plate'] as String,
       photos: await _photos.load(paths),
       newVehicle: _newVehicleFrom(payload),
+      leftKeys: payload['left_keys'] == true,
       idempotencyKey: clientRef,
       clientEntryTime: switch (payload['client_entry_time']) {
         final String value => DateTime.parse(value),
         _ => null, // legacy queue entry written before this field existed
       },
+      lotId: (payload['lot_id'] as num?)?.toInt(),
     );
     await _photos.deleteFor(clientRef);
   }

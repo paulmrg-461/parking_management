@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:parking_management/core/widgets/skeleton.dart';
 import 'package:parking_management/core/widgets/app_icon_button.dart';
 import 'package:parking_management/core/widgets/async_view.dart';
 import 'package:parking_management/core/widgets/confirm_dialog.dart';
@@ -192,10 +193,11 @@ void main() {
       expect(retries, 1);
     });
 
-    testWidgets('Loading: shows a labelled progress indicator', (tester) async {
+    testWidgets('Loading: shows a labelled skeleton list', (tester) async {
       await pump(tester, view(const AsyncLoading()));
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.byType(SkeletonList), findsOneWidget);
       expect(find.bySemanticsLabel('Cargando'), findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
     });
   });
 }

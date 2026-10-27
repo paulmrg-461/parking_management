@@ -1,9 +1,17 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/qr/qr_decoder.dart';
 import '../../core/widgets/deferred_page.dart';
+import '../../features/audit/application/audit_cubit.dart';
+import '../../features/audit/presentation/audit_page.dart';
+import '../../features/diagnostics/application/diagnostics_cubit.dart';
+import '../../features/diagnostics/presentation/diagnostics_page.dart';
 import '../../features/auth/application/auth_cubit.dart';
+import '../../features/auth/domain/entities/user.dart';
 import '../../features/auth/presentation/login_page.dart';
 import '../../features/check_in/application/check_in_cubit.dart';
 import '../../features/check_in/application/vehicle_lookup_cubit.dart';
@@ -11,11 +19,21 @@ import '../../features/check_in/presentation/check_in_page.dart';
 import '../../features/check_out/application/check_out_cubit.dart';
 import '../../features/check_out/presentation/check_out_page.dart';
 import '../../features/home/application/dashboard_cubit.dart';
+import '../../features/lots/application/lots_cubit.dart';
+import '../../features/lots/presentation/lots_page.dart';
+import '../../features/notifications/application/notifications_cubit.dart';
+import '../../features/notifications/presentation/notifications_page.dart';
+import '../../features/shifts/application/shift_cubit.dart';
+import '../../features/shifts/presentation/shift_page.dart';
+import '../../features/vehicle_history/application/vehicle_history_cubit.dart';
+import '../../features/vehicle_history/presentation/vehicle_history_page.dart';
 import '../../features/home/presentation/home_page.dart';
 import '../../features/plate_scanning/application/plate_scanning_cubit.dart';
 import '../../features/plate_scanning/domain/repositories/plate_image_capture.dart';
 import '../../features/plate_scanning/domain/repositories/plate_scanner.dart';
 import '../../features/plate_scanning/presentation/plate_scan_page.dart';
+import '../../features/reservations/application/reservations_cubit.dart';
+import '../../features/reservations/presentation/reservations_page.dart';
 import '../di/injection.dart';
 import '../shell/app_shell.dart';
 import 'deferred/categories_entry.dart' deferred as categories;
@@ -49,16 +67,39 @@ GoRouter buildRouter(AuthCubit auth, Listenable refresh) => GoRouter(
       ),
     ),
     ShellRoute(
-      builder: (context, state, child) => BlocProvider<DashboardCubit>(
-        create: (_) => serviceLocator<DashboardCubit>(),
-        child: AppShell(location: state.uri.path, child: child),
+      builder: (context, state, child) => BlocProvider<NotificationsCubit>(
+        create: (_) {
+          final cubit = serviceLocator<NotificationsCubit>();
+          final session = switch (auth.state) {
+            AuthAuthenticated(:final session) => session,
+            _ => null,
+          };
+          unawaited(cubit.start(session?.user.id));
+          return cubit;
+        },
+        child: BlocProvider<ShiftCubit>(
+          create: (_) {
+            final cubit = serviceLocator<ShiftCubit>();
+            final isAdmin = switch (auth.state) {
+              AuthAuthenticated(:final session) =>
+                session.user.role == UserRole.admin,
+              _ => false,
+            };
+            unawaited(cubit.load(admin: isAdmin));
+            return cubit;
+          },
+          child: BlocProvider<DashboardCubit>(
+            create: (_) => serviceLocator<DashboardCubit>(),
+            child: AppShell(location: state.uri.path, child: child),
+          ),
+        ),
       ),
-      routes: [_homeRoute],
+      routes: [_homeRoute(auth)],
     ),
   ],
 );
 
-final GoRoute _homeRoute = GoRoute(
+GoRoute _homeRoute(AuthCubit auth) => GoRoute(
   path: homePath,
   builder: (context, state) => const HomePage(),
   routes: [
@@ -79,6 +120,7 @@ final GoRoute _homeRoute = GoRoute(
         child: CheckInPage(
           capture: serviceLocator<PlateImageCapture>(),
           canScan: serviceLocator<PlateScanner>().isSupported,
+          initialPlate: state.uri.queryParameters['plate'],
         ),
       ),
     ),
@@ -86,7 +128,64 @@ final GoRoute _homeRoute = GoRoute(
       path: 'check-out',
       builder: (context, state) => BlocProvider<CheckOutCubit>(
         create: (_) => serviceLocator<CheckOutCubit>(),
-        child: const CheckOutPage(),
+        child: CheckOutPage(
+          initialQuery: state.uri.queryParameters['plate'],
+          scanPlate: state.uri.queryParameters['scan'],
+          capture: serviceLocator<PlateImageCapture>(),
+          qrDecoder: serviceLocator<QrDecoder>(),
+        ),
+      ),
+    ),
+    GoRoute(
+      path: 'diagnostics',
+      builder: (context, state) => BlocProvider<DiagnosticsCubit>(
+        create: (_) => serviceLocator<DiagnosticsCubit>(),
+        child: const DiagnosticsPage(),
+      ),
+    ),
+    GoRoute(
+      path: 'audit',
+      builder: (context, state) => BlocProvider<AuditCubit>(
+        create: (_) => serviceLocator<AuditCubit>(),
+        child: const AuditPage(),
+      ),
+    ),
+    GoRoute(
+      path: 'lots',
+      builder: (context, state) => BlocProvider<LotsCubit>.value(
+        value: serviceLocator<LotsCubit>(),
+        child: const LotsPage(),
+      ),
+    ),
+    GoRoute(
+      path: 'reservations',
+      builder: (context, state) => BlocProvider<ReservationsCubit>(
+        create: (_) => serviceLocator<ReservationsCubit>(),
+        child: const ReservationsPage(),
+      ),
+    ),
+    GoRoute(
+      path: 'notifications',
+      builder: (context, state) => const NotificationsPage(),
+    ),
+    GoRoute(
+      path: 'shift',
+      builder: (context, state) {
+        final isAdmin = switch (auth.state) {
+          AuthAuthenticated(:final session) =>
+            session.user.role == UserRole.admin,
+          _ => false,
+        };
+        return ShiftPage(isAdmin: isAdmin);
+      },
+    ),
+    GoRoute(
+      path: 'history',
+      builder: (context, state) => BlocProvider<VehicleHistoryCubit>(
+        create: (_) => serviceLocator<VehicleHistoryCubit>(),
+        child: VehicleHistoryPage(
+          initialPlate: state.uri.queryParameters['plate'],
+        ),
       ),
     ),
     // Admin-only sections are deferred: operators never download them.

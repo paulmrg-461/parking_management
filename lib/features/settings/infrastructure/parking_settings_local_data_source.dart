@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:hive_ce/hive_ce.dart';
 
+import '../../../core/lot/lot_session.dart';
 import '../domain/entities/parking_settings.dart';
 
 abstract class ParkingSettingsLocalDataSource {
@@ -16,9 +17,18 @@ abstract class ParkingSettingsLocalDataSource {
 
 class HiveParkingSettingsLocalDataSource
     implements ParkingSettingsLocalDataSource {
+  HiveParkingSettingsLocalDataSource(this._lots);
+
+  final LotSession _lots;
+
   static const _boxName = 'parking_settings';
   static const _logoBoxName = 'logo_cache';
-  static const _key = 'current';
+
+  /// One cached record per lot: switching sites must never render the other
+  /// site's branding offline.
+  String get _key => 'current_${_lots.activeLotId ?? 1}';
+
+  String _logoKey(int version) => '${_lots.activeLotId ?? 1}_$version';
 
   /// Opens lazily on first use (returns the already-open box afterwards),
   /// so reads work on a cold start before any write happened.
@@ -38,9 +48,9 @@ class HiveParkingSettingsLocalDataSource
   /// for the current logo.
   @override
   Future<Uint8List?> readLogo(int version) async =>
-      (await _logoBox()).get(version);
+      (await _logoBox()).get(_logoKey(version));
 
   @override
   Future<void> putLogo(int version, Uint8List bytes) async =>
-      (await _logoBox()).put(version, bytes);
+      (await _logoBox()).put(_logoKey(version), bytes);
 }

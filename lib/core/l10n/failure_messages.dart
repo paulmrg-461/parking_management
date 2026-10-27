@@ -1,7 +1,7 @@
 import '../error/failure.dart';
 import '../../l10n/app_localizations.dart';
 
-/// Must match the text `mapDioError` uses for a 403 without a `code`.
+/// Must match the text `mapSupabaseError` uses for a 403 without a `code`.
 const _forbiddenDetail = 'Forbidden';
 
 /// Localizes a [Failure] for the UI: known `code`s (backend `DomainError`
@@ -35,6 +35,26 @@ extension FailureMessages on AppLocalizations {
     'AdminRequiredError' || 'PermissionDeniedError' => errorForbidden,
     'VehicleNotFoundError' => errorVehicleNotFound,
     'CategoryNotFoundError' => errorCategoryNotFound,
+    'CategoryFullError' => errorCategoryFull,
+    'ParkingFullError' => errorParkingFull,
+    'KeysFullError' => errorKeysFull,
+    'ShiftAlreadyOpenError' => errorShiftAlreadyOpen,
+    'NoOpenShiftError' => errorNoOpenShift,
+    'ShiftNotFoundError' => errorShiftNotFound,
+    'InvalidOpeningFloatError' => errorInvalidOpeningFloat,
+    'InvalidCountedCashError' => errorInvalidCountedCash,
+    'LostTicketReasonRequired' => lostTicketReasonRequired,
+    'LastAdminError' => errorLastAdmin,
+    'CannotDeleteSelfError' => errorCannotDeleteSelf,
+    'PaymentNotFoundError' => errorPaymentNotFound,
+    'PaymentAlreadyProcessedError' => errorPaymentAlreadyProcessed,
+    'ShiftStillOpenError' => errorShiftStillOpen,
+    'ShiftAdjustmentReasonRequired' => errorShiftAdjustReason,
+    'InvalidCashMovementType' ||
+    'InvalidCashMovementAmount' => errorInvalidCashMovement,
+    'CashMovementReasonRequired' => errorCashMovementReason,
+    'InvalidDiscountError' => errorInvalidDiscount,
+    'DiscountReasonRequiredError' => errorDiscountReason,
     'TariffNotFoundError' => errorTariffNotFound,
     'UserNotFoundError' => errorUserNotFound,
     'MonthlyPassNotFoundError' => errorMonthlyPassNotFound,
@@ -50,7 +70,12 @@ extension FailureMessages on AppLocalizations {
     'IdempotencyKeyMismatchError' => errorIdempotency,
     'ConflictError' => errorConflict,
     'VehicleNotRegisteredError' => errorVehicleNotRegistered,
+    'VehicleBlacklistedError' => errorVehicleBlacklisted,
+    'InvalidPhoneError' => errorInvalidPhone,
+    'WhatsappDisabledError' => errorWhatsappDisabled,
     'InvalidPhotoError' => errorInvalidPhoto,
+    'InvalidDataError' || 'InvalidUsername' => errorInvalidData,
+    'InvalidPin' => pinInvalid,
     'PhotoTooLargeError' || 'PayloadTooLargeError' => errorPhotoTooLarge,
     'InternalError' => errorServer,
     ClientFailureCodes.emptyPlate => errorEmptyPlate,

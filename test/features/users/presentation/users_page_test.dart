@@ -55,7 +55,7 @@ void main() {
     expect(repository.users.single.isActive, isTrue);
   });
 
-  testWidgets('Failure: create rejects a PIN that is not 4-6 digits', (
+  testWidgets('Failure: create rejects a PIN that is not 6 digits', (
     tester,
   ) async {
     await pumpPage(tester);
@@ -72,13 +72,17 @@ void main() {
     await tester.tap(find.text('Crear'));
     await tester.pumpAndSettle();
 
-    expect(find.text('El PIN debe tener de 4 a 6 dígitos'), findsOneWidget);
+    expect(find.text('El PIN debe tener 6 dígitos'), findsOneWidget);
     expect(repository.created, isNull);
   });
 
-  testWidgets('Empty: no users shows the empty state', (tester) async {
+  testWidgets('Empty: no users offers the first user', (tester) async {
     await pumpPage(tester, users: const []);
     expect(find.text('Aún no hay usuarios'), findsOneWidget);
+
+    await tester.tap(find.text('Agregar usuario'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsOneWidget);
   });
 
   testWidgets('A11y: labelled switches, 48dp targets, contrast', (
@@ -89,5 +93,47 @@ void main() {
     await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
     await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
     await expectLater(tester, meetsGuideline(textContrastGuideline));
+  });
+
+  testWidgets('Success: the role filter narrows the list', (tester) async {
+    await pumpPage(
+      tester,
+      users: const [
+        User(
+          id: 1,
+          username: 'ana',
+          displayName: 'Ana',
+          role: UserRole.admin,
+        ),
+        User(
+          id: 2,
+          username: 'beto',
+          displayName: 'Beto',
+          role: UserRole.operator,
+        ),
+      ],
+    );
+
+    await tester.tap(find.text('Administrador'));
+    await tester.pumpAndSettle();
+    expect(find.text('Ana'), findsOneWidget);
+    expect(find.text('Beto'), findsNothing);
+
+    await tester.tap(find.text('Todos'));
+    await tester.pumpAndSettle();
+    expect(find.text('Ana'), findsOneWidget);
+    expect(find.text('Beto'), findsOneWidget);
+  });
+
+  testWidgets('Failure: a filter with no matches explains itself', (
+    tester,
+  ) async {
+    await pumpPage(tester);
+
+    await tester.tap(find.text('Administrador'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('No hay usuarios con este filtro'), findsOneWidget);
+    expect(find.text('Ana'), findsNothing);
   });
 }

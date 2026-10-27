@@ -52,3 +52,6 @@ app.*.map.json
 .env
 .env.*
 !.env.example
+
+# Local database/storage backups (see supabase/backup.sh)
+/backups/

@@ -1,3 +1,9 @@
+> **Historical document (2026-09-25).** This audit predates the
+> Supabase migration: it still describes the FastAPI `backend/`, Alembic and
+> Dio. It is kept for context only — the current architecture lives in
+> [`architecture.md`](architecture.md), [`infrastructure.md`](infrastructure.md)
+> and [`database.md`](database.md).
+
 # Plan de Arquitectura y Refactorización — Parking Management
 
 > **Alcance:** Backend FastAPI (`backend/`) · App Flutter móvil (Android/iOS) · App Flutter Web (`web/`, mismo código base).

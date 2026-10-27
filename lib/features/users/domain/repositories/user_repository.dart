@@ -9,4 +9,8 @@ abstract class UserRepository {
   Future<User> create(CreateUserCommand command);
 
   Future<User> update(UpdateUserCommand command);
+
+  Future<User> resetPin(int id, String pin);
+
+  Future<void> delete(int id);
 }

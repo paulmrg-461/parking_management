@@ -1,4 +1,4 @@
-import 'package:dio/dio.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:get_it/get_it.dart';
 
 import '../../../features/users/application/users_cubit.dart';
@@ -9,7 +9,7 @@ import '../../../features/users/infrastructure/user_repository_impl.dart';
 void registerUsersModule(GetIt sl) {
   sl
     ..registerLazySingleton<UserRemoteDataSource>(
-      () => DioUserRemoteDataSource(sl<Dio>()),
+      () => SupabaseUserRemoteDataSource(sl<SupabaseClient>()),
     )
     ..registerLazySingleton<UserRepository>(
       () => UserRepositoryImpl(sl<UserRemoteDataSource>()),

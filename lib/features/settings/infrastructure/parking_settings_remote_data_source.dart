@@ -1,9 +1,10 @@
 import 'dart:typed_data';
 
-import 'package:dio/dio.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/error/failure.dart';
-import '../../../core/network/dio_error_mapper.dart';
+import '../../../core/lot/lot_session.dart';
+import '../../../core/network/supabase_error_mapper.dart';
 import '../domain/entities/parking_settings.dart';
 import 'models/parking_settings_dto.dart';
 
@@ -17,69 +18,101 @@ abstract class ParkingSettingsRemoteDataSource {
   Future<Uint8List> fetchLogo();
 }
 
-class DioParkingSettingsRemoteDataSource
+class SupabaseParkingSettingsRemoteDataSource
     implements ParkingSettingsRemoteDataSource {
-  DioParkingSettingsRemoteDataSource(this._dio);
+  SupabaseParkingSettingsRemoteDataSource(this._client, this._lots);
 
-  final Dio _dio;
+  final SupabaseClient _client;
+  final LotSession _lots;
 
-  static const _path = '/api/settings';
+  static const _table = 'parking_settings';
+  static const _bucket = 'branding';
 
   @override
   Future<ParkingSettings> fetch() async {
     try {
-      final response = await _dio.get(_path);
-      return _toDomain(response.data);
-    } on DioException catch (error) {
-      throw mapDioError(error);
+      // RLS returns only the active lot's row; `order` keeps it deterministic
+      // for the single-lot fallback.
+      final rows = await _client.from(_table).select().order('id').limit(1);
+      if (rows.isEmpty) {
+        throw StateError('Parking settings missing');
+      }
+      final row = rows.first;
+      return ParkingSettingsDto.fromJson(row).toDomain();
+    } catch (error) {
+      throw mapSupabaseError(error);
     }
   }
 
   @override
   Future<ParkingSettings> patch(Map<String, dynamic> fields) async {
     try {
-      final response = await _dio.patch(_path, data: fields);
-      return _toDomain(response.data);
-    } on DioException catch (error) {
-      throw mapDioError(error);
+      final lotId = _lots.activeLotId;
+      if (lotId == null) {
+        throw StateError('Select a parking lot first');
+      }
+      final row = await _client
+          .from(_table)
+          .update(fields)
+          .eq('lot_id', lotId)
+          .select()
+          .single();
+      return ParkingSettingsDto.fromJson(row).toDomain();
+    } catch (error) {
+      throw mapSupabaseError(error);
     }
+  }
+
+  int get _lotId {
+    final lotId = _lots.activeLotId;
+    if (lotId == null) {
+      throw StateError('Select a parking lot first');
+    }
+    return lotId;
   }
 
   @override
   Future<ParkingSettings> uploadLogo(Uint8List bytes) async {
     try {
-      final response = await _dio.post(
-        '$_path/logo',
-        data: FormData.fromMap({
-          'file': MultipartFile.fromBytes(bytes, filename: _filename(bytes)),
-        }),
+      final path = logoPathForLot(_lotId);
+      await _client.storage.from(_bucket).uploadBinary(
+        path,
+        bytes,
+        fileOptions: FileOptions(
+          contentType: _contentType(bytes),
+          upsert: true,
+        ),
       );
-      return _toDomain(response.data);
-    } on DioException catch (error) {
-      throw mapDioError(error);
+      final row = await _client.rpc(
+        'set_branding_logo',
+        params: {'p_path': path},
+      );
+      return ParkingSettingsDto.fromJson(
+        Map<String, dynamic>.from(row as Map),
+      ).toDomain();
+    } catch (error) {
+      throw mapSupabaseError(error);
     }
   }
 
   @override
   Future<Uint8List> fetchLogo() async {
     try {
-      final response = await _dio.get<Uint8List>(
-        '$_path/logo',
-        options: Options(responseType: ResponseType.bytes),
+      return await _client.storage.from(_bucket).download(
+        logoPathForLot(_lotId),
       );
-      return response.data ?? (throw const NetworkFailure('Logo unavailable'));
-    } on DioException catch (error) {
-      throw mapDioError(error);
+    } catch (_) {
+      // Missing/offline logo is not fatal: the repository falls back to null.
+      throw const NetworkFailure('Logo unavailable');
     }
   }
 
-  ParkingSettings _toDomain(Object? data) =>
-      ParkingSettingsDto.fromJson(data as Map<String, dynamic>).toDomain();
-
-  /// The server sniffs magic bytes (the name is ignored); matching it keeps
-  /// multipart metadata honest for logs and proxies.
-  String _filename(Uint8List bytes) =>
-      bytes.length >= 3 && bytes[0] == 0xFF && bytes[1] == 0xD8
-          ? 'logo.jpg'
-          : 'logo.png';
+  String _contentType(Uint8List bytes) =>
+      bytes.length >= 2 && bytes[0] == 0xFF && bytes[1] == 0xD8
+      ? 'image/jpeg'
+      : 'image/png';
 }
+
+/// One logo object per lot, so uploading a site's logo never overwrites the
+/// other site's branding.
+String logoPathForLot(int lotId) => 'logo_$lotId';

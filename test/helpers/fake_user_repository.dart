@@ -13,6 +13,12 @@ class EmptyUserRepository implements UserRepository {
 
   @override
   Future<User> update(UpdateUserCommand command) => throw UnimplementedError();
+
+  @override
+  Future<User> resetPin(int id, String pin) => throw UnimplementedError();
+
+  @override
+  Future<void> delete(int id) => throw UnimplementedError();
 }
 
 /// In-memory users with recorded writes for page tests.
@@ -37,6 +43,15 @@ class FakeUserRepository implements UserRepository {
     );
     users.add(user);
     return user;
+  }
+
+  @override
+  Future<User> resetPin(int id, String pin) async =>
+      users.firstWhere((u) => u.id == id);
+
+  @override
+  Future<void> delete(int id) async {
+    users.removeWhere((u) => u.id == id);
   }
 
   @override
