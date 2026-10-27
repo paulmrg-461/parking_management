@@ -398,6 +398,7 @@
   "checkOutTitle": "Registrar salida",
   "searchPlate": "Buscar por placa",
   "checkOutClearSearch": "Limpiar búsqueda",
+  "scanExitTooltip": "Escanear QR y registrar salida",
   "checkOutScanQr": "Escanear el QR del recibo",
   "checkOutQrUnreadable": "No se pudo leer el código QR",
   "checkOutQrNoSession": "No hay una sesión abierta para {plate}",

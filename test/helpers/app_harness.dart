@@ -1,3 +1,6 @@
+import 'dart:typed_data';
+
+import 'package:cross_file/cross_file.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -5,6 +8,7 @@ import 'package:parking_management/app/app.dart';
 import 'package:parking_management/app/di/injection.dart';
 import 'package:parking_management/core/network/connectivity_cubit.dart';
 import 'package:parking_management/core/storage/key_value_store.dart';
+import 'package:parking_management/core/qr/qr_decoder.dart';
 import 'package:parking_management/core/sync/sync_status_cubit.dart';
 import 'package:parking_management/core/theme/theme_cubit.dart';
 import 'package:parking_management/features/auth/application/auth_cubit.dart';
@@ -16,6 +20,7 @@ import 'package:parking_management/features/audit/application/audit_cubit.dart';
 import 'package:parking_management/features/diagnostics/application/diagnostics_cubit.dart';
 import 'package:parking_management/features/home/application/dashboard_cubit.dart';
 import 'package:parking_management/features/lots/application/lots_cubit.dart';
+import 'package:parking_management/features/plate_scanning/domain/repositories/plate_image_capture.dart';
 import 'package:parking_management/features/notifications/application/notifications_cubit.dart';
 import 'package:parking_management/features/reservations/application/reservations_cubit.dart';
 import 'package:parking_management/features/shifts/application/shift_cubit.dart';
@@ -35,6 +40,16 @@ import 'fake_lots_repository.dart';
 import 'fake_shift_repository.dart';
 import 'fake_user_repository.dart';
 import 'fake_sync_outbox.dart';
+
+class _NoopCapture implements PlateImageCapture {
+  @override
+  Future<XFile?> capture() async => null;
+}
+
+class _NoopQrDecoder implements QrDecoder {
+  @override
+  Future<String?> decode(Uint8List bytes) async => null;
+}
 
 AuthSession sessionFor(UserRole role) => AuthSession(
   user: User(id: 1, username: 'juan', displayName: 'Juan', role: role),
@@ -79,6 +94,8 @@ Future<AuthCubit> pumpApp(
       ),
     )
     ..registerSingleton<KeyValueStore>(FakeKeyValueStore())
+    ..registerSingleton<PlateImageCapture>(_NoopCapture())
+    ..registerSingleton<QrDecoder>(_NoopQrDecoder())
     ..registerFactory<ReservationsCubit>(
       () => ReservationsCubit(
         FakeReservationRepository(),

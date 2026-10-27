@@ -133,6 +133,7 @@ void main() {
   Future<void> pumpPage(
     WidgetTester tester, {
     String? initialQuery,
+    String? initialScan,
     bool firstHasPass = false,
     PlateImageCapture? capture,
     QrDecoder? qrDecoder,
@@ -161,6 +162,7 @@ void main() {
           ],
           child: CheckOutPage(
             initialQuery: initialQuery,
+            scanPlate: initialScan,
             capture: capture,
             qrDecoder: qrDecoder,
           ),
@@ -508,5 +510,18 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('No hay una sesión abierta para NOPE01'), findsOneWidget);
+  });
+
+  testWidgets('Success: a scanned plate opens its check-out on arrival', (
+    tester,
+  ) async {
+    await pumpPage(tester, initialScan: 'XYZ999');
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('XYZ999'), findsWidgets);
+    expect(find.text('Efectivo'), findsOneWidget);
+
+    await tester.tap(find.text('Cancelar'));
+    await tester.pumpAndSettle();
   });
 }

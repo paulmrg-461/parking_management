@@ -2192,6 +2192,12 @@ abstract class AppLocalizations {
   /// **'Limpiar búsqueda'**
   String get checkOutClearSearch;
 
+  /// No description provided for @scanExitTooltip.
+  ///
+  /// In es, this message translates to:
+  /// **'Escanear QR y registrar salida'**
+  String get scanExitTooltip;
+
   /// No description provided for @checkOutScanQr.
   ///
   /// In es, this message translates to:

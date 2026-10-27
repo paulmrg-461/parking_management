@@ -17,6 +17,7 @@ import 'package:parking_management/features/check_in/presentation/check_in_page.
 import 'package:parking_management/app/di/injection.dart';
 import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/core/storage/key_value_store.dart';
+import 'package:parking_management/core/widgets/qr_code.dart';
 import 'package:parking_management/features/home/application/dashboard_cubit.dart';
 import 'package:parking_management/features/plate_scanning/application/plate_scanning_cubit.dart';
 import 'package:parking_management/features/plate_scanning/domain/entities/plate_scan_result.dart';
@@ -319,10 +320,17 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Entrada registrada: ABC123'), findsOneWidget);
+    expect(hapticFired(), isTrue);
+    // The ticket with its exit QR and a print action is shown.
+    expect(find.byType(QrCode), findsOneWidget);
+    expect(find.text('Imprimir'), findsOneWidget);
+
+    await tester.tap(find.text('Cerrar'));
+    await tester.pumpAndSettle();
+
     final field = tester.widget<TextField>(plateField());
     expect(field.controller!.text, isEmpty);
     expect(field.focusNode!.hasFocus, isTrue);
-    expect(hapticFired(), isTrue);
     // The plate is offered again for the next entry.
     expect(find.text('Repetir entrada ABC123'), findsOneWidget);
   });

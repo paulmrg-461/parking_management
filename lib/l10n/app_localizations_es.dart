@@ -1162,6 +1162,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get checkOutClearSearch => 'Limpiar búsqueda';
 
   @override
+  String get scanExitTooltip => 'Escanear QR y registrar salida';
+
+  @override
   String get checkOutScanQr => 'Escanear el QR del recibo';
 
   @override

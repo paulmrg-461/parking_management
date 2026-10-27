@@ -281,10 +281,31 @@ class _CheckInPageState extends State<CheckInPage> {
         final message = context.l10n.checkInSuccess(result.plate);
         SemanticsService.announce(message, Directionality.of(context));
         showInfoSnack(context, message);
+        unawaited(_showReceipt(context, result));
       case SubmissionFailed(:final message, :final failure):
         showErrorSnack(context, context.l10n.errorText(message, failure));
       default:
         break;
+    }
+  }
+
+  /// The ticket the customer keeps: it carries the exit QR and can be printed
+  /// right away.
+  Future<void> _showReceipt(BuildContext context, ParkingSession result) async {
+    final data = ReceiptData(
+      kind: ReceiptKind.checkIn,
+      plate: result.plate,
+      entryTime: result.entryTime,
+      photoCount: result.photoCount,
+      pendingSync: result.status == ParkingSessionStatus.pendingSync,
+    );
+    await showReceipt(
+      context,
+      data,
+      onPrint: () => showReceiptPrintSheet(context, data),
+    );
+    if (mounted) {
+      _plateFocus.requestFocus();
     }
   }
 

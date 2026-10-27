@@ -249,6 +249,17 @@ void main() {
     expect(find.textContaining('Sin conexión'), findsOneWidget);
   });
 
+  testWidgets('Success: the QR shortcut sits in the shell', (tester) async {
+    await pumpApp(tester, role: UserRole.operator);
+
+    expect(
+      find.byTooltip('Escanear QR y registrar salida'),
+      findsOneWidget,
+    );
+    expect(find.byIcon(Icons.qr_code_scanner), findsOneWidget);
+    expect(find.byIcon(Icons.chat), findsNothing);
+  });
+
   testWidgets('Success: online hides the OfflineBanner', (tester) async {
     final connectivity = ConnectivityCubit(_FixedConnectivity(online: true));
     addTearDown(connectivity.close);

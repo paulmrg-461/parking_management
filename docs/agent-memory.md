@@ -12,7 +12,7 @@ Last updated: 2026-10-26, branch `feature/supabase` (post-UI/UX polish).
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0046` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 646 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 645 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -432,6 +432,12 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 - Check-out: `resolvePlate` asks the server for the exact plate (limit 2, only a
   single match opens); `_startCheckout` moved from the tile to the page so the
   scan and a USB reader's `Enter` (`SearchField.onSubmitted`) reuse it.
+- Check-in success opens `showReceipt` with the QR + Imprimir (no summary step)
+  and restores plate focus when the dialog closes.
+- The shell FAB is the QR scanner (`_ScanQrFab`, hidden without capture/decoder):
+  it navigates to `/check-out?scan=<plate>`, which resolves and opens the
+  payment dialog. The old WhatsApp FAB (and its test) is gone; WhatsApp lives in
+  `/contact`.
 - The camera button only renders when the route injects `capture` + `qrDecoder`;
   the search field still works with a keyboard-wedge reader alone.
 
@@ -457,7 +463,7 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 ## Latest verification (2026-10-26)
 
-- `flutter test`: 646 passed (+1 live-stack integration skipped); `flutter
+- `flutter test`: 645 passed (+1 live-stack integration skipped); `flutter
   analyze` 129 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
 - `supabase/tests/run.sh` passed (migrations `0001`–`0046`); `e2e.sh` passed

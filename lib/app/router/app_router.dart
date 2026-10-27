@@ -130,6 +130,7 @@ GoRoute _homeRoute(AuthCubit auth) => GoRoute(
         create: (_) => serviceLocator<CheckOutCubit>(),
         child: CheckOutPage(
           initialQuery: state.uri.queryParameters['plate'],
+          scanPlate: state.uri.queryParameters['scan'],
           capture: serviceLocator<PlateImageCapture>(),
           qrDecoder: serviceLocator<QrDecoder>(),
         ),

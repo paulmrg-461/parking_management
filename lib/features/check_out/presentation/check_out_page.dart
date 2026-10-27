@@ -41,12 +41,17 @@ class CheckOutPage extends StatefulWidget {
   const CheckOutPage({
     super.key,
     this.initialQuery,
+    this.scanPlate,
     this.capture,
     this.qrDecoder,
   });
 
   /// Plate to filter by (e.g. arriving from the vehicle history).
   final String? initialQuery;
+
+  /// Plate just scanned with the shell QR action: resolve it and open its
+  /// payment dialog as soon as the page mounts.
+  final String? scanPlate;
 
   /// Camera capture + QR reader for the receipt code. Optional so tests can
   /// omit the scanner (the field still accepts a USB reader).
@@ -74,6 +79,14 @@ class _CheckOutPageState extends State<CheckOutPage> {
     if (query != null && query.isNotEmpty) {
       _searchController.text = query;
       context.read<CheckOutCubit>().search(query);
+    }
+    final scan = widget.scanPlate?.trim();
+    if (scan != null && scan.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          unawaited(_resolveAndOpen(context, scan));
+        }
+      });
     }
   }
 

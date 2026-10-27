@@ -3,9 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/l10n/l10n.dart';
+import '../di/injection.dart';
+import '../../core/qr/qr_decoder.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/widgets/offline_banner.dart';
 import '../../core/widgets/submission_feedback.dart';
@@ -15,8 +16,8 @@ import '../../features/home/application/dashboard_cubit.dart';
 import '../../features/lots/application/lots_cubit.dart';
 import '../../features/notifications/application/notifications_cubit.dart';
 import '../../features/shifts/application/shift_cubit.dart';
+import '../../features/plate_scanning/domain/repositories/plate_image_capture.dart';
 import '../../features/settings/application/branding_cubit.dart';
-import '../../features/settings/domain/whatsapp_url.dart';
 import 'app_destinations.dart';
 import 'app_sidebar.dart';
 
@@ -123,7 +124,7 @@ class _WideShell extends StatelessWidget {
           Expanded(child: content),
         ],
       ),
-      floatingActionButton: const _WhatsAppFab(),
+      floatingActionButton: const _ScanQrFab(),
     );
   }
 }
@@ -145,7 +146,7 @@ class _NarrowShell extends StatelessWidget {
     final more = destinationsFor(role).skip(primary.length).toList();
     return Scaffold(
       body: content,
-      floatingActionButton: const _WhatsAppFab(),
+      floatingActionButton: const _ScanQrFab(),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex(primary, more),
         onDestinationSelected: (i) => i < primary.length
@@ -205,37 +206,56 @@ class _NarrowShell extends StatelessWidget {
   }
 }
 
-/// Floating WhatsApp shortcut; hidden until a number is configured.
-class _WhatsAppFab extends StatelessWidget {
-  const _WhatsAppFab();
+/// Floating shortcut: photograph a receipt's QR and open that session's
+/// check-out. Hidden when the platform has no camera capture/decoder.
+class _ScanQrFab extends StatelessWidget {
+  const _ScanQrFab();
 
   @override
   Widget build(BuildContext context) {
-    final url = context.select<BrandingCubit, String?>(
-      (cubit) => whatsappUrl(cubit.state.settingsOrNull?.whatsapp ?? ''),
-    );
-    if (url == null) {
+    final capture = serviceLocator.isRegistered<PlateImageCapture>()
+        ? serviceLocator<PlateImageCapture>()
+        : null;
+    final decoder = serviceLocator.isRegistered<QrDecoder>()
+        ? serviceLocator<QrDecoder>()
+        : null;
+    if (capture == null || decoder == null) {
       return const SizedBox.shrink();
     }
     return FloatingActionButton(
-      tooltip: context.l10n.whatsappTooltip,
-      onPressed: () => _open(context, url),
-      child: const Icon(Icons.chat),
+      tooltip: context.l10n.scanExitTooltip,
+      onPressed: () => unawaited(_scan(context, capture, decoder)),
+      child: const Icon(Icons.qr_code_scanner),
     );
   }
 
-  Future<void> _open(BuildContext context, String url) async {
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.platformDefault);
-      return;
-    }
-    if (context.mounted) {
-      showErrorSnack(context, context.l10n.errorUnknown);
+  Future<void> _scan(
+    BuildContext context,
+    PlateImageCapture capture,
+    QrDecoder decoder,
+  ) async {
+    try {
+      final file = await capture.capture();
+      if (file == null || !context.mounted) {
+        return;
+      }
+      final payload = await decoder.decode(await file.readAsBytes());
+      if (!context.mounted) {
+        return;
+      }
+      final plate = payload == null ? null : plateFromQrPayload(payload);
+      if (plate == null) {
+        showInfoSnack(context, context.l10n.checkOutQrUnreadable);
+        return;
+      }
+      context.go('/check-out?scan=$plate');
+    } catch (_) {
+      if (context.mounted) {
+        showErrorSnack(context, context.l10n.checkOutQrUnreadable);
+      }
     }
   }
 }
-
 
 /// Adds the unread badge to the notifications destination.
 class _NavIcon extends StatelessWidget {

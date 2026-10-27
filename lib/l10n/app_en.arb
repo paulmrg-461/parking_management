@@ -371,6 +371,7 @@
   "checkOutTitle": "Check-out",
   "searchPlate": "Search by plate",
   "checkOutClearSearch": "Clear search",
+  "scanExitTooltip": "Scan a QR to check out",
   "checkOutScanQr": "Scan the receipt QR",
   "checkOutQrUnreadable": "The QR code could not be read",
   "checkOutQrNoSession": "No open session for {plate}",
