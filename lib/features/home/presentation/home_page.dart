@@ -102,8 +102,12 @@ class _Dashboard extends StatelessWidget {
                 : l10n.roleOperator,
           ),
           const SizedBox(height: Space.sm),
-          const LotSwitcher(),
-          const SizedBox(height: Space.md),
+          // Wide screens carry the site switcher in the sidebar footer.
+          if (MediaQuery.sizeOf(context).width < Layout.railBreakpoint) ...[
+            const LotSwitcher(),
+            const SizedBox(height: Space.md),
+          ] else
+            const SizedBox(height: Space.lg),
           const OccupancyCard(),
           const SizedBox(height: Space.md),
           const TodayCard(),

@@ -108,6 +108,9 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - Monthly passes that are expired or end within a week show a "Renew 30 days"
   action (extends from the day after the end, or from today when expired,
   keeping the amount) with a confirmation.
+- The web shell uses a **collapsible side navigation** (persisted per device)
+  with the brand, Operación/Gestión groups, and a footer carrying the active
+  site and the signed-in user; page content widens to 1080 px on desktop.
 - The multi-site indicator is now a compact chip in the home content (it used
   to be a full-width strip above the app bar that read like a notification).
 - The home app bar picks the device appearance (system / light / dark); the
@@ -220,7 +223,7 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Tests
 
-- 628 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
+- 629 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
   integration test that runs only against a live stack.
 - SQL/RLS/RPC regressions covering capacity, shifts, discounts, passes,
   reservations, multi-site isolation, audit, diagnostics and retention.
@@ -250,7 +253,7 @@ Captured on 2026-10-24 against the local self-hosted stack:
 
 | Check | Result |
 |---|---|
-| `flutter test` | 628 passed (+1 live-stack integration skipped) |
+| `flutter test` | 629 passed (+1 live-stack integration skipped) |
 | `flutter analyze` | 0 errors, 0 warnings (only SDK deprecation infos) |
 | `flutter build web --release` | OK |
 | `supabase/tests/run.sh` | Passed (migrations + RPC/RLS regressions) |

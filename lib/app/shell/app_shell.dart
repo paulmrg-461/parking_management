@@ -18,9 +18,10 @@ import '../../features/shifts/application/shift_cubit.dart';
 import '../../features/settings/application/branding_cubit.dart';
 import '../../features/settings/domain/whatsapp_url.dart';
 import 'app_destinations.dart';
+import 'app_sidebar.dart';
 
-/// Responsive chrome around every authenticated page: a [NavigationBar]
-/// below [wideBreakpoint] and a [NavigationRail] above it, with
+/// Responsive chrome around every authenticated page: the [NavigationBar]
+/// below [wideBreakpoint] and a collapsible [AppSidebar] above it, with
 /// destinations filtered by role. Content is capped at [maxContentWidth];
 /// an [OfflineBanner] sits above it while the device is offline.
 class AppShell extends StatelessWidget {
@@ -115,62 +116,14 @@ class _WideShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final destinations = destinationsFor(role);
-    final selected = destinations.indexWhere((d) => d.matches(location));
     return Scaffold(
       body: Row(
         children: [
-          _ScrollableRail(
-            destinations: destinations,
-            selectedIndex: selected < 0 ? null : selected,
-            onSelected: (i) => context.go(destinations[i].path),
-          ),
-          const VerticalDivider(width: 1),
+          AppSidebar(role: role, location: location),
           Expanded(child: content),
         ],
       ),
       floatingActionButton: const _WhatsAppFab(),
-    );
-  }
-}
-
-class _ScrollableRail extends StatelessWidget {
-  const _ScrollableRail({
-    required this.destinations,
-    required this.selectedIndex,
-    required this.onSelected,
-  });
-
-  final List<AppDestination> destinations;
-  final int? selectedIndex;
-  final ValueChanged<int> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) => SingleChildScrollView(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(minHeight: constraints.maxHeight),
-          child: IntrinsicHeight(
-            child: NavigationRail(
-              labelType: NavigationRailLabelType.all,
-              selectedIndex: selectedIndex,
-              onDestinationSelected: onSelected,
-              destinations: [
-                for (final d in destinations)
-                  NavigationRailDestination(
-                    icon: _NavIcon(destination: d, icon: d.icon),
-                    selectedIcon: _NavIcon(
-                      destination: d,
-                      icon: d.selectedIcon,
-                    ),
-                    label: Text(d.label(context.l10n)),
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

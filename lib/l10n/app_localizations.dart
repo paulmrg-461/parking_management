@@ -926,6 +926,30 @@ abstract class AppLocalizations {
   /// **'Se liberará el cupo reservado para {plate}.'**
   String reservationCancelBody(String plate);
 
+  /// No description provided for @sidebarCollapse.
+  ///
+  /// In es, this message translates to:
+  /// **'Contraer menú'**
+  String get sidebarCollapse;
+
+  /// No description provided for @sidebarExpand.
+  ///
+  /// In es, this message translates to:
+  /// **'Expandir menú'**
+  String get sidebarExpand;
+
+  /// No description provided for @navGroupOperation.
+  ///
+  /// In es, this message translates to:
+  /// **'Operación'**
+  String get navGroupOperation;
+
+  /// No description provided for @navGroupManagement.
+  ///
+  /// In es, this message translates to:
+  /// **'Gestión'**
+  String get navGroupManagement;
+
   /// No description provided for @navHome.
   ///
   /// In es, this message translates to:

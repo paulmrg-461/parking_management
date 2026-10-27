@@ -12,7 +12,7 @@ Last updated: 2026-10-26, branch `feature/supabase` (post-UI/UX polish).
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0046` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 628 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 629 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -222,9 +222,12 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 - `core/widgets/plate_input_field.dart` is the single plate input (check-in,
   reservation dialog, vehicle creation): its formatter uppercases and strips
   blanks live and caps at 20, the column width. Do not add another formatter.
-- `LotSwitcher` (formerly `LotBar`) is a chip inside the home content, shown
-  only when the user belongs to more than one site; it is **not** part of the
-  shell, so no strip sits above the pages' app bars.
+- `LotSwitcher` (formerly `LotBar`) is a chip inside the home content on narrow
+  screens only; wide screens use `AppSidebar`'s footer (same bottom sheet via
+  `showLotSwitcher`). The old shell strip was removed.
+- `AppSidebar` (wide shell, ≥900 px): brand + role, Operación/Gestión groups,
+  active-site and user footer, and a collapse toggle persisted at
+  `preferences/sidebar_collapsed` (264 → 84 px). Content max width is 1080.
 - `ThemeCubit` (`preferences/theme_mode`, system/light/dark) is optional in
   `ParkingApp` so tests stay on the system theme; `ThemeModeButton` lives in the
   home app bar and is hidden when the cubit is not provided.
@@ -436,7 +439,7 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 ## Latest verification (2026-10-26)
 
-- `flutter test`: 628 passed (+1 live-stack integration skipped); `flutter
+- `flutter test`: 629 passed (+1 live-stack integration skipped); `flutter
   analyze` 129 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
 - `supabase/tests/run.sh` passed (migrations `0001`–`0046`); `e2e.sh` passed
@@ -452,7 +455,8 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   +4 h, end of day), one-tap 30-day renewal for expiring monthly passes, and
   first-action buttons inside empty lists (users, vehicles, passes), and a
   discard-changes guard on the settings form, and an empty/no-match state on
-  check-out with a "clear search" action.
+  check-out with a "clear search" action, and a web-style collapsible sidebar
+  (grouped sections, site + user footer, collapse persisted).
 - Hardware run found and fixed two boot bugs: Hive now initializes before the
   Supabase session cleanup, and evidence uploads are insert-only (see above).
 - Current HEAD after the polish: `21f0149` (site switcher) on top of

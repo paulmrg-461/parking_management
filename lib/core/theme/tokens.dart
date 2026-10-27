@@ -18,13 +18,17 @@ abstract final class Radii {
 
 abstract final class Layout {
   /// Max width of page content (lists, dashboards).
-  static const maxContent = 840.0;
+  static const maxContent = 1080.0;
 
   /// Max width of single-column forms (login, check-in).
   static const maxForm = 560.0;
 
-  /// Width at which the shell switches NavigationBar → NavigationRail.
-  static const railBreakpoint = 840.0;
+  /// Width at which the shell switches the bottom bar for the side navigation.
+  static const railBreakpoint = 900.0;
+
+  /// Web side navigation: expanded and icon-only widths.
+  static const sidebar = 264.0;
+  static const sidebarCollapsed = 84.0;
 
   /// Minimum interactive size (Material / WCAG 2.5.5 target size).
   static const minTouch = 48.0;

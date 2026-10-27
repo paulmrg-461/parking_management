@@ -76,7 +76,7 @@ lib/
 ├── app/                 # composition root: get_it modules, router, shell
 │   ├── di/              #   one module per feature + injection.dart
 │   ├── router/          #   go_router config, route access policy
-│   └── shell/           #   navigation bar/rail, offline banner, lot bar
+│   └── shell/           #   bottom bar / collapsible sidebar, offline banner
 ├── core/                # cross-cutting: error/failure, sync outbox,
 │                        #   l10n, theme, widgets, lot context, receipts
 └── features/<feature>/

@@ -33,53 +33,56 @@ class LotSwitcher extends StatelessWidget {
         avatar: const Icon(Icons.location_on_outlined, size: 18),
         label: Text(active.name),
         tooltip: context.l10n.lotSwitchTooltip(active.name),
-        onPressed: () => _open(context, state.lots, active),
+        onPressed: () => showLotSwitcher(context, state.lots, active),
       ),
     );
   }
 
-  Future<void> _open(
-    BuildContext context,
-    List<ParkingLot> lots,
-    ParkingLot active,
-  ) async {
-    final cubit = context.read<LotsCubit>();
-    await showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (sheetContext) => SafeArea(
-        child: ListView(
-          shrinkWrap: true,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                Space.md,
-                Space.xs,
-                Space.md,
-                Space.sm,
-              ),
-              child: Text(
-                context.l10n.lotSwitchTitle,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
+}
+
+/// Bottom sheet with the sites the user belongs to; picking one switches the
+/// active site everywhere. Shared by the home chip and the web sidebar.
+Future<void> showLotSwitcher(
+  BuildContext context,
+  List<ParkingLot> lots,
+  ParkingLot active,
+) async {
+  final cubit = context.read<LotsCubit>();
+  await showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    builder: (sheetContext) => SafeArea(
+      child: ListView(
+        shrinkWrap: true,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              Space.md,
+              Space.xs,
+              Space.md,
+              Space.sm,
             ),
-            for (final lot in lots)
-              ListTile(
-                leading: Icon(
-                  lot.id == active.id
-                      ? Icons.radio_button_checked
-                      : Icons.radio_button_unchecked,
-                ),
-                title: Text(lot.name),
-                subtitle: Text(lot.code),
-                onTap: () {
-                  Navigator.of(sheetContext).pop();
-                  cubit.select(lot.id);
-                },
+            child: Text(
+              context.l10n.lotSwitchTitle,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+          ),
+          for (final lot in lots)
+            ListTile(
+              leading: Icon(
+                lot.id == active.id
+                    ? Icons.radio_button_checked
+                    : Icons.radio_button_unchecked,
               ),
-          ],
-        ),
+              title: Text(lot.name),
+              subtitle: Text(lot.code),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                cubit.select(lot.id);
+              },
+            ),
+        ],
       ),
-    );
-  }
+    ),
+  );
 }

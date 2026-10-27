@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:parking_management/app/app.dart';
 import 'package:parking_management/app/di/injection.dart';
 import 'package:parking_management/core/network/connectivity_cubit.dart';
+import 'package:parking_management/core/storage/key_value_store.dart';
 import 'package:parking_management/core/sync/sync_status_cubit.dart';
 import 'package:parking_management/core/theme/theme_cubit.dart';
 import 'package:parking_management/features/auth/application/auth_cubit.dart';
@@ -77,6 +78,7 @@ Future<AuthCubit> pumpApp(
         LotContext(FakeKeyValueStore(), LotSession()),
       ),
     )
+    ..registerSingleton<KeyValueStore>(FakeKeyValueStore())
     ..registerFactory<ReservationsCubit>(
       () => ReservationsCubit(
         FakeReservationRepository(),

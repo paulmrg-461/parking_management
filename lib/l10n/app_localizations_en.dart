@@ -463,6 +463,18 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get sidebarCollapse => 'Collapse menu';
+
+  @override
+  String get sidebarExpand => 'Expand menu';
+
+  @override
+  String get navGroupOperation => 'Operations';
+
+  @override
+  String get navGroupManagement => 'Management';
+
+  @override
   String get navHome => 'Home';
 
   @override
