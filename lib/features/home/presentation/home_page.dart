@@ -64,11 +64,13 @@ class _HomePageState extends State<HomePage> {
           const NotificationBell(),
           const SyncBadge(),
           if (_hasThemeCubit(context)) const ThemeModeButton(),
-          AppIconButton(
-            icon: Icons.logout,
-            tooltip: l10n.actionLogout,
-            onPressed: () => context.read<AuthCubit>().logout(),
-          ),
+          // Wide screens sign out from the sidebar user card.
+          if (MediaQuery.sizeOf(context).width < Layout.railBreakpoint)
+            AppIconButton(
+              icon: Icons.logout,
+              tooltip: l10n.actionLogout,
+              onPressed: () => context.read<AuthCubit>().logout(),
+            ),
         ],
       ),
       body: BlocBuilder<AuthCubit, AuthState>(

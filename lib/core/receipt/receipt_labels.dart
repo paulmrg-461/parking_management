@@ -17,6 +17,7 @@ class ReceiptLabels {
     required this.ticket,
     required this.generatedOn,
     required this.thanks,
+    required this.scanHint,
     required this.paymentMethod,
   });
 
@@ -34,6 +35,9 @@ class ReceiptLabels {
   final String ticket;
   final String generatedOn;
   final String thanks;
+
+  /// Caption under the QR that opens the check-out flow.
+  final String scanHint;
 
   /// Localizes a wire value (`cash`, `card`, `transfer`, `monthly_pass`,
   /// `exempt`).
@@ -55,6 +59,7 @@ class ReceiptLabels {
     ticket: 'Ticket',
     generatedOn: 'Generado el',
     thanks: 'Gracias por su visita',
+    scanHint: 'Escanee el QR para registrar la salida',
     paymentMethod: _paymentEs,
   );
 
@@ -73,6 +78,7 @@ class ReceiptLabels {
     ticket: 'Ticket',
     generatedOn: 'Generated on',
     thanks: 'Thank you for your visit',
+    scanHint: 'Scan the QR to check out',
     paymentMethod: _paymentEn,
   );
 

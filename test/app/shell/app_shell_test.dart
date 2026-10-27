@@ -67,6 +67,67 @@ void main() {
     );
     // Management lives in the sidebar, not duplicated as home shortcuts.
     expect(find.byType(ManagementShortcuts), findsNothing);
+    // Signing out lives in the sidebar card on desktop.
+    expect(find.byTooltip('Cerrar sesión'), findsOneWidget);
+  });
+
+  testWidgets('Success: Gestión is an accordion that remembers its state', (
+    tester,
+  ) async {
+    await pumpApp(tester, role: UserRole.admin, size: const Size(1200, 900));
+    final sidebar = find.byType(AppSidebar);
+
+    expect(
+      find.descendant(of: sidebar, matching: find.text('Usuarios')),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const Key('sidebar_management_toggle')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.descendant(of: sidebar, matching: find.text('Usuarios')),
+      findsNothing,
+    );
+    expect(
+      serviceLocator<KeyValueStore>().get(
+        'preferences',
+        'sidebar_management_open',
+      ),
+      isFalse,
+    );
+
+    await tester.tap(find.byKey(const Key('sidebar_management_toggle')));
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(of: sidebar, matching: find.text('Usuarios')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('Success: collapsed sidebar keeps the management icons', (
+    tester,
+  ) async {
+    await pumpApp(tester, role: UserRole.admin, size: const Size(1400, 900));
+
+    await tester.tap(find.byTooltip('Contraer menú'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('sidebar_item_/reports')),
+      findsOneWidget,
+    );
+    expect(find.byType(AppSidebar), findsOneWidget);
+  });
+
+  testWidgets('Success: the sidebar user card signs out on desktop', (
+    tester,
+  ) async {
+    await pumpApp(tester, role: UserRole.admin, size: const Size(1200, 900));
+
+    await tester.tap(find.byTooltip('Cerrar sesión'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ingresar'), findsOneWidget);
   });
 
   testWidgets('Success: the side navigation collapses and remembers it', (

@@ -1162,6 +1162,17 @@ class AppLocalizationsEs extends AppLocalizations {
   String get checkOutClearSearch => 'Limpiar búsqueda';
 
   @override
+  String get checkOutScanQr => 'Escanear el QR del recibo';
+
+  @override
+  String get checkOutQrUnreadable => 'No se pudo leer el código QR';
+
+  @override
+  String checkOutQrNoSession(String plate) {
+    return 'No hay una sesión abierta para $plate';
+  }
+
+  @override
   String checkOutNoMatch(String query) {
     return 'Ninguna placa coincide con «$query»';
   }
@@ -1297,6 +1308,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get receiptNewCharge => 'Nuevo cobro';
+
+  @override
+  String get receiptQrHint => 'Escanea el QR para registrar la salida';
 
   @override
   String get receiptClose => 'Cerrar';

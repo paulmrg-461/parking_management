@@ -32,8 +32,10 @@ class AppSidebar extends StatefulWidget {
 class _AppSidebarState extends State<AppSidebar> {
   static const _box = 'preferences';
   static const _key = 'sidebar_collapsed';
+  static const _managementKey = 'sidebar_management_open';
 
   bool _collapsed = false;
+  bool _managementOpen = true;
 
   @override
   void initState() {
@@ -44,6 +46,26 @@ class _AppSidebarState extends State<AppSidebar> {
     final stored = serviceLocator<KeyValueStore>().get(_box, _key);
     if (stored == true) {
       _collapsed = true;
+    }
+    final open = serviceLocator<KeyValueStore>().get(_box, _managementKey);
+    if (open is bool) {
+      _managementOpen = open;
+    }
+  }
+
+  Future<void> _toggleManagement() async {
+    setState(() => _managementOpen = !_managementOpen);
+    if (!serviceLocator.isRegistered<KeyValueStore>()) {
+      return;
+    }
+    try {
+      await serviceLocator<KeyValueStore>().put(
+        _box,
+        _managementKey,
+        _managementOpen,
+      );
+    } catch (_) {
+      // A layout preference is not worth an error dialog.
     }
   }
 
@@ -79,7 +101,9 @@ class _AppSidebarState extends State<AppSidebar> {
       decoration: BoxDecoration(
         color: scheme.surfaceContainerLow,
         border: Border(
-          right: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.6)),
+          right: BorderSide(
+            color: scheme.outlineVariant.withValues(alpha: 0.6),
+          ),
         ),
       ),
       child: SafeArea(
@@ -96,11 +120,22 @@ class _AppSidebarState extends State<AppSidebar> {
                 children: [
                   ..._group(context, l10n.navGroupOperation, primary),
                   if (management.isNotEmpty) ...[
-                    if (_collapsed)
-                      const Divider(height: Space.lg, indent: Space.sm, endIndent: Space.sm)
-                    else
-                      _groupLabel(context, l10n.navGroupManagement),
-                    ..._groupItems(context, management),
+                    if (_collapsed) ...[
+                      const Divider(
+                        height: Space.lg,
+                        indent: Space.sm,
+                        endIndent: Space.sm,
+                      ),
+                      ..._groupItems(context, management),
+                    ] else ...[
+                      const SizedBox(height: Space.sm),
+                      _ManagementSection(
+                        label: l10n.navGroupManagement,
+                        open: _managementOpen,
+                        onTap: _toggleManagement,
+                        children: _accordionItems(context, management),
+                      ),
+                    ],
                   ],
                   const SizedBox(height: Space.md),
                 ],
@@ -123,11 +158,8 @@ class _AppSidebarState extends State<AppSidebar> {
         'assets/branding/logo.png',
         width: 34,
         height: 34,
-        errorBuilder: (_, _, _) => Icon(
-          Icons.local_parking_rounded,
-          size: 30,
-          color: scheme.primary,
-        ),
+        errorBuilder: (_, _, _) =>
+            Icon(Icons.local_parking_rounded, size: 30, color: scheme.primary),
       ),
     );
     final toggle = IconButton(
@@ -163,9 +195,8 @@ class _AppSidebarState extends State<AppSidebar> {
                   _title(context),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                  style: Theme.of(context).textTheme.titleSmall
+                      ?.copyWith(fontWeight: FontWeight.w700),
                 ),
                 if (session != null)
                   Text(
@@ -174,9 +205,8 @@ class _AppSidebarState extends State<AppSidebar> {
                         : l10n.roleOperator,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
+                    style: Theme.of(context).textTheme.bodySmall
+                        ?.copyWith(color: scheme.onSurfaceVariant),
                   ),
               ],
             ),
@@ -235,6 +265,37 @@ class _AppSidebarState extends State<AppSidebar> {
     ),
   );
 
+  List<Widget> _accordionItems(
+    BuildContext context,
+    List<AppDestination> destinations,
+  ) {
+    final scheme = Theme.of(context).colorScheme;
+    return [
+      for (final destination in destinations)
+        Padding(
+          padding: const EdgeInsets.only(left: Space.sm, bottom: 2),
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border(
+                left: BorderSide(
+                  color: scheme.outlineVariant.withValues(alpha: 0.8),
+                  width: 2,
+                ),
+              ),
+            ),
+            padding: const EdgeInsets.only(left: Space.sm),
+            child: _SidebarItem(
+              key: ValueKey('sidebar_item_${destination.path}'),
+              destination: destination,
+              collapsed: false,
+              selected: destination.matches(widget.location),
+              onTap: () => context.go(destination.path),
+            ),
+          ),
+        ),
+    ];
+  }
+
   List<Widget> _groupItems(
     BuildContext context,
     List<AppDestination> destinations,
@@ -273,8 +334,7 @@ class _AppSidebarState extends State<AppSidebar> {
               message: l10n.lotSwitchTooltip(lots.active!.name),
               child: InkWell(
                 borderRadius: BorderRadius.circular(Radii.sm),
-                onTap: () =>
-                    showLotSwitcher(context, lots.lots, lots.active!),
+                onTap: () => showLotSwitcher(context, lots.lots, lots.active!),
                 child: Padding(
                   padding: EdgeInsets.symmetric(
                     horizontal: _collapsed ? 0 : Space.sm,
@@ -308,55 +368,14 @@ class _AppSidebarState extends State<AppSidebar> {
               ),
             ),
           if (session != null)
-            Tooltip(
-              message:
-                  '${session.user.displayName} · '
-                  '${session.user.role == UserRole.admin ? l10n.roleAdmin : l10n.roleOperator}',
-              child: Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: _collapsed ? 0 : Space.sm,
-                  vertical: Space.xs,
-                ),
-                child: Row(
-                  mainAxisAlignment: _collapsed
-                      ? MainAxisAlignment.center
-                      : MainAxisAlignment.start,
-                  children: [
-                    CircleAvatar(
-                      radius: 16,
-                      backgroundColor: scheme.primaryContainer,
-                      child: Text(
-                        _initials(session.user.displayName),
-                        style: Theme.of(context).textTheme.labelMedium
-                            ?.copyWith(color: scheme.onPrimaryContainer),
-                      ),
-                    ),
-                    if (!_collapsed) ...[
-                      const SizedBox(width: Space.sm),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              session.user.displayName,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.labelLarge,
-                            ),
-                            Text(
-                              session.user.username,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(color: scheme.onSurfaceVariant),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
+            _UserCard(
+              collapsed: _collapsed,
+              displayName: session.user.displayName,
+              roleLabel: session.user.role == UserRole.admin
+                  ? l10n.roleAdmin
+                  : l10n.roleOperator,
+              initials: _initials(session.user.displayName),
+              onLogout: () => context.read<AuthCubit>().logout(),
             ),
         ],
       ),
@@ -455,6 +474,180 @@ class _SidebarItem extends StatelessWidget {
       button: true,
       label: label,
       child: collapsed ? Tooltip(message: label, child: row) : row,
+    );
+  }
+}
+
+/// Signed-in user card with the session actions, mirroring a web app's
+/// profile block. Collapsed it keeps only the avatar and the logout button.
+class _UserCard extends StatelessWidget {
+  const _UserCard({
+    required this.collapsed,
+    required this.displayName,
+    required this.roleLabel,
+    required this.initials,
+    required this.onLogout,
+  });
+
+  final bool collapsed;
+  final String displayName;
+  final String roleLabel;
+  final String initials;
+  final VoidCallback onLogout;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final scheme = Theme.of(context).colorScheme;
+    final avatar = CircleAvatar(
+      radius: 18,
+      backgroundColor: scheme.primaryContainer,
+      child: Text(
+        initials,
+        style: Theme.of(context).textTheme.labelLarge
+            ?.copyWith(color: scheme.onPrimaryContainer),
+      ),
+    );
+    final logout = IconButton(
+      tooltip: l10n.actionLogout,
+      onPressed: onLogout,
+      icon: const Icon(Icons.logout, size: 20),
+    );
+
+    if (collapsed) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Tooltip(message: '$displayName · $roleLabel', child: avatar),
+          const SizedBox(height: 2),
+          logout,
+        ],
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(
+        Space.sm,
+        Space.sm,
+        Space.xs,
+        Space.sm,
+      ),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(Radii.md),
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.6)),
+      ),
+      child: Row(
+        children: [
+          avatar,
+          const SizedBox(width: Space.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  displayName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelLarge,
+                ),
+                Text(
+                  roleLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall
+                      ?.copyWith(color: scheme.onSurfaceVariant),
+                ),
+              ],
+            ),
+          ),
+          logout,
+        ],
+      ),
+    );
+  }
+}
+
+/// Collapsible "Gestión" section: a header with a rotating chevron and the
+/// management destinations indented under a guide line.
+class _ManagementSection extends StatelessWidget {
+  const _ManagementSection({
+    required this.label,
+    required this.open,
+    required this.onTap,
+    required this.children,
+  });
+
+  final String label;
+  final bool open;
+  final VoidCallback onTap;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Semantics(
+          button: true,
+          expanded: open,
+          label: label,
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(Radii.sm),
+            child: InkWell(
+              key: const Key('sidebar_management_toggle'),
+              borderRadius: BorderRadius.circular(Radii.sm),
+              onTap: onTap,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: Space.sm,
+                  vertical: 10,
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.space_dashboard_outlined,
+                      size: 22,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: Space.sm),
+                    Expanded(
+                      child: Text(
+                        label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    AnimatedRotation(
+                      turns: open ? 0 : -0.25,
+                      duration: Motion.short,
+                      child: Icon(
+                        Icons.expand_more,
+                        size: 20,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        AnimatedSize(
+          duration: Motion.short,
+          curve: Curves.easeOutCubic,
+          alignment: Alignment.topCenter,
+          child: open
+              ? Column(children: children)
+              : const SizedBox(width: double.infinity),
+        ),
+      ],
     );
   }
 }

@@ -1,9 +1,13 @@
+import 'dart:typed_data';
+
+import 'package:cross_file/cross_file.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/app/di/injection.dart';
 import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/core/pagination/paged_result.dart';
+import 'package:parking_management/core/qr/qr_decoder.dart';
 import 'package:parking_management/core/receipt/payment_method.dart';
 import 'package:parking_management/core/storage/key_value_store.dart';
 import 'package:parking_management/features/check_out/application/check_out_cubit.dart';
@@ -16,6 +20,7 @@ import 'package:parking_management/features/check_out/domain/entities/today_summ
 import 'package:parking_management/features/check_out/domain/repositories/check_out_repository.dart';
 import 'package:parking_management/features/check_out/presentation/check_out_page.dart';
 import 'package:parking_management/features/home/application/dashboard_cubit.dart';
+import 'package:parking_management/features/plate_scanning/domain/repositories/plate_image_capture.dart';
 import 'package:parking_management/features/vehicles/domain/entities/vehicle.dart';
 
 import '../../../helpers/fake_check_out_repository.dart';
@@ -39,20 +44,32 @@ class _FakeCheckOutRepository implements CheckOutRepository {
 
   bool firstHasPass = false;
 
+  static const _plates = {1: 'ABC123', 2: 'XYZ999'};
+
   @override
   Future<PagedResult<OpenSession>> listOpenSessions({
     int offset = 0,
     int limit = defaultPageSize,
     String? plate,
-  }) async => PagedResult([
-    OpenSession(
-      id: 1,
-      vehicleId: 1,
-      entryTime: DateTime(2026, 1, 1),
-      hasPass: firstHasPass,
-    ),
-    OpenSession(id: 2, vehicleId: 2, entryTime: DateTime(2026, 1, 1)),
-  ]);
+  }) async {
+    final all = [
+      OpenSession(
+        id: 1,
+        vehicleId: 1,
+        entryTime: DateTime(2026, 1, 1),
+        hasPass: firstHasPass,
+      ),
+      OpenSession(id: 2, vehicleId: 2, entryTime: DateTime(2026, 1, 1)),
+    ];
+    final query = plate?.trim().toUpperCase() ?? '';
+    final items = query.isEmpty
+        ? all
+        : [
+            for (final session in all)
+              if (_plates[session.vehicleId]!.contains(query)) session,
+          ];
+    return PagedResult(items, total: items.length);
+  }
 
   @override
   Future<CheckOutPreview> preview(int sessionId) async {
@@ -92,6 +109,23 @@ class _FakeCheckOutRepository implements CheckOutRepository {
   }
 }
 
+class _FakeCapture implements PlateImageCapture {
+  int captures = 0;
+
+  @override
+  Future<XFile?> capture() async {
+    captures++;
+    return XFile.fromData(Uint8List.fromList([1, 2, 3]), name: 'qr.png');
+  }
+}
+
+class _FakeQrDecoder implements QrDecoder {
+  String? payload;
+
+  @override
+  Future<String?> decode(Uint8List bytes) async => payload;
+}
+
 void main() {
   late _FakeCheckOutRepository repository;
   late FakeCheckOutRepository occupancy;
@@ -100,6 +134,8 @@ void main() {
     WidgetTester tester, {
     String? initialQuery,
     bool firstHasPass = false,
+    PlateImageCapture? capture,
+    QrDecoder? qrDecoder,
   }) async {
     repository = _FakeCheckOutRepository()..firstHasPass = firstHasPass;
     occupancy = FakeCheckOutRepository();
@@ -123,7 +159,11 @@ void main() {
               create: (_) => DashboardCubit(occupancy),
             ),
           ],
-          child: CheckOutPage(initialQuery: initialQuery),
+          child: CheckOutPage(
+            initialQuery: initialQuery,
+            capture: capture,
+            qrDecoder: qrDecoder,
+          ),
         ),
       ),
     );
@@ -414,5 +454,59 @@ void main() {
       tester.widget<TextField>(find.byType(TextField).first).controller!.text,
       isEmpty,
     );
+  });
+
+  testWidgets('Success: scanning a receipt QR opens its check-out', (
+    tester,
+  ) async {
+    final capture = _FakeCapture();
+    final decoder = _FakeQrDecoder()..payload = 'XYZ999';
+    await pumpPage(tester, capture: capture, qrDecoder: decoder);
+
+    await tester.tap(find.byTooltip('Escanear el QR del recibo'));
+    await tester.pumpAndSettle();
+
+    expect(capture.captures, 1);
+    expect(find.textContaining('XYZ999'), findsWidgets);
+    expect(find.text('Efectivo'), findsOneWidget);
+
+    await tester.tap(find.text('Cancelar'));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('Failure: an unreadable QR explains itself', (tester) async {
+    final decoder = _FakeQrDecoder()..payload = 'https://example.com/menu';
+    await pumpPage(tester, capture: _FakeCapture(), qrDecoder: decoder);
+
+    await tester.tap(find.byTooltip('Escanear el QR del recibo'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('No se pudo leer el código QR'), findsOneWidget);
+  });
+
+  testWidgets('Success: a USB reader types the plate and Enter charges it', (
+    tester,
+  ) async {
+    await pumpPage(tester);
+
+    await tester.enterText(find.byType(TextField).first, 'xyz999');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Efectivo'), findsOneWidget);
+    await tester.tap(find.text('Cancelar'));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('Failure: a plate without an open session is reported', (
+    tester,
+  ) async {
+    final decoder = _FakeQrDecoder()..payload = 'NOPE01';
+    await pumpPage(tester, capture: _FakeCapture(), qrDecoder: decoder);
+
+    await tester.tap(find.byTooltip('Escanear el QR del recibo'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('No hay una sesión abierta para NOPE01'), findsOneWidget);
   });
 }

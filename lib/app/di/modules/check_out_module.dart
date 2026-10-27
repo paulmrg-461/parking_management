@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:get_it/get_it.dart';
 
 import '../../../core/lot/lot_session.dart';
+import '../../../core/qr/qr_decoder.dart';
 
 import '../../../core/sync/sync_outbox.dart';
 import '../../../features/check_out/application/check_out_cubit.dart';
@@ -30,6 +31,7 @@ void registerCheckOutModule(GetIt sl) {
     ..registerFactory<DashboardCubit>(
       () => DashboardCubit(sl<CheckOutRepository>()),
     )
+    ..registerLazySingleton<QrDecoder>(ZxingQrDecoder.new)
     ..registerFactory<CheckOutCubit>(
       () => CheckOutCubit(
         sl<CheckOutVehicle>(),

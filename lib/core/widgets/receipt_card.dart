@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../l10n/l10n.dart';
 import '../receipt/receipt_data.dart';
 import '../theme/status_colors.dart';
+import 'qr_code.dart';
 import '../theme/tokens.dart';
 import '../receipt/payment_method.dart';
 import '../utils/formatters.dart';
@@ -338,6 +339,26 @@ class ReceiptCard extends StatelessWidget {
               ),
             ),
           ),
+        if (data.isCheckOut) ...[
+          const SizedBox(height: Space.md),
+          Center(
+            child: Semantics(
+              label: l10n.receiptQrHint,
+              child: QrCode(
+                data: data.plate,
+                semanticLabel: l10n.receiptQrHint,
+              ),
+            ),
+          ),
+          const SizedBox(height: Space.xs),
+          Text(
+            l10n.receiptQrHint,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+        ],
         const SizedBox(height: Space.lg),
         const Divider(height: 1),
         const SizedBox(height: Space.sm),

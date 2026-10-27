@@ -12,7 +12,7 @@ Last updated: 2026-10-26, branch `feature/supabase` (post-UI/UX polish).
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0046` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 630 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 646 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -420,6 +420,20 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   http://localhost:8000`; no firewall/Wi-Fi involved. Both are documented in
   QUICKSTART and the environment guides.
 
+## Receipt QR / check-out scanning
+
+- The QR payload is the **plate** (`Barcode.qrCode()` in `core/widgets/qr_code.dart`),
+  printed on the check-out receipt (screen, PDF via `pw.BarcodeWidget`, thermal
+  via `GS ( k`) and captioned with `ReceiptLabels.scanHint`.
+- `QrDecoder` (`core/qr/qr_decoder.dart`, zxing2 + image, pure Dart) decodes a
+  camera capture; `plateFromQrPayload` accepts a bare plate or `?plate=`/`?p=`
+  and rejects anything else (a random QR cannot start a check-out).
+- Check-out: `resolvePlate` asks the server for the exact plate (limit 2, only a
+  single match opens); `_startCheckout` moved from the tile to the page so the
+  scan and a USB reader's `Enter` (`SearchField.onSubmitted`) reuse it.
+- The camera button only renders when the route injects `capture` + `qrDecoder`;
+  the search field still works with a keyboard-wedge reader alone.
+
 ## Branding assets
 
 - `assets/branding/logo.png` is the app mark; `tool/generate_branding.py`
@@ -442,7 +456,7 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 ## Latest verification (2026-10-26)
 
-- `flutter test`: 630 passed (+1 live-stack integration skipped); `flutter
+- `flutter test`: 646 passed (+1 live-stack integration skipped); `flutter
   analyze` 129 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
 - `supabase/tests/run.sh` passed (migrations `0001`–`0046`); `e2e.sh` passed
@@ -459,7 +473,8 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   first-action buttons inside empty lists (users, vehicles, passes), and a
   discard-changes guard on the settings form, and an empty/no-match state on
   check-out with a "clear search" action, and a web-style collapsible sidebar
-  (grouped sections, site + user footer, collapse persisted).
+  (grouped sections, site + user footer, collapse persisted), and a receipt QR
+  that opens check-out from the camera or a USB scanner.
 - Hardware run found and fixed two boot bugs: Hive now initializes before the
   Supabase session cleanup, and evidence uploads are insert-only (see above).
 - Current HEAD after the polish: `21f0149` (site switcher) on top of

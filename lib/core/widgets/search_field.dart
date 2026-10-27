@@ -40,6 +40,8 @@ class SearchField extends StatefulWidget {
     this.fieldKey,
     this.hint,
     this.initialValue,
+    this.controller,
+    this.onSubmitted,
     this.textCapitalization = TextCapitalization.characters,
   });
 
@@ -48,6 +50,10 @@ class SearchField extends StatefulWidget {
   final ValueChanged<String> onChanged;
   final Key? fieldKey;
   final String? initialValue;
+
+  /// Optional external controller (e.g. a scanned plate fills the field).
+  final TextEditingController? controller;
+  final ValueChanged<String>? onSubmitted;
   final TextCapitalization textCapitalization;
 
   @override
@@ -55,7 +61,8 @@ class SearchField extends StatefulWidget {
 }
 
 class _SearchFieldState extends State<SearchField> {
-  final _controller = TextEditingController();
+  late final TextEditingController _controller =
+      widget.controller ?? TextEditingController();
   final _focus = FocusNode();
 
   static bool get _desktop =>
@@ -84,7 +91,9 @@ class _SearchFieldState extends State<SearchField> {
       _activeSearchField = null;
     }
     _focus.dispose();
-    _controller.dispose();
+    if (widget.controller == null) {
+      _controller.dispose();
+    }
     super.dispose();
   }
 
@@ -121,6 +130,7 @@ class _SearchFieldState extends State<SearchField> {
           setState(() {});
           widget.onChanged(value);
         },
+        onSubmitted: widget.onSubmitted,
       ),
     );
   }

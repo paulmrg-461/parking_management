@@ -9,6 +9,7 @@ import '../../../app/di/injection.dart';
 import '../../../core/l10n/failure_messages.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/state/submission.dart';
+import '../../../core/qr/qr_decoder.dart';
 import '../../../core/utils/elapsed.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/empty_state.dart';
@@ -21,6 +22,7 @@ import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/widgets/sync_badge.dart';
 import '../../auth/application/auth_cubit.dart';
 import '../../auth/domain/entities/user.dart';
+import '../../plate_scanning/domain/repositories/plate_image_capture.dart';
 import '../../home/application/dashboard_cubit.dart';
 import '../../shifts/application/shift_cubit.dart';
 import '../../receipt_printing/presentation/receipt_print_sheet.dart';
@@ -36,10 +38,20 @@ import 'payment_method_dialog.dart';
 /// lets an operator search by plate (debounced in the cubit) and close one
 /// out, showing a receipt on success. Long lists page in on scroll.
 class CheckOutPage extends StatefulWidget {
-  const CheckOutPage({super.key, this.initialQuery});
+  const CheckOutPage({
+    super.key,
+    this.initialQuery,
+    this.capture,
+    this.qrDecoder,
+  });
 
   /// Plate to filter by (e.g. arriving from the vehicle history).
   final String? initialQuery;
+
+  /// Camera capture + QR reader for the receipt code. Optional so tests can
+  /// omit the scanner (the field still accepts a USB reader).
+  final PlateImageCapture? capture;
+  final QrDecoder? qrDecoder;
 
   @override
   State<CheckOutPage> createState() => _CheckOutPageState();
@@ -49,6 +61,7 @@ class _CheckOutPageState extends State<CheckOutPage> {
   static const _prefsBox = 'preferences';
   static const _lastPaymentKey = 'last_payment_method';
 
+  final _searchController = TextEditingController();
   PaymentMethod? _rememberedMethod;
   PaymentMethod? _pendingMethod;
 
@@ -59,8 +72,15 @@ class _CheckOutPageState extends State<CheckOutPage> {
     _restoreRememberedMethod();
     final query = widget.initialQuery?.trim();
     if (query != null && query.isNotEmpty) {
+      _searchController.text = query;
       context.read<CheckOutCubit>().search(query);
     }
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   /// The last method the operator charged with, so a fleet that always pays
@@ -121,10 +141,26 @@ class _CheckOutPageState extends State<CheckOutPage> {
           children: [
             Padding(
               padding: const EdgeInsets.all(16),
-              child: SearchField(
-                label: context.l10n.searchPlate,
-                initialValue: widget.initialQuery,
-                onChanged: context.read<CheckOutCubit>().search,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: SearchField(
+                      label: context.l10n.searchPlate,
+                      controller: _searchController,
+                      onChanged: context.read<CheckOutCubit>().search,
+                      onSubmitted: (value) =>
+                          unawaited(_resolveAndOpen(context, value)),
+                    ),
+                  ),
+                  if (widget.capture != null && widget.qrDecoder != null) ...[
+                    const SizedBox(width: 8),
+                    IconButton.filledTonal(
+                      tooltip: context.l10n.checkOutScanQr,
+                      onPressed: () => unawaited(_scanQr(context)),
+                      icon: const Icon(Icons.qr_code_scanner),
+                    ),
+                  ],
+                ],
               ),
             ),
             const _ShiftBanner(),
@@ -132,6 +168,7 @@ class _CheckOutPageState extends State<CheckOutPage> {
               child: _SessionsList(
                 rememberedMethod: _rememberedMethod,
                 onMethodChosen: _chooseMethod,
+                onCheckOut: _startCheckout,
               ),
             ),
           ],
@@ -174,6 +211,107 @@ class _CheckOutPageState extends State<CheckOutPage> {
     }
   }
 
+  bool _canDiscount(BuildContext context) {
+    try {
+      final auth = context.read<AuthCubit>();
+      return switch (auth.state) {
+        AuthAuthenticated(:final session) =>
+          session.user.role == UserRole.admin,
+        _ => false,
+      };
+    } on ProviderNotFoundException {
+      return false;
+    }
+  }
+
+  Future<void> _startCheckout(
+    BuildContext context,
+    OpenSession session,
+    String plate,
+  ) async {
+    final cubit = context.read<CheckOutCubit>();
+    final preview = await cubit.preview(session.id);
+    if (!context.mounted) {
+      return;
+    }
+    final hasPass = preview?.hasPass ?? false;
+    final choice = await showCheckoutDialog(
+      context,
+      plate: plate,
+      canDiscount: _canDiscount(context),
+      estimatedAmount: preview?.amount,
+      hasPass: hasPass,
+      initialMethod: hasPass
+          ? PaymentMethod.monthlyPass
+          : _basePaymentMethod(_rememberedMethod),
+    );
+    if (choice == null) {
+      return;
+    }
+    _chooseMethod(choice.method);
+    await cubit.checkOut(
+      session.id,
+      paymentMethod: choice.method.wire,
+      discountAmount: choice.discountAmount,
+      discountReason: choice.discountReason,
+      lostTicket: choice.lostTicket,
+      lostTicketReason: choice.lostTicketReason,
+    );
+  }
+
+  /// Scans the QR printed on a receipt and opens that session (camera path).
+  Future<void> _scanQr(BuildContext context) async {
+    final capture = widget.capture;
+    final decoder = widget.qrDecoder;
+    if (capture == null || decoder == null) {
+      return;
+    }
+    try {
+      final file = await capture.capture();
+      if (file == null || !context.mounted) {
+        return;
+      }
+      final payload = await decoder.decode(await file.readAsBytes());
+      if (!context.mounted) {
+        return;
+      }
+      final plate = payload == null ? null : plateFromQrPayload(payload);
+      if (plate == null) {
+        showInfoSnack(context, context.l10n.checkOutQrUnreadable);
+        return;
+      }
+      await _resolveAndOpen(context, plate);
+    } catch (_) {
+      if (context.mounted) {
+        showErrorSnack(context, context.l10n.checkOutQrUnreadable);
+      }
+    }
+  }
+
+  /// Resolves a scanned or typed plate on the server and opens its payment
+  /// dialog when exactly one open session matches (USB QR readers type the
+  /// plate and send Enter).
+  Future<void> _resolveAndOpen(BuildContext context, String rawPlate) async {
+    final cubit = context.read<CheckOutCubit>();
+    final plate = rawPlate.replaceAll(RegExp(r'\s'), '').toUpperCase();
+    if (plate.isEmpty) {
+      return;
+    }
+    _searchController.text = plate;
+    cubit.search(plate);
+    final session = await cubit.resolvePlate(plate);
+    if (!context.mounted) {
+      return;
+    }
+    if (session == null) {
+      showInfoSnack(context, context.l10n.checkOutQrNoSession(plate));
+      return;
+    }
+    final state = cubit.state;
+    final resolved = state is CheckOutLoaded ? state.plateOf(session) : plate;
+    await _startCheckout(context, session, resolved);
+  }
+
   Future<void> _showReceipt(BuildContext context, CheckOutReceipt receipt) {
     final data = _receiptData(receipt);
     return showReceiptSummary(
@@ -209,10 +347,17 @@ class _SessionsList extends StatelessWidget {
   const _SessionsList({
     required this.rememberedMethod,
     required this.onMethodChosen,
+    required this.onCheckOut,
   });
 
   final PaymentMethod? rememberedMethod;
   final ValueChanged<PaymentMethod> onMethodChosen;
+  final Future<void> Function(
+    BuildContext context,
+    OpenSession session,
+    String plate,
+  )
+  onCheckOut;
 
   static const _loadMoreThreshold = 200.0;
 
@@ -276,8 +421,14 @@ class _SessionsList extends StatelessWidget {
                 plate:
                     state.plates[state.visible[index].vehicleId] ??
                     context.l10n.unknownVehicle(state.visible[index].vehicleId),
-                rememberedMethod: rememberedMethod,
-                onMethodChosen: onMethodChosen,
+                onCharge: () => onCheckOut(
+                  context,
+                  state.visible[index],
+                  state.plates[state.visible[index].vehicleId] ??
+                      context.l10n.unknownVehicle(
+                        state.visible[index].vehicleId,
+                      ),
+                ),
               ),
       ),
     );
@@ -288,14 +439,12 @@ class _SessionTile extends StatelessWidget {
   const _SessionTile({
     required this.session,
     required this.plate,
-    required this.rememberedMethod,
-    required this.onMethodChosen,
+    required this.onCharge,
   });
 
   final OpenSession session;
   final String plate;
-  final PaymentMethod? rememberedMethod;
-  final ValueChanged<PaymentMethod> onMethodChosen;
+  final VoidCallback onCharge;
 
   @override
   Widget build(BuildContext context) {
@@ -339,54 +488,9 @@ class _SessionTile extends StatelessWidget {
         ],
       ),
       trailing: FilledButton(
-        onPressed: () => _confirmCheckOut(context),
+        onPressed: onCharge,
         child: Text(l10n.checkOutCharge),
       ),
-    );
-  }
-
-  bool _canDiscount(BuildContext context) {
-    try {
-      final auth = context.read<AuthCubit>();
-      return switch (auth.state) {
-        AuthAuthenticated(:final session) =>
-          session.user.role == UserRole.admin,
-        _ => false,
-      };
-    } on ProviderNotFoundException {
-      return false;
-    }
-  }
-
-  Future<void> _confirmCheckOut(BuildContext context) async {
-    final cubit = context.read<CheckOutCubit>();
-    final canDiscount = _canDiscount(context);
-    final preview = await cubit.preview(session.id);
-    if (!context.mounted) {
-      return;
-    }
-    final hasPass = preview?.hasPass ?? false;
-    final choice = await showCheckoutDialog(
-      context,
-      plate: plate,
-      canDiscount: canDiscount,
-      estimatedAmount: preview?.amount,
-      hasPass: hasPass,
-      initialMethod: hasPass
-          ? PaymentMethod.monthlyPass
-          : _basePaymentMethod(rememberedMethod),
-    );
-    if (choice == null) {
-      return;
-    }
-    onMethodChosen(choice.method);
-    await cubit.checkOut(
-      session.id,
-      paymentMethod: choice.method.wire,
-      discountAmount: choice.discountAmount,
-      discountReason: choice.discountReason,
-      lostTicket: choice.lostTicket,
-      lostTicketReason: choice.lostTicketReason,
     );
   }
 }

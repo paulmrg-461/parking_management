@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:barcode/barcode.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -110,6 +111,22 @@ class SystemDialogReceiptPrinter implements ReceiptPrinter {
         if (data.isCheckOut && !data.pendingSync && data.ticketNumber != null)
           _row(context, labels.ticket, data.ticketNumber!),
         pw.Divider(),
+        if (data.isCheckOut) ...[
+          pw.SizedBox(height: 8),
+          pw.Center(
+            child: pw.BarcodeWidget(
+              barcode: Barcode.qrCode(),
+              data: data.plate,
+              width: 84,
+              height: 84,
+            ),
+          ),
+          pw.Text(
+            labels.scanHint,
+            textAlign: pw.TextAlign.center,
+            style: const pw.TextStyle(fontSize: 8),
+          ),
+        ],
         pw.SizedBox(height: 8),
         pw.Text(
           '${labels.generatedOn} ${_dateTime(DateTime.now())}',

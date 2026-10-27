@@ -16,6 +16,29 @@ class EscPosGenerator {
 
   /// [settings] is null when nothing was ever cached: the header then falls
   /// back to `PARQUEADERO` so printing never fails.
+  /// ESC/POS QR (GS ( k, model 2). Cheap 80 mm printers support it; the plate
+  /// is ASCII so the code page does not matter.
+  void _qr(List<int> bytes, String text) {
+    final payload = utf8.encode(text);
+    final length = payload.length + 3;
+    bytes.addAll([0x1D, 0x28, 0x6B, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00]);
+    bytes.addAll([0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, 0x06]);
+    bytes.addAll([0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x45, 0x31]);
+    bytes.addAll([
+      0x1D,
+      0x28,
+      0x6B,
+      length & 0xFF,
+      (length >> 8) & 0xFF,
+      0x31,
+      0x50,
+      0x30,
+      ...payload,
+    ]);
+    bytes.addAll([0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30]);
+    bytes.addAll([0x0A, 0x0A]);
+  }
+
   List<int> build(
     ReceiptData data,
     ParkingSettings? settings, [
@@ -74,7 +97,12 @@ class EscPosGenerator {
       _row(bytes, labels.ticket, data.ticketNumber!);
     }
 
-    _rule(bytes);
+    if (data.isCheckOut) {
+      _qr(bytes, data.plate);
+      _text(bytes, labels.scanHint, align: 1);
+      _rule(bytes);
+    }
+
     _text(bytes, '${labels.generatedOn} ${_dateTime(DateTime.now())}', align: 1);
     _text(bytes, labels.thanks, align: 1);
     _footer(bytes, settings);

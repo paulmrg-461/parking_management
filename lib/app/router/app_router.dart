@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/qr/qr_decoder.dart';
 import '../../core/widgets/deferred_page.dart';
 import '../../features/audit/application/audit_cubit.dart';
 import '../../features/audit/presentation/audit_page.dart';
@@ -127,7 +128,11 @@ GoRoute _homeRoute(AuthCubit auth) => GoRoute(
       path: 'check-out',
       builder: (context, state) => BlocProvider<CheckOutCubit>(
         create: (_) => serviceLocator<CheckOutCubit>(),
-        child: CheckOutPage(initialQuery: state.uri.queryParameters['plate']),
+        child: CheckOutPage(
+          initialQuery: state.uri.queryParameters['plate'],
+          capture: serviceLocator<PlateImageCapture>(),
+          qrDecoder: serviceLocator<QrDecoder>(),
+        ),
       ),
     ),
     GoRoute(

@@ -2192,6 +2192,24 @@ abstract class AppLocalizations {
   /// **'Limpiar búsqueda'**
   String get checkOutClearSearch;
 
+  /// No description provided for @checkOutScanQr.
+  ///
+  /// In es, this message translates to:
+  /// **'Escanear el QR del recibo'**
+  String get checkOutScanQr;
+
+  /// No description provided for @checkOutQrUnreadable.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo leer el código QR'**
+  String get checkOutQrUnreadable;
+
+  /// No description provided for @checkOutQrNoSession.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay una sesión abierta para {plate}'**
+  String checkOutQrNoSession(String plate);
+
   /// No description provided for @checkOutNoMatch.
   ///
   /// In es, this message translates to:
@@ -2431,6 +2449,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Nuevo cobro'**
   String get receiptNewCharge;
+
+  /// No description provided for @receiptQrHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Escanea el QR para registrar la salida'**
+  String get receiptQrHint;
 
   /// No description provided for @receiptClose.
   ///
