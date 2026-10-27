@@ -6,16 +6,22 @@ class CapacitySnapshot extends Equatable {
   const CapacitySnapshot({
     this.carOpen = 0,
     this.carCapacity = 0,
+    this.carReserved = 0,
     this.motoOpen = 0,
     this.motoCapacity = 0,
+    this.motoReserved = 0,
     this.keysOpen = 0,
     this.keyCapacity = 0,
   });
 
   final int carOpen;
   final int carCapacity;
+
+  /// Active holds for the car group (spots promised, not occupied yet).
+  final int carReserved;
   final int motoOpen;
   final int motoCapacity;
+  final int motoReserved;
   final int keysOpen;
   final int keyCapacity;
 
@@ -29,8 +35,10 @@ class CapacitySnapshot extends Equatable {
       CapacitySnapshot(
         carOpen: (json['car_open'] as num?)?.toInt() ?? 0,
         carCapacity: (json['car_capacity'] as num?)?.toInt() ?? 0,
+        carReserved: (json['car_reserved'] as num?)?.toInt() ?? 0,
         motoOpen: (json['moto_open'] as num?)?.toInt() ?? 0,
         motoCapacity: (json['moto_capacity'] as num?)?.toInt() ?? 0,
+        motoReserved: (json['moto_reserved'] as num?)?.toInt() ?? 0,
         keysOpen: (json['keys_open'] as num?)?.toInt() ?? 0,
         keyCapacity: (json['key_capacity'] as num?)?.toInt() ?? 0,
       );
@@ -39,8 +47,10 @@ class CapacitySnapshot extends Equatable {
   List<Object?> get props => [
     carOpen,
     carCapacity,
+    carReserved,
     motoOpen,
     motoCapacity,
+    motoReserved,
     keysOpen,
     keyCapacity,
   ];

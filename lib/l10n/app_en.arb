@@ -329,6 +329,8 @@
   "homeCapacityCars": "Cars and pickups",
   "homeCapacityMotos": "Motorcycles",
   "homeCapacityKeys": "Cars with keys",
+  "homeReservedCount": "{count} held",
+  "@homeReservedCount": {"placeholders": {"count": {"type": "int"}}},
   "homeNoLimit": "no limit",
   "homeInsideSeeAll": "See all",
   "homeSummary": "Summary",

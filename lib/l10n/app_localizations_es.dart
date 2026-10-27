@@ -1015,6 +1015,11 @@ class AppLocalizationsEs extends AppLocalizations {
   String get homeCapacityKeys => 'Vehículos con llaves';
 
   @override
+  String homeReservedCount(int count) {
+    return '$count reservados';
+  }
+
+  @override
   String get homeNoLimit => 'sin límite';
 
   @override

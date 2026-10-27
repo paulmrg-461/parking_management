@@ -1007,6 +1007,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeCapacityKeys => 'Cars with keys';
 
   @override
+  String homeReservedCount(int count) {
+    return '$count held';
+  }
+
+  @override
   String get homeNoLimit => 'no limit';
 
   @override

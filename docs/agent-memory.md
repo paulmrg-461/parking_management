@@ -459,6 +459,8 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 - `0049` makes active reservations count against the category and group
   capacities (walk-ins cannot take a held spot); the capacity trigger and
   `create_reservation` share the advisory locks and the same group name sets.
+- `0050` adds `car_reserved`/`moto_reserved` to `capacity_snapshot()`; the
+  capacity card renders them under the bar ("N reservados").
 - `0048 capacity_snapshot()` returns `car_open/car_capacity`,
   `moto_open/moto_capacity`, `keys_open/key_capacity` for the home. The
   `CapacitySnapshot` entity + `CheckOutRepository.capacitySnapshot()` feed

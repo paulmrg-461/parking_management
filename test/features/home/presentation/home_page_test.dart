@@ -204,6 +204,7 @@ void main() {
       space: const CapacitySnapshot(
         carOpen: 4,
         carCapacity: 10,
+        carReserved: 2,
         motoOpen: 1,
         motoCapacity: 5,
         keysOpen: 2,
@@ -220,6 +221,7 @@ void main() {
     expect(find.text('2 / 3'), findsOneWidget);
     // The big occupancy uses the configured spaces (cars 4+1 of 10+5).
     expect(find.text('5 / 15'), findsOneWidget);
+    expect(find.text('2 reservados'), findsOneWidget);
   });
 
   testWidgets('Success: the home lists the cars inside', (tester) async {

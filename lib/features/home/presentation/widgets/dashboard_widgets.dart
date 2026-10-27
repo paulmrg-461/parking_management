@@ -256,6 +256,7 @@ class CapacityCard extends StatelessWidget {
                   icon: Icons.directions_car_outlined,
                   label: l10n.homeCapacityCars,
                   open: capacity.carOpen,
+                  reserved: capacity.carReserved,
                   capacity: capacity.carCapacity,
                   full: capacity.carsFull,
                 ),
@@ -263,6 +264,7 @@ class CapacityCard extends StatelessWidget {
                   icon: Icons.two_wheeler_outlined,
                   label: l10n.homeCapacityMotos,
                   open: capacity.motoOpen,
+                  reserved: capacity.motoReserved,
                   capacity: capacity.motoCapacity,
                   full: capacity.motosFull,
                 ),
@@ -289,11 +291,13 @@ class _CapacityRow extends StatelessWidget {
     required this.open,
     required this.capacity,
     required this.full,
+    this.reserved = 0,
   });
 
   final IconData icon;
   final String label;
   final int open;
+  final int reserved;
   final int capacity;
   final bool full;
 
@@ -330,6 +334,15 @@ class _CapacityRow extends StatelessWidget {
               color: full ? scheme.error : null,
               minHeight: 6,
               borderRadius: BorderRadius.circular(Radii.pill),
+            ),
+          ],
+          if (reserved > 0) ...[
+            const SizedBox(height: 2),
+            Text(
+              l10n.homeReservedCount(reserved),
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
             ),
           ],
         ],

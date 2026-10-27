@@ -1952,6 +1952,12 @@ abstract class AppLocalizations {
   /// **'Vehículos con llaves'**
   String get homeCapacityKeys;
 
+  /// No description provided for @homeReservedCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} reservados'**
+  String homeReservedCount(int count);
+
   /// No description provided for @homeNoLimit.
   ///
   /// In es, this message translates to:

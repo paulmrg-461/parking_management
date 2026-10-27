@@ -132,6 +132,8 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - The home is a real dashboard: a **capacity card** (cars/pickups, motorcycles
   and keys: inside vs. limit, with bars) and a **cars-inside list** with plates,
   elapsed time, pass/photo hints and "See all" to check-out.
+- The home capacity card shows spots on hold (active reservations) next to
+  the occupied ones (`0050`).
 - Active reservations consume the configured **group spaces** too: a site
   cannot promise more spots than it has and a walk-in cannot take a promised
   one (`0049`).

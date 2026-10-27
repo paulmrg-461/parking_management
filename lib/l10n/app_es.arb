@@ -344,6 +344,8 @@
   "homeCapacityCars": "Carros y camionetas",
   "homeCapacityMotos": "Motos",
   "homeCapacityKeys": "Vehículos con llaves",
+  "homeReservedCount": "{count} reservados",
+  "@homeReservedCount": {"placeholders": {"count": {"type": "int"}}},
   "homeNoLimit": "sin límite",
   "homeInsideSeeAll": "Ver todos",
   "homeSummary": "Resumen",
