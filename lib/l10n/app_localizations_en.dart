@@ -1013,6 +1013,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeInsideSeeAll => 'See all';
 
   @override
+  String get homeSummary => 'Summary';
+
+  @override
   String get homeOccupancy => 'Vehicles parked';
 
   @override

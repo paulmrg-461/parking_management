@@ -331,6 +331,7 @@
   "homeCapacityKeys": "Cars with keys",
   "homeNoLimit": "no limit",
   "homeInsideSeeAll": "See all",
+  "homeSummary": "Summary",
   "homeOccupancy": "Vehicles parked",
   "homeOccupancyUnavailable": "Occupancy unavailable",
   "homeEntryHint": "Register an arriving vehicle",

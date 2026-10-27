@@ -438,6 +438,9 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   `CapacitySnapshot` entity + `CheckOutRepository.capacitySnapshot()` feed
   `DashboardLoaded.capacity`; `DashboardCubit` also loads the first 5 open
   sessions and resolves their plates through an optional `VehicleRepository`.
+- Home layout: actions first; `_SummaryGrid` puts occupancy/capacity and
+  today/shift in two equal-height columns from 720 px (one column on phones);
+  management shortcuts are a two-column tile grid; cards share `_KpiIcon`.
 - Home widgets: `CapacityCard` (bars, `0` = "no limit") and `InsideCard`
   (plates + elapsed + pass/photo hints; "See all" → `/check-out`, row tap →
   `/check-out?plate=`). `OccupancyCard` now counts only configured group

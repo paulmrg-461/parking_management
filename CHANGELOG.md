@@ -124,6 +124,11 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   motos; trucks/buses excluded), the check-in dropdown disables a category only
   when its whole group is full, and on wide screens the cars-inside list moves
   to a **side panel**.
+- The home dashboard is reorganized: the **Entrada/Salida actions come first**,
+  the KPIs (occupancy, capacity, today, shift) sit in a two-column responsive
+  grid under a "Summary" label, cards use tinted icon headers, and the
+  management shortcuts are a two-column tile grid. A capacity card (below)
+  shows the configured spaces.
 - The home is a real dashboard: a **capacity card** (cars/pickups, motorcycles
   and keys: inside vs. limit, with bars) and a **cars-inside list** with plates,
   elapsed time, pass/photo hints and "See all" to check-out.

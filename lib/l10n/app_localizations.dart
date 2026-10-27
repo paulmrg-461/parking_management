@@ -1964,6 +1964,12 @@ abstract class AppLocalizations {
   /// **'Ver todos'**
   String get homeInsideSeeAll;
 
+  /// No description provided for @homeSummary.
+  ///
+  /// In es, this message translates to:
+  /// **'Resumen'**
+  String get homeSummary;
+
   /// No description provided for @homeOccupancy.
   ///
   /// In es, this message translates to:

@@ -346,6 +346,7 @@
   "homeCapacityKeys": "Vehículos con llaves",
   "homeNoLimit": "sin límite",
   "homeInsideSeeAll": "Ver todos",
+  "homeSummary": "Resumen",
   "homeOccupancy": "Vehículos dentro",
   "homeOccupancyUnavailable": "Ocupación no disponible",
   "homeEntryHint": "Registrar un vehículo que llega",

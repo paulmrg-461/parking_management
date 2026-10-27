@@ -116,19 +116,6 @@ class _Dashboard extends StatelessWidget {
             const SizedBox(height: Space.md),
           ] else
             const SizedBox(height: Space.lg),
-          const OccupancyCard(),
-          const SizedBox(height: Space.md),
-          const CapacityCard(),
-          const SizedBox(height: Space.md),
-          // Wide screens move the cars-inside list to the side panel.
-          if (!split) ...[
-            const InsideCard(),
-            const SizedBox(height: Space.md),
-          ],
-          const TodayCard(),
-          const SizedBox(height: Space.md),
-          const ShiftCard(),
-          const SizedBox(height: Space.lg),
           PrimaryActions(
             onEntry: () => context.go('/check-in'),
             onExit: () => context.go('/check-out'),
@@ -149,6 +136,20 @@ class _Dashboard extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: Space.lg),
+          Text(
+            l10n.homeSummary,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: Space.sm),
+          const _SummaryGrid(cards: [
+            OccupancyCard(),
+            CapacityCard(),
+            TodayCard(),
+            ShiftCard(),
+          ]),
+          const SizedBox(height: Space.md),
+          if (!split) const InsideCard(),
           // The sidebar already lists every management section on desktop.
           if (management.isNotEmpty &&
               MediaQuery.sizeOf(context).width < Layout.railBreakpoint) ...[
@@ -177,6 +178,57 @@ class _Dashboard extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Two KPI columns on wide content, one on phones; equal-height rows so the
+/// cards line up.
+class _SummaryGrid extends StatelessWidget {
+  const _SummaryGrid({required this.cards});
+
+  final List<Widget> cards;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 720) {
+          return Column(
+            children: [
+              for (var i = 0; i < cards.length; i++) ...[
+                if (i > 0) const SizedBox(height: Space.md),
+                cards[i],
+              ],
+            ],
+          );
+        }
+        return Column(
+          children: [
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(child: cards[0]),
+                  const SizedBox(width: Space.md),
+                  Expanded(child: cards[1]),
+                ],
+              ),
+            ),
+            const SizedBox(height: Space.md),
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(child: cards[2]),
+                  const SizedBox(width: Space.md),
+                  Expanded(child: cards[3]),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
