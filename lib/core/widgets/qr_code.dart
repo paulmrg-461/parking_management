@@ -9,7 +9,7 @@ class QrCode extends StatelessWidget {
   const QrCode({
     super.key,
     required this.data,
-    this.size = 104,
+    this.size = 120,
     this.foreground = Colors.black,
     this.background = Colors.white,
     this.semanticLabel,
@@ -21,11 +21,18 @@ class QrCode extends StatelessWidget {
   final Color background;
   final String? semanticLabel;
 
+  /// White margin around the modules (the QR spec asks for ~4 modules; the
+  /// modules are ~5 px at the default size).
+  static const _quietZone = 12.0;
+
   @override
   Widget build(BuildContext context) {
+    // Generate for the inner square only: painting it into the padded canvas
+    // keeps every module (an outer-sized matrix used to clip the last rows).
+    final inner = size - _quietZone * 2;
     final bars = Barcode.qrCode(
       errorCorrectLevel: BarcodeQRCorrectionLevel.medium,
-    ).make(data, width: size, height: size).whereType<BarcodeBar>().where(
+    ).make(data, width: inner, height: inner).whereType<BarcodeBar>().where(
       (bar) => bar.black,
     ).toList();
 
@@ -35,17 +42,13 @@ class QrCode extends StatelessWidget {
       child: Container(
         width: size,
         height: size,
-        padding: const EdgeInsets.all(6),
+        padding: const EdgeInsets.all(_quietZone),
         decoration: BoxDecoration(
           color: background,
           borderRadius: BorderRadius.circular(8),
         ),
         child: CustomPaint(
-          painter: _QrPainter(
-            bars: bars,
-            foreground: foreground,
-            canvasSize: size - 12,
-          ),
+          painter: _QrPainter(bars: bars, foreground: foreground),
         ),
       ),
     );
@@ -53,27 +56,22 @@ class QrCode extends StatelessWidget {
 }
 
 class _QrPainter extends CustomPainter {
-  const _QrPainter({
-    required this.bars,
-    required this.foreground,
-    required this.canvasSize,
-  });
+  const _QrPainter({required this.bars, required this.foreground});
 
   final List<BarcodeBar> bars;
   final Color foreground;
-  final double canvasSize;
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()..color = foreground;
-    final scale = size.width / canvasSize;
     for (final bar in bars) {
+      // The extra half pixel closes anti-aliasing seams between modules.
       canvas.drawRect(
         Rect.fromLTWH(
-          bar.left * scale,
-          bar.top * scale,
-          (bar.width * scale) + 0.4,
-          (bar.height * scale) + 0.4,
+          bar.left,
+          bar.top,
+          bar.width + 0.5,
+          bar.height + 0.5,
         ),
         paint,
       );
