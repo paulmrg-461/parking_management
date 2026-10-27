@@ -229,7 +229,8 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   active-site and user footer, and a collapse toggle persisted at
   `preferences/sidebar_collapsed` (264 → 84 px). Content max width is 1080.
   The home app bar titles itself "Inicio" on wide screens (brand lives in the
-  sidebar); mobile still shows the branding title.
+  sidebar) and the home hides `ManagementShortcuts` there (they are in the
+  sidebar); mobile keeps both. The sidebar clips while it animates.
 - `ThemeCubit` (`preferences/theme_mode`, system/light/dark) is optional in
   `ParkingApp` so tests stay on the system theme; `ThemeModeButton` lives in the
   home app bar and is hidden when the cubit is not provided.

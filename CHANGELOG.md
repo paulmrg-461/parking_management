@@ -108,6 +108,8 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - Monthly passes that are expired or end within a week show a "Renew 30 days"
   action (extends from the day after the end, or from today when expired,
   keeping the amount) with a confirmation.
+- On wide screens the home no longer repeats the management shortcuts (the
+  sidebar lists them) and clips the sidebar while it animates open/closed.
 - The web shell uses a **collapsible side navigation** (persisted per device)
   with the brand, Operación/Gestión groups, and a footer carrying the active
   site and the signed-in user; page content widens to 1080 px on desktop.

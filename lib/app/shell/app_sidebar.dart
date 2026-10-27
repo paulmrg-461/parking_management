@@ -74,6 +74,7 @@ class _AppSidebarState extends State<AppSidebar> {
     return AnimatedContainer(
       duration: Motion.short,
       curve: Curves.easeOutCubic,
+      clipBehavior: Clip.hardEdge,
       width: _collapsed ? Layout.sidebarCollapsed : Layout.sidebar,
       decoration: BoxDecoration(
         color: scheme.surfaceContainerLow,

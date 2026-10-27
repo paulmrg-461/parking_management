@@ -139,7 +139,9 @@ class _Dashboard extends StatelessWidget {
               ),
             ],
           ),
-          if (management.isNotEmpty) ...[
+          // The sidebar already lists every management section on desktop.
+          if (management.isNotEmpty &&
+              MediaQuery.sizeOf(context).width < Layout.railBreakpoint) ...[
             const SizedBox(height: Space.xl),
             ManagementShortcuts(destinations: management),
           ],

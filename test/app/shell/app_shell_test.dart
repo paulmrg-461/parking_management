@@ -10,6 +10,7 @@ import 'package:parking_management/core/network/connectivity_service.dart';
 import 'package:parking_management/core/sync/pending_mutation.dart';
 import 'package:parking_management/core/widgets/sync_badge.dart';
 import 'package:parking_management/features/auth/domain/entities/user.dart';
+import 'package:parking_management/features/home/presentation/widgets/dashboard_widgets.dart';
 
 import '../../helpers/app_harness.dart';
 import '../../helpers/fake_sync_outbox.dart';
@@ -64,6 +65,8 @@ void main() {
       ),
       findsOneWidget,
     );
+    // Management lives in the sidebar, not duplicated as home shortcuts.
+    expect(find.byType(ManagementShortcuts), findsNothing);
   });
 
   testWidgets('Success: the side navigation collapses and remembers it', (
