@@ -5,7 +5,8 @@
 #
 #   sh tool/run-android.sh [serial]
 #
-# The anon key is read from $SUPABASE_ANON_KEY or from .env (ANON_KEY=...).
+# The anon key is read from $SUPABASE_ANON_KEY or from .env (ANON_KEY=...);
+# the gateway port comes from $SUPABASE_PORT or .env API_GW_HTTP_PORT.
 set -eu
 
 SERIAL=${1:-$(adb devices | awk 'NR > 1 && $2 == "device" { print $1; exit }')}
@@ -17,9 +18,15 @@ if [ -z "$ANON_KEY" ] && [ -f .env ]; then
 fi
 [ -n "$ANON_KEY" ] || { echo "ANON_KEY missing (.env) or SUPABASE_ANON_KEY unset." >&2; exit 1; }
 
-adb -s "$SERIAL" reverse tcp:8000 tcp:8000 >/dev/null
-echo "adb reverse tcp:8000 -> $SERIAL (localhost:8000 on the phone)"
+PORT=${SUPABASE_PORT:-}
+if [ -z "$PORT" ] && [ -f .env ]; then
+    PORT=$(grep -E '^API_GW_HTTP_PORT=' .env | cut -d= -f2-)
+fi
+PORT=${PORT:-8000}
+
+adb -s "$SERIAL" reverse "tcp:$PORT" "tcp:$PORT" >/dev/null
+echo "adb reverse tcp:$PORT -> $SERIAL (localhost:$PORT on the phone)"
 
 exec flutter run -d "$SERIAL" \
-    --dart-define=SUPABASE_URL=http://localhost:8000 \
+    --dart-define=SUPABASE_URL="http://localhost:$PORT" \
     --dart-define=SUPABASE_ANON_KEY="$ANON_KEY"

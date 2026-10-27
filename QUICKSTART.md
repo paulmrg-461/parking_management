@@ -80,6 +80,23 @@ Nothing is mandatory. In-app notifications work out of the box (Realtime).
 | Automated WhatsApp | Meta token + approved templates (`WHATSAPP_*`); billed per message |
 | Manual WhatsApp | Nothing (`wa.me` from the app) |
 
+## 5.1 Another gateway port
+
+The gateway port lives in `.env` (`API_GW_HTTP_PORT`, default 8000) and the
+public URLs must match it:
+
+```bash
+# .env
+API_GW_HTTP_PORT=8017
+SUPABASE_PUBLIC_URL=http://localhost:8017
+API_EXTERNAL_URL=http://localhost:8017/auth/v1
+SITE_URL=http://localhost:8017
+
+docker compose up -d --force-recreate api-gw auth   # apply the new port
+# Flutter: --dart-define=SUPABASE_URL=http://localhost:8017
+# sh tool/run-android.sh reads API_GW_HTTP_PORT and reverses that port.
+```
+
 ## 6. Stop / reset
 
 ```bash

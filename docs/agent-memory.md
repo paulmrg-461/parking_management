@@ -396,6 +396,16 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 - Never put `sb_secret_...`/service_role or third-party keys (Groq, etc.) in
   the client or in `--dart-define`; only the publishable key ships.
 
+## Local gateway port
+
+- The local gateway port is `.env` `API_GW_HTTP_PORT` (currently **8017**),
+  mirrored in `SUPABASE_PUBLIC_URL`, `API_EXTERNAL_URL` and `SITE_URL`. After
+  changing it: `docker compose up -d --force-recreate api-gw auth`.
+- `tool/run-android.sh` reads that port (or `SUPABASE_PORT`) and reverses it;
+  Flutter gets `SUPABASE_URL=http://localhost:<port>`. e2e/healthcheck read
+  `SUPABASE_PUBLIC_URL` from `.env`.
+- Port 8000 is no longer bound in this environment.
+
 ## Dev environment running (2026-10-26)
 
 - Backend: `docker compose up -d` from the repo root; all services healthy,
