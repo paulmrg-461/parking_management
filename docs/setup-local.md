@@ -35,7 +35,8 @@ values that already look real. The resulting `.env` is **never committed**.
 Required values it sets for the app:
 
 - `SUPABASE_PUBLIC_URL` (used by the helper scripts, normally
-  `http://localhost:8000`)
+  `http://localhost:8000`; the port comes from `API_GW_HTTP_PORT` and must
+  match `API_EXTERNAL_URL`/`SITE_URL`. This workspace uses **8017**.)
 - `ANON_KEY`, `SERVICE_ROLE_KEY`
 - `POSTGRES_PASSWORD`, `POSTGRES_DB` (default `parking`)
 
@@ -91,26 +92,40 @@ Log in with `admin` / `123456`. The app forces a 6-digit PIN everywhere.
 
 ## 5. Run the Flutter app
 
+Read the configured port and key once per terminal:
+
+```bash
+PORT=$(grep -E '^API_GW_HTTP_PORT=' .env | cut -d= -f2-)
+ANON=$(grep -E '^ANON_KEY=' .env | cut -d= -f2-)
+```
+
 **Web (fastest loop):**
 
 ```bash
 flutter run -d chrome \
-  --dart-define=SUPABASE_URL=http://localhost:8000 \
-  --dart-define=SUPABASE_ANON_KEY=<ANON_KEY from .env>
+  --dart-define=SUPABASE_URL="http://localhost:$PORT" \
+  --dart-define=SUPABASE_ANON_KEY="$ANON"
 ```
 
 **Android emulator** (the host is `10.0.2.2`, not `localhost`):
 
 ```bash
 flutter run -d emulator-5554 \
-  --dart-define=SUPABASE_URL=http://10.0.2.2:8000 \
-  --dart-define=SUPABASE_ANON_KEY=<ANON_KEY>
+  --dart-define=SUPABASE_URL="http://10.0.2.2:$PORT" \
+  --dart-define=SUPABASE_ANON_KEY="$ANON"
 ```
 
-**Physical Android device**: expose the gateway on your LAN
-(`http://<laptop-ip>:8000`), add it to `API_EXTERNAL_URL`/`SITE_URL` in `.env`
-if you want Studio redirects to work, and pass the same URL as
-`SUPABASE_URL`. Android release builds require HTTPS (see
+**Physical Android device over adb (USB or wireless):**
+
+```bash
+sh tool/run-android.sh        # reverses API_GW_HTTP_PORT and runs Flutter
+```
+
+No LAN IP or firewall rule is involved; the app uses `http://localhost:<port>`
+through the reverse tunnel. Wireless adb reconnects drop the tunnel: rerun the
+script (or `adb reverse tcp:$PORT tcp:$PORT`). If you prefer the LAN, pass
+`http://<laptop-ip>:$PORT` and add it to `API_EXTERNAL_URL`/`SITE_URL` in
+`.env` for Studio redirects. Android release builds require HTTPS (see
 [`setup-cloud.md`](setup-cloud.md)).
 
 Optional dart-defines: `APP_NAME`, `FCM_ENABLED` + `FIREBASE_*`,
@@ -184,7 +199,7 @@ docker compose down -v
 | Android emulator cannot reach the API | Use `10.0.2.2` instead of `localhost`. |
 | 401 from the app after login | `.env` keys changed after the app was built; rebuild with the current `ANON_KEY`. |
 | `docker compose up` fails on `.env` | `cp .env.example .env && sh supabase/generate-env.sh`. |
-| Studio loads but the app does not | Studio goes through the gateway too; the app only needs `:8000`. |
+| Studio loads but the app does not | Studio goes through the gateway too; the app only needs the gateway port (`API_GW_HTTP_PORT`, e.g. `:8017`). |
 | Push never arrives | In-app notifications work through Realtime; background push needs FCM/VAPID credentials. |
 | PIN rejected on create | PINs must be exactly 6 digits (`PASSWORD_MIN_LENGTH=6`). |
 
