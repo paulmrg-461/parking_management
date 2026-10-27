@@ -53,7 +53,12 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          context.select<BrandingCubit, String>((c) => c.state.titleFor(l10n)),
+          // Wide screens already show the brand in the sidebar header.
+          MediaQuery.sizeOf(context).width >= Layout.railBreakpoint
+              ? l10n.navHome
+              : context.select<BrandingCubit, String>(
+                  (c) => c.state.titleFor(l10n),
+                ),
         ),
         actions: [
           const NotificationBell(),

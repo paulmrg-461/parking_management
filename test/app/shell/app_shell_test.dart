@@ -51,6 +51,21 @@ void main() {
     },
   );
 
+  testWidgets('Success: wide home titles the page and keeps the brand aside', (
+    tester,
+  ) async {
+    await pumpApp(tester, role: UserRole.admin, size: const Size(1200, 900));
+
+    expect(find.widgetWithText(AppBar, 'Inicio'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(AppSidebar),
+        matching: find.text('Parqueadero'),
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('Success: the side navigation collapses and remembers it', (
     tester,
   ) async {

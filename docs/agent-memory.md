@@ -12,7 +12,7 @@ Last updated: 2026-10-26, branch `feature/supabase` (post-UI/UX polish).
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0046` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 629 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 630 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -228,6 +228,8 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 - `AppSidebar` (wide shell, ≥900 px): brand + role, Operación/Gestión groups,
   active-site and user footer, and a collapse toggle persisted at
   `preferences/sidebar_collapsed` (264 → 84 px). Content max width is 1080.
+  The home app bar titles itself "Inicio" on wide screens (brand lives in the
+  sidebar); mobile still shows the branding title.
 - `ThemeCubit` (`preferences/theme_mode`, system/light/dark) is optional in
   `ParkingApp` so tests stay on the system theme; `ThemeModeButton` lives in the
   home app bar and is hidden when the cubit is not provided.
@@ -439,7 +441,7 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 ## Latest verification (2026-10-26)
 
-- `flutter test`: 629 passed (+1 live-stack integration skipped); `flutter
+- `flutter test`: 630 passed (+1 live-stack integration skipped); `flutter
   analyze` 129 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
 - `supabase/tests/run.sh` passed (migrations `0001`–`0046`); `e2e.sh` passed
