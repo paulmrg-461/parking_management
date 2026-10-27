@@ -12,7 +12,7 @@ Last updated: 2026-10-26, branch `feature/supabase` (post-UI/UX polish).
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0046` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 660 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 662 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -440,7 +440,10 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   sessions and resolves their plates through an optional `VehicleRepository`.
 - Home widgets: `CapacityCard` (bars, `0` = "no limit") and `InsideCard`
   (plates + elapsed + pass/photo hints; "See all" → `/check-out`, row tap →
-  `/check-out?plate=`).
+  `/check-out?plate=`). `OccupancyCard` now counts only configured group
+  spaces; from `Layout.homeSplit` (1000) the inside list moves to a 340 px
+  side panel. Check-in disables a category when its whole group is full
+  (`core/utils/vehicle_groups.dart`, same names as the SQL trigger).
 
 ## Receipt QR / check-out scanning
 
@@ -498,7 +501,7 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 ## Latest verification (2026-10-26)
 
-- `flutter test`: 660 passed (+1 live-stack integration skipped); `flutter
+- `flutter test`: 662 passed (+1 live-stack integration skipped); `flutter
   analyze` 129 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
 - `supabase/tests/run.sh` passed (migrations `0001`–`0046`); `e2e.sh` passed

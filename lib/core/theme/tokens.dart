@@ -26,6 +26,9 @@ abstract final class Layout {
   /// Width at which the shell switches the bottom bar for the side navigation.
   static const railBreakpoint = 900.0;
 
+  /// Content width at which the home moves the "inside" list to a side panel.
+  static const homeSplit = 1000.0;
+
   /// Web side navigation: expanded and icon-only widths.
   static const sidebar = 264.0;
   static const sidebarCollapsed = 84.0;

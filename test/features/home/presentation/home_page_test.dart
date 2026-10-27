@@ -10,6 +10,7 @@ import 'package:parking_management/features/check_out/domain/entities/today_summ
 import 'package:parking_management/features/check_out/domain/entities/open_session.dart';
 import 'package:parking_management/features/home/application/dashboard_cubit.dart';
 import 'package:parking_management/features/home/presentation/home_page.dart';
+import 'package:parking_management/features/home/presentation/widgets/dashboard_widgets.dart';
 import 'package:parking_management/features/settings/application/branding_cubit.dart';
 import 'package:parking_management/features/vehicles/domain/entities/vehicle.dart';
 
@@ -27,10 +28,11 @@ Future<FakeCheckOutRepository> _pump(
   TodaySummary today = TodaySummary.empty,
   int capacity = 0,
   CapacitySnapshot? space,
+  Size size = const Size(800, 1600),
 }) async {
   // Tall viewport: the dashboard now stacks occupancy, capacity, the inside
   // list and today, so actions must stay reachable without scrolling.
-  tester.view.physicalSize = const Size(800, 1600);
+  tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   final sessions = FakeCheckOutRepository(
@@ -216,6 +218,8 @@ void main() {
     expect(find.text('1 / 5'), findsOneWidget);
     expect(find.text('Vehículos con llaves'), findsOneWidget);
     expect(find.text('2 / 3'), findsOneWidget);
+    // The big occupancy uses the configured spaces (cars 4+1 of 10+5).
+    expect(find.text('5 / 15'), findsOneWidget);
   });
 
   testWidgets('Success: the home lists the cars inside', (tester) async {
@@ -237,5 +241,22 @@ void main() {
     await _pump(tester, capacity: 8);
 
     expect(find.textContaining('sin límite'), findsWidgets);
+  });
+
+  testWidgets('Success: wide screens move the inside list to a side panel', (
+    tester,
+  ) async {
+    await _pump(tester, capacity: 8, size: const Size(1400, 1000));
+
+    final inside = find.descendant(
+      of: find.byType(InsideCard),
+      matching: find.text('Vehículos dentro'),
+    );
+    expect(inside, findsOneWidget);
+    final panel = tester.getTopLeft(inside).dx;
+    final capacityCard = tester.getTopLeft(
+      find.text('Capacidad del parqueadero'),
+    ).dx;
+    expect(panel, greaterThan(capacityCard));
   });
 }

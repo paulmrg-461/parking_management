@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/pagination/paged_result.dart';
 import 'package:parking_management/features/categories/domain/entities/category.dart';
+import 'package:parking_management/features/check_out/domain/entities/capacity_snapshot.dart';
 import 'package:parking_management/features/check_out/domain/entities/occupancy_snapshot.dart';
 import 'package:parking_management/features/categories/domain/repositories/category_repository.dart';
 import 'package:parking_management/features/check_in/application/check_in_cubit.dart';
@@ -188,6 +189,7 @@ void main() {
     bool photos = false,
     _FakeScanner? scanner,
     List<CategoryOccupancySnapshot> occupancyCategories = const [],
+    CapacitySnapshot space = CapacitySnapshot.empty,
     String? initialPlate,
     void Function(BuildContext context, String plate)? onMarkExit,
   }) async {
@@ -197,7 +199,8 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     checkIns = _FakeCheckInRepository();
-    occupancy = FakeCheckOutRepository(categories: occupancyCategories);
+    occupancy = FakeCheckOutRepository(categories: occupancyCategories)
+      ..capacityToReturn = space;
     await tester.pumpWidget(
       testApp(
         MultiBlocProvider(
@@ -666,5 +669,38 @@ void main() {
       tester.widget<SwitchListTile>(find.byKey(const Key('check_in_left_keys'))).value,
       isFalse,
     );
+  });
+
+  testWidgets('Success: a full car group disables every car category', (
+    tester,
+  ) async {
+    await pumpPage(
+      tester,
+      occupancyCategories: const [
+        CategoryOccupancySnapshot(
+          categoryId: 1,
+          name: 'Car',
+          count: 4,
+          capacity: 0,
+          isFull: false,
+        ),
+        CategoryOccupancySnapshot(
+          categoryId: 2,
+          name: 'Motorcycle',
+          count: 0,
+          capacity: 0,
+          isFull: false,
+        ),
+      ],
+      space: const CapacitySnapshot(carOpen: 4, carCapacity: 4),
+    );
+
+    await enterPlate(tester, 'NEW999');
+    await scrollTo(tester, categoryField());
+    await tester.tap(categoryField());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Car · La categoría está llena'), findsOneWidget);
+    expect(find.text('Motorcycle'), findsOneWidget);
   });
 }

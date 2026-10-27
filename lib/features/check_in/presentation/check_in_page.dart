@@ -11,6 +11,7 @@ import '../../../core/l10n/failure_messages.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/state/submission.dart';
 import '../../../core/utils/elapsed.dart';
+import '../../../core/utils/vehicle_groups.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/storage/key_value_store.dart';
 import '../../../core/theme/tokens.dart';
@@ -496,10 +497,25 @@ class _CheckInPageState extends State<CheckInPage> {
       if (state is! DashboardLoaded) {
         return const {};
       }
-      return {
+      final full = <int>{
         for (final category in state.categories)
           if (category.isFull) category.categoryId,
       };
+      // With group spaces configured, a category is only blocked when its
+      // whole group (cars + pickups, or motorcycles) is full.
+      if (state.capacity.carsFull) {
+        full.addAll([
+          for (final category in state.categories)
+            if (isCarGroup(category.name)) category.categoryId,
+        ]);
+      }
+      if (state.capacity.motosFull) {
+        full.addAll([
+          for (final category in state.categories)
+            if (isMotoGroup(category.name)) category.categoryId,
+        ]);
+      }
+      return full;
     } on ProviderNotFoundException {
       return const {};
     }

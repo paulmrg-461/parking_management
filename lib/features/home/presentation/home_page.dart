@@ -97,7 +97,8 @@ class _Dashboard extends StatelessWidget {
     final management = destinationsFor(user.role)
         .where(managementDestinations.contains)
         .toList();
-    return RefreshIndicator(
+    final split = MediaQuery.sizeOf(context).width >= Layout.homeSplit;
+    final list = RefreshIndicator(
       onRefresh: context.read<DashboardCubit>().load,
       child: ListView(
         padding: const EdgeInsets.all(Space.md),
@@ -119,8 +120,11 @@ class _Dashboard extends StatelessWidget {
           const SizedBox(height: Space.md),
           const CapacityCard(),
           const SizedBox(height: Space.md),
-          const InsideCard(),
-          const SizedBox(height: Space.md),
+          // Wide screens move the cars-inside list to the side panel.
+          if (!split) ...[
+            const InsideCard(),
+            const SizedBox(height: Space.md),
+          ],
           const TodayCard(),
           const SizedBox(height: Space.md),
           const ShiftCard(),
@@ -153,6 +157,26 @@ class _Dashboard extends StatelessWidget {
           ],
         ],
       ),
+    );
+    if (!split) {
+      return list;
+    }
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(child: list),
+        const SizedBox(
+          width: 340,
+          child: Padding(
+            padding: EdgeInsets.only(
+              top: Space.md,
+              right: Space.md,
+              bottom: Space.md,
+            ),
+            child: SingleChildScrollView(child: InsideCard()),
+          ),
+        ),
+      ],
     );
   }
 }

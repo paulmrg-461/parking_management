@@ -120,6 +120,10 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - The ticket QR keeps its full matrix and quiet zone (the modules were clipped
   by the padded canvas) and is now verified by rendering + decoding it in a
   widget test.
+- The home occupancy figure counts the **configured spaces** (cars+pickups and
+  motos; trucks/buses excluded), the check-in dropdown disables a category only
+  when its whole group is full, and on wide screens the cars-inside list moves
+  to a **side panel**.
 - The home is a real dashboard: a **capacity card** (cars/pickups, motorcycles
   and keys: inside vs. limit, with bars) and a **cars-inside list** with plates,
   elapsed time, pass/photo hints and "See all" to check-out.
@@ -249,7 +253,7 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Tests
 
-- 660 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
+- 662 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
   integration test that runs only against a live stack.
 - SQL/RLS/RPC regressions covering capacity, shifts, discounts, passes,
   reservations, multi-site isolation, audit, diagnostics and retention.
@@ -279,7 +283,7 @@ Captured on 2026-10-24 against the local self-hosted stack:
 
 | Check | Result |
 |---|---|
-| `flutter test` | 660 passed (+1 live-stack integration skipped) |
+| `flutter test` | 662 passed (+1 live-stack integration skipped) |
 | `flutter analyze` | 0 errors, 0 warnings (only SDK deprecation infos) |
 | `flutter build web --release` | OK |
 | `supabase/tests/run.sh` | Passed (migrations + RPC/RLS regressions) |

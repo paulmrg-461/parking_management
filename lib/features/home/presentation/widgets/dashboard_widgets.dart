@@ -11,6 +11,7 @@ import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/app_icon_button.dart';
 import '../../../../core/widgets/money_text.dart';
 import '../../../../core/widgets/status_chip.dart';
+import '../../../check_out/domain/entities/capacity_snapshot.dart';
 import '../../../shifts/application/shift_cubit.dart';
 import '../../application/dashboard_cubit.dart';
 
@@ -69,63 +70,12 @@ class OccupancyCard extends StatelessWidget {
                     DashboardLoaded(
                       :final openSessions,
                       :final totalCapacity,
-                      :final isFull,
-                      :final categories,
+                      :final capacity,
                     ) =>
-                      MergeSemantics(
-                        child: Column(
-                          key: const ValueKey('loaded'),
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  totalCapacity > 0
-                                      ? '$openSessions / $totalCapacity'
-                                      : '$openSessions',
-                                  style: textTheme.displaySmall,
-                                ),
-                                if (isFull) ...[
-                                  const SizedBox(width: Space.sm),
-                                  StatusChip(
-                                    label: l10n.homeFull,
-                                    tone: StatusTone.warning,
-                                  ),
-                                ],
-                              ],
-                            ),
-                            Text(
-                              l10n.homeOccupancy,
-                              style: textTheme.bodyLarge,
-                            ),
-                            if (totalCapacity > 0) ...[
-                              const SizedBox(height: Space.xs),
-                              _OccupancyBar(
-                                fraction: (openSessions / totalCapacity).clamp(
-                                  0,
-                                  1,
-                                ),
-                              ),
-                            ],
-                            if (categories.any((c) => c.isFull)) ...[
-                              const SizedBox(height: Space.xs),
-                              Text(
-                                l10n.homeFullCategories(
-                                  categories
-                                      .where((c) => c.isFull)
-                                      .map((c) => c.name)
-                                      .join(', '),
-                                ),
-                                style: textTheme.bodySmall?.copyWith(
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.error,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
+                      _OccupancySummary(
+                        openSessions: openSessions,
+                        totalCapacity: totalCapacity,
+                        capacity: capacity,
                       ),
                     DashboardFailure(:final failure) => Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -148,6 +98,67 @@ class OccupancyCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Big occupancy number. When the site configured group spaces (cars+pickups,
+/// motorcycles) the number counts those real spots only; trucks and buses are
+/// not limited and stay out of the fraction.
+class _OccupancySummary extends StatelessWidget {
+  const _OccupancySummary({
+    required this.openSessions,
+    required this.totalCapacity,
+    required this.capacity,
+  });
+
+  final int openSessions;
+  final int totalCapacity;
+  final CapacitySnapshot capacity;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final textTheme = Theme.of(context).textTheme;
+    var occupied = 0;
+    var places = 0;
+    if (capacity.carCapacity > 0) {
+      occupied += capacity.carOpen;
+      places += capacity.carCapacity;
+    }
+    if (capacity.motoCapacity > 0) {
+      occupied += capacity.motoOpen;
+      places += capacity.motoCapacity;
+    }
+    final hasGroups = places > 0;
+    final open = hasGroups ? occupied : openSessions;
+    final total = hasGroups ? places : totalCapacity;
+    final full = total > 0 && open >= total;
+    return MergeSemantics(
+      child: Column(
+        key: const ValueKey('loaded'),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                total > 0 ? '$open / $total' : '$open',
+                style: textTheme.displaySmall,
+              ),
+              if (full) ...[
+                const SizedBox(width: Space.sm),
+                StatusChip(label: l10n.homeFull, tone: StatusTone.warning),
+              ],
+            ],
+          ),
+          Text(l10n.homeOccupancy, style: textTheme.bodyLarge),
+          if (total > 0) ...[
+            const SizedBox(height: Space.xs),
+            _OccupancyBar(fraction: (open / total).clamp(0, 1)),
+          ],
+        ],
       ),
     );
   }
