@@ -82,6 +82,10 @@ void main() {
     await tester.tap(find.text('Reintentar'));
     await tester.pumpAndSettle();
     expect(find.text('Aún no hay vehículos registrados'), findsOneWidget);
+
+    await tester.tap(find.text('Agregar vehículo'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsOneWidget);
   });
 
   testWidgets('Failure: create requires plate and normalizes it', (

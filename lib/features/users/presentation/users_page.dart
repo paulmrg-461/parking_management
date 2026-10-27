@@ -102,6 +102,11 @@ class _UsersPageState extends State<UsersPage> {
         UsersLoaded(:final users) when users.isEmpty => AsyncEmpty(
           context.l10n.usersEmpty,
           icon: Icons.people_outline,
+          action: FilledButton.icon(
+            onPressed: () => _addUser(context, context.read<UsersCubit>()),
+            icon: const Icon(Icons.add),
+            label: Text(context.l10n.userAddTooltip),
+          ),
         ),
         UsersLoaded(:final users) => AsyncReady(users),
       };

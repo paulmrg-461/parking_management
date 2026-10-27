@@ -153,6 +153,11 @@ class _MonthlyPassesPageState extends State<MonthlyPassesPage> {
       AsyncEmpty(
         context.l10n.monthlyPassesEmpty,
         icon: Icons.card_membership_outlined,
+        action: FilledButton.icon(
+          onPressed: () => _showCreateDialog(context),
+          icon: const Icon(Icons.add),
+          label: Text(context.l10n.monthlyPassAddTooltip),
+        ),
       ),
     final MonthlyPassesLoaded loaded => AsyncReady(loaded),
   };

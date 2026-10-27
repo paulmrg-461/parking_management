@@ -102,6 +102,13 @@ class _VehiclesPageState extends State<VehiclesPage> {
             ? context.l10n.vehiclesEmpty
             : context.l10n.vehiclesNoMatch(query),
         icon: Icons.directions_car_outlined,
+        action: query.isEmpty
+            ? FilledButton.icon(
+                onPressed: () => _showCreateDialog(context),
+                icon: const Icon(Icons.add),
+                label: Text(context.l10n.vehicleAddTooltip),
+              )
+            : null,
       ),
     final VehiclesLoaded loaded => AsyncReady(loaded),
   };

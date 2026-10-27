@@ -262,4 +262,13 @@ void main() {
     expect(update.endDate!.difference(update.startDate!).inDays, 29);
     expect(find.text('Mensualidad renovada 30 días'), findsOneWidget);
   });
+
+  testWidgets('Empty: no passes offers the first one', (tester) async {
+    await pumpPage(tester, passes: []);
+
+    expect(find.text('Aún no hay mensualidades'), findsOneWidget);
+    await tester.tap(find.text('Agregar mensualidad'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsOneWidget);
+  });
 }

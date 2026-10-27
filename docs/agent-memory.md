@@ -12,7 +12,7 @@ Last updated: 2026-10-26, branch `feature/supabase` (post-UI/UX polish).
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0046` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 625 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 626 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -436,7 +436,7 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 ## Latest verification (2026-10-26)
 
-- `flutter test`: 625 passed (+1 live-stack integration skipped); `flutter
+- `flutter test`: 626 passed (+1 live-stack integration skipped); `flutter
   analyze` 129 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
 - `supabase/tests/run.sh` passed (migrations `0001`–`0046`); `e2e.sh` passed
@@ -449,7 +449,8 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   monthly-pass chip on check-out, device appearance, the "already inside"
   check-in warning, the app mark/launcher icons, the site switcher moved from a
   shell strip into a compact home chip, reservation quick-hold chips (+2 h,
-  +4 h, end of day) and one-tap 30-day renewal for expiring monthly passes.
+  +4 h, end of day), one-tap 30-day renewal for expiring monthly passes, and
+  first-action buttons inside empty lists (users, vehicles, passes).
 - Hardware run found and fixed two boot bugs: Hive now initializes before the
   Supabase session cleanup, and evidence uploads are insert-only (see above).
 - Current HEAD after the polish: `21f0149` (site switcher) on top of

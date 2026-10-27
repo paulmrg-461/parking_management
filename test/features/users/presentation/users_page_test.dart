@@ -76,9 +76,13 @@ void main() {
     expect(repository.created, isNull);
   });
 
-  testWidgets('Empty: no users shows the empty state', (tester) async {
+  testWidgets('Empty: no users offers the first user', (tester) async {
     await pumpPage(tester, users: const []);
     expect(find.text('Aún no hay usuarios'), findsOneWidget);
+
+    await tester.tap(find.text('Agregar usuario'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsOneWidget);
   });
 
   testWidgets('A11y: labelled switches, 48dp targets, contrast', (
