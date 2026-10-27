@@ -1139,4 +1139,73 @@ begin
      where lot_id = 1;
 end $$;
 
+-- Holds consume the same group spaces as parked cars: a site cannot promise
+-- more spots than it has, and a walk-in cannot take a promised one.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    car_cat integer;
+    car_open integer;
+    car_reserved integer;
+    refused boolean := false;
+begin
+    select id into car_cat from public.categories
+     where lot_id = 1 and lower(name) = 'car';
+    update public.categories set capacity = 0 where id = car_cat;
+    update public.parking_settings
+       set car_capacity = 0, moto_capacity = 0, key_capacity = 0
+     where lot_id = 1;
+
+    select count(*) into car_open
+      from public.parking_sessions s
+      join public.vehicles v on v.id = s.vehicle_id
+      join public.categories c on c.id = v.category_id
+     where s.status = 'open' and s.lot_id = 1
+       and lower(c.name) in ('car', 'carro', 'auto', 'camioneta', 'suv');
+    select count(*) into car_reserved
+      from public.category_reservations r
+      join public.categories c on c.id = r.category_id
+     where r.status = 'active' and r.reserved_until > now() and r.lot_id = 1
+       and lower(c.name) in ('car', 'carro', 'auto', 'camioneta', 'suv');
+
+    update public.parking_settings
+       set car_capacity = car_open + car_reserved + 2
+     where lot_id = 1;
+
+    perform public.create_reservation('HOLDG1', car_cat, now() + interval '2 hours');
+    perform public.create_reservation('HOLDG2', car_cat, now() + interval '2 hours');
+
+    begin
+        perform public.create_reservation('HOLDG3', car_cat, now() + interval '2 hours');
+    exception when others then
+        if sqlerrm like '%ParkingFullError%' or sqlerrm like '%CategoryFullError%' then
+            refused := true;
+        else
+            raise;
+        end if;
+    end;
+    if not refused then
+        raise exception 'reservations ignored the group capacity';
+    end if;
+
+    refused := false;
+    begin
+        perform public.check_in('CAPWALK1', car_cat, null, null, '[]'::jsonb);
+    exception when others then
+        if sqlerrm like '%ParkingFullError%' or sqlerrm like '%CategoryFullError%' then
+            refused := true;
+        else
+            raise;
+        end if;
+    end;
+    if not refused then
+        raise exception 'a walk-in took a reserved space';
+    end if;
+
+    update public.parking_settings
+       set car_capacity = 0, moto_capacity = 0, key_capacity = 0
+     where lot_id = 1;
+end $$;
+
 rollback;

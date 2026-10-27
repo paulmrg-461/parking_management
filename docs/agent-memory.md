@@ -12,7 +12,7 @@ Last updated: 2026-10-26, branch `feature/supabase` (post-UI/UX polish).
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0046` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 662 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 664 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -456,6 +456,9 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   advisory locks per lot/group. Errors: `ParkingFullError`, `KeysFullError`.
 - The check-in RPC signature gained a trailing `p_left_keys` default; the old
   8-argument overload must stay dropped (two overloads make calls ambiguous).
+- `0049` makes active reservations count against the category and group
+  capacities (walk-ins cannot take a held spot); the capacity trigger and
+  `create_reservation` share the advisory locks and the same group name sets.
 - `0048 capacity_snapshot()` returns `car_open/car_capacity`,
   `moto_open/moto_capacity`, `keys_open/key_capacity` for the home. The
   `CapacitySnapshot` entity + `CheckOutRepository.capacitySnapshot()` feed
@@ -531,7 +534,7 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 ## Latest verification (2026-10-26)
 
-- `flutter test`: 662 passed (+1 live-stack integration skipped); `flutter
+- `flutter test`: 664 passed (+1 live-stack integration skipped); `flutter
   analyze` 129 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
 - `supabase/tests/run.sh` passed (migrations `0001`–`0046`); `e2e.sh` passed

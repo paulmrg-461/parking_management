@@ -530,6 +530,12 @@ class _SessionTile extends StatelessWidget {
                   tone: StatusTone.success,
                   icon: Icons.card_membership,
                 ),
+              if (session.leftKeys)
+                StatusChip(
+                  label: l10n.checkInLeftKeysShort,
+                  tone: StatusTone.neutral,
+                  icon: Icons.key_outlined,
+                ),
             ],
           ),
         ],

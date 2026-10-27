@@ -63,6 +63,7 @@ class _FakeCheckOutRepository implements CheckOutRepository {
         entryTime: DateTime(2026, 1, 1),
         hasPass: firstHasPass,
         photoCount: 2,
+        leftKeys: true,
       ),
       OpenSession(id: 2, vehicleId: 2, entryTime: DateTime(2026, 1, 1)),
     ];
@@ -548,5 +549,11 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.byTooltip('Reimprimir recibo de entrada'), findsNWidgets(2));
+  });
+
+  testWidgets('Success: a car that left its keys is flagged', (tester) async {
+    await pumpPage(tester);
+
+    expect(find.text('Llaves'), findsOneWidget);
   });
 }

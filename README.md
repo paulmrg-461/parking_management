@@ -410,7 +410,8 @@ their own, and there is a cap on cars that leave their keys (0 = no limit;
 trucks and buses are not limited). Check-in offers a “Leaves the keys” switch.
 Limits are enforced in the database under advisory locks
 (`ParkingFullError`/`KeysFullError`) and shown in the dashboard's capacity
-card; the check-in form disables a category when its whole group is full.
+card; active reservations consume the same spaces, and the check-in form
+disables a category when its whole group is full.
 
 Reservations (`/reservations`, admins) hold a slot for a plate until it checks
 in, the hold is cancelled or it expires. Active holds count against the

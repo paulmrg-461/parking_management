@@ -425,6 +425,15 @@ class InsideCard extends StatelessWidget {
                                 icon: Icons.card_membership,
                               ),
                             ],
+                            if (state.sessions[i].leftKeys) ...[
+                              const SizedBox(width: Space.xs),
+                              Icon(
+                                Icons.key_outlined,
+                                size: 16,
+                                color: theme.colorScheme.onSurfaceVariant,
+                                semanticLabel: l10n.checkInLeftKeysShort,
+                              ),
+                            ],
                             if (state.sessions[i].photoCount > 0) ...[
                               const SizedBox(width: Space.xs),
                               Icon(
