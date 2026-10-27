@@ -409,6 +409,7 @@
   "checkOutEstimate": "Total estimado: {amount}",
   "@checkOutEstimate": {"placeholders": {"amount": {"type": "String"}}},
   "checkOutPassCovered": "Mensualidad activa: sin cobro",
+  "checkOutReprintTicket": "Reimprimir recibo de entrada",
   "checkOutCharge": "Cobrar",
   "checkOutChargeTooltip": "Cobrar salida de {plate}",
   "@checkOutChargeTooltip": {"placeholders": {"plate": {"type": "String"}}},

@@ -2240,6 +2240,12 @@ abstract class AppLocalizations {
   /// **'Mensualidad activa: sin cobro'**
   String get checkOutPassCovered;
 
+  /// No description provided for @checkOutReprintTicket.
+  ///
+  /// In es, this message translates to:
+  /// **'Reimprimir recibo de entrada'**
+  String get checkOutReprintTicket;
+
   /// No description provided for @checkOutCharge.
   ///
   /// In es, this message translates to:

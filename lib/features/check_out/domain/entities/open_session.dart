@@ -8,6 +8,7 @@ class OpenSession extends Equatable {
     required this.vehicleId,
     required this.entryTime,
     this.hasPass = false,
+    this.photoCount = 0,
   });
 
   final int id;
@@ -18,6 +19,9 @@ class OpenSession extends Equatable {
   /// view), so the check-out will not charge the stay.
   final bool hasPass;
 
+  /// Evidence photos taken at check-in, for reprinting the entry ticket.
+  final int photoCount;
+
   @override
-  List<Object?> get props => [id, vehicleId, entryTime, hasPass];
+  List<Object?> get props => [id, vehicleId, entryTime, hasPass, photoCount];
 }

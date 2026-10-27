@@ -8,6 +8,7 @@ import 'package:parking_management/app/di/injection.dart';
 import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/core/pagination/paged_result.dart';
 import 'package:parking_management/core/qr/qr_decoder.dart';
+import 'package:parking_management/core/widgets/qr_code.dart';
 import 'package:parking_management/core/receipt/payment_method.dart';
 import 'package:parking_management/core/storage/key_value_store.dart';
 import 'package:parking_management/features/check_out/application/check_out_cubit.dart';
@@ -19,10 +20,14 @@ import 'package:parking_management/features/check_out/domain/entities/occupancy_
 import 'package:parking_management/features/check_out/domain/entities/today_summary.dart';
 import 'package:parking_management/features/check_out/domain/repositories/check_out_repository.dart';
 import 'package:parking_management/features/check_out/presentation/check_out_page.dart';
+import 'package:parking_management/features/auth/application/auth_cubit.dart';
+import 'package:parking_management/features/auth/domain/entities/user.dart';
 import 'package:parking_management/features/home/application/dashboard_cubit.dart';
 import 'package:parking_management/features/plate_scanning/domain/repositories/plate_image_capture.dart';
 import 'package:parking_management/features/vehicles/domain/entities/vehicle.dart';
 
+import '../../../helpers/app_harness.dart';
+import '../../../helpers/fake_auth_repository.dart';
 import '../../../helpers/fake_check_out_repository.dart';
 import '../../../helpers/fake_key_value_store.dart';
 import '../../../helpers/fake_vehicle_repository.dart';
@@ -58,6 +63,7 @@ class _FakeCheckOutRepository implements CheckOutRepository {
         vehicleId: 1,
         entryTime: DateTime(2026, 1, 1),
         hasPass: firstHasPass,
+        photoCount: 2,
       ),
       OpenSession(id: 2, vehicleId: 2, entryTime: DateTime(2026, 1, 1)),
     ];
@@ -137,6 +143,7 @@ void main() {
     bool firstHasPass = false,
     PlateImageCapture? capture,
     QrDecoder? qrDecoder,
+    UserRole? role,
   }) async {
     repository = _FakeCheckOutRepository()..firstHasPass = firstHasPass;
     occupancy = FakeCheckOutRepository();
@@ -144,10 +151,18 @@ void main() {
       Vehicle(id: 1, plate: 'ABC123', categoryId: 1),
       Vehicle(id: 2, plate: 'XYZ999', categoryId: 1),
     ]);
+    final auth = AuthCubit(
+      FakeAuthRepository(sessionToRestore: role == null ? null : sessionFor(role)),
+    );
+    if (role != null) {
+      await auth.restore();
+    }
+    addTearDown(auth.close);
     await tester.pumpWidget(
       testApp(
         MultiBlocProvider(
           providers: [
+            if (role != null) BlocProvider<AuthCubit>.value(value: auth),
             BlocProvider<CheckOutCubit>(
               create: (_) => CheckOutCubit(
                 CheckOutVehicle(repository),
@@ -523,5 +538,29 @@ void main() {
 
     await tester.tap(find.text('Cancelar'));
     await tester.pumpAndSettle();
+  });
+
+  testWidgets('Success: an admin can reprint an entry ticket', (tester) async {
+    await pumpPage(tester, role: UserRole.admin);
+
+    expect(find.byTooltip('Reimprimir recibo de entrada'), findsNWidgets(2));
+    await tester.tap(find.byTooltip('Reimprimir recibo de entrada').first);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(QrCode), findsOneWidget);
+    expect(find.text('Imprimir'), findsOneWidget);
+    expect(find.textContaining('2 fotos'), findsOneWidget);
+
+    // The ticket dialog scrolls on short screens; close it programmatically.
+    Navigator.of(tester.element(find.byType(QrCode))).pop();
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('Security: operators do not get the reprint action', (
+    tester,
+  ) async {
+    await pumpPage(tester, role: UserRole.operator);
+
+    expect(find.byTooltip('Reimprimir recibo de entrada'), findsNothing);
   });
 }

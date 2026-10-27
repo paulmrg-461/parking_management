@@ -11,6 +11,7 @@ class OpenSessionDto {
     required this.vehicleId,
     required this.entryTime,
     this.hasPass = false,
+    this.photoCount = 0,
   });
 
   factory OpenSessionDto.fromJson(Map<String, dynamic> json) =>
@@ -26,6 +27,9 @@ class OpenSessionDto {
 
   @JsonKey(name: 'has_pass', defaultValue: false)
   final bool hasPass;
+
+  @JsonKey(name: 'photo_count', defaultValue: 0)
+  final int photoCount;
 
   Map<String, dynamic> toJson() => _$OpenSessionDtoToJson(this);
 

@@ -381,6 +381,7 @@
   "checkOutEstimate": "Estimated total: {amount}",
   "@checkOutEstimate": {"placeholders": {"amount": {"type": "String"}}},
   "checkOutPassCovered": "Active monthly pass: no charge",
+  "checkOutReprintTicket": "Reprint entry receipt",
   "checkOutCharge": "Charge",
   "checkOutChargeTooltip": "Charge check-out for {plate}",
   "checkOutConfirm": "Charge the check-out for vehicle {plate}?",

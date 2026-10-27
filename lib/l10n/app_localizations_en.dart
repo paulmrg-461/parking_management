@@ -1186,6 +1186,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get checkOutPassCovered => 'Active monthly pass: no charge';
 
   @override
+  String get checkOutReprintTicket => 'Reprint entry receipt';
+
+  @override
   String get checkOutCharge => 'Charge';
 
   @override

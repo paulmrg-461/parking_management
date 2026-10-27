@@ -12,7 +12,7 @@ Last updated: 2026-10-26, branch `feature/supabase` (post-UI/UX polish).
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0046` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 647 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 649 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -438,6 +438,9 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   scan and a USB reader's `Enter` (`SearchField.onSubmitted`) reuse it.
 - Check-in success opens `showReceipt` with the QR + Imprimir (no summary step)
   and restores plate focus when the dialog closes.
+- Open sessions now carry `photo_count` (the view already exposed it) so the
+  check-out list can reprint an entry ticket: admins get a receipt icon per row
+  that opens the QR ticket with Imprimir. Operators do not (security test).
 - The shell FAB is the QR scanner (`_ScanQrFab`, hidden without capture/decoder):
   it navigates to `/check-out?scan=<plate>`, which resolves and opens the
   payment dialog. The old WhatsApp FAB (and its test) is gone; WhatsApp lives in
@@ -467,7 +470,7 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 ## Latest verification (2026-10-26)
 
-- `flutter test`: 647 passed (+1 live-stack integration skipped); `flutter
+- `flutter test`: 649 passed (+1 live-stack integration skipped); `flutter
   analyze` 129 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
 - `supabase/tests/run.sh` passed (migrations `0001`–`0046`); `e2e.sh` passed

@@ -182,6 +182,7 @@ class _CheckOutPageState extends State<CheckOutPage> {
                 rememberedMethod: _rememberedMethod,
                 onMethodChosen: _chooseMethod,
                 onCheckOut: _startCheckout,
+                canReprint: _canDiscount(context),
               ),
             ),
           ],
@@ -361,10 +362,12 @@ class _SessionsList extends StatelessWidget {
     required this.rememberedMethod,
     required this.onMethodChosen,
     required this.onCheckOut,
+    required this.canReprint,
   });
 
   final PaymentMethod? rememberedMethod;
   final ValueChanged<PaymentMethod> onMethodChosen;
+  final bool canReprint;
   final Future<void> Function(
     BuildContext context,
     OpenSession session,
@@ -434,6 +437,7 @@ class _SessionsList extends StatelessWidget {
                 plate:
                     state.plates[state.visible[index].vehicleId] ??
                     context.l10n.unknownVehicle(state.visible[index].vehicleId),
+                canReprint: canReprint,
                 onCharge: () => onCheckOut(
                   context,
                   state.visible[index],
@@ -453,11 +457,13 @@ class _SessionTile extends StatelessWidget {
     required this.session,
     required this.plate,
     required this.onCharge,
+    required this.canReprint,
   });
 
   final OpenSession session;
   final String plate;
   final VoidCallback onCharge;
+  final bool canReprint;
 
   @override
   Widget build(BuildContext context) {
@@ -500,10 +506,37 @@ class _SessionTile extends StatelessWidget {
           ),
         ],
       ),
-      trailing: FilledButton(
-        onPressed: onCharge,
-        child: Text(l10n.checkOutCharge),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (canReprint)
+            IconButton(
+              tooltip: l10n.checkOutReprintTicket,
+              visualDensity: VisualDensity.compact,
+              icon: const Icon(Icons.receipt_long_outlined),
+              onPressed: () => _reprintTicket(context),
+            ),
+          FilledButton(
+            onPressed: onCharge,
+            child: Text(l10n.checkOutCharge),
+          ),
+        ],
       ),
+    );
+  }
+
+  /// Reprints the entry ticket (with its exit QR) for a car still inside.
+  Future<void> _reprintTicket(BuildContext context) {
+    final data = ReceiptData(
+      kind: ReceiptKind.checkIn,
+      plate: plate,
+      entryTime: session.entryTime,
+      photoCount: session.photoCount,
+    );
+    return showReceipt(
+      context,
+      data,
+      onPrint: () => showReceiptPrintSheet(context, data),
     );
   }
 }
