@@ -30,6 +30,7 @@ import '../../plate_scanning/presentation/inline_plate_scan.dart';
 import '../../receipt_printing/presentation/receipt_print_sheet.dart';
 import '../../reservations/domain/entities/reservation.dart';
 import '../../reservations/domain/repositories/reservation_repository.dart';
+import '../../vehicles/domain/repositories/vehicle_repository.dart';
 import '../../notifications/presentation/notification_bell.dart';
 import '../application/check_in_cubit.dart';
 import '../application/vehicle_lookup_cubit.dart';
@@ -51,6 +52,7 @@ class CheckInPage extends StatefulWidget {
     this.initialPlate,
     this.onMarkExit,
     this.reservations,
+    this.vehicles,
   });
 
   /// Camera port (injected by the router from get_it; fakes in tests).
@@ -70,6 +72,9 @@ class CheckInPage extends StatefulWidget {
   /// Active holds, so the operator can cancel one when the customer does not
   /// arrive. Optional in tests.
   final ReservationRepository? reservations;
+
+  /// Known plates for the quick suggestions under the field. Optional.
+  final VehicleRepository? vehicles;
 
   @override
   State<CheckInPage> createState() => _CheckInPageState();
@@ -97,6 +102,7 @@ class _CheckInPageState extends State<CheckInPage> {
   bool _sessionsOpen = true;
   bool _leftKeys = false;
   List<Reservation> _activeHolds = const [];
+  List<String> _knownPlates = const [];
   static const _prefsBox = 'preferences';
   static const _lastPlateKey = 'last_plate';
 
@@ -107,6 +113,7 @@ class _CheckInPageState extends State<CheckInPage> {
     super.initState();
     unawaited(context.read<CheckInCubit>().loadOpenSessions());
     unawaited(_loadHolds());
+    unawaited(_loadKnownPlates());
     // Fresh capacity snapshot so full categories are disabled in the
     // registration dropdown even on a deep link.
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -227,6 +234,53 @@ class _CheckInPageState extends State<CheckInPage> {
     } catch (_) {
       // The hold banner is an extra; check-in keeps working without it.
     }
+  }
+
+  /// Repeat customers type two letters and pick their plate: no full plate
+  /// memory needed from the operator.
+  Future<void> _loadKnownPlates() async {
+    final repository = widget.vehicles;
+    if (repository == null) {
+      return;
+    }
+    try {
+      final page = await repository.listPage(offset: 0, limit: 200);
+      if (mounted) {
+        setState(() {
+          _knownPlates = [for (final vehicle in page.items) vehicle.plate];
+        });
+      }
+    } catch (_) {
+      // Suggestions are an extra; check-in keeps working without them.
+    }
+  }
+
+  List<String> _plateSuggestions() {
+    final typed = _plateController.text.replaceAll(RegExp(r'\s'), '')
+        .toUpperCase();
+    if (typed.length < 2) {
+      return const [];
+    }
+    final matches = <String>[];
+    for (final plate in _knownPlates) {
+      final normalized = plate.toUpperCase();
+      if (normalized != typed && normalized.startsWith(typed)) {
+        matches.add(plate);
+        if (matches.length == 4) {
+          break;
+        }
+      }
+    }
+    return matches;
+  }
+
+  void _pickPlate(String plate) {
+    _plateController.value = TextEditingValue(
+      text: plate,
+      selection: TextSelection.collapsed(offset: plate.length),
+    );
+    _onPlateChanged(plate);
+    _lookupNow();
   }
 
   Reservation? _holdFor(String plate) {
@@ -356,6 +410,7 @@ class _CheckInPageState extends State<CheckInPage> {
         setState(() => _lastPlate = result.plate);
         unawaited(_rememberLastPlate(result.plate));
         unawaited(_loadHolds());
+    unawaited(_loadKnownPlates());
         unawaited(context.read<DashboardCubit>().load());
         final message = context.l10n.checkInSuccess(result.plate);
         SemanticsService.announce(message, Directionality.of(context));
@@ -479,6 +534,23 @@ class _CheckInPageState extends State<CheckInPage> {
           onChanged: _onPlateChanged,
           onSubmitted: (_) => _lookupNow(),
         ),
+        if (_plateSuggestions() case final suggestions
+            when suggestions.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final plate in suggestions)
+                  ActionChip(
+                    avatar: const Icon(Icons.history, size: 18),
+                    label: Text(plate),
+                    onPressed: () => _pickPlate(plate),
+                  ),
+              ],
+            ),
+          ),
         if (openSession != null)
           Padding(
             padding: const EdgeInsets.only(top: 8),

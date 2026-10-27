@@ -29,6 +29,8 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   breakdown, so the explanation can never drift from the charge.
 - The occupancy KPI adds a radial gauge (percentage as text) next to the
   existing bar.
+- Check-in suggests known plates after two typed characters (tap to fill and
+  look it up); it is optional and never blocks the manual field.
 
 **Core operations**
 
@@ -293,7 +295,7 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Tests
 
-- 682 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
+- 685 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
   integration test that runs only against a live stack.
 - SQL/RLS/RPC regressions covering capacity, shifts, discounts, passes,
   reservations, multi-site isolation, audit, diagnostics and retention.
@@ -331,7 +333,7 @@ Captured on 2026-10-24 against the local self-hosted stack:
 
 | Check | Result |
 |---|---|
-| `flutter test` | 682 passed (+1 live-stack integration skipped) |
+| `flutter test` | 685 passed (+1 live-stack integration skipped) |
 | `flutter analyze` | 0 errors, 0 warnings (only SDK deprecation infos) |
 | `flutter build web --release` | OK |
 | `supabase/tests/run.sh` | Passed (migrations + RPC/RLS regressions) |
