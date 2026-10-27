@@ -563,4 +563,15 @@ void main() {
 
     expect(find.byTooltip('Reimprimir recibo de entrada'), findsNothing);
   });
+
+  testWidgets('A11y: the admin row fits a phone width', (tester) async {
+    tester.view.physicalSize = const Size(400, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await pumpPage(tester, role: UserRole.admin);
+
+    expect(tester.takeException(), isNull);
+    expect(find.byTooltip('Reimprimir recibo de entrada'), findsNWidgets(2));
+  });
 }

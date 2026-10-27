@@ -477,31 +477,43 @@ class _SessionTile extends StatelessWidget {
         children: [
           Text(l10n.sessionEntry(Formatters.dateTime(session.entryTime))),
           const SizedBox(height: 2),
-          Row(
+          // Wrap so the elapsed time and chips never overflow when the
+          // trailing actions (Cobrar + reprint) narrow the row on phones.
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Icon(
-                Icons.timer_outlined,
-                size: 14,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.timer_outlined,
+                    size: 14,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      elapsedLabel(l10n, session.entryTime),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 4),
-              Text(elapsedLabel(l10n, session.entryTime)),
-              if (longStay) ...[
-                const SizedBox(width: 8),
+              if (longStay)
                 StatusChip(
                   label: l10n.checkOutLongStay,
                   tone: StatusTone.warning,
                   icon: Icons.warning_amber_outlined,
                 ),
-              ],
-              if (session.hasPass) ...[
-                const SizedBox(width: 8),
+              if (session.hasPass)
                 StatusChip(
                   label: l10n.paymentMonthlyPass,
                   tone: StatusTone.success,
                   icon: Icons.card_membership,
                 ),
-              ],
             ],
           ),
         ],
