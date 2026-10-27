@@ -141,8 +141,10 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - Check-in shows the **ticket with its QR as soon as the entry is registered**
   (with Imprimir right there), on screen, in the PDF and on thermal printers. At the exit, the app's
   camera scan opens that session's payment dialog; a USB QR reader can type the
-  plate into the search field and Enter opens it too. The camera reader is pure
-  Dart (`zxing2`), so it works offline.
+  plate into the search field and Enter opens it too. On phones the scanner is
+  a **live camera preview** (`mobile_scanner`) that detects the QR
+  automatically and closes itself; web keeps the photo/USB-reader path. The
+  photo decoder is pure Dart (`zxing2`) and works offline.
 - The shell's WhatsApp shortcut is now a **QR scan shortcut** that reads a
   receipt and opens its check-out (with `/check-out?scan=PLATE`).
 - Check-out shows the shared empty state (no cars inside, or no plate match)

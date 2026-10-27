@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/l10n/l10n.dart';
 import '../di/injection.dart';
 import '../../core/qr/qr_decoder.dart';
+import '../../core/qr/qr_scan_page.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/widgets/offline_banner.dart';
 import '../../core/widgets/submission_feedback.dart';
@@ -219,7 +221,7 @@ class _ScanQrFab extends StatelessWidget {
     final decoder = serviceLocator.isRegistered<QrDecoder>()
         ? serviceLocator<QrDecoder>()
         : null;
-    if (capture == null || decoder == null) {
+    if (kIsWeb && (capture == null || decoder == null)) {
       return const SizedBox.shrink();
     }
     return FloatingActionButton(
@@ -231,29 +233,33 @@ class _ScanQrFab extends StatelessWidget {
 
   Future<void> _scan(
     BuildContext context,
-    PlateImageCapture capture,
-    QrDecoder decoder,
+    PlateImageCapture? capture,
+    QrDecoder? decoder,
   ) async {
+    String? payload;
     try {
-      final file = await capture.capture();
-      if (file == null || !context.mounted) {
-        return;
+      if (!kIsWeb) {
+        payload = await scanQrWithCamera(context);
+      } else if (capture != null && decoder != null) {
+        final file = await capture.capture();
+        if (file != null) {
+          payload = await decoder.decode(await file.readAsBytes());
+        }
       }
-      final payload = await decoder.decode(await file.readAsBytes());
-      if (!context.mounted) {
-        return;
-      }
-      final plate = payload == null ? null : plateFromQrPayload(payload);
-      if (plate == null) {
-        showInfoSnack(context, context.l10n.checkOutQrUnreadable);
-        return;
-      }
-      context.go('/check-out?scan=$plate');
     } catch (_) {
-      if (context.mounted) {
-        showErrorSnack(context, context.l10n.checkOutQrUnreadable);
-      }
+      payload = null;
     }
+    if (!context.mounted) {
+      return;
+    }
+    final plate = payload == null ? null : plateFromQrPayload(payload);
+    if (plate == null) {
+      if (payload != null) {
+        showInfoSnack(context, context.l10n.checkOutQrUnreadable);
+      }
+      return;
+    }
+    context.go('/check-out?scan=$plate');
   }
 }
 

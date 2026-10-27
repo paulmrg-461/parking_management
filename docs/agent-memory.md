@@ -455,9 +455,13 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   printed on the **entry** receipt (screen, PDF via `pw.BarcodeWidget`, thermal
   via `GS ( k`) and captioned with `ReceiptLabels.scanHint`. Check-out receipts
   carry no QR: the car is already gone.
-- `QrDecoder` (`core/qr/qr_decoder.dart`, zxing2 + image, pure Dart) decodes a
-  camera capture; `plateFromQrPayload` accepts a bare plate or `?plate=`/`?p=`
-  and rejects anything else (a random QR cannot start a check-out).
+- `scanQrWithCamera` (`core/qr/qr_scan_page.dart`, `mobile_scanner`) is the
+  phone path: a live preview with torch, one result pops the page (haptic).
+  Web has no live scanner; the check-out page and the shell FAB fall back to
+  `PlateImageCapture` + `QrDecoder` (file/photo).
+- `QrDecoder` (`core/qr/qr_decoder.dart`, zxing2 + image, pure Dart) decodes the
+  web capture; `plateFromQrPayload` accepts a bare plate or `?plate=`/`?p=` and
+  rejects anything else (a random QR cannot start a check-out).
 - Check-out: `resolvePlate` asks the server for the exact plate (limit 2, only a
   single match opens); `_startCheckout` moved from the tile to the page so the
   scan and a USB reader's `Enter` (`SearchField.onSubmitted`) reuse it.

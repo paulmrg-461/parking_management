@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -10,6 +11,7 @@ import '../../../core/l10n/failure_messages.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/state/submission.dart';
 import '../../../core/qr/qr_decoder.dart';
+import '../../../core/qr/qr_scan_page.dart';
 import '../../../core/utils/elapsed.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/empty_state.dart';
@@ -44,6 +46,7 @@ class CheckOutPage extends StatefulWidget {
     this.scanPlate,
     this.capture,
     this.qrDecoder,
+    this.scanQr,
   });
 
   /// Plate to filter by (e.g. arriving from the vehicle history).
@@ -57,6 +60,9 @@ class CheckOutPage extends StatefulWidget {
   /// omit the scanner (the field still accepts a USB reader).
   final PlateImageCapture? capture;
   final QrDecoder? qrDecoder;
+
+  /// Test seam: returns the payload the live scanner read (or null to cancel).
+  final Future<String?> Function(BuildContext context)? scanQr;
 
   @override
   State<CheckOutPage> createState() => _CheckOutPageState();
@@ -165,7 +171,8 @@ class _CheckOutPageState extends State<CheckOutPage> {
                           unawaited(_resolveAndOpen(context, value)),
                     ),
                   ),
-                  if (widget.capture != null && widget.qrDecoder != null) ...[
+                  if (!kIsWeb ||
+                      (widget.capture != null && widget.qrDecoder != null)) ...[
                     const SizedBox(width: 8),
                     IconButton.filledTonal(
                       tooltip: context.l10n.checkOutScanQr,
@@ -273,32 +280,41 @@ class _CheckOutPageState extends State<CheckOutPage> {
     );
   }
 
-  /// Scans the QR printed on a receipt and opens that session (camera path).
+  /// Scans the QR printed on a receipt: live camera on mobile, photo picker on
+  /// web (where the USB reader is the usual path).
   Future<void> _scanQr(BuildContext context) async {
+    final payload =
+        await (widget.scanQr?.call(context) ?? _scanPayload(context));
+    if (!context.mounted) {
+      return;
+    }
+    final plate = payload == null ? null : plateFromQrPayload(payload);
+    if (plate == null) {
+      if (payload != null) {
+        showInfoSnack(context, context.l10n.checkOutQrUnreadable);
+      }
+      return;
+    }
+    await _resolveAndOpen(context, plate);
+  }
+
+  Future<String?> _scanPayload(BuildContext context) async {
+    if (!kIsWeb) {
+      return scanQrWithCamera(context);
+    }
     final capture = widget.capture;
     final decoder = widget.qrDecoder;
     if (capture == null || decoder == null) {
-      return;
+      return null;
     }
     try {
       final file = await capture.capture();
-      if (file == null || !context.mounted) {
-        return;
+      if (file == null) {
+        return null;
       }
-      final payload = await decoder.decode(await file.readAsBytes());
-      if (!context.mounted) {
-        return;
-      }
-      final plate = payload == null ? null : plateFromQrPayload(payload);
-      if (plate == null) {
-        showInfoSnack(context, context.l10n.checkOutQrUnreadable);
-        return;
-      }
-      await _resolveAndOpen(context, plate);
+      return await decoder.decode(await file.readAsBytes());
     } catch (_) {
-      if (context.mounted) {
-        showErrorSnack(context, context.l10n.checkOutQrUnreadable);
-      }
+      return null;
     }
   }
 

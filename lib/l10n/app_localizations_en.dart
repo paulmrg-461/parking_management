@@ -1207,6 +1207,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get scanExitTooltip => 'Scan a QR to check out';
 
   @override
+  String get scanQrTitle => 'Scan receipt';
+
+  @override
+  String get scanQrHint => 'Point the camera at the receipt QR code';
+
+  @override
+  String get scanQrTorch => 'Flashlight';
+
+  @override
+  String get scanQrCameraError =>
+      'The camera could not start. Check the permission.';
+
+  @override
   String get checkOutScanQr => 'Scan the receipt QR';
 
   @override

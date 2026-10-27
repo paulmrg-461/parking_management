@@ -1215,6 +1215,19 @@ class AppLocalizationsEs extends AppLocalizations {
   String get scanExitTooltip => 'Escanear QR y registrar salida';
 
   @override
+  String get scanQrTitle => 'Escanear recibo';
+
+  @override
+  String get scanQrHint => 'Apunta la cámara al código QR del recibo';
+
+  @override
+  String get scanQrTorch => 'Linterna';
+
+  @override
+  String get scanQrCameraError =>
+      'No se pudo abrir la cámara. Revisa el permiso.';
+
+  @override
   String get checkOutScanQr => 'Escanear el QR del recibo';
 
   @override

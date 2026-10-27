@@ -2294,6 +2294,30 @@ abstract class AppLocalizations {
   /// **'Escanear QR y registrar salida'**
   String get scanExitTooltip;
 
+  /// No description provided for @scanQrTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Escanear recibo'**
+  String get scanQrTitle;
+
+  /// No description provided for @scanQrHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Apunta la cámara al código QR del recibo'**
+  String get scanQrHint;
+
+  /// No description provided for @scanQrTorch.
+  ///
+  /// In es, this message translates to:
+  /// **'Linterna'**
+  String get scanQrTorch;
+
+  /// No description provided for @scanQrCameraError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo abrir la cámara. Revisa el permiso.'**
+  String get scanQrCameraError;
+
   /// No description provided for @checkOutScanQr.
   ///
   /// In es, this message translates to:

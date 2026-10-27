@@ -1,13 +1,9 @@
-import 'dart:typed_data';
-
-import 'package:cross_file/cross_file.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/app/di/injection.dart';
 import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/core/pagination/paged_result.dart';
-import 'package:parking_management/core/qr/qr_decoder.dart';
 import 'package:parking_management/core/widgets/qr_code.dart';
 import 'package:parking_management/core/receipt/payment_method.dart';
 import 'package:parking_management/core/storage/key_value_store.dart';
@@ -24,7 +20,6 @@ import 'package:parking_management/features/check_out/presentation/check_out_pag
 import 'package:parking_management/features/auth/application/auth_cubit.dart';
 import 'package:parking_management/features/auth/domain/entities/user.dart';
 import 'package:parking_management/features/home/application/dashboard_cubit.dart';
-import 'package:parking_management/features/plate_scanning/domain/repositories/plate_image_capture.dart';
 import 'package:parking_management/features/vehicles/domain/entities/vehicle.dart';
 
 import '../../../helpers/app_harness.dart';
@@ -119,23 +114,6 @@ class _FakeCheckOutRepository implements CheckOutRepository {
   }
 }
 
-class _FakeCapture implements PlateImageCapture {
-  int captures = 0;
-
-  @override
-  Future<XFile?> capture() async {
-    captures++;
-    return XFile.fromData(Uint8List.fromList([1, 2, 3]), name: 'qr.png');
-  }
-}
-
-class _FakeQrDecoder implements QrDecoder {
-  String? payload;
-
-  @override
-  Future<String?> decode(Uint8List bytes) async => payload;
-}
-
 void main() {
   late _FakeCheckOutRepository repository;
   late FakeCheckOutRepository occupancy;
@@ -145,8 +123,7 @@ void main() {
     String? initialQuery,
     String? initialScan,
     bool firstHasPass = false,
-    PlateImageCapture? capture,
-    QrDecoder? qrDecoder,
+    Future<String?> Function(BuildContext context)? scanQr,
     UserRole? role,
   }) async {
     repository = _FakeCheckOutRepository()..firstHasPass = firstHasPass;
@@ -182,8 +159,7 @@ void main() {
           child: CheckOutPage(
             initialQuery: initialQuery,
             scanPlate: initialScan,
-            capture: capture,
-            qrDecoder: qrDecoder,
+            scanQr: scanQr,
           ),
         ),
       ),
@@ -480,14 +456,11 @@ void main() {
   testWidgets('Success: scanning a receipt QR opens its check-out', (
     tester,
   ) async {
-    final capture = _FakeCapture();
-    final decoder = _FakeQrDecoder()..payload = 'XYZ999';
-    await pumpPage(tester, capture: capture, qrDecoder: decoder);
+    await pumpPage(tester, scanQr: (_) async => 'XYZ999');
 
     await tester.tap(find.byTooltip('Escanear el QR del recibo'));
     await tester.pumpAndSettle();
 
-    expect(capture.captures, 1);
     expect(find.textContaining('XYZ999'), findsWidgets);
     expect(find.text('Efectivo'), findsOneWidget);
 
@@ -496,8 +469,7 @@ void main() {
   });
 
   testWidgets('Failure: an unreadable QR explains itself', (tester) async {
-    final decoder = _FakeQrDecoder()..payload = 'https://example.com/menu';
-    await pumpPage(tester, capture: _FakeCapture(), qrDecoder: decoder);
+    await pumpPage(tester, scanQr: (_) async => 'https://example.com/menu');
 
     await tester.tap(find.byTooltip('Escanear el QR del recibo'));
     await tester.pumpAndSettle();
@@ -522,8 +494,7 @@ void main() {
   testWidgets('Failure: a plate without an open session is reported', (
     tester,
   ) async {
-    final decoder = _FakeQrDecoder()..payload = 'NOPE01';
-    await pumpPage(tester, capture: _FakeCapture(), qrDecoder: decoder);
+    await pumpPage(tester, scanQr: (_) async => 'NOPE01');
 
     await tester.tap(find.byTooltip('Escanear el QR del recibo'));
     await tester.pumpAndSettle();
