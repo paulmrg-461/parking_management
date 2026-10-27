@@ -1121,6 +1121,9 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get markExit => 'Marcar salida';
+
+  @override
   String get openSessionsTitle => 'Vehículos dentro';
 
   @override

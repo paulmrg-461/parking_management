@@ -120,6 +120,9 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - The ticket QR keeps its full matrix and quiet zone (the modules were clipped
   by the padded canvas) and is now verified by rendering + decoding it in a
   widget test.
+- The check-in "vehicles inside" widget is an **accordion** with the count:
+  each car offers its receipt (QR + print) and **Mark exit**, which jumps to
+  check-out with that plate.
 - Admins can see the cars still inside from check-out and **reprint their
   entry ticket** (QR + Imprimir) from each row, for a lost or damaged ticket.
   The row subtitle wraps its chips and shortens the elapsed time on phones.
@@ -238,7 +241,7 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Tests
 
-- 650 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
+- 651 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
   integration test that runs only against a live stack.
 - SQL/RLS/RPC regressions covering capacity, shifts, discounts, passes,
   reservations, multi-site isolation, audit, diagnostics and retention.
@@ -268,7 +271,7 @@ Captured on 2026-10-24 against the local self-hosted stack:
 
 | Check | Result |
 |---|---|
-| `flutter test` | 650 passed (+1 live-stack integration skipped) |
+| `flutter test` | 651 passed (+1 live-stack integration skipped) |
 | `flutter analyze` | 0 errors, 0 warnings (only SDK deprecation infos) |
 | `flutter build web --release` | OK |
 | `supabase/tests/run.sh` | Passed (migrations + RPC/RLS regressions) |

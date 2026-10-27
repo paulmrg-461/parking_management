@@ -2132,6 +2132,12 @@ abstract class AppLocalizations {
   /// **'Entrada guardada sin conexión: {plate}'**
   String checkInQueued(String plate);
 
+  /// No description provided for @markExit.
+  ///
+  /// In es, this message translates to:
+  /// **'Marcar salida'**
+  String get markExit;
+
   /// No description provided for @openSessionsTitle.
   ///
   /// In es, this message translates to:

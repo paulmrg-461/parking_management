@@ -385,6 +385,7 @@
   "@checkInSuccess": {"placeholders": {"plate": {"type": "String"}}},
   "checkInQueued": "Entrada guardada sin conexión: {plate}",
   "@checkInQueued": {"placeholders": {"plate": {"type": "String"}}},
+  "markExit": "Marcar salida",
   "openSessionsTitle": "Vehículos dentro",
   "openSessionsEmpty": "No hay vehículos en el parqueadero",
   "sessionEntry": "Entrada: {time}",

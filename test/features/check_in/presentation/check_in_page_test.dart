@@ -186,6 +186,7 @@ void main() {
     _FakeScanner? scanner,
     List<CategoryOccupancySnapshot> occupancyCategories = const [],
     String? initialPlate,
+    void Function(BuildContext context, String plate)? onMarkExit,
   }) async {
     checkIns = _FakeCheckInRepository();
     occupancy = FakeCheckOutRepository(categories: occupancyCategories);
@@ -214,6 +215,7 @@ void main() {
             capture: _FakeCapture(returnsPhoto: photos),
             canScan: canScan,
             initialPlate: initialPlate,
+            onMarkExit: onMarkExit,
           ),
         ),
       ),
@@ -609,5 +611,25 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('ya figura dentro'), findsNothing);
+  });
+
+  testWidgets('Success: vehicles inside collapse and can be marked for exit', (
+    tester,
+  ) async {
+    String? marked;
+    await pumpPage(tester, onMarkExit: (_, plate) => marked = plate);
+
+    expect(find.text('OPEN01'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('sessions_toggle')));
+    await tester.pumpAndSettle();
+    expect(find.text('OPEN01'), findsNothing);
+
+    await tester.tap(find.byKey(const Key('sessions_toggle')));
+    await tester.pumpAndSettle();
+    expect(find.text('OPEN01'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Marcar salida'));
+    await tester.pumpAndSettle();
+    expect(marked, 'OPEN01');
   });
 }

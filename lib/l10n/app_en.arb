@@ -361,6 +361,7 @@
   "checkInSubmit": "Register check-in",
   "checkInSuccess": "Check-in created for {plate}",
   "checkInQueued": "Check-in saved offline: {plate}",
+  "markExit": "Mark exit",
   "openSessionsTitle": "Parked vehicles",
   "openSessionsEmpty": "No vehicles parked",
   "sessionEntry": "Entry: {time}",

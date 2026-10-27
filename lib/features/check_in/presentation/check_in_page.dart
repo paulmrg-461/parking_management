@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/l10n/failure_messages.dart';
 import '../../../core/l10n/l10n.dart';
@@ -12,6 +13,7 @@ import '../../../core/state/submission.dart';
 import '../../../core/utils/elapsed.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/storage/key_value_store.dart';
+import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/photo_strip.dart';
 import '../../../core/widgets/plate_input_field.dart';
 import '../../../core/widgets/receipt_card.dart';
@@ -42,6 +44,7 @@ class CheckInPage extends StatefulWidget {
     required this.capture,
     this.canScan = true,
     this.initialPlate,
+    this.onMarkExit,
   });
 
   /// Camera port (injected by the router from get_it; fakes in tests).
@@ -54,6 +57,9 @@ class CheckInPage extends StatefulWidget {
   /// Plate to prefill (e.g. from a reservation): the vehicle lookup runs as
   /// soon as the page opens, saving a retype.
   final String? initialPlate;
+
+  /// Opens check-out for an open session (injectable for widget tests).
+  final void Function(BuildContext context, String plate)? onMarkExit;
 
   @override
   State<CheckInPage> createState() => _CheckInPageState();
@@ -78,6 +84,7 @@ class _CheckInPageState extends State<CheckInPage> {
   Timer? _debounce;
   int? _categoryId;
   String? _lastPlate;
+  bool _sessionsOpen = true;
   static const _prefsBox = 'preferences';
   static const _lastPlateKey = 'last_plate';
 
@@ -331,11 +338,18 @@ class _CheckInPageState extends State<CheckInPage> {
                 padding: const EdgeInsets.all(16),
                 sliver: SliverToBoxAdapter(child: _buildForm(context)),
               ),
-              const SliverPadding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
-                sliver: SliverToBoxAdapter(child: _SessionsHeader()),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                sliver: SliverToBoxAdapter(
+                  child: _SessionsHeader(
+                    open: _sessionsOpen,
+                    onToggle: () =>
+                        setState(() => _sessionsOpen = !_sessionsOpen),
+                  ),
+                ),
               ),
-              const _OpenSessionsSliver(),
+              if (_sessionsOpen)
+                _OpenSessionsSliver(onMarkExit: widget.onMarkExit),
             ],
           ),
         ),
@@ -540,18 +554,72 @@ class _CheckInPageState extends State<CheckInPage> {
   }
 }
 
+/// Collapsible "vehicles inside" header: shows the count and hides the list
+/// when the operator is focused on the form.
 class _SessionsHeader extends StatelessWidget {
-  const _SessionsHeader();
+  const _SessionsHeader({required this.open, required this.onToggle});
+
+  final bool open;
+  final VoidCallback onToggle;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final scheme = Theme.of(context).colorScheme;
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const Divider(height: 32),
-        Text(
-          context.l10n.openSessionsTitle,
-          style: const TextStyle(fontWeight: FontWeight.bold),
+        Material(
+          color: scheme.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(Radii.sm),
+          child: InkWell(
+            key: const Key('sessions_toggle'),
+            borderRadius: BorderRadius.circular(Radii.sm),
+            onTap: onToggle,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: Space.sm,
+                vertical: 14,
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.local_parking_outlined,
+                    size: 20,
+                    color: scheme.primary,
+                  ),
+                  const SizedBox(width: Space.sm),
+                  Expanded(
+                    child: BlocBuilder<CheckInCubit, CheckInState>(
+                      buildWhen: (previous, current) =>
+                          previous.sessions.length != current.sessions.length,
+                      builder: (context, state) => Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              l10n.openSessionsTitle,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.titleSmall,
+                            ),
+                          ),
+                          if (state.sessions.isNotEmpty) ...[
+                            const SizedBox(width: Space.sm),
+                            Badge(label: Text('${state.sessions.length}')),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                  AnimatedRotation(
+                    turns: open ? 0 : -0.25,
+                    duration: Motion.short,
+                    child: const Icon(Icons.expand_more, size: 20),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
         const SizedBox(height: 8),
       ],
@@ -561,8 +629,14 @@ class _SessionsHeader extends StatelessWidget {
 
 /// Lazily built list of open sessions; rebuilds only when the list (or its
 /// load status) changes, never on form submissions.
+void _markExit(BuildContext context, String plate) => context.push(
+  '/check-out?scan=${Uri.encodeQueryComponent(plate)}',
+);
+
 class _OpenSessionsSliver extends StatelessWidget {
-  const _OpenSessionsSliver();
+  const _OpenSessionsSliver({this.onMarkExit});
+
+  final void Function(BuildContext context, String plate)? onMarkExit;
 
   @override
   Widget build(BuildContext context) {
@@ -597,7 +671,10 @@ class _OpenSessionsSliver extends StatelessWidget {
         return SliverList.builder(
           itemCount: state.sessions.length,
           itemBuilder: (context, index) =>
-              _SessionTile(session: state.sessions[index]),
+              _SessionTile(
+                session: state.sessions[index],
+                onMarkExit: onMarkExit,
+              ),
         );
       },
     );
@@ -605,9 +682,10 @@ class _OpenSessionsSliver extends StatelessWidget {
 }
 
 class _SessionTile extends StatelessWidget {
-  const _SessionTile({required this.session});
+  const _SessionTile({required this.session, this.onMarkExit});
 
   final ParkingSession session;
+  final void Function(BuildContext context, String plate)? onMarkExit;
 
   @override
   Widget build(BuildContext context) {
@@ -621,10 +699,23 @@ class _SessionTile extends StatelessWidget {
       ),
       trailing: session.status == ParkingSessionStatus.pendingSync
           ? Chip(label: Text(l10n.statusPendingSync))
-          : IconButton(
-              icon: const Icon(Icons.receipt_long),
-              tooltip: l10n.receiptView,
-              onPressed: () => _viewReceipt(context),
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.receipt_long_outlined),
+                  tooltip: l10n.receiptView,
+                  onPressed: () => _viewReceipt(context),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.logout),
+                  tooltip: l10n.markExit,
+                  onPressed: () => (onMarkExit ?? _markExit)(
+                    context,
+                    session.plate,
+                  ),
+                ),
+              ],
             ),
       onTap: () => _viewReceipt(context),
     );
