@@ -99,4 +99,26 @@ void main() {
     expect(branding.state.logoOrNull, Uint8List.fromList(_logoBytes));
     expect(repository.logoBytes, Uint8List.fromList(_logoBytes));
   });
+
+  testWidgets('Security: leaving with unsaved edits asks before discarding', (
+    tester,
+  ) async {
+    final repository = FakeParkingSettingsRepository(_configured);
+    await pumpPage(tester, repository: repository);
+
+    await tester.enterText(
+      find.byKey(const Key('settings_name')),
+      'Parqueadero Sur',
+    );
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    expect(find.text('¿Descartar cambios?'), findsOneWidget);
+    await tester.tap(find.text('Cancelar'));
+    await tester.pumpAndSettle();
+
+    // Still on the form with the edit intact and nothing saved.
+    expect(find.byKey(const Key('settings_name')), findsOneWidget);
+    expect(repository.settings.name, _configured.name);
+  });
 }

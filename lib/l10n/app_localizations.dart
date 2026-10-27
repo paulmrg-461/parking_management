@@ -1646,6 +1646,24 @@ abstract class AppLocalizations {
   /// **'Más secciones de gestión'**
   String get navMoreTooltip;
 
+  /// No description provided for @settingsDiscardTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Descartar cambios?'**
+  String get settingsDiscardTitle;
+
+  /// No description provided for @settingsDiscardBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Hay cambios sin guardar en la configuración.'**
+  String get settingsDiscardBody;
+
+  /// No description provided for @settingsDiscard.
+  ///
+  /// In es, this message translates to:
+  /// **'Descartar'**
+  String get settingsDiscard;
+
   /// No description provided for @settingsTitle.
   ///
   /// In es, this message translates to:

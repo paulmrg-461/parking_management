@@ -849,6 +849,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navMoreTooltip => 'More management sections';
 
   @override
+  String get settingsDiscardTitle => 'Discard changes?';
+
+  @override
+  String get settingsDiscardBody => 'There are unsaved settings changes.';
+
+  @override
+  String get settingsDiscard => 'Discard';
+
+  @override
   String get settingsTitle => 'Parking settings';
 
   @override

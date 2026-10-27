@@ -854,6 +854,16 @@ class AppLocalizationsEs extends AppLocalizations {
   String get navMoreTooltip => 'Más secciones de gestión';
 
   @override
+  String get settingsDiscardTitle => '¿Descartar cambios?';
+
+  @override
+  String get settingsDiscardBody =>
+      'Hay cambios sin guardar en la configuración.';
+
+  @override
+  String get settingsDiscard => 'Descartar';
+
+  @override
   String get settingsTitle => 'Configuración del parqueadero';
 
   @override

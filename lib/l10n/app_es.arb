@@ -289,6 +289,9 @@
   "navMore": "Más",
   "navMoreTooltip": "Más secciones de gestión",
 
+  "settingsDiscardTitle": "¿Descartar cambios?",
+  "settingsDiscardBody": "Hay cambios sin guardar en la configuración.",
+  "settingsDiscard": "Descartar",
   "settingsTitle": "Configuración del parqueadero",
   "settingsEvidenceRetention": "Retención de evidencias (días)",
   "settingsEvidenceRetentionHint": "0 = conservar siempre. Las fotos más antiguas se borran automáticamente.",
