@@ -1141,6 +1141,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchPlate => 'Search by plate';
 
   @override
+  String get checkOutClearSearch => 'Clear search';
+
+  @override
   String checkOutNoMatch(String query) {
     return 'No plate matches “$query”';
   }

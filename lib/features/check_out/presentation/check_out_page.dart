@@ -11,6 +11,7 @@ import '../../../core/l10n/l10n.dart';
 import '../../../core/state/submission.dart';
 import '../../../core/utils/elapsed.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_state.dart';
 import '../../../core/widgets/receipt_card.dart';
 import '../../../core/widgets/search_field.dart';
@@ -239,12 +240,22 @@ class _SessionsList extends StatelessWidget {
 
   Widget _buildList(BuildContext context, CheckOutLoaded state) {
     if (state.visible.isEmpty) {
-      return Center(
-        child: Text(
-          state.query.isEmpty
-              ? context.l10n.openSessionsEmpty
-              : context.l10n.checkOutNoMatch(state.query),
-        ),
+      final query = state.query;
+      return EmptyState(
+        message: query.isEmpty
+            ? context.l10n.openSessionsEmpty
+            : context.l10n.checkOutNoMatch(query),
+        icon: query.isEmpty ? Icons.local_parking_outlined : Icons.search_off,
+        action: query.isEmpty
+            ? null
+            : TextButton.icon(
+                onPressed: () {
+                  context.read<CheckOutCubit>().search('');
+                  resetActiveSearchField();
+                },
+                icon: const Icon(Icons.clear),
+                label: Text(context.l10n.checkOutClearSearch),
+              ),
       );
     }
     final showFooter = state.hasMore;

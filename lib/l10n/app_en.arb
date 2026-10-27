@@ -366,6 +366,7 @@
   "statusClosed": "Closed",
   "checkOutTitle": "Check-out",
   "searchPlate": "Search by plate",
+  "checkOutClearSearch": "Clear search",
   "checkOutNoMatch": "No plate matches “{query}”",
   "checkOutLongStay": "Over 24 h",
   "checkOutEstimate": "Estimated total: {amount}",

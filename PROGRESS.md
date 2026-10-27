@@ -294,7 +294,8 @@ The app is now a Supabase-only stack: FastAPI, Alembic, Dio and Redis are gone.
   within a week offers a one-tap 30-day renewal from the day after its end.
   Empty lists (users, vehicles, passes) show their first-action button instead
   of a dead end, and leaving the settings form with edits asks before
-  discarding them.
+  discarding them. Check-out empty and no-match states use the shared empty
+  state, with a clear-search action on a miss.
 
 ## Infra/tooling (not OpenSpec capabilities — repo scaffolding)
 
@@ -342,7 +343,7 @@ notable changes and the migration history.
 
 ## Test counts
 
-- Flutter (`flutter test`): 627 passed (plus 1 integration test that runs only against a live stack). `flutter analyze`: 0 errors/warnings
+- Flutter (`flutter test`): 628 passed (plus 1 integration test that runs only against a live stack). `flutter analyze`: 0 errors/warnings
   (98 SDK-deprecation/const infos under the local Flutter 3.50 beta; CI pins
   3.49 where the baseline is clean).
 - SQL/compose: validated against the running Supabase stack and by

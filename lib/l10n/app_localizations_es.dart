@@ -1147,6 +1147,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get searchPlate => 'Buscar por placa';
 
   @override
+  String get checkOutClearSearch => 'Limpiar búsqueda';
+
+  @override
   String checkOutNoMatch(String query) {
     return 'Ninguna placa coincide con «$query»';
   }

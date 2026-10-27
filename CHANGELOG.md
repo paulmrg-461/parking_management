@@ -112,6 +112,8 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   to be a full-width strip above the app bar that read like a notification).
 - The home app bar picks the device appearance (system / light / dark); the
   choice is stored locally and survives restarts.
+- Check-out shows the shared empty state (no cars inside, or no plate match)
+  and a "Clear search" action on a miss.
 - Leaving the settings form with unsaved edits asks before discarding them.
 - Empty users/vehicles/monthly-pass lists offer their first action (add) right
   in the empty state instead of only the FAB.
@@ -218,7 +220,7 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Tests
 
-- 627 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
+- 628 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
   integration test that runs only against a live stack.
 - SQL/RLS/RPC regressions covering capacity, shifts, discounts, passes,
   reservations, multi-site isolation, audit, diagnostics and retention.
@@ -248,7 +250,7 @@ Captured on 2026-10-24 against the local self-hosted stack:
 
 | Check | Result |
 |---|---|
-| `flutter test` | 627 passed (+1 live-stack integration skipped) |
+| `flutter test` | 628 passed (+1 live-stack integration skipped) |
 | `flutter analyze` | 0 errors, 0 warnings (only SDK deprecation infos) |
 | `flutter build web --release` | OK |
 | `supabase/tests/run.sh` | Passed (migrations + RPC/RLS regressions) |

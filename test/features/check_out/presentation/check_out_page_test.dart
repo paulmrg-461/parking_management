@@ -396,4 +396,23 @@ void main() {
 
     expect(find.text('Mensualidad'), findsOneWidget);
   });
+
+  testWidgets('Success: no match offers to clear the search', (tester) async {
+    await pumpPage(tester);
+
+    await tester.enterText(find.byType(TextField).first, 'QQQ');
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Ninguna placa'), findsOneWidget);
+    expect(find.text('Limpiar búsqueda'), findsOneWidget);
+
+    await tester.tap(find.text('Limpiar búsqueda'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('ABC123'), findsOneWidget);
+    expect(find.text('XYZ999'), findsOneWidget);
+    expect(
+      tester.widget<TextField>(find.byType(TextField).first).controller!.text,
+      isEmpty,
+    );
+  });
 }

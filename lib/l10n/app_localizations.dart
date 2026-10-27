@@ -2162,6 +2162,12 @@ abstract class AppLocalizations {
   /// **'Buscar por placa'**
   String get searchPlate;
 
+  /// No description provided for @checkOutClearSearch.
+  ///
+  /// In es, this message translates to:
+  /// **'Limpiar búsqueda'**
+  String get checkOutClearSearch;
+
   /// No description provided for @checkOutNoMatch.
   ///
   /// In es, this message translates to:
