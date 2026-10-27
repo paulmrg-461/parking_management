@@ -5,16 +5,19 @@ import 'package:go_router/go_router.dart';
 import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/features/auth/application/auth_cubit.dart';
 import 'package:parking_management/features/auth/domain/entities/user.dart';
+import 'package:parking_management/features/check_out/domain/entities/capacity_snapshot.dart';
 import 'package:parking_management/features/check_out/domain/entities/today_summary.dart';
 import 'package:parking_management/features/check_out/domain/entities/open_session.dart';
 import 'package:parking_management/features/home/application/dashboard_cubit.dart';
 import 'package:parking_management/features/home/presentation/home_page.dart';
 import 'package:parking_management/features/settings/application/branding_cubit.dart';
+import 'package:parking_management/features/vehicles/domain/entities/vehicle.dart';
 
 import '../../../helpers/app_harness.dart';
 import '../../../helpers/fake_auth_repository.dart';
 import '../../../helpers/fake_check_out_repository.dart';
 import '../../../helpers/fake_settings_repository.dart';
+import '../../../helpers/fake_vehicle_repository.dart';
 import '../../../helpers/test_app.dart';
 
 Future<FakeCheckOutRepository> _pump(
@@ -23,7 +26,13 @@ Future<FakeCheckOutRepository> _pump(
   Failure? error,
   TodaySummary today = TodaySummary.empty,
   int capacity = 0,
+  CapacitySnapshot? space,
 }) async {
+  // Tall viewport: the dashboard now stacks occupancy, capacity, the inside
+  // list and today, so actions must stay reachable without scrolling.
+  tester.view.physicalSize = const Size(800, 1600);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
   final sessions = FakeCheckOutRepository(
     capacity: capacity,
     sessions: [
@@ -32,7 +41,7 @@ Future<FakeCheckOutRepository> _pump(
     ],
     listError: error,
     today: today,
-  );
+  )..capacityToReturn = space ?? CapacitySnapshot.empty;
   final auth = AuthCubit(FakeAuthRepository(sessionToRestore: sessionFor(role)));
   await auth.restore();
   final router = GoRouter(
@@ -40,7 +49,13 @@ Future<FakeCheckOutRepository> _pump(
       GoRoute(
         path: '/',
         builder: (_, _) => BlocProvider(
-          create: (_) => DashboardCubit(sessions),
+          create: (_) => DashboardCubit(
+            sessions,
+            FakeVehicleRepository(const [
+              Vehicle(id: 1, plate: 'ABC123', categoryId: 1),
+              Vehicle(id: 2, plate: 'XYZ999', categoryId: 1),
+            ]),
+          ),
           child: const HomePage(),
         ),
         routes: [
@@ -74,7 +89,7 @@ void main() {
 
     expect(find.text('Hola, Juan'), findsOneWidget);
     expect(find.text('4'), findsOneWidget);
-    expect(find.text('Vehículos dentro'), findsOneWidget);
+    expect(find.text('Vehículos dentro'), findsWidgets);
 
     await tester.tap(find.text('Entrada'));
     await tester.pumpAndSettle();
@@ -176,5 +191,51 @@ void main() {
           .value,
       0.5,
     );
+  });
+
+  testWidgets('Success: the capacity dashboard shows spaces and keys', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      capacity: 8,
+      space: const CapacitySnapshot(
+        carOpen: 4,
+        carCapacity: 10,
+        motoOpen: 1,
+        motoCapacity: 5,
+        keysOpen: 2,
+        keyCapacity: 3,
+      ),
+    );
+
+    expect(find.text('Capacidad del parqueadero'), findsOneWidget);
+    expect(find.text('Carros y camionetas'), findsOneWidget);
+    expect(find.text('4 / 10'), findsOneWidget);
+    expect(find.text('Motos'), findsOneWidget);
+    expect(find.text('1 / 5'), findsOneWidget);
+    expect(find.text('Vehículos con llaves'), findsOneWidget);
+    expect(find.text('2 / 3'), findsOneWidget);
+  });
+
+  testWidgets('Success: the home lists the cars inside', (tester) async {
+    await _pump(tester, capacity: 8);
+
+    expect(find.text('Vehículos dentro'), findsWidgets);
+    expect(find.text('ABC123'), findsOneWidget);
+    expect(find.text('XYZ999'), findsOneWidget);
+    expect(find.text('Ver todos'), findsOneWidget);
+
+    await tester.tap(find.text('Ver todos'));
+    await tester.pumpAndSettle();
+    expect(find.text('check-out page'), findsOneWidget);
+  });
+
+  testWidgets('Failure: no limit is shown without a configured capacity', (
+    tester,
+  ) async {
+    await _pump(tester, capacity: 8);
+
+    expect(find.textContaining('sin límite'), findsWidgets);
   });
 }

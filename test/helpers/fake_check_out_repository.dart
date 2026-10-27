@@ -3,6 +3,7 @@ import 'package:parking_management/core/pagination/paged_result.dart';
 import 'package:parking_management/features/check_out/domain/entities/check_out_preview.dart';
 import 'package:parking_management/features/check_out/domain/entities/check_out_receipt.dart';
 import 'package:parking_management/features/check_out/domain/entities/open_session.dart';
+import 'package:parking_management/features/check_out/domain/entities/capacity_snapshot.dart';
 import 'package:parking_management/features/check_out/domain/entities/occupancy_snapshot.dart';
 import 'package:parking_management/features/check_out/domain/entities/today_summary.dart';
 import 'package:parking_management/features/check_out/domain/repositories/check_out_repository.dart';
@@ -34,6 +35,18 @@ class FakeCheckOutRepository implements CheckOutRepository {
       throw error;
     }
     return today;
+  }
+
+  CapacitySnapshot capacityToReturn = CapacitySnapshot.empty;
+  Failure? capacityError;
+
+  @override
+  Future<CapacitySnapshot> capacitySnapshot() async {
+    final error = capacityError;
+    if (error != null) {
+      throw error;
+    }
+    return capacityToReturn;
   }
 
   @override

@@ -1,4 +1,5 @@
 import '../../../../core/pagination/paged_result.dart';
+import '../entities/capacity_snapshot.dart';
 import '../entities/check_out_preview.dart';
 import '../entities/check_out_receipt.dart';
 import '../entities/occupancy_snapshot.dart';
@@ -27,6 +28,9 @@ abstract class CheckOutRepository {
 
   /// Fare the customer would pay right now (no side effects).
   Future<CheckOutPreview> preview(int sessionId);
+
+  /// Space configuration and what is inside (home dashboard).
+  Future<CapacitySnapshot> capacitySnapshot();
 
   /// Open sessions + capacity per category (any signed-in user).
   Future<OccupancySnapshot> occupancy();

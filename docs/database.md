@@ -80,7 +80,7 @@ granted to `authenticated` only.
 
 **Check-in / check-out**
 `check_in` (incl. `p_left_keys`), `check_out`, `check_out_preview`,
-`open_sessions_view` (`has_pass`, `left_keys`),
+`open_sessions_view` (`has_pass`, `left_keys`), `capacity_snapshot`,
 `calculate_fare`,
 `vehicle_history`, `update_vehicle_flags` (notes, blacklist, owner phone).
 

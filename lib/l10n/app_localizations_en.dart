@@ -995,6 +995,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeTodayPasses => 'Monthly passes';
 
   @override
+  String get homeCapacityTitle => 'Parking capacity';
+
+  @override
+  String get homeCapacityCars => 'Cars and pickups';
+
+  @override
+  String get homeCapacityMotos => 'Motorcycles';
+
+  @override
+  String get homeCapacityKeys => 'Cars with keys';
+
+  @override
+  String get homeNoLimit => 'no limit';
+
+  @override
+  String get homeInsideSeeAll => 'See all';
+
+  @override
   String get homeOccupancy => 'Vehicles parked';
 
   @override

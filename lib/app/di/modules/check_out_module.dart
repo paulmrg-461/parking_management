@@ -29,7 +29,7 @@ void registerCheckOutModule(GetIt sl) {
       () => CheckOutVehicle(sl<CheckOutRepository>()),
     )
     ..registerFactory<DashboardCubit>(
-      () => DashboardCubit(sl<CheckOutRepository>()),
+      () => DashboardCubit(sl<CheckOutRepository>(), sl<VehicleRepository>()),
     )
     ..registerLazySingleton<QrDecoder>(ZxingQrDecoder.new)
     ..registerFactory<CheckOutCubit>(

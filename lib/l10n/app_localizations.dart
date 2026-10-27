@@ -1928,6 +1928,42 @@ abstract class AppLocalizations {
   /// **'Mensualidades'**
   String get homeTodayPasses;
 
+  /// No description provided for @homeCapacityTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Capacidad del parqueadero'**
+  String get homeCapacityTitle;
+
+  /// No description provided for @homeCapacityCars.
+  ///
+  /// In es, this message translates to:
+  /// **'Carros y camionetas'**
+  String get homeCapacityCars;
+
+  /// No description provided for @homeCapacityMotos.
+  ///
+  /// In es, this message translates to:
+  /// **'Motos'**
+  String get homeCapacityMotos;
+
+  /// No description provided for @homeCapacityKeys.
+  ///
+  /// In es, this message translates to:
+  /// **'Vehículos con llaves'**
+  String get homeCapacityKeys;
+
+  /// No description provided for @homeNoLimit.
+  ///
+  /// In es, this message translates to:
+  /// **'sin límite'**
+  String get homeNoLimit;
+
+  /// No description provided for @homeInsideSeeAll.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver todos'**
+  String get homeInsideSeeAll;
+
   /// No description provided for @homeOccupancy.
   ///
   /// In es, this message translates to:

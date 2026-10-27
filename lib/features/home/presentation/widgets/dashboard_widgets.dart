@@ -6,6 +6,7 @@ import '../../../../app/shell/app_destinations.dart';
 import '../../../../core/l10n/failure_messages.dart';
 import '../../../../core/l10n/l10n.dart';
 import '../../../../core/theme/tokens.dart';
+import '../../../../core/utils/elapsed.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/app_icon_button.dart';
 import '../../../../core/widgets/money_text.dart';
@@ -436,6 +437,206 @@ class _OccupancyBar extends StatelessWidget {
       tween: Tween(begin: 0, end: fraction),
       duration: Motion.short,
       builder: (context, value, _) => LinearProgressIndicator(value: value),
+    );
+  }
+}
+
+/// Space configuration vs. what is inside: cars + pickups, motorcycles and
+/// cars that left their keys. `0` appears as "no limit" with no bar.
+class CapacityCard extends StatelessWidget {
+  const CapacityCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return BlocBuilder<DashboardCubit, DashboardState>(
+      builder: (context, state) {
+        if (state is! DashboardLoaded) {
+          return const SizedBox.shrink();
+        }
+        final capacity = state.capacity;
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(Space.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.homeCapacityTitle,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: Space.sm),
+                _CapacityRow(
+                  label: l10n.homeCapacityCars,
+                  open: capacity.carOpen,
+                  capacity: capacity.carCapacity,
+                  full: capacity.carsFull,
+                ),
+                _CapacityRow(
+                  label: l10n.homeCapacityMotos,
+                  open: capacity.motoOpen,
+                  capacity: capacity.motoCapacity,
+                  full: capacity.motosFull,
+                ),
+                _CapacityRow(
+                  label: l10n.homeCapacityKeys,
+                  open: capacity.keysOpen,
+                  capacity: capacity.keyCapacity,
+                  full: capacity.keysFull,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _CapacityRow extends StatelessWidget {
+  const _CapacityRow({
+    required this.label,
+    required this.open,
+    required this.capacity,
+    required this.full,
+  });
+
+  final String label;
+  final int open;
+  final int capacity;
+  final bool full;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final limited = capacity > 0;
+    return Padding(
+      padding: const EdgeInsets.only(top: Space.xs),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(label, style: theme.textTheme.bodyMedium),
+              ),
+              Text(
+                limited ? '$open / $capacity' : '$open · ${l10n.homeNoLimit}',
+                style: theme.textTheme.labelLarge?.copyWith(
+                  color: full ? scheme.error : scheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+          if (limited) ...[
+            const SizedBox(height: 4),
+            LinearProgressIndicator(
+              value: (open / capacity).clamp(0, 1),
+              color: full ? scheme.error : null,
+              minHeight: 6,
+              borderRadius: BorderRadius.circular(Radii.pill),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// First cars still inside, with a shortcut to the full check-out list.
+class InsideCard extends StatelessWidget {
+  const InsideCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    return BlocBuilder<DashboardCubit, DashboardState>(
+      builder: (context, state) {
+        if (state is! DashboardLoaded) {
+          return const SizedBox.shrink();
+        }
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(Space.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        l10n.openSessionsTitle,
+                        style: theme.textTheme.titleMedium,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => context.go('/check-out'),
+                      child: Text(l10n.homeInsideSeeAll),
+                    ),
+                  ],
+                ),
+                if (state.sessions.isEmpty)
+                  Text(
+                    l10n.openSessionsEmpty,
+                    style: theme.textTheme.bodySmall,
+                  )
+                else
+                  for (final session in state.sessions)
+                    InkWell(
+                      borderRadius: BorderRadius.circular(Radii.sm),
+                      onTap: () => context.go(
+                        '/check-out?plate=${Uri.encodeQueryComponent(state.plateOf(session))}',
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                state.plateOf(session),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.titleSmall?.copyWith(
+                                  fontFamily: 'monospace',
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: Space.sm),
+                            Text(
+                              elapsedLabel(l10n, session.entryTime),
+                              style: theme.textTheme.bodySmall,
+                            ),
+                            if (session.hasPass) ...[
+                              const SizedBox(width: Space.sm),
+                              StatusChip(
+                                label: l10n.paymentMonthlyPass,
+                                tone: StatusTone.success,
+                                icon: Icons.card_membership,
+                              ),
+                            ],
+                            if (session.photoCount > 0) ...[
+                              const SizedBox(width: Space.xs),
+                              Icon(
+                                Icons.photo_camera_outlined,
+                                size: 16,
+                                color: theme.colorScheme.onSurfaceVariant,
+                                semanticLabel: l10n.sessionPhotos(
+                                  session.photoCount,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
