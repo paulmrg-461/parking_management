@@ -3,6 +3,7 @@ import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/features/check_out/domain/entities/open_session.dart';
 import 'package:parking_management/features/check_out/domain/entities/today_summary.dart';
 import 'package:parking_management/features/check_out/domain/entities/capacity_snapshot.dart';
+import 'package:parking_management/features/check_out/domain/entities/slot_board.dart';
 import 'package:parking_management/features/home/application/dashboard_cubit.dart';
 import 'package:parking_management/features/vehicles/domain/entities/vehicle.dart';
 
@@ -119,5 +120,31 @@ void main() {
     final state = cubit.state as DashboardLoaded;
     expect(state.openSessions, 2);
     expect(state.capacity, CapacitySnapshot.empty);
+  });
+
+  test('Success: the slot board lands in the loaded state', () async {
+    final repository = FakeCheckOutRepository(sessions: _sessions(1))
+      ..slotBoardToReturn = SlotBoard(
+        carCapacity: 4,
+        motoCapacity: 2,
+        sessions: [
+          SlotSession(
+            sessionId: 9,
+            plate: 'BRD001',
+            entryTime: DateTime(2026),
+          ),
+        ],
+        holds: [
+          SlotHold(plate: 'HOLD01', until: DateTime(2026, 1, 2)),
+        ],
+      );
+    final cubit = DashboardCubit(repository);
+
+    await cubit.load();
+
+    final state = cubit.state as DashboardLoaded;
+    expect(state.slotBoard.carCapacity, 4);
+    expect(state.slotBoard.sessions.single.plate, 'BRD001');
+    expect(state.slotBoard.holds.single.plate, 'HOLD01');
   });
 }

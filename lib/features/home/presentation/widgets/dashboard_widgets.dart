@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/shell/app_destinations.dart';
 import '../../../../core/l10n/failure_messages.dart';
 import '../../../../core/l10n/l10n.dart';
+import '../../../../core/theme/status_colors.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../core/utils/elapsed.dart';
 import '../../../../core/utils/formatters.dart';
@@ -169,30 +170,87 @@ class _OccupancySummary extends StatelessWidget {
     final open = hasGroups ? occupied : openSessions;
     final total = hasGroups ? places : totalCapacity;
     final full = total > 0 && open >= total;
+    final fraction = total > 0 ? (open / total).clamp(0.0, 1.0) : 0.0;
     return MergeSemantics(
-      child: Column(
+      child: Row(
         key: const ValueKey('loaded'),
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                total > 0 ? '$open / $total' : '$open',
-                style: textTheme.displaySmall?.copyWith(
-                  fontWeight: FontWeight.w600,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      total > 0 ? '$open / $total' : '$open',
+                      style: textTheme.displaySmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (full) ...[
+                      const SizedBox(width: Space.sm),
+                      StatusChip(label: l10n.homeFull, tone: StatusTone.warning),
+                    ],
+                  ],
                 ),
-              ),
-              if (full) ...[
-                const SizedBox(width: Space.sm),
-                StatusChip(label: l10n.homeFull, tone: StatusTone.warning),
+                if (total > 0) ...[
+                  const SizedBox(height: Space.sm),
+                  _OccupancyBar(fraction: fraction),
+                ],
               ],
-            ],
+            ),
           ),
           if (total > 0) ...[
-            const SizedBox(height: Space.sm),
-            _OccupancyBar(fraction: (open / total).clamp(0, 1)),
+            const SizedBox(width: Space.md),
+            _OccupancyGauge(fraction: fraction, full: full),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Radial occupancy: the same fraction as the bar, readable at a glance from
+/// across the cabin. The percentage is painted as text too, so the state never
+/// depends on color alone.
+class _OccupancyGauge extends StatelessWidget {
+  const _OccupancyGauge({required this.fraction, required this.full});
+
+  final double fraction;
+  final bool full;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final status = StatusColors.of(context);
+    final color = full ? theme.colorScheme.error : status.success;
+    final percent = (fraction * 100).round();
+    return SizedBox(
+      width: 72,
+      height: 72,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          SizedBox(
+            width: 72,
+            height: 72,
+            child: CircularProgressIndicator(
+              value: fraction,
+              strokeWidth: 8,
+              strokeCap: StrokeCap.round,
+              color: color,
+              backgroundColor: theme.colorScheme.surfaceContainerHighest,
+            ),
+          ),
+          Text(
+            '$percent%',
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
         ],
       ),
     );

@@ -3,7 +3,8 @@ import 'package:flutter/services.dart';
 
 import '../../../core/l10n/l10n.dart';
 import '../../../core/receipt/payment_method.dart';
-import '../../../core/utils/cop_formatter.dart';
+import '../domain/entities/check_out_preview.dart';
+import 'widgets/fare_breakdown_view.dart';
 
 class CheckoutChoice {
   const CheckoutChoice({
@@ -27,16 +28,14 @@ Future<CheckoutChoice?> showCheckoutDialog(
   BuildContext context, {
   required String plate,
   required bool canDiscount,
-  int? estimatedAmount,
-  bool hasPass = false,
+  CheckOutPreview? preview,
   PaymentMethod initialMethod = PaymentMethod.cash,
 }) => showDialog<CheckoutChoice>(
   context: context,
   builder: (_) => _CheckoutDialog(
     plate: plate,
     canDiscount: canDiscount,
-    estimatedAmount: estimatedAmount,
-    hasPass: hasPass,
+    preview: preview,
     initialMethod: initialMethod,
   ),
 );
@@ -45,15 +44,13 @@ class _CheckoutDialog extends StatefulWidget {
   const _CheckoutDialog({
     required this.plate,
     required this.canDiscount,
-    this.estimatedAmount,
-    this.hasPass = false,
+    this.preview,
     this.initialMethod = PaymentMethod.cash,
   });
 
   final String plate;
   final bool canDiscount;
-  final int? estimatedAmount;
-  final bool hasPass;
+  final CheckOutPreview? preview;
   final PaymentMethod initialMethod;
 
   @override
@@ -107,28 +104,28 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return AlertDialog(
-      title: Text(context.l10n.paymentMethodTitle),
+      title: Text(l10n.checkOutSettlement),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(context.l10n.checkOutConfirm(widget.plate)),
+            Text(l10n.checkOutConfirm(widget.plate)),
             const SizedBox(height: 8),
-            if (widget.hasPass)
-              _Estimate(
-                icon: Icons.card_membership,
-                text: context.l10n.checkOutPassCovered,
-              )
-            else if (widget.estimatedAmount != null)
-              _Estimate(
-                icon: Icons.payments_outlined,
-                text: context.l10n.checkOutEstimate(
-                  CopFormatter.format(widget.estimatedAmount!),
-                ),
+            if (widget.preview case final preview?)
+              FareBreakdownView(preview: preview)
+            else
+              Text(
+                l10n.slotEstimateUnavailable,
+                style: Theme.of(context).textTheme.bodySmall,
               ),
             const SizedBox(height: 8),
+            Text(
+              l10n.paymentMethodTitle,
+              style: Theme.of(context).textTheme.labelLarge,
+            ),
             for (final method in PaymentMethod.values)
               RadioListTile<PaymentMethod>(
                 value: method,
@@ -138,7 +135,7 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
                     setState(() => _selected = value);
                   }
                 },
-                title: Text(method.label(context.l10n)),
+                title: Text(method.label(l10n)),
                 secondary: Icon(method.icon),
               ),
             const SizedBox(height: 8),
@@ -148,14 +145,14 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
               controlAffinity: ListTileControlAffinity.leading,
               onChanged: (value) =>
                   setState(() => _lostTicket = value ?? false),
-              title: Text(context.l10n.lostTicket),
-              subtitle: Text(context.l10n.lostTicketHint),
+              title: Text(l10n.lostTicket),
+              subtitle: Text(l10n.lostTicketHint),
             ),
             if (_lostTicket)
               TextFormField(
                 controller: _lostReasonController,
                 decoration: InputDecoration(
-                  labelText: context.l10n.lostTicketReason,
+                  labelText: l10n.lostTicketReason,
                 ),
               ),
             if (widget.canDiscount) ...[
@@ -165,14 +162,14 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 decoration: InputDecoration(
-                  labelText: context.l10n.discountAmount,
+                  labelText: l10n.discountAmount,
                 ),
               ),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _reasonController,
                 decoration: InputDecoration(
-                  labelText: context.l10n.discountReason,
+                  labelText: l10n.discountReason,
                 ),
               ),
             ],
@@ -189,36 +186,11 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: Text(context.l10n.actionCancel),
+          child: Text(l10n.actionCancel),
         ),
         FilledButton(
           onPressed: _confirm,
-          child: Text(context.l10n.actionConfirm),
-        ),
-      ],
-    );
-  }
-}
-
-class _Estimate extends StatelessWidget {
-  const _Estimate({required this.icon, required this.text});
-
-  final IconData icon;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Row(
-      children: [
-        Icon(icon, size: 18, color: scheme.primary),
-        const SizedBox(width: 6),
-        Expanded(
-          child: Text(
-            text,
-            style: Theme.of(context).textTheme.titleSmall
-                ?.copyWith(color: scheme.primary),
-          ),
+          child: Text(l10n.actionConfirm),
         ),
       ],
     );

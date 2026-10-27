@@ -80,10 +80,12 @@ granted to `authenticated` only.
 
 **Check-in / check-out**
 `check_in` (incl. `p_left_keys`), `create_reservation` (holds consume group
-capacity), `check_out`, `check_out_preview`,
+capacity), `check_out`, `check_out_preview` (amount + billing breakdown),
 `open_sessions_view` (`has_pass`, `left_keys`), `capacity_snapshot`
 (`car_open/capacity/reserved`, motos, keys, active/expiring holds),
-`calculate_fare`,
+`slot_board` (capacities, sessions and holds for the visual board),
+`calculate_fare` (wrapper) and `fare_breakdown` (single source of truth for the
+money: day/night hours, rates, daily cap, elapsed time),
 `vehicle_history`, `update_vehicle_flags` (notes, blacklist, owner phone).
 
 **Billing and reports**

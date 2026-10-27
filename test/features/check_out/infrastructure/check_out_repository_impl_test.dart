@@ -10,6 +10,7 @@ import 'package:parking_management/features/check_out/domain/entities/check_out_
 import 'package:parking_management/features/check_out/domain/entities/open_session.dart';
 import 'package:parking_management/features/check_out/domain/entities/capacity_snapshot.dart';
 import 'package:parking_management/features/check_out/domain/entities/occupancy_snapshot.dart';
+import 'package:parking_management/features/check_out/domain/entities/slot_board.dart';
 import 'package:parking_management/features/check_out/domain/entities/today_summary.dart';
 import 'package:parking_management/features/check_out/infrastructure/check_out_remote_data_source.dart';
 import 'package:parking_management/features/check_out/infrastructure/check_out_repository_impl.dart';
@@ -29,6 +30,9 @@ class _FakeRemote implements CheckOutRemoteDataSource {
 
   @override
   Future<TodaySummary> todaySummary() async => TodaySummary.empty;
+
+  @override
+  Future<SlotBoard> slotBoard() async => SlotBoard.empty;
 
   @override
   Future<CapacitySnapshot> capacitySnapshot() async => CapacitySnapshot.empty;

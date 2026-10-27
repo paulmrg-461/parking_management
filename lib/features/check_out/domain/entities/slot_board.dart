@@ -1,0 +1,123 @@
+import 'package:equatable/equatable.dart';
+
+/// Space group used by the visual board and the capacity settings.
+enum SlotGroup {
+  car,
+  moto,
+  heavy;
+
+  static SlotGroup fromWire(Object? value) => switch (value) {
+    'car' => SlotGroup.car,
+    'moto' => SlotGroup.moto,
+    _ => SlotGroup.heavy,
+  };
+}
+
+/// A car currently inside, as painted on the board.
+class SlotSession extends Equatable {
+  const SlotSession({
+    required this.sessionId,
+    required this.plate,
+    required this.entryTime,
+    this.hasPass = false,
+    this.leftKeys = false,
+    this.photoCount = 0,
+    this.group = SlotGroup.car,
+  });
+
+  final int sessionId;
+  final String plate;
+  final DateTime entryTime;
+  final bool hasPass;
+  final bool leftKeys;
+  final int photoCount;
+  final SlotGroup group;
+
+  factory SlotSession.fromJson(Map<String, dynamic> json) => SlotSession(
+    sessionId: (json['session_id'] as num).toInt(),
+    plate: json['plate'] as String,
+    entryTime: DateTime.parse(json['entry_time'] as String),
+    hasPass: json['has_pass'] == true,
+    leftKeys: json['left_keys'] == true,
+    photoCount: (json['photo_count'] as num?)?.toInt() ?? 0,
+    group: SlotGroup.fromWire(json['group']),
+  );
+
+  @override
+  List<Object?> get props => [
+    sessionId,
+    plate,
+    entryTime,
+    hasPass,
+    leftKeys,
+    photoCount,
+    group,
+  ];
+}
+
+/// An active hold painted as a promised space.
+class SlotHold extends Equatable {
+  const SlotHold({
+    required this.plate,
+    required this.until,
+    this.group = SlotGroup.car,
+  });
+
+  final String plate;
+  final DateTime until;
+  final SlotGroup group;
+
+  factory SlotHold.fromJson(Map<String, dynamic> json) => SlotHold(
+    plate: json['plate'] as String,
+    until: DateTime.parse(json['reserved_until'] as String),
+    group: SlotGroup.fromWire(json['group']),
+  );
+
+  @override
+  List<Object?> get props => [plate, until, group];
+}
+
+/// Board data for the active site: capacities plus what is inside/held.
+class SlotBoard extends Equatable {
+  const SlotBoard({
+    this.carCapacity = 0,
+    this.motoCapacity = 0,
+    this.sessions = const [],
+    this.holds = const [],
+  });
+
+  final int carCapacity;
+  final int motoCapacity;
+  final List<SlotSession> sessions;
+  final List<SlotHold> holds;
+
+  static const empty = SlotBoard();
+
+  bool get isEmpty => carCapacity == 0 && motoCapacity == 0 && sessions.isEmpty;
+
+  List<SlotSession> sessionsIn(SlotGroup group) => [
+    for (final session in sessions)
+      if (session.group == group) session,
+  ];
+
+  List<SlotHold> holdsIn(SlotGroup group) => [
+    for (final hold in holds)
+      if (hold.group == group) hold,
+  ];
+
+  factory SlotBoard.fromJson(Map<String, dynamic> json) => SlotBoard(
+    carCapacity: (json['car_capacity'] as num?)?.toInt() ?? 0,
+    motoCapacity: (json['moto_capacity'] as num?)?.toInt() ?? 0,
+    sessions: [
+      for (final item in (json['sessions'] as List<dynamic>? ?? const []))
+        SlotSession.fromJson(Map<String, dynamic>.from(item as Map)),
+    ],
+    holds: [
+      for (final item in (json['holds'] as List<dynamic>? ?? const []))
+        SlotHold.fromJson(Map<String, dynamic>.from(item as Map)),
+    ],
+  );
+
+  @override
+  List<Object?> get props => [carCapacity, motoCapacity, sessions, holds];
+}

@@ -10,6 +10,7 @@ import '../domain/entities/capacity_snapshot.dart';
 import '../domain/entities/check_out_preview.dart';
 import '../domain/entities/check_out_receipt.dart';
 import '../domain/entities/occupancy_snapshot.dart';
+import '../domain/entities/slot_board.dart';
 import '../domain/entities/open_session.dart';
 import '../domain/entities/today_summary.dart';
 import '../domain/repositories/check_out_repository.dart';
@@ -39,6 +40,9 @@ class CheckOutRepositoryImpl implements CheckOutRepository {
 
   @override
   Future<CapacitySnapshot> capacitySnapshot() => _remote.capacitySnapshot();
+
+  @override
+  Future<SlotBoard> slotBoard() => _remote.slotBoard();
 
   @override
   Future<TodaySummary> todaySummary() => _remote.todaySummary();

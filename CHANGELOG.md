@@ -11,6 +11,25 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Added
 
+**Operator UI/UX (space board and settlement)**
+
+- Home **space board** (`slot_board()` + `SlotBoardCard`): virtual capacity
+  cells for cars+pickups and motorcycles with four semantic states (free,
+  occupied with plate and elapsed time, reserved, and the skeleton/empty/error
+  states), per-group headers (`free / capacity`), filter chips with icons
+  (all/cars/motorcycles/holds) and 44×48 dp targets. Tapping a vehicle opens a
+  sheet with its exact entry time, a one-second clock, pass/keys/photo chips,
+  the server fare breakdown and a direct exit.
+- Settlement dialog explains the charge: elapsed time, billed day hours ×
+  hourly rate, night hours × nightly rate, daily cap, total, and the payment
+  methods with icons. A monthly pass shows as covered; a failed preview still
+  lets the operator charge.
+- `fare_breakdown` (`0053`) is the single source of truth for money:
+  `calculate_fare` is a thin wrapper over it and `check_out_preview` returns the
+  breakdown, so the explanation can never drift from the charge.
+- The occupancy KPI adds a radial gauge (percentage as text) next to the
+  existing bar.
+
 **Core operations**
 
 - Offline-first check-in/check-out with a Hive outbox, idempotency keys
@@ -274,7 +293,7 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Tests
 
-- 668 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
+- 682 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
   integration test that runs only against a live stack.
 - SQL/RLS/RPC regressions covering capacity, shifts, discounts, passes,
   reservations, multi-site isolation, audit, diagnostics and retention.
@@ -304,6 +323,7 @@ Migrations are append-only and applied in filename order by `supabase-migrate`.
 | `0027`–`0032` | Per-lot branding, retention, shift filters, header contract |
 | `0033`–`0038` | Evidence retention, storage membership, diagnostics, audit export, report comparison, home KPIs |
 | `0039`–`0044` | Site comparison fields, ticket reprint, customer phone, WhatsApp queue/report |
+| `0045`–`0053` | Check-out preview, pass flag, capacity groups, reservations consuming group capacity, reserved counts, hold counters, space board, fare breakdown |
 
 ## Verification snapshot
 
@@ -311,7 +331,7 @@ Captured on 2026-10-24 against the local self-hosted stack:
 
 | Check | Result |
 |---|---|
-| `flutter test` | 668 passed (+1 live-stack integration skipped) |
+| `flutter test` | 682 passed (+1 live-stack integration skipped) |
 | `flutter analyze` | 0 errors, 0 warnings (only SDK deprecation infos) |
 | `flutter build web --release` | OK |
 | `supabase/tests/run.sh` | Passed (migrations + RPC/RLS regressions) |

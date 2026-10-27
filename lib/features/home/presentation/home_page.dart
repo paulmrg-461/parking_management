@@ -19,6 +19,7 @@ import '../../notifications/presentation/notification_bell.dart';
 import '../../settings/application/branding_cubit.dart';
 import '../application/dashboard_cubit.dart';
 import 'widgets/dashboard_widgets.dart';
+import 'widgets/slot_board_card.dart';
 
 /// Dashboard at `/`: greeting, current occupancy and the two primary
 /// operator actions (Entrada / Salida). Admins also get management
@@ -148,6 +149,8 @@ class _Dashboard extends StatelessWidget {
             TodayCard(),
             ShiftCard(),
           ]),
+          const SizedBox(height: Space.md),
+          const SlotBoardCard(),
           const SizedBox(height: Space.md),
           if (!split) const InsideCard(),
           // The sidebar already lists every management section on desktop.

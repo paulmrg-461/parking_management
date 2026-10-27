@@ -1034,6 +1034,53 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeInsideSeeAll => 'See all';
 
   @override
+  String get slotBoardTitle => 'Space map';
+
+  @override
+  String slotBoardFree(int count) {
+    return '$count free';
+  }
+
+  @override
+  String get slotBoardAll => 'All';
+
+  @override
+  String get slotBoardCars => 'Cars';
+
+  @override
+  String get slotBoardMotos => 'Motorcycles';
+
+  @override
+  String get slotBoardHolds => 'Holds';
+
+  @override
+  String get slotBoardHeavy => 'Heavy';
+
+  @override
+  String get slotEstimateUnavailable => 'The fare could not be calculated';
+
+  @override
+  String get slotBoardEmpty => 'Set the parking spaces in Settings';
+
+  @override
+  String get slotBoardConfigure => 'Configure';
+
+  @override
+  String get slotBoardNoHolds => 'No active holds';
+
+  @override
+  String get slotFree => 'Free';
+
+  @override
+  String get slotOccupied => 'Occupied';
+
+  @override
+  String get slotReserved => 'Reserved';
+
+  @override
+  String get slotEstimate => 'Estimated fare';
+
+  @override
   String get homeSummary => 'Summary';
 
   @override
@@ -1319,6 +1366,43 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get receiptDiscount => 'Discount';
+
+  @override
+  String get checkOutSettlement => 'Settlement';
+
+  @override
+  String fareTime(String duration) {
+    return 'Time: $duration';
+  }
+
+  @override
+  String fareDays(int days) {
+    return '$days days';
+  }
+
+  @override
+  String fareDayHours(int hours, String rate) {
+    return '$hours h × $rate (day)';
+  }
+
+  @override
+  String fareNightHours(int hours, String rate) {
+    return '$hours h × $rate (night)';
+  }
+
+  @override
+  String fareDailyCap(String amount) {
+    return 'Daily cap applied ($amount)';
+  }
+
+  @override
+  String get fareTotal => 'Total due';
+
+  @override
+  String get slotBoardError => 'The space map could not be loaded';
+
+  @override
+  String get slotBoardRetry => 'Retry';
 
   @override
   String get paymentMethodTitle => 'Payment method';

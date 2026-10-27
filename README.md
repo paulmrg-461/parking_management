@@ -30,6 +30,7 @@ Storage directly, and business rules live in PostgreSQL functions.
 | [`docs/architecture.md`](docs/architecture.md) | Components, Flutter layers and the check-in/billing/shift/notification/multi-site flows. |
 | [`docs/infrastructure.md`](docs/infrastructure.md) | Services, ports, volumes, env vars, operations, scaling and CI. |
 | [`docs/database.md`](docs/database.md) | ER diagram, tables, RPC catalog, RLS model and migration rules. |
+| [`docs/slot-board.md`](docs/slot-board.md) | Space board and settlement dialog: states, data contract, accessibility, limits. |
 | [`docs/agent-memory.md`](docs/agent-memory.md) | Current state, invariants and gotchas for the next session. |
 
 ## Architecture

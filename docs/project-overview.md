@@ -43,7 +43,7 @@ WhatsApp (manual or automated).
 | Secrets / PIN operations | Complete (scripts + runbook) | PIN rotation verified live |
 | E2E and CI | Complete (API + Flutter client, real stack) | CI job `supabase-e2e` |
 
-Quality snapshot (2026-10-24, local stack): **668 Flutter tests + 1 integration
+Quality snapshot (2026-10-24, local stack): **682 Flutter tests + 1 integration
 test**, SQL/RLS suite green, web build green, analyzer with **0 errors and 0
 warnings** (only SDK deprecation infos from the pinned beta channel), restore
 drill green.
@@ -57,7 +57,7 @@ the main data it touches.
 | Module (`lib/features/…`) | Responsibility | Backing data / RPCs |
 |---|---|---|
 | `auth` | PIN login, session restore, logout | GoTrue, `users`, `lot_members` |
-| `home` | Dashboard: occupancy, today KPIs, shift card, shortcuts | `occupancy_snapshot`, `dashboard_today` |
+| `home` | Dashboard: occupancy + radial, space board, today KPIs, shift card, shortcuts | `occupancy_snapshot`, `dashboard_today`, `slot_board` |
 | `check_in` | Plate lookup, evidence photos, offline queue | `check_in`, `vehicles`, Storage `evidence` |
 | `check_out` | Open sessions (paged), payment, receipt | `check_out`, `calculate_fare`, `open_sessions_view` |
 | `vehicle_history` | Timeline, notes, blacklist, phone, reprint, WhatsApp | `vehicle_history`, `update_vehicle_flags` |

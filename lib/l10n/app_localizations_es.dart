@@ -1042,6 +1042,54 @@ class AppLocalizationsEs extends AppLocalizations {
   String get homeInsideSeeAll => 'Ver todos';
 
   @override
+  String get slotBoardTitle => 'Mapa de espacios';
+
+  @override
+  String slotBoardFree(int count) {
+    return '$count libres';
+  }
+
+  @override
+  String get slotBoardAll => 'Todos';
+
+  @override
+  String get slotBoardCars => 'Carros';
+
+  @override
+  String get slotBoardMotos => 'Motos';
+
+  @override
+  String get slotBoardHolds => 'Reservas';
+
+  @override
+  String get slotBoardHeavy => 'Pesados';
+
+  @override
+  String get slotEstimateUnavailable => 'No se pudo calcular la tarifa';
+
+  @override
+  String get slotBoardEmpty =>
+      'Configura los espacios del parqueadero en Ajustes';
+
+  @override
+  String get slotBoardConfigure => 'Configurar';
+
+  @override
+  String get slotBoardNoHolds => 'No hay reservas activas';
+
+  @override
+  String get slotFree => 'Libre';
+
+  @override
+  String get slotOccupied => 'Ocupado';
+
+  @override
+  String get slotReserved => 'Reservado';
+
+  @override
+  String get slotEstimate => 'Tarifa estimada';
+
+  @override
   String get homeSummary => 'Resumen';
 
   @override
@@ -1327,6 +1375,43 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get receiptDiscount => 'Descuento';
+
+  @override
+  String get checkOutSettlement => 'Liquidación';
+
+  @override
+  String fareTime(String duration) {
+    return 'Tiempo: $duration';
+  }
+
+  @override
+  String fareDays(int days) {
+    return '$days días';
+  }
+
+  @override
+  String fareDayHours(int hours, String rate) {
+    return '$hours h × $rate (día)';
+  }
+
+  @override
+  String fareNightHours(int hours, String rate) {
+    return '$hours h × $rate (noche)';
+  }
+
+  @override
+  String fareDailyCap(String amount) {
+    return 'Tope diario aplicado ($amount)';
+  }
+
+  @override
+  String get fareTotal => 'Total a cobrar';
+
+  @override
+  String get slotBoardError => 'No se pudo cargar el mapa de espacios';
+
+  @override
+  String get slotBoardRetry => 'Reintentar';
 
   @override
   String get paymentMethodTitle => 'Método de pago';

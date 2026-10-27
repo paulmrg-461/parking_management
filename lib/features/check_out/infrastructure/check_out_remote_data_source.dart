@@ -6,6 +6,7 @@ import '../domain/entities/capacity_snapshot.dart';
 import '../domain/entities/check_out_preview.dart';
 import '../domain/entities/check_out_receipt.dart';
 import '../domain/entities/occupancy_snapshot.dart';
+import '../domain/entities/slot_board.dart';
 import '../domain/entities/open_session.dart';
 import '../domain/entities/today_summary.dart';
 import 'models/check_out_receipt_dto.dart';
@@ -33,6 +34,8 @@ abstract class CheckOutRemoteDataSource {
   Future<OccupancySnapshot> occupancy();
 
   Future<CapacitySnapshot> capacitySnapshot();
+
+  Future<SlotBoard> slotBoard();
 
   Future<TodaySummary> todaySummary();
 
@@ -82,6 +85,16 @@ class SupabaseCheckOutRemoteDataSource implements CheckOutRemoteDataSource {
       return CapacitySnapshot.fromJson(
         Map<String, dynamic>.from(result as Map),
       );
+    } catch (error) {
+      throw mapSupabaseError(error);
+    }
+  }
+
+  @override
+  Future<SlotBoard> slotBoard() async {
+    try {
+      final result = await _client.rpc('slot_board');
+      return SlotBoard.fromJson(Map<String, dynamic>.from(result as Map));
     } catch (error) {
       throw mapSupabaseError(error);
     }

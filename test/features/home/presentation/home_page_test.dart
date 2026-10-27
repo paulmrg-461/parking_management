@@ -8,6 +8,7 @@ import 'package:parking_management/features/auth/domain/entities/user.dart';
 import 'package:parking_management/features/check_out/domain/entities/capacity_snapshot.dart';
 import 'package:parking_management/features/check_out/domain/entities/today_summary.dart';
 import 'package:parking_management/features/check_out/domain/entities/open_session.dart';
+import 'package:parking_management/features/check_out/domain/entities/slot_board.dart';
 import 'package:parking_management/features/home/application/dashboard_cubit.dart';
 import 'package:parking_management/features/home/presentation/home_page.dart';
 import 'package:parking_management/features/home/presentation/widgets/dashboard_widgets.dart';
@@ -28,6 +29,7 @@ Future<FakeCheckOutRepository> _pump(
   TodaySummary today = TodaySummary.empty,
   int capacity = 0,
   CapacitySnapshot? space,
+  SlotBoard? board,
   Size size = const Size(800, 1600),
 }) async {
   // Tall viewport: the dashboard now stacks occupancy, capacity, the inside
@@ -43,7 +45,9 @@ Future<FakeCheckOutRepository> _pump(
     ],
     listError: error,
     today: today,
-  )..capacityToReturn = space ?? CapacitySnapshot.empty;
+  )
+    ..capacityToReturn = space ?? CapacitySnapshot.empty
+    ..slotBoardToReturn = board ?? SlotBoard.empty;
   final auth = AuthCubit(FakeAuthRepository(sessionToRestore: sessionFor(role)));
   await auth.restore();
   final router = GoRouter(
@@ -136,7 +140,16 @@ void main() {
 
   testWidgets('Success: admins get management shortcuts', (tester) async {
     await _pump(tester, role: UserRole.admin);
-    await tester.scrollUntilVisible(find.text('Gestión'), 200);
+    await tester.scrollUntilVisible(
+      find.text('Gestión'),
+      200,
+      scrollable: find
+          .descendant(
+            of: find.byType(RefreshIndicator),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
     expect(find.text('Gestión'), findsOneWidget);
     expect(find.text('Reportes'), findsOneWidget);
   });
@@ -297,5 +310,152 @@ void main() {
 
     expect(find.text('3 reservas activas'), findsOneWidget);
     expect(find.text('Ver reservas'), findsNothing);
+  });
+
+  testWidgets('Success: the space map paints free, occupied and held cells', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      capacity: 8,
+      board: SlotBoard(
+        carCapacity: 4,
+        motoCapacity: 2,
+        sessions: [
+          SlotSession(
+            sessionId: 9,
+            plate: 'BRD001',
+            entryTime: DateTime(2026, 1, 1),
+          ),
+          SlotSession(
+            sessionId: 10,
+            plate: 'BRD002',
+            entryTime: DateTime(2026, 1, 1),
+          ),
+        ],
+        holds: [
+          SlotHold(
+            plate: 'HOLD01',
+            until: DateTime.now().add(const Duration(hours: 1)),
+          ),
+        ],
+      ),
+    );
+
+    expect(find.text('Mapa de espacios'), findsOneWidget);
+    expect(find.text('3 libres'), findsOneWidget);
+    expect(find.text('BRD001'), findsOneWidget);
+    expect(find.text('HOLD01'), findsOneWidget);
+
+    await tester.tap(find.text('Reservas'));
+    await tester.pumpAndSettle();
+    expect(find.text('BRD001'), findsNothing);
+    expect(find.text('HOLD01'), findsOneWidget);
+  });
+
+  testWidgets('Success: an occupied cell opens its details and check-out', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      capacity: 8,
+      board: SlotBoard(
+        carCapacity: 4,
+        sessions: [
+          SlotSession(
+            sessionId: 9,
+            plate: 'BRD001',
+            entryTime: DateTime(2026, 1, 1),
+          ),
+        ],
+      ),
+    );
+
+    await tester.tap(find.text('BRD001'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Total a cobrar'), findsOneWidget);
+    expect(find.textContaining('5.000'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Salida'));
+    await tester.pumpAndSettle();
+    expect(find.text('check-out page'), findsOneWidget);
+  });
+
+  testWidgets('Success: occupancy adds a radial gauge on top of the bar', (
+    tester,
+  ) async {
+    await _pump(tester, capacity: 8);
+
+    expect(find.text('50%'), findsOneWidget);
+    final gauge = tester.widget<CircularProgressIndicator>(
+      find.byType(CircularProgressIndicator),
+    );
+    expect(gauge.value, closeTo(0.5, 0.001));
+  });
+
+  testWidgets('A11y: space cells announce state, plate and group', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    await _pump(
+      tester,
+      capacity: 8,
+      board: SlotBoard(
+        carCapacity: 4,
+        sessions: [
+          SlotSession(
+            sessionId: 9,
+            plate: 'BRD001',
+            entryTime: DateTime(2026, 1, 1),
+          ),
+        ],
+        holds: [
+          SlotHold(
+            plate: 'HOLD01',
+            until: DateTime.now().add(const Duration(hours: 1)),
+          ),
+        ],
+      ),
+    );
+
+    expect(
+      find.bySemanticsLabel(RegExp('^Ocupado BRD001')),
+      findsOneWidget,
+    );
+    expect(
+      find.bySemanticsLabel(RegExp('^Reservado HOLD01')),
+      findsOneWidget,
+    );
+    expect(find.bySemanticsLabel(RegExp('^Libre Carros')), findsWidgets);
+    semantics.dispose();
+  });
+
+  testWidgets('A11y: space cells keep cabin-sized tap targets', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      capacity: 8,
+      board: const SlotBoard(carCapacity: 4),
+    );
+
+    final cell = tester.getSize(find.byTooltip('Libre Carros y camionetas 1'));
+    expect(cell.width, greaterThanOrEqualTo(44));
+    expect(cell.height, greaterThanOrEqualTo(48));
+  });
+
+  testWidgets('Security: a free cell opens nothing', (tester) async {
+    await _pump(
+      tester,
+      capacity: 8,
+      board: const SlotBoard(carCapacity: 4),
+    );
+
+    await tester.tap(find.byTooltip('Libre Carros y camionetas 1'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Total a cobrar'), findsNothing);
+    expect(find.text('check-out page'), findsNothing);
   });
 }

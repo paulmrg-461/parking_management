@@ -1994,6 +1994,96 @@ abstract class AppLocalizations {
   /// **'Ver todos'**
   String get homeInsideSeeAll;
 
+  /// No description provided for @slotBoardTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Mapa de espacios'**
+  String get slotBoardTitle;
+
+  /// No description provided for @slotBoardFree.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} libres'**
+  String slotBoardFree(int count);
+
+  /// No description provided for @slotBoardAll.
+  ///
+  /// In es, this message translates to:
+  /// **'Todos'**
+  String get slotBoardAll;
+
+  /// No description provided for @slotBoardCars.
+  ///
+  /// In es, this message translates to:
+  /// **'Carros'**
+  String get slotBoardCars;
+
+  /// No description provided for @slotBoardMotos.
+  ///
+  /// In es, this message translates to:
+  /// **'Motos'**
+  String get slotBoardMotos;
+
+  /// No description provided for @slotBoardHolds.
+  ///
+  /// In es, this message translates to:
+  /// **'Reservas'**
+  String get slotBoardHolds;
+
+  /// No description provided for @slotBoardHeavy.
+  ///
+  /// In es, this message translates to:
+  /// **'Pesados'**
+  String get slotBoardHeavy;
+
+  /// No description provided for @slotEstimateUnavailable.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo calcular la tarifa'**
+  String get slotEstimateUnavailable;
+
+  /// No description provided for @slotBoardEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Configura los espacios del parqueadero en Ajustes'**
+  String get slotBoardEmpty;
+
+  /// No description provided for @slotBoardConfigure.
+  ///
+  /// In es, this message translates to:
+  /// **'Configurar'**
+  String get slotBoardConfigure;
+
+  /// No description provided for @slotBoardNoHolds.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay reservas activas'**
+  String get slotBoardNoHolds;
+
+  /// No description provided for @slotFree.
+  ///
+  /// In es, this message translates to:
+  /// **'Libre'**
+  String get slotFree;
+
+  /// No description provided for @slotOccupied.
+  ///
+  /// In es, this message translates to:
+  /// **'Ocupado'**
+  String get slotOccupied;
+
+  /// No description provided for @slotReserved.
+  ///
+  /// In es, this message translates to:
+  /// **'Reservado'**
+  String get slotReserved;
+
+  /// No description provided for @slotEstimate.
+  ///
+  /// In es, this message translates to:
+  /// **'Tarifa estimada'**
+  String get slotEstimate;
+
   /// No description provided for @homeSummary.
   ///
   /// In es, this message translates to:
@@ -2479,6 +2569,60 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Descuento'**
   String get receiptDiscount;
+
+  /// No description provided for @checkOutSettlement.
+  ///
+  /// In es, this message translates to:
+  /// **'Liquidación'**
+  String get checkOutSettlement;
+
+  /// No description provided for @fareTime.
+  ///
+  /// In es, this message translates to:
+  /// **'Tiempo: {duration}'**
+  String fareTime(String duration);
+
+  /// No description provided for @fareDays.
+  ///
+  /// In es, this message translates to:
+  /// **'{days} días'**
+  String fareDays(int days);
+
+  /// No description provided for @fareDayHours.
+  ///
+  /// In es, this message translates to:
+  /// **'{hours} h × {rate} (día)'**
+  String fareDayHours(int hours, String rate);
+
+  /// No description provided for @fareNightHours.
+  ///
+  /// In es, this message translates to:
+  /// **'{hours} h × {rate} (noche)'**
+  String fareNightHours(int hours, String rate);
+
+  /// No description provided for @fareDailyCap.
+  ///
+  /// In es, this message translates to:
+  /// **'Tope diario aplicado ({amount})'**
+  String fareDailyCap(String amount);
+
+  /// No description provided for @fareTotal.
+  ///
+  /// In es, this message translates to:
+  /// **'Total a cobrar'**
+  String get fareTotal;
+
+  /// No description provided for @slotBoardError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo cargar el mapa de espacios'**
+  String get slotBoardError;
+
+  /// No description provided for @slotBoardRetry.
+  ///
+  /// In es, this message translates to:
+  /// **'Reintentar'**
+  String get slotBoardRetry;
 
   /// No description provided for @paymentMethodTitle.
   ///

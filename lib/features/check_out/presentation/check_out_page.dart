@@ -255,14 +255,12 @@ class _CheckOutPageState extends State<CheckOutPage> {
     if (!context.mounted) {
       return;
     }
-    final hasPass = preview?.hasPass ?? false;
     final choice = await showCheckoutDialog(
       context,
       plate: plate,
       canDiscount: _canDiscount(context),
-      estimatedAmount: preview?.amount,
-      hasPass: hasPass,
-      initialMethod: hasPass
+      preview: preview,
+      initialMethod: (preview?.hasPass ?? false)
           ? PaymentMethod.monthlyPass
           : _basePaymentMethod(_rememberedMethod),
     );

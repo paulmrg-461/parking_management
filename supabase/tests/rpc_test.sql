@@ -1208,4 +1208,115 @@ begin
      where lot_id = 1;
 end $$;
 
+-- Fare breakdown: the explanation shown to the operator is the same math the
+-- server charges, including the night window and the daily cap.
+do $$
+declare
+    brk_cat integer;
+    night_cat integer;
+    breakdown jsonb;
+    night jsonb;
+    entry_at timestamptz := timestamptz '2026-03-10 10:15:00-05';
+    exit_at timestamptz := timestamptz '2026-03-10 13:40:00-05';
+begin
+    insert into public.categories (name, capacity, lot_id)
+    values ('brkcar', 0, 1)
+    returning id into brk_cat;
+    insert into public.tariffs (category_id, type, amount, active, lot_id) values
+        (brk_cat, 'hourly', 3000, true, 1),
+        (brk_cat, 'daily', 10000, true, 1);
+
+    breakdown := public.fare_breakdown(brk_cat, entry_at, exit_at, false);
+    if (breakdown ->> 'amount')::integer
+       <> public.calculate_fare(brk_cat, entry_at, exit_at, false) then
+        raise exception 'fare breakdown disagrees with calculate_fare';
+    end if;
+    if (breakdown ->> 'day_hours')::integer <> 4 then
+        raise exception 'fare breakdown billed the wrong day hours: %', breakdown;
+    end if;
+    if (breakdown ->> 'night_hours')::integer <> 0
+       or (breakdown ->> 'days')::integer <> 1 then
+        raise exception 'fare breakdown invented night hours: %', breakdown;
+    end if;
+    if not (breakdown ->> 'daily_cap_applied')::boolean
+       or (breakdown ->> 'amount')::integer <> 10000 then
+        raise exception 'fare breakdown ignored the daily cap: %', breakdown;
+    end if;
+    if (breakdown ->> 'elapsed_seconds')::integer <> 12300 then
+        raise exception 'fare breakdown lost the elapsed time: %', breakdown;
+    end if;
+
+    if (public.fare_breakdown(brk_cat, entry_at, exit_at, true) ->> 'amount')::integer <> 0 then
+        raise exception 'a monthly pass was charged';
+    end if;
+
+    insert into public.categories (name, capacity, lot_id)
+    values ('brknight', 0, 1)
+    returning id into night_cat;
+    insert into public.tariffs (
+        category_id, type, amount, active, lot_id, start_time, end_time
+    ) values
+        (night_cat, 'hourly', 3000, true, 1, null, null),
+        (night_cat, 'nightly', 9000, true, 1, '20:00', '06:00');
+
+    night := public.fare_breakdown(
+        night_cat,
+        timestamptz '2026-03-10 21:00:00-05',
+        timestamptz '2026-03-10 23:00:00-05',
+        false
+    );
+    if (night ->> 'night_hours')::integer <> 2
+       or (night ->> 'day_hours')::integer <> 0
+       or (night ->> 'amount')::integer <> 18000 then
+        raise exception 'night window was not billed separately: %', night;
+    end if;
+
+    begin
+        perform public.fare_breakdown(brk_cat, exit_at, entry_at, false);
+        raise exception 'an empty billing period was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidBillingPeriodError%' then
+            raise;
+        end if;
+    end;
+end $$;
+
+-- Slot board: the visual map is lot-scoped and groups by category.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+declare
+    free_cat integer;
+    board jsonb;
+begin
+    insert into public.categories (name, capacity, lot_id)
+    values ('brdwalk', 0, 1)
+    returning id into free_cat;
+
+    perform public.check_in('BOARD1', free_cat, null, null, '[]'::jsonb);
+
+    board := public.slot_board();
+    if (board ->> 'car_capacity')::integer
+       <> (select car_capacity from public.parking_settings where lot_id = 1) then
+        raise exception 'slot board lost the car capacity';
+    end if;
+    if not exists (
+        select 1 from jsonb_array_elements(board -> 'sessions') item
+         where item ->> 'plate' = 'BOARD1'
+           and item ->> 'group' = 'heavy'
+    ) then
+        raise exception 'slot board did not paint the vehicle inside: %', board;
+    end if;
+
+    set local request.headers = '{"x-lot-id":"2"}';
+    board := public.slot_board();
+    if exists (
+        select 1 from jsonb_array_elements(board -> 'sessions') item
+         where item ->> 'plate' = 'BOARD1'
+    ) then
+        raise exception 'slot board leaked another lot';
+    end if;
+    set local request.headers = '{"x-lot-id":"1"}';
+end $$;
+
 rollback;

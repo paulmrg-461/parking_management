@@ -14,6 +14,7 @@ import 'package:parking_management/features/check_out/domain/entities/check_out_
 import 'package:parking_management/features/check_out/domain/entities/open_session.dart';
 import 'package:parking_management/features/check_out/domain/entities/capacity_snapshot.dart';
 import 'package:parking_management/features/check_out/domain/entities/occupancy_snapshot.dart';
+import 'package:parking_management/features/check_out/domain/entities/slot_board.dart';
 import 'package:parking_management/features/check_out/domain/entities/today_summary.dart';
 import 'package:parking_management/features/check_out/domain/repositories/check_out_repository.dart';
 import 'package:parking_management/features/check_out/presentation/check_out_page.dart';
@@ -33,11 +34,15 @@ class _FakeCheckOutRepository implements CheckOutRepository {
   Failure? checkOutError;
   Failure? previewError;
   bool hasPass = false;
+  CheckOutPreview? previewToReturn;
   bool? lastLostTicket;
   String? lastLostTicketReason;
 
   @override
   Future<TodaySummary> todaySummary() async => TodaySummary.empty;
+
+  @override
+  Future<SlotBoard> slotBoard() async => SlotBoard.empty;
 
   @override
   Future<CapacitySnapshot> capacitySnapshot() async => CapacitySnapshot.empty;
@@ -83,11 +88,12 @@ class _FakeCheckOutRepository implements CheckOutRepository {
     if (error != null) {
       throw error;
     }
-    return CheckOutPreview(
-      sessionId: sessionId,
-      amount: hasPass ? 0 : 5000,
-      hasPass: hasPass,
-    );
+    return previewToReturn ??
+        CheckOutPreview(
+          sessionId: sessionId,
+          amount: hasPass ? 0 : 5000,
+          hasPass: hasPass,
+        );
   }
 
 
@@ -287,7 +293,7 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Cobrar').first);
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Total estimado'), findsOneWidget);
+    expect(find.text('Total a cobrar'), findsOneWidget);
     expect(find.textContaining('5.000'), findsOneWidget);
 
     await tester.tap(find.text('Confirmar'));
@@ -303,7 +309,7 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Cobrar').first);
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Total estimado'), findsNothing);
+    expect(find.text('No se pudo calcular la tarifa'), findsOneWidget);
     expect(find.text('Efectivo'), findsOneWidget);
 
     await tester.tap(find.text('Confirmar'));
@@ -555,5 +561,30 @@ void main() {
     await pumpPage(tester);
 
     expect(find.text('Llaves'), findsOneWidget);
+  });
+
+  testWidgets('Success: the dialog explains the billed hours', (tester) async {
+    await pumpPage(tester);
+    repository.previewToReturn = const CheckOutPreview(
+      sessionId: 1,
+      amount: 22000,
+      elapsedSeconds: 3900,
+      dayHours: 2,
+      nightHours: 1,
+      days: 1,
+      hourlyRate: 2000,
+      nightlyRate: 8000,
+      dailyRate: 30000,
+      dailyCapApplied: true,
+    );
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Cobrar').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Tiempo: 1 h 5 min'), findsOneWidget);
+    expect(find.text('2 h × \$2.000 (día)'), findsOneWidget);
+    expect(find.text('1 h × \$8.000 (noche)'), findsOneWidget);
+    expect(find.text('Tope diario aplicado (\$30.000)'), findsOneWidget);
+    expect(find.text('\$22.000'), findsOneWidget);
   });
 }
