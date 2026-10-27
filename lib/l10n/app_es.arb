@@ -497,6 +497,9 @@
   "scanEmpty": "Ingresa una placa antes de confirmar",
 
   "categoriesTitle": "Categorías",
+  "categorySpotsLeft": "quedan {count}",
+  "@categorySpotsLeft": {"placeholders": {"count": {"type": "int"}}},
+  "categoryNoSpots": "sin cupo",
   "categoriesEmpty": "Aún no hay categorías",
   "categoryNew": "Nueva categoría",
   "categoryRename": "Renombrar categoría",

@@ -1447,6 +1447,14 @@ class AppLocalizationsEs extends AppLocalizations {
   String get categoriesTitle => 'Categorías';
 
   @override
+  String categorySpotsLeft(int count) {
+    return 'quedan $count';
+  }
+
+  @override
+  String get categoryNoSpots => 'sin cupo';
+
+  @override
   String get categoriesEmpty => 'Aún no hay categorías';
 
   @override

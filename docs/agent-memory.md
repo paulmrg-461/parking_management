@@ -12,7 +12,7 @@ Last updated: 2026-10-26, branch `feature/supabase` (post-UI/UX polish).
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0046` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 664 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 665 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -498,6 +498,9 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   scan and a USB reader's `Enter` (`SearchField.onSubmitted`) reuse it.
 - Check-in success opens `showReceipt` with the QR + Imprimir (no summary step)
   and restores plate focus when the dialog closes.
+- Check-in category options append the group's remaining spaces
+  (`categorySpotsLeft`, held spots subtracted, `categoryNoSpots` when zero);
+  groups without a configured capacity stay plain.
 - Check-in's "vehicles inside" is a local accordion (`_sessionsOpen`) with a
   count badge; rows expose the ticket (receipt + print) and "Mark exit"
   (`/check-out?scan=<plate>`; `onMarkExit` is injectable for tests).
@@ -536,7 +539,7 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 ## Latest verification (2026-10-26)
 
-- `flutter test`: 664 passed (+1 live-stack integration skipped); `flutter
+- `flutter test`: 665 passed (+1 live-stack integration skipped); `flutter
   analyze` 129 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
 - `supabase/tests/run.sh` passed (migrations `0001`–`0046`); `e2e.sh` passed

@@ -521,6 +521,38 @@ class _CheckInPageState extends State<CheckInPage> {
     }
   }
 
+  /// Remaining spaces for the category's group, when the site configured it.
+  /// `null` means "no limit / unknown" and the option stays plain.
+  String? _availability(String categoryName) {
+    try {
+      final state = context.watch<DashboardCubit>().state;
+      if (state is! DashboardLoaded) {
+        return null;
+      }
+      final capacity = state.capacity;
+      final int? remaining;
+      if (isCarGroup(categoryName) && capacity.carCapacity > 0) {
+        remaining = capacity.carCapacity -
+            capacity.carOpen -
+            capacity.carReserved;
+      } else if (isMotoGroup(categoryName) && capacity.motoCapacity > 0) {
+        remaining = capacity.motoCapacity -
+            capacity.motoOpen -
+            capacity.motoReserved;
+      } else {
+        remaining = null;
+      }
+      if (remaining == null) {
+        return null;
+      }
+      return remaining <= 0
+          ? context.l10n.categoryNoSpots
+          : context.l10n.categorySpotsLeft(remaining);
+    } on ProviderNotFoundException {
+      return null;
+    }
+  }
+
   Widget _buildRegistration(VehicleLookupNotFound lookup) {
     final l10n = context.l10n;
     final full = _fullCategories(context);
@@ -559,7 +591,10 @@ class _CheckInPageState extends State<CheckInPage> {
                     child: Text(
                       full.contains(category.id)
                           ? '${category.name} · ${l10n.errorCategoryFull}'
-                          : category.name,
+                          : [
+                              category.name,
+                              ?_availability(category.name),
+                            ].join(' · '),
                     ),
                   ),
             ],

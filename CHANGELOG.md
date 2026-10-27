@@ -142,6 +142,9 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   may leave their keys (`0` = no limit). The check-in form has a "Leaves the
   keys" switch, the list shows it, and the server enforces the three limits
   (`ParkingFullError`/`KeysFullError`); trucks and buses are not limited.
+- The check-in category dropdown shows the **remaining spaces** of the group
+  (held spots included) next to each option, so the operator knows before
+  choosing.
 - Check-out shows a **keys** chip on cars that left them, and
   `evidence-archive.sh` honors the gateway port from `.env`.
 - The check-in "vehicles inside" widget is an **accordion** with the count:
@@ -267,7 +270,7 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Tests
 
-- 664 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
+- 665 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
   integration test that runs only against a live stack.
 - SQL/RLS/RPC regressions covering capacity, shifts, discounts, passes,
   reservations, multi-site isolation, audit, diagnostics and retention.
@@ -304,7 +307,7 @@ Captured on 2026-10-24 against the local self-hosted stack:
 
 | Check | Result |
 |---|---|
-| `flutter test` | 664 passed (+1 live-stack integration skipped) |
+| `flutter test` | 665 passed (+1 live-stack integration skipped) |
 | `flutter analyze` | 0 errors, 0 warnings (only SDK deprecation infos) |
 | `flutter build web --release` | OK |
 | `supabase/tests/run.sh` | Passed (migrations + RPC/RLS regressions) |

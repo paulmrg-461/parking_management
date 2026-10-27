@@ -703,4 +703,26 @@ void main() {
     expect(find.text('Car · La categoría está llena'), findsOneWidget);
     expect(find.text('Motorcycle'), findsOneWidget);
   });
+
+  testWidgets('Success: category options show the remaining spaces', (
+    tester,
+  ) async {
+    await pumpPage(
+      tester,
+      space: const CapacitySnapshot(
+        carOpen: 1,
+        carCapacity: 4,
+        carReserved: 1,
+      ),
+    );
+
+    await enterPlate(tester, 'NEW999');
+    await scrollTo(tester, categoryField());
+    await tester.tap(categoryField());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Car · quedan 2'), findsOneWidget);
+    // Motorcycles have no configured limit, so the option stays plain.
+    expect(find.text('Motorcycle'), findsOneWidget);
+  });
 }

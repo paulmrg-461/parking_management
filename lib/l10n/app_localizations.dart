@@ -2708,6 +2708,18 @@ abstract class AppLocalizations {
   /// **'Categorías'**
   String get categoriesTitle;
 
+  /// No description provided for @categorySpotsLeft.
+  ///
+  /// In es, this message translates to:
+  /// **'quedan {count}'**
+  String categorySpotsLeft(int count);
+
+  /// No description provided for @categoryNoSpots.
+  ///
+  /// In es, this message translates to:
+  /// **'sin cupo'**
+  String get categoryNoSpots;
+
   /// No description provided for @categoriesEmpty.
   ///
   /// In es, this message translates to:
