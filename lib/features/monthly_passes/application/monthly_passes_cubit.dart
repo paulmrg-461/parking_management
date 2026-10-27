@@ -27,7 +27,7 @@ final class MonthlyPassesLoading extends MonthlyPassesState {
 }
 
 /// What the last successful action did, so the page can confirm it.
-enum MonthlyPassAction { created, deleted, payment }
+enum MonthlyPassAction { created, deleted, payment, renewed }
 
 /// Passes plus the vehicles for the create form and a precomputed
 /// vehicleId → plate map (O(1) per row).
@@ -135,6 +135,26 @@ class MonthlyPassesCubit extends ResilientCubit<MonthlyPassesState> {
 
   Future<void> update(UpdateMonthlyPassCommand command) =>
       _submit(() => _repository.update(command));
+
+  /// Manual renewal: continues the day after the current end (or starts today
+  /// for an expired pass) for 30 days, keeping the amount.
+  Future<void> renew(MonthlyPass pass) async {
+    final id = pass.id;
+    if (id == null) {
+      return;
+    }
+    final period = pass.renewedPeriod();
+    await _submit(
+      () => _repository.update(
+        UpdateMonthlyPassCommand(
+          id: id,
+          startDate: period.start,
+          endDate: period.end,
+        ),
+      ),
+      action: MonthlyPassAction.renewed,
+    );
+  }
 
   Future<void> delete(int id) =>
       _submit(() => _repository.delete(id), action: MonthlyPassAction.deleted);

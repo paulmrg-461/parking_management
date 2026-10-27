@@ -21,6 +21,25 @@ class MonthlyPass extends Equatable {
   final bool autoRenew;
   final String autoRenewPaymentMethod;
 
+  /// `true` when the pass is expired or ends within [days] calendar days, so
+  /// the list can offer a manual renewal.
+  bool needsRenewal({DateTime? now, int days = 7}) {
+    final current = now ?? DateTime.now();
+    final today = DateTime(current.year, current.month, current.day);
+    final end = DateTime(endDate.year, endDate.month, endDate.day);
+    return !end.isAfter(today.add(Duration(days: days)));
+  }
+
+  /// Period a manual renewal covers: the day after the current end (or today
+  /// when it already expired), 30 days inclusive.
+  ({DateTime start, DateTime end}) renewedPeriod({DateTime? now}) {
+    final current = now ?? DateTime.now();
+    final today = DateTime(current.year, current.month, current.day);
+    final end = DateTime(endDate.year, endDate.month, endDate.day);
+    final start = end.isBefore(today) ? today : end.add(const Duration(days: 1));
+    return (start: start, end: start.add(const Duration(days: 29)));
+  }
+
   @override
   List<Object?> get props =>
       [

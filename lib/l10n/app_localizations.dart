@@ -866,6 +866,24 @@ abstract class AppLocalizations {
   /// **'Vence en {duration}'**
   String reservationExpiresIn(String duration);
 
+  /// No description provided for @reservationQuick2h.
+  ///
+  /// In es, this message translates to:
+  /// **'+2 h'**
+  String get reservationQuick2h;
+
+  /// No description provided for @reservationQuick4h.
+  ///
+  /// In es, this message translates to:
+  /// **'+4 h'**
+  String get reservationQuick4h;
+
+  /// No description provided for @reservationEndOfDay.
+  ///
+  /// In es, this message translates to:
+  /// **'Fin del día'**
+  String get reservationEndOfDay;
+
   /// No description provided for @reservationUntil.
   ///
   /// In es, this message translates to:
@@ -2929,6 +2947,30 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Pago de mensualidad registrado'**
   String get monthlyPassPaymentDone;
+
+  /// No description provided for @monthlyPassRenew.
+  ///
+  /// In es, this message translates to:
+  /// **'Renovar 30 días'**
+  String get monthlyPassRenew;
+
+  /// No description provided for @monthlyPassRenewTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Renovar la mensualidad?'**
+  String get monthlyPassRenewTitle;
+
+  /// No description provided for @monthlyPassRenewBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Se extenderá hasta {date}, conservando el valor actual.'**
+  String monthlyPassRenewBody(String date);
+
+  /// No description provided for @monthlyPassRenewed.
+  ///
+  /// In es, this message translates to:
+  /// **'Mensualidad renovada 30 días'**
+  String get monthlyPassRenewed;
 
   /// No description provided for @monthlyPassesEmpty.
   ///

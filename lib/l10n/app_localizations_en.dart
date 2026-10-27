@@ -427,6 +427,15 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get reservationQuick2h => '+2 h';
+
+  @override
+  String get reservationQuick4h => '+4 h';
+
+  @override
+  String get reservationEndOfDay => 'End of day';
+
+  @override
   String reservationUntil(String when) {
     return 'Until $when';
   }
@@ -1581,6 +1590,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get monthlyPassPaymentDone => 'Monthly pass payment recorded';
+
+  @override
+  String get monthlyPassRenew => 'Renew 30 days';
+
+  @override
+  String get monthlyPassRenewTitle => 'Renew this monthly pass?';
+
+  @override
+  String monthlyPassRenewBody(String date) {
+    return 'It will be extended until $date, keeping the current amount.';
+  }
+
+  @override
+  String get monthlyPassRenewed => 'Monthly pass renewed for 30 days';
 
   @override
   String get monthlyPassesEmpty => 'No monthly passes yet';

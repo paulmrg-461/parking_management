@@ -170,6 +170,7 @@ class _MonthlyPassesPageState extends State<MonthlyPassesPage> {
       MonthlyPassAction.created => l10n.monthlyPassCreated,
       MonthlyPassAction.deleted => l10n.monthlyPassDeleted,
       MonthlyPassAction.payment => l10n.monthlyPassPaymentDone,
+      MonthlyPassAction.renewed => l10n.monthlyPassRenewed,
       null => null,
     };
     if (message == null) {
@@ -288,9 +289,23 @@ class _MonthlyPassTile extends StatelessWidget {
           ),
         ],
       ),
-      subtitle: Text(
-        '$period · ${Formatters.money(monthlyPass.amount)}'
-        '${monthlyPass.autoRenew ? ' · ${l10n.monthlyPassAutoRenew}' : ''}',
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '$period · ${Formatters.money(monthlyPass.amount)}'
+            '${monthlyPass.autoRenew ? ' · ${l10n.monthlyPassAutoRenew}' : ''}',
+          ),
+          if (monthlyPass.active && monthlyPass.needsRenewal())
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () => _renew(context),
+                icon: const Icon(Icons.event_repeat, size: 18),
+                label: Text(l10n.monthlyPassRenew),
+              ),
+            ),
+        ],
       ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
@@ -341,6 +356,22 @@ class _MonthlyPassTile extends StatelessWidget {
         onUndo: () =>
             cubit.update(UpdateMonthlyPassCommand(id: id, active: true)),
       );
+    }
+  }
+
+  Future<void> _renew(BuildContext context) async {
+    final l10n = context.l10n;
+    final period = monthlyPass.renewedPeriod();
+    final confirmed = await ConfirmDialog.show(
+      context,
+      ConfirmDialog(
+        title: l10n.monthlyPassRenewTitle,
+        body: l10n.monthlyPassRenewBody(Formatters.date(period.end)),
+        confirmLabel: l10n.monthlyPassRenew,
+      ),
+    );
+    if (confirmed && context.mounted) {
+      await context.read<MonthlyPassesCubit>().renew(monthlyPass);
     }
   }
 

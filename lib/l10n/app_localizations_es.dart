@@ -434,6 +434,15 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get reservationQuick2h => '+2 h';
+
+  @override
+  String get reservationQuick4h => '+4 h';
+
+  @override
+  String get reservationEndOfDay => 'Fin del día';
+
+  @override
   String reservationUntil(String when) {
     return 'Hasta $when';
   }
@@ -1586,6 +1595,20 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get monthlyPassPaymentDone => 'Pago de mensualidad registrado';
+
+  @override
+  String get monthlyPassRenew => 'Renovar 30 días';
+
+  @override
+  String get monthlyPassRenewTitle => '¿Renovar la mensualidad?';
+
+  @override
+  String monthlyPassRenewBody(String date) {
+    return 'Se extenderá hasta $date, conservando el valor actual.';
+  }
+
+  @override
+  String get monthlyPassRenewed => 'Mensualidad renovada 30 días';
 
   @override
   String get monthlyPassesEmpty => 'Aún no hay mensualidades';

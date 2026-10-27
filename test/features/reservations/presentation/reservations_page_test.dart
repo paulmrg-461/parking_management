@@ -147,4 +147,39 @@ void main() {
       'ABC123',
     );
   });
+
+  testWidgets('Success: a quick hold presets the expiry time', (tester) async {
+    final repository = await pumpPage(tester);
+    await tester.tap(find.byTooltip('Nueva reserva'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).first, 'abc123');
+    await tester.tap(find.text('+4 h'));
+    await tester.pump();
+    await tester.tap(find.text('Guardar'));
+    await tester.pumpAndSettle();
+
+    final until = repository.createdUntil!;
+    expect(until.difference(DateTime.now()).inMinutes, closeTo(240, 3));
+  });
+
+  testWidgets('Success: the hold can end at the end of the day', (
+    tester,
+  ) async {
+    final repository = await pumpPage(tester);
+    await tester.tap(find.byTooltip('Nueva reserva'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).first, 'abc123');
+    await tester.tap(find.text('Fin del día'));
+    await tester.pump();
+    await tester.tap(find.text('Guardar'));
+    await tester.pumpAndSettle();
+
+    final until = repository.createdUntil!;
+    final now = DateTime.now();
+    expect(until.year, now.year);
+    expect(until.month, now.month);
+    expect(until.day, now.day);
+    expect(until.hour, 23);
+    expect(until.minute, 59);
+  });
 }

@@ -71,6 +71,17 @@ class _ReservationDialogState extends State<ReservationDialog> {
     });
   }
 
+  void _quickUntil(Duration duration) {
+    setState(() => _until = DateTime.now().add(duration));
+  }
+
+  void _endOfDay() {
+    final now = DateTime.now();
+    setState(() {
+      _until = DateTime(now.year, now.month, now.day, 23, 59);
+    });
+  }
+
   void _save() {
     final categoryId = _categoryId;
     if (!_formKey.currentState!.validate() || categoryId == null) {
@@ -125,6 +136,24 @@ class _ReservationDialogState extends State<ReservationDialog> {
                     '${_until.minute.toString().padLeft(2, '0')}',
                   ),
                 ),
+              ),
+              const SizedBox(height: Space.sm),
+              Wrap(
+                spacing: Space.xs,
+                children: [
+                  ActionChip(
+                    label: Text(l10n.reservationQuick2h),
+                    onPressed: () => _quickUntil(const Duration(hours: 2)),
+                  ),
+                  ActionChip(
+                    label: Text(l10n.reservationQuick4h),
+                    onPressed: () => _quickUntil(const Duration(hours: 4)),
+                  ),
+                  ActionChip(
+                    label: Text(l10n.reservationEndOfDay),
+                    onPressed: _endOfDay,
+                  ),
+                ],
               ),
               const SizedBox(height: Space.md),
               TextFormField(

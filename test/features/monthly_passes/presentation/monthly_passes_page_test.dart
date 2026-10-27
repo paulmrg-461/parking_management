@@ -243,4 +243,23 @@ void main() {
     expect(find.text('Pago de mensualidad registrado'), findsOneWidget);
     expect(repository.paid, [7]);
   });
+
+  testWidgets('Success: an expiring pass can be renewed in place', (
+    tester,
+  ) async {
+    await pumpPage(tester);
+
+    expect(find.text('Renovar 30 días'), findsOneWidget);
+    await tester.tap(find.text('Renovar 30 días'));
+    await tester.pumpAndSettle();
+    expect(find.text('¿Renovar la mensualidad?'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Renovar 30 días'));
+    await tester.pumpAndSettle();
+
+    final update = repository.updates.single;
+    expect(update.startDate, isNotNull);
+    expect(update.endDate!.difference(update.startDate!).inDays, 29);
+    expect(find.text('Mensualidad renovada 30 días'), findsOneWidget);
+  });
 }
