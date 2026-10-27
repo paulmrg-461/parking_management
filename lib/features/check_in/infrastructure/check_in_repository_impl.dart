@@ -30,6 +30,7 @@ class CheckInRepositoryImpl implements CheckInRepository {
     required String plate,
     required List<XFile> photos,
     NewVehicleInfo? newVehicle,
+    bool leftKeys = false,
   }) async {
     // Generated BEFORE the first attempt: if the server commits but the
     // response is lost, the queued replay sends the same key and gets the
@@ -41,6 +42,7 @@ class CheckInRepositoryImpl implements CheckInRepository {
         plate: plate,
         photos: photos,
         newVehicle: newVehicle,
+        leftKeys: leftKeys,
         idempotencyKey: clientRef,
       );
     } on NetworkFailure {
@@ -48,6 +50,7 @@ class CheckInRepositoryImpl implements CheckInRepository {
         plate: plate,
         photos: photos,
         newVehicle: newVehicle,
+        leftKeys: leftKeys,
         clientRef: clientRef,
         entryTime: entryTime,
       );
@@ -61,6 +64,7 @@ class CheckInRepositoryImpl implements CheckInRepository {
     required String plate,
     required List<XFile> photos,
     NewVehicleInfo? newVehicle,
+    required bool leftKeys,
     required String clientRef,
     required DateTime entryTime,
   }) async {
@@ -79,6 +83,7 @@ class CheckInRepositoryImpl implements CheckInRepository {
           'photo_paths': persistedPaths,
           'client_entry_time': entryTime.toIso8601String(),
           'client_ref': clientRef,
+          'left_keys': leftKeys,
           'lot_id': ?_lots.activeLotId,
           ..._newVehiclePayload(newVehicle),
         }),
@@ -92,6 +97,7 @@ class CheckInRepositoryImpl implements CheckInRepository {
       status: ParkingSessionStatus.pendingSync,
       entryTime: entryTime.toLocal(),
       photoCount: photos.length,
+      leftKeys: leftKeys,
     );
   }
 

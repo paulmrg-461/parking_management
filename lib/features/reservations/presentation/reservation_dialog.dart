@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/tokens.dart';
+import '../../../core/widgets/plate_input_field.dart';
 import '../../categories/domain/entities/category.dart';
 
 class ReservationDraft {
@@ -71,6 +71,17 @@ class _ReservationDialogState extends State<ReservationDialog> {
     });
   }
 
+  void _quickUntil(Duration duration) {
+    setState(() => _until = DateTime.now().add(duration));
+  }
+
+  void _endOfDay() {
+    final now = DateTime.now();
+    setState(() {
+      _until = DateTime(now.year, now.month, now.day, 23, 59);
+    });
+  }
+
   void _save() {
     final categoryId = _categoryId;
     if (!_formKey.currentState!.validate() || categoryId == null) {
@@ -99,16 +110,7 @@ class _ReservationDialogState extends State<ReservationDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              TextFormField(
-                controller: _plate,
-                autofocus: true,
-                textCapitalization: TextCapitalization.characters,
-                inputFormatters: [LengthLimitingTextInputFormatter(20)],
-                decoration: InputDecoration(labelText: l10n.plateLabel),
-                validator: (value) => (value ?? '').trim().isEmpty
-                    ? l10n.fieldRequired
-                    : null,
-              ),
+              PlateInputField(controller: _plate, autofocus: true),
               const SizedBox(height: Space.md),
               DropdownButtonFormField<int>(
                 initialValue: _categoryId,
@@ -134,6 +136,24 @@ class _ReservationDialogState extends State<ReservationDialog> {
                     '${_until.minute.toString().padLeft(2, '0')}',
                   ),
                 ),
+              ),
+              const SizedBox(height: Space.sm),
+              Wrap(
+                spacing: Space.xs,
+                children: [
+                  ActionChip(
+                    label: Text(l10n.reservationQuick2h),
+                    onPressed: () => _quickUntil(const Duration(hours: 2)),
+                  ),
+                  ActionChip(
+                    label: Text(l10n.reservationQuick4h),
+                    onPressed: () => _quickUntil(const Duration(hours: 4)),
+                  ),
+                  ActionChip(
+                    label: Text(l10n.reservationEndOfDay),
+                    onPressed: _endOfDay,
+                  ),
+                ],
               ),
               const SizedBox(height: Space.md),
               TextFormField(

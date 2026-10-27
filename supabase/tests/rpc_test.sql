@@ -814,6 +814,13 @@ begin
        or not (with_pass ->> 'has_pass')::boolean then
         raise exception 'fare preview ignored the active pass';
     end if;
+
+    if not (
+        select has_pass from public.open_sessions_view
+         where id = (preview ->> 'session_id')::integer
+    ) then
+        raise exception 'open sessions view did not report the active pass';
+    end if;
 end $$;
 
 -- Branding is per lot: only the active lot's row changes.
@@ -1033,5 +1040,103 @@ begin
     end if;
 end $$;
 reset role;
+
+-- Capacity groups: cars/pickups share the lot's car spots, motorcycles have
+-- their own, and cars that leave their keys have a separate cap. Trucks and
+-- buses are not limited by these settings.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    car_cat integer;
+    moto_cat integer;
+    car_open integer;
+    moto_open integer;
+    keys_open integer;
+    refused boolean := false;
+begin
+    insert into public.parking_settings (lot_id) values (1)
+    on conflict do nothing;
+
+    select id into car_cat from public.categories
+     where lot_id = 1 and lower(name) = 'car';
+    select id into moto_cat from public.categories
+     where lot_id = 1 and lower(name) = 'moto';
+    if car_cat is null or moto_cat is null then
+        raise exception 'capacity test needs the seeded car and moto categories';
+    end if;
+
+    -- Isolate the group caps from the per-category capacity.
+    update public.categories set capacity = 0 where id in (car_cat, moto_cat);
+
+    select count(*) into car_open
+      from public.parking_sessions s
+      join public.vehicles v on v.id = s.vehicle_id
+      join public.categories c on c.id = v.category_id
+     where s.status = 'open' and s.lot_id = 1
+       and lower(c.name) in ('car', 'carro', 'auto', 'camioneta', 'suv');
+    select count(*) into moto_open
+      from public.parking_sessions s
+      join public.vehicles v on v.id = s.vehicle_id
+      join public.categories c on c.id = v.category_id
+     where s.status = 'open' and s.lot_id = 1
+       and lower(c.name) in ('moto', 'motos', 'motorcycle');
+    select count(*) into keys_open
+      from public.parking_sessions s
+     where s.status = 'open' and s.lot_id = 1 and s.left_keys;
+
+    update public.parking_settings
+       set car_capacity = car_open + 1,
+           moto_capacity = moto_open + 1,
+           key_capacity = keys_open + 1
+     where lot_id = 1;
+
+    perform public.check_in('CAPCAR1', car_cat, null, null, '[]'::jsonb);
+    begin
+        perform public.check_in('CAPCAR2', car_cat, null, null, '[]'::jsonb);
+    exception when others then
+        if sqlerrm like '%ParkingFullError%' then
+            refused := true;
+        else
+            raise;
+        end if;
+    end;
+    if not refused then
+        raise exception 'car space capacity was not enforced';
+    end if;
+    refused := false;
+
+    perform public.check_in('CAPMOTO1', moto_cat, null, null, '[]'::jsonb);
+
+    -- Room for the key test cars; the key cap is what must stop the second.
+    update public.parking_settings set car_capacity = car_open + 3 where lot_id = 1;
+    perform public.check_in(p_plate => 'CAPKEY1', p_category_id => car_cat, p_left_keys => true);
+    begin
+        perform public.check_in(p_plate => 'CAPKEY2', p_category_id => car_cat, p_left_keys => true);
+    exception when others then
+        if sqlerrm like '%KeysFullError%' then
+            refused := true;
+        else
+            raise;
+        end if;
+    end;
+    if not refused then
+        raise exception 'key capacity was not enforced';
+    end if;
+
+    if not (select left_keys from public.parking_sessions s
+              join public.vehicles v on v.id = s.vehicle_id
+             where v.plate = 'CAPKEY1' and s.status = 'open') then
+        raise exception 'left_keys was not stored on the session';
+    end if;
+    if not (select left_keys from public.open_sessions_view v
+             where v.plate = 'CAPKEY1') then
+        raise exception 'open_sessions_view did not expose left_keys';
+    end if;
+
+    update public.parking_settings
+       set car_capacity = 0, moto_capacity = 0, key_capacity = 0
+     where lot_id = 1;
+end $$;
 
 rollback;

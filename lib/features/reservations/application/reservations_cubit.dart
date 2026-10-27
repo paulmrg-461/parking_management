@@ -9,6 +9,9 @@ import '../../plate_scanning/domain/normalize_plate.dart';
 import '../domain/entities/reservation.dart';
 import '../domain/repositories/reservation_repository.dart';
 
+/// What the last successful action did, so the page can confirm it.
+enum ReservationsAction { created, cancelled }
+
 sealed class ReservationsState extends Equatable {
   const ReservationsState();
 
@@ -29,24 +32,33 @@ final class ReservationsLoaded extends ReservationsState {
     this.reservations, {
     this.categories = const [],
     this.submission = const SubmissionIdle(),
+    this.lastAction,
   });
 
   final List<Reservation> reservations;
   final List<Category> categories;
   final Submission submission;
+  final ReservationsAction? lastAction;
 
   ReservationsLoaded copyWith({
     List<Reservation>? reservations,
     List<Category>? categories,
     Submission? submission,
+    ReservationsAction? lastAction,
   }) => ReservationsLoaded(
     reservations ?? this.reservations,
     categories: categories ?? this.categories,
     submission: submission ?? this.submission,
+    lastAction: lastAction ?? this.lastAction,
   );
 
   @override
-  List<Object?> get props => [reservations, categories, submission];
+  List<Object?> get props => [
+    reservations,
+    categories,
+    submission,
+    lastAction,
+  ];
 }
 
 final class ReservationsFailure extends ReservationsState {
@@ -100,6 +112,7 @@ class ReservationsCubit extends ResilientCubit<ReservationsState> {
       emit(current.copyWith(
         reservations: await _repository.listActive(),
         submission: const SubmissionSucceeded<Object?>(null),
+        lastAction: ReservationsAction.created,
       ));
     } on Failure catch (failure) {
       emit(current.copyWith(submission: SubmissionFailed.of(failure)));
@@ -117,6 +130,7 @@ class ReservationsCubit extends ResilientCubit<ReservationsState> {
       emit(current.copyWith(
         reservations: await _repository.listActive(),
         submission: const SubmissionSucceeded<Object?>(null),
+        lastAction: ReservationsAction.cancelled,
       ));
     } on Failure catch (failure) {
       emit(current.copyWith(submission: SubmissionFailed.of(failure)));

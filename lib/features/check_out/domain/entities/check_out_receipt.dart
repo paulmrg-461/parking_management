@@ -33,18 +33,17 @@ class CheckOutReceipt extends Equatable {
   final bool pendingSync;
 
   @override
-  List<Object?> get props =>
-      [
-        id,
-        plate,
-        entryTime,
-        exitTime,
-        amountCharged,
-        ticketNumber,
-        paymentMethod,
-        discountAmount,
-        discountReason,
-        lostTicket,
-        pendingSync,
-      ];
+  List<Object?> get props => [
+    id,
+    plate,
+    entryTime,
+    exitTime,
+    amountCharged,
+    ticketNumber,
+    paymentMethod,
+    discountAmount,
+    discountReason,
+    lostTicket,
+    pendingSync,
+  ];
 }

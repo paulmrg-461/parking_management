@@ -4,16 +4,28 @@ import 'package:flutter/services.dart';
 
 /// The search field currently on screen (`null` when the page has none), so
 /// the global Ctrl/Cmd+K shortcut knows where to send focus.
-FocusNode? _activeSearchFocus;
+_SearchFieldState? _activeSearchField;
 
 /// Focuses the visible search field. Returns `true` when there was one, so the
 /// shortcut can let the platform handle the key otherwise.
 bool focusActiveSearchField() {
-  final focus = _activeSearchFocus;
-  if (focus == null) {
+  final field = _activeSearchField;
+  if (field == null) {
     return false;
   }
-  focus.requestFocus();
+  field._focus.requestFocus();
+  return true;
+}
+
+/// Empties the visible search field and reports `''` (the next check-out after
+/// a receipt starts from a clean list).
+bool resetActiveSearchField() {
+  final field = _activeSearchField;
+  if (field == null) {
+    return false;
+  }
+  field._clear();
+  field._focus.requestFocus();
   return true;
 }
 
@@ -27,6 +39,9 @@ class SearchField extends StatefulWidget {
     required this.onChanged,
     this.fieldKey,
     this.hint,
+    this.initialValue,
+    this.controller,
+    this.onSubmitted,
     this.textCapitalization = TextCapitalization.characters,
   });
 
@@ -34,6 +49,11 @@ class SearchField extends StatefulWidget {
   final String? hint;
   final ValueChanged<String> onChanged;
   final Key? fieldKey;
+  final String? initialValue;
+
+  /// Optional external controller (e.g. a scanned plate fills the field).
+  final TextEditingController? controller;
+  final ValueChanged<String>? onSubmitted;
   final TextCapitalization textCapitalization;
 
   @override
@@ -41,7 +61,8 @@ class SearchField extends StatefulWidget {
 }
 
 class _SearchFieldState extends State<SearchField> {
-  final _controller = TextEditingController();
+  late final TextEditingController _controller =
+      widget.controller ?? TextEditingController();
   final _focus = FocusNode();
 
   static bool get _desktop =>
@@ -57,16 +78,22 @@ class _SearchFieldState extends State<SearchField> {
   void initState() {
     super.initState();
     // The last field mounted wins; go_router keeps one page alive at a time.
-    _activeSearchFocus = _focus;
+    _activeSearchField = this;
+    final initial = widget.initialValue?.trim();
+    if (initial != null && initial.isNotEmpty) {
+      _controller.text = initial;
+    }
   }
 
   @override
   void dispose() {
-    if (identical(_activeSearchFocus, _focus)) {
-      _activeSearchFocus = null;
+    if (identical(_activeSearchField, this)) {
+      _activeSearchField = null;
     }
     _focus.dispose();
-    _controller.dispose();
+    if (widget.controller == null) {
+      _controller.dispose();
+    }
     super.dispose();
   }
 
@@ -103,6 +130,7 @@ class _SearchFieldState extends State<SearchField> {
           setState(() {});
           widget.onChanged(value);
         },
+        onSubmitted: widget.onSubmitted,
       ),
     );
   }

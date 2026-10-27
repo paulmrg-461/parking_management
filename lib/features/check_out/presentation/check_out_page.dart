@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -9,8 +10,11 @@ import '../../../app/di/injection.dart';
 import '../../../core/l10n/failure_messages.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/state/submission.dart';
+import '../../../core/qr/qr_decoder.dart';
+import '../../../core/qr/qr_scan_page.dart';
 import '../../../core/utils/elapsed.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_state.dart';
 import '../../../core/widgets/receipt_card.dart';
 import '../../../core/widgets/search_field.dart';
@@ -20,6 +24,7 @@ import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/widgets/sync_badge.dart';
 import '../../auth/application/auth_cubit.dart';
 import '../../auth/domain/entities/user.dart';
+import '../../plate_scanning/domain/repositories/plate_image_capture.dart';
 import '../../home/application/dashboard_cubit.dart';
 import '../../shifts/application/shift_cubit.dart';
 import '../../receipt_printing/presentation/receipt_print_sheet.dart';
@@ -35,7 +40,29 @@ import 'payment_method_dialog.dart';
 /// lets an operator search by plate (debounced in the cubit) and close one
 /// out, showing a receipt on success. Long lists page in on scroll.
 class CheckOutPage extends StatefulWidget {
-  const CheckOutPage({super.key});
+  const CheckOutPage({
+    super.key,
+    this.initialQuery,
+    this.scanPlate,
+    this.capture,
+    this.qrDecoder,
+    this.scanQr,
+  });
+
+  /// Plate to filter by (e.g. arriving from the vehicle history).
+  final String? initialQuery;
+
+  /// Plate just scanned with the shell QR action: resolve it and open its
+  /// payment dialog as soon as the page mounts.
+  final String? scanPlate;
+
+  /// Camera capture + QR reader for the receipt code. Optional so tests can
+  /// omit the scanner (the field still accepts a USB reader).
+  final PlateImageCapture? capture;
+  final QrDecoder? qrDecoder;
+
+  /// Test seam: returns the payload the live scanner read (or null to cancel).
+  final Future<String?> Function(BuildContext context)? scanQr;
 
   @override
   State<CheckOutPage> createState() => _CheckOutPageState();
@@ -45,6 +72,7 @@ class _CheckOutPageState extends State<CheckOutPage> {
   static const _prefsBox = 'preferences';
   static const _lastPaymentKey = 'last_payment_method';
 
+  final _searchController = TextEditingController();
   PaymentMethod? _rememberedMethod;
   PaymentMethod? _pendingMethod;
 
@@ -53,6 +81,25 @@ class _CheckOutPageState extends State<CheckOutPage> {
     super.initState();
     unawaited(context.read<CheckOutCubit>().loadOpenSessions());
     _restoreRememberedMethod();
+    final query = widget.initialQuery?.trim();
+    if (query != null && query.isNotEmpty) {
+      _searchController.text = query;
+      context.read<CheckOutCubit>().search(query);
+    }
+    final scan = widget.scanPlate?.trim();
+    if (scan != null && scan.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          unawaited(_resolveAndOpen(context, scan));
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   /// The last method the operator charged with, so a fleet that always pays
@@ -113,9 +160,27 @@ class _CheckOutPageState extends State<CheckOutPage> {
           children: [
             Padding(
               padding: const EdgeInsets.all(16),
-              child: SearchField(
-                label: context.l10n.searchPlate,
-                onChanged: context.read<CheckOutCubit>().search,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: SearchField(
+                      label: context.l10n.searchPlate,
+                      controller: _searchController,
+                      onChanged: context.read<CheckOutCubit>().search,
+                      onSubmitted: (value) =>
+                          unawaited(_resolveAndOpen(context, value)),
+                    ),
+                  ),
+                  if (!kIsWeb ||
+                      (widget.capture != null && widget.qrDecoder != null)) ...[
+                    const SizedBox(width: 8),
+                    IconButton.filledTonal(
+                      tooltip: context.l10n.checkOutScanQr,
+                      onPressed: () => unawaited(_scanQr(context)),
+                      icon: const Icon(Icons.qr_code_scanner),
+                    ),
+                  ],
+                ],
               ),
             ),
             const _ShiftBanner(),
@@ -123,6 +188,8 @@ class _CheckOutPageState extends State<CheckOutPage> {
               child: _SessionsList(
                 rememberedMethod: _rememberedMethod,
                 onMethodChosen: _chooseMethod,
+                onCheckOut: _startCheckout,
+                canReprint: _canDiscount(context),
               ),
             ),
           ],
@@ -165,12 +232,129 @@ class _CheckOutPageState extends State<CheckOutPage> {
     }
   }
 
+  bool _canDiscount(BuildContext context) {
+    try {
+      final auth = context.read<AuthCubit>();
+      return switch (auth.state) {
+        AuthAuthenticated(:final session) =>
+          session.user.role == UserRole.admin,
+        _ => false,
+      };
+    } on ProviderNotFoundException {
+      return false;
+    }
+  }
+
+  Future<void> _startCheckout(
+    BuildContext context,
+    OpenSession session,
+    String plate,
+  ) async {
+    final cubit = context.read<CheckOutCubit>();
+    final preview = await cubit.preview(session.id);
+    if (!context.mounted) {
+      return;
+    }
+    final hasPass = preview?.hasPass ?? false;
+    final choice = await showCheckoutDialog(
+      context,
+      plate: plate,
+      canDiscount: _canDiscount(context),
+      estimatedAmount: preview?.amount,
+      hasPass: hasPass,
+      initialMethod: hasPass
+          ? PaymentMethod.monthlyPass
+          : _basePaymentMethod(_rememberedMethod),
+    );
+    if (choice == null) {
+      return;
+    }
+    _chooseMethod(choice.method);
+    await cubit.checkOut(
+      session.id,
+      paymentMethod: choice.method.wire,
+      discountAmount: choice.discountAmount,
+      discountReason: choice.discountReason,
+      lostTicket: choice.lostTicket,
+      lostTicketReason: choice.lostTicketReason,
+    );
+  }
+
+  /// Scans the QR printed on a receipt: live camera on mobile, photo picker on
+  /// web (where the USB reader is the usual path).
+  Future<void> _scanQr(BuildContext context) async {
+    final payload =
+        await (widget.scanQr?.call(context) ?? _scanPayload(context));
+    if (!context.mounted) {
+      return;
+    }
+    final plate = payload == null ? null : plateFromQrPayload(payload);
+    if (plate == null) {
+      if (payload != null) {
+        showInfoSnack(context, context.l10n.checkOutQrUnreadable);
+      }
+      return;
+    }
+    await _resolveAndOpen(context, plate);
+  }
+
+  Future<String?> _scanPayload(BuildContext context) async {
+    if (!kIsWeb) {
+      return scanQrWithCamera(context);
+    }
+    final capture = widget.capture;
+    final decoder = widget.qrDecoder;
+    if (capture == null || decoder == null) {
+      return null;
+    }
+    try {
+      final file = await capture.capture();
+      if (file == null) {
+        return null;
+      }
+      return await decoder.decode(await file.readAsBytes());
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Resolves a scanned or typed plate on the server and opens its payment
+  /// dialog when exactly one open session matches (USB QR readers type the
+  /// plate and send Enter).
+  Future<void> _resolveAndOpen(BuildContext context, String rawPlate) async {
+    final cubit = context.read<CheckOutCubit>();
+    final plate = rawPlate.replaceAll(RegExp(r'\s'), '').toUpperCase();
+    if (plate.isEmpty) {
+      return;
+    }
+    _searchController.text = plate;
+    cubit.search(plate);
+    final session = await cubit.resolvePlate(plate);
+    if (!context.mounted) {
+      return;
+    }
+    if (session == null) {
+      showInfoSnack(context, context.l10n.checkOutQrNoSession(plate));
+      return;
+    }
+    final state = cubit.state;
+    final resolved = state is CheckOutLoaded ? state.plateOf(session) : plate;
+    await _startCheckout(context, session, resolved);
+  }
+
   Future<void> _showReceipt(BuildContext context, CheckOutReceipt receipt) {
     final data = _receiptData(receipt);
     return showReceiptSummary(
       context,
       data,
       onPrint: () => showReceiptPrintSheet(context, data),
+      nextActionLabel: context.l10n.receiptNewCharge,
+      onNextAction: () {
+        // Back to a clean list with the cursor ready for the next plate.
+        if (!resetActiveSearchField()) {
+          context.read<CheckOutCubit>().search('');
+        }
+      },
     );
   }
 
@@ -193,10 +377,19 @@ class _SessionsList extends StatelessWidget {
   const _SessionsList({
     required this.rememberedMethod,
     required this.onMethodChosen,
+    required this.onCheckOut,
+    required this.canReprint,
   });
 
   final PaymentMethod? rememberedMethod;
   final ValueChanged<PaymentMethod> onMethodChosen;
+  final bool canReprint;
+  final Future<void> Function(
+    BuildContext context,
+    OpenSession session,
+    String plate,
+  )
+  onCheckOut;
 
   static const _loadMoreThreshold = 200.0;
 
@@ -211,8 +404,7 @@ class _SessionsList extends StatelessWidget {
           previous.hasMore != current.hasMore ||
           previous.loadingMore != current.loadingMore,
       builder: (context, state) => switch (state) {
-        CheckOutInitial() ||
-        CheckOutLoading() => const SkeletonList(),
+        CheckOutInitial() || CheckOutLoading() => const SkeletonList(),
         CheckOutFailure(:final message, :final failure) => ErrorState(
           message: context.l10n.errorText(message, failure),
           onRetry: () =>
@@ -225,12 +417,22 @@ class _SessionsList extends StatelessWidget {
 
   Widget _buildList(BuildContext context, CheckOutLoaded state) {
     if (state.visible.isEmpty) {
-      return Center(
-        child: Text(
-          state.query.isEmpty
-              ? context.l10n.openSessionsEmpty
-              : context.l10n.checkOutNoMatch(state.query),
-        ),
+      final query = state.query;
+      return EmptyState(
+        message: query.isEmpty
+            ? context.l10n.openSessionsEmpty
+            : context.l10n.checkOutNoMatch(query),
+        icon: query.isEmpty ? Icons.local_parking_outlined : Icons.search_off,
+        action: query.isEmpty
+            ? null
+            : TextButton.icon(
+                onPressed: () {
+                  context.read<CheckOutCubit>().search('');
+                  resetActiveSearchField();
+                },
+                icon: const Icon(Icons.clear),
+                label: Text(context.l10n.checkOutClearSearch),
+              ),
       );
     }
     final showFooter = state.hasMore;
@@ -250,11 +452,16 @@ class _SessionsList extends StatelessWidget {
                 session: state.visible[index],
                 plate:
                     state.plates[state.visible[index].vehicleId] ??
-                    context.l10n.unknownVehicle(
-                      state.visible[index].vehicleId,
-                    ),
-                rememberedMethod: rememberedMethod,
-                onMethodChosen: onMethodChosen,
+                    context.l10n.unknownVehicle(state.visible[index].vehicleId),
+                canReprint: canReprint,
+                onCharge: () => onCheckOut(
+                  context,
+                  state.visible[index],
+                  state.plates[state.visible[index].vehicleId] ??
+                      context.l10n.unknownVehicle(
+                        state.visible[index].vehicleId,
+                      ),
+                ),
               ),
       ),
     );
@@ -265,14 +472,14 @@ class _SessionTile extends StatelessWidget {
   const _SessionTile({
     required this.session,
     required this.plate,
-    required this.rememberedMethod,
-    required this.onMethodChosen,
+    required this.onCharge,
+    required this.canReprint,
   });
 
   final OpenSession session;
   final String plate;
-  final PaymentMethod? rememberedMethod;
-  final ValueChanged<PaymentMethod> onMethodChosen;
+  final VoidCallback onCharge;
+  final bool canReprint;
 
   @override
   Widget build(BuildContext context) {
@@ -286,76 +493,78 @@ class _SessionTile extends StatelessWidget {
         children: [
           Text(l10n.sessionEntry(Formatters.dateTime(session.entryTime))),
           const SizedBox(height: 2),
-          Row(
+          // Wrap so the elapsed time and chips never overflow when the
+          // trailing actions (Cobrar + reprint) narrow the row on phones.
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Icon(
-                Icons.timer_outlined,
-                size: 14,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.timer_outlined,
+                    size: 14,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      elapsedLabel(l10n, session.entryTime),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 4),
-              Text(elapsedLabel(l10n, session.entryTime)),
-              if (longStay) ...[
-                const SizedBox(width: 8),
+              if (longStay)
                 StatusChip(
                   label: l10n.checkOutLongStay,
                   tone: StatusTone.warning,
                   icon: Icons.warning_amber_outlined,
                 ),
-              ],
+              if (session.hasPass)
+                StatusChip(
+                  label: l10n.paymentMonthlyPass,
+                  tone: StatusTone.success,
+                  icon: Icons.card_membership,
+                ),
             ],
           ),
         ],
       ),
-      trailing: FilledButton(
-        onPressed: () => _confirmCheckOut(context),
-        child: Text(l10n.checkOutCharge),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (canReprint)
+            IconButton(
+              tooltip: l10n.checkOutReprintTicket,
+              visualDensity: VisualDensity.compact,
+              icon: const Icon(Icons.receipt_long_outlined),
+              onPressed: () => _reprintTicket(context),
+            ),
+          FilledButton(
+            onPressed: onCharge,
+            child: Text(l10n.checkOutCharge),
+          ),
+        ],
       ),
     );
   }
 
-  bool _canDiscount(BuildContext context) {
-    try {
-      final auth = context.read<AuthCubit>();
-      return switch (auth.state) {
-          AuthAuthenticated(:final session) =>
-            session.user.role == UserRole.admin,
-        _ => false,
-      };
-    } on ProviderNotFoundException {
-      return false;
-    }
-  }
-
-  Future<void> _confirmCheckOut(BuildContext context) async {
-    final cubit = context.read<CheckOutCubit>();
-    final canDiscount = _canDiscount(context);
-    final preview = await cubit.preview(session.id);
-    if (!context.mounted) {
-      return;
-    }
-    final hasPass = preview?.hasPass ?? false;
-    final choice = await showCheckoutDialog(
-      context,
+  /// Reprints the entry ticket (with its exit QR) for a car still inside.
+  Future<void> _reprintTicket(BuildContext context) {
+    final data = ReceiptData(
+      kind: ReceiptKind.checkIn,
       plate: plate,
-      canDiscount: canDiscount,
-      estimatedAmount: preview?.amount,
-      hasPass: hasPass,
-      initialMethod: hasPass
-          ? PaymentMethod.monthlyPass
-          : _basePaymentMethod(rememberedMethod),
+      entryTime: session.entryTime,
+      photoCount: session.photoCount,
     );
-    if (choice == null) {
-      return;
-    }
-    onMethodChosen(choice.method);
-    await cubit.checkOut(
-      session.id,
-      paymentMethod: choice.method.wire,
-      discountAmount: choice.discountAmount,
-      discountReason: choice.discountReason,
-      lostTicket: choice.lostTicket,
-      lostTicketReason: choice.lostTicketReason,
+    return showReceipt(
+      context,
+      data,
+      onPrint: () => showReceiptPrintSheet(context, data),
     );
   }
 }
@@ -380,7 +589,6 @@ class _LoadMoreTile extends StatelessWidget {
     );
   }
 }
-
 
 class _ShiftBanner extends StatelessWidget {
   const _ShiftBanner();

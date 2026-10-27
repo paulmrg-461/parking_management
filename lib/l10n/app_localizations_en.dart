@@ -46,6 +46,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get actionEdit => 'Edit';
 
   @override
+  String get themeMode => 'Appearance';
+
+  @override
+  String get themeSystem => 'System';
+
+  @override
+  String get themeLight => 'Light';
+
+  @override
+  String get themeDark => 'Dark';
+
+  @override
   String get actionLogout => 'Log out';
 
   @override
@@ -387,9 +399,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get lotsEmpty => 'No sites yet';
 
   @override
-  String get lotSwitch => 'Switch';
-
-  @override
   String lotMembers(int count) {
     return '$count users';
   }
@@ -404,12 +413,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reservationAdd => 'New reservation';
 
   @override
+  String get reservationCreated => 'Reservation created';
+
+  @override
+  String get reservationCancelled => 'Reservation cancelled';
+
+  @override
   String get reservationsEmpty => 'No active reservations';
 
   @override
   String reservationExpiresIn(String duration) {
     return 'Expires in $duration';
   }
+
+  @override
+  String get reservationQuick2h => '+2 h';
+
+  @override
+  String get reservationQuick4h => '+4 h';
+
+  @override
+  String get reservationEndOfDay => 'End of day';
 
   @override
   String reservationUntil(String when) {
@@ -425,6 +449,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reservationNotes => 'Notes (optional)';
 
   @override
+  String get reservationCheckIn => 'Register entry';
+
+  @override
   String get reservationCancel => 'Cancel reservation';
 
   @override
@@ -434,6 +461,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String reservationCancelBody(String plate) {
     return 'The slot held for $plate will be released.';
   }
+
+  @override
+  String get sidebarCollapse => 'Collapse menu';
+
+  @override
+  String get sidebarExpand => 'Expand menu';
+
+  @override
+  String get navGroupOperation => 'Operations';
+
+  @override
+  String get navGroupManagement => 'Management';
 
   @override
   String get navHome => 'Home';
@@ -612,6 +651,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shiftClose => 'Close shift';
 
   @override
+  String get shiftDifferenceConfirmTitle => 'The cash count does not match';
+
+  @override
+  String shiftDifferenceConfirmBody(String amount) {
+    return 'Difference of $amount against the expected cash. Close the shift anyway?';
+  }
+
+  @override
   String get shiftClosedTitle => 'Shift closed';
 
   @override
@@ -705,6 +752,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String vehicleWhatsappReady(String plate) {
     return 'Hi, your vehicle $plate is ready for pickup.';
   }
+
+  @override
+  String get vehicleChargeAction => 'Charge at checkout';
 
   @override
   String get vehicleWhatsappReadyAction => 'Notify it is ready';
@@ -811,7 +861,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navMoreTooltip => 'More management sections';
 
   @override
+  String get settingsDiscardTitle => 'Discard changes?';
+
+  @override
+  String get settingsDiscardBody => 'There are unsaved settings changes.';
+
+  @override
+  String get settingsDiscard => 'Discard';
+
+  @override
   String get settingsTitle => 'Parking settings';
+
+  @override
+  String get settingsCarCapacity => 'Spaces for cars and pickups';
+
+  @override
+  String get settingsMotoCapacity => 'Spaces for motorcycles';
+
+  @override
+  String get settingsKeyCapacity => 'Maximum cars leaving keys';
+
+  @override
+  String get settingsCapacityHint => '0 = no limit';
+
+  @override
+  String get errorParkingFull => 'No spaces left for this vehicle type';
+
+  @override
+  String get errorKeysFull => 'The maximum of cars leaving keys was reached';
 
   @override
   String get settingsEvidenceRetention => 'Evidence retention (days)';
@@ -916,6 +993,27 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homeTodayPasses => 'Monthly passes';
+
+  @override
+  String get homeCapacityTitle => 'Parking capacity';
+
+  @override
+  String get homeCapacityCars => 'Cars and pickups';
+
+  @override
+  String get homeCapacityMotos => 'Motorcycles';
+
+  @override
+  String get homeCapacityKeys => 'Cars with keys';
+
+  @override
+  String get homeNoLimit => 'no limit';
+
+  @override
+  String get homeInsideSeeAll => 'See all';
+
+  @override
+  String get homeSummary => 'Summary';
 
   @override
   String get homeOccupancy => 'Vehicles parked';
@@ -1038,6 +1136,20 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String checkInAlreadyInside(String plate) {
+    return 'This vehicle is already inside ($plate). Check before registering it again.';
+  }
+
+  @override
+  String get checkInLeftKeys => 'Leaves the keys';
+
+  @override
+  String get checkInLeftKeysHint => 'Kept at the front desk';
+
+  @override
+  String get checkInLeftKeysShort => 'Keys';
+
+  @override
   String get checkInSubmit => 'Register check-in';
 
   @override
@@ -1049,6 +1161,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String checkInQueued(String plate) {
     return 'Check-in saved offline: $plate';
   }
+
+  @override
+  String get markExit => 'Mark exit';
 
   @override
   String get openSessionsTitle => 'Parked vehicles';
@@ -1089,6 +1204,36 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchPlate => 'Search by plate';
 
   @override
+  String get checkOutClearSearch => 'Clear search';
+
+  @override
+  String get scanExitTooltip => 'Scan a QR to check out';
+
+  @override
+  String get scanQrTitle => 'Scan receipt';
+
+  @override
+  String get scanQrHint => 'Point the camera at the receipt QR code';
+
+  @override
+  String get scanQrTorch => 'Flashlight';
+
+  @override
+  String get scanQrCameraError =>
+      'The camera could not start. Check the permission.';
+
+  @override
+  String get checkOutScanQr => 'Scan the receipt QR';
+
+  @override
+  String get checkOutQrUnreadable => 'The QR code could not be read';
+
+  @override
+  String checkOutQrNoSession(String plate) {
+    return 'No open session for $plate';
+  }
+
+  @override
   String checkOutNoMatch(String query) {
     return 'No plate matches “$query”';
   }
@@ -1103,6 +1248,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get checkOutPassCovered => 'Active monthly pass: no charge';
+
+  @override
+  String get checkOutReprintTicket => 'Reprint entry receipt';
 
   @override
   String get checkOutCharge => 'Charge';
@@ -1221,6 +1369,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get receiptView => 'View receipt';
+
+  @override
+  String get receiptNewCharge => 'New charge';
+
+  @override
+  String get receiptQrHint => 'Show this code at the exit to check out';
 
   @override
   String get receiptClose => 'Close';
@@ -1349,6 +1503,14 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String vehicleCreated(String plate) {
+    return 'Vehicle created: $plate';
+  }
+
+  @override
+  String get vehicleCheckInAction => 'Register entry';
+
+  @override
   String get vehiclesTitle => 'Vehicles';
 
   @override
@@ -1428,6 +1590,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get usersTitle => 'Users';
+
+  @override
+  String get usersFilterAll => 'All';
+
+  @override
+  String get usersFilterEmpty => 'No users match this filter';
 
   @override
   String get usersEmpty => 'No users yet';
@@ -1518,6 +1686,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String get monthlyPassesTitle => 'Monthly passes';
 
   @override
+  String monthlyPassesNoMatch(String query) {
+    return 'No monthly pass matches “$query”';
+  }
+
+  @override
+  String get monthlyPassCreated => 'Monthly pass created';
+
+  @override
+  String get monthlyPassDeleted => 'Monthly pass deleted';
+
+  @override
+  String get monthlyPassPaymentDone => 'Monthly pass payment recorded';
+
+  @override
+  String get monthlyPassRenew => 'Renew 30 days';
+
+  @override
+  String get monthlyPassRenewTitle => 'Renew this monthly pass?';
+
+  @override
+  String monthlyPassRenewBody(String date) {
+    return 'It will be extended until $date, keeping the current amount.';
+  }
+
+  @override
+  String get monthlyPassRenewed => 'Monthly pass renewed for 30 days';
+
+  @override
   String get monthlyPassesEmpty => 'No monthly passes yet';
 
   @override
@@ -1605,6 +1801,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportsTitle => 'Reports';
 
   @override
+  String get lotSwitchTitle => 'Switch site';
+
+  @override
+  String lotSwitchTooltip(String site) {
+    return 'Current site: $site. Tap to switch.';
+  }
+
+  @override
   String get reportsRangeTooltip => 'Change date range';
 
   @override
@@ -1622,6 +1826,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reportsPreviousLabel => 'Previous period';
+
+  @override
+  String get reportsExportCsv => 'Copy CSV';
+
+  @override
+  String get reportsCsvCopied => 'CSV copied to the clipboard';
 
   @override
   String get reportsTotalRevenue => 'Total revenue';

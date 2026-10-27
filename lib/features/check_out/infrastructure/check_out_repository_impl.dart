@@ -6,6 +6,7 @@ import '../../../core/lot/lot_session.dart';
 import '../../../core/sync/client_ref.dart';
 import '../../../core/sync/pending_mutation.dart';
 import '../../../core/sync/sync_outbox.dart';
+import '../domain/entities/capacity_snapshot.dart';
 import '../domain/entities/check_out_preview.dart';
 import '../domain/entities/check_out_receipt.dart';
 import '../domain/entities/occupancy_snapshot.dart';
@@ -37,11 +38,13 @@ class CheckOutRepositoryImpl implements CheckOutRepository {
   Future<OccupancySnapshot> occupancy() => _remote.occupancy();
 
   @override
+  Future<CapacitySnapshot> capacitySnapshot() => _remote.capacitySnapshot();
+
+  @override
   Future<TodaySummary> todaySummary() => _remote.todaySummary();
 
   @override
-  Future<CheckOutPreview> preview(int sessionId) =>
-      _remote.preview(sessionId);
+  Future<CheckOutPreview> preview(int sessionId) => _remote.preview(sessionId);
 
   @override
   Future<CheckOutReceipt> checkOut(

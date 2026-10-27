@@ -52,15 +52,15 @@ class CheckOutReceiptDto {
   Map<String, dynamic> toJson() => _$CheckOutReceiptDtoToJson(this);
 
   CheckOutReceipt toDomain() => CheckOutReceipt(
-        id: id,
-        plate: plate,
-        entryTime: entryTime,
-        exitTime: exitTime,
-        amountCharged: amountCharged,
-        ticketNumber: ticketNumber,
-        paymentMethod: paymentMethod ?? 'cash',
-        discountAmount: discountAmount,
-        discountReason: discountReason,
-        lostTicket: lostTicket,
-      );
+    id: id,
+    plate: plate,
+    entryTime: entryTime,
+    exitTime: exitTime,
+    amountCharged: amountCharged,
+    ticketNumber: ticketNumber,
+    paymentMethod: paymentMethod ?? 'cash',
+    discountAmount: discountAmount,
+    discountReason: discountReason,
+    lostTicket: lostTicket,
+  );
 }

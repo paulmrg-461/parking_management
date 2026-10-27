@@ -157,7 +157,21 @@ flutter run -d emulator-5554 \
   --dart-define=SUPABASE_ANON_KEY=<ANON_KEY>
 ```
 
-**Physical phone on the same Wi-Fi:**
+**Physical phone over adb** (USB or wireless adb; recommended):
+
+```bash
+adb devices                       # find the serial, e.g. 192.168.0.2:38333
+adb reverse tcp:8000 tcp:8000     # the phone's localhost:8000 reaches this PC
+flutter run -d <serial> \
+  --dart-define=SUPABASE_URL=http://localhost:8000 \
+  --dart-define=SUPABASE_ANON_KEY=<ANON_KEY>
+```
+
+Re-run `adb reverse tcp:8000 tcp:8000` (or `sh tool/run-android.sh`) after a
+wireless adb reconnect: the device comes back on a new port and the tunnel is
+gone, which looks like "cannot reach the server".
+
+If `adb reverse` is not an option, use the same Wi-Fi instead:
 
 1. `ip addr` (or `ipconfig`) to find your machine IP, e.g. `192.168.1.50`.
 2. `flutter run -d <device> --dart-define=SUPABASE_URL=http://192.168.1.50:8000 --dart-define=SUPABASE_ANON_KEY=<ANON_KEY>`.
@@ -166,7 +180,17 @@ flutter run -d emulator-5554 \
 **Debug** builds allow cleartext HTTP (the debug `AndroidManifest` enables it).
 **Release** builds require HTTPS.
 
-### 3.7 Production builds
+### 3.7 Branding
+
+The app ships a default mark (`assets/branding/logo.png`) used by the login
+header until an admin uploads a logo per site (Ajustes → logo). To regenerate
+the launcher/web icons after editing the design:
+
+```bash
+python3 tool/generate_branding.py   # needs Pillow
+```
+
+### 3.8 Production builds
 
 ```bash
 # Static web (any host; use HTTPS in production)
@@ -185,7 +209,7 @@ flutter build appbundle --release \
 ## 4. Verify it works
 
 ```bash
-flutter test                 # 581 tests
+flutter test                 # 662 tests
 flutter analyze              # only SDK deprecation infos from the beta channel
 sh supabase/healthcheck.sh   # services, endpoints, backlog (exit 1 on failure)
 sh supabase/tests/e2e.sh     # login → check-in → check-out → report → history

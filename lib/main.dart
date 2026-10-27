@@ -7,6 +7,7 @@ import 'package:hive_ce/hive_ce.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 import 'app/app.dart';
+import 'core/theme/theme_cubit.dart';
 import 'app/di/hive_registrar.g.dart';
 import 'app/di/injection.dart';
 import 'core/l10n/l10n.dart';
@@ -42,6 +43,7 @@ Future<void> main() async {
       brandingCubit: serviceLocator<BrandingCubit>(),
       connectivityCubit: connectivity,
       lotsCubit: serviceLocator<LotsCubit>(),
+      themeCubit: serviceLocator<ThemeCubit>(),
     ),
   );
 }

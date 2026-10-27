@@ -75,14 +75,62 @@ void main() {
 
     await tester.tap(find.widgetWithText(FilledButton, 'Cerrar turno'));
     await tester.pumpAndSettle();
+    // Matches the expected cash (opening float + sales), so no mismatch
+    // confirmation is involved.
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Efectivo contado'),
-      '25000',
+      '15000',
     );
     await tester.tap(find.text('Confirmar'));
     await tester.pumpAndSettle();
 
     expect(find.text('Turno cerrado correctamente'), findsOneWidget);
+    expect(find.text('No hay turno abierto'), findsOneWidget);
+  });
+
+  testWidgets('Security: a cash mismatch must be confirmed before closing', (
+    tester,
+  ) async {
+    final repository = FakeShiftRepository(currentShift: sampleShift());
+    final cubit = ShiftCubit(repository);
+    addTearDown(cubit.close);
+    await tester.pumpWidget(
+      testApp(
+        BlocProvider.value(
+          value: cubit,
+          child: const ShiftPage(isAdmin: false),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Cerrar turno'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Efectivo contado'),
+      '20000',
+    );
+    await tester.tap(find.text('Confirmar'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('El arqueo no cuadra'), findsOneWidget);
+    await tester.tap(find.text('Cancelar').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Cerrar turno'), findsOneWidget);
+    expect(repository.currentShift, isNotNull);
+
+    // Confirming the mismatch does close it.
+    await tester.tap(find.widgetWithText(FilledButton, 'Cerrar turno'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Efectivo contado'),
+      '20000',
+    );
+    await tester.tap(find.text('Confirmar'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Cerrar turno').last);
+    await tester.pumpAndSettle();
+
     expect(find.text('No hay turno abierto'), findsOneWidget);
   });
 }

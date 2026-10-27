@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/error/failure.dart';
@@ -14,7 +15,9 @@ import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/app_icon_button.dart';
 import '../../../core/widgets/async_view.dart';
 import '../../../core/widgets/confirm_dialog.dart';
+import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/list_page_scaffold.dart';
+import '../../../core/widgets/search_field.dart';
 import '../../../app/di/injection.dart';
 import '../../../core/utils/whatsapp_launcher.dart';
 import '../../../core/widgets/plate_text.dart';
@@ -43,6 +46,8 @@ class MonthlyPassesPage extends StatefulWidget {
 }
 
 class _MonthlyPassesPageState extends State<MonthlyPassesPage> {
+  String _query = '';
+
   @override
   void initState() {
     super.initState();
@@ -58,6 +63,7 @@ class _MonthlyPassesPageState extends State<MonthlyPassesPage> {
       onRefresh: context.read<MonthlyPassesCubit>().load,
       body: SubmissionListener<MonthlyPassesCubit, MonthlyPassesState>(
         submissionOf: _submissionOf,
+        onSuccess: (context, _) => _confirmAction(context),
         child: BlocBuilder<MonthlyPassesCubit, MonthlyPassesState>(
           buildWhen: (previous, current) =>
               previous is! MonthlyPassesLoaded ||
@@ -67,39 +73,70 @@ class _MonthlyPassesPageState extends State<MonthlyPassesPage> {
               previous.plates != current.plates,
           builder: (context, state) => AsyncView<MonthlyPassesLoaded>(
             status: _status(context, state),
-            builder: (loaded) => ListView(
-              padding: const EdgeInsets.only(bottom: Space.xxl * 2),
+            builder: (loaded) => Column(
               children: [
-                if (loaded.pendingPayments.isNotEmpty) ...[
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      Space.md,
-                      Space.md,
-                      Space.md,
-                      Space.sm,
-                    ),
-                    child: Text(
-                      context.l10n.monthlyPassPendingTitle,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
+                Padding(
+                  padding: const EdgeInsets.all(Space.md),
+                  child: SearchField(
+                    label: context.l10n.searchPlate,
+                    onChanged: (value) => setState(() => _query = value),
                   ),
-                  for (final payment in loaded.pendingPayments)
-                    _PendingPaymentTile(payment: payment),
-                  const Divider(),
-                ],
-                for (final pass in loaded.monthlyPasses)
-                  _MonthlyPassTile(
-                    monthlyPass: pass,
-                    plate:
-                        loaded.plates[pass.vehicleId] ??
-                        context.l10n.unknownVehicle(pass.vehicleId),
-                    phone: loaded.phoneOf(pass),
-                  ),
+                ),
+                Expanded(child: _buildList(context, loaded)),
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+
+  bool _matches(String plate) =>
+      _query.trim().isEmpty ||
+      plate.toLowerCase().contains(_query.trim().toLowerCase());
+
+  Widget _buildList(BuildContext context, MonthlyPassesLoaded loaded) {
+    final l10n = context.l10n;
+    final payments = [
+      for (final payment in loaded.pendingPayments)
+        if (_matches(payment.plate)) payment,
+    ];
+    final passes = [
+      for (final pass in loaded.monthlyPasses)
+        if (_matches(loaded.plateOf(pass))) pass,
+    ];
+    if (payments.isEmpty && passes.isEmpty) {
+      return EmptyState(
+        message: l10n.monthlyPassesNoMatch(_query.trim()),
+        icon: Icons.search_off,
+      );
+    }
+    return ListView(
+      padding: const EdgeInsets.only(bottom: Space.xxl * 2),
+      children: [
+        if (payments.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              Space.md,
+              Space.sm,
+              Space.md,
+              Space.sm,
+            ),
+            child: Text(
+              l10n.monthlyPassPendingTitle,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+          ),
+          for (final payment in payments) _PendingPaymentTile(payment: payment),
+          const Divider(),
+        ],
+        for (final pass in passes)
+          _MonthlyPassTile(
+            monthlyPass: pass,
+            plate: loaded.plateOf(pass),
+            phone: loaded.phoneOf(pass),
+          ),
+      ],
     );
   }
 
@@ -116,12 +153,37 @@ class _MonthlyPassesPageState extends State<MonthlyPassesPage> {
       AsyncEmpty(
         context.l10n.monthlyPassesEmpty,
         icon: Icons.card_membership_outlined,
+        action: FilledButton.icon(
+          onPressed: () => _showCreateDialog(context),
+          icon: const Icon(Icons.add),
+          label: Text(context.l10n.monthlyPassAddTooltip),
+        ),
       ),
     final MonthlyPassesLoaded loaded => AsyncReady(loaded),
   };
 
   static Submission? _submissionOf(MonthlyPassesState state) =>
       state is MonthlyPassesLoaded ? state.submission : null;
+
+  /// Confirms creates, edits, deletes and payment collections in text and to
+  /// screen readers.
+  void _confirmAction(BuildContext context) {
+    final state = context.read<MonthlyPassesCubit>().state;
+    final action = state is MonthlyPassesLoaded ? state.lastAction : null;
+    final l10n = context.l10n;
+    final message = switch (action) {
+      MonthlyPassAction.created => l10n.monthlyPassCreated,
+      MonthlyPassAction.deleted => l10n.monthlyPassDeleted,
+      MonthlyPassAction.payment => l10n.monthlyPassPaymentDone,
+      MonthlyPassAction.renewed => l10n.monthlyPassRenewed,
+      null => null,
+    };
+    if (message == null) {
+      return;
+    }
+    SemanticsService.announce(message, Directionality.of(context));
+    showInfoSnack(context, message);
+  }
 
   void _showCreateDialog(BuildContext context) {
     final cubit = context.read<MonthlyPassesCubit>();
@@ -232,9 +294,23 @@ class _MonthlyPassTile extends StatelessWidget {
           ),
         ],
       ),
-      subtitle: Text(
-        '$period · ${Formatters.money(monthlyPass.amount)}'
-        '${monthlyPass.autoRenew ? ' · ${l10n.monthlyPassAutoRenew}' : ''}',
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '$period · ${Formatters.money(monthlyPass.amount)}'
+            '${monthlyPass.autoRenew ? ' · ${l10n.monthlyPassAutoRenew}' : ''}',
+          ),
+          if (monthlyPass.active && monthlyPass.needsRenewal())
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () => _renew(context),
+                icon: const Icon(Icons.event_repeat, size: 18),
+                label: Text(l10n.monthlyPassRenew),
+              ),
+            ),
+        ],
       ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
@@ -285,6 +361,22 @@ class _MonthlyPassTile extends StatelessWidget {
         onUndo: () =>
             cubit.update(UpdateMonthlyPassCommand(id: id, active: true)),
       );
+    }
+  }
+
+  Future<void> _renew(BuildContext context) async {
+    final l10n = context.l10n;
+    final period = monthlyPass.renewedPeriod();
+    final confirmed = await ConfirmDialog.show(
+      context,
+      ConfirmDialog(
+        title: l10n.monthlyPassRenewTitle,
+        body: l10n.monthlyPassRenewBody(Formatters.date(period.end)),
+        confirmLabel: l10n.monthlyPassRenew,
+      ),
+    );
+    if (confirmed && context.mounted) {
+      await context.read<MonthlyPassesCubit>().renew(monthlyPass);
     }
   }
 

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../l10n/l10n.dart';
 import '../receipt/receipt_data.dart';
 import '../theme/status_colors.dart';
+import 'qr_code.dart';
 import '../theme/tokens.dart';
 import '../receipt/payment_method.dart';
 import '../utils/formatters.dart';
@@ -28,21 +29,39 @@ Future<void> showReceiptSummary(
   BuildContext context,
   ReceiptData data, {
   Future<void> Function()? onPrint,
+  String? nextActionLabel,
+  VoidCallback? onNextAction,
 }) {
   return showDialog<void>(
     context: context,
     barrierDismissible: false,
-    builder: (_) => ReceiptSummaryDialog(data: data, onPrint: onPrint),
+    builder: (_) => ReceiptSummaryDialog(
+      data: data,
+      onPrint: onPrint,
+      nextActionLabel: nextActionLabel,
+      onNextAction: onNextAction,
+    ),
   );
 }
 
 /// Compact post-action summary (check-in or check-out): formatted dates,
 /// duration, a pretty amount and a "Generar recibo" button.
 class ReceiptSummaryDialog extends StatelessWidget {
-  const ReceiptSummaryDialog({super.key, required this.data, this.onPrint});
+  const ReceiptSummaryDialog({
+    super.key,
+    required this.data,
+    this.onPrint,
+    this.nextActionLabel,
+    this.onNextAction,
+  });
 
   final ReceiptData data;
   final Future<void> Function()? onPrint;
+
+  /// Optional "keep working" action (e.g. charge the next car). It closes the
+  /// summary first, then runs [onNextAction].
+  final String? nextActionLabel;
+  final VoidCallback? onNextAction;
 
   @override
   Widget build(BuildContext context) {
@@ -149,14 +168,24 @@ class ReceiptSummaryDialog extends StatelessWidget {
                   ),
                 ),
               const SizedBox(height: Space.lg),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+              Wrap(
+                alignment: WrapAlignment.end,
+                spacing: Space.sm,
+                runSpacing: Space.xs,
                 children: [
+                  if (nextActionLabel != null && onNextAction != null)
+                    TextButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        onNextAction!();
+                      },
+                      icon: const Icon(Icons.play_arrow),
+                      label: Text(nextActionLabel!),
+                    ),
                   TextButton(
                     onPressed: () => Navigator.of(context).pop(),
                     child: Text(l10n.receiptClose),
                   ),
-                  const SizedBox(width: Space.sm),
                   FilledButton.icon(
                     onPressed: () {
                       Navigator.of(context).pop();
@@ -310,6 +339,26 @@ class ReceiptCard extends StatelessWidget {
               ),
             ),
           ),
+        if (!data.isCheckOut) ...[
+          const SizedBox(height: Space.md),
+          Center(
+            child: Semantics(
+              label: l10n.receiptQrHint,
+              child: QrCode(
+                data: data.plate,
+                semanticLabel: l10n.receiptQrHint,
+              ),
+            ),
+          ),
+          const SizedBox(height: Space.xs),
+          Text(
+            l10n.receiptQrHint,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+        ],
         const SizedBox(height: Space.lg),
         const Divider(height: 1),
         const SizedBox(height: Space.sm),

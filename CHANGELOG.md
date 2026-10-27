@@ -99,9 +99,70 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   check-out flags stays over 24 h.
 - Monthly passes show a status chip (active/upcoming/expired) and sort active
   passes first, then upcoming, then expired.
+- Creating a vehicle confirms it with a snack that offers to register its
+  check-in straight away.
+- Creating, deleting or collecting a monthly pass and creating or cancelling a
+  reservation confirm with a SnackBar and a screen-reader announcement.
+- New reservations offer quick holds (+2 h, +4 h, end of day) next to the
+  date picker.
+- Monthly passes that are expired or end within a week show a "Renew 30 days"
+  action (extends from the day after the end, or from today when expired,
+  keeping the amount) with a confirmation.
+- On wide screens the home no longer repeats the management shortcuts (the
+  sidebar lists them) and clips the sidebar while it animates open/closed.
+- The web shell uses a **collapsible side navigation** (persisted per device)
+  with the brand, Operación/Gestión groups, and a footer carrying the active
+  site and the signed-in user; page content widens to 1080 px on desktop.
+- The multi-site indicator is now a compact chip in the home content (it used
+  to be a full-width strip above the app bar that read like a notification).
+- The home app bar picks the device appearance (system / light / dark); the
+  choice is stored locally and survives restarts.
+- The ticket QR keeps its full matrix and quiet zone (the modules were clipped
+  by the padded canvas) and is now verified by rendering + decoding it in a
+  widget test.
+- The home occupancy figure counts the **configured spaces** (cars+pickups and
+  motos; trucks/buses excluded), the check-in dropdown disables a category only
+  when its whole group is full, and on wide screens the cars-inside list moves
+  to a **side panel**.
+- The home dashboard is reorganized: the **Entrada/Salida actions come first**,
+  the KPIs (occupancy, capacity, today, shift) sit in a two-column responsive
+  grid under a "Summary" label, cards use tinted icon headers, and the
+  management shortcuts are a two-column tile grid. A capacity card (below)
+  shows the configured spaces.
+- The home is a real dashboard: a **capacity card** (cars/pickups, motorcycles
+  and keys: inside vs. limit, with bars) and a **cars-inside list** with plates,
+  elapsed time, pass/photo hints and "See all" to check-out.
+- Ajustes gains the site's **space configuration**: spaces for cars and
+  pickups (shared), spaces for motorcycles and the maximum number of cars that
+  may leave their keys (`0` = no limit). The check-in form has a "Leaves the
+  keys" switch, the list shows it, and the server enforces the three limits
+  (`ParkingFullError`/`KeysFullError`); trucks and buses are not limited.
+- The check-in "vehicles inside" widget is an **accordion** with the count:
+  each car offers its receipt (QR + print) and **Mark exit**, which jumps to
+  check-out with that plate.
+- Admins can see the cars still inside from check-out and **reprint their
+  entry ticket** (QR + Imprimir) from each row, for a lost or damaged ticket.
+  The row subtitle wraps its chips and shortens the elapsed time on phones.
+- Check-in shows the **ticket with its QR as soon as the entry is registered**
+  (with Imprimir right there), on screen, in the PDF and on thermal printers. At the exit, the app's
+  camera scan opens that session's payment dialog; a USB QR reader can type the
+  plate into the search field and Enter opens it too. On phones the scanner is
+  a **live camera preview** (`mobile_scanner`) that detects the QR
+  automatically and closes itself; web keeps the photo/USB-reader path. The
+  photo decoder is pure Dart (`zxing2`) and works offline.
+- The shell's WhatsApp shortcut is now a **QR scan shortcut** that reads a
+  receipt and opens its check-out (with `/check-out?scan=PLATE`).
+- Check-out shows the shared empty state (no cars inside, or no plate match)
+  and a "Clear search" action on a miss.
+- Leaving the settings form with unsaved edits asks before discarding them.
+- Empty users/vehicles/monthly-pass lists offer their first action (add) right
+  in the empty state instead of only the FAB.
+- The users list filters by role (All / Admin / Operator) and monthly passes
+  have a plate search (pending payments included), both with a no-match state.
 - Empty lists (reservations, sites, audit) use the same friendly empty-state
   component instead of bare text. Reservations sort by expiry and flag holds
-  that lapse within two hours with a "expires in …" warning chip.
+  that lapse within two hours with a "expires in …" warning chip, and each
+  reservation opens check-in with its plate already prefilled.
 - The home "today" card shows a quiet-day message instead of a row of zeros
   before the first movement, with a cross-fade between both states.
 - Vehicles list has a server-side plate search (debounced), a no-match state
@@ -112,15 +173,30 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   web/desktop, a clear button and `Esc` to reset. `Ctrl/Cmd+K` focuses the
   search of the current screen from anywhere in the app.
 - Screen readers announce successful check-ins and check-outs.
-- Check-in remembers the last plate and offers a one-tap "repeat entry" chip.
-- The occupancy bar and the monthly-pass status chip animate their changes.
+- Check-in warns inline when the plate is already inside, before submitting.
+- Check-in remembers the last plate and offers a one-tap "repeat entry" chip;
+  plate fields normalize while typing through the shared `PlateInputField`
+  (uppercase, no blanks) and cap at the 20-char column width.
+- The occupancy bar honours `reduce motion` (fills instantly), and the same bar
+  plus the monthly-pass status chip animate their changes, while
+  vehicle/reservation rows fade-slide in once when a list appears (disabled
+  under `reduce motion`).
+- Closing a shift whose counted cash differs from the expected amount asks for
+  confirmation, showing the difference.
 - Shift cash actions (open, close, movement, correction) confirm with a
   SnackBar and a screen-reader announcement instead of happening silently.
+- An open session in the vehicle history offers "Cobrar en caja", opening
+  check-out filtered by that plate.
+- The check-out receipt offers "Nuevo cobro", which clears the search and
+  refocuses it so the next car can be charged without leaving the screen.
+- The check-out list flags cars covered by an active monthly pass, so the
+  operator knows the stay is free before opening the payment dialog (`0046`).
 - Check-out remembers the last payment method and preselects it (a pass only
   preselects "monthly pass" when the session is actually covered).
 - Reports compare the selected period with the previous, equally long one:
   a signed **% variation** plus the previous total, hidden when that window
-  cannot be loaded. The exported PDF carries the same comparison.
+  cannot be loaded. The exported PDF carries the same comparison, and the CSV
+  button copies a spreadsheet-ready dump (raw numbers, one row per figure).
 - Check-out shows the **estimated fare before charging**
   (`rpc/check_out_preview`) and "monthly pass: no charge" when a pass covers the
   stay; a failed preview still opens the payment dialog.
@@ -131,6 +207,16 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   `ReceiptLabels`; ticket numbers include the site code (`TCK-<LOT>-000123`).
 - List screens use skeleton loaders that honour the reduce-motion setting.
 - Reports accept an "all sites" view for platform admins.
+- Check-in with evidence photos works again on a real device: uploads are
+  insert-only (the evidence SELECT policy only exposes a photo after
+  `check_in` records it), and a replayed upload accepts the existing object.
+- New app mark: dark asphalt badge, chunky safety-yellow "P" and a hazard
+  curb; it ships as the Android launcher icon, the web/PWA icons and favicon,
+  and the login header fallback until a site uploads its own logo. Regenerate
+  with `python3 tool/generate_branding.py` (Pillow).
+- Hive initializes before the Supabase boot, so a **fresh Android install**
+  can open its boxes (the cached-session cleanup used to throw `HiveError` on
+  first launch; web was unaffected).
 - `restore.sh` now runs `pg_restore` as `supabase_admin` (restoring as
   `postgres` silently lost every grant).
 
@@ -174,12 +260,19 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Tests
 
-- 581 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
+- 662 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
   integration test that runs only against a live stack.
 - SQL/RLS/RPC regressions covering capacity, shifts, discounts, passes,
   reservations, multi-site isolation, audit, diagnostics and retention.
 - `flutter analyze` reports **zero errors, zero warnings** and only SDK
   `deprecated_member_use` infos from the pinned beta channel.
+
+### Cloud helpers
+
+- `supabase/apply-cloud.sh` applies every migration to a hosted project and
+  `supabase/create-cloud-operator.sh` creates a kiosk user through the Admin
+  API with a secret key; `docs/setup-cloud.md` documents the hosted checklist
+  (empty project → `PGRST205`/`invalid_credentials`).
 
 ## Database migrations
 
@@ -204,7 +297,7 @@ Captured on 2026-10-24 against the local self-hosted stack:
 
 | Check | Result |
 |---|---|
-| `flutter test` | 581 passed (+1 live-stack integration skipped) |
+| `flutter test` | 662 passed (+1 live-stack integration skipped) |
 | `flutter analyze` | 0 errors, 0 warnings (only SDK deprecation infos) |
 | `flutter build web --release` | OK |
 | `supabase/tests/run.sh` | Passed (migrations + RPC/RLS regressions) |

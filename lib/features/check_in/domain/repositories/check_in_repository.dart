@@ -10,6 +10,7 @@ abstract class CheckInRepository {
     required String plate,
     required List<XFile> photos,
     NewVehicleInfo? newVehicle,
+    bool leftKeys = false,
   });
 
   Future<List<ParkingSession>> listOpenSessions();

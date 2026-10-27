@@ -26,6 +26,9 @@ final class MonthlyPassesLoading extends MonthlyPassesState {
   const MonthlyPassesLoading();
 }
 
+/// What the last successful action did, so the page can confirm it.
+enum MonthlyPassAction { created, deleted, payment, renewed }
+
 /// Passes plus the vehicles for the create form and a precomputed
 /// vehicleId → plate map (O(1) per row).
 final class MonthlyPassesLoaded extends MonthlyPassesState {
@@ -35,12 +38,14 @@ final class MonthlyPassesLoaded extends MonthlyPassesState {
     this.plates = const {},
     this.pendingPayments = const [],
     this.submission = const SubmissionIdle(),
+    this.lastAction,
   });
 
   final List<MonthlyPass> monthlyPasses;
   final List<Vehicle> vehicles;
   final Map<int, String> plates;
   final Submission submission;
+  final MonthlyPassAction? lastAction;
   final List<MonthlyPassPayment> pendingPayments;
 
   String plateOf(MonthlyPass pass) =>
@@ -60,12 +65,14 @@ final class MonthlyPassesLoaded extends MonthlyPassesState {
     List<MonthlyPass>? monthlyPasses,
     List<MonthlyPassPayment>? pendingPayments,
     Submission? submission,
+    MonthlyPassAction? lastAction,
   }) => MonthlyPassesLoaded(
     monthlyPasses: monthlyPasses ?? this.monthlyPasses,
     pendingPayments: pendingPayments ?? this.pendingPayments,
     vehicles: vehicles,
     plates: plates,
     submission: submission ?? this.submission,
+    lastAction: lastAction ?? this.lastAction,
   );
 
   @override
@@ -75,6 +82,7 @@ final class MonthlyPassesLoaded extends MonthlyPassesState {
     plates,
     pendingPayments,
     submission,
+    lastAction,
   ];
 }
 
@@ -123,29 +131,59 @@ class MonthlyPassesCubit extends ResilientCubit<MonthlyPassesState> {
   }
 
   Future<void> create(CreateMonthlyPassCommand command) =>
-      _submit(() => _repository.create(command));
+      _submit(() => _repository.create(command), action: MonthlyPassAction.created);
 
   Future<void> update(UpdateMonthlyPassCommand command) =>
       _submit(() => _repository.update(command));
 
-  Future<void> delete(int id) => _submit(() => _repository.delete(id));
+  /// Manual renewal: continues the day after the current end (or starts today
+  /// for an expired pass) for 30 days, keeping the amount.
+  Future<void> renew(MonthlyPass pass) async {
+    final id = pass.id;
+    if (id == null) {
+      return;
+    }
+    final period = pass.renewedPeriod();
+    await _submit(
+      () => _repository.update(
+        UpdateMonthlyPassCommand(
+          id: id,
+          startDate: period.start,
+          endDate: period.end,
+        ),
+      ),
+      action: MonthlyPassAction.renewed,
+    );
+  }
+
+  Future<void> delete(int id) =>
+      _submit(() => _repository.delete(id), action: MonthlyPassAction.deleted);
 
   Future<void> registerPayment(int id, String method) =>
-      _submit(() => _repository.registerPayment(id, method));
+      _submit(
+        () => _repository.registerPayment(id, method),
+        action: MonthlyPassAction.payment,
+      );
 
-  Future<void> _submit(Future<Object?> Function() action) async {
+  Future<void> _submit(
+    Future<Object?> Function() perform, {
+    MonthlyPassAction? action,
+  }) async {
     final current = state;
     if (current is! MonthlyPassesLoaded) {
       return;
     }
     emit(current.copyWith(submission: const SubmissionInProgress()));
     try {
-      await action();
+      final result = await perform();
       emit(
         current.copyWith(
           monthlyPasses: await _repository.list(),
           pendingPayments: await _repository.pendingPayments(),
-          submission: const SubmissionIdle(),
+          submission: action == null
+              ? const SubmissionIdle()
+              : SubmissionSucceeded<Object?>(result),
+          lastAction: action,
         ),
       );
     } on Failure catch (failure) {

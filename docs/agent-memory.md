@@ -4,19 +4,19 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-10-23, branch `feature/supabase` (post-hardening).
+Last updated: 2026-10-26, branch `feature/supabase` (post-UI/UX polish).
 
 ## Where we are
 
 - Stack: Flutter (android + web) + self-hosted Supabase only. No FastAPI,
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
-- `supabase/migrations/0001..0026` are the schema owner (applied by
+- `supabase/migrations/0001..0046` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 480 tests green, `flutter analyze` reports only SDK
-  deprecation/const infos from the local beta channel (0 errors/warnings).
-  Web build green. `supabase/tests/run.sh` green.
-- OpenSpec: `openspec/changes/add-multi-parking-lot` is 24/25 done (only the
-  header-fallback "contract" migration remains, intentionally later).
+- Flutter: 662 tests green, `flutter analyze` reports only SDK deprecation
+  infos from the pinned beta channel (0 errors/warnings). Web build green.
+  `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
+- OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
+  item is the manual smoke for `add-parking-settings` (task 10.4).
 
 ## What shipped recently
 
@@ -194,6 +194,9 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 - Reports: segmented presets (Today / 7 / 30 days) next to the calendar; a custom
   range clears the preset. Tests must pass the vertical `Scrollable` explicitly
   (the preset row adds a second one).
+- `showReceiptSummary(..., nextActionLabel, onNextAction)` adds a "keep
+  working" button (closes the dialog then runs the callback). Check-out uses it
+  with `resetActiveSearchField()` (clears + refocuses the visible field).
 - `core/widgets/search_field.dart`: shared search input (autofocus only on
   web/desktop so mobile keyboards do not pop up, clear button, `Esc` resets);
   used by vehicles and check-out. The last mounted field registers itself as
@@ -204,17 +207,67 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 - Check-in stores `last_plate` in `KeyValueStore` (box `preferences`) after a
   success and offers a repeat chip; guarded by `serviceLocator.isRegistered`
   so page tests can skip it or inject a fake store.
+- The shift close dialog result is checked against `expectedCash`; a mismatch
+  goes through `ConfirmDialog` (destructive) before `closeShift` is called.
 - `ShiftCubit._submit` emits `SubmissionSucceeded(shift)` + `lastAction`
   (`opened/closed/movement/adjusted`) after a confirmed cash action; the page
   announces it and shows an info snack. Do not revert it to `SubmissionIdle`,
   the confirmation depends on the transition.
+- The occupancy bar animates through `TweenAnimationBuilder` only when
+  `MediaQuery.disableAnimationsOf` is false (same rule as `StaggeredListItem`
+  and the skeleton loaders).
+- `core/widgets/staggered_list_item.dart` wraps list rows (vehicles,
+  reservations) with a one-shot fade+slide keyed by the row id; it renders the
+  bare child when `MediaQuery.disableAnimationsOf` is true.
+- `core/widgets/plate_input_field.dart` is the single plate input (check-in,
+  reservation dialog, vehicle creation): its formatter uppercases and strips
+  blanks live and caps at 20, the column width. Do not add another formatter.
+- `LotSwitcher` (formerly `LotBar`) is a chip inside the home content on narrow
+  screens only; wide screens use `AppSidebar`'s footer (same bottom sheet via
+  `showLotSwitcher`). The old shell strip was removed.
+- `AppSidebar` (wide shell, ≥900 px): brand + role, Operación/Gestión groups,
+  active-site and user footer, and a collapse toggle persisted at
+  `preferences/sidebar_collapsed` (264 → 84 px). Content max width is 1080.
+  The home app bar titles itself "Inicio" on wide screens (brand lives in the
+  sidebar) and the home hides `ManagementShortcuts` there (they are in the
+  sidebar); mobile keeps both. The sidebar clips while it animates.
+- `ThemeCubit` (`preferences/theme_mode`, system/light/dark) is optional in
+  `ParkingApp` so tests stay on the system theme; `ThemeModeButton` lives in the
+  home app bar and is hidden when the cubit is not provided.
+- `VehiclesCubit.create` reports `SubmissionSucceeded(vehicle)` (update/delete
+  stay idle); the page shows a snack with a "Registrar entrada" action that
+  pushes `/check-in?plate=` (`onCheckIn` is injectable for widget tests).
+- `MonthlyPassesCubit` reports `lastAction` (`created/deleted/payment`) and the
+  page confirms it; `update` (activation toggle) stays idle on purpose because
+  that tile shows an undo snack. `ReservationsCubit` does the same with
+  `created/cancelled`.
+- Monthly passes: the page filters passes and pending payments client-side by
+  plate (`plateOf`), with `monthlyPassesNoMatch` when nothing matches.
+- Users list filters client-side by role with a `SegmentedButton`; the empty
+  filtered result uses `EmptyState` (`usersFilterEmpty`), never the "no users"
+  message.
+- `CheckOutPage(initialQuery:)` + `SearchField(initialValue:)` prefill and
+  filter the check-out list from `/check-out?plate=`; the vehicle history sends
+  open sessions there (`onCharge` is injectable for widget tests).
+- Check-in compares the typed plate (normalized) with `CheckInState.sessions`
+  and shows a non-blocking warning (`checkInAlreadyInside`); the submit stays
+  enabled because the local list may be stale.
+- `CheckInPage(initialPlate:)` prefills the field and runs the lookup on the
+  first frame; the router reads it from `/check-in?plate=`. Reservations pass
+  their plate to it (`onCheckIn` is injectable for widget tests).
 - Reservations: `Reservation.expiresSoon({now, window})` (default 2 h,
   expired holds excluded) drives a warning chip; `sortedByExpiry` returns a new
   soonest-first list used by the page (never sorts the state list in place).
+- `0046` rewrites `open_sessions_view` with `has_pass` (same pass rule as the
+  preview, lot timezone via a lateral settings join). The list shows a
+  "Mensualidad" chip so the car is known to be free before the dialog.
 - Check-out stores `last_payment_method` in `KeyValueStore` (box
   `preferences`) only after the server confirms; `_SessionTile` receives the
   remembered method and falls back to cash when it is `monthly_pass` or the
   preview has no pass.
+- `reportCsv` (reports) emits `section,label,value` rows with raw numbers and
+  RFC 4180 quoting; the page copies it to the clipboard (audit already does the
+  same for its own CSV).
 - `reportComparisonRows` builds the PDF comparison lines (variation + previous
   total) and returns them empty when the previous window is unknown; the page
   passes `previousTotal`/`deltaPercent` to `buildRevenueReportPdf`.
@@ -330,11 +383,186 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 - Ops: `healthcheck.sh` (exit 1 on failure, `HEALTHCHECK_WEBHOOK` alerts) and
   `diagnostics.sh` (stuck sessions/shifts, backlog, client errors, sizes).
 
+## Supabase Cloud (hosted) gotcha
+
+- A fresh Cloud project reaches Auth (`/auth/v1/health` 200) but has **no
+  parking schema**: queries return `PGRST205 Could not find the table` and
+  login returns `invalid_credentials` (no kiosk user). Apply
+  `supabase/migrations` with `sh supabase/apply-cloud.sh <session-db-url>` and
+  create the admin with `sh supabase/create-cloud-operator.sh <url>
+  <secret-key> admin <pin> admin`.
+- The publishable key (`sb_publishable_...`) works as `apikey`; `/rest/v1/`
+  answering "Secret API key required" with it is normal (admin-only root).
+- Never put `sb_secret_...`/service_role or third-party keys (Groq, etc.) in
+  the client or in `--dart-define`; only the publishable key ships.
+
+## Local gateway port
+
+- The local gateway port is `.env` `API_GW_HTTP_PORT` (currently **8017**),
+  mirrored in `SUPABASE_PUBLIC_URL`, `API_EXTERNAL_URL` and `SITE_URL`. After
+  changing it: `docker compose up -d --force-recreate api-gw auth`.
+- `tool/run-android.sh` reads that port (or `SUPABASE_PORT`) and reverses it;
+  Flutter gets `SUPABASE_URL=http://localhost:<port>`. e2e/healthcheck read
+  `SUPABASE_PUBLIC_URL` from `.env`.
+- Port 8000 is no longer bound in this environment.
+
+## Dev environment running (2026-10-26)
+
+- Backend: `docker compose up -d` from the repo root; all services healthy,
+  gateway/Studio on <http://localhost:8000>; migrations up to date.
+- Flutter web: `flutter run -d chrome --dart-define=SUPABASE_URL=http://localhost:8000
+  --dart-define=SUPABASE_ANON_KEY=<ANON_KEY>` (log: `/tmp/opencode/flutter-web.log`).
+- Android (Samsung S901E over wireless adb): `sh tool/run-android.sh` — it
+  re-applies `adb reverse` and runs with `SUPABASE_URL=http://localhost:8000`.
+  Install-only alternative: `flutter build apk --debug --dart-define=...` then
+  `adb install -r ... && adb shell am start -n
+  pro.devpaul.parking_management/.MainActivity`.
+- Login: `admin` / `123456`. Dev data: lot 1 "Parqueadero" (categories + data)
+  and lot 2 "Sede Norte" (member `norte2`, **no categories**: a new vehicle
+  cannot be registered there until categories/tariffs are created).
+- The apps use `localhost:8000`; if the phone shows "cannot reach the server",
+  check `adb reverse --list` first (see below), not `ufw`.
+
+## Android over adb
+
+- `tool/run-android.sh [serial]` re-applies `adb reverse tcp:8000 tcp:8000` and
+  runs Flutter with `SUPABASE_URL=http://localhost:8000`. **Wireless adb
+  reconnects on a new port and drops every reverse mapping** — the app then
+  cannot reach the backend until the reverse is re-applied. No `ufw` rule is
+  involved on that path; only a LAN URL needs `ufw allow 8000/tcp`.
+- `adb shell curl -s -o /dev/null -w '%{http_code}' http://localhost:8000/rest/v1/`
+  must answer `401` (reachable); `000` means the tunnel is missing.
+
+## Boot order (fresh installs)
+
+- `configureDependencies()` initializes `KeyValueStore` (Hive) **before**
+  `_initSupabase`: the boot clears a stale cached session through Hive, which
+  needs `Hive.init(path)` on mobile (web needs no path, so the bug only showed
+  on a fresh Android install).
+- Android over adb: `adb reverse tcp:8000 tcp:8000` + `SUPABASE_URL=
+  http://localhost:8000`; no firewall/Wi-Fi involved. Both are documented in
+  QUICKSTART and the environment guides.
+
+## Space capacities and keys (0047)
+
+- `parking_settings`: `car_capacity` (cars + pickups share the pool),
+  `moto_capacity`, `key_capacity`; `0` = no limit. Trucks/buses are excluded by
+  design. Editable in Ajustes.
+- `parking_sessions.left_keys` (default false) travels through the check-in
+  form, `check_in(p_left_keys)`, the queued payload (`left_keys`) and the
+  replayer; `open_sessions_view` exposes it.
+- `enforce_category_capacity()` keeps the per-category cap and adds group caps
+  (category name sets are the contract for groups) and the keys cap, all under
+  advisory locks per lot/group. Errors: `ParkingFullError`, `KeysFullError`.
+- The check-in RPC signature gained a trailing `p_left_keys` default; the old
+  8-argument overload must stay dropped (two overloads make calls ambiguous).
+- `0048 capacity_snapshot()` returns `car_open/car_capacity`,
+  `moto_open/moto_capacity`, `keys_open/key_capacity` for the home. The
+  `CapacitySnapshot` entity + `CheckOutRepository.capacitySnapshot()` feed
+  `DashboardLoaded.capacity`; `DashboardCubit` also loads the first 5 open
+  sessions and resolves their plates through an optional `VehicleRepository`.
+- Home layout: actions first; `_SummaryGrid` puts occupancy/capacity and
+  today/shift in two equal-height columns from 720 px (one column on phones);
+  management shortcuts are a two-column tile grid; cards share `_KpiIcon`.
+- Home widgets: `CapacityCard` (bars, `0` = "no limit") and `InsideCard`
+  (plates + elapsed + pass/photo hints; "See all" → `/check-out`, row tap →
+  `/check-out?plate=`). `OccupancyCard` now counts only configured group
+  spaces; from `Layout.homeSplit` (1000) the inside list moves to a 340 px
+  side panel. Check-in disables a category when its whole group is full
+  (`core/utils/vehicle_groups.dart`, same names as the SQL trigger).
+
+## Receipt QR / check-out scanning
+
+- `QrCode` generates the matrix for the *inner* square (size − 2×12) and paints
+  it unscaled inside that padding; sizing it outside the padded canvas clipped
+  the last modules. `test/core/widgets/qr_code_test.dart` renders the widget to
+  a PNG and decodes it with the camera decoder, so a clipped QR fails CI.
+- The QR payload is the **plate** (`Barcode.qrCode()` in `core/widgets/qr_code.dart`),
+  printed on the **entry** receipt (screen, PDF via `pw.BarcodeWidget`, thermal
+  via `GS ( k`) and captioned with `ReceiptLabels.scanHint`. Check-out receipts
+  carry no QR: the car is already gone.
+- `scanQrWithCamera` (`core/qr/qr_scan_page.dart`, `mobile_scanner`) is the
+  phone path: a live preview with torch, one result pops the page (haptic).
+  Web has no live scanner; the check-out page and the shell FAB fall back to
+  `PlateImageCapture` + `QrDecoder` (file/photo).
+- `QrDecoder` (`core/qr/qr_decoder.dart`, zxing2 + image, pure Dart) decodes the
+  web capture; `plateFromQrPayload` accepts a bare plate or `?plate=`/`?p=` and
+  rejects anything else (a random QR cannot start a check-out).
+- Check-out: `resolvePlate` asks the server for the exact plate (limit 2, only a
+  single match opens); `_startCheckout` moved from the tile to the page so the
+  scan and a USB reader's `Enter` (`SearchField.onSubmitted`) reuse it.
+- Check-in success opens `showReceipt` with the QR + Imprimir (no summary step)
+  and restores plate focus when the dialog closes.
+- Check-in's "vehicles inside" is a local accordion (`_sessionsOpen`) with a
+  count badge; rows expose the ticket (receipt + print) and "Mark exit"
+  (`/check-out?scan=<plate>`; `onMarkExit` is injectable for tests).
+- Open sessions now carry `photo_count` (the view already exposed it) so the
+  check-out list can reprint an entry ticket: admins get a receipt icon per row
+  that opens the QR ticket with Imprimir. Operators do not (security test).
+  The row subtitle is a `Wrap` with the elapsed label ellipsized: the extra
+  action narrowed the row enough to overflow at 400 px (regression test at that
+  width).
+- The shell FAB is the QR scanner (`_ScanQrFab`, hidden without capture/decoder):
+  it navigates to `/check-out?scan=<plate>`, which resolves and opens the
+  payment dialog. The old WhatsApp FAB (and its test) is gone; WhatsApp lives in
+  `/contact`.
+- The camera button only renders when the route injects `capture` + `qrDecoder`;
+  the search field still works with a keyboard-wedge reader alone.
+
+## Branding assets
+
+- `assets/branding/logo.png` is the app mark; `tool/generate_branding.py`
+  regenerates it plus the Android mipmaps, web icons/favicon and maskable
+  variants (deterministic, Pillow). The login header uses the per-lot logo when
+  `BrandingCubit.logoOrNull` has bytes, else this asset, else the parking icon.
+- `web/manifest.json`/`index.html` use the asphalt background (`#0B0D10`);
+  keep them in sync if the mark changes.
+
+## Evidence uploads
+
+- Storage evidence is **insert-only** from the client: the SELECT policy uses
+  `can_read_evidence(name)`, which is true only after `check_in` inserts the
+  `evidence_photos` row. `upsert: true` therefore fails (INSERT ... ON CONFLICT
+  needs to read the row) with a misleading "permission" error.
+- `isDuplicateUpload` treats storage `409`/`Duplicate` as success: a replay of
+  the same queued entry already stored that exact path. Never swallow 403.
+- Verified against the live stack: insert 200 → duplicate 409 → `check_in` with
+  the photo path returns `photo_count: 1`.
+
+## Latest verification (2026-10-26)
+
+- `flutter test`: 662 passed (+1 live-stack integration skipped); `flutter
+  analyze` 129 infos, all SDK `deprecated_member_use` (zero warnings/errors);
+  `flutter build web --release` OK.
+- `supabase/tests/run.sh` passed (migrations `0001`–`0046`); `e2e.sh` passed
+  (login → check-in → check-out → report → history).
+- `healthcheck.sh`: 0 failures (one warning for a dev shift left open >12 h).
+- UI/UX batches landed this session: reports comparison (screen, PDF, CSV),
+  remember payment method, shift confirmations + mismatch guard, Ctrl/Cmd+K,
+  reservations expiry chip + jump to check-in, continuous "Nuevo cobro",
+  shared plate input, staggered rows, users role filter, passes plate search,
+  monthly-pass chip on check-out, device appearance, the "already inside"
+  check-in warning, the app mark/launcher icons, the site switcher moved from a
+  shell strip into a compact home chip, reservation quick-hold chips (+2 h,
+  +4 h, end of day), one-tap 30-day renewal for expiring monthly passes, and
+  first-action buttons inside empty lists (users, vehicles, passes), and a
+  discard-changes guard on the settings form, and an empty/no-match state on
+  check-out with a "clear search" action, and a web-style collapsible sidebar
+  (grouped sections, site + user footer, collapse persisted), and a receipt QR
+  that opens check-out from the camera or a USB scanner.
+- Hardware run found and fixed two boot bugs: Hive now initializes before the
+  Supabase session cleanup, and evidence uploads are insert-only (see above).
+- Current HEAD after the polish: `21f0149` (site switcher) on top of
+  `dece16c` (branding) and `9d4225e` (run-android helper).
+
 ## Backlog / next moves
 
 - `5.4` contract migration: drop the missing-header fallback once every client
   sends `x-lot-id`.
-- Optional polish: per-lot receipt footer beyond settings, lot filter on the
-  vehicle history UI, audit-log export, admin diagnostics screen.
-- Dev DB artifacts from smoke tests: lot `NORTH` ("Sede Norte") and user
-  `norte2` (operator, PIN `123456`, member of lot 2). Safe to delete.
+- Optional polish: per-lot receipt footer beyond settings, audit free-text
+  search, configurable shifts; the lot switcher could later live in an app-bar
+  menu instead of the home chip.
+- Dev DB artifacts from smoke tests: lot `NORTH` ("Sede Norte", no categories)
+  and user `norte2` (operator, PIN `123456`, member of lot 2). Safe to delete.
+- Closed dev sessions from probing (`PERMTEST1`, `PHOTOE2E`) were checked out and
+  are only history rows; storage probes were test artifacts.

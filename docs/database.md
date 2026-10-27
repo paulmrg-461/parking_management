@@ -58,7 +58,7 @@ erDiagram
 | `monthly_passes` | Pass period/amount, auto-renew flag, renewal link. | yes |
 | `monthly_pass_payments` | Exactly one charge per pass (`pending`/`paid`/`waived`), collected into a shift. | yes |
 | `category_reservations` | Capacity hold for a plate (`active`/`used`/`cancelled`/`expired`). | yes |
-| `parking_settings` | Per-site branding (name, address, schedule, contacts, logo version/path) + `business_timezone`, `overstay_hours`, `lost_ticket_fee`, `evidence_retention_days`. | yes |
+| `parking_settings` (`car_capacity`, `moto_capacity`, `key_capacity`) | Per-site branding (name, address, schedule, contacts, logo version/path) + `business_timezone`, `overstay_hours`, `lost_ticket_fee`, `evidence_retention_days`. | yes |
 | `notifications` | Per-user inbox rows (type, title, body, data, read/pushed state, dedupe key). | optional |
 | `device_tokens` | FCM tokens per user/device. | no |
 | `web_push_subscriptions` | Browser push endpoints (endpoint + p256dh + auth). | no |
@@ -79,7 +79,9 @@ All RPCs are `security definer`, derive the actor from `auth.uid()`, and are
 granted to `authenticated` only.
 
 **Check-in / check-out**
-`check_in`, `check_out`, `check_out_preview`, `calculate_fare`,
+`check_in` (incl. `p_left_keys`), `check_out`, `check_out_preview`,
+`open_sessions_view` (`has_pass`, `left_keys`), `capacity_snapshot`,
+`calculate_fare`,
 `vehicle_history`, `update_vehicle_flags` (notes, blacklist, owner phone).
 
 **Billing and reports**
@@ -144,7 +146,7 @@ days).
 | `evidence_photos` | active lot | only through RPCs (rows deleted by `evidence-archive`) |
 | `shifts`, `cash_movements`, `shift_adjustments` | own shift or lot admin, active lot | RPCs |
 | `monthly_pass_payments`, `category_reservations` | active lot | RPCs |
-| `parking_settings` | active lot; anonymous only the first lot (login branding) | lot admins |
+| `parking_settings` (`car_capacity`, `moto_capacity`, `key_capacity`) | active lot; anonymous only the first lot (login branding) | lot admins |
 | `whatsapp_messages` | admins | `enqueue_whatsapp_message` + the dispatcher |
 | `notifications` | own rows, active lot (or global) | RPCs/triggers |
 | `audit_log` | platform admins | triggers and the `admin-users` Edge Function |

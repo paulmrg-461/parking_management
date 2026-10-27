@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/app/di/injection.dart';
 import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/core/pagination/paged_result.dart';
+import 'package:parking_management/core/widgets/qr_code.dart';
 import 'package:parking_management/core/receipt/payment_method.dart';
 import 'package:parking_management/core/storage/key_value_store.dart';
 import 'package:parking_management/features/check_out/application/check_out_cubit.dart';
@@ -11,13 +12,18 @@ import 'package:parking_management/features/check_out/application/check_out_vehi
 import 'package:parking_management/features/check_out/domain/entities/check_out_preview.dart';
 import 'package:parking_management/features/check_out/domain/entities/check_out_receipt.dart';
 import 'package:parking_management/features/check_out/domain/entities/open_session.dart';
+import 'package:parking_management/features/check_out/domain/entities/capacity_snapshot.dart';
 import 'package:parking_management/features/check_out/domain/entities/occupancy_snapshot.dart';
 import 'package:parking_management/features/check_out/domain/entities/today_summary.dart';
 import 'package:parking_management/features/check_out/domain/repositories/check_out_repository.dart';
 import 'package:parking_management/features/check_out/presentation/check_out_page.dart';
+import 'package:parking_management/features/auth/application/auth_cubit.dart';
+import 'package:parking_management/features/auth/domain/entities/user.dart';
 import 'package:parking_management/features/home/application/dashboard_cubit.dart';
 import 'package:parking_management/features/vehicles/domain/entities/vehicle.dart';
 
+import '../../../helpers/app_harness.dart';
+import '../../../helpers/fake_auth_repository.dart';
 import '../../../helpers/fake_check_out_repository.dart';
 import '../../../helpers/fake_key_value_store.dart';
 import '../../../helpers/fake_vehicle_repository.dart';
@@ -34,18 +40,41 @@ class _FakeCheckOutRepository implements CheckOutRepository {
   Future<TodaySummary> todaySummary() async => TodaySummary.empty;
 
   @override
+  Future<CapacitySnapshot> capacitySnapshot() async => CapacitySnapshot.empty;
+
+  @override
   Future<OccupancySnapshot> occupancy() async =>
       const OccupancySnapshot(totalOpen: 0, totalCapacity: 0);
+
+  bool firstHasPass = false;
+
+  static const _plates = {1: 'ABC123', 2: 'XYZ999'};
 
   @override
   Future<PagedResult<OpenSession>> listOpenSessions({
     int offset = 0,
     int limit = defaultPageSize,
     String? plate,
-  }) async => PagedResult([
-    OpenSession(id: 1, vehicleId: 1, entryTime: DateTime(2026, 1, 1)),
-    OpenSession(id: 2, vehicleId: 2, entryTime: DateTime(2026, 1, 1)),
-  ]);
+  }) async {
+    final all = [
+      OpenSession(
+        id: 1,
+        vehicleId: 1,
+        entryTime: DateTime(2026, 1, 1),
+        hasPass: firstHasPass,
+        photoCount: 2,
+      ),
+      OpenSession(id: 2, vehicleId: 2, entryTime: DateTime(2026, 1, 1)),
+    ];
+    final query = plate?.trim().toUpperCase() ?? '';
+    final items = query.isEmpty
+        ? all
+        : [
+            for (final session in all)
+              if (_plates[session.vehicleId]!.contains(query)) session,
+          ];
+    return PagedResult(items, total: items.length);
+  }
 
   @override
   Future<CheckOutPreview> preview(int sessionId) async {
@@ -89,17 +118,32 @@ void main() {
   late _FakeCheckOutRepository repository;
   late FakeCheckOutRepository occupancy;
 
-  Future<void> pumpPage(WidgetTester tester) async {
-    repository = _FakeCheckOutRepository();
+  Future<void> pumpPage(
+    WidgetTester tester, {
+    String? initialQuery,
+    String? initialScan,
+    bool firstHasPass = false,
+    Future<String?> Function(BuildContext context)? scanQr,
+    UserRole? role,
+  }) async {
+    repository = _FakeCheckOutRepository()..firstHasPass = firstHasPass;
     occupancy = FakeCheckOutRepository();
     final vehicles = FakeVehicleRepository(const [
       Vehicle(id: 1, plate: 'ABC123', categoryId: 1),
       Vehicle(id: 2, plate: 'XYZ999', categoryId: 1),
     ]);
+    final auth = AuthCubit(
+      FakeAuthRepository(sessionToRestore: role == null ? null : sessionFor(role)),
+    );
+    if (role != null) {
+      await auth.restore();
+    }
+    addTearDown(auth.close);
     await tester.pumpWidget(
       testApp(
         MultiBlocProvider(
           providers: [
+            if (role != null) BlocProvider<AuthCubit>.value(value: auth),
             BlocProvider<CheckOutCubit>(
               create: (_) => CheckOutCubit(
                 CheckOutVehicle(repository),
@@ -112,7 +156,11 @@ void main() {
               create: (_) => DashboardCubit(occupancy),
             ),
           ],
-          child: const CheckOutPage(),
+          child: CheckOutPage(
+            initialQuery: initialQuery,
+            scanPlate: initialScan,
+            scanQr: scanQr,
+          ),
         ),
       ),
     );
@@ -339,5 +387,166 @@ void main() {
 
     await tester.tap(find.text('Confirmar'));
     await tester.pumpAndSettle();
+  });
+
+  testWidgets('Success: Nuevo cobro clears the search for the next car', (
+    tester,
+  ) async {
+    await pumpPage(tester);
+    await tester.enterText(find.byType(TextField).first, 'XYZ');
+    await tester.pumpAndSettle();
+    expect(find.text('ABC123'), findsNothing);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Cobrar'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Confirmar'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Nuevo cobro'));
+    await tester.pumpAndSettle();
+
+    // Dialog closed, query cleared and the cursor is ready for the next plate.
+    expect(find.text('Nuevo cobro'), findsNothing);
+    expect(find.text('ABC123'), findsOneWidget);
+    final field = tester.widget<TextField>(find.byType(TextField).first);
+    expect(field.controller!.text, isEmpty);
+    expect(field.focusNode!.hasFocus, isTrue);
+  });
+
+  testWidgets('Success: an initial plate arrives filtered and prefilled', (
+    tester,
+  ) async {
+    await pumpPage(tester, initialQuery: 'XYZ');
+
+    expect(find.text('ABC123'), findsNothing);
+    expect(find.text('XYZ999'), findsOneWidget);
+    expect(
+      tester.widget<TextField>(find.byType(TextField).first).controller!.text,
+      'XYZ',
+    );
+  });
+
+  testWidgets('Success: a car with an active pass is flagged in the list', (
+    tester,
+  ) async {
+    await pumpPage(tester, firstHasPass: true);
+
+    expect(find.text('Mensualidad'), findsOneWidget);
+  });
+
+  testWidgets('Success: no match offers to clear the search', (tester) async {
+    await pumpPage(tester);
+
+    await tester.enterText(find.byType(TextField).first, 'QQQ');
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Ninguna placa'), findsOneWidget);
+    expect(find.text('Limpiar búsqueda'), findsOneWidget);
+
+    await tester.tap(find.text('Limpiar búsqueda'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('ABC123'), findsOneWidget);
+    expect(find.text('XYZ999'), findsOneWidget);
+    expect(
+      tester.widget<TextField>(find.byType(TextField).first).controller!.text,
+      isEmpty,
+    );
+  });
+
+  testWidgets('Success: scanning a receipt QR opens its check-out', (
+    tester,
+  ) async {
+    await pumpPage(tester, scanQr: (_) async => 'XYZ999');
+
+    await tester.tap(find.byTooltip('Escanear el QR del recibo'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('XYZ999'), findsWidgets);
+    expect(find.text('Efectivo'), findsOneWidget);
+
+    await tester.tap(find.text('Cancelar'));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('Failure: an unreadable QR explains itself', (tester) async {
+    await pumpPage(tester, scanQr: (_) async => 'https://example.com/menu');
+
+    await tester.tap(find.byTooltip('Escanear el QR del recibo'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('No se pudo leer el código QR'), findsOneWidget);
+  });
+
+  testWidgets('Success: a USB reader types the plate and Enter charges it', (
+    tester,
+  ) async {
+    await pumpPage(tester);
+
+    await tester.enterText(find.byType(TextField).first, 'xyz999');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Efectivo'), findsOneWidget);
+    await tester.tap(find.text('Cancelar'));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('Failure: a plate without an open session is reported', (
+    tester,
+  ) async {
+    await pumpPage(tester, scanQr: (_) async => 'NOPE01');
+
+    await tester.tap(find.byTooltip('Escanear el QR del recibo'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('No hay una sesión abierta para NOPE01'), findsOneWidget);
+  });
+
+  testWidgets('Success: a scanned plate opens its check-out on arrival', (
+    tester,
+  ) async {
+    await pumpPage(tester, initialScan: 'XYZ999');
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('XYZ999'), findsWidgets);
+    expect(find.text('Efectivo'), findsOneWidget);
+
+    await tester.tap(find.text('Cancelar'));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('Success: an admin can reprint an entry ticket', (tester) async {
+    await pumpPage(tester, role: UserRole.admin);
+
+    expect(find.byTooltip('Reimprimir recibo de entrada'), findsNWidgets(2));
+    await tester.tap(find.byTooltip('Reimprimir recibo de entrada').first);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(QrCode), findsOneWidget);
+    expect(find.text('Imprimir'), findsOneWidget);
+    expect(find.textContaining('2 fotos'), findsOneWidget);
+
+    // The ticket dialog scrolls on short screens; close it programmatically.
+    Navigator.of(tester.element(find.byType(QrCode))).pop();
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('Security: operators do not get the reprint action', (
+    tester,
+  ) async {
+    await pumpPage(tester, role: UserRole.operator);
+
+    expect(find.byTooltip('Reimprimir recibo de entrada'), findsNothing);
+  });
+
+  testWidgets('A11y: the admin row fits a phone width', (tester) async {
+    tester.view.physicalSize = const Size(400, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await pumpPage(tester, role: UserRole.admin);
+
+    expect(tester.takeException(), isNull);
+    expect(find.byTooltip('Reimprimir recibo de entrada'), findsNWidgets(2));
   });
 }

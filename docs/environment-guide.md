@@ -159,7 +159,21 @@ flutter run -d emulator-5554 \
   --dart-define=SUPABASE_ANON_KEY=<ANON_KEY>
 ```
 
-**Teléfono físico en tu misma red Wi-Fi**:
+**Teléfono físico por adb** (USB o adb inalámbrico; recomendado):
+
+```bash
+adb devices                       # busca el serial, p. ej. 192.168.0.2:38333
+adb reverse tcp:8000 tcp:8000     # el localhost:8000 del teléfono llega a este PC
+flutter run -d <serial> \
+  --dart-define=SUPABASE_URL=http://localhost:8000 \
+  --dart-define=SUPABASE_ANON_KEY=<ANON_KEY>
+```
+
+Repite `adb reverse tcp:8000 tcp:8000` (o `sh tool/run-android.sh`) cuando el
+adb inalámbrico se reconecte: el teléfono vuelve en otro puerto y el túnel se
+pierde, lo que se ve como "no conecta con el servidor".
+
+Si no puedes usar `adb reverse`, usa la misma red Wi-Fi:
 
 1. `ip addr` (o `ipconfig`) para ver la IP de tu PC, por ejemplo `192.168.1.50`.
 2. `flutter run -d <device> --dart-define=SUPABASE_URL=http://192.168.1.50:8000 --dart-define=SUPABASE_ANON_KEY=<ANON_KEY>`.
@@ -168,7 +182,17 @@ flutter run -d emulator-5554 \
 Los builds **debug** permiten HTTP en claro (el `AndroidManifest` de debug lo
 habilita). Los builds **release** exigen HTTPS.
 
-### 3.7 Builds de producción
+### 3.7 Identidad visual
+
+La app trae un logo por defecto (`assets/branding/logo.png`) que usa el login
+hasta que un admin sube el logo de su sede (Ajustes → logo). Para regenerar los
+iconos del launcher y de la web tras cambiar el diseño:
+
+```bash
+python3 tool/generate_branding.py   # requiere Pillow
+```
+
+### 3.8 Builds de producción
 
 ```bash
 # Web estático (sirve cualquier hosting; recuerda HTTPS en producción)
@@ -187,7 +211,7 @@ flutter build appbundle --release \
 ## 4. Verificar que todo funciona
 
 ```bash
-flutter test                 # 581 tests
+flutter test                 # 662 tests
 flutter analyze              # solo infos de deprecación del SDK beta
 sh supabase/healthcheck.sh   # servicios, endpoints y backlog (exit 1 si falla)
 sh supabase/tests/e2e.sh     # login → entrada → cobro → reporte → historial

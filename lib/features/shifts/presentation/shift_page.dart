@@ -10,6 +10,7 @@ import '../../../core/network/connectivity_cubit.dart';
 import '../../../core/state/submission.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/error_state.dart';
 import '../../../core/widgets/money_text.dart';
 import '../../../core/widgets/submission_feedback.dart';
@@ -423,16 +424,35 @@ class _OpenShiftCard extends StatelessWidget {
   }
 
   Future<void> _close(BuildContext context) async {
+    final l10n = context.l10n;
     final result = await showDialog<_CloseResult>(
       context: context,
       builder: (_) => const _CloseShiftDialog(),
     );
-    if (result != null && context.mounted) {
-      await context.read<ShiftCubit>().closeShift(
-        countedCash: result.counted,
-        notes: result.notes,
-      );
+    if (result == null || !context.mounted) {
+      return;
     }
+    final difference = result.counted - shift.expectedCash;
+    if (difference != 0) {
+      // Closing with a mismatch is legitimate (tips, mistakes) but never
+      // accidental.
+      final confirmed = await ConfirmDialog.show(
+        context,
+        ConfirmDialog(
+          title: l10n.shiftDifferenceConfirmTitle,
+          body: l10n.shiftDifferenceConfirmBody(Formatters.money(difference)),
+          confirmLabel: l10n.shiftClose,
+          destructive: true,
+        ),
+      );
+      if (!confirmed || !context.mounted) {
+        return;
+      }
+    }
+    await context.read<ShiftCubit>().closeShift(
+      countedCash: result.counted,
+      notes: result.notes,
+    );
   }
 }
 

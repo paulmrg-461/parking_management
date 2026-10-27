@@ -9,6 +9,7 @@ class ParkingSession extends Equatable {
     required this.status,
     required this.entryTime,
     required this.photoCount,
+    this.leftKeys = false,
   });
 
   final int id;
@@ -17,6 +18,16 @@ class ParkingSession extends Equatable {
   final DateTime entryTime;
   final int photoCount;
 
+  /// The customer left the keys at the desk.
+  final bool leftKeys;
+
   @override
-  List<Object?> get props => [id, plate, status, entryTime, photoCount];
+  List<Object?> get props => [
+    id,
+    plate,
+    status,
+    entryTime,
+    photoCount,
+    leftKeys,
+  ];
 }

@@ -4,6 +4,7 @@ import 'package:parking_management/core/state/submission.dart';
 import 'package:parking_management/features/categories/domain/entities/category.dart';
 import 'package:parking_management/features/vehicles/application/vehicles_cubit.dart';
 import 'package:parking_management/features/vehicles/domain/commands/create_vehicle_command.dart';
+import 'package:parking_management/features/vehicles/domain/commands/update_vehicle_command.dart';
 import 'package:parking_management/features/vehicles/domain/entities/vehicle.dart';
 
 import '../../../helpers/fake_category_repository.dart';
@@ -51,7 +52,7 @@ void main() {
     expect(cubit.state, const VehiclesFailure('offline'));
   });
 
-  test('Success: create persists and reloads with Idle submission', () async {
+  test('Success: create persists and reports the new vehicle', () async {
     await cubit.load();
 
     await cubit.create(
@@ -59,6 +60,16 @@ void main() {
     );
 
     expect(loaded().vehicles.map((v) => v.plate), ['ABC123', 'XYZ789']);
+    final submission = loaded().submission;
+    expect(submission, isA<SubmissionSucceeded<Object?>>());
+    expect((submission as SubmissionSucceeded).result, isA<Vehicle>());
+  });
+
+  test('Success: updating keeps the submission idle (no snack)', () async {
+    await cubit.load();
+
+    await cubit.update(const UpdateVehicleCommand(id: 1, brand: 'Mazda'));
+
     expect(loaded().submission, const SubmissionIdle());
   });
 

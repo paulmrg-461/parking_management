@@ -216,9 +216,8 @@ class _Estimate extends StatelessWidget {
         Expanded(
           child: Text(
             text,
-            style: Theme.of(
-              context,
-            ).textTheme.titleSmall?.copyWith(color: scheme.primary),
+            style: Theme.of(context).textTheme.titleSmall
+                ?.copyWith(color: scheme.primary),
           ),
         ),
       ],

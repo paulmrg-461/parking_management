@@ -22,6 +22,24 @@ void showInfoSnack(BuildContext context, String message) {
     ..showSnackBar(SnackBar(content: Text(message)));
 }
 
+/// Confirmation with one follow-up action (e.g. "Registrar entrada").
+void showActionSnack(
+  BuildContext context, {
+  required String message,
+  required String actionLabel,
+  required VoidCallback onAction,
+}) {
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(seconds: 6),
+        action: SnackBarAction(label: actionLabel, onPressed: onAction),
+      ),
+    );
+}
+
 /// Confirmation with a "Deshacer" action (reversible changes only).
 void showUndoSnack(
   BuildContext context, {

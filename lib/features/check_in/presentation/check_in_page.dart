@@ -5,14 +5,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/l10n/failure_messages.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/state/submission.dart';
 import '../../../core/utils/elapsed.dart';
+import '../../../core/utils/vehicle_groups.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/storage/key_value_store.dart';
+import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/photo_strip.dart';
+import '../../../core/widgets/plate_input_field.dart';
 import '../../../core/widgets/receipt_card.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/widgets/sync_badge.dart';
@@ -36,7 +40,13 @@ import 'widgets/vehicle_lookup_section.dart';
 /// looked up (debounced) so a registered vehicle is shown read-only and an
 /// unknown one can be registered with the check-in.
 class CheckInPage extends StatefulWidget {
-  const CheckInPage({super.key, required this.capture, this.canScan = true});
+  const CheckInPage({
+    super.key,
+    required this.capture,
+    this.canScan = true,
+    this.initialPlate,
+    this.onMarkExit,
+  });
 
   /// Camera port (injected by the router from get_it; fakes in tests).
   final PlateImageCapture capture;
@@ -44,6 +54,13 @@ class CheckInPage extends StatefulWidget {
   /// `false` where on-device plate OCR is unavailable (web): the scan
   /// button is hidden and the plate is typed.
   final bool canScan;
+
+  /// Plate to prefill (e.g. from a reservation): the vehicle lookup runs as
+  /// soon as the page opens, saving a retype.
+  final String? initialPlate;
+
+  /// Opens check-out for an open session (injectable for widget tests).
+  final void Function(BuildContext context, String plate)? onMarkExit;
 
   @override
   State<CheckInPage> createState() => _CheckInPageState();
@@ -68,6 +85,8 @@ class _CheckInPageState extends State<CheckInPage> {
   Timer? _debounce;
   int? _categoryId;
   String? _lastPlate;
+  bool _sessionsOpen = true;
+  bool _leftKeys = false;
   static const _prefsBox = 'preferences';
   static const _lastPlateKey = 'last_plate';
 
@@ -89,6 +108,7 @@ class _CheckInPageState extends State<CheckInPage> {
         // Isolated tests may not provide the dashboard cubit.
       }
       _restoreLastPlate();
+      _prefillPlate();
     });
   }
 
@@ -130,6 +150,19 @@ class _CheckInPageState extends State<CheckInPage> {
     }
     _plateFocus.requestFocus();
     showErrorSnack(context, message);
+  }
+
+  void _prefillPlate() {
+    final plate = widget.initialPlate?.trim();
+    if (plate == null || plate.isEmpty) {
+      return;
+    }
+    _plateController.text = plate;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _lookupNow();
+      }
+    });
   }
 
   void _restoreLastPlate() {
@@ -205,6 +238,7 @@ class _CheckInPageState extends State<CheckInPage> {
         plate: _plateController.text,
         photos: [for (final photo in _photos) photo.file],
         newVehicle: lookup is VehicleLookupNotFound ? _newVehicleInfo() : null,
+        leftKeys: _leftKeys,
       ),
     );
   }
@@ -241,6 +275,7 @@ class _CheckInPageState extends State<CheckInPage> {
     setState(() {
       _photos.clear();
       _categoryId = null;
+      _leftKeys = false;
     });
     context.read<VehicleLookupCubit>().reset();
   }
@@ -257,10 +292,31 @@ class _CheckInPageState extends State<CheckInPage> {
         final message = context.l10n.checkInSuccess(result.plate);
         SemanticsService.announce(message, Directionality.of(context));
         showInfoSnack(context, message);
+        unawaited(_showReceipt(context, result));
       case SubmissionFailed(:final message, :final failure):
         showErrorSnack(context, context.l10n.errorText(message, failure));
       default:
         break;
+    }
+  }
+
+  /// The ticket the customer keeps: it carries the exit QR and can be printed
+  /// right away.
+  Future<void> _showReceipt(BuildContext context, ParkingSession result) async {
+    final data = ReceiptData(
+      kind: ReceiptKind.checkIn,
+      plate: result.plate,
+      entryTime: result.entryTime,
+      photoCount: result.photoCount,
+      pendingSync: result.status == ParkingSessionStatus.pendingSync,
+    );
+    await showReceipt(
+      context,
+      data,
+      onPrint: () => showReceiptPrintSheet(context, data),
+    );
+    if (mounted) {
+      _plateFocus.requestFocus();
     }
   }
 
@@ -286,11 +342,18 @@ class _CheckInPageState extends State<CheckInPage> {
                 padding: const EdgeInsets.all(16),
                 sliver: SliverToBoxAdapter(child: _buildForm(context)),
               ),
-              const SliverPadding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
-                sliver: SliverToBoxAdapter(child: _SessionsHeader()),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                sliver: SliverToBoxAdapter(
+                  child: _SessionsHeader(
+                    open: _sessionsOpen,
+                    onToggle: () =>
+                        setState(() => _sessionsOpen = !_sessionsOpen),
+                  ),
+                ),
               ),
-              const _OpenSessionsSliver(),
+              if (_sessionsOpen)
+                _OpenSessionsSliver(onMarkExit: widget.onMarkExit),
             ],
           ),
         ),
@@ -306,8 +369,28 @@ class _CheckInPageState extends State<CheckInPage> {
     );
   }
 
+  /// Open session for the typed plate, if the local list knows it.
+  ParkingSession? _openSessionFor(String plate) {
+    final normalized = plate.replaceAll(RegExp(r'\s'), '').toUpperCase();
+    if (normalized.isEmpty) {
+      return null;
+    }
+    try {
+      final state = context.watch<CheckInCubit>().state;
+      for (final session in state.sessions) {
+        if (session.plate.toUpperCase() == normalized) {
+          return session;
+        }
+      }
+    } on ProviderNotFoundException {
+      // Isolated tests may not provide the sessions cubit.
+    }
+    return null;
+  }
+
   Widget _buildFormFields(BuildContext context, VehicleLookupState lookup) {
     final l10n = context.l10n;
+    final openSession = _openSessionFor(_plateController.text);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -322,15 +405,34 @@ class _CheckInPageState extends State<CheckInPage> {
           ),
           const SizedBox(height: 8),
         ],
-        TextField(
+        PlateInputField(
           controller: _plateController,
           focusNode: _plateFocus,
-          decoration: InputDecoration(labelText: l10n.plateLabel),
-          textCapitalization: TextCapitalization.characters,
-          textInputAction: TextInputAction.done,
           onChanged: _onPlateChanged,
           onSubmitted: (_) => _lookupNow(),
         ),
+        if (openSession != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  size: 18,
+                  color: Theme.of(context).colorScheme.error,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    l10n.checkInAlreadyInside(openSession.plate),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         if (_lastPlate != null && _plateController.text.trim().isEmpty)
           Align(
             alignment: Alignment.centerLeft,
@@ -342,7 +444,16 @@ class _CheckInPageState extends State<CheckInPage> {
           ),
         const SizedBox(height: 8),
         VehicleLookupSection(state: lookup, registration: _buildRegistration),
-        const SizedBox(height: 16),
+        SwitchListTile(
+          key: const Key('check_in_left_keys'),
+          contentPadding: EdgeInsets.zero,
+          value: _leftKeys,
+          onChanged: (value) => setState(() => _leftKeys = value),
+          title: Text(l10n.checkInLeftKeys),
+          subtitle: Text(l10n.checkInLeftKeysHint),
+          secondary: const Icon(Icons.key_outlined),
+        ),
+        const SizedBox(height: 8),
         PhotoStrip(
           photos: [for (final photo in _photos) photo.bytes],
           max: EvidencePolicy.maxPhotos,
@@ -386,10 +497,25 @@ class _CheckInPageState extends State<CheckInPage> {
       if (state is! DashboardLoaded) {
         return const {};
       }
-      return {
+      final full = <int>{
         for (final category in state.categories)
           if (category.isFull) category.categoryId,
       };
+      // With group spaces configured, a category is only blocked when its
+      // whole group (cars + pickups, or motorcycles) is full.
+      if (state.capacity.carsFull) {
+        full.addAll([
+          for (final category in state.categories)
+            if (isCarGroup(category.name)) category.categoryId,
+        ]);
+      }
+      if (state.capacity.motosFull) {
+        full.addAll([
+          for (final category in state.categories)
+            if (isMotoGroup(category.name)) category.categoryId,
+        ]);
+      }
+      return full;
     } on ProviderNotFoundException {
       return const {};
     }
@@ -456,18 +582,72 @@ class _CheckInPageState extends State<CheckInPage> {
   }
 }
 
+/// Collapsible "vehicles inside" header: shows the count and hides the list
+/// when the operator is focused on the form.
 class _SessionsHeader extends StatelessWidget {
-  const _SessionsHeader();
+  const _SessionsHeader({required this.open, required this.onToggle});
+
+  final bool open;
+  final VoidCallback onToggle;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final scheme = Theme.of(context).colorScheme;
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const Divider(height: 32),
-        Text(
-          context.l10n.openSessionsTitle,
-          style: const TextStyle(fontWeight: FontWeight.bold),
+        Material(
+          color: scheme.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(Radii.sm),
+          child: InkWell(
+            key: const Key('sessions_toggle'),
+            borderRadius: BorderRadius.circular(Radii.sm),
+            onTap: onToggle,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: Space.sm,
+                vertical: 14,
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.local_parking_outlined,
+                    size: 20,
+                    color: scheme.primary,
+                  ),
+                  const SizedBox(width: Space.sm),
+                  Expanded(
+                    child: BlocBuilder<CheckInCubit, CheckInState>(
+                      buildWhen: (previous, current) =>
+                          previous.sessions.length != current.sessions.length,
+                      builder: (context, state) => Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              l10n.openSessionsTitle,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.titleSmall,
+                            ),
+                          ),
+                          if (state.sessions.isNotEmpty) ...[
+                            const SizedBox(width: Space.sm),
+                            Badge(label: Text('${state.sessions.length}')),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                  AnimatedRotation(
+                    turns: open ? 0 : -0.25,
+                    duration: Motion.short,
+                    child: const Icon(Icons.expand_more, size: 20),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
         const SizedBox(height: 8),
       ],
@@ -477,8 +657,14 @@ class _SessionsHeader extends StatelessWidget {
 
 /// Lazily built list of open sessions; rebuilds only when the list (or its
 /// load status) changes, never on form submissions.
+void _markExit(BuildContext context, String plate) => context.push(
+  '/check-out?scan=${Uri.encodeQueryComponent(plate)}',
+);
+
 class _OpenSessionsSliver extends StatelessWidget {
-  const _OpenSessionsSliver();
+  const _OpenSessionsSliver({this.onMarkExit});
+
+  final void Function(BuildContext context, String plate)? onMarkExit;
 
   @override
   Widget build(BuildContext context) {
@@ -513,7 +699,10 @@ class _OpenSessionsSliver extends StatelessWidget {
         return SliverList.builder(
           itemCount: state.sessions.length,
           itemBuilder: (context, index) =>
-              _SessionTile(session: state.sessions[index]),
+              _SessionTile(
+                session: state.sessions[index],
+                onMarkExit: onMarkExit,
+              ),
         );
       },
     );
@@ -521,9 +710,10 @@ class _OpenSessionsSliver extends StatelessWidget {
 }
 
 class _SessionTile extends StatelessWidget {
-  const _SessionTile({required this.session});
+  const _SessionTile({required this.session, this.onMarkExit});
 
   final ParkingSession session;
+  final void Function(BuildContext context, String plate)? onMarkExit;
 
   @override
   Widget build(BuildContext context) {
@@ -533,14 +723,28 @@ class _SessionTile extends StatelessWidget {
       subtitle: Text(
         '${l10n.sessionEntry(Formatters.dateTime(session.entryTime))}'
         ' · ${elapsedLabel(l10n, session.entryTime)}'
-        ' · ${l10n.sessionPhotos(session.photoCount)}',
+        ' · ${l10n.sessionPhotos(session.photoCount)}'
+        '${session.leftKeys ? ' · ${l10n.checkInLeftKeysShort}' : ''}',
       ),
       trailing: session.status == ParkingSessionStatus.pendingSync
           ? Chip(label: Text(l10n.statusPendingSync))
-          : IconButton(
-              icon: const Icon(Icons.receipt_long),
-              tooltip: l10n.receiptView,
-              onPressed: () => _viewReceipt(context),
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.receipt_long_outlined),
+                  tooltip: l10n.receiptView,
+                  onPressed: () => _viewReceipt(context),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.logout),
+                  tooltip: l10n.markExit,
+                  onPressed: () => (onMarkExit ?? _markExit)(
+                    context,
+                    session.plate,
+                  ),
+                ),
+              ],
             ),
       onTap: () => _viewReceipt(context),
     );

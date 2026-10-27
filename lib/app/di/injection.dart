@@ -46,8 +46,10 @@ Future<void> configureDependencies() async {
     );
   }
   registerAllModules(serviceLocator, config);
-  await _initSupabase(config);
+  // Hive must know its path before anything opens a box: the Supabase boot
+  // below clears a stale cached session, which reads `auth` through Hive.
   await serviceLocator<KeyValueStore>().init();
+  await _initSupabase(config);
 }
 
 /// Boots GoTrue and keeps the cached bearer token fresh: Supabase rotates

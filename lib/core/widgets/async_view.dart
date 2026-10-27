@@ -15,10 +15,17 @@ final class AsyncLoading<T> extends AsyncStatus<T> {
 }
 
 final class AsyncEmpty<T> extends AsyncStatus<T> {
-  const AsyncEmpty(this.message, {this.icon = Icons.inbox_outlined});
+  const AsyncEmpty(
+    this.message, {
+    this.icon = Icons.inbox_outlined,
+    this.action,
+  });
 
   final String message;
   final IconData icon;
+
+  /// Optional call to action (e.g. the first create button).
+  final Widget? action;
 }
 
 final class AsyncFailed<T> extends AsyncStatus<T> {
@@ -49,9 +56,10 @@ class AsyncView<T> extends StatelessWidget {
       key: ValueKey(status.runtimeType),
       child: switch (status) {
         AsyncLoading() => const SkeletonList(),
-        AsyncEmpty(:final message, :final icon) => EmptyState(
+        AsyncEmpty(:final message, :final icon, :final action) => EmptyState(
           message: message,
           icon: icon,
+          action: action,
         ),
         AsyncFailed(:final message, :final retry) => ErrorState(
           message: message,

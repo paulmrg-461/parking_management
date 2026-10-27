@@ -180,7 +180,7 @@ class VehiclesCubit extends ResilientCubit<VehiclesState> {
   }
 
   Future<void> create(CreateVehicleCommand command) =>
-      _submit(() => _repository.create(command));
+      _submit(() => _repository.create(command), reportSuccess: true);
 
   Future<void> update(UpdateVehicleCommand command) =>
       _submit(() => _repository.update(command));
@@ -189,14 +189,17 @@ class VehiclesCubit extends ResilientCubit<VehiclesState> {
 
   /// Keeps the list on screen while [action] runs; afterwards the first page
   /// is refetched. Failures surface as [SubmissionFailed].
-  Future<void> _submit(Future<Object?> Function() action) async {
+  Future<void> _submit(
+    Future<Object?> Function() action, {
+    bool reportSuccess = false,
+  }) async {
     final current = state;
     if (current is! VehiclesLoaded) {
       return;
     }
     emit(current.copyWith(submission: const SubmissionInProgress()));
     try {
-      await action();
+      final result = await action();
       final page = await _repository.listPage(
         offset: 0,
         limit: pageSize,
@@ -206,7 +209,9 @@ class VehiclesCubit extends ResilientCubit<VehiclesState> {
         current.copyWith(
           vehicles: page.items,
           total: page.total,
-          submission: const SubmissionIdle(),
+          submission: reportSuccess
+              ? SubmissionSucceeded<Object?>(result)
+              : const SubmissionIdle(),
         ),
       );
     } on Failure catch (failure) {

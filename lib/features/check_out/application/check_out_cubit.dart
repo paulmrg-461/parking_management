@@ -191,6 +191,26 @@ class CheckOutCubit extends ResilientCubit<CheckOutState> {
     _searchTimer = Timer(searchDebounce, () => _applySearch(query));
   }
 
+  /// Finds the single open session for a scanned/typed plate using the server
+  /// filter (the local page may not hold every session). Returns `null` when
+  /// there is no open session or the plate matches more than one.
+  Future<OpenSession?> resolvePlate(String rawPlate) async {
+    final plate = rawPlate.replaceAll(RegExp(r'\s'), '').toUpperCase();
+    if (plate.isEmpty) {
+      return null;
+    }
+    try {
+      final page = await _repository.listOpenSessions(
+        offset: 0,
+        limit: 2,
+        plate: plate,
+      );
+      return page.items.length == 1 ? page.items.first : null;
+    } on Failure {
+      return null;
+    }
+  }
+
   /// Best effort: a failed preview opens the dialog without an estimate.
   Future<CheckOutPreview?> preview(int sessionId) async {
     try {
@@ -229,10 +249,7 @@ class CheckOutCubit extends ResilientCubit<CheckOutState> {
         ),
       );
     } on Failure catch (failure) {
-      emit(
-        _latest(current)
-            .copyWith(submission: SubmissionFailed.of(failure)),
-      );
+      emit(_latest(current).copyWith(submission: SubmissionFailed.of(failure)));
     } catch (_) {
       emit(
         _latest(current).copyWith(
@@ -295,11 +312,7 @@ class CheckOutCubit extends ResilientCubit<CheckOutState> {
   }
 
   Future<PagedResult<OpenSession>> _firstPage({String? plate}) =>
-      _repository.listOpenSessions(
-        offset: 0,
-        limit: pageSize,
-        plate: plate,
-      );
+      _repository.listOpenSessions(offset: 0, limit: pageSize, plate: plate);
 
   /// Plates are best-effort: a failure falls back to "Vehicle #id" rows.
   Future<Map<int, String>> _plates() async {
@@ -321,9 +334,8 @@ class CheckOutCubit extends ResilientCubit<CheckOutState> {
     final current = state;
     final query = current is CheckOutLoaded ? current.query.trim() : '';
     try {
-      final items = (await _firstPage(
-        plate: query.isEmpty ? null : query,
-      )).items;
+      final items = (await _firstPage(plate: query.isEmpty ? null : query))
+          .items;
       _loadedCount = items.length;
       return items;
     } on Failure {

@@ -58,6 +58,7 @@ class FakeVehicleHistoryRepository implements VehicleHistoryRepository {
 VehicleHistory sampleHistory({
   String plate = 'ABC123',
   String? ownerPhone,
+  bool withOpenSession = false,
 }) => VehicleHistory(
   plate: plate,
   vehicleId: 1,
@@ -70,6 +71,15 @@ VehicleHistory sampleHistory({
   currentLotVisits: 1,
   ownerPhone: ownerPhone,
   sessions: [
+    if (withOpenSession)
+      VehicleHistorySession(
+        id: 3,
+        entryTime: DateTime.utc(2026, 10, 24, 8),
+        status: 'open',
+        durationSeconds: 3600,
+        lotId: 1,
+        lotName: 'Central',
+      ),
     VehicleHistorySession(
       id: 2,
       entryTime: DateTime.utc(2026, 10, 23, 8),

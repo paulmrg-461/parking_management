@@ -264,7 +264,40 @@ The app is now a Supabase-only stack: FastAPI, Alembic, Dio and Redis are gone.
   is ignored (left to the platform) when the screen has none. The exported
   report PDF includes the comparison rows when the previous window loaded.
   Reservations list the soonest expiry first and flag holds that lapse within
-  two hours ("Vence en 30 min") with a warning chip.
+  two hours ("Vence en 30 min") with a warning chip. A reservation can jump
+  straight to check-in with its plate prefilled (`/check-in?plate=…`). The
+  post-checkout summary offers "Nuevo cobro": it clears the search and returns
+  focus to it, so a queue of cars is charged without leaving the screen. Plate
+  inputs normalize while typing through the shared `PlateInputField` (uppercase,
+  no blanks) and cap at the column width (20). Vehicle and reservation rows
+  fade/slide in once (honouring reduce motion; stable keys per id). Reports
+  copy a spreadsheet-ready CSV (raw numbers, comparison rows included). An open
+  session in the vehicle history jumps to check-out filtered by its plate
+  (`/check-out?plate=…`, prefilled search). The users list filters by role
+  with a segmented control and a dedicated no-match state. The check-out list
+  flags cars covered by an active monthly pass (`0046`, `has_pass` in
+  `open_sessions_view`). Monthly passes have a plate search that also filters
+  the pending payments and shows a no-match state. Closing a shift with a
+  cash mismatch asks for confirmation (with the difference) before closing.
+  Creating a vehicle confirms with a snack that offers to register its entry
+  ("Registrar entrada", `/check-in?plate=…`). Monthly-pass create/delete/payment
+  and reservation create/cancel confirm with a snack and a screen-reader
+  announcement (pass activation keeps its undo snack). The home app bar picks
+  the device appearance (system/light/dark), stored in Hive and applied app-wide.
+  Check-in warns inline when the typed plate already appears inside, before the
+  server rejects it. The occupancy bar skips its fill animation under
+  `reduce motion`. Running on hardware surfaced two boot bugs, both fixed:
+  Hive now initializes before the Supabase session cleanup, and evidence
+  photos upload insert-only (storage RLS hides them until `check_in` links
+  them, so `upsert` was rejected as a permission error). New reservations take
+  a quick hold (+2 h, +4 h, end of day), and a pass that is expired or ends
+  within a week offers a one-tap 30-day renewal from the day after its end.
+  Empty lists (users, vehicles, passes) show their first-action button instead
+  of a dead end, and leaving the settings form with edits asks before
+  discarding them. Check-out empty and no-match states use the shared empty
+  state, with a clear-search action on a miss. Wide screens get an app-style
+  collapsible sidebar (brand, grouped sections, site/user footer; the collapsed
+  state persists) and a 1080 px content column.
 
 ## Infra/tooling (not OpenSpec capabilities — repo scaffolding)
 
@@ -312,7 +345,7 @@ notable changes and the migration history.
 
 ## Test counts
 
-- Flutter (`flutter test`): 581 passed (plus 1 integration test that runs only against a live stack). `flutter analyze`: 0 errors/warnings
+- Flutter (`flutter test`): 629 passed (plus 1 integration test that runs only against a live stack). `flutter analyze`: 0 errors/warnings
   (98 SDK-deprecation/const infos under the local Flutter 3.50 beta; CI pins
   3.49 where the baseline is clean).
 - SQL/compose: validated against the running Supabase stack and by

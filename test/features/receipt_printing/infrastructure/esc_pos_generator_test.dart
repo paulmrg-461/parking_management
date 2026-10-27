@@ -24,6 +24,24 @@ final _checkOut = ReceiptData(
   ticketNumber: 'TCK-000042',
 );
 
+bool _contains(List<int> bytes, List<int> needle) {
+  for (var i = 0; i + needle.length <= bytes.length; i++) {
+    var match = true;
+    for (var j = 0; j < needle.length; j++) {
+      if (bytes[i + j] != needle[j]) {
+        match = false;
+        break;
+      }
+    }
+    if (match) {
+      return true;
+    }
+  }
+  return false;
+}
+
+const _qrPrint = [0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30];
+
 void main() {
   test('Success: configured name and contact footer replace the literal', () {
     final bytes = const EscPosGenerator().build(_checkOut, _configured);
@@ -109,5 +127,26 @@ void main() {
       expect(bytes, isNotEmpty);
       expect(bytes.every((b) => b <= 0xFF), isTrue);
     }
+  });
+
+  test('Success: the entry receipt prints the exit QR with the plate', () {
+    final bytes = const EscPosGenerator().build(
+      ReceiptData(
+        kind: ReceiptKind.checkIn,
+        plate: 'ABC123',
+        entryTime: DateTime(2026, 1, 1, 8, 30),
+        photoCount: 1,
+      ),
+      _configured,
+    );
+
+    expect(_contains(bytes, _qrPrint), isTrue);
+    expect(_decode(bytes), contains('Presente este codigo al salir'));
+  });
+
+  test('Security: check-out receipts carry no exit QR', () {
+    final bytes = const EscPosGenerator().build(_checkOut, _configured);
+
+    expect(_contains(bytes, _qrPrint), isFalse);
   });
 }

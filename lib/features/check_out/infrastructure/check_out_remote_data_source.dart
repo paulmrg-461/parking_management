@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/network/supabase_error_mapper.dart';
 import '../../../core/pagination/paged_result.dart';
+import '../domain/entities/capacity_snapshot.dart';
 import '../domain/entities/check_out_preview.dart';
 import '../domain/entities/check_out_receipt.dart';
 import '../domain/entities/occupancy_snapshot.dart';
@@ -31,6 +32,8 @@ abstract class CheckOutRemoteDataSource {
 
   Future<OccupancySnapshot> occupancy();
 
+  Future<CapacitySnapshot> capacitySnapshot();
+
   Future<TodaySummary> todaySummary();
 
   Future<CheckOutPreview> preview(int sessionId);
@@ -52,7 +55,7 @@ class SupabaseCheckOutRemoteDataSource implements CheckOutRemoteDataSource {
     try {
       var query = _client
           .from(_view)
-          .select('id, vehicle_id, entry_time');
+          .select('id, vehicle_id, entry_time, has_pass, photo_count');
       if (plate != null && plate.trim().isNotEmpty) {
         query = query.ilike('plate', '%${plate.trim()}%');
       }
@@ -65,6 +68,18 @@ class SupabaseCheckOutRemoteDataSource implements CheckOutRemoteDataSource {
           OpenSessionDto.fromJson(row).toDomain(),
       ];
       return PagedResult(items, total: response.count);
+    } catch (error) {
+      throw mapSupabaseError(error);
+    }
+  }
+
+  @override
+  Future<CapacitySnapshot> capacitySnapshot() async {
+    try {
+      final result = await _client.rpc('capacity_snapshot');
+      return CapacitySnapshot.fromJson(
+        Map<String, dynamic>.from(result as Map),
+      );
     } catch (error) {
       throw mapSupabaseError(error);
     }
@@ -89,9 +104,7 @@ class SupabaseCheckOutRemoteDataSource implements CheckOutRemoteDataSource {
         'check_out_preview',
         params: {'p_session_id': sessionId},
       );
-      return CheckOutPreview.fromJson(
-        Map<String, dynamic>.from(result as Map),
-      );
+      return CheckOutPreview.fromJson(Map<String, dynamic>.from(result as Map));
     } catch (error) {
       throw mapSupabaseError(error);
     }

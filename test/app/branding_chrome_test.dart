@@ -37,14 +37,14 @@ void main() {
     expect(find.byIcon(Icons.local_parking_rounded), findsNothing);
   });
 
-  testWidgets('Failure: branding falls back before the first sync', (
+  testWidgets('Success: branding falls back to the app mark before sync', (
     tester,
   ) async {
     await pumpApp(tester);
 
     expect(find.text('Parqueadero'), findsOneWidget);
-    expect(find.byIcon(Icons.local_parking_rounded), findsOneWidget);
-    expect(find.byType(Image), findsNothing);
+    expect(find.byType(Image), findsOneWidget);
+    expect(find.byIcon(Icons.local_parking_rounded), findsNothing);
   });
 
   testWidgets('Security: the pre-auth header exposes no contact fields', (

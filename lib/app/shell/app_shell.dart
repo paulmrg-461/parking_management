@@ -1,11 +1,14 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/l10n/l10n.dart';
+import '../di/injection.dart';
+import '../../core/qr/qr_decoder.dart';
+import '../../core/qr/qr_scan_page.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/widgets/offline_banner.dart';
 import '../../core/widgets/submission_feedback.dart';
@@ -13,15 +16,15 @@ import '../../features/auth/application/auth_cubit.dart';
 import '../../features/auth/domain/entities/user.dart';
 import '../../features/home/application/dashboard_cubit.dart';
 import '../../features/lots/application/lots_cubit.dart';
-import '../../features/lots/presentation/lot_bar.dart';
 import '../../features/notifications/application/notifications_cubit.dart';
 import '../../features/shifts/application/shift_cubit.dart';
+import '../../features/plate_scanning/domain/repositories/plate_image_capture.dart';
 import '../../features/settings/application/branding_cubit.dart';
-import '../../features/settings/domain/whatsapp_url.dart';
 import 'app_destinations.dart';
+import 'app_sidebar.dart';
 
-/// Responsive chrome around every authenticated page: a [NavigationBar]
-/// below [wideBreakpoint] and a [NavigationRail] above it, with
+/// Responsive chrome around every authenticated page: the [NavigationBar]
+/// below [wideBreakpoint] and a collapsible [AppSidebar] above it, with
 /// destinations filtered by role. Content is capped at [maxContentWidth];
 /// an [OfflineBanner] sits above it while the device is offline.
 class AppShell extends StatelessWidget {
@@ -62,7 +65,6 @@ class AppShell extends StatelessWidget {
       child: Column(
         children: [
           const OfflineBanner(),
-          const LotBar(),
           Expanded(
             child: Center(
               child: ConstrainedBox(
@@ -117,62 +119,14 @@ class _WideShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final destinations = destinationsFor(role);
-    final selected = destinations.indexWhere((d) => d.matches(location));
     return Scaffold(
       body: Row(
         children: [
-          _ScrollableRail(
-            destinations: destinations,
-            selectedIndex: selected < 0 ? null : selected,
-            onSelected: (i) => context.go(destinations[i].path),
-          ),
-          const VerticalDivider(width: 1),
+          AppSidebar(role: role, location: location),
           Expanded(child: content),
         ],
       ),
-      floatingActionButton: const _WhatsAppFab(),
-    );
-  }
-}
-
-class _ScrollableRail extends StatelessWidget {
-  const _ScrollableRail({
-    required this.destinations,
-    required this.selectedIndex,
-    required this.onSelected,
-  });
-
-  final List<AppDestination> destinations;
-  final int? selectedIndex;
-  final ValueChanged<int> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) => SingleChildScrollView(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(minHeight: constraints.maxHeight),
-          child: IntrinsicHeight(
-            child: NavigationRail(
-              labelType: NavigationRailLabelType.all,
-              selectedIndex: selectedIndex,
-              onDestinationSelected: onSelected,
-              destinations: [
-                for (final d in destinations)
-                  NavigationRailDestination(
-                    icon: _NavIcon(destination: d, icon: d.icon),
-                    selectedIcon: _NavIcon(
-                      destination: d,
-                      icon: d.selectedIcon,
-                    ),
-                    label: Text(d.label(context.l10n)),
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ),
+      floatingActionButton: const _ScanQrFab(),
     );
   }
 }
@@ -194,7 +148,7 @@ class _NarrowShell extends StatelessWidget {
     final more = destinationsFor(role).skip(primary.length).toList();
     return Scaffold(
       body: content,
-      floatingActionButton: const _WhatsAppFab(),
+      floatingActionButton: const _ScanQrFab(),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex(primary, more),
         onDestinationSelected: (i) => i < primary.length
@@ -254,37 +208,60 @@ class _NarrowShell extends StatelessWidget {
   }
 }
 
-/// Floating WhatsApp shortcut; hidden until a number is configured.
-class _WhatsAppFab extends StatelessWidget {
-  const _WhatsAppFab();
+/// Floating shortcut: photograph a receipt's QR and open that session's
+/// check-out. Hidden when the platform has no camera capture/decoder.
+class _ScanQrFab extends StatelessWidget {
+  const _ScanQrFab();
 
   @override
   Widget build(BuildContext context) {
-    final url = context.select<BrandingCubit, String?>(
-      (cubit) => whatsappUrl(cubit.state.settingsOrNull?.whatsapp ?? ''),
-    );
-    if (url == null) {
+    final capture = serviceLocator.isRegistered<PlateImageCapture>()
+        ? serviceLocator<PlateImageCapture>()
+        : null;
+    final decoder = serviceLocator.isRegistered<QrDecoder>()
+        ? serviceLocator<QrDecoder>()
+        : null;
+    if (kIsWeb && (capture == null || decoder == null)) {
       return const SizedBox.shrink();
     }
     return FloatingActionButton(
-      tooltip: context.l10n.whatsappTooltip,
-      onPressed: () => _open(context, url),
-      child: const Icon(Icons.chat),
+      tooltip: context.l10n.scanExitTooltip,
+      onPressed: () => unawaited(_scan(context, capture, decoder)),
+      child: const Icon(Icons.qr_code_scanner),
     );
   }
 
-  Future<void> _open(BuildContext context, String url) async {
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.platformDefault);
+  Future<void> _scan(
+    BuildContext context,
+    PlateImageCapture? capture,
+    QrDecoder? decoder,
+  ) async {
+    String? payload;
+    try {
+      if (!kIsWeb) {
+        payload = await scanQrWithCamera(context);
+      } else if (capture != null && decoder != null) {
+        final file = await capture.capture();
+        if (file != null) {
+          payload = await decoder.decode(await file.readAsBytes());
+        }
+      }
+    } catch (_) {
+      payload = null;
+    }
+    if (!context.mounted) {
       return;
     }
-    if (context.mounted) {
-      showErrorSnack(context, context.l10n.errorUnknown);
+    final plate = payload == null ? null : plateFromQrPayload(payload);
+    if (plate == null) {
+      if (payload != null) {
+        showInfoSnack(context, context.l10n.checkOutQrUnreadable);
+      }
+      return;
     }
+    context.go('/check-out?scan=$plate');
   }
 }
-
 
 /// Adds the unread badge to the notifications destination.
 class _NavIcon extends StatelessWidget {

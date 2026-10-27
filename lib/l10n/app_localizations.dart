@@ -170,6 +170,30 @@ abstract class AppLocalizations {
   /// **'Editar'**
   String get actionEdit;
 
+  /// No description provided for @themeMode.
+  ///
+  /// In es, this message translates to:
+  /// **'Apariencia'**
+  String get themeMode;
+
+  /// No description provided for @themeSystem.
+  ///
+  /// In es, this message translates to:
+  /// **'Sistema'**
+  String get themeSystem;
+
+  /// No description provided for @themeLight.
+  ///
+  /// In es, this message translates to:
+  /// **'Claro'**
+  String get themeLight;
+
+  /// No description provided for @themeDark.
+  ///
+  /// In es, this message translates to:
+  /// **'Oscuro'**
+  String get themeDark;
+
   /// No description provided for @actionLogout.
   ///
   /// In es, this message translates to:
@@ -794,12 +818,6 @@ abstract class AppLocalizations {
   /// **'Aún no hay sedes'**
   String get lotsEmpty;
 
-  /// No description provided for @lotSwitch.
-  ///
-  /// In es, this message translates to:
-  /// **'Cambiar'**
-  String get lotSwitch;
-
   /// No description provided for @lotMembers.
   ///
   /// In es, this message translates to:
@@ -824,6 +842,18 @@ abstract class AppLocalizations {
   /// **'Nueva reserva'**
   String get reservationAdd;
 
+  /// No description provided for @reservationCreated.
+  ///
+  /// In es, this message translates to:
+  /// **'Reserva creada'**
+  String get reservationCreated;
+
+  /// No description provided for @reservationCancelled.
+  ///
+  /// In es, this message translates to:
+  /// **'Reserva cancelada'**
+  String get reservationCancelled;
+
   /// No description provided for @reservationsEmpty.
   ///
   /// In es, this message translates to:
@@ -835,6 +865,24 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Vence en {duration}'**
   String reservationExpiresIn(String duration);
+
+  /// No description provided for @reservationQuick2h.
+  ///
+  /// In es, this message translates to:
+  /// **'+2 h'**
+  String get reservationQuick2h;
+
+  /// No description provided for @reservationQuick4h.
+  ///
+  /// In es, this message translates to:
+  /// **'+4 h'**
+  String get reservationQuick4h;
+
+  /// No description provided for @reservationEndOfDay.
+  ///
+  /// In es, this message translates to:
+  /// **'Fin del día'**
+  String get reservationEndOfDay;
 
   /// No description provided for @reservationUntil.
   ///
@@ -854,6 +902,12 @@ abstract class AppLocalizations {
   /// **'Notas (opcional)'**
   String get reservationNotes;
 
+  /// No description provided for @reservationCheckIn.
+  ///
+  /// In es, this message translates to:
+  /// **'Registrar entrada'**
+  String get reservationCheckIn;
+
   /// No description provided for @reservationCancel.
   ///
   /// In es, this message translates to:
@@ -871,6 +925,30 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Se liberará el cupo reservado para {plate}.'**
   String reservationCancelBody(String plate);
+
+  /// No description provided for @sidebarCollapse.
+  ///
+  /// In es, this message translates to:
+  /// **'Contraer menú'**
+  String get sidebarCollapse;
+
+  /// No description provided for @sidebarExpand.
+  ///
+  /// In es, this message translates to:
+  /// **'Expandir menú'**
+  String get sidebarExpand;
+
+  /// No description provided for @navGroupOperation.
+  ///
+  /// In es, this message translates to:
+  /// **'Operación'**
+  String get navGroupOperation;
+
+  /// No description provided for @navGroupManagement.
+  ///
+  /// In es, this message translates to:
+  /// **'Gestión'**
+  String get navGroupManagement;
 
   /// No description provided for @navHome.
   ///
@@ -1214,6 +1292,18 @@ abstract class AppLocalizations {
   /// **'Cerrar turno'**
   String get shiftClose;
 
+  /// No description provided for @shiftDifferenceConfirmTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'El arqueo no cuadra'**
+  String get shiftDifferenceConfirmTitle;
+
+  /// No description provided for @shiftDifferenceConfirmBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Diferencia de {amount} frente al efectivo esperado. ¿Cerrar el turno igualmente?'**
+  String shiftDifferenceConfirmBody(String amount);
+
   /// No description provided for @shiftClosedTitle.
   ///
   /// In es, this message translates to:
@@ -1393,6 +1483,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Hola, tu vehículo {plate} está listo para retirar.'**
   String vehicleWhatsappReady(String plate);
+
+  /// No description provided for @vehicleChargeAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Cobrar en caja'**
+  String get vehicleChargeAction;
 
   /// No description provided for @vehicleWhatsappReadyAction.
   ///
@@ -1574,11 +1670,65 @@ abstract class AppLocalizations {
   /// **'Más secciones de gestión'**
   String get navMoreTooltip;
 
+  /// No description provided for @settingsDiscardTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Descartar cambios?'**
+  String get settingsDiscardTitle;
+
+  /// No description provided for @settingsDiscardBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Hay cambios sin guardar en la configuración.'**
+  String get settingsDiscardBody;
+
+  /// No description provided for @settingsDiscard.
+  ///
+  /// In es, this message translates to:
+  /// **'Descartar'**
+  String get settingsDiscard;
+
   /// No description provided for @settingsTitle.
   ///
   /// In es, this message translates to:
   /// **'Configuración del parqueadero'**
   String get settingsTitle;
+
+  /// No description provided for @settingsCarCapacity.
+  ///
+  /// In es, this message translates to:
+  /// **'Espacios para carros y camionetas'**
+  String get settingsCarCapacity;
+
+  /// No description provided for @settingsMotoCapacity.
+  ///
+  /// In es, this message translates to:
+  /// **'Espacios para motos'**
+  String get settingsMotoCapacity;
+
+  /// No description provided for @settingsKeyCapacity.
+  ///
+  /// In es, this message translates to:
+  /// **'Máximo de vehículos con llaves'**
+  String get settingsKeyCapacity;
+
+  /// No description provided for @settingsCapacityHint.
+  ///
+  /// In es, this message translates to:
+  /// **'0 = sin límite'**
+  String get settingsCapacityHint;
+
+  /// No description provided for @errorParkingFull.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay espacios disponibles para este tipo de vehículo'**
+  String get errorParkingFull;
+
+  /// No description provided for @errorKeysFull.
+  ///
+  /// In es, this message translates to:
+  /// **'Se alcanzó el máximo de vehículos que pueden dejar las llaves'**
+  String get errorKeysFull;
 
   /// No description provided for @settingsEvidenceRetention.
   ///
@@ -1777,6 +1927,48 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Mensualidades'**
   String get homeTodayPasses;
+
+  /// No description provided for @homeCapacityTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Capacidad del parqueadero'**
+  String get homeCapacityTitle;
+
+  /// No description provided for @homeCapacityCars.
+  ///
+  /// In es, this message translates to:
+  /// **'Carros y camionetas'**
+  String get homeCapacityCars;
+
+  /// No description provided for @homeCapacityMotos.
+  ///
+  /// In es, this message translates to:
+  /// **'Motos'**
+  String get homeCapacityMotos;
+
+  /// No description provided for @homeCapacityKeys.
+  ///
+  /// In es, this message translates to:
+  /// **'Vehículos con llaves'**
+  String get homeCapacityKeys;
+
+  /// No description provided for @homeNoLimit.
+  ///
+  /// In es, this message translates to:
+  /// **'sin límite'**
+  String get homeNoLimit;
+
+  /// No description provided for @homeInsideSeeAll.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver todos'**
+  String get homeInsideSeeAll;
+
+  /// No description provided for @homeSummary.
+  ///
+  /// In es, this message translates to:
+  /// **'Resumen'**
+  String get homeSummary;
 
   /// No description provided for @homeOccupancy.
   ///
@@ -1994,6 +2186,30 @@ abstract class AppLocalizations {
   /// **'Repetir entrada {plate}'**
   String checkInRepeat(String plate);
 
+  /// No description provided for @checkInAlreadyInside.
+  ///
+  /// In es, this message translates to:
+  /// **'Este vehículo ya figura dentro ({plate}). Verifica antes de registrarlo de nuevo.'**
+  String checkInAlreadyInside(String plate);
+
+  /// No description provided for @checkInLeftKeys.
+  ///
+  /// In es, this message translates to:
+  /// **'Deja las llaves'**
+  String get checkInLeftKeys;
+
+  /// No description provided for @checkInLeftKeysHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Se guardan en recepción'**
+  String get checkInLeftKeysHint;
+
+  /// No description provided for @checkInLeftKeysShort.
+  ///
+  /// In es, this message translates to:
+  /// **'Llaves'**
+  String get checkInLeftKeysShort;
+
   /// No description provided for @checkInSubmit.
   ///
   /// In es, this message translates to:
@@ -2011,6 +2227,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Entrada guardada sin conexión: {plate}'**
   String checkInQueued(String plate);
+
+  /// No description provided for @markExit.
+  ///
+  /// In es, this message translates to:
+  /// **'Marcar salida'**
+  String get markExit;
 
   /// No description provided for @openSessionsTitle.
   ///
@@ -2066,6 +2288,60 @@ abstract class AppLocalizations {
   /// **'Buscar por placa'**
   String get searchPlate;
 
+  /// No description provided for @checkOutClearSearch.
+  ///
+  /// In es, this message translates to:
+  /// **'Limpiar búsqueda'**
+  String get checkOutClearSearch;
+
+  /// No description provided for @scanExitTooltip.
+  ///
+  /// In es, this message translates to:
+  /// **'Escanear QR y registrar salida'**
+  String get scanExitTooltip;
+
+  /// No description provided for @scanQrTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Escanear recibo'**
+  String get scanQrTitle;
+
+  /// No description provided for @scanQrHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Apunta la cámara al código QR del recibo'**
+  String get scanQrHint;
+
+  /// No description provided for @scanQrTorch.
+  ///
+  /// In es, this message translates to:
+  /// **'Linterna'**
+  String get scanQrTorch;
+
+  /// No description provided for @scanQrCameraError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo abrir la cámara. Revisa el permiso.'**
+  String get scanQrCameraError;
+
+  /// No description provided for @checkOutScanQr.
+  ///
+  /// In es, this message translates to:
+  /// **'Escanear el QR del recibo'**
+  String get checkOutScanQr;
+
+  /// No description provided for @checkOutQrUnreadable.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo leer el código QR'**
+  String get checkOutQrUnreadable;
+
+  /// No description provided for @checkOutQrNoSession.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay una sesión abierta para {plate}'**
+  String checkOutQrNoSession(String plate);
+
   /// No description provided for @checkOutNoMatch.
   ///
   /// In es, this message translates to:
@@ -2089,6 +2365,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Mensualidad activa: sin cobro'**
   String get checkOutPassCovered;
+
+  /// No description provided for @checkOutReprintTicket.
+  ///
+  /// In es, this message translates to:
+  /// **'Reimprimir recibo de entrada'**
+  String get checkOutReprintTicket;
 
   /// No description provided for @checkOutCharge.
   ///
@@ -2299,6 +2581,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Ver recibo'**
   String get receiptView;
+
+  /// No description provided for @receiptNewCharge.
+  ///
+  /// In es, this message translates to:
+  /// **'Nuevo cobro'**
+  String get receiptNewCharge;
+
+  /// No description provided for @receiptQrHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Presenta este código al salir para registrar la salida'**
+  String get receiptQrHint;
 
   /// No description provided for @receiptClose.
   ///
@@ -2516,6 +2810,18 @@ abstract class AppLocalizations {
   /// **'No hay vehículos para «{query}»'**
   String vehiclesNoMatch(String query);
 
+  /// No description provided for @vehicleCreated.
+  ///
+  /// In es, this message translates to:
+  /// **'Vehículo creado: {plate}'**
+  String vehicleCreated(String plate);
+
+  /// No description provided for @vehicleCheckInAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Registrar entrada'**
+  String get vehicleCheckInAction;
+
   /// No description provided for @vehiclesTitle.
   ///
   /// In es, this message translates to:
@@ -2665,6 +2971,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Usuarios'**
   String get usersTitle;
+
+  /// No description provided for @usersFilterAll.
+  ///
+  /// In es, this message translates to:
+  /// **'Todos'**
+  String get usersFilterAll;
+
+  /// No description provided for @usersFilterEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay usuarios con este filtro'**
+  String get usersFilterEmpty;
 
   /// No description provided for @usersEmpty.
   ///
@@ -2816,6 +3134,54 @@ abstract class AppLocalizations {
   /// **'Mensualidades'**
   String get monthlyPassesTitle;
 
+  /// No description provided for @monthlyPassesNoMatch.
+  ///
+  /// In es, this message translates to:
+  /// **'Ninguna mensualidad coincide con «{query}»'**
+  String monthlyPassesNoMatch(String query);
+
+  /// No description provided for @monthlyPassCreated.
+  ///
+  /// In es, this message translates to:
+  /// **'Mensualidad creada'**
+  String get monthlyPassCreated;
+
+  /// No description provided for @monthlyPassDeleted.
+  ///
+  /// In es, this message translates to:
+  /// **'Mensualidad eliminada'**
+  String get monthlyPassDeleted;
+
+  /// No description provided for @monthlyPassPaymentDone.
+  ///
+  /// In es, this message translates to:
+  /// **'Pago de mensualidad registrado'**
+  String get monthlyPassPaymentDone;
+
+  /// No description provided for @monthlyPassRenew.
+  ///
+  /// In es, this message translates to:
+  /// **'Renovar 30 días'**
+  String get monthlyPassRenew;
+
+  /// No description provided for @monthlyPassRenewTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Renovar la mensualidad?'**
+  String get monthlyPassRenewTitle;
+
+  /// No description provided for @monthlyPassRenewBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Se extenderá hasta {date}, conservando el valor actual.'**
+  String monthlyPassRenewBody(String date);
+
+  /// No description provided for @monthlyPassRenewed.
+  ///
+  /// In es, this message translates to:
+  /// **'Mensualidad renovada 30 días'**
+  String get monthlyPassRenewed;
+
   /// No description provided for @monthlyPassesEmpty.
   ///
   /// In es, this message translates to:
@@ -2954,6 +3320,18 @@ abstract class AppLocalizations {
   /// **'Reportes'**
   String get reportsTitle;
 
+  /// No description provided for @lotSwitchTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Cambiar de sede'**
+  String get lotSwitchTitle;
+
+  /// No description provided for @lotSwitchTooltip.
+  ///
+  /// In es, this message translates to:
+  /// **'Sede actual: {site}. Toca para cambiar.'**
+  String lotSwitchTooltip(String site);
+
   /// No description provided for @reportsRangeTooltip.
   ///
   /// In es, this message translates to:
@@ -2983,6 +3361,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Periodo anterior'**
   String get reportsPreviousLabel;
+
+  /// No description provided for @reportsExportCsv.
+  ///
+  /// In es, this message translates to:
+  /// **'Copiar CSV'**
+  String get reportsExportCsv;
+
+  /// No description provided for @reportsCsvCopied.
+  ///
+  /// In es, this message translates to:
+  /// **'CSV copiado al portapapeles'**
+  String get reportsCsvCopied;
 
   /// No description provided for @reportsTotalRevenue.
   ///

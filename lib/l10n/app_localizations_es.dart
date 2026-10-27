@@ -46,6 +46,18 @@ class AppLocalizationsEs extends AppLocalizations {
   String get actionEdit => 'Editar';
 
   @override
+  String get themeMode => 'Apariencia';
+
+  @override
+  String get themeSystem => 'Sistema';
+
+  @override
+  String get themeLight => 'Claro';
+
+  @override
+  String get themeDark => 'Oscuro';
+
+  @override
   String get actionLogout => 'Cerrar sesión';
 
   @override
@@ -394,9 +406,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get lotsEmpty => 'Aún no hay sedes';
 
   @override
-  String get lotSwitch => 'Cambiar';
-
-  @override
   String lotMembers(int count) {
     return '$count usuarios';
   }
@@ -411,12 +420,27 @@ class AppLocalizationsEs extends AppLocalizations {
   String get reservationAdd => 'Nueva reserva';
 
   @override
+  String get reservationCreated => 'Reserva creada';
+
+  @override
+  String get reservationCancelled => 'Reserva cancelada';
+
+  @override
   String get reservationsEmpty => 'No hay reservas activas';
 
   @override
   String reservationExpiresIn(String duration) {
     return 'Vence en $duration';
   }
+
+  @override
+  String get reservationQuick2h => '+2 h';
+
+  @override
+  String get reservationQuick4h => '+4 h';
+
+  @override
+  String get reservationEndOfDay => 'Fin del día';
 
   @override
   String reservationUntil(String when) {
@@ -432,6 +456,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get reservationNotes => 'Notas (opcional)';
 
   @override
+  String get reservationCheckIn => 'Registrar entrada';
+
+  @override
   String get reservationCancel => 'Cancelar reserva';
 
   @override
@@ -441,6 +468,18 @@ class AppLocalizationsEs extends AppLocalizations {
   String reservationCancelBody(String plate) {
     return 'Se liberará el cupo reservado para $plate.';
   }
+
+  @override
+  String get sidebarCollapse => 'Contraer menú';
+
+  @override
+  String get sidebarExpand => 'Expandir menú';
+
+  @override
+  String get navGroupOperation => 'Operación';
+
+  @override
+  String get navGroupManagement => 'Gestión';
 
   @override
   String get navHome => 'Inicio';
@@ -619,6 +658,14 @@ class AppLocalizationsEs extends AppLocalizations {
   String get shiftClose => 'Cerrar turno';
 
   @override
+  String get shiftDifferenceConfirmTitle => 'El arqueo no cuadra';
+
+  @override
+  String shiftDifferenceConfirmBody(String amount) {
+    return 'Diferencia de $amount frente al efectivo esperado. ¿Cerrar el turno igualmente?';
+  }
+
+  @override
   String get shiftClosedTitle => 'Turno cerrado';
 
   @override
@@ -710,6 +757,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String vehicleWhatsappReady(String plate) {
     return 'Hola, tu vehículo $plate está listo para retirar.';
   }
+
+  @override
+  String get vehicleChargeAction => 'Cobrar en caja';
 
   @override
   String get vehicleWhatsappReadyAction => 'Avisar que está listo';
@@ -816,7 +866,37 @@ class AppLocalizationsEs extends AppLocalizations {
   String get navMoreTooltip => 'Más secciones de gestión';
 
   @override
+  String get settingsDiscardTitle => '¿Descartar cambios?';
+
+  @override
+  String get settingsDiscardBody =>
+      'Hay cambios sin guardar en la configuración.';
+
+  @override
+  String get settingsDiscard => 'Descartar';
+
+  @override
   String get settingsTitle => 'Configuración del parqueadero';
+
+  @override
+  String get settingsCarCapacity => 'Espacios para carros y camionetas';
+
+  @override
+  String get settingsMotoCapacity => 'Espacios para motos';
+
+  @override
+  String get settingsKeyCapacity => 'Máximo de vehículos con llaves';
+
+  @override
+  String get settingsCapacityHint => '0 = sin límite';
+
+  @override
+  String get errorParkingFull =>
+      'No hay espacios disponibles para este tipo de vehículo';
+
+  @override
+  String get errorKeysFull =>
+      'Se alcanzó el máximo de vehículos que pueden dejar las llaves';
 
   @override
   String get settingsEvidenceRetention => 'Retención de evidencias (días)';
@@ -921,6 +1001,27 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get homeTodayPasses => 'Mensualidades';
+
+  @override
+  String get homeCapacityTitle => 'Capacidad del parqueadero';
+
+  @override
+  String get homeCapacityCars => 'Carros y camionetas';
+
+  @override
+  String get homeCapacityMotos => 'Motos';
+
+  @override
+  String get homeCapacityKeys => 'Vehículos con llaves';
+
+  @override
+  String get homeNoLimit => 'sin límite';
+
+  @override
+  String get homeInsideSeeAll => 'Ver todos';
+
+  @override
+  String get homeSummary => 'Resumen';
 
   @override
   String get homeOccupancy => 'Vehículos dentro';
@@ -1043,6 +1144,20 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String checkInAlreadyInside(String plate) {
+    return 'Este vehículo ya figura dentro ($plate). Verifica antes de registrarlo de nuevo.';
+  }
+
+  @override
+  String get checkInLeftKeys => 'Deja las llaves';
+
+  @override
+  String get checkInLeftKeysHint => 'Se guardan en recepción';
+
+  @override
+  String get checkInLeftKeysShort => 'Llaves';
+
+  @override
   String get checkInSubmit => 'Registrar entrada';
 
   @override
@@ -1054,6 +1169,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String checkInQueued(String plate) {
     return 'Entrada guardada sin conexión: $plate';
   }
+
+  @override
+  String get markExit => 'Marcar salida';
 
   @override
   String get openSessionsTitle => 'Vehículos dentro';
@@ -1094,6 +1212,36 @@ class AppLocalizationsEs extends AppLocalizations {
   String get searchPlate => 'Buscar por placa';
 
   @override
+  String get checkOutClearSearch => 'Limpiar búsqueda';
+
+  @override
+  String get scanExitTooltip => 'Escanear QR y registrar salida';
+
+  @override
+  String get scanQrTitle => 'Escanear recibo';
+
+  @override
+  String get scanQrHint => 'Apunta la cámara al código QR del recibo';
+
+  @override
+  String get scanQrTorch => 'Linterna';
+
+  @override
+  String get scanQrCameraError =>
+      'No se pudo abrir la cámara. Revisa el permiso.';
+
+  @override
+  String get checkOutScanQr => 'Escanear el QR del recibo';
+
+  @override
+  String get checkOutQrUnreadable => 'No se pudo leer el código QR';
+
+  @override
+  String checkOutQrNoSession(String plate) {
+    return 'No hay una sesión abierta para $plate';
+  }
+
+  @override
   String checkOutNoMatch(String query) {
     return 'Ninguna placa coincide con «$query»';
   }
@@ -1108,6 +1256,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get checkOutPassCovered => 'Mensualidad activa: sin cobro';
+
+  @override
+  String get checkOutReprintTicket => 'Reimprimir recibo de entrada';
 
   @override
   String get checkOutCharge => 'Cobrar';
@@ -1226,6 +1377,13 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get receiptView => 'Ver recibo';
+
+  @override
+  String get receiptNewCharge => 'Nuevo cobro';
+
+  @override
+  String get receiptQrHint =>
+      'Presenta este código al salir para registrar la salida';
 
   @override
   String get receiptClose => 'Cerrar';
@@ -1354,6 +1512,14 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String vehicleCreated(String plate) {
+    return 'Vehículo creado: $plate';
+  }
+
+  @override
+  String get vehicleCheckInAction => 'Registrar entrada';
+
+  @override
   String get vehiclesTitle => 'Vehículos';
 
   @override
@@ -1433,6 +1599,12 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get usersTitle => 'Usuarios';
+
+  @override
+  String get usersFilterAll => 'Todos';
+
+  @override
+  String get usersFilterEmpty => 'No hay usuarios con este filtro';
 
   @override
   String get usersEmpty => 'Aún no hay usuarios';
@@ -1523,6 +1695,34 @@ class AppLocalizationsEs extends AppLocalizations {
   String get monthlyPassesTitle => 'Mensualidades';
 
   @override
+  String monthlyPassesNoMatch(String query) {
+    return 'Ninguna mensualidad coincide con «$query»';
+  }
+
+  @override
+  String get monthlyPassCreated => 'Mensualidad creada';
+
+  @override
+  String get monthlyPassDeleted => 'Mensualidad eliminada';
+
+  @override
+  String get monthlyPassPaymentDone => 'Pago de mensualidad registrado';
+
+  @override
+  String get monthlyPassRenew => 'Renovar 30 días';
+
+  @override
+  String get monthlyPassRenewTitle => '¿Renovar la mensualidad?';
+
+  @override
+  String monthlyPassRenewBody(String date) {
+    return 'Se extenderá hasta $date, conservando el valor actual.';
+  }
+
+  @override
+  String get monthlyPassRenewed => 'Mensualidad renovada 30 días';
+
+  @override
   String get monthlyPassesEmpty => 'Aún no hay mensualidades';
 
   @override
@@ -1611,6 +1811,14 @@ class AppLocalizationsEs extends AppLocalizations {
   String get reportsTitle => 'Reportes';
 
   @override
+  String get lotSwitchTitle => 'Cambiar de sede';
+
+  @override
+  String lotSwitchTooltip(String site) {
+    return 'Sede actual: $site. Toca para cambiar.';
+  }
+
+  @override
   String get reportsRangeTooltip => 'Cambiar rango de fechas';
 
   @override
@@ -1628,6 +1836,12 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get reportsPreviousLabel => 'Periodo anterior';
+
+  @override
+  String get reportsExportCsv => 'Copiar CSV';
+
+  @override
+  String get reportsCsvCopied => 'CSV copiado al portapapeles';
 
   @override
   String get reportsTotalRevenue => 'Ingresos totales';
