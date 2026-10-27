@@ -125,32 +125,37 @@ void main() {
     expect(find.text('Nuevo cobro'), findsNothing);
   });
 
-  testWidgets('check-out receipt embeds the plate QR', (tester) async {
+  testWidgets('check-in receipt embeds the exit QR', (tester) async {
     await tester.pumpWidget(
       testApp(
         Material(
           child: SingleChildScrollView(
-            child: ReceiptCard(data: _checkOutData()),
+            child: ReceiptCard(
+              data: ReceiptData(
+                kind: ReceiptKind.checkIn,
+                plate: 'ABC123',
+                entryTime: DateTime(2026, 1, 1, 8, 30),
+                photoCount: 1,
+              ),
+            ),
           ),
         ),
       ),
     );
 
     expect(find.byType(QrCode), findsOneWidget);
-    expect(find.text('Escanea el QR para registrar la salida'), findsOneWidget);
+    expect(
+      find.text('Presenta este código al salir para registrar la salida'),
+      findsOneWidget,
+    );
   });
 
-  testWidgets('check-in receipt has no exit QR', (tester) async {
+  testWidgets('check-out receipt has no exit QR', (tester) async {
     await tester.pumpWidget(
       testApp(
         Material(
-          child: ReceiptCard(
-            data: ReceiptData(
-              kind: ReceiptKind.checkIn,
-              plate: 'ABC123',
-              entryTime: DateTime(2026, 1, 1, 8, 30),
-              photoCount: 1,
-            ),
+          child: SingleChildScrollView(
+            child: ReceiptCard(data: _checkOutData()),
           ),
         ),
       ),

@@ -97,7 +97,7 @@ class EscPosGenerator {
       _row(bytes, labels.ticket, data.ticketNumber!);
     }
 
-    if (data.isCheckOut) {
+    if (!data.isCheckOut) {
       _qr(bytes, data.plate);
       _text(bytes, labels.scanHint, align: 1);
       _rule(bytes);

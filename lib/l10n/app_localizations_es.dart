@@ -1310,7 +1310,8 @@ class AppLocalizationsEs extends AppLocalizations {
   String get receiptNewCharge => 'Nuevo cobro';
 
   @override
-  String get receiptQrHint => 'Escanea el QR para registrar la salida';
+  String get receiptQrHint =>
+      'Presenta este código al salir para registrar la salida';
 
   @override
   String get receiptClose => 'Cerrar';

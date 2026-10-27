@@ -2453,7 +2453,7 @@ abstract class AppLocalizations {
   /// No description provided for @receiptQrHint.
   ///
   /// In es, this message translates to:
-  /// **'Escanea el QR para registrar la salida'**
+  /// **'Presenta este código al salir para registrar la salida'**
   String get receiptQrHint;
 
   /// No description provided for @receiptClose.

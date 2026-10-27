@@ -1304,7 +1304,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get receiptNewCharge => 'New charge';
 
   @override
-  String get receiptQrHint => 'Scan the QR to check out';
+  String get receiptQrHint => 'Show this code at the exit to check out';
 
   @override
   String get receiptClose => 'Close';

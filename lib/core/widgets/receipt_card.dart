@@ -339,7 +339,7 @@ class ReceiptCard extends StatelessWidget {
               ),
             ),
           ),
-        if (data.isCheckOut) ...[
+        if (!data.isCheckOut) ...[
           const SizedBox(height: Space.md),
           Center(
             child: Semantics(

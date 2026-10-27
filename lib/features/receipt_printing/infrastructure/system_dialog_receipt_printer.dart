@@ -111,7 +111,7 @@ class SystemDialogReceiptPrinter implements ReceiptPrinter {
         if (data.isCheckOut && !data.pendingSync && data.ticketNumber != null)
           _row(context, labels.ticket, data.ticketNumber!),
         pw.Divider(),
-        if (data.isCheckOut) ...[
+        if (!data.isCheckOut) ...[
           pw.SizedBox(height: 8),
           pw.Center(
             child: pw.BarcodeWidget(

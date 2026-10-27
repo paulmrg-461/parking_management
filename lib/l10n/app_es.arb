@@ -450,7 +450,7 @@
   "receiptGenerate": "Generar recibo",
   "receiptView": "Ver recibo",
   "receiptNewCharge": "Nuevo cobro",
-  "receiptQrHint": "Escanea el QR para registrar la salida",
+  "receiptQrHint": "Presenta este código al salir para registrar la salida",
   "receiptClose": "Cerrar",
   "printReceipt": "Imprimir",
   "printSystem": "Impresora del sistema (PDF)",

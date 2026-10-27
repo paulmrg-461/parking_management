@@ -129,15 +129,7 @@ void main() {
     }
   });
 
-  test('Success: the check-out receipt prints a QR with the plate', () {
-    final bytes = const EscPosGenerator().build(_checkOut, _configured);
-
-    expect(_contains(bytes, _qrPrint), isTrue);
-    // The plate travels as the QR payload (store command: 31 50 30 <data>).
-    expect(_decode(bytes), contains('Escanee el QR para registrar la salida'));
-  });
-
-  test('Security: check-in receipts carry no exit QR', () {
+  test('Success: the entry receipt prints the exit QR with the plate', () {
     final bytes = const EscPosGenerator().build(
       ReceiptData(
         kind: ReceiptKind.checkIn,
@@ -147,6 +139,13 @@ void main() {
       ),
       _configured,
     );
+
+    expect(_contains(bytes, _qrPrint), isTrue);
+    expect(_decode(bytes), contains('Presente este codigo al salir'));
+  });
+
+  test('Security: check-out receipts carry no exit QR', () {
+    final bytes = const EscPosGenerator().build(_checkOut, _configured);
 
     expect(_contains(bytes, _qrPrint), isFalse);
   });

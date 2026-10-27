@@ -423,8 +423,9 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 ## Receipt QR / check-out scanning
 
 - The QR payload is the **plate** (`Barcode.qrCode()` in `core/widgets/qr_code.dart`),
-  printed on the check-out receipt (screen, PDF via `pw.BarcodeWidget`, thermal
-  via `GS ( k`) and captioned with `ReceiptLabels.scanHint`.
+  printed on the **entry** receipt (screen, PDF via `pw.BarcodeWidget`, thermal
+  via `GS ( k`) and captioned with `ReceiptLabels.scanHint`. Check-out receipts
+  carry no QR: the car is already gone.
 - `QrDecoder` (`core/qr/qr_decoder.dart`, zxing2 + image, pure Dart) decodes a
   camera capture; `plateFromQrPayload` accepts a bare plate or `?plate=`/`?p=`
   and rejects anything else (a random QR cannot start a check-out).

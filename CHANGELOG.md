@@ -117,10 +117,11 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   to be a full-width strip above the app bar that read like a notification).
 - The home app bar picks the device appearance (system / light / dark); the
   choice is stored locally and survives restarts.
-- Check-out receipts print a **QR with the plate** (screen, PDF and thermal):
-  scanning it with the app's camera opens that session's payment dialog, and a
-  USB QR reader types the plate into the search (Enter opens it too). The
-  camera reader is pure Dart (`zxing2`), so it works offline.
+- **Entry receipts** (the ticket the customer keeps) print a **QR with the
+  plate** on screen, in the PDF and on thermal printers. At the exit, the app's
+  camera scan opens that session's payment dialog; a USB QR reader can type the
+  plate into the search field and Enter opens it too. The camera reader is pure
+  Dart (`zxing2`), so it works offline.
 - Check-out shows the shared empty state (no cars inside, or no plate match)
   and a "Clear search" action on a miss.
 - Leaving the settings form with unsaved edits asks before discarding them.

@@ -59,7 +59,7 @@ class ReceiptLabels {
     ticket: 'Ticket',
     generatedOn: 'Generado el',
     thanks: 'Gracias por su visita',
-    scanHint: 'Escanee el QR para registrar la salida',
+    scanHint: 'Presente este codigo al salir',
     paymentMethod: _paymentEs,
   );
 
@@ -78,7 +78,7 @@ class ReceiptLabels {
     ticket: 'Ticket',
     generatedOn: 'Generated on',
     thanks: 'Thank you for your visit',
-    scanHint: 'Scan the QR to check out',
+    scanHint: 'Show this code at the exit',
     paymentMethod: _paymentEn,
   );
 
