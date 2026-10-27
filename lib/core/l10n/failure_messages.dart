@@ -36,6 +36,8 @@ extension FailureMessages on AppLocalizations {
     'VehicleNotFoundError' => errorVehicleNotFound,
     'CategoryNotFoundError' => errorCategoryNotFound,
     'CategoryFullError' => errorCategoryFull,
+    'ParkingFullError' => errorParkingFull,
+    'KeysFullError' => errorKeysFull,
     'ShiftAlreadyOpenError' => errorShiftAlreadyOpen,
     'NoOpenShiftError' => errorNoOpenShift,
     'ShiftNotFoundError' => errorShiftNotFound,

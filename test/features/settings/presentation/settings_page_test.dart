@@ -121,4 +121,30 @@ void main() {
     expect(find.byKey(const Key('settings_name')), findsOneWidget);
     expect(repository.settings.name, _configured.name);
   });
+
+  testWidgets('Success: the space capacities are saved', (tester) async {
+    final repository = FakeParkingSettingsRepository(_configured);
+    await pumpPage(tester, repository: repository);
+
+    await tester.enterText(
+      find.byKey(const Key('settings_car_capacity')),
+      '12',
+    );
+    await tester.enterText(
+      find.byKey(const Key('settings_moto_capacity')),
+      '5',
+    );
+    await tester.enterText(
+      find.byKey(const Key('settings_key_capacity')),
+      '3',
+    );
+    await tester.ensureVisible(find.widgetWithText(FilledButton, 'Guardar'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Guardar'));
+    await tester.pumpAndSettle();
+
+    expect(repository.settings.carCapacity, 12);
+    expect(repository.settings.motoCapacity, 5);
+    expect(repository.settings.keyCapacity, 3);
+  });
 }

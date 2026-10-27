@@ -37,6 +37,7 @@ class _FakeCheckInRepository implements CheckInRepository {
   int createCalls = 0;
   Failure? createError;
   String? lastPlate;
+  bool? lastLeftKeys;
   NewVehicleInfo? lastNewVehicle;
   List<XFile> lastPhotos = const [];
 
@@ -45,9 +46,11 @@ class _FakeCheckInRepository implements CheckInRepository {
     required String plate,
     required List<XFile> photos,
     NewVehicleInfo? newVehicle,
+    bool leftKeys = false,
   }) async {
     createCalls++;
     lastPlate = plate;
+    lastLeftKeys = leftKeys;
     lastNewVehicle = newVehicle;
     lastPhotos = photos;
     final error = createError;
@@ -188,6 +191,11 @@ void main() {
     String? initialPlate,
     void Function(BuildContext context, String plate)? onMarkExit,
   }) async {
+    // Tall viewport: the form, the keys switch and the sessions accordion must
+    // fit without fighting the CustomScrollView while tapping.
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     checkIns = _FakeCheckInRepository();
     occupancy = FakeCheckOutRepository(categories: occupancyCategories);
     await tester.pumpWidget(
@@ -233,6 +241,14 @@ void main() {
 
   Finder submitButton() =>
       find.widgetWithText(FilledButton, 'Registrar entrada');
+
+  /// The form scrolls; make the submit button visible before tapping it.
+  Future<void> tapSubmit(WidgetTester tester) async {
+    await tester.ensureVisible(submitButton());
+    await tester.pumpAndSettle();
+    await tester.tap(submitButton());
+    await tester.pumpAndSettle();
+  }
 
   bool submitEnabled(WidgetTester tester) =>
       tester.widget<FilledButton>(submitButton()).onPressed != null;
@@ -305,8 +321,7 @@ void main() {
     expect(categoryField(), findsNothing);
     expect(submitEnabled(tester), isTrue);
 
-    await tester.tap(submitButton());
-    await tester.pumpAndSettle();
+    await tapSubmit(tester);
 
     expect(checkIns.createCalls, 1);
     expect(checkIns.lastNewVehicle, isNull);
@@ -318,8 +333,7 @@ void main() {
     await pumpPage(tester);
     await enterPlate(tester, 'abc123');
 
-    await tester.tap(submitButton());
-    await tester.pumpAndSettle();
+    await tapSubmit(tester);
 
     expect(find.text('Entrada registrada: ABC123'), findsOneWidget);
     expect(hapticFired(), isTrue);
@@ -397,8 +411,7 @@ void main() {
   ) async {
     await pumpPage(tester);
 
-    await tester.tap(submitButton());
-    await tester.pumpAndSettle();
+    await tapSubmit(tester);
 
     expect(find.text('Ingresa la placa'), findsOneWidget);
     expect(checkIns.createCalls, 0);
@@ -503,8 +516,7 @@ void main() {
     await tester.tap(find.byTooltip('Agregar foto'));
     await tester.pumpAndSettle();
     await tester.ensureVisible(submitButton());
-    await tester.tap(submitButton());
-    await tester.pumpAndSettle();
+    await tapSubmit(tester);
 
     expect(checkIns.lastPhotos, hasLength(1));
   });
@@ -631,5 +643,28 @@ void main() {
     await tester.tap(find.byTooltip('Marcar salida'));
     await tester.pumpAndSettle();
     expect(marked, 'OPEN01');
+  });
+
+  testWidgets('Success: the keys switch travels with the check-in', (
+    tester,
+  ) async {
+    await pumpPage(tester);
+    await enterPlate(tester, 'abc123');
+
+    await tester.ensureVisible(find.byKey(const Key('check_in_left_keys')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('check_in_left_keys')));
+    await tester.pump();
+    await tapSubmit(tester);
+
+    expect(checkIns.lastLeftKeys, isTrue);
+    await tester.tap(find.text('Cerrar'));
+    await tester.pumpAndSettle();
+
+    // A fresh entry starts unchecked.
+    expect(
+      tester.widget<SwitchListTile>(find.byKey(const Key('check_in_left_keys'))).value,
+      isFalse,
+    );
   });
 }

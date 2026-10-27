@@ -16,6 +16,9 @@ class ParkingSettingsDto {
     this.logoVersion = 0,
     this.evidenceRetentionDays = 0,
     this.whatsappAuto = false,
+    this.carCapacity = 0,
+    this.motoCapacity = 0,
+    this.keyCapacity = 0,
   });
 
   factory ParkingSettingsDto.fromJson(Map<String, dynamic> json) =>
@@ -30,6 +33,9 @@ class ParkingSettingsDto {
   final int logoVersion;
   final int evidenceRetentionDays;
   final bool whatsappAuto;
+  final int carCapacity;
+  final int motoCapacity;
+  final int keyCapacity;
 
   Map<String, dynamic> toJson() => _$ParkingSettingsDtoToJson(this);
 
@@ -43,5 +49,8 @@ class ParkingSettingsDto {
     logoVersion: logoVersion,
     evidenceRetentionDays: evidenceRetentionDays,
     whatsappAuto: whatsappAuto,
+    carCapacity: carCapacity,
+    motoCapacity: motoCapacity,
+    keyCapacity: keyCapacity,
   );
 }

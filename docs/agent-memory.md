@@ -12,7 +12,7 @@ Last updated: 2026-10-26, branch `feature/supabase` (post-UI/UX polish).
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0046` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 651 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 655 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -420,6 +420,20 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   http://localhost:8000`; no firewall/Wi-Fi involved. Both are documented in
   QUICKSTART and the environment guides.
 
+## Space capacities and keys (0047)
+
+- `parking_settings`: `car_capacity` (cars + pickups share the pool),
+  `moto_capacity`, `key_capacity`; `0` = no limit. Trucks/buses are excluded by
+  design. Editable in Ajustes.
+- `parking_sessions.left_keys` (default false) travels through the check-in
+  form, `check_in(p_left_keys)`, the queued payload (`left_keys`) and the
+  replayer; `open_sessions_view` exposes it.
+- `enforce_category_capacity()` keeps the per-category cap and adds group caps
+  (category name sets are the contract for groups) and the keys cap, all under
+  advisory locks per lot/group. Errors: `ParkingFullError`, `KeysFullError`.
+- The check-in RPC signature gained a trailing `p_left_keys` default; the old
+  8-argument overload must stay dropped (two overloads make calls ambiguous).
+
 ## Receipt QR / check-out scanning
 
 - `QrCode` generates the matrix for the *inner* square (size − 2×12) and paints
@@ -476,7 +490,7 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 ## Latest verification (2026-10-26)
 
-- `flutter test`: 651 passed (+1 live-stack integration skipped); `flutter
+- `flutter test`: 655 passed (+1 live-stack integration skipped); `flutter
   analyze` 129 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
 - `supabase/tests/run.sh` passed (migrations `0001`–`0046`); `e2e.sh` passed

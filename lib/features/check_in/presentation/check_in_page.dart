@@ -85,6 +85,7 @@ class _CheckInPageState extends State<CheckInPage> {
   int? _categoryId;
   String? _lastPlate;
   bool _sessionsOpen = true;
+  bool _leftKeys = false;
   static const _prefsBox = 'preferences';
   static const _lastPlateKey = 'last_plate';
 
@@ -236,6 +237,7 @@ class _CheckInPageState extends State<CheckInPage> {
         plate: _plateController.text,
         photos: [for (final photo in _photos) photo.file],
         newVehicle: lookup is VehicleLookupNotFound ? _newVehicleInfo() : null,
+        leftKeys: _leftKeys,
       ),
     );
   }
@@ -272,6 +274,7 @@ class _CheckInPageState extends State<CheckInPage> {
     setState(() {
       _photos.clear();
       _categoryId = null;
+      _leftKeys = false;
     });
     context.read<VehicleLookupCubit>().reset();
   }
@@ -440,7 +443,16 @@ class _CheckInPageState extends State<CheckInPage> {
           ),
         const SizedBox(height: 8),
         VehicleLookupSection(state: lookup, registration: _buildRegistration),
-        const SizedBox(height: 16),
+        SwitchListTile(
+          key: const Key('check_in_left_keys'),
+          contentPadding: EdgeInsets.zero,
+          value: _leftKeys,
+          onChanged: (value) => setState(() => _leftKeys = value),
+          title: Text(l10n.checkInLeftKeys),
+          subtitle: Text(l10n.checkInLeftKeysHint),
+          secondary: const Icon(Icons.key_outlined),
+        ),
+        const SizedBox(height: 8),
         PhotoStrip(
           photos: [for (final photo in _photos) photo.bytes],
           max: EvidencePolicy.maxPhotos,
@@ -695,7 +707,8 @@ class _SessionTile extends StatelessWidget {
       subtitle: Text(
         '${l10n.sessionEntry(Formatters.dateTime(session.entryTime))}'
         ' · ${elapsedLabel(l10n, session.entryTime)}'
-        ' · ${l10n.sessionPhotos(session.photoCount)}',
+        ' · ${l10n.sessionPhotos(session.photoCount)}'
+        '${session.leftKeys ? ' · ${l10n.checkInLeftKeysShort}' : ''}',
       ),
       trailing: session.status == ParkingSessionStatus.pendingSync
           ? Chip(label: Text(l10n.statusPendingSync))

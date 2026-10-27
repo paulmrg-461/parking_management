@@ -1694,6 +1694,42 @@ abstract class AppLocalizations {
   /// **'Configuración del parqueadero'**
   String get settingsTitle;
 
+  /// No description provided for @settingsCarCapacity.
+  ///
+  /// In es, this message translates to:
+  /// **'Espacios para carros y camionetas'**
+  String get settingsCarCapacity;
+
+  /// No description provided for @settingsMotoCapacity.
+  ///
+  /// In es, this message translates to:
+  /// **'Espacios para motos'**
+  String get settingsMotoCapacity;
+
+  /// No description provided for @settingsKeyCapacity.
+  ///
+  /// In es, this message translates to:
+  /// **'Máximo de vehículos con llaves'**
+  String get settingsKeyCapacity;
+
+  /// No description provided for @settingsCapacityHint.
+  ///
+  /// In es, this message translates to:
+  /// **'0 = sin límite'**
+  String get settingsCapacityHint;
+
+  /// No description provided for @errorParkingFull.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay espacios disponibles para este tipo de vehículo'**
+  String get errorParkingFull;
+
+  /// No description provided for @errorKeysFull.
+  ///
+  /// In es, this message translates to:
+  /// **'Se alcanzó el máximo de vehículos que pueden dejar las llaves'**
+  String get errorKeysFull;
+
   /// No description provided for @settingsEvidenceRetention.
   ///
   /// In es, this message translates to:
@@ -2113,6 +2149,24 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Este vehículo ya figura dentro ({plate}). Verifica antes de registrarlo de nuevo.'**
   String checkInAlreadyInside(String plate);
+
+  /// No description provided for @checkInLeftKeys.
+  ///
+  /// In es, this message translates to:
+  /// **'Deja las llaves'**
+  String get checkInLeftKeys;
+
+  /// No description provided for @checkInLeftKeysHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Se guardan en recepción'**
+  String get checkInLeftKeysHint;
+
+  /// No description provided for @checkInLeftKeysShort.
+  ///
+  /// In es, this message translates to:
+  /// **'Llaves'**
+  String get checkInLeftKeysShort;
 
   /// No description provided for @checkInSubmit.
   ///

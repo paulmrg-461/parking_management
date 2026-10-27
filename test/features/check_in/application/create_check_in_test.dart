@@ -19,6 +19,7 @@ class _FakeRepository implements CheckInRepository {
     required String plate,
     required List<XFile> photos,
     NewVehicleInfo? newVehicle,
+    bool leftKeys = false,
   }) async {
     this.plate = plate;
     this.photos = photos;

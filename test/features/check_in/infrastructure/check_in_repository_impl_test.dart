@@ -40,6 +40,7 @@ class _FakeRemote implements CheckInRemoteDataSource {
     required String plate,
     required List<XFile> photos,
     NewVehicleInfo? newVehicle,
+    bool leftKeys = false,
     String? idempotencyKey,
     DateTime? clientEntryTime,
     int? lotId,
@@ -150,6 +151,27 @@ void main() {
       expect(payload['client_ref'], remote.idempotencyKeyUsed);
     },
   );
+
+  test('Success: the queued entry keeps the keys flag', () async {
+    final remote = _FakeRemote(error: const NetworkFailure('offline'));
+    final outbox = FakeSyncOutbox();
+    final repository = CheckInRepositoryImpl(
+      remote,
+      outbox,
+      FilePendingPhotoStorage(),
+      LotSession(),
+    );
+
+    await repository.createCheckIn(
+      plate: 'ABC123',
+      photos: const [],
+      leftKeys: true,
+    );
+
+    final payload =
+        jsonDecode(outbox.enqueued.single.payloadJson!) as Map<String, dynamic>;
+    expect(payload['left_keys'], isTrue);
+  });
 
   test(
     'Success: createCheckIn forwards new-vehicle data to the remote',

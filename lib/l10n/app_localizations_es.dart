@@ -879,6 +879,26 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsTitle => 'Configuración del parqueadero';
 
   @override
+  String get settingsCarCapacity => 'Espacios para carros y camionetas';
+
+  @override
+  String get settingsMotoCapacity => 'Espacios para motos';
+
+  @override
+  String get settingsKeyCapacity => 'Máximo de vehículos con llaves';
+
+  @override
+  String get settingsCapacityHint => '0 = sin límite';
+
+  @override
+  String get errorParkingFull =>
+      'No hay espacios disponibles para este tipo de vehículo';
+
+  @override
+  String get errorKeysFull =>
+      'Se alcanzó el máximo de vehículos que pueden dejar las llaves';
+
+  @override
   String get settingsEvidenceRetention => 'Retención de evidencias (días)';
 
   @override
@@ -1106,6 +1126,15 @@ class AppLocalizationsEs extends AppLocalizations {
   String checkInAlreadyInside(String plate) {
     return 'Este vehículo ya figura dentro ($plate). Verifica antes de registrarlo de nuevo.';
   }
+
+  @override
+  String get checkInLeftKeys => 'Deja las llaves';
+
+  @override
+  String get checkInLeftKeysHint => 'Se guardan en recepción';
+
+  @override
+  String get checkInLeftKeysShort => 'Llaves';
 
   @override
   String get checkInSubmit => 'Registrar entrada';

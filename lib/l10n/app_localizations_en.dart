@@ -873,6 +873,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsTitle => 'Parking settings';
 
   @override
+  String get settingsCarCapacity => 'Spaces for cars and pickups';
+
+  @override
+  String get settingsMotoCapacity => 'Spaces for motorcycles';
+
+  @override
+  String get settingsKeyCapacity => 'Maximum cars leaving keys';
+
+  @override
+  String get settingsCapacityHint => '0 = no limit';
+
+  @override
+  String get errorParkingFull => 'No spaces left for this vehicle type';
+
+  @override
+  String get errorKeysFull => 'The maximum of cars leaving keys was reached';
+
+  @override
   String get settingsEvidenceRetention => 'Evidence retention (days)';
 
   @override
@@ -1100,6 +1118,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String checkInAlreadyInside(String plate) {
     return 'This vehicle is already inside ($plate). Check before registering it again.';
   }
+
+  @override
+  String get checkInLeftKeys => 'Leaves the keys';
+
+  @override
+  String get checkInLeftKeysHint => 'Kept at the front desk';
+
+  @override
+  String get checkInLeftKeysShort => 'Keys';
 
   @override
   String get checkInSubmit => 'Register check-in';

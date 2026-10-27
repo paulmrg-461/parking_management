@@ -15,6 +15,7 @@ class _FakeRemote implements CheckInRemoteDataSource {
   String? plate;
   List<XFile>? photos;
   NewVehicleInfo? newVehicle;
+  bool? leftKeysUsed;
   String? idempotencyKey;
   DateTime? clientEntryTime;
 
@@ -23,6 +24,7 @@ class _FakeRemote implements CheckInRemoteDataSource {
     required String plate,
     required List<XFile> photos,
     NewVehicleInfo? newVehicle,
+    bool leftKeys = false,
     String? idempotencyKey,
     DateTime? clientEntryTime,
     int? lotId,
@@ -30,6 +32,7 @@ class _FakeRemote implements CheckInRemoteDataSource {
     this.plate = plate;
     this.photos = photos;
     this.newVehicle = newVehicle;
+    leftKeysUsed = leftKeys;
     this.idempotencyKey = idempotencyKey;
     this.clientEntryTime = clientEntryTime;
     if (error != null) {
@@ -122,4 +125,17 @@ void main() {
       expect(photos.deleted, ['ref-2']);
     },
   );
+
+  test('Success: a queued entry with keys replays left_keys', () async {
+    final remote = _FakeRemote();
+    final photos = _FakePhotos();
+
+    await CheckInMutationReplayer(remote, photos).replay(
+      _queued(
+        '{"plate":"ABC123","photo_paths":[],"client_ref":"ref-keys","left_keys":true}',
+      ),
+    );
+
+    expect(remote.leftKeysUsed, isTrue);
+  });
 }

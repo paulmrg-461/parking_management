@@ -41,6 +41,9 @@ class _SettingsPageState extends State<SettingsPage> {
   late final TextEditingController _website;
   late final TextEditingController _whatsapp;
   late final TextEditingController _evidenceRetention;
+  late final TextEditingController _carCapacity;
+  late final TextEditingController _motoCapacity;
+  late final TextEditingController _keyCapacity;
   var _seeded = false;
   bool _whatsappAuto = false;
   List<String>? _baseline;
@@ -55,6 +58,9 @@ class _SettingsPageState extends State<SettingsPage> {
     _website = TextEditingController();
     _whatsapp = TextEditingController();
     _evidenceRetention = TextEditingController();
+    _carCapacity = TextEditingController();
+    _motoCapacity = TextEditingController();
+    _keyCapacity = TextEditingController();
     unawaited(context.read<SettingsCubit>().load());
   }
 
@@ -67,6 +73,9 @@ class _SettingsPageState extends State<SettingsPage> {
     _website.dispose();
     _whatsapp.dispose();
     _evidenceRetention.dispose();
+    _carCapacity.dispose();
+    _motoCapacity.dispose();
+    _keyCapacity.dispose();
     super.dispose();
   }
 
@@ -118,6 +127,9 @@ class _SettingsPageState extends State<SettingsPage> {
     _website.text,
     _whatsapp.text,
     _evidenceRetention.text,
+    _carCapacity.text,
+    _motoCapacity.text,
+    _keyCapacity.text,
     '$_whatsappAuto',
   ];
 
@@ -155,6 +167,9 @@ class _SettingsPageState extends State<SettingsPage> {
     _website.text = settings.website;
     _whatsapp.text = settings.whatsapp;
     _evidenceRetention.text = settings.evidenceRetentionDays.toString();
+    _carCapacity.text = settings.carCapacity.toString();
+    _motoCapacity.text = settings.motoCapacity.toString();
+    _keyCapacity.text = settings.keyCapacity.toString();
     _whatsappAuto = settings.whatsappAuto;
     _baseline = _snapshot();
   }
@@ -238,6 +253,39 @@ class _SettingsPageState extends State<SettingsPage> {
                   : null;
             },
           ),
+          TextFormField(
+            key: const Key('settings_car_capacity'),
+            controller: _carCapacity,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: InputDecoration(
+              labelText: l10n.settingsCarCapacity,
+              helperText: l10n.settingsCapacityHint,
+            ),
+            validator: _capacity,
+          ),
+          TextFormField(
+            key: const Key('settings_moto_capacity'),
+            controller: _motoCapacity,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: InputDecoration(
+              labelText: l10n.settingsMotoCapacity,
+              helperText: l10n.settingsCapacityHint,
+            ),
+            validator: _capacity,
+          ),
+          TextFormField(
+            key: const Key('settings_key_capacity'),
+            controller: _keyCapacity,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: InputDecoration(
+              labelText: l10n.settingsKeyCapacity,
+              helperText: l10n.settingsCapacityHint,
+            ),
+            validator: _capacity,
+          ),
           SwitchListTile(
             key: const Key('settings_whatsapp_auto'),
             contentPadding: EdgeInsets.zero,
@@ -309,8 +357,18 @@ class _SettingsPageState extends State<SettingsPage> {
         evidenceRetentionDays:
             int.tryParse(_evidenceRetention.text.trim()) ?? 0,
         whatsappAuto: _whatsappAuto,
+        carCapacity: int.tryParse(_carCapacity.text.trim()) ?? 0,
+        motoCapacity: int.tryParse(_motoCapacity.text.trim()) ?? 0,
+        keyCapacity: int.tryParse(_keyCapacity.text.trim()) ?? 0,
       ),
     );
+  }
+
+  String? _capacity(String? value) {
+    final spaces = int.tryParse((value ?? '0').trim());
+    return spaces == null || spaces < 0 || spaces > 10000
+        ? context.l10n.invalidAmount
+        : null;
   }
 
   Future<void> _uploadLogo() async {
