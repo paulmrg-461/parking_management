@@ -256,7 +256,8 @@ class _CheckInPageState extends State<CheckInPage> {
   }
 
   List<String> _plateSuggestions() {
-    final typed = _plateController.text.replaceAll(RegExp(r'\s'), '')
+    final typed = _plateController.text
+        .replaceAll(RegExp(r'\s'), '')
         .toUpperCase();
     if (typed.length < 2) {
       return const [];
@@ -410,7 +411,7 @@ class _CheckInPageState extends State<CheckInPage> {
         setState(() => _lastPlate = result.plate);
         unawaited(_rememberLastPlate(result.plate));
         unawaited(_loadHolds());
-    unawaited(_loadKnownPlates());
+        unawaited(_loadKnownPlates());
         unawaited(context.read<DashboardCubit>().load());
         final message = context.l10n.checkInSuccess(result.plate);
         SemanticsService.announce(message, Directionality.of(context));
@@ -565,9 +566,8 @@ class _CheckInPageState extends State<CheckInPage> {
                 Expanded(
                   child: Text(
                     l10n.checkInAlreadyInside(openSession.plate),
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.error,
-                    ),
+                    style: Theme.of(context).textTheme.bodySmall
+                        ?.copyWith(color: Theme.of(context).colorScheme.error),
                   ),
                 ),
               ],
@@ -676,13 +676,9 @@ class _CheckInPageState extends State<CheckInPage> {
       final capacity = state.capacity;
       final int? remaining;
       if (isCarGroup(categoryName) && capacity.carCapacity > 0) {
-        remaining = capacity.carCapacity -
-            capacity.carOpen -
-            capacity.carReserved;
+        remaining = capacity.carFree;
       } else if (isMotoGroup(categoryName) && capacity.motoCapacity > 0) {
-        remaining = capacity.motoCapacity -
-            capacity.motoOpen -
-            capacity.motoReserved;
+        remaining = capacity.motoFree;
       } else {
         remaining = null;
       }
@@ -836,9 +832,8 @@ class _SessionsHeader extends StatelessWidget {
 
 /// Lazily built list of open sessions; rebuilds only when the list (or its
 /// load status) changes, never on form submissions.
-void _markExit(BuildContext context, String plate) => context.push(
-  '/check-out?scan=${Uri.encodeQueryComponent(plate)}',
-);
+void _markExit(BuildContext context, String plate) =>
+    context.push('/check-out?scan=${Uri.encodeQueryComponent(plate)}');
 
 class _OpenSessionsSliver extends StatelessWidget {
   const _OpenSessionsSliver({this.onMarkExit});
@@ -877,11 +872,10 @@ class _OpenSessionsSliver extends StatelessWidget {
         }
         return SliverList.builder(
           itemCount: state.sessions.length,
-          itemBuilder: (context, index) =>
-              _SessionTile(
-                session: state.sessions[index],
-                onMarkExit: onMarkExit,
-              ),
+          itemBuilder: (context, index) => _SessionTile(
+            session: state.sessions[index],
+            onMarkExit: onMarkExit,
+          ),
         );
       },
     );
@@ -918,10 +912,8 @@ class _SessionTile extends StatelessWidget {
                 IconButton(
                   icon: const Icon(Icons.logout),
                   tooltip: l10n.markExit,
-                  onPressed: () => (onMarkExit ?? _markExit)(
-                    context,
-                    session.plate,
-                  ),
+                  onPressed: () =>
+                      (onMarkExit ?? _markExit)(context, session.plate),
                 ),
               ],
             ),
@@ -959,7 +951,12 @@ class _HoldBanner extends StatelessWidget {
       color: scheme.tertiaryContainer,
       borderRadius: BorderRadius.circular(Radii.sm),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(Space.sm, Space.sm, Space.xs, Space.sm),
+        padding: const EdgeInsets.fromLTRB(
+          Space.sm,
+          Space.sm,
+          Space.xs,
+          Space.sm,
+        ),
         child: Row(
           children: [
             Icon(
@@ -974,17 +971,15 @@ class _HoldBanner extends StatelessWidget {
                 children: [
                   Text(
                     l10n.checkInHoldTitle,
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: scheme.onTertiaryContainer,
-                    ),
+                    style: Theme.of(context).textTheme.labelLarge
+                        ?.copyWith(color: scheme.onTertiaryContainer),
                   ),
                   Text(
                     l10n.reservationUntil(
                       Formatters.dateTime(hold.reservedUntil.toLocal()),
                     ),
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: scheme.onTertiaryContainer,
-                    ),
+                    style: Theme.of(context).textTheme.bodySmall
+                        ?.copyWith(color: scheme.onTertiaryContainer),
                   ),
                 ],
               ),

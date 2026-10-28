@@ -11,16 +11,22 @@ Both read money from the server only; the client never computes a fare.
 
 The site has capacity counts per group (cars + pickups, motorcycles), not
 physical bay numbers, so the board paints **virtual capacity cells**: the first
-cells are the vehicles inside, then the active holds, then free cells. A group
-with capacity `0` means "no limit" and only paints the vehicles inside
-(`Pesados`/heavy: trucks and buses are not limited).
+cells are the vehicles inside, then the active holds, then the spots the admin
+took out of service (striped), then free cells. A group with capacity `0`
+means "no limit" and only paints the vehicles inside (`Pesados`/heavy: trucks
+and buses are not limited).
+
+Free spots are `capacity - sessions - holds - out_of_service`, clamped to
+zero. Out-of-service spots are set in Ajustes and are **never offered**: the
+capacity trigger, `create_reservation`, the dashboard snapshot and the
+check-in remaining-spaces labels all use `usable_capacity()`.
 
 | State | Meaning | Colour (semantic token) | Cell content |
 | --- | --- | --- | --- |
 | Free | Spot available | `StatusColors.success` (emerald) tint + border | group icon, `Libre`, index |
 | Occupied | Open session | `ColorScheme.primary` tint, neutral border | plate (monospace), live elapsed time |
 | Reserved | Active hold | `StatusColors.pending` (amber) tint | plate, expiry time (`HH:mm`) |
-| Unavailable | Not modelled yet | — | — |
+| Maintenance | Spot taken out of service by an admin | grey hatch (`ColorScheme.outline`) | build icon, `Mantenimiento` (not tappable) |
 
 The state is never conveyed by colour alone: each cell also carries a text
 label (`Libre`/`Ocupado`/`Reservado` in the tooltip and semantics) and a
@@ -89,10 +95,13 @@ operator is never blocked from closing a session.
 ```sql
 -- 0052: visual board of the active lot
 slot_board() returns jsonb
--- { car_capacity, moto_capacity,
+-- { car_capacity, moto_capacity, car_out_of_service, moto_out_of_service,
 --   sessions: [{session_id, plate, entry_time, left_keys, photo_count,
 --               has_pass, group: car|moto|heavy}],
 --   holds:    [{plate, reserved_until, group}] }
+
+usable_capacity(capacity, out_of_service) returns integer
+-- configured minus out of service; `0` capacity (no limit) stays `0`
 
 -- 0053: money, single source of truth
 fare_breakdown(category_id, entry, exit, has_pass) returns jsonb
@@ -124,9 +133,10 @@ derived from the category name: `car/carro/auto/camioneta/suv` → car,
 
 ## 5. Known limits
 
-- No physical bay numbers, maintenance bays or bicycles in the data model, so
-  the board is a capacity map. Adding bay rows later would only replace the
-  free-cell generator, not the card.
+- No physical bay numbers or bicycles in the data model, so the board is a
+  capacity map. "Out of service" is a count per group, not a specific bay.
+  Adding bay rows later would only replace the free-cell generator, not the
+  card.
 - The live amount refreshes every 60 s (and the clock every second) to avoid
   hammering the RPC; the authoritative amount is still the one computed at
   check-out.
@@ -141,7 +151,9 @@ derived from the category name: `car/carro/auto/camioneta/suv` → car,
   size, radial occupancy gauge, free cells not interactive.
 - `test/features/check_out/presentation/check_out_page_test.dart`: settlement
   breakdown (day/night/cap/total), broken-preview fallback.
-- `test/features/check_out/domain/{check_out_preview,slot_board}_test.dart`:
-  parsing, zeroed legacy payloads, unknown-group isolation.
+- `test/features/check_out/domain/{check_out_preview,slot_board,capacity_snapshot}_test.dart`:
+  parsing, zeroed legacy payloads, unknown-group isolation, usable-pool math.
 - `supabase/tests/rpc_test.sql`: `fare_breakdown` equals `calculate_fare`,
-  night split, daily cap, pass zero-charge, invalid period, board RPC.
+  night split, daily cap, pass zero-charge, invalid period, board RPC, and
+  out-of-service check-in/reservation refusal (plus a usable-spot oversell
+  guard).

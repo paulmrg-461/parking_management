@@ -87,7 +87,10 @@ int _free(SlotBoard board, SlotGroup group) {
   if (capacity == 0) {
     return 0;
   }
-  final used = board.sessionsIn(group).length + board.holdsIn(group).length;
+  final used =
+      board.sessionsIn(group).length +
+      board.holdsIn(group).length +
+      board.outOfServiceIn(group);
   return (capacity - used).clamp(0, capacity);
 }
 
@@ -182,11 +185,12 @@ class _Board extends StatelessWidget {
     final hasSession = board.sessionsIn(group).isNotEmpty;
     final hasHold = board.holdsIn(group).isNotEmpty;
     return switch (filter) {
-      SlotFilter.all => true,
-      SlotFilter.car => group == SlotGroup.car,
-      SlotFilter.moto => group == SlotGroup.moto,
-      SlotFilter.holds => hasHold,
-    } && (hasSession || hasHold || _capacityOf(board, group) > 0);
+          SlotFilter.all => true,
+          SlotFilter.car => group == SlotGroup.car,
+          SlotFilter.moto => group == SlotGroup.moto,
+          SlotFilter.holds => hasHold,
+        } &&
+        (hasSession || hasHold || _capacityOf(board, group) > 0);
   }
 }
 
@@ -325,6 +329,7 @@ class _GroupSection extends StatelessWidget {
           holds: holds,
           group: group,
           capacity: capacity,
+          outOfService: board.outOfServiceIn(group),
           onlyHolds: onlyHolds,
         ),
       ],
@@ -338,6 +343,7 @@ class _CellsGrid extends StatelessWidget {
     required this.holds,
     required this.group,
     required this.capacity,
+    required this.outOfService,
     required this.onlyHolds,
   });
 
@@ -345,6 +351,7 @@ class _CellsGrid extends StatelessWidget {
   final List<SlotHold> holds;
   final SlotGroup group;
   final int capacity;
+  final int outOfService;
   final bool onlyHolds;
 
   static const _target = 76.0;
@@ -358,7 +365,16 @@ class _CellsGrid extends StatelessWidget {
       cells.addAll(sessions.map(_SlotCell.session));
       cells.addAll(holds.map(_SlotCell.hold));
       // Heavy vehicles have no configured capacity: one cell per car.
-      final freeCells = capacity == 0 ? 0 : capacity - cells.length;
+      final maintenance = capacity == 0 ? 0 : outOfService.clamp(0, capacity);
+      for (var i = 0; i < maintenance; i++) {
+        cells.add(_SlotCell.maintenance(group));
+      }
+      final freeCells = capacity == 0
+          ? 0
+          : (capacity - sessions.length - holds.length - maintenance).clamp(
+              0,
+              capacity,
+            );
       for (var i = 0; i < freeCells; i++) {
         cells.add(_SlotCell.free(group, index: i + 1));
       }
@@ -391,6 +407,7 @@ class _SlotCell extends StatelessWidget {
     this.session,
     this.hold,
     this.index,
+    this.maintenance = false,
   });
 
   factory _SlotCell.session(SlotSession session) =>
@@ -402,10 +419,14 @@ class _SlotCell extends StatelessWidget {
   factory _SlotCell.free(SlotGroup group, {required int index}) =>
       _SlotCell._(group: group, index: index);
 
+  factory _SlotCell.maintenance(SlotGroup group) =>
+      _SlotCell._(group: group, maintenance: true);
+
   final SlotGroup group;
   final SlotSession? session;
   final SlotHold? hold;
   final int? index;
+  final bool maintenance;
 
   @override
   Widget build(BuildContext context) {
@@ -417,12 +438,14 @@ class _SlotCell extends StatelessWidget {
     final tint = switch ((occupied, held)) {
       (true, _) => scheme.primary,
       (_, true) => status.pending,
-      _ => status.success,
+      _ => maintenance ? scheme.outline : status.success,
     };
     final label = occupied
         ? l10n.slotOccupied
         : held
         ? l10n.slotReserved
+        : maintenance
+        ? l10n.slotMaintenance
         : l10n.slotFree;
     final detail = session?.plate ?? hold?.plate;
     final caption = occupied
@@ -433,51 +456,62 @@ class _SlotCell extends StatelessWidget {
 
     final content = Container(
       decoration: BoxDecoration(
-        color: Color.alphaBlend(
-          tint.withValues(alpha: occupied ? 0.10 : 0.14),
-          scheme.surface,
-        ),
+        color: maintenance
+            ? scheme.surfaceContainerHighest
+            : Color.alphaBlend(
+                tint.withValues(alpha: occupied ? 0.10 : 0.14),
+                scheme.surface,
+              ),
         borderRadius: BorderRadius.circular(Radii.sm),
         border: Border.all(
-          color: occupied ? scheme.outlineVariant : tint.withValues(alpha: 0.7),
+          color: occupied
+              ? scheme.outlineVariant
+              : maintenance
+              ? scheme.outline
+              : tint.withValues(alpha: 0.7),
           width: 1.2,
         ),
       ),
       padding: const EdgeInsets.all(2),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            _groupIcon(group),
-            size: 18,
-            color: occupied ? scheme.onSurfaceVariant : tint,
-          ),
-          const SizedBox(height: 2),
-          Text(
-            detail ?? label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 10,
-              height: 1.1,
-              fontFamily: detail == null ? null : 'monospace',
-              fontWeight: detail == null ? FontWeight.w500 : FontWeight.w700,
-              color: scheme.onSurface,
+      child: CustomPaint(
+        painter: maintenance ? _StripesPainter(scheme.outline) : null,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              maintenance ? Icons.build_circle_outlined : _groupIcon(group),
+              size: 18,
+              color: occupied ? scheme.onSurfaceVariant : tint,
             ),
-          ),
-          Text(
-            detail == null ? '' : caption,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 8,
-              height: 1.1,
-              color: scheme.onSurfaceVariant,
+            const SizedBox(height: 2),
+            Text(
+              detail ?? label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 10,
+                height: 1.1,
+                fontFamily: detail == null ? null : 'monospace',
+                fontWeight: detail == null ? FontWeight.w500 : FontWeight.w700,
+                color: scheme.onSurface,
+              ),
             ),
-          ),
-        ],
+            Text(
+              detail == null
+                  ? (maintenance ? l10n.slotMaintenanceShort : '')
+                  : caption,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 8,
+                height: 1.1,
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
       ),
     );
 
@@ -488,6 +522,7 @@ class _SlotCell extends StatelessWidget {
       (_, true) =>
         '$label ${hold!.plate}, '
             '${l10n.reservationUntil(Formatters.time(hold!.until.toLocal()))}',
+      _ when maintenance => '$label ${_groupLabel(l10n, group)}',
       _ => '$label ${_groupLabel(l10n, group)} ${index ?? ''}',
     };
     final cell = Semantics(
@@ -571,9 +606,8 @@ class _SheetTitle extends StatelessWidget {
     header: true,
     child: Text(
       text,
-      style: Theme.of(
-        context,
-      ).textTheme.headlineSmall?.copyWith(fontFamily: 'monospace'),
+      style: Theme.of(context).textTheme.headlineSmall
+          ?.copyWith(fontFamily: 'monospace'),
     ),
   );
 }
@@ -799,4 +833,31 @@ bool _isAdmin(BuildContext context) {
   } on ProviderNotFoundException {
     return false;
   }
+}
+
+/// Diagonal hatching for out-of-service cells, readable in both themes
+/// without hiding the label (state is not colour-only).
+class _StripesPainter extends CustomPainter {
+  const _StripesPainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color.withValues(alpha: 0.22)
+      ..strokeWidth = 2;
+    const step = 8.0;
+    for (var offset = -size.height; offset < size.width; offset += step) {
+      canvas.drawLine(
+        Offset(offset, size.height),
+        Offset(offset + size.height, 0),
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _StripesPainter oldDelegate) =>
+      oldDelegate.color != color;
 }

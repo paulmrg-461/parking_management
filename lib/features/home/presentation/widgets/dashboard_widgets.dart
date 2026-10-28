@@ -69,10 +69,7 @@ class OccupancyCard extends StatelessWidget {
                 const _KpiIcon(icon: Icons.local_parking_rounded),
                 const SizedBox(width: Space.sm),
                 Expanded(
-                  child: Text(
-                    l10n.homeOccupancy,
-                    style: textTheme.titleSmall,
-                  ),
+                  child: Text(l10n.homeOccupancy, style: textTheme.titleSmall),
                 ),
                 AppIconButton(
                   icon: Icons.refresh,
@@ -158,18 +155,23 @@ class _OccupancySummary extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     var occupied = 0;
     var places = 0;
+    var outOfService = 0;
     if (capacity.carCapacity > 0) {
       occupied += capacity.carOpen;
-      places += capacity.carCapacity;
+      places += capacity.carAvailable;
+      outOfService += capacity.carOutOfService;
     }
     if (capacity.motoCapacity > 0) {
       occupied += capacity.motoOpen;
-      places += capacity.motoCapacity;
+      places += capacity.motoAvailable;
+      outOfService += capacity.motoOutOfService;
     }
-    final hasGroups = places > 0;
+    final hasGroups = capacity.carCapacity > 0 || capacity.motoCapacity > 0;
     final open = hasGroups ? occupied : openSessions;
     final total = hasGroups ? places : totalCapacity;
-    final full = total > 0 && open >= total;
+    final full = hasGroups
+        ? total == 0 || occupied >= total
+        : total > 0 && open >= total;
     final fraction = total > 0 ? (open / total).clamp(0.0, 1.0) : 0.0;
     return MergeSemantics(
       child: Row(
@@ -191,13 +193,25 @@ class _OccupancySummary extends StatelessWidget {
                     ),
                     if (full) ...[
                       const SizedBox(width: Space.sm),
-                      StatusChip(label: l10n.homeFull, tone: StatusTone.warning),
+                      StatusChip(
+                        label: l10n.homeFull,
+                        tone: StatusTone.warning,
+                      ),
                     ],
                   ],
                 ),
                 if (total > 0) ...[
                   const SizedBox(height: Space.sm),
                   _OccupancyBar(fraction: fraction),
+                ],
+                if (outOfService > 0) ...[
+                  const SizedBox(height: Space.xs),
+                  Text(
+                    l10n.capacityOutOfService(outOfService),
+                    style: textTheme.labelSmall?.copyWith(
+                      color: textTheme.bodySmall?.color,
+                    ),
+                  ),
                 ],
               ],
             ),
@@ -318,6 +332,8 @@ class CapacityCard extends StatelessWidget {
                   open: capacity.carOpen,
                   reserved: capacity.carReserved,
                   capacity: capacity.carCapacity,
+                  available: capacity.carAvailable,
+                  outOfService: capacity.carOutOfService,
                   full: capacity.carsFull,
                 ),
                 _CapacityRow(
@@ -326,6 +342,8 @@ class CapacityCard extends StatelessWidget {
                   open: capacity.motoOpen,
                   reserved: capacity.motoReserved,
                   capacity: capacity.motoCapacity,
+                  available: capacity.motoAvailable,
+                  outOfService: capacity.motoOutOfService,
                   full: capacity.motosFull,
                 ),
                 _CapacityRow(
@@ -333,6 +351,7 @@ class CapacityCard extends StatelessWidget {
                   label: l10n.homeCapacityKeys,
                   open: capacity.keysOpen,
                   capacity: capacity.keyCapacity,
+                  available: capacity.keyCapacity,
                   full: capacity.keysFull,
                 ),
                 if (capacity.reservationsActive > 0) ...[
@@ -367,10 +386,9 @@ class CapacityCard extends StatelessWidget {
                         l10n.homeReservationsExpiring(
                           capacity.reservationsExpiring,
                         ),
-                        style: Theme.of(context).textTheme.labelSmall
-                            ?.copyWith(
-                              color: Theme.of(context).colorScheme.error,
-                            ),
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
                       ),
                     ),
                 ],
@@ -389,15 +407,21 @@ class _CapacityRow extends StatelessWidget {
     required this.label,
     required this.open,
     required this.capacity,
+    required this.available,
     required this.full,
     this.reserved = 0,
+    this.outOfService = 0,
   });
 
   final IconData icon;
   final String label;
   final int open;
   final int reserved;
+
+  /// Configured spots (`0` = no limit) and how many of them are usable.
   final int capacity;
+  final int available;
+  final int outOfService;
   final bool full;
 
   @override
@@ -415,11 +439,9 @@ class _CapacityRow extends StatelessWidget {
             children: [
               Icon(icon, size: 16, color: scheme.onSurfaceVariant),
               const SizedBox(width: 6),
-              Expanded(
-                child: Text(label, style: theme.textTheme.bodyMedium),
-              ),
+              Expanded(child: Text(label, style: theme.textTheme.bodyMedium)),
               Text(
-                limited ? '$open / $capacity' : '$open · ${l10n.homeNoLimit}',
+                limited ? '$open / $available' : '$open · ${l10n.homeNoLimit}',
                 style: theme.textTheme.labelLarge?.copyWith(
                   color: full ? scheme.error : scheme.onSurfaceVariant,
                 ),
@@ -429,10 +451,19 @@ class _CapacityRow extends StatelessWidget {
           if (limited) ...[
             const SizedBox(height: 4),
             LinearProgressIndicator(
-              value: (open / capacity).clamp(0, 1),
+              value: available <= 0 ? 1 : (open / available).clamp(0, 1),
               color: full ? scheme.error : null,
               minHeight: 6,
               borderRadius: BorderRadius.circular(Radii.pill),
+            ),
+          ],
+          if (outOfService > 0) ...[
+            const SizedBox(height: 2),
+            Text(
+              l10n.capacityOutOfService(outOfService),
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
             ),
           ],
           if (reserved > 0) ...[
@@ -486,10 +517,7 @@ class InsideCard extends StatelessWidget {
                   ],
                 ),
                 if (state.sessions.isEmpty)
-                  Text(
-                    l10n.openSessionsEmpty,
-                    style: theme.textTheme.bodySmall,
-                  )
+                  Text(l10n.openSessionsEmpty, style: theme.textTheme.bodySmall)
                 else
                   for (var i = 0; i < state.sessions.length; i++) ...[
                     if (i > 0) const Divider(height: 1),
@@ -504,9 +532,8 @@ class InsideCard extends StatelessWidget {
                           children: [
                             CircleAvatar(
                               radius: 14,
-                              backgroundColor: theme
-                                  .colorScheme
-                                  .surfaceContainerHighest,
+                              backgroundColor:
+                                  theme.colorScheme.surfaceContainerHighest,
                               child: Icon(
                                 Icons.directions_car,
                                 size: 16,
@@ -574,7 +601,11 @@ class InsideCard extends StatelessWidget {
 /// The two operator actions: large, color-coded and always above the KPIs so
 /// the main job is the first thing on screen.
 class PrimaryActions extends StatelessWidget {
-  const PrimaryActions({super.key, required this.onEntry, required this.onExit});
+  const PrimaryActions({
+    super.key,
+    required this.onEntry,
+    required this.onExit,
+  });
 
   final VoidCallback onEntry;
   final VoidCallback onExit;
@@ -630,9 +661,7 @@ class _BigAction extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final background = primary ? scheme.primary : scheme.secondaryContainer;
-    final foreground = primary
-        ? scheme.onPrimary
-        : scheme.onSecondaryContainer;
+    final foreground = primary ? scheme.onPrimary : scheme.onSecondaryContainer;
     return Semantics(
       button: true,
       label: '$label. $hint',
@@ -662,9 +691,8 @@ class _BigAction extends StatelessWidget {
                   hint,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: foreground.withValues(alpha: 0.85),
-                  ),
+                  style: Theme.of(context).textTheme.bodySmall
+                      ?.copyWith(color: foreground.withValues(alpha: 0.85)),
                 ),
               ],
             ),
@@ -789,9 +817,7 @@ class ShiftCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  _KpiIcon(
-                    icon: open ? Icons.point_of_sale : Icons.lock_open,
-                  ),
+                  _KpiIcon(icon: open ? Icons.point_of_sale : Icons.lock_open),
                   const SizedBox(width: Space.sm),
                   Expanded(
                     child: Text(
@@ -961,8 +987,7 @@ bool _isAdmin(BuildContext context) {
   try {
     final auth = context.read<AuthCubit>();
     return switch (auth.state) {
-      AuthAuthenticated(:final session) =>
-        session.user.role == UserRole.admin,
+      AuthAuthenticated(:final session) => session.user.role == UserRole.admin,
       _ => false,
     };
   } on ProviderNotFoundException {

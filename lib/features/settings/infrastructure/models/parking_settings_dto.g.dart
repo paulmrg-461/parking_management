@@ -21,6 +21,8 @@ ParkingSettingsDto _$ParkingSettingsDtoFromJson(Map<String, dynamic> json) =>
       carCapacity: (json['car_capacity'] as num?)?.toInt() ?? 0,
       motoCapacity: (json['moto_capacity'] as num?)?.toInt() ?? 0,
       keyCapacity: (json['key_capacity'] as num?)?.toInt() ?? 0,
+      carOutOfService: (json['car_out_of_service'] as num?)?.toInt() ?? 0,
+      motoOutOfService: (json['moto_out_of_service'] as num?)?.toInt() ?? 0,
     );
 
 Map<String, dynamic> _$ParkingSettingsDtoToJson(ParkingSettingsDto instance) =>
@@ -37,4 +39,6 @@ Map<String, dynamic> _$ParkingSettingsDtoToJson(ParkingSettingsDto instance) =>
       'car_capacity': instance.carCapacity,
       'moto_capacity': instance.motoCapacity,
       'key_capacity': instance.keyCapacity,
+      'car_out_of_service': instance.carOutOfService,
+      'moto_out_of_service': instance.motoOutOfService,
     };

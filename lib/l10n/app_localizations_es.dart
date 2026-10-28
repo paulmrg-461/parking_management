@@ -888,6 +888,31 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsMotoCapacity => 'Espacios para motos';
 
   @override
+  String get settingsCarOutOfService => 'Carros fuera de servicio';
+
+  @override
+  String get settingsMotoOutOfService => 'Motos fuera de servicio';
+
+  @override
+  String get settingsOutOfServiceHint =>
+      'Se descuentan de los espacios disponibles';
+
+  @override
+  String get settingsOutOfServiceTooMany =>
+      'No puede superar la capacidad configurada';
+
+  @override
+  String capacityOutOfService(int count) {
+    return '$count fuera de servicio';
+  }
+
+  @override
+  String get slotMaintenance => 'Mantenimiento';
+
+  @override
+  String get slotMaintenanceShort => 'Mant.';
+
+  @override
   String get settingsKeyCapacity => 'Máximo de vehículos con llaves';
 
   @override

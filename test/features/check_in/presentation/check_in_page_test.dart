@@ -801,4 +801,20 @@ void main() {
 
     expect(find.byType(ActionChip), findsNothing);
   });
+
+  testWidgets('Success: out-of-service spots reduce the remaining spaces', (
+    tester,
+  ) async {
+    await pumpPage(
+      tester,
+      space: const CapacitySnapshot(carCapacity: 4, carOutOfService: 2),
+    );
+
+    await enterPlate(tester, 'NEW998');
+    await scrollTo(tester, categoryField());
+    await tester.tap(categoryField());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Car · quedan 2'), findsOneWidget);
+  });
 }

@@ -147,4 +147,51 @@ void main() {
     expect(repository.settings.motoCapacity, 5);
     expect(repository.settings.keyCapacity, 3);
   });
+
+  testWidgets('Success: out-of-service spots are saved', (tester) async {
+    final repository = FakeParkingSettingsRepository(_configured);
+    await pumpPage(tester, repository: repository);
+
+    await tester.enterText(
+      find.byKey(const Key('settings_car_capacity')),
+      '12',
+    );
+    await tester.enterText(
+      find.byKey(const Key('settings_car_out_of_service')),
+      '2',
+    );
+    await tester.ensureVisible(find.widgetWithText(FilledButton, 'Guardar'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Guardar'));
+    await tester.pumpAndSettle();
+
+    expect(repository.settings.carCapacity, 12);
+    expect(repository.settings.carOutOfService, 2);
+  });
+
+  testWidgets('Failure: out-of-service cannot exceed the capacity', (
+    tester,
+  ) async {
+    final repository = FakeParkingSettingsRepository(_configured);
+    await pumpPage(tester, repository: repository);
+
+    await tester.enterText(
+      find.byKey(const Key('settings_car_capacity')),
+      '4',
+    );
+    await tester.enterText(
+      find.byKey(const Key('settings_car_out_of_service')),
+      '5',
+    );
+    await tester.ensureVisible(find.widgetWithText(FilledButton, 'Guardar'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Guardar'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('No puede superar la capacidad configurada'),
+      findsOneWidget,
+    );
+    expect(repository.settings.carOutOfService, 0);
+  });
 }

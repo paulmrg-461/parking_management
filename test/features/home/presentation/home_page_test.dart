@@ -458,4 +458,56 @@ void main() {
     expect(find.text('Total a cobrar'), findsNothing);
     expect(find.text('check-out page'), findsNothing);
   });
+
+  testWidgets('Success: out-of-service spots are painted and never offered', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      capacity: 8,
+      space: const CapacitySnapshot(
+        carOpen: 3,
+        carCapacity: 8,
+        carOutOfService: 2,
+      ),
+      board: SlotBoard(
+        carCapacity: 4,
+        carOutOfService: 1,
+        sessions: [
+          SlotSession(
+            sessionId: 9,
+            plate: 'BRD001',
+            entryTime: DateTime(2026, 1, 1),
+          ),
+        ],
+      ),
+    );
+
+    // 4 configured - 1 occupied - 1 in maintenance = 2 free.
+    expect(find.text('2 libres'), findsOneWidget);
+    expect(find.text('Mantenimiento'), findsOneWidget);
+    expect(find.text('2 / 4'), findsOneWidget);
+
+    // The dashboard counts only usable spots (8 - 2 = 6).
+    expect(find.text('3 / 6'), findsWidgets);
+    expect(find.text('2 fuera de servicio'), findsWidgets);
+  });
+
+  testWidgets('Security: maintenance cells are not interactive', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      capacity: 8,
+      board: const SlotBoard(carCapacity: 2, carOutOfService: 2),
+    );
+
+    final cell = find.byTooltip('Mantenimiento Carros y camionetas').first;
+    await tester.ensureVisible(cell);
+    await tester.pumpAndSettle();
+    await tester.tap(cell);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Total a cobrar'), findsNothing);
+  });
 }

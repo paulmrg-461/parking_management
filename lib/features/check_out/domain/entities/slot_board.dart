@@ -82,12 +82,18 @@ class SlotBoard extends Equatable {
   const SlotBoard({
     this.carCapacity = 0,
     this.motoCapacity = 0,
+    this.carOutOfService = 0,
+    this.motoOutOfService = 0,
     this.sessions = const [],
     this.holds = const [],
   });
 
   final int carCapacity;
   final int motoCapacity;
+
+  /// Spots the admin took out of the usable pool (maintenance, blocked area).
+  final int carOutOfService;
+  final int motoOutOfService;
   final List<SlotSession> sessions;
   final List<SlotHold> holds;
 
@@ -108,6 +114,8 @@ class SlotBoard extends Equatable {
   factory SlotBoard.fromJson(Map<String, dynamic> json) => SlotBoard(
     carCapacity: (json['car_capacity'] as num?)?.toInt() ?? 0,
     motoCapacity: (json['moto_capacity'] as num?)?.toInt() ?? 0,
+    carOutOfService: (json['car_out_of_service'] as num?)?.toInt() ?? 0,
+    motoOutOfService: (json['moto_out_of_service'] as num?)?.toInt() ?? 0,
     sessions: [
       for (final item in (json['sessions'] as List<dynamic>? ?? const []))
         SlotSession.fromJson(Map<String, dynamic>.from(item as Map)),
@@ -118,6 +126,19 @@ class SlotBoard extends Equatable {
     ],
   );
 
+  int outOfServiceIn(SlotGroup group) => switch (group) {
+    SlotGroup.car => carOutOfService,
+    SlotGroup.moto => motoOutOfService,
+    SlotGroup.heavy => 0,
+  };
+
   @override
-  List<Object?> get props => [carCapacity, motoCapacity, sessions, holds];
+  List<Object?> get props => [
+    carCapacity,
+    motoCapacity,
+    carOutOfService,
+    motoOutOfService,
+    sessions,
+    holds,
+  ];
 }

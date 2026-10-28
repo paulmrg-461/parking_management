@@ -43,7 +43,7 @@ WhatsApp (manual or automated).
 | Secrets / PIN operations | Complete (scripts + runbook) | PIN rotation verified live |
 | E2E and CI | Complete (API + Flutter client, real stack) | CI job `supabase-e2e` |
 
-Quality snapshot (2026-10-24, local stack): **685 Flutter tests + 1 integration
+Quality snapshot (2026-10-24, local stack): **693 Flutter tests + 1 integration
 test**, SQL/RLS suite green, web build green, analyzer with **0 errors and 0
 warnings** (only SDK deprecation infos from the pinned beta channel), restore
 drill green.
@@ -134,8 +134,8 @@ Deployment: [`setup-cloud.md`](setup-cloud.md) (single VM + TLS proxy) and
   scheduled work runs from host cron (documented); the functions are the same.
 - **Single currency and single tax regime** assumptions.
 - **No physical bay numbers.** The space board paints virtual capacity cells;
-  maintenance bays and bicycles are not modelled, so there is no "out of
-  service" state yet.
+  "out of service" is a per-group count (not a specific bay) and bicycles are
+  not modelled.
 - **Beta Flutter SDK pinned**; analyzer output is limited to SDK deprecation
   infos until the pin moves to stable.
 

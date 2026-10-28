@@ -10,9 +10,9 @@ Last updated: 2026-10-26, branch `feature/supabase` (post-UI/UX polish).
 
 - Stack: Flutter (android + web) + self-hosted Supabase only. No FastAPI,
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
-- `supabase/migrations/0001..0053` are the schema owner (applied by
+- `supabase/migrations/0001..0055` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 685 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 693 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -459,6 +459,15 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 - `0049` makes active reservations count against the category and group
   capacities (walk-ins cannot take a held spot); the capacity trigger and
   `create_reservation` share the advisory locks and the same group name sets.
+- `0054`/`0055` add out-of-service spaces: `parking_settings.car_out_of_service`
+  / `moto_out_of_service` stay inside the configured capacity but are removed
+  from the usable pool by `usable_capacity()` (`0` capacity = no limit, and it
+  ignores the counter). The trigger, `create_reservation`, `capacity_snapshot`
+  (`*_available`) and `slot_board` all use it; the board paints striped
+  "Mantenimiento" cells that are not interactive.
+- SQL test timezone gotcha: `supabase/tests/rpc_test.sql` sets
+  `timezone = 'America/Bogota'` so `current_date` matches the business day.
+  Without it the suite fails between 00:00 and 05:00 UTC (evening in Bogota).
 - `0053` makes `fare_breakdown` the only money math (`calculate_fare` wraps it,
   `check_out_preview` returns its components). Never re-implement the fare in
   Dart: the settlement dialog and the board sheet render the server breakdown.
@@ -471,6 +480,9 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 - Check-in loads one page of known vehicles (`listPage(limit: 200)`) and shows
   up to four prefix matches as `ActionChip`s once two characters are typed;
   the repository is injectable, and a failure just hides the suggestions.
+- Out-of-service invariants: never offer a spot that is out of service, and
+  never treat "all spots out of service" as unlimited. The settings form
+  rejects an out-of-service count above the configured capacity.
 - UI/UX invariants: state is never colour-only (each cell has a label and a
   group icon), cells stay ≥ 44×48 dp, and the occupancy KPI paints its
   percentage as text next to the radial gauge.
@@ -558,12 +570,12 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 - Verified against the live stack: insert 200 → duplicate 409 → `check_in` with
   the photo path returns `photo_count: 1`.
 
-## Latest verification (2026-10-27)
+## Latest verification (2026-10-28)
 
-- `flutter test`: 685 passed (+1 live-stack integration skipped); `flutter
+- `flutter test`: 693 passed (+1 live-stack integration skipped); `flutter
   analyze` 134 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
-- `supabase/tests/run.sh` passed (migrations `0001`–`0053`); `e2e.sh` passed
+- `supabase/tests/run.sh` passed (migrations `0001`–`0055`); `e2e.sh` passed
   (login → check-in → check-out → report → history).
 - `healthcheck.sh`: 0 failures (one warning for a dev shift left open >12 h).
 - UI/UX batches landed this session: reports comparison (screen, PDF, CSV),

@@ -1712,6 +1712,48 @@ abstract class AppLocalizations {
   /// **'Espacios para motos'**
   String get settingsMotoCapacity;
 
+  /// No description provided for @settingsCarOutOfService.
+  ///
+  /// In es, this message translates to:
+  /// **'Carros fuera de servicio'**
+  String get settingsCarOutOfService;
+
+  /// No description provided for @settingsMotoOutOfService.
+  ///
+  /// In es, this message translates to:
+  /// **'Motos fuera de servicio'**
+  String get settingsMotoOutOfService;
+
+  /// No description provided for @settingsOutOfServiceHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Se descuentan de los espacios disponibles'**
+  String get settingsOutOfServiceHint;
+
+  /// No description provided for @settingsOutOfServiceTooMany.
+  ///
+  /// In es, this message translates to:
+  /// **'No puede superar la capacidad configurada'**
+  String get settingsOutOfServiceTooMany;
+
+  /// No description provided for @capacityOutOfService.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} fuera de servicio'**
+  String capacityOutOfService(int count);
+
+  /// No description provided for @slotMaintenance.
+  ///
+  /// In es, this message translates to:
+  /// **'Mantenimiento'**
+  String get slotMaintenance;
+
+  /// No description provided for @slotMaintenanceShort.
+  ///
+  /// In es, this message translates to:
+  /// **'Mant.'**
+  String get slotMaintenanceShort;
+
   /// No description provided for @settingsKeyCapacity.
   ///
   /// In es, this message translates to:

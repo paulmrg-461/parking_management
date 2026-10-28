@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -44,6 +45,8 @@ class _SettingsPageState extends State<SettingsPage> {
   late final TextEditingController _carCapacity;
   late final TextEditingController _motoCapacity;
   late final TextEditingController _keyCapacity;
+  late final TextEditingController _carOutOfService;
+  late final TextEditingController _motoOutOfService;
   var _seeded = false;
   bool _whatsappAuto = false;
   List<String>? _baseline;
@@ -61,6 +64,8 @@ class _SettingsPageState extends State<SettingsPage> {
     _carCapacity = TextEditingController();
     _motoCapacity = TextEditingController();
     _keyCapacity = TextEditingController();
+    _carOutOfService = TextEditingController();
+    _motoOutOfService = TextEditingController();
     unawaited(context.read<SettingsCubit>().load());
   }
 
@@ -76,6 +81,8 @@ class _SettingsPageState extends State<SettingsPage> {
     _carCapacity.dispose();
     _motoCapacity.dispose();
     _keyCapacity.dispose();
+    _carOutOfService.dispose();
+    _motoOutOfService.dispose();
     super.dispose();
   }
 
@@ -83,7 +90,8 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget build(BuildContext context) {
     final cubit = context.read<SettingsCubit>();
     return SubmissionListener<SettingsCubit, SettingsState>(
-      submissionOf: (state) => state is SettingsLoaded ? state.submission : null,
+      submissionOf: (state) =>
+          state is SettingsLoaded ? state.submission : null,
       onSuccess: _onSaved,
       child: PopScope(
         canPop: false,
@@ -96,20 +104,20 @@ class _SettingsPageState extends State<SettingsPage> {
           title: context.l10n.settingsTitle,
           onRefresh: cubit.load,
           body: BlocConsumer<SettingsCubit, SettingsState>(
-          listenWhen: (previous, current) =>
-              current is SettingsLoaded && previous is! SettingsLoaded,
-          listener: (context, state) =>
-              _seed((state as SettingsLoaded).settings),
-          builder: (context, state) => switch (state) {
-            SettingsInitial() || SettingsLoading() => const Center(
-              child: CircularProgressIndicator(),
-            ),
-            SettingsFailure(:final message, :final failure) => Center(
-              child: Text(
-                context.l10n.errorText(message, failure),
-                textAlign: TextAlign.center,
+            listenWhen: (previous, current) =>
+                current is SettingsLoaded && previous is! SettingsLoaded,
+            listener: (context, state) =>
+                _seed((state as SettingsLoaded).settings),
+            builder: (context, state) => switch (state) {
+              SettingsInitial() || SettingsLoading() => const Center(
+                child: CircularProgressIndicator(),
               ),
-            ),
+              SettingsFailure(:final message, :final failure) => Center(
+                child: Text(
+                  context.l10n.errorText(message, failure),
+                  textAlign: TextAlign.center,
+                ),
+              ),
               SettingsLoaded() => _form(context, state.settings),
             },
           ),
@@ -130,6 +138,8 @@ class _SettingsPageState extends State<SettingsPage> {
     _carCapacity.text,
     _motoCapacity.text,
     _keyCapacity.text,
+    _carOutOfService.text,
+    _motoOutOfService.text,
     '$_whatsappAuto',
   ];
 
@@ -170,6 +180,8 @@ class _SettingsPageState extends State<SettingsPage> {
     _carCapacity.text = settings.carCapacity.toString();
     _motoCapacity.text = settings.motoCapacity.toString();
     _keyCapacity.text = settings.keyCapacity.toString();
+    _carOutOfService.text = settings.carOutOfService.toString();
+    _motoOutOfService.text = settings.motoOutOfService.toString();
     _whatsappAuto = settings.whatsappAuto;
     _baseline = _snapshot();
   }
@@ -276,6 +288,28 @@ class _SettingsPageState extends State<SettingsPage> {
             validator: _capacity,
           ),
           TextFormField(
+            key: const Key('settings_car_out_of_service'),
+            controller: _carOutOfService,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: InputDecoration(
+              labelText: l10n.settingsCarOutOfService,
+              helperText: l10n.settingsOutOfServiceHint,
+            ),
+            validator: (value) => _outOfService(value, _carCapacity.text),
+          ),
+          TextFormField(
+            key: const Key('settings_moto_out_of_service'),
+            controller: _motoOutOfService,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: InputDecoration(
+              labelText: l10n.settingsMotoOutOfService,
+              helperText: l10n.settingsOutOfServiceHint,
+            ),
+            validator: (value) => _outOfService(value, _motoCapacity.text),
+          ),
+          TextFormField(
             key: const Key('settings_key_capacity'),
             controller: _keyCapacity,
             keyboardType: TextInputType.number,
@@ -360,8 +394,24 @@ class _SettingsPageState extends State<SettingsPage> {
         carCapacity: int.tryParse(_carCapacity.text.trim()) ?? 0,
         motoCapacity: int.tryParse(_motoCapacity.text.trim()) ?? 0,
         keyCapacity: int.tryParse(_keyCapacity.text.trim()) ?? 0,
+        carOutOfService: int.tryParse(_carOutOfService.text.trim()) ?? 0,
+        motoOutOfService: int.tryParse(_motoOutOfService.text.trim()) ?? 0,
       ),
     );
+  }
+
+  /// Zero-capacity means "no limit", so an out-of-service count only makes
+  /// sense (and is only bounded) when the group has a configured capacity.
+  String? _outOfService(String? value, String capacityText) {
+    final spaces = int.tryParse((value ?? '0').trim());
+    if (spaces == null || spaces < 0 || spaces > 10000) {
+      return context.l10n.invalidAmount;
+    }
+    final capacity = int.tryParse(capacityText.trim()) ?? 0;
+    if (capacity > 0 && spaces > capacity) {
+      return context.l10n.settingsOutOfServiceTooMany;
+    }
+    return null;
   }
 
   String? _capacity(String? value) {

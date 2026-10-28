@@ -3,6 +3,11 @@
 -- Runs in one transaction and rolls back; no fixture survives.
 begin;
 
+-- The suite runs on the site's business day (UTC-5), so `current_date` in the
+-- fixtures matches what the RPCs compute locally. Without this, tests fail
+-- between 00:00 and 05:00 UTC (evening in Bogota).
+set local timezone = 'America/Bogota';
+
 -- The x-lot-id header is mandatory since the contract migration; the suite
 -- runs against the default lot unless a block switches it.
 set local request.headers = '{"x-lot-id":"1"}';
@@ -765,7 +770,11 @@ set local request.headers = '{"x-lot-id":"2"}';
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
 do $$
 declare
-    report jsonb := public.report_whatsapp(current_date, current_date);
+    -- The business day is the site's local date; `current_date` is UTC and
+    -- would miss a message sent in the evening at UTC-5 (test flake at UTC
+    -- midnight). A ±1 day window is deterministic.
+    local_date date := (now() at time zone 'America/Bogota')::date;
+    report jsonb := public.report_whatsapp(local_date - 1, local_date + 1);
 begin
     if (report ->> 'sent')::integer < 1 then
         raise exception 'whatsapp report ignored sent messages';
@@ -1318,5 +1327,86 @@ begin
     end if;
     set local request.headers = '{"x-lot-id":"1"}';
 end $$;
+
+-- Out-of-service spots: they stay in the configured capacity but are never
+-- offered, neither to a walk-in nor to a hold.
+set local request.headers = '{"x-lot-id":"2"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+declare
+    moto_cat integer;
+    refused boolean := false;
+    snapshot jsonb;
+    board jsonb;
+begin
+    insert into public.categories (name, capacity, lot_id)
+    values ('moto', 0, 2)
+    returning id into moto_cat;
+    update public.parking_settings
+       set moto_capacity = 2, moto_out_of_service = 2
+     where lot_id = 2;
+
+    snapshot := public.capacity_snapshot();
+    if (snapshot ->> 'moto_capacity')::integer <> 2
+       or (snapshot ->> 'moto_available')::integer <> 0
+       or (snapshot ->> 'moto_out_of_service')::integer <> 2 then
+        raise exception 'snapshot ignored the out-of-service spots: %', snapshot;
+    end if;
+
+    board := public.slot_board();
+    if (board ->> 'moto_out_of_service')::integer <> 2
+       or (board ->> 'moto_capacity')::integer <> 2 then
+        raise exception 'board ignored the out-of-service spots: %', board;
+    end if;
+
+    begin
+        perform public.check_in('OOSM1', moto_cat, null, null, '[]'::jsonb);
+        raise exception 'a check-in took a spot out of service';
+    exception when others then
+        if sqlerrm not like '%ParkingFullError%' then
+            raise;
+        end if;
+        refused := true;
+    end;
+    if not refused then
+        raise exception 'out-of-service check-in was accepted';
+    end if;
+
+    refused := false;
+    begin
+        perform public.create_reservation('OOSM2', moto_cat, now() + interval '1 hour');
+        raise exception 'a hold took a spot out of service';
+    exception when others then
+        if sqlerrm not like '%ParkingFullError%' then
+            raise;
+        end if;
+        refused := true;
+    end;
+    if not refused then
+        raise exception 'out-of-service hold was accepted';
+    end if;
+
+    -- One usable spot: it can be sold once, never twice.
+    update public.parking_settings set moto_out_of_service = 1 where lot_id = 2;
+    perform public.check_in('OOSM3', moto_cat, null, null, '[]'::jsonb);
+
+    refused := false;
+    begin
+        perform public.check_in('OOSM4', moto_cat, null, null, '[]'::jsonb);
+    exception when others then
+        if sqlerrm not like '%ParkingFullError%' then
+            raise;
+        end if;
+        refused := true;
+    end;
+    if not refused then
+        raise exception 'the usable spot was oversold';
+    end if;
+
+    update public.parking_settings
+       set moto_capacity = 0, moto_out_of_service = 0
+     where lot_id = 2;
+end $$;
+set local request.headers = '{"x-lot-id":"1"}';
 
 rollback;

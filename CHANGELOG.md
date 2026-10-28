@@ -31,6 +31,12 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   existing bar.
 - Check-in suggests known plates after two typed characters (tap to fill and
   look it up); it is optional and never blocks the manual field.
+- **Out-of-service spaces.** Admins can take car or motorcycle spots out of the
+  usable pool in Ajustes (`car_out_of_service`, `moto_out_of_service`). They
+  stay in the configured capacity, are painted as striped "Mantenimiento" cells
+  on the board, and are never offered: the capacity guard, reservations, the
+  dashboard snapshot and the check-in remaining-spaces labels all use
+  `usable_capacity()` (`capacity - out_of_service`, `0` capacity = no limit).
 
 **Core operations**
 
@@ -295,7 +301,7 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Tests
 
-- 685 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
+- 693 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
   integration test that runs only against a live stack.
 - SQL/RLS/RPC regressions covering capacity, shifts, discounts, passes,
   reservations, multi-site isolation, audit, diagnostics and retention.
@@ -325,7 +331,7 @@ Migrations are append-only and applied in filename order by `supabase-migrate`.
 | `0027`–`0032` | Per-lot branding, retention, shift filters, header contract |
 | `0033`–`0038` | Evidence retention, storage membership, diagnostics, audit export, report comparison, home KPIs |
 | `0039`–`0044` | Site comparison fields, ticket reprint, customer phone, WhatsApp queue/report |
-| `0045`–`0053` | Check-out preview, pass flag, capacity groups, reservations consuming group capacity, reserved counts, hold counters, space board, fare breakdown |
+| `0045`–`0055` | Check-out preview, pass flag, capacity groups, reservations consuming group capacity, reserved counts, hold counters, space board, fare breakdown, out-of-service spaces |
 
 ## Verification snapshot
 
@@ -333,7 +339,7 @@ Captured on 2026-10-24 against the local self-hosted stack:
 
 | Check | Result |
 |---|---|
-| `flutter test` | 685 passed (+1 live-stack integration skipped) |
+| `flutter test` | 693 passed (+1 live-stack integration skipped) |
 | `flutter analyze` | 0 errors, 0 warnings (only SDK deprecation infos) |
 | `flutter build web --release` | OK |
 | `supabase/tests/run.sh` | Passed (migrations + RPC/RLS regressions) |
