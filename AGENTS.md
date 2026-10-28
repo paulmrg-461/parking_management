@@ -99,6 +99,11 @@ RPCs own business logic and the Flutter client calls Supabase directly.
   the passes list. Missing WhatsApp is a snack, never a crash. With
   `whatsapp_auto` on, the app enqueues into `whatsapp_messages` instead and
   `whatsapp-dispatch` sends it with the Meta token (never in the client).
+- Realtime and Storage evaluate RLS **without** the `x-lot-id` header: a policy
+  that calls `current_lot_id()` raises `LotRequiredError` and silently kills the
+  subscription/object read. Use `can_read_lot()` (notifications) or
+  `can_read_evidence()` (Storage) membership checks in those policies, never the
+  active-lot helper.
 - Evidence: `parking_settings.evidence_retention_days` (0 = keep) drives the
   `evidence-archive` Edge Function (Storage delete + row delete, service-role
   only, daily cron). Storage cannot see `x-lot-id`, so the bucket policy uses

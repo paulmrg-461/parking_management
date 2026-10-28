@@ -90,6 +90,8 @@ visual board), `usable_capacity` (capacity - out of service, `0` = no limit),
 `calculate_fare` (wrapper) and `fare_breakdown` (single source of truth for the
 money: day/night hours, rates, daily cap, elapsed time),
 `vehicle_history`, `update_vehicle_flags` (notes, blacklist, owner phone).
+`can_read_lot(lot_id)` backs the notifications RLS for Realtime (no lot header
+there).
 
 **Billing and reports**
 `report_revenue` (active lot), `report_revenue_all` (platform admins),

@@ -48,6 +48,11 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   phone activity and the phone sees the web's, through Supabase Realtime. The
   snackbar is localized from the payload, the inbox keeps the row, and the
   acting device ignores the echo of its own write (`LocalActivity`).
+- **Realtime fix.** The notifications policy used `current_lot_id()`, which
+  Realtime evaluates without the `x-lot-id` header: the subscription died with
+  `LotRequiredError` and live snackbars never arrived. It now uses the
+  security-definer `can_read_lot()` membership check (`0057`), verified with a
+  real WebSocket subscription (join → check-in → `postgres_changes` payload).
 - **Out-of-service spaces.** Admins can take car or motorcycle spots out of the
   usable pool in Ajustes (`car_out_of_service`, `moto_out_of_service`). They
   stay in the configured capacity, are painted as striped "Mantenimiento" cells

@@ -1054,6 +1054,32 @@ begin
 end $$;
 reset role;
 
+-- Realtime evaluates the same policy with no x-lot-id header: a membership
+-- check must not raise LotRequiredError there.
+set local request.headers = '{}';
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    if not exists (
+        select 1 from public.notifications
+         where user_id = 2 and lot_id = 1
+    ) then
+        raise exception 'the operator lost their own lot alerts';
+    end if;
+    if public.can_read_lot(999) then
+        raise exception 'lot membership helper invented a membership';
+    end if;
+    if exists (
+        select 1 from public.notifications
+         where user_id = 2 and lot_id is not null and not public.can_read_lot(lot_id)
+    ) then
+        raise exception 'the operator read a lot they do not belong to';
+    end if;
+end $$;
+reset role;
+set local request.headers = '{"x-lot-id":"1"}';
+
 -- Capacity groups: cars/pickups share the lot's car spots, motorcycles have
 -- their own, and cars that leave their keys have a separate cap. Trucks and
 -- buses are not limited by these settings.

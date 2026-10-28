@@ -10,7 +10,7 @@ Last updated: 2026-10-26, branch `feature/supabase` (post-UI/UX polish).
 
 - Stack: Flutter (android + web) + self-hosted Supabase only. No FastAPI,
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
-- `supabase/migrations/0001..0056` are the schema owner (applied by
+- `supabase/migrations/0001..0057` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
 - Flutter: 710 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
@@ -477,6 +477,12 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   reserved cells carry the hold expiry. A board failure falls back to an empty
   board so the dashboard keeps working. The detail sheet refreshes the clock
   every second and the preview every 60 s.
+- `0057` fixes the notifications RLS policy: Realtime has no `x-lot-id`, so the
+  old `current_lot_id()` raised `LotRequiredError` and the channel silently
+  dropped events. Policies evaluated by Realtime/Storage must use membership
+  helpers (`can_read_lot`, `can_read_evidence`), never the active-lot helper.
+  Verified with `websockets` against `/realtime/v1/websocket`
+  (`phx_join` → `postgres_changes` after a check-in).
 - `0056` notifies **every active lot member** (including the actor) on
   check-in/check-out with `data.action`, `session_id`, `plate`, `actor_name`,
   `actor_role` and (exits) `amount_charged`; Realtime delivers it to each
@@ -594,7 +600,7 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 - `flutter test`: 710 passed (+1 live-stack integration skipped); `flutter
   analyze` 138 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
-- `supabase/tests/run.sh` passed (migrations `0001`–`0056`); `e2e.sh` passed
+- `supabase/tests/run.sh` passed (migrations `0001`–`0057`); `e2e.sh` passed
   (login → check-in → check-out → report → history).
 - `healthcheck.sh`: 0 failures (one warning for a dev shift left open >12 h).
 - UI/UX batches landed this session: reports comparison (screen, PDF, CSV),
