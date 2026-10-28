@@ -1316,6 +1316,18 @@ abstract class AppLocalizations {
   /// **'Turno cerrado'**
   String get shiftClosedTitle;
 
+  /// No description provided for @cashCountTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Contar efectivo'**
+  String get cashCountTitle;
+
+  /// No description provided for @cashCountUse.
+  ///
+  /// In es, this message translates to:
+  /// **'Usar {amount}'**
+  String cashCountUse(String amount);
+
   /// No description provided for @shiftAdjust.
   ///
   /// In es, this message translates to:

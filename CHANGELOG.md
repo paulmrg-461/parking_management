@@ -31,6 +31,10 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   existing bar.
 - Check-in suggests known plates after two typed characters (tap to fill and
   look it up); it is optional and never blocks the manual field.
+- Cash closing is safer: the close/adjust dialogs show the **expected cash**
+  and a live **difference** while typing, and a **denomination counter**
+  (100.000 → 100 COP notes/coins) totals the drawer and fills the counted
+  amount, so the arqueo is arithmetic the app does, not the operator.
 - On-screen alphanumeric keypad (`PlateKeypad`) for touch cabins: opens from the
   plate field and the check-out search, 52 dp keys, backspace/clear, respects
   the plate length limit and feeds the normal lookup/debounce.
@@ -308,7 +312,7 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Tests
 
-- 700 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
+- 705 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
   integration test that runs only against a live stack.
 - SQL/RLS/RPC regressions covering capacity, shifts, discounts, passes,
   reservations, multi-site isolation, audit, diagnostics and retention.
@@ -346,7 +350,7 @@ Captured on 2026-10-24 against the local self-hosted stack:
 
 | Check | Result |
 |---|---|
-| `flutter test` | 700 passed (+1 live-stack integration skipped) |
+| `flutter test` | 705 passed (+1 live-stack integration skipped) |
 | `flutter analyze` | 0 errors, 0 warnings (only SDK deprecation infos) |
 | `flutter build web --release` | OK |
 | `supabase/tests/run.sh` | Passed (migrations + RPC/RLS regressions) |

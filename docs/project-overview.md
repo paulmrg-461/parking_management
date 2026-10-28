@@ -43,7 +43,7 @@ WhatsApp (manual or automated).
 | Secrets / PIN operations | Complete (scripts + runbook) | PIN rotation verified live |
 | E2E and CI | Complete (API + Flutter client, real stack) | CI job `supabase-e2e` |
 
-Quality snapshot (2026-10-24, local stack): **700 Flutter tests + 1 integration
+Quality snapshot (2026-10-24, local stack): **705 Flutter tests + 1 integration
 test**, SQL/RLS suite green, web build green, analyzer with **0 errors and 0
 warnings** (only SDK deprecation infos from the pinned beta channel), restore
 drill green.
@@ -64,7 +64,7 @@ the main data it touches.
 | `vehicles` | Registry CRUD and paging | `vehicles` |
 | `categories` / `tariffs` | Reference data per site, capacity | `categories`, `tariffs` |
 | `monthly_passes` | Passes, charges, collection, expiry notices | `monthly_passes`, `monthly_pass_payments`, `register_pass_payment` |
-| `shifts` | Open/close, movements, history filters, corrections, PDF | `shifts`, `cash_movements`, `shift_adjustments`, `list_shifts`, `adjust_shift` |
+| `shifts` | Open/close with expected-vs-counted and a denomination counter, movements, history filters, corrections, PDF | `shifts`, `cash_movements`, `shift_adjustments`, `list_shifts`, `adjust_shift` |
 | `reports` | Revenue, occupancy, site comparison, WhatsApp metrics, PDF | `report_revenue(_all)`, `report_occupancy`, `report_whatsapp` |
 | `notifications` | Inbox, bell, deep links, browser push toggle | `notifications`, `web_push_subscriptions` |
 | `settings` | Per-site identity, branding, retention, WhatsApp mode | `parking_settings`, `set_branding_logo` |

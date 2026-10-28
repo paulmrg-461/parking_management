@@ -672,6 +672,14 @@ class AppLocalizationsEs extends AppLocalizations {
   String get shiftClosedTitle => 'Turno cerrado';
 
   @override
+  String get cashCountTitle => 'Contar efectivo';
+
+  @override
+  String cashCountUse(String amount) {
+    return 'Usar $amount';
+  }
+
+  @override
   String get shiftAdjust => 'Corregir cierre de turno';
 
   @override

@@ -133,4 +133,66 @@ void main() {
 
     expect(find.text('No hay turno abierto'), findsOneWidget);
   });
+
+  testWidgets('Success: the close dialog shows expected and difference', (
+    tester,
+  ) async {
+    final repository = FakeShiftRepository(currentShift: sampleShift());
+    final cubit = ShiftCubit(repository);
+    addTearDown(cubit.close);
+    await tester.pumpWidget(
+      testApp(
+        BlocProvider.value(
+          value: cubit,
+          child: const ShiftPage(isAdmin: false),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Cerrar turno'));
+    await tester.pumpAndSettle();
+
+    // Expected cash is opening float (10.000) + cash sales (5.000).
+    expect(find.text('\$15.000'), findsWidgets);
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Efectivo contado'),
+      '20000',
+    );
+    await tester.pump();
+
+    expect(find.text('\$5.000'), findsWidgets);
+  });
+
+  testWidgets('Success: counting by denomination fills the drawer total', (
+    tester,
+  ) async {
+    final repository = FakeShiftRepository(currentShift: sampleShift());
+    final cubit = ShiftCubit(repository);
+    addTearDown(cubit.close);
+    await tester.pumpWidget(
+      testApp(
+        BlocProvider.value(
+          value: cubit,
+          child: const ShiftPage(isAdmin: false),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Cerrar turno'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Contar efectivo'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('cash_qty_5000')), '3');
+    await tester.pump();
+    await tester.tap(find.widgetWithText(FilledButton, 'Usar \$15.000'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('\$0'), findsWidgets);
+
+    await tester.tap(find.text('Confirmar'));
+    await tester.pumpAndSettle();
+    expect(find.text('Turno cerrado correctamente'), findsOneWidget);
+  });
 }

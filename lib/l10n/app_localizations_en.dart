@@ -665,6 +665,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shiftClosedTitle => 'Shift closed';
 
   @override
+  String get cashCountTitle => 'Count cash';
+
+  @override
+  String cashCountUse(String amount) {
+    return 'Use $amount';
+  }
+
+  @override
   String get shiftAdjust => 'Correct shift close';
 
   @override

@@ -12,7 +12,7 @@ Last updated: 2026-10-26, branch `feature/supabase` (post-UI/UX polish).
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0055` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 700 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 705 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -477,6 +477,9 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   reserved cells carry the hold expiry. A board failure falls back to an empty
   board so the dashboard keeps working. The detail sheet refreshes the clock
   every second and the preview every 60 s.
+- Cash closing shows the expected cash and a live difference, and a
+  denomination counter (`CashCountSheet`, COP notes/coins) fills the counted
+  amount; both the close and the admin adjust dialogs use it.
 - Touch cabins get an on-screen alphanumeric keypad (`PlateKeypad`, opened
   from the plate field and the check-out search); it edits the shared
   controller, so validation/lookup/debounce run as if typed.
@@ -581,8 +584,8 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 ## Latest verification (2026-10-28)
 
-- `flutter test`: 700 passed (+1 live-stack integration skipped); `flutter
-  analyze` 136 infos, all SDK `deprecated_member_use` (zero warnings/errors);
+- `flutter test`: 705 passed (+1 live-stack integration skipped); `flutter
+  analyze` 138 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
 - `supabase/tests/run.sh` passed (migrations `0001`–`0055`); `e2e.sh` passed
   (login → check-in → check-out → report → history).
