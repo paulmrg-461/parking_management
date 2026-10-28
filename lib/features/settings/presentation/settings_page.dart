@@ -57,6 +57,7 @@ class _SettingsPageState extends State<SettingsPage> {
   late final TextEditingController _carOutOfService;
   late final TextEditingController _motoOutOfService;
   late final TextEditingController _legalPolicy;
+  String _currency = 'COP';
   var _seeded = false;
   bool _whatsappAuto = false;
   List<String>? _baseline;
@@ -186,6 +187,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _carOutOfService.text,
     _motoOutOfService.text,
     _legalPolicy.text,
+    _currency,
     '$_whatsappAuto',
   ];
 
@@ -229,6 +231,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _carOutOfService.text = settings.carOutOfService.toString();
     _motoOutOfService.text = settings.motoOutOfService.toString();
     _legalPolicy.text = settings.legalPolicy;
+    _currency = settings.currency;
     _whatsappAuto = settings.whatsappAuto;
     _baseline = _snapshot();
   }
@@ -438,6 +441,30 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const SizedBox(height: Space.lg),
           _SectionHeader(
+            icon: Icons.tune,
+            title: l10n.settingsSectionPreferences,
+          ),
+          const SizedBox(height: Space.sm),
+          DropdownButtonFormField<String>(
+            key: const Key('settings_currency'),
+            initialValue: _currency,
+            decoration: InputDecoration(
+              labelText: l10n.settingsCurrency,
+              helperText: l10n.settingsCurrencyHint,
+              helperMaxLines: 3,
+            ),
+            items: [
+              DropdownMenuItem(value: 'COP', child: Text(l10n.currencyCop)),
+              DropdownMenuItem(value: 'USD', child: Text(l10n.currencyUsd)),
+            ],
+            onChanged: (value) {
+              if (value != null) {
+                setState(() => _currency = value);
+              }
+            },
+          ),
+          const SizedBox(height: Space.lg),
+          _SectionHeader(
             icon: Icons.gavel_outlined,
             title: l10n.settingsSectionLegal,
           ),
@@ -614,6 +641,7 @@ class _SettingsPageState extends State<SettingsPage> {
         carOutOfService: int.tryParse(_carOutOfService.text.trim()) ?? 0,
         motoOutOfService: int.tryParse(_motoOutOfService.text.trim()) ?? 0,
         legalPolicy: _legalPolicy.text.trim(),
+        currency: _currency,
       ),
     );
   }

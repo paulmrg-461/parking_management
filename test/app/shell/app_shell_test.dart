@@ -7,6 +7,7 @@ import 'package:parking_management/core/storage/key_value_store.dart';
 import 'package:parking_management/core/theme/tokens.dart';
 import 'package:parking_management/core/network/connectivity_cubit.dart';
 import 'package:parking_management/core/network/connectivity_service.dart';
+import 'package:parking_management/core/l10n/locale_cubit.dart';
 import 'package:parking_management/core/sync/pending_mutation.dart';
 import 'package:parking_management/core/widgets/sync_badge.dart';
 import 'package:parking_management/features/auth/domain/entities/user.dart';
@@ -17,6 +18,7 @@ import 'package:parking_management/core/realtime/local_activity.dart';
 import '../../helpers/app_harness.dart';
 import '../../helpers/fake_check_out_repository.dart';
 import '../../helpers/fake_notification_repository.dart';
+import '../../helpers/fake_key_value_store.dart';
 import '../../helpers/fake_sync_outbox.dart';
 
 void main() {
@@ -463,6 +465,26 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(dashboard.occupancyCalls, greaterThan(before));
+  });
+
+  testWidgets('Success: the language button switches the app to English', (
+    tester,
+  ) async {
+    final locale = LocaleCubit(FakeKeyValueStore());
+    addTearDown(locale.close);
+    await locale.select(const Locale('es'));
+    await pumpApp(tester, role: UserRole.operator, localeCubit: locale);
+
+    await tester.tap(find.byIcon(Icons.translate));
+    await tester.pumpAndSettle();
+    // The menu item's Text is not hit-testable itself; the item handles it.
+    await tester.tap(find.text('English'), warnIfMissed: false);
+    await tester.pumpAndSettle();
+
+    expect(locale.state?.languageCode, 'en');
+    // The shell switches every label: no Spanish tooltip survives the change.
+    expect(find.byTooltip('Language'), findsOneWidget);
+    expect(find.byTooltip('Idioma'), findsNothing);
   });
 }
 

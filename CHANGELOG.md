@@ -11,6 +11,21 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Added
 
+**Multi-currency (COP/USD) and Spanish/English**
+
+- `parking_settings.currency` (`0068`, `COP` default, `USD` allowed) is exposed
+  by `public_lot_profile`. Amounts remain integers in the currency minor unit
+  (COP pesos, USD cents); `core/money` formats `$5.000` / `US$50.00`, parses
+  operator input with either separator and writes CSV in major units. The
+  currency is ambient (`Money.configure` from `BrandingCubit`), so screens,
+  PDFs, printed receipts, fare breakdowns, cash counting and the shift drawer
+  adapt with no per-widget plumbing. Ajustes has a currency selector and
+  money inputs accept decimals for USD.
+- The interface is translatable between Spanish and English with a device-level
+  preference (`LocaleCubit`, Hive `preferences/locale`): system, Español or
+  English from the translate button in the home app bar. Tests without the
+  cubit keep the Spanish `defaultLocale`.
+
 **Operator UI/UX (space board and settlement)**
 
 - Home **space board** (`slot_board()` + `SlotBoardCard`): virtual capacity

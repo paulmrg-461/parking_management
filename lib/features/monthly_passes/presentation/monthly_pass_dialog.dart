@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../../core/l10n/l10n.dart';
+import '../../../core/money/money.dart';
+import '../../../core/money/money_input.dart';
 import '../../../core/receipt/payment_method.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/date_form_field.dart';
@@ -50,7 +51,7 @@ class _MonthlyPassDialogState extends State<MonthlyPassDialog> {
   final _startKey = GlobalKey<FormFieldState<DateTime>>();
   final _endKey = GlobalKey<FormFieldState<DateTime>>();
   late final _amountController = TextEditingController(
-    text: widget.existing?.amount.toString() ?? '',
+    text: widget.existing == null ? '' : Money.input(widget.existing!.amount),
   );
   late int? _vehicleId = widget.vehicles.firstOrNull?.id;
   late bool _autoRenew = widget.existing?.autoRenew ?? false;
@@ -92,7 +93,7 @@ class _MonthlyPassDialogState extends State<MonthlyPassDialog> {
         vehicleId: _editing ? null : _vehicleId,
         startDate: _startKey.currentState!.value!,
         endDate: _endKey.currentState!.value!,
-        amount: int.parse(_amountController.text),
+        amount: Money.parse(_amountController.text) ?? 0,
         autoRenew: _autoRenew,
         autoRenewPaymentMethod: _autoRenewMethod,
       ),
@@ -132,7 +133,7 @@ class _MonthlyPassDialogState extends State<MonthlyPassDialog> {
               TextFormField(
                 controller: _amountController,
                 keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                inputFormatters: moneyInputFormatters(),
                 decoration: InputDecoration(labelText: l10n.fieldAmount),
                 validator: _amount,
               ),

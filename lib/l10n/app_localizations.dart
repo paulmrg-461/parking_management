@@ -2162,6 +2162,60 @@ abstract class AppLocalizations {
   /// **'Evidencia'**
   String get settingsSectionEvidence;
 
+  /// No description provided for @settingsSectionPreferences.
+  ///
+  /// In es, this message translates to:
+  /// **'Preferencias'**
+  String get settingsSectionPreferences;
+
+  /// No description provided for @settingsCurrency.
+  ///
+  /// In es, this message translates to:
+  /// **'Moneda'**
+  String get settingsCurrency;
+
+  /// No description provided for @settingsCurrencyHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Los montos se guardan en la unidad menor de la moneda (COP pesos, USD centavos). Al cambiarla, revisa las tarifas y precios.'**
+  String get settingsCurrencyHint;
+
+  /// No description provided for @currencyCop.
+  ///
+  /// In es, this message translates to:
+  /// **'Peso colombiano (COP)'**
+  String get currencyCop;
+
+  /// No description provided for @currencyUsd.
+  ///
+  /// In es, this message translates to:
+  /// **'Dólar estadounidense (USD)'**
+  String get currencyUsd;
+
+  /// No description provided for @languageTooltip.
+  ///
+  /// In es, this message translates to:
+  /// **'Idioma'**
+  String get languageTooltip;
+
+  /// No description provided for @languageSystem.
+  ///
+  /// In es, this message translates to:
+  /// **'Sistema'**
+  String get languageSystem;
+
+  /// No description provided for @languageSpanish.
+  ///
+  /// In es, this message translates to:
+  /// **'Español'**
+  String get languageSpanish;
+
+  /// No description provided for @languageEnglish.
+  ///
+  /// In es, this message translates to:
+  /// **'English'**
+  String get languageEnglish;
+
   /// No description provided for @settingsSectionLegal.
   ///
   /// In es, this message translates to:

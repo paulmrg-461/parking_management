@@ -1149,6 +1149,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsSectionEvidence => 'Evidence';
 
   @override
+  String get settingsSectionPreferences => 'Preferences';
+
+  @override
+  String get settingsCurrency => 'Currency';
+
+  @override
+  String get settingsCurrencyHint =>
+      'Amounts are stored in the currency minor unit (COP pesos, USD cents). Review tariffs and prices after changing it.';
+
+  @override
+  String get currencyCop => 'Colombian peso (COP)';
+
+  @override
+  String get currencyUsd => 'US dollar (USD)';
+
+  @override
+  String get languageTooltip => 'Language';
+
+  @override
+  String get languageSystem => 'System';
+
+  @override
+  String get languageSpanish => 'Español';
+
+  @override
+  String get languageEnglish => 'English';
+
+  @override
   String get settingsSectionLegal => 'Policies and contract';
 
   @override

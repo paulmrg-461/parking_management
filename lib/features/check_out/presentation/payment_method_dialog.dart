@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/status_colors.dart';
 import '../../../core/theme/tokens.dart';
+import '../../../core/money/money.dart';
+import '../../../core/money/money_input.dart';
 import '../../../core/utils/cop_formatter.dart';
 import '../../../core/receipt/payment_method.dart';
 import '../domain/entities/check_out_preview.dart';
@@ -94,13 +95,13 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
       return null;
     }
     final discount = widget.canDiscount
-        ? int.tryParse(_discountController.text.trim()) ?? 0
+        ? Money.parse(_discountController.text.trim()) ?? 0
         : 0;
     return (amount - discount).clamp(0, amount);
   }
 
   int? get _cashReceived {
-    final value = int.tryParse(_cashController.text.trim());
+    final value = Money.parse(_cashController.text.trim());
     return value == null || value <= 0 ? null : value;
   }
 
@@ -208,7 +209,7 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
                 key: const Key('checkout_cash_received'),
                 controller: _cashController,
                 keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                inputFormatters: moneyInputFormatters(),
                 decoration: InputDecoration(
                   labelText: l10n.checkoutCashReceived,
                   prefixText: '\$ ',
@@ -263,7 +264,7 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
               TextFormField(
                 controller: _discountController,
                 keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                inputFormatters: moneyInputFormatters(),
                 decoration: InputDecoration(
                   labelText: l10n.discountAmount,
                 ),

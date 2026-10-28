@@ -187,6 +187,13 @@ Write 3 tests (Success / Failure / Security) BEFORE logic.
 - **Lists used for lookups** (open sessions, vehicles, monthly passes) must
   walk every Supabase page; PostgREST caps rows per request.
 - **UI text**: always `context.l10n`; no hardcoded operator-facing strings.
+- **Money**: amounts are integers in the site currency's **minor unit** (COP
+  pesos, USD cents). Format/parse only through `Money` (`core/money`); it is
+  configured from `parking_settings.currency` by `BrandingCubit`. CSV exports
+  use `Money.major`, screens/receipts `Money.format`. Never hardcode `$` or
+  divide by 100 in a widget.
+- **Language**: the device picks system/`es`/`en` via `LocaleCubit`; keep every
+  new string in both ARB files and never read `Platform.localeName` directly.
 - **Supabase**: `supabase/migrations` is the only schema owner (applied by
   `supabase-migrate`). Every new table ships grants + RLS before PostgREST sees
   it; writes go through `security definer` RPCs that derive the operator from

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../core/l10n/l10n.dart';
+import '../../../../core/money/money.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../core/utils/cop_formatter.dart';
 
@@ -36,8 +37,9 @@ class CashCountSheet extends StatefulWidget {
 }
 
 class _CashCountSheetState extends State<CashCountSheet> {
+  late final List<int> _denominations = Money.currency.denominations;
   late final Map<int, TextEditingController> _quantities = {
-    for (final denomination in cashDenominations)
+    for (final denomination in _denominations)
       denomination: TextEditingController(),
   };
 
@@ -54,7 +56,7 @@ class _CashCountSheetState extends State<CashCountSheet> {
 
   int get _total {
     var total = 0;
-    for (final denomination in cashDenominations) {
+    for (final denomination in _denominations) {
       total += denomination * _quantity(denomination);
     }
     return total;
@@ -101,7 +103,7 @@ class _CashCountSheetState extends State<CashCountSheet> {
               child: SingleChildScrollView(
                 child: Column(
                   children: [
-                    for (final denomination in cashDenominations)
+                    for (final denomination in _denominations)
                       _DenominationRow(
                         denomination: denomination,
                         controller: _quantities[denomination]!,

@@ -5,6 +5,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/l10n/failure_messages.dart';
 import '../../../core/l10n/l10n.dart';
+import '../../../core/money/money.dart';
+import '../../../core/money/money_input.dart';
 import '../../../core/receipt/pdf_share.dart';
 import '../../../core/network/connectivity_cubit.dart';
 import '../../../core/state/submission.dart';
@@ -292,7 +294,7 @@ class _OpenShiftFormState extends State<_OpenShiftForm> {
     if (!_formKey.currentState!.validate()) {
       return;
     }
-    context.read<ShiftCubit>().open(int.parse(_controller.text.trim()));
+    context.read<ShiftCubit>().open(Money.parse(_controller.text.trim()) ?? 0);
   }
 
   @override
@@ -314,12 +316,12 @@ class _OpenShiftFormState extends State<_OpenShiftForm> {
               TextFormField(
                 controller: _controller,
                 keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                inputFormatters: moneyInputFormatters(),
                 decoration: InputDecoration(
                   labelText: l10n.shiftOpeningFloat,
                 ),
                 validator: (value) {
-                  final amount = int.tryParse((value ?? '').trim());
+                  final amount = Money.parse(value);
                   return amount == null || amount < 0
                       ? l10n.invalidAmount
                       : null;
@@ -594,7 +596,7 @@ class _AdjustShiftDialogState extends State<_AdjustShiftDialog> {
     if (total == null || !mounted) {
       return;
     }
-    setState(() => _counted.text = '$total');
+    setState(() => _counted.text = Money.input(total));
   }
 
   @override
@@ -610,7 +612,7 @@ class _AdjustShiftDialogState extends State<_AdjustShiftDialog> {
     }
     Navigator.of(context).pop(
       _CloseResult(
-        int.parse(_counted.text.trim()),
+        Money.parse(_counted.text.trim()) ?? 0,
         _reason.text.trim(),
       ),
     );
@@ -632,7 +634,7 @@ class _AdjustShiftDialogState extends State<_AdjustShiftDialog> {
               controller: _counted,
               autofocus: true,
               keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              inputFormatters: moneyInputFormatters(),
               decoration: InputDecoration(
                 labelText: l10n.shiftCountedCash,
                 suffixIcon: IconButton(
@@ -643,7 +645,7 @@ class _AdjustShiftDialogState extends State<_AdjustShiftDialog> {
               ),
               onChanged: (_) => setState(() {}),
               validator: (value) {
-                final amount = int.tryParse((value ?? '').trim());
+                final amount = Money.parse(value);
                 return amount == null || amount < 0
                     ? l10n.invalidAmount
                     : null;
@@ -709,7 +711,7 @@ class _DifferenceRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final value = int.tryParse(counted.trim());
+    final value = Money.parse(counted.trim());
     if (value == null) {
       return const SizedBox.shrink();
     }
@@ -809,7 +811,10 @@ class _CashMovementDialogState extends State<_CashMovementDialog> {
       return;
     }
     Navigator.of(context).pop(
-      _MovementResult(int.parse(_amount.text.trim()), _reason.text.trim()),
+      _MovementResult(
+        Money.parse(_amount.text.trim()) ?? 0,
+        _reason.text.trim(),
+      ),
     );
   }
 
@@ -828,10 +833,10 @@ class _CashMovementDialogState extends State<_CashMovementDialog> {
               controller: _amount,
               autofocus: true,
               keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              inputFormatters: moneyInputFormatters(),
               decoration: InputDecoration(labelText: l10n.fieldAmount),
               validator: (value) {
-                final amount = int.tryParse((value ?? '').trim());
+                final amount = Money.parse(value);
                 return amount == null || amount <= 0
                     ? l10n.invalidAmount
                     : null;

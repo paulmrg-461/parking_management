@@ -2,6 +2,8 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/error/failure.dart';
+import 'package:parking_management/core/money/currency.dart';
+import 'package:parking_management/core/money/money.dart';
 import 'package:parking_management/features/settings/application/branding_cubit.dart';
 import 'package:parking_management/features/settings/domain/entities/parking_settings.dart';
 
@@ -37,6 +39,34 @@ void main() {
     expect(emissions.first, isA<BrandingLoaded>());
     expect(emissions.first.settingsOrNull?.name, 'Parqueadero Central');
     expect(emissions.first.logoOrNull, isNotNull);
+  });
+
+  test('Success: loading settings configures the ambient currency', () async {
+    addTearDown(() => Money.configure(Currency.cop));
+    repository
+      ..cached = const ParkingSettings(
+        name: 'Parqueadero Central',
+        currency: 'USD',
+      )
+      ..settings = _configured.copyWith(currency: 'USD');
+
+    await cubit.load();
+
+    expect(Money.currency, Currency.usd);
+  });
+
+  test('Security: an unknown currency code falls back to COP', () async {
+    addTearDown(() => Money.configure(Currency.cop));
+    repository
+      ..cached = const ParkingSettings(
+        name: 'Parqueadero Central',
+        currency: 'EUR',
+      )
+      ..settings = _configured.copyWith(currency: 'EUR');
+
+    await cubit.load();
+
+    expect(Money.currency, Currency.cop);
   });
 
   test('Success: load refreshes branding from the backend', () async {

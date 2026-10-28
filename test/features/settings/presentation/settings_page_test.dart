@@ -293,4 +293,27 @@ void main() {
     );
     expect(field.controller?.text, 'POLITICAS {{parking}}');
   });
+
+  testWidgets('Success: the site currency is changed and saved', (
+    tester,
+  ) async {
+    final repository = FakeParkingSettingsRepository(_configured);
+    await pumpPage(tester, repository: repository);
+
+    final field = find.byKey(const Key('settings_currency'));
+    await tester.scrollUntilVisible(
+      field,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(field);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Dólar estadounidense (USD)').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('settings_save')));
+    await tester.pumpAndSettle();
+
+    expect(repository.settings.currency, 'USD');
+  });
 }

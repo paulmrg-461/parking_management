@@ -20,6 +20,7 @@ class ParkingSettings extends Equatable {
     this.carOutOfService = 0,
     this.motoOutOfService = 0,
     this.legalPolicy = '',
+    this.currency = 'COP',
   });
 
   final String name;
@@ -59,6 +60,9 @@ class ParkingSettings extends Equatable {
   /// Service contract / legal policy shown to customers (editable template).
   final String legalPolicy;
 
+  /// Site currency code (`COP` or `USD`); amounts are minor units of it.
+  final String currency;
+
   /// The never-configured record (mirrors the backend default).
   static ParkingSettings defaults() => const ParkingSettings();
 
@@ -78,6 +82,7 @@ class ParkingSettings extends Equatable {
     int? carOutOfService,
     int? motoOutOfService,
     String? legalPolicy,
+    String? currency,
   }) => ParkingSettings(
     name: name ?? this.name,
     address: address ?? this.address,
@@ -94,6 +99,7 @@ class ParkingSettings extends Equatable {
     carOutOfService: carOutOfService ?? this.carOutOfService,
     motoOutOfService: motoOutOfService ?? this.motoOutOfService,
     legalPolicy: legalPolicy ?? this.legalPolicy,
+    currency: currency ?? this.currency,
   );
 
   /// Editable fields (metadata excluded).
@@ -112,6 +118,7 @@ class ParkingSettings extends Equatable {
     'car_out_of_service': carOutOfService,
     'moto_out_of_service': motoOutOfService,
     'legal_policy': legalPolicy,
+    'currency': currency,
   };
 
   @override
@@ -131,5 +138,6 @@ class ParkingSettings extends Equatable {
     carOutOfService,
     motoOutOfService,
     legalPolicy,
+    currency,
   ];
 }

@@ -1,6 +1,8 @@
+import '../../../core/money/money.dart';
 import '../domain/entities/session_record.dart';
 
-/// Machine-readable CSV of the records log (RFC 4180 quoting, raw amounts).
+/// Machine-readable CSV of the records log (RFC 4180 quoting). Amounts are
+/// exported in major units (`5000` COP, `50.50` USD) for spreadsheets.
 String recordsCsv(List<SessionRecord> records) {
   String cell(Object? value) {
     final text = (value ?? '').toString();
@@ -35,7 +37,7 @@ String recordsCsv(List<SessionRecord> records) {
         stamp(record.entryTime),
         stamp(record.exitTime),
         record.duration.inMinutes,
-        record.amountCharged,
+        Money.major(record.amountCharged),
         record.status,
         record.ticketNumber ?? '',
       ],

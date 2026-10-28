@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../../core/l10n/l10n.dart';
+import '../../../core/money/money.dart';
+import '../../../core/money/money_input.dart';
 import '../../../core/theme/tokens.dart';
 import '../../categories/domain/entities/category.dart';
 import '../domain/commands/create_tariff_command.dart';
@@ -52,7 +53,7 @@ class _CreateTariffDialogState extends State<CreateTariffDialog> {
       CreateTariffCommand(
         categoryId: _categoryId!,
         type: _type,
-        amount: int.parse(_amountController.text),
+        amount: Money.parse(_amountController.text) ?? 0,
         startTime: _nightly ? _startController.text.trim() : null,
         endTime: _nightly ? _endController.text.trim() : null,
       ),
@@ -61,7 +62,7 @@ class _CreateTariffDialogState extends State<CreateTariffDialog> {
   }
 
   String? _amount(String? value) {
-    final amount = int.tryParse(value ?? '');
+    final amount = Money.parse(value);
     return amount == null || amount <= 0 ? context.l10n.invalidAmount : null;
   }
 
@@ -86,7 +87,7 @@ class _CreateTariffDialogState extends State<CreateTariffDialog> {
               TextFormField(
                 controller: _amountController,
                 keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                inputFormatters: moneyInputFormatters(),
                 decoration: InputDecoration(labelText: l10n.fieldAmount),
                 validator: _amount,
               ),

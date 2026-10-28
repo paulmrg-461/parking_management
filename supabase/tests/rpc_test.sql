@@ -2029,4 +2029,40 @@ begin
     end if;
 end $$;
 
+-- Currency: integer amounts in COP pesos or USD cents; only supported codes.
+set local request.headers = '{"x-lot-id":"1"}';
+reset role;
+do $$
+declare
+    code text;
+begin
+    select currency into code from public.parking_settings where lot_id = 1;
+    if code <> 'COP' then
+        raise exception 'currency default is not COP: %', code;
+    end if;
+
+    update public.parking_settings set currency = 'USD' where lot_id = 1;
+
+    begin
+        update public.parking_settings set currency = 'EUR' where lot_id = 1;
+        raise exception 'an unsupported currency was accepted';
+    exception when check_violation then
+        null;
+    end;
+end $$;
+
+set local role anon;
+do $$
+declare
+    profile jsonb;
+begin
+    profile := public.public_lot_profile(1);
+    if profile ->> 'currency' <> 'USD' then
+        raise exception 'public profile lost the currency: %', profile;
+    end if;
+end $$;
+
+reset role;
+update public.parking_settings set currency = 'COP' where lot_id = 1;
+
 rollback;

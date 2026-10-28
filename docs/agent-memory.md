@@ -4,16 +4,16 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-10-28, branch `feature/supabase` (settlement, mobile drawer,
-receipt print fix, deployment requirements; HEAD `4d80348`).
+Last updated: 2026-10-28, branch `feature/supabase` (COP/USD currency, es/en
+language, records exports, deployment requirements).
 
 ## Where we are
 
 - Stack: Flutter (android + web) + self-hosted Supabase only. No FastAPI,
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
-- `supabase/migrations/0001..0067` are the schema owner (applied by
+- `supabase/migrations/0001..0068` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 785 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 797 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -34,6 +34,30 @@ receipt print fix, deployment requirements; HEAD `4d80348`).
    `0024` (`current_lot_id`, lot CRUD, re-scoped policies/RPCs/reports,
    `report_revenue_all`), `0025` (offline replay lot capture via
    `resolve_lot`), `0026` (`list_lot_members`).
+
+## Currency and language (2026-10-28)
+
+- **Currency** (`0068`): `parking_settings.currency` (`COP` default, `USD`,
+  check constraint); `public_lot_profile` exposes it. Amounts stay integers in
+  the currency **minor unit** (COP pesos, USD cents) — never floats, never a
+  second column. `Money` (`core/money`) is ambient: `BrandingCubit` calls
+  `Money.configure(Currency.fromCode(settings.currency))` on cache and fresh
+  loads, and Ajustes reloads branding after saving, so every screen, PDF,
+  thermal receipt and CSV picks it up without threading a currency. Use
+  `Money.format` / `Money.parse` / `Money.input` / `Money.major`; `CopFormatter`
+  and `Formatters.money` delegate to it (legacy call sites are fine).
+  Money inputs use `moneyInputFormatters()` (digits plus `.`/`,`) and validate
+  with `Money.parse`. `Money.major` is what CSV exports write (`50.50`), while
+  screens/receipts use the symbol (`US$50.50`). Cash denominations come from
+  `Currency.denominations` (COP notes/coins vs USD 100 → 0.01).
+- **Language** (`LocaleCubit`, Hive `preferences/locale`): `null` follows the
+  system, otherwise `es`/`en`. It is a **device** preference, not per lot; the
+  translate button in the home app bar opens system/Español/English. Tests that
+  omit the cubit keep receiving `defaultLocale` (Spanish) from `ParkingApp`.
+  Test bindings default to the system locale (`en`): assert Spanish strings only
+  after pinning the cubit.
+- Records exports: `recordsCsv` writes major units; the PDF and receipts are
+  symbol-aware through `Money`.
 
 ## Operator UI + realtime (2026-10-28)
 

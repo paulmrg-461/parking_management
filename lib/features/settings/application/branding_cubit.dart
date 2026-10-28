@@ -4,6 +4,8 @@ import 'package:equatable/equatable.dart';
 
 import '../../../core/error/failure.dart';
 import '../../../core/l10n/l10n.dart';
+import '../../../core/money/currency.dart';
+import '../../../core/money/money.dart';
 import '../domain/entities/parking_settings.dart';
 import '../domain/repositories/parking_settings_repository.dart';
 import '../../../core/state/resilient_cubit.dart';
@@ -62,6 +64,7 @@ class BrandingCubit extends ResilientCubit<BrandingState> {
   Future<void> load() async {
     final cached = await _repository.loadCached();
     if (cached != null && cached != ParkingSettings.defaults()) {
+      Money.configure(Currency.fromCode(cached.currency));
       emit(
         BrandingLoaded(cached, logo: await _repository.loadLogo(cached.logoVersion)),
       );
@@ -69,6 +72,7 @@ class BrandingCubit extends ResilientCubit<BrandingState> {
     try {
       final fresh = await _repository.load();
       if (fresh != ParkingSettings.defaults()) {
+        Money.configure(Currency.fromCode(fresh.currency));
         emit(
           BrandingLoaded(fresh, logo: await _repository.loadLogo(fresh.logoVersion)),
         );

@@ -1156,6 +1156,34 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsSectionEvidence => 'Evidencia';
 
   @override
+  String get settingsSectionPreferences => 'Preferencias';
+
+  @override
+  String get settingsCurrency => 'Moneda';
+
+  @override
+  String get settingsCurrencyHint =>
+      'Los montos se guardan en la unidad menor de la moneda (COP pesos, USD centavos). Al cambiarla, revisa las tarifas y precios.';
+
+  @override
+  String get currencyCop => 'Peso colombiano (COP)';
+
+  @override
+  String get currencyUsd => 'Dólar estadounidense (USD)';
+
+  @override
+  String get languageTooltip => 'Idioma';
+
+  @override
+  String get languageSystem => 'Sistema';
+
+  @override
+  String get languageSpanish => 'Español';
+
+  @override
+  String get languageEnglish => 'English';
+
+  @override
   String get settingsSectionLegal => 'Políticas y contrato';
 
   @override

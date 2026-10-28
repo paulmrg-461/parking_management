@@ -119,7 +119,7 @@ types:
         index: 7
   ParkingSettings:
     typeId: 9
-    nextIndex: 15
+    nextIndex: 16
     fields:
       name:
         index: 0
@@ -151,3 +151,5 @@ types:
         index: 13
       legalPolicy:
         index: 14
+      currency:
+        index: 15

@@ -43,7 +43,7 @@ WhatsApp (manual or automated).
 | Secrets / PIN operations | Complete (scripts + runbook) | PIN rotation verified live |
 | E2E and CI | Complete (API + Flutter client, real stack) | CI job `supabase-e2e` |
 
-Quality snapshot (2026-10-24, local stack): **785 Flutter tests + 1 integration
+Quality snapshot (2026-10-28, local stack): **797 Flutter tests + 1 integration
 test**, SQL/RLS suite green, web build green, analyzer with **0 errors and 0
 warnings** (only SDK deprecation infos from the pinned beta channel), restore
 drill green.
@@ -70,7 +70,7 @@ the main data it touches.
 | `shifts` | Open/close with expected-vs-counted and a denomination counter, movements, history filters, corrections, PDF | `shifts`, `cash_movements`, `shift_adjustments`, `list_shifts`, `adjust_shift` |
 | `reports` | Revenue, occupancy, site comparison, WhatsApp metrics, PDF | `report_revenue(_all)`, `report_occupancy`, `report_whatsapp` |
 | `notifications` | Inbox, bell, deep links, browser push toggle | `notifications`, `web_push_subscriptions` |
-| `settings` | Per-site identity, branding, retention, WhatsApp mode | `parking_settings`, `set_branding_logo` |
+| `settings` | Per-site identity, branding, currency (COP/USD), retention, WhatsApp mode | `parking_settings`, `set_branding_logo` |
 | `users` | Admin user management | `admin-users` Edge Function |
 | `lots` | Sites and membership | `my_lots`, `create_lot`, `set_lot_member`, `list_lot_members` |
 | `reservations` | Capacity holds | `category_reservations`, `create/cancel_reservation` |
@@ -129,13 +129,15 @@ Deployment: [`setup-cloud.md`](setup-cloud.md) (single VM + TLS proxy) and
 
 - **Android + Web only.** No iOS target, no desktop target.
 - **Internal receipts only.** No electronic invoicing.
-- **COP only, ES/EN only** (Spanish default; English at key parity).
+- **COP or USD only** (site-level, integer minor units) and **ES/EN only**
+  (system/Spanish default; English at key parity).
 - **Operator-provided credentials** for FCM, VAPID and Meta WhatsApp; without
   them the features are inert (in-app notifications still work).
 - **Evidence archival deletes objects.** Backups are the archive of record.
 - **`pg_cron` is not available in the shipped image's app database**, so
   scheduled work runs from host cron (documented); the functions are the same.
-- **Single currency and single tax regime** assumptions.
+- **Single currency and single tax regime** assumptions (no per-vehicle
+  currency, no tax engine).
 - **Physical bays are optional.** Without a map the board paints virtual
   capacity cells and capacity comes from Ajustes; with a map the bays define the
   capacity. Bicycles are not modelled.

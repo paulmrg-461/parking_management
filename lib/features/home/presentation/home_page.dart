@@ -6,9 +6,11 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/shell/app_destinations.dart';
 import '../../../core/l10n/l10n.dart';
+import '../../../core/l10n/locale_cubit.dart';
 import '../../reservations/domain/repositories/reservation_repository.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/app_icon_button.dart';
+import '../../../core/widgets/language_button.dart';
 import '../../../core/widgets/sync_badge.dart';
 import '../../../core/theme/theme_cubit.dart';
 import '../../../core/widgets/theme_mode_button.dart';
@@ -33,6 +35,15 @@ class HomePage extends StatefulWidget {
 
   @override
   State<HomePage> createState() => _HomePageState();
+}
+
+bool _hasLocaleCubit(BuildContext context) {
+  try {
+    context.read<LocaleCubit>();
+    return true;
+  } on ProviderNotFoundException {
+    return false;
+  }
 }
 
 bool _hasThemeCubit(BuildContext context) {
@@ -68,6 +79,7 @@ class _HomePageState extends State<HomePage> {
         actions: [
           const NotificationBell(),
           const SyncBadge(),
+          if (_hasLocaleCubit(context)) const LanguageButton(),
           if (_hasThemeCubit(context)) const ThemeModeButton(),
           // Wide screens sign out from the sidebar user card.
           if (MediaQuery.sizeOf(context).width < Layout.railBreakpoint)
