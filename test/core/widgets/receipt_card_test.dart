@@ -33,6 +33,18 @@ ReceiptData _cardData() => ReceiptData(
   ticketNumber: 'TCK-000042',
 );
 
+ReceiptData _cashData() => ReceiptData(
+  kind: ReceiptKind.checkOut,
+  plate: 'ABC123',
+  entryTime: DateTime(2026, 1, 1, 8, 30),
+  exitTime: DateTime(2026, 1, 1, 11, 45),
+  amountCharged: 12500,
+  paymentMethod: 'cash',
+  cashReceived: 20000,
+  cashChange: 7500,
+  ticketNumber: 'TCK-000042',
+);
+
 void main() {
   testWidgets('check-out receipt formats date, duration and amount', (
     tester,
@@ -237,5 +249,22 @@ void main() {
     );
 
     expect(find.text('Tarjeta · Débito'), findsOneWidget);
+  });
+
+  testWidgets('a cash receipt shows the amount received and change', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      testApp(
+        Scaffold(
+          body: SingleChildScrollView(child: ReceiptCard(data: _cashData())),
+        ),
+      ),
+    );
+
+    expect(find.text('Recibido'), findsOneWidget);
+    expect(find.text(r'$20.000'), findsOneWidget);
+    expect(find.text('Cambio'), findsOneWidget);
+    expect(find.text(r'$7.500'), findsOneWidget);
   });
 }

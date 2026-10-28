@@ -93,6 +93,13 @@ class EscPosGenerator {
       _row(bytes, labels.payment, labels.paymentMethod(data.paymentMethod!, data.cardType));
     }
 
+    if (data.isCheckOut && !data.pendingSync && data.cashReceived != null) {
+      _row(bytes, labels.received, CopFormatter.format(data.cashReceived!));
+    }
+    if (data.isCheckOut && !data.pendingSync && data.cashChange != null) {
+      _row(bytes, labels.change, CopFormatter.format(data.cashChange!));
+    }
+
     if (data.isCheckOut && !data.pendingSync && data.ticketNumber != null) {
       _row(bytes, labels.ticket, data.ticketNumber!);
     }

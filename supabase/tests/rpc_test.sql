@@ -1975,6 +1975,46 @@ begin
         raise exception 'session lost the card type';
     end if;
 
+    -- Cash can record the amount received and the change; short cash is refused.
+    entry := public.check_in(
+        'CASH01', card_cat, null, null, '[]'::jsonb, null,
+        now() - interval '1 minute'
+    );
+    sid := (entry ->> 'id')::integer;
+    receipt := public.check_out(
+        sid, null, null, 'cash', 0, null, false, null, null, null, 5000
+    );
+    if (receipt ->> 'cash_received')::integer <> 5000
+       or (receipt ->> 'cash_change')::integer <> 4000 then
+        raise exception 'cash change was not stored: %', receipt;
+    end if;
+    if (select cash_received from public.parking_sessions where id = sid) <> 5000
+       or (select cash_change from public.parking_sessions where id = sid) <> 4000 then
+        raise exception 'session lost the cash change';
+    end if;
+
+    entry := public.check_in(
+        'CASH02', card_cat, null, null, '[]'::jsonb, null,
+        now() - interval '1 minute'
+    );
+    sid := (entry ->> 'id')::integer;
+    refused := false;
+    begin
+        perform public.check_out(
+            sid, null, null, 'cash', 0, null, false, null, null, null, 500
+        );
+        raise exception 'short cash was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidCashReceivedError%' then
+            raise;
+        end if;
+        refused := true;
+    end;
+    if not refused then
+        raise exception 'short cash was not refused';
+    end if;
+    perform public.check_out(sid, null, null, 'cash');
+
     -- Cash with a stray card type is ignored (no card fields).
     entry := public.check_in(
         'CARD02', card_cat, null, null, '[]'::jsonb, null,

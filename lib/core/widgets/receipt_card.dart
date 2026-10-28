@@ -334,6 +334,16 @@ class ReceiptCard extends StatelessWidget {
               cardType: data.cardType,
             ),
           ),
+        if (data.isCheckOut && !data.pendingSync && data.cashReceived != null)
+          ReceiptRow(
+            label: l10n.receiptCashReceived,
+            value: Formatters.money(data.cashReceived!),
+          ),
+        if (data.isCheckOut && !data.pendingSync && data.cashChange != null)
+          ReceiptRow(
+            label: l10n.receiptChange,
+            value: Formatters.money(data.cashChange!),
+          ),
         if (data.isCheckOut && !data.pendingSync && data.ticketNumber != null)
           Padding(
             padding: const EdgeInsets.only(top: Space.md),

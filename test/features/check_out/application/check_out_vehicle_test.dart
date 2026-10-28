@@ -48,6 +48,7 @@ class _FakeRepository implements CheckOutRepository {
     bool lostTicket = false,
     String? lostTicketReason,
     String? cardType,
+    int? cashReceived,
   }) async {
     checkedOut.add(sessionId);
     return CheckOutReceipt(

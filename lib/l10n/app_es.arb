@@ -606,6 +606,8 @@
   "receiptEstimated": "Valor estimado",
   "receiptEstimateUnavailable": "Se calcula al cerrar",
   "receiptAmount": "Total cobrado",
+  "receiptCashReceived": "Recibido",
+  "receiptChange": "Cambio",
   "receiptPayment": "Pago",
   "receiptDiscount": "Descuento",
   "checkOutSettlement": "Liquidación",

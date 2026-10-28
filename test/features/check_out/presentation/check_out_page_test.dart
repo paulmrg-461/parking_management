@@ -112,6 +112,7 @@ class _FakeCheckOutRepository implements CheckOutRepository {
     bool lostTicket = false,
     String? lostTicketReason,
     String? cardType,
+    int? cashReceived,
   }) async {
     final error = checkOutError;
     if (error != null) throw error;

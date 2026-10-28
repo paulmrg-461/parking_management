@@ -574,6 +574,8 @@
   "receiptEstimated": "Estimated amount",
   "receiptEstimateUnavailable": "Computed on close",
   "receiptAmount": "Amount charged",
+  "receiptCashReceived": "Received",
+  "receiptChange": "Change",
   "receiptPayment": "Payment",
   "receiptDiscount": "Discount",
   "checkOutSettlement": "Settlement",

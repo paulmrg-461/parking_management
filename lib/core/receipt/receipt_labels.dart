@@ -14,6 +14,8 @@ class ReceiptLabels {
     required this.total,
     required this.discount,
     required this.payment,
+    required this.received,
+    required this.change,
     required this.ticket,
     required this.generatedOn,
     required this.thanks,
@@ -33,6 +35,8 @@ class ReceiptLabels {
   final String total;
   final String discount;
   final String payment;
+  final String received;
+  final String change;
   final String ticket;
   final String generatedOn;
   final String thanks;
@@ -60,6 +64,8 @@ class ReceiptLabels {
     total: 'Total',
     discount: 'Descuento',
     payment: 'Pago',
+    received: 'Recibido',
+    change: 'Cambio',
     ticket: 'Ticket',
     generatedOn: 'Generado el',
     thanks: 'Gracias por su visita',
@@ -80,6 +86,8 @@ class ReceiptLabels {
     total: 'Total',
     discount: 'Discount',
     payment: 'Payment',
+    received: 'Received',
+    change: 'Change',
     ticket: 'Ticket',
     generatedOn: 'Generated on',
     thanks: 'Thank you for your visit',

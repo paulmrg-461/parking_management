@@ -308,6 +308,7 @@ class _CheckOutPageState extends State<CheckOutPage> {
       lostTicket: choice.lostTicket,
       lostTicketReason: choice.lostTicketReason,
       cardType: choice.cardType?.wire,
+      cashReceived: choice.cashReceived,
     );
   }
 
@@ -398,6 +399,8 @@ class _CheckOutPageState extends State<CheckOutPage> {
     ticketNumber: receipt.ticketNumber,
     paymentMethod: receipt.paymentMethod,
     cardType: receipt.cardType,
+    cashReceived: receipt.cashReceived,
+    cashChange: receipt.cashChange,
     discountAmount: receipt.discountAmount,
     discountReason: receipt.discountReason,
     pendingSync: receipt.pendingSync,

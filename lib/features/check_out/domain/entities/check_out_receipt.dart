@@ -15,6 +15,8 @@ class CheckOutReceipt extends Equatable {
     required this.ticketNumber,
     this.paymentMethod = 'cash',
     this.cardType,
+    this.cashReceived,
+    this.cashChange,
     this.discountAmount = 0,
     this.discountReason,
     this.lostTicket = false,
@@ -29,6 +31,8 @@ class CheckOutReceipt extends Equatable {
   final String? ticketNumber;
   final String paymentMethod;
   final String? cardType;
+  final int? cashReceived;
+  final int? cashChange;
   final int discountAmount;
   final String? discountReason;
   final bool lostTicket;

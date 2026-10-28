@@ -26,6 +26,7 @@ abstract class CheckOutRepository {
     bool lostTicket = false,
     String? lostTicketReason,
     String? cardType,
+    int? cashReceived,
   });
 
   /// Fare the customer would pay right now (no side effects).

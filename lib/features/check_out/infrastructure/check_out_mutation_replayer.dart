@@ -25,6 +25,7 @@ class CheckOutMutationReplayer extends MutationReplayer {
       lostTicket: payload['lost_ticket'] == true,
       lostTicketReason: payload['lost_ticket_reason'] as String?,
       cardType: payload['card_type'] as String?,
+      cashReceived: (payload['cash_received'] as num?)?.toInt(),
       lotId: (payload['lot_id'] as num?)?.toInt(),
     );
   }

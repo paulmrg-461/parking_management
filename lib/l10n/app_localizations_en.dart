@@ -1760,6 +1760,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get receiptAmount => 'Amount charged';
 
   @override
+  String get receiptCashReceived => 'Received';
+
+  @override
+  String get receiptChange => 'Change';
+
+  @override
   String get receiptPayment => 'Payment';
 
   @override

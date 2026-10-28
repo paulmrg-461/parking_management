@@ -1771,6 +1771,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get receiptAmount => 'Total cobrado';
 
   @override
+  String get receiptCashReceived => 'Recibido';
+
+  @override
+  String get receiptChange => 'Cambio';
+
+  @override
   String get receiptPayment => 'Pago';
 
   @override

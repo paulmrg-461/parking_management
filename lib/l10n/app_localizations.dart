@@ -3236,6 +3236,18 @@ abstract class AppLocalizations {
   /// **'Total cobrado'**
   String get receiptAmount;
 
+  /// No description provided for @receiptCashReceived.
+  ///
+  /// In es, this message translates to:
+  /// **'Recibido'**
+  String get receiptCashReceived;
+
+  /// No description provided for @receiptChange.
+  ///
+  /// In es, this message translates to:
+  /// **'Cambio'**
+  String get receiptChange;
+
   /// No description provided for @receiptPayment.
   ///
   /// In es, this message translates to:

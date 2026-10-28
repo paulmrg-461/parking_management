@@ -64,6 +64,7 @@ class _FakeRemote implements CheckOutRemoteDataSource {
     bool lostTicket = false,
     String? lostTicketReason,
     String? cardType,
+    int? cashReceived,
     int? lotId,
   }) async {
     clientExitTimeUsed = clientExitTime;
