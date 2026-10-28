@@ -1892,6 +1892,42 @@ abstract class AppLocalizations {
   /// **'El espacio no existe'**
   String get errorSpotNotFound;
 
+  /// No description provided for @settingsSectionIdentity.
+  ///
+  /// In es, this message translates to:
+  /// **'Identidad'**
+  String get settingsSectionIdentity;
+
+  /// No description provided for @settingsSectionSpaces.
+  ///
+  /// In es, this message translates to:
+  /// **'Espacios y mapa'**
+  String get settingsSectionSpaces;
+
+  /// No description provided for @settingsSectionEvidence.
+  ///
+  /// In es, this message translates to:
+  /// **'Evidencia'**
+  String get settingsSectionEvidence;
+
+  /// No description provided for @settingsSectionMessaging.
+  ///
+  /// In es, this message translates to:
+  /// **'Mensajería'**
+  String get settingsSectionMessaging;
+
+  /// No description provided for @settingsOutOfServiceMapHint.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} bahía(s) en mantenimiento · se controla en el mapa'**
+  String settingsOutOfServiceMapHint(int count);
+
+  /// No description provided for @settingsOutOfServiceHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Se descuentan de los espacios disponibles'**
+  String get settingsOutOfServiceHint;
+
   /// No description provided for @settingsTitle.
   ///
   /// In es, this message translates to:
@@ -1921,12 +1957,6 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Motos fuera de servicio'**
   String get settingsMotoOutOfService;
-
-  /// No description provided for @settingsOutOfServiceHint.
-  ///
-  /// In es, this message translates to:
-  /// **'Se descuentan de los espacios disponibles'**
-  String get settingsOutOfServiceHint;
 
   /// No description provided for @settingsOutOfServiceTooMany.
   ///

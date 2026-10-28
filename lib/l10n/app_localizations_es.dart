@@ -1000,6 +1000,27 @@ class AppLocalizationsEs extends AppLocalizations {
   String get errorSpotNotFound => 'El espacio no existe';
 
   @override
+  String get settingsSectionIdentity => 'Identidad';
+
+  @override
+  String get settingsSectionSpaces => 'Espacios y mapa';
+
+  @override
+  String get settingsSectionEvidence => 'Evidencia';
+
+  @override
+  String get settingsSectionMessaging => 'Mensajería';
+
+  @override
+  String settingsOutOfServiceMapHint(int count) {
+    return '$count bahía(s) en mantenimiento · se controla en el mapa';
+  }
+
+  @override
+  String get settingsOutOfServiceHint =>
+      'Se descuentan de los espacios disponibles';
+
+  @override
   String get settingsTitle => 'Configuración del parqueadero';
 
   @override
@@ -1013,10 +1034,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get settingsMotoOutOfService => 'Motos fuera de servicio';
-
-  @override
-  String get settingsOutOfServiceHint =>
-      'Se descuentan de los espacios disponibles';
 
   @override
   String get settingsOutOfServiceTooMany =>

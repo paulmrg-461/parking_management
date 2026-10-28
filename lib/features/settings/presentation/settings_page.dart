@@ -16,6 +16,8 @@ import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/widgets/submission_listener.dart';
 import '../application/branding_cubit.dart';
 import '../application/settings_cubit.dart';
+import '../../check_out/domain/entities/slot_board.dart';
+import '../../spots/domain/repositories/spot_repository.dart';
 import '../domain/entities/parking_settings.dart';
 
 final _websitePattern = RegExp(
@@ -25,7 +27,11 @@ final _websitePattern = RegExp(
 
 /// Admin-only form for the singleton parking identity plus logo upload.
 class SettingsPage extends StatefulWidget {
-  const SettingsPage({super.key, this.pickLogo});
+  const SettingsPage({super.key, this.pickLogo, this.spots});
+
+  /// Optional map access: when the site already drew bays, out-of-service is
+  /// per bay and the count fields are hidden.
+  final SpotRepository? spots;
 
   /// Test seam: returns the picked logo bytes (or null when cancelled).
   final Future<Uint8List?> Function()? pickLogo;
@@ -51,6 +57,10 @@ class _SettingsPageState extends State<SettingsPage> {
   var _seeded = false;
   bool _whatsappAuto = false;
   List<String>? _baseline;
+  int _carBays = 0;
+  int _carBaysOut = 0;
+  int _motoBays = 0;
+  int _motoBaysOut = 0;
 
   @override
   void initState() {
@@ -68,6 +78,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _carOutOfService = TextEditingController();
     _motoOutOfService = TextEditingController();
     unawaited(context.read<SettingsCubit>().load());
+    unawaited(_loadSpotCounts());
   }
 
   @override
@@ -125,6 +136,33 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
       ),
     );
+  }
+
+  /// Bay counts per group, so the form can explain that out-of-service is per
+  /// bay once a map exists. Best effort: without a map the counters stay.
+  Future<void> _loadSpotCounts() async {
+    final repository = widget.spots;
+    if (repository == null) {
+      return;
+    }
+    try {
+      final spots = await repository.list();
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _carBays = spots.where((spot) => spot.group == SlotGroup.car).length;
+        _carBaysOut = spots
+            .where((spot) => spot.group == SlotGroup.car && !spot.active)
+            .length;
+        _motoBays = spots.where((spot) => spot.group == SlotGroup.moto).length;
+        _motoBaysOut = spots
+            .where((spot) => spot.group == SlotGroup.moto && !spot.active)
+            .length;
+      });
+    } catch (_) {
+      // The counts are explanatory only; the form keeps working.
+    }
   }
 
   /// Every editable field, so "unsaved changes" needs no per-field listener.
@@ -201,7 +239,12 @@ class _SettingsPageState extends State<SettingsPage> {
         padding: const EdgeInsets.all(Space.md),
         children: [
           _logoSection(context),
-          const SizedBox(height: Space.md),
+          const SizedBox(height: Space.lg),
+          _SectionHeader(
+            icon: Icons.badge_outlined,
+            title: l10n.settingsSectionIdentity,
+          ),
+          const SizedBox(height: Space.sm),
           TextFormField(
             key: const Key('settings_name'),
             controller: _name,
@@ -211,18 +254,21 @@ class _SettingsPageState extends State<SettingsPage> {
                 ? l10n.fieldRequired
                 : null,
           ),
+          const SizedBox(height: Space.md),
           TextFormField(
             key: const Key('settings_address'),
             controller: _address,
             maxLength: 160,
             decoration: InputDecoration(labelText: l10n.settingsAddress),
           ),
+          const SizedBox(height: Space.md),
           TextFormField(
             key: const Key('settings_schedule'),
             controller: _schedule,
             maxLength: 120,
             decoration: InputDecoration(labelText: l10n.settingsSchedule),
           ),
+          const SizedBox(height: Space.md),
           TextFormField(
             key: const Key('settings_phone'),
             controller: _phone,
@@ -230,6 +276,7 @@ class _SettingsPageState extends State<SettingsPage> {
             keyboardType: TextInputType.phone,
             decoration: InputDecoration(labelText: l10n.settingsPhone),
           ),
+          const SizedBox(height: Space.md),
           TextFormField(
             key: const Key('settings_website'),
             controller: _website,
@@ -243,6 +290,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   : null;
             },
           ),
+          const SizedBox(height: Space.md),
           TextFormField(
             key: const Key('settings_whatsapp'),
             controller: _whatsapp,
@@ -250,22 +298,12 @@ class _SettingsPageState extends State<SettingsPage> {
             keyboardType: TextInputType.phone,
             decoration: InputDecoration(labelText: l10n.settingsWhatsapp),
           ),
-          TextFormField(
-            key: const Key('settings_evidence_retention'),
-            controller: _evidenceRetention,
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: InputDecoration(
-              labelText: l10n.settingsEvidenceRetention,
-              helperText: l10n.settingsEvidenceRetentionHint,
-            ),
-            validator: (value) {
-              final days = int.tryParse((value ?? '').trim());
-              return days == null || days < 0 || days > 3650
-                  ? l10n.invalidAmount
-                  : null;
-            },
+          const SizedBox(height: Space.lg),
+          _SectionHeader(
+            icon: Icons.grid_view_rounded,
+            title: l10n.settingsSectionSpaces,
           ),
+          const SizedBox(height: Space.sm),
           TextFormField(
             key: const Key('settings_car_capacity'),
             controller: _carCapacity,
@@ -274,9 +312,11 @@ class _SettingsPageState extends State<SettingsPage> {
             decoration: InputDecoration(
               labelText: l10n.settingsCarCapacity,
               helperText: l10n.settingsCapacityHint,
+              helperMaxLines: 2,
             ),
             validator: _capacity,
           ),
+          const SizedBox(height: Space.md),
           TextFormField(
             key: const Key('settings_moto_capacity'),
             controller: _motoCapacity,
@@ -285,31 +325,49 @@ class _SettingsPageState extends State<SettingsPage> {
             decoration: InputDecoration(
               labelText: l10n.settingsMotoCapacity,
               helperText: l10n.settingsCapacityHint,
+              helperMaxLines: 2,
             ),
             validator: _capacity,
           ),
-          TextFormField(
-            key: const Key('settings_car_out_of_service'),
-            controller: _carOutOfService,
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: InputDecoration(
-              labelText: l10n.settingsCarOutOfService,
-              helperText: l10n.settingsOutOfServiceHint,
+          const SizedBox(height: Space.md),
+          if (_carBays > 0)
+            _MapMaintenanceNote(
+              label: l10n.homeCapacityCars,
+              bays: _carBaysOut,
+            )
+          else
+            TextFormField(
+              key: const Key('settings_car_out_of_service'),
+              controller: _carOutOfService,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: InputDecoration(
+                labelText: l10n.settingsCarOutOfService,
+                helperText: l10n.settingsOutOfServiceHint,
+                helperMaxLines: 2,
+              ),
+              validator: (value) => _outOfService(value, _carCapacity.text),
             ),
-            validator: (value) => _outOfService(value, _carCapacity.text),
-          ),
-          TextFormField(
-            key: const Key('settings_moto_out_of_service'),
-            controller: _motoOutOfService,
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: InputDecoration(
-              labelText: l10n.settingsMotoOutOfService,
-              helperText: l10n.settingsOutOfServiceHint,
+          if (_carBays > 0) const SizedBox(height: Space.md),
+          if (_motoBays > 0)
+            _MapMaintenanceNote(
+              label: l10n.homeCapacityMotos,
+              bays: _motoBaysOut,
+            )
+          else
+            TextFormField(
+              key: const Key('settings_moto_out_of_service'),
+              controller: _motoOutOfService,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: InputDecoration(
+                labelText: l10n.settingsMotoOutOfService,
+                helperText: l10n.settingsOutOfServiceHint,
+                helperMaxLines: 2,
+              ),
+              validator: (value) => _outOfService(value, _motoCapacity.text),
             ),
-            validator: (value) => _outOfService(value, _motoCapacity.text),
-          ),
+          const SizedBox(height: Space.md),
           TextFormField(
             key: const Key('settings_key_capacity'),
             controller: _keyCapacity,
@@ -318,15 +376,44 @@ class _SettingsPageState extends State<SettingsPage> {
             decoration: InputDecoration(
               labelText: l10n.settingsKeyCapacity,
               helperText: l10n.settingsCapacityHint,
+              helperMaxLines: 2,
             ),
             validator: _capacity,
           ),
-          const SizedBox(height: Space.sm),
+          const SizedBox(height: Space.md),
           OutlinedButton.icon(
             key: const Key('settings_spots_map'),
             onPressed: () => context.go('/spots'),
             icon: const Icon(Icons.grid_view_rounded),
             label: Text(l10n.spotsTitle),
+          ),
+          const SizedBox(height: Space.lg),
+          _SectionHeader(
+            icon: Icons.photo_camera_outlined,
+            title: l10n.settingsSectionEvidence,
+          ),
+          const SizedBox(height: Space.sm),
+          TextFormField(
+            key: const Key('settings_evidence_retention'),
+            controller: _evidenceRetention,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: InputDecoration(
+              labelText: l10n.settingsEvidenceRetention,
+              helperText: l10n.settingsEvidenceRetentionHint,
+              helperMaxLines: 2,
+            ),
+            validator: (value) {
+              final days = int.tryParse((value ?? '').trim());
+              return days == null || days < 0 || days > 3650
+                  ? l10n.invalidAmount
+                  : null;
+            },
+          ),
+          const SizedBox(height: Space.lg),
+          _SectionHeader(
+            icon: Icons.chat_outlined,
+            title: l10n.settingsSectionMessaging,
           ),
           SwitchListTile(
             key: const Key('settings_whatsapp_auto'),
@@ -336,7 +423,7 @@ class _SettingsPageState extends State<SettingsPage> {
             title: Text(l10n.settingsWhatsappAuto),
             subtitle: Text(l10n.settingsWhatsappAutoHint),
           ),
-          const SizedBox(height: Space.md),
+          const SizedBox(height: Space.lg),
           FilledButton(
             onPressed: () => _save(context, settings),
             child: Text(l10n.actionSave),
@@ -449,5 +536,65 @@ class _SettingsPageState extends State<SettingsPage> {
       maxWidth: 1024,
     );
     return file == null ? null : await file.readAsBytes();
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.icon, required this.title});
+
+  final IconData icon;
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: theme.colorScheme.primary),
+        const SizedBox(width: Space.xs),
+        Text(
+          title,
+          style: theme.textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Out-of-service is a per-bay state once the site has a map.
+class _MapMaintenanceNote extends StatelessWidget {
+  const _MapMaintenanceNote({required this.label, required this.bays});
+
+  final String label;
+  final int bays;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(Space.sm),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(Radii.sm),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.build_circle_outlined,
+            size: 18,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: Space.xs),
+          Expanded(
+            child: Text(
+              '$label · ${context.l10n.settingsOutOfServiceMapHint(bays)}',
+              style: theme.textTheme.bodySmall,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

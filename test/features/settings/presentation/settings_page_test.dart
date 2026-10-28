@@ -7,9 +7,13 @@ import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/features/settings/application/branding_cubit.dart';
 import 'package:parking_management/features/settings/application/settings_cubit.dart';
 import 'package:parking_management/features/settings/domain/entities/parking_settings.dart';
+import 'package:parking_management/features/check_out/domain/entities/slot_board.dart';
 import 'package:parking_management/features/settings/presentation/settings_page.dart';
+import 'package:parking_management/features/spots/domain/entities/parking_spot.dart';
+import 'package:parking_management/features/spots/domain/repositories/spot_repository.dart';
 
 import '../../../helpers/fake_settings_repository.dart';
+import '../../../helpers/fake_spot_repository.dart';
 import '../../../helpers/test_app.dart';
 
 const _configured = ParkingSettings(
@@ -25,6 +29,7 @@ Future<void> pumpPage(
   required FakeParkingSettingsRepository repository,
   BrandingCubit? branding,
   Future<Uint8List?> Function()? pickLogo,
+  SpotRepository? spots,
 }) async {
   // Tall viewport: the settings form (logo + 8 fields + save) must fit
   // without fighting ListView's lazy children while tapping.
@@ -39,7 +44,7 @@ Future<void> pumpPage(
           value: branding ?? BrandingCubit(repository),
         ),
       ],
-      child: testApp(SettingsPage(pickLogo: pickLogo)),
+      child: testApp(SettingsPage(pickLogo: pickLogo, spots: spots)),
     ),
   );
   await tester.pumpAndSettle();
@@ -54,6 +59,8 @@ void main() {
       find.byKey(const Key('settings_name')),
       'Parqueadero Sur',
     );
+    await tester.ensureVisible(find.widgetWithText(FilledButton, 'Guardar'));
+    await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, 'Guardar'));
     await tester.pumpAndSettle();
 
@@ -69,6 +76,8 @@ void main() {
     await pumpPage(tester, repository: repository);
 
     await tester.enterText(find.byKey(const Key('settings_name')), 'Nope');
+    await tester.ensureVisible(find.widgetWithText(FilledButton, 'Guardar'));
+    await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, 'Guardar'));
     await tester.pumpAndSettle();
 
@@ -194,5 +203,55 @@ void main() {
       findsOneWidget,
     );
     expect(repository.settings.carOutOfService, 0);
+  });
+
+  testWidgets('Success: a drawn map replaces the out-of-service counters', (
+    tester,
+  ) async {
+    final repository = FakeParkingSettingsRepository(_configured);
+    await pumpPage(
+      tester,
+      repository: repository,
+      spots: FakeSpotRepository(const [
+        ParkingSpot(id: 1, code: 'A1', group: SlotGroup.car, row: 0, col: 0),
+        ParkingSpot(
+          id: 2,
+          code: 'A2',
+          group: SlotGroup.car,
+          row: 0,
+          col: 1,
+          active: false,
+        ),
+        ParkingSpot(id: 3, code: 'M1', group: SlotGroup.moto, row: 0, col: 0),
+      ]),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.textContaining('se controla en el mapa').first,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+
+    expect(
+      find.byKey(const Key('settings_car_out_of_service')),
+      findsNothing,
+    );
+    expect(find.textContaining('1 bahía(s) en mantenimiento'), findsOneWidget);
+    expect(
+      find.byKey(const Key('settings_car_capacity')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('Security: without a map the counters stay editable', (
+    tester,
+  ) async {
+    final repository = FakeParkingSettingsRepository(_configured);
+    await pumpPage(tester, repository: repository);
+
+    expect(
+      find.byKey(const Key('settings_car_out_of_service')),
+      findsWidgets,
+    );
   });
 }

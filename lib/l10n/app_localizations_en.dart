@@ -992,6 +992,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorSpotNotFound => 'The spot does not exist';
 
   @override
+  String get settingsSectionIdentity => 'Identity';
+
+  @override
+  String get settingsSectionSpaces => 'Spots and map';
+
+  @override
+  String get settingsSectionEvidence => 'Evidence';
+
+  @override
+  String get settingsSectionMessaging => 'Messaging';
+
+  @override
+  String settingsOutOfServiceMapHint(int count) {
+    return '$count bay(s) under maintenance · controlled on the map';
+  }
+
+  @override
+  String get settingsOutOfServiceHint => 'Subtracted from the available spots';
+
+  @override
   String get settingsTitle => 'Parking settings';
 
   @override
@@ -1005,9 +1025,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsMotoOutOfService => 'Motorcycles out of service';
-
-  @override
-  String get settingsOutOfServiceHint => 'Subtracted from the available spots';
 
   @override
   String get settingsOutOfServiceTooMany =>
