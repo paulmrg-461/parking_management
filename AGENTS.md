@@ -8,7 +8,8 @@ commands, invariants and known gotchas. Update it when a batch lands.
 Deployment and design docs live in `docs/` (`README.md` indexes them):
 `environment-guide.en.md` / `environment-guide.md` (onboarding, EN/ES),
 `setup-local.md`, `setup-cloud.md`, `deployment-requirements.md`,
-`architecture.md`, `infrastructure.md` and `database.md`; `QUICKSTART.md` at the root is the one-page command sheet.
+`architecture.md`, `infrastructure.md` and `database.md`; `QUICKSTART.md` at the
+root is the one-page command sheet.
 `docs/project-overview.md` is the executive summary (module status, limitations)
 and `CHANGELOG.md` tracks notable changes. Keep the changelog, the overview and
 the Mermaid diagrams in sync with code changes.
