@@ -104,6 +104,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorStorage => 'Could not save data on this device';
 
   @override
+  String get evidenceGateTitle => 'Enter the plate to see the evidence';
+
+  @override
+  String get evidenceGateHint =>
+      'The plate printed on the receipt is the access key.';
+
+  @override
+  String get evidenceUnlock => 'See evidence';
+
+  @override
   String get evidenceTitle => 'Vehicle evidence';
 
   @override

@@ -93,4 +93,34 @@ void main() {
 
     expect(find.text('Este ingreso no tiene fotos ni videos.'), findsOneWidget);
   });
+
+  testWidgets('Security: without the plate in the link it asks for the key', (
+    tester,
+  ) async {
+    final repository = FakeEvidenceRepository(
+      evidence: PublicEvidence(
+        plate: 'ABC123',
+        entryTime: DateTime(2026, 10, 28, 8),
+      ),
+    );
+    await pumpPage(tester, repository, plate: null);
+
+    expect(find.byKey(const Key('evidence_plate')), findsOneWidget);
+    await tester.enterText(find.byKey(const Key('evidence_plate')), 'abc123');
+    await tester.tap(find.byKey(const Key('evidence_unlock')));
+    await tester.pumpAndSettle();
+
+    expect(repository.lastPlate, 'ABC123');
+    expect(find.text('Clave de acceso: ABC123'), findsOneWidget);
+  });
+
+  testWidgets('Security: an invalid session id never unlocks the page', (
+    tester,
+  ) async {
+    await pumpPage(tester, FakeEvidenceRepository(), sessionId: null, plate: null);
+
+    expect(find.text('Este enlace no es válido o la placa no coincide.'),
+        findsOneWidget);
+    expect(find.byKey(const Key('evidence_plate')), findsNothing);
+  });
 }

@@ -489,7 +489,7 @@ class _CheckInPageState extends State<CheckInPage> {
       pendingSync: result.status == ParkingSessionStatus.pendingSync,
       evidenceUrl: result.status == ParkingSessionStatus.pendingSync
           ? null
-          : publicEvidenceUrl(result.id, result.plate),
+          : publicEvidenceUrl(result.id),
     );
     await showReceipt(
       context,
@@ -1152,7 +1152,7 @@ class _SessionTile extends StatelessWidget {
       pendingSync: session.status == ParkingSessionStatus.pendingSync,
       evidenceUrl: session.status == ParkingSessionStatus.pendingSync
           ? null
-          : publicEvidenceUrl(session.id, session.plate),
+          : publicEvidenceUrl(session.id),
     );
     showReceipt(
       context,

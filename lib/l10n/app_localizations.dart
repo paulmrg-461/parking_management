@@ -272,6 +272,24 @@ abstract class AppLocalizations {
   /// **'No se pudo guardar la información en el dispositivo'**
   String get errorStorage;
 
+  /// No description provided for @evidenceGateTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresa la placa para ver las evidencias'**
+  String get evidenceGateTitle;
+
+  /// No description provided for @evidenceGateHint.
+  ///
+  /// In es, this message translates to:
+  /// **'La placa impresa en el recibo es la clave de acceso.'**
+  String get evidenceGateHint;
+
+  /// No description provided for @evidenceUnlock.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver evidencias'**
+  String get evidenceUnlock;
+
   /// No description provided for @evidenceTitle.
   ///
   /// In es, this message translates to:

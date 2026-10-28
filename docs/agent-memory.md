@@ -13,7 +13,7 @@ HEAD `e7351da`).
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0064` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 764 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 766 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -55,7 +55,8 @@ HEAD `e7351da`).
   `session_records` (`0063`) also takes an inclusive business-date range
   (`p_from`/`p_to`); exports use `RecordsCubit.exportAll()` (pages server-side,
   cap 2000) with `recordsCsv` (clipboard) and `buildRecordsPdf` (share sheet).
-- Public evidence: `/evidence?session=..&plate=..` is a **public route**
+- Public evidence: `/evidence?session=..` is a **public route** whose gate asks
+  for the plate (the link never carries it);
   (`authRedirect` allows it) backed by the `public-evidence` Edge Function
   (service role, verifies session + plate, signs Storage URLs for 1 h; uses the
   caller host so the links are reachable). Receipts print a big check-out QR
@@ -701,7 +702,7 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 ## Latest verification (2026-10-28)
 
-- `flutter test`: 764 passed (+1 live-stack integration skipped); `flutter
+- `flutter test`: 766 passed (+1 live-stack integration skipped); `flutter
   analyze` 144 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
 - `supabase/tests/run.sh` passed (migrations `0001`–`0057`); `e2e.sh` passed

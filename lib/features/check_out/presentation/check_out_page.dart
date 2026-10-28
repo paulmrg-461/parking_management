@@ -401,7 +401,7 @@ class _CheckOutPageState extends State<CheckOutPage> {
     pendingSync: receipt.pendingSync,
     evidenceUrl: receipt.pendingSync
         ? null
-        : publicEvidenceUrl(receipt.id, receipt.plate),
+        : publicEvidenceUrl(receipt.id),
   );
 }
 
@@ -599,7 +599,7 @@ class _SessionTile extends StatelessWidget {
       plate: plate,
       entryTime: session.entryTime,
       photoCount: session.photoCount,
-      evidenceUrl: publicEvidenceUrl(session.id, plate),
+      evidenceUrl: publicEvidenceUrl(session.id),
     );
     return showReceipt(
       context,

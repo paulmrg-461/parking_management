@@ -105,6 +105,16 @@ class AppLocalizationsEs extends AppLocalizations {
       'No se pudo guardar la información en el dispositivo';
 
   @override
+  String get evidenceGateTitle => 'Ingresa la placa para ver las evidencias';
+
+  @override
+  String get evidenceGateHint =>
+      'La placa impresa en el recibo es la clave de acceso.';
+
+  @override
+  String get evidenceUnlock => 'Ver evidencias';
+
+  @override
   String get evidenceTitle => 'Evidencias del vehículo';
 
   @override

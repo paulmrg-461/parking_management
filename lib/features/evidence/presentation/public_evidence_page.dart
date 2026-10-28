@@ -27,16 +27,37 @@ class PublicEvidencePage extends StatefulWidget {
 }
 
 class _PublicEvidencePageState extends State<PublicEvidencePage> {
+  final _plate = TextEditingController();
+  String? _key;
+
   @override
   void initState() {
     super.initState();
-    unawaited(_load());
+    _key = widget.plate;
+    if ((_key ?? '').trim().isNotEmpty) {
+      unawaited(_load());
+    }
+  }
+
+  @override
+  void dispose() {
+    _plate.dispose();
+    super.dispose();
   }
 
   Future<void> _load() => context.read<EvidenceCubit>().load(
     sessionId: widget.sessionId,
-    plate: widget.plate,
+    plate: _key,
   );
+
+  void _unlock() {
+    final plate = _plate.text.trim().toUpperCase();
+    if (plate.isEmpty) {
+      return;
+    }
+    setState(() => _key = plate);
+    unawaited(_load());
+  }
 
   Future<void> _open(String url) async {
     final uri = Uri.tryParse(url);
@@ -52,7 +73,15 @@ class _PublicEvidencePageState extends State<PublicEvidencePage> {
     return Scaffold(
       appBar: AppBar(title: Text(l10n.evidenceTitle)),
       body: BlocBuilder<EvidenceCubit, EvidenceState>(
-        builder: (context, state) => switch (state.status) {
+        builder: (context, state) {
+          if ((_key ?? '').trim().isEmpty) {
+            return _PlateGate(
+              sessionInvalid: widget.sessionId == null || widget.sessionId! <= 0,
+              controller: _plate,
+              onUnlock: _unlock,
+            );
+          }
+          return switch (state.status) {
           EvidenceStatus.initial || EvidenceStatus.loading => const Center(
             child: CircularProgressIndicator(),
           ),
@@ -68,12 +97,83 @@ class _PublicEvidencePageState extends State<PublicEvidencePage> {
               ],
             ),
           ),
-          EvidenceStatus.loaded => _EvidenceBody(
-            evidence: state.evidence!,
-            onOpen: _open,
-          ),
+            EvidenceStatus.loaded => _EvidenceBody(
+              evidence: state.evidence!,
+              onOpen: _open,
+            ),
+          };
         },
       ),
+    );
+  }
+}
+
+class _PlateGate extends StatelessWidget {
+  const _PlateGate({
+    required this.sessionInvalid,
+    required this.controller,
+    required this.onUnlock,
+  });
+
+  final bool sessionInvalid;
+  final TextEditingController controller;
+  final VoidCallback onUnlock;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    return ListView(
+      padding: const EdgeInsets.all(Space.lg),
+      children: [
+        Icon(
+          Icons.lock_outline,
+          size: Space.xxl,
+          color: theme.colorScheme.primary,
+        ),
+        const SizedBox(height: Space.md),
+        Text(
+          l10n.evidenceGateTitle,
+          textAlign: TextAlign.center,
+          style: theme.textTheme.titleMedium,
+        ),
+        const SizedBox(height: Space.xs),
+        Text(
+          l10n.evidenceGateHint,
+          textAlign: TextAlign.center,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: Space.lg),
+        if (sessionInvalid)
+          Text(
+            l10n.evidenceInvalid,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: theme.colorScheme.error),
+          )
+        else ...[
+          TextField(
+            key: const Key('evidence_plate'),
+            controller: controller,
+            autofocus: true,
+            textCapitalization: TextCapitalization.characters,
+            textInputAction: TextInputAction.go,
+            onSubmitted: (_) => onUnlock(),
+            decoration: InputDecoration(
+              labelText: l10n.plateLabel,
+              prefixIcon: const Icon(Icons.badge_outlined),
+            ),
+          ),
+          const SizedBox(height: Space.md),
+          FilledButton.icon(
+            key: const Key('evidence_unlock'),
+            onPressed: onUnlock,
+            icon: const Icon(Icons.lock_open),
+            label: Text(l10n.evidenceUnlock),
+          ),
+        ],
+      ],
     );
   }
 }

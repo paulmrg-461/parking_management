@@ -10,8 +10,7 @@ const evidencePath = '/evidence';
 const _appUrl = String.fromEnvironment('APP_URL');
 
 Uri? publicEvidenceUri(
-  int sessionId,
-  String plate, {
+  int sessionId, {
   String? base,
 }) {
   final raw = (base ?? _appUrl).trim();
@@ -20,17 +19,14 @@ Uri? publicEvidenceUri(
   if (root.isEmpty) {
     return null;
   }
-  final normalized = plate.replaceAll(RegExp(r'\s'), '').toUpperCase();
   final parsed = Uri.parse(root);
   return parsed.replace(
     path: evidencePath,
-    queryParameters: {
-      'session': '$sessionId',
-      'plate': normalized,
-    },
+    queryParameters: {'session': '$sessionId'},
   );
 }
 
-/// Printable evidence URL, or null when the app URL is not configured.
-String? publicEvidenceUrl(int sessionId, String plate, {String? base}) =>
-    publicEvidenceUri(sessionId, plate, base: base)?.toString();
+/// Printable evidence URL, or null when the app URL is not configured. The
+/// plate is intentionally absent: it is the access key the customer types.
+String? publicEvidenceUrl(int sessionId, {String? base}) =>
+    publicEvidenceUri(sessionId, base: base)?.toString();
