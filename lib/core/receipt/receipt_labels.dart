@@ -14,10 +14,13 @@ class ReceiptLabels {
     required this.total,
     required this.discount,
     required this.payment,
+    required this.received,
+    required this.change,
     required this.ticket,
     required this.generatedOn,
     required this.thanks,
     required this.scanHint,
+    required this.evidenceHint,
     required this.paymentMethod,
   });
 
@@ -32,6 +35,8 @@ class ReceiptLabels {
   final String total;
   final String discount;
   final String payment;
+  final String received;
+  final String change;
   final String ticket;
   final String generatedOn;
   final String thanks;
@@ -39,9 +44,12 @@ class ReceiptLabels {
   /// Caption under the QR that opens the check-out flow.
   final String scanHint;
 
+  /// Caption under the smaller QR that opens the public evidence page.
+  final String evidenceHint;
+
   /// Localizes a wire value (`cash`, `card`, `transfer`, `monthly_pass`,
-  /// `exempt`).
-  final String Function(String method) paymentMethod;
+  /// `exempt`) plus the optional card type (`debit`/`credit`).
+  final String Function(String method, String? cardType) paymentMethod;
 
   /// Accent-free labels: thermal printers run on a CP437 code page.
   static const spanish = ReceiptLabels(
@@ -56,10 +64,13 @@ class ReceiptLabels {
     total: 'Total',
     discount: 'Descuento',
     payment: 'Pago',
+    received: 'Recibido',
+    change: 'Cambio',
     ticket: 'Ticket',
     generatedOn: 'Generado el',
     thanks: 'Gracias por su visita',
     scanHint: 'Presente este codigo al salir',
+    evidenceHint: 'Evidencias del vehiculo (clave: placa)',
     paymentMethod: _paymentEs,
   );
 
@@ -75,10 +86,13 @@ class ReceiptLabels {
     total: 'Total',
     discount: 'Discount',
     payment: 'Payment',
+    received: 'Received',
+    change: 'Change',
     ticket: 'Ticket',
     generatedOn: 'Generated on',
     thanks: 'Thank you for your visit',
     scanHint: 'Show this code at the exit',
+    evidenceHint: 'Vehicle evidence (key: plate)',
     paymentMethod: _paymentEn,
   );
 
@@ -86,7 +100,9 @@ class ReceiptLabels {
   factory ReceiptLabels.forLanguage(String languageCode) =>
       languageCode == 'en' ? english : spanish;
 
-  static String _paymentEs(String method) => switch (method) {
+  static String _paymentEs(String method, String? cardType) => switch (method) {
+    'card' when cardType == 'debit' => 'Tarjeta debito',
+    'card' when cardType == 'credit' => 'Tarjeta credito',
     'cash' => 'Efectivo',
     'card' => 'Tarjeta',
     'transfer' => 'Transferencia',
@@ -95,7 +111,9 @@ class ReceiptLabels {
     _ => method,
   };
 
-  static String _paymentEn(String method) => switch (method) {
+  static String _paymentEn(String method, String? cardType) => switch (method) {
+    'card' when cardType == 'debit' => 'Debit card',
+    'card' when cardType == 'credit' => 'Credit card',
     'cash' => 'Cash',
     'card' => 'Card',
     'transfer' => 'Transfer',

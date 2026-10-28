@@ -51,4 +51,18 @@ void main() {
     expect(mapSupabaseError(ClientException('down')), isA<NetworkFailure>());
     expect(mapSupabaseError(TimeoutException('slow')), isA<NetworkFailure>());
   });
+
+  test('Security: capacity errors keep the code for the localized message', () {
+    for (final code in [
+      'CategoryFullError',
+      'ParkingFullError',
+      'KeysFullError',
+    ]) {
+      final failure = mapSupabaseError(
+        PostgrestException(message: code, code: 'P0001'),
+      );
+      expect(failure, isA<ValidationFailure>());
+      expect(failure.code, code);
+    }
+  });
 }

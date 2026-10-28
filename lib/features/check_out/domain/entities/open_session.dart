@@ -9,6 +9,7 @@ class OpenSession extends Equatable {
     required this.entryTime,
     this.hasPass = false,
     this.photoCount = 0,
+    this.leftKeys = false,
   });
 
   final int id;
@@ -22,6 +23,16 @@ class OpenSession extends Equatable {
   /// Evidence photos taken at check-in, for reprinting the entry ticket.
   final int photoCount;
 
+  /// The customer left the keys at the desk.
+  final bool leftKeys;
+
   @override
-  List<Object?> get props => [id, vehicleId, entryTime, hasPass, photoCount];
+  List<Object?> get props => [
+    id,
+    vehicleId,
+    entryTime,
+    hasPass,
+    photoCount,
+    leftKeys,
+  ];
 }

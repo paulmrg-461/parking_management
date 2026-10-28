@@ -16,6 +16,8 @@ abstract class ParkingSettingsRemoteDataSource {
   Future<ParkingSettings> uploadLogo(Uint8List bytes);
 
   Future<Uint8List> fetchLogo();
+
+  Future<String> resetLegalPolicy();
 }
 
 class SupabaseParkingSettingsRemoteDataSource
@@ -90,6 +92,16 @@ class SupabaseParkingSettingsRemoteDataSource
       return ParkingSettingsDto.fromJson(
         Map<String, dynamic>.from(row as Map),
       ).toDomain();
+    } catch (error) {
+      throw mapSupabaseError(error);
+    }
+  }
+
+  @override
+  Future<String> resetLegalPolicy() async {
+    try {
+      final result = await _client.rpc('reset_legal_policy');
+      return result as String;
     } catch (error) {
       throw mapSupabaseError(error);
     }

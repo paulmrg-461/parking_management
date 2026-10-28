@@ -119,7 +119,7 @@ types:
         index: 7
   ParkingSettings:
     typeId: 9
-    nextIndex: 9
+    nextIndex: 15
     fields:
       name:
         index: 0
@@ -139,3 +139,15 @@ types:
         index: 7
       whatsappAuto:
         index: 8
+      carCapacity:
+        index: 9
+      motoCapacity:
+        index: 10
+      keyCapacity:
+        index: 11
+      carOutOfService:
+        index: 12
+      motoOutOfService:
+        index: 13
+      legalPolicy:
+        index: 14

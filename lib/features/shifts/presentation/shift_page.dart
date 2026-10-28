@@ -8,6 +8,7 @@ import '../../../core/l10n/l10n.dart';
 import '../../../core/receipt/pdf_share.dart';
 import '../../../core/network/connectivity_cubit.dart';
 import '../../../core/state/submission.dart';
+import '../../../core/theme/status_colors.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/confirm_dialog.dart';
@@ -18,6 +19,7 @@ import '../../lots/application/lots_cubit.dart';
 import '../application/shift_cubit.dart';
 import '../domain/entities/shift_summary.dart';
 import 'shift_pdf.dart';
+import 'widgets/cash_count_sheet.dart';
 
 class ShiftPage extends StatefulWidget {
   const ShiftPage({super.key, required this.isAdmin});
@@ -427,7 +429,7 @@ class _OpenShiftCard extends StatelessWidget {
     final l10n = context.l10n;
     final result = await showDialog<_CloseResult>(
       context: context,
-      builder: (_) => const _CloseShiftDialog(),
+      builder: (_) => _CloseShiftDialog(expected: shift.expectedCash),
     );
     if (result == null || !context.mounted) {
       return;
@@ -560,7 +562,7 @@ class _HistoryTile extends StatelessWidget {
   Future<void> _adjust(BuildContext context) async {
     final result = await showDialog<_CloseResult>(
       context: context,
-      builder: (_) => const _AdjustShiftDialog(),
+      builder: (_) => _AdjustShiftDialog(expected: shift.expectedCash),
     );
     if (result != null && context.mounted) {
       await context.read<ShiftCubit>().adjust(
@@ -573,7 +575,10 @@ class _HistoryTile extends StatelessWidget {
 }
 
 class _AdjustShiftDialog extends StatefulWidget {
-  const _AdjustShiftDialog();
+  const _AdjustShiftDialog({required this.expected});
+
+  /// Cash the shift should hold, to show the difference while counting.
+  final int expected;
 
   @override
   State<_AdjustShiftDialog> createState() => _AdjustShiftDialogState();
@@ -583,6 +588,14 @@ class _AdjustShiftDialogState extends State<_AdjustShiftDialog> {
   final _formKey = GlobalKey<FormState>();
   final _counted = TextEditingController();
   final _reason = TextEditingController();
+
+  Future<void> _countWithDenominations() async {
+    final total = await showCashCountSheet(context);
+    if (total == null || !mounted) {
+      return;
+    }
+    setState(() => _counted.text = '$total');
+  }
 
   @override
   void dispose() {
@@ -613,12 +626,22 @@ class _AdjustShiftDialogState extends State<_AdjustShiftDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            _ExpectedRow(expected: widget.expected),
+            const SizedBox(height: Space.sm),
             TextFormField(
               controller: _counted,
               autofocus: true,
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: InputDecoration(labelText: l10n.shiftCountedCash),
+              decoration: InputDecoration(
+                labelText: l10n.shiftCountedCash,
+                suffixIcon: IconButton(
+                  tooltip: l10n.cashCountTitle,
+                  icon: const Icon(Icons.calculate_outlined),
+                  onPressed: _countWithDenominations,
+                ),
+              ),
+              onChanged: (_) => setState(() {}),
               validator: (value) {
                 final amount = int.tryParse((value ?? '').trim());
                 return amount == null || amount < 0
@@ -626,6 +649,7 @@ class _AdjustShiftDialogState extends State<_AdjustShiftDialog> {
                     : null;
               },
             ),
+            _DifferenceRow(counted: _counted.text, expected: widget.expected),
             const SizedBox(height: Space.md),
             TextFormField(
               controller: _reason,
@@ -644,6 +668,76 @@ class _AdjustShiftDialogState extends State<_AdjustShiftDialog> {
         ),
         FilledButton(onPressed: _save, child: Text(l10n.actionSave)),
       ],
+    );
+  }
+}
+
+class _ExpectedRow extends StatelessWidget {
+  const _ExpectedRow({required this.expected});
+
+  final int expected;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            context.l10n.shiftExpectedCash,
+            style: theme.textTheme.bodyMedium,
+          ),
+        ),
+        Text(
+          Formatters.money(expected),
+          style: theme.textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w600,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Live difference while the operator types the counted cash.
+class _DifferenceRow extends StatelessWidget {
+  const _DifferenceRow({required this.counted, required this.expected});
+
+  final String counted;
+  final int expected;
+
+  @override
+  Widget build(BuildContext context) {
+    final value = int.tryParse(counted.trim());
+    if (value == null) {
+      return const SizedBox.shrink();
+    }
+    final difference = value - expected;
+    final status = StatusColors.of(context);
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(top: Space.xs),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              context.l10n.shiftDifference,
+              style: theme.textTheme.bodySmall,
+            ),
+          ),
+          Text(
+            Formatters.money(difference),
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: difference == 0
+                  ? status.success
+                  : theme.colorScheme.error,
+              fontWeight: FontWeight.w600,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -773,7 +867,10 @@ class _CloseResult {
 }
 
 class _CloseShiftDialog extends StatefulWidget {
-  const _CloseShiftDialog();
+  const _CloseShiftDialog({required this.expected});
+
+  /// Cash the shift should hold, to show the difference while counting.
+  final int expected;
 
   @override
   State<_CloseShiftDialog> createState() => _CloseShiftDialogState();
@@ -783,6 +880,14 @@ class _CloseShiftDialogState extends State<_CloseShiftDialog> {
   final _formKey = GlobalKey<FormState>();
   final _counted = TextEditingController();
   final _notes = TextEditingController();
+
+  Future<void> _countWithDenominations() async {
+    final total = await showCashCountSheet(context);
+    if (total == null || !mounted) {
+      return;
+    }
+    setState(() => _counted.text = '$total');
+  }
 
   @override
   void dispose() {
@@ -813,12 +918,22 @@ class _CloseShiftDialogState extends State<_CloseShiftDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            _ExpectedRow(expected: widget.expected),
+            const SizedBox(height: Space.sm),
             TextFormField(
               controller: _counted,
               autofocus: true,
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: InputDecoration(labelText: l10n.shiftCountedCash),
+              decoration: InputDecoration(
+                labelText: l10n.shiftCountedCash,
+                suffixIcon: IconButton(
+                  tooltip: l10n.cashCountTitle,
+                  icon: const Icon(Icons.calculate_outlined),
+                  onPressed: _countWithDenominations,
+                ),
+              ),
+              onChanged: (_) => setState(() {}),
               validator: (value) {
                 final amount = int.tryParse((value ?? '').trim());
                 return amount == null || amount < 0
@@ -826,6 +941,7 @@ class _CloseShiftDialogState extends State<_CloseShiftDialog> {
                     : null;
               },
             ),
+            _DifferenceRow(counted: _counted.text, expected: widget.expected),
             const SizedBox(height: Space.md),
             TextFormField(
               controller: _notes,

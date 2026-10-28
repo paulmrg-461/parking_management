@@ -43,7 +43,7 @@ WhatsApp (manual or automated).
 | Secrets / PIN operations | Complete (scripts + runbook) | PIN rotation verified live |
 | E2E and CI | Complete (API + Flutter client, real stack) | CI job `supabase-e2e` |
 
-Quality snapshot (2026-10-24, local stack): **662 Flutter tests + 1 integration
+Quality snapshot (2026-10-24, local stack): **785 Flutter tests + 1 integration
 test**, SQL/RLS suite green, web build green, analyzer with **0 errors and 0
 warnings** (only SDK deprecation infos from the pinned beta channel), restore
 drill green.
@@ -57,14 +57,17 @@ the main data it touches.
 | Module (`lib/features/…`) | Responsibility | Backing data / RPCs |
 |---|---|---|
 | `auth` | PIN login, session restore, logout | GoTrue, `users`, `lot_members` |
-| `home` | Dashboard: occupancy, today KPIs, shift card, shortcuts | `occupancy_snapshot`, `dashboard_today` |
+| `home` | Dashboard: occupancy + radial, space board (physical map), today KPIs, shift card, shortcuts | `occupancy_snapshot`, `dashboard_today`, `slot_board` |
+| `spots` | Admin drag & drop map editor and bay layout | `parking_spots`, `save/delete_parking_spot` |
 | `check_in` | Plate lookup, evidence photos, offline queue | `check_in`, `vehicles`, Storage `evidence` |
 | `check_out` | Open sessions (paged), payment, receipt | `check_out`, `calculate_fare`, `open_sessions_view` |
+| `records` | Site activity log with a plate filter and paging | `session_records` |
+| `policies` | Public legal policy / service contract | `public_lot_profile`, `reset_legal_policy` |
 | `vehicle_history` | Timeline, notes, blacklist, phone, reprint, WhatsApp | `vehicle_history`, `update_vehicle_flags` |
 | `vehicles` | Registry CRUD and paging | `vehicles` |
 | `categories` / `tariffs` | Reference data per site, capacity | `categories`, `tariffs` |
 | `monthly_passes` | Passes, charges, collection, expiry notices | `monthly_passes`, `monthly_pass_payments`, `register_pass_payment` |
-| `shifts` | Open/close, movements, history filters, corrections, PDF | `shifts`, `cash_movements`, `shift_adjustments`, `list_shifts`, `adjust_shift` |
+| `shifts` | Open/close with expected-vs-counted and a denomination counter, movements, history filters, corrections, PDF | `shifts`, `cash_movements`, `shift_adjustments`, `list_shifts`, `adjust_shift` |
 | `reports` | Revenue, occupancy, site comparison, WhatsApp metrics, PDF | `report_revenue(_all)`, `report_occupancy`, `report_whatsapp` |
 | `notifications` | Inbox, bell, deep links, browser push toggle | `notifications`, `web_push_subscriptions` |
 | `settings` | Per-site identity, branding, retention, WhatsApp mode | `parking_settings`, `set_branding_logo` |
@@ -80,7 +83,7 @@ the main data it touches.
 | `app` | DI modules, router, shell | — |
 
 **Edge Functions** (`supabase/volumes/functions`): `admin-users`,
-`push-dispatch`, `evidence-archive`, `whatsapp-dispatch` (the `hello`/`main`
+`push-dispatch`, `evidence-archive`, `whatsapp-dispatch`, `public-evidence` (the `hello`/`main`
 folders are Supabase scaffolding, not used by the app).
 
 ## 4. Architecture in one paragraph
@@ -133,6 +136,9 @@ Deployment: [`setup-cloud.md`](setup-cloud.md) (single VM + TLS proxy) and
 - **`pg_cron` is not available in the shipped image's app database**, so
   scheduled work runs from host cron (documented); the functions are the same.
 - **Single currency and single tax regime** assumptions.
+- **Physical bays are optional.** Without a map the board paints virtual
+  capacity cells and capacity comes from Ajustes; with a map the bays define the
+  capacity. Bicycles are not modelled.
 - **Beta Flutter SDK pinned**; analyzer output is limited to SDK deprecation
   infos until the pin moves to stable.
 
@@ -141,6 +147,8 @@ Deployment: [`setup-cloud.md`](setup-cloud.md) (single VM + TLS proxy) and
 - Real FCM/Meta/VAPID credentials for production push and automated WhatsApp.
 - Cold-storage archival for evidence files (currently deleted after retention).
 - Historical per-site metrics dashboard (today's KPIs exist; trends do not).
+- Physical bays with per-bay out-of-service state (the current state is a
+  per-group count).
 - iOS target if required.
 - Template management UI for automated WhatsApp.
 - Conflict resolution for offline reference-data edits (last-write-wins today).

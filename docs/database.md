@@ -79,15 +79,53 @@ All RPCs are `security definer`, derive the actor from `auth.uid()`, and are
 granted to `authenticated` only.
 
 **Check-in / check-out**
-`check_in` (incl. `p_left_keys`), `check_out`, `check_out_preview`,
-`open_sessions_view` (`has_pass`, `left_keys`), `capacity_snapshot`,
-`calculate_fare`,
+`check_in` (incl. `p_left_keys`, `p_spot_id` and optional `p_videos`; notifies
+the lot's members), `create_reservation` (holds consume group
+capacity), `check_out` (notifies the lot's members; `p_card_type` required for cards,
+stored in `parking_sessions.card_type`; `p_cash_received` stored with the change
+in `cash_received`/`cash_change`), `check_out_preview` (amount +
+billing breakdown),
+`open_sessions_view` (`has_pass`, `left_keys`), `evidence_photos.kind`
+(`photo`/`video`) with `duration_seconds`, `capacity_snapshot`
+(`car_open/capacity/available/out_of_service/reserved`, motos, keys,
+active/expiring holds),
+`slot_board` (capacities, sessions, holds and out-of-service counts for the
+visual board), `usable_capacity` (capacity - out of service, `0` = no limit),
+`calculate_fare` (wrapper) and `fare_breakdown` (single source of truth for the
+money: day/night hours, rates, daily cap, elapsed time),
 `vehicle_history`, `update_vehicle_flags` (notes, blacklist, owner phone).
+`can_read_lot(lot_id)` backs the notifications RLS for Realtime (no lot header
+there).
+
+**Physical map**
+`parking_spots` (`code`, `group_name`, `grid_row`, `grid_col`, `status`;
+unique code and cell per lot), `parking_sessions.spot_id` (one open session per
+bay), `save_parking_spot`, `delete_parking_spot`, `assign_session_spot`,
+`category_group(name)`, `spot_target_capacity(lot, group)`; a group with spots
+limits check-ins and holds to its active bays, and `save/delete_parking_spot`
+keep the drawn bays equal to the configured capacity (`0` = no limit).
+`capacity_snapshot` returns `car_target_capacity`/`moto_target_capacity` (raw
+settings) beside the derived `car_capacity`/`moto_capacity`.
 
 **Billing and reports**
 `report_revenue` (active lot), `report_revenue_all` (platform admins),
 `report_occupancy`, `occupancy_snapshot`, `dashboard_today` (home KPIs),
 `report_whatsapp` (customer message delivery).
+
+**Legal policy**
+`parking_settings.legal_policy` (template), `default_legal_policy()`,
+`reset_legal_policy()` (lot admin), `public_lot_profile(lot_id)` (anon:
+identity, contact, policy).
+
+**Public evidence**
+`public-evidence` Edge Function (service role): verifies a session + plate and
+returns 1-hour signed URLs for that session's photos/videos (no login; the
+plate is the key).
+
+**Records**
+`session_records(plate, limit, offset, from, to)`: lot-scoped session log
+(entry, exit, duration, amount, status) with a partial plate filter, an
+inclusive business-date range and a total; powers `/records` and its exports.
 
 **Shifts and cash**
 `open_shift`, `current_shift`, `close_shift`, `add_cash_movement`,

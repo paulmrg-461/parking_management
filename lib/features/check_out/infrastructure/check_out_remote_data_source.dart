@@ -6,6 +6,7 @@ import '../domain/entities/capacity_snapshot.dart';
 import '../domain/entities/check_out_preview.dart';
 import '../domain/entities/check_out_receipt.dart';
 import '../domain/entities/occupancy_snapshot.dart';
+import '../domain/entities/slot_board.dart';
 import '../domain/entities/open_session.dart';
 import '../domain/entities/today_summary.dart';
 import 'models/check_out_receipt_dto.dart';
@@ -27,12 +28,16 @@ abstract class CheckOutRemoteDataSource {
     String? discountReason,
     bool lostTicket = false,
     String? lostTicketReason,
+    String? cardType,
+    int? cashReceived,
     int? lotId,
   });
 
   Future<OccupancySnapshot> occupancy();
 
   Future<CapacitySnapshot> capacitySnapshot();
+
+  Future<SlotBoard> slotBoard();
 
   Future<TodaySummary> todaySummary();
 
@@ -55,7 +60,9 @@ class SupabaseCheckOutRemoteDataSource implements CheckOutRemoteDataSource {
     try {
       var query = _client
           .from(_view)
-          .select('id, vehicle_id, entry_time, has_pass, photo_count');
+          .select(
+            'id, vehicle_id, entry_time, has_pass, photo_count, left_keys',
+          );
       if (plate != null && plate.trim().isNotEmpty) {
         query = query.ilike('plate', '%${plate.trim()}%');
       }
@@ -80,6 +87,16 @@ class SupabaseCheckOutRemoteDataSource implements CheckOutRemoteDataSource {
       return CapacitySnapshot.fromJson(
         Map<String, dynamic>.from(result as Map),
       );
+    } catch (error) {
+      throw mapSupabaseError(error);
+    }
+  }
+
+  @override
+  Future<SlotBoard> slotBoard() async {
+    try {
+      final result = await _client.rpc('slot_board');
+      return SlotBoard.fromJson(Map<String, dynamic>.from(result as Map));
     } catch (error) {
       throw mapSupabaseError(error);
     }
@@ -130,6 +147,8 @@ class SupabaseCheckOutRemoteDataSource implements CheckOutRemoteDataSource {
     String? discountReason,
     bool lostTicket = false,
     String? lostTicketReason,
+    String? cardType,
+    int? cashReceived,
     int? lotId,
   }) async {
     try {
@@ -138,6 +157,8 @@ class SupabaseCheckOutRemoteDataSource implements CheckOutRemoteDataSource {
         params: {
           'p_session_id': sessionId,
           'p_payment_method': paymentMethod,
+          'p_card_type': ?cardType,
+          'p_cash_received': ?cashReceived,
           if (discountAmount > 0) 'p_discount_amount': discountAmount,
           'p_discount_reason': ?discountReason,
           if (lostTicket) ...{

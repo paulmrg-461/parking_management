@@ -1,3 +1,4 @@
+import '../../core/receipt/evidence_link.dart';
 import '../../features/auth/application/auth_cubit.dart';
 import '../../features/auth/domain/entities/user.dart';
 
@@ -13,6 +14,7 @@ const operatorRoutes = {
   '/check-out',
   '/notifications',
   '/history',
+  '/records',
   '/shift',
   '/scan',
   '/contact',
@@ -23,7 +25,12 @@ bool canAccess(UserRole role, String location) =>
 
 /// Pure redirect policy for `GoRouter.redirect` (unit-testable).
 String? authRedirect(AuthState auth, String location) {
-  final atLogin = _normalize(location) == loginPath;
+  final path = _normalize(location);
+  // The evidence page is public: the receipt QR carries the key (the plate).
+  if (path == evidencePath || path == policiesPath) {
+    return null;
+  }
+  final atLogin = path == loginPath;
   return switch (auth) {
     AuthAuthenticated() when atLogin => homePath,
     AuthAuthenticated(:final session)

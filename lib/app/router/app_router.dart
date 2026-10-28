@@ -5,6 +5,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/qr/qr_decoder.dart';
+import '../../core/receipt/evidence_link.dart';
+import '../../features/reservations/domain/repositories/reservation_repository.dart';
+import '../../features/vehicles/domain/repositories/vehicle_repository.dart';
 import '../../core/widgets/deferred_page.dart';
 import '../../features/audit/application/audit_cubit.dart';
 import '../../features/audit/presentation/audit_page.dart';
@@ -18,6 +21,12 @@ import '../../features/check_in/application/vehicle_lookup_cubit.dart';
 import '../../features/check_in/presentation/check_in_page.dart';
 import '../../features/check_out/application/check_out_cubit.dart';
 import '../../features/check_out/presentation/check_out_page.dart';
+import '../../features/evidence/application/evidence_cubit.dart';
+import '../../features/evidence/presentation/public_evidence_page.dart';
+import '../../features/policies/application/policies_cubit.dart';
+import '../../features/policies/presentation/policies_page.dart';
+import '../../features/records/application/records_cubit.dart';
+import '../../features/records/presentation/records_page.dart';
 import '../../features/home/application/dashboard_cubit.dart';
 import '../../features/lots/application/lots_cubit.dart';
 import '../../features/lots/presentation/lots_page.dart';
@@ -41,6 +50,7 @@ import 'deferred/contact_entry.dart' deferred as contact;
 import 'deferred/monthly_passes_entry.dart' deferred as monthly_passes;
 import 'deferred/reports_entry.dart' deferred as reports;
 import 'deferred/settings_entry.dart' deferred as settings;
+import 'deferred/spots_entry.dart' deferred as spots;
 import 'deferred/tariffs_entry.dart' deferred as tariffs;
 import 'deferred/users_entry.dart' deferred as users;
 import 'deferred/vehicles_entry.dart' deferred as vehicles;
@@ -59,6 +69,25 @@ GoRouter buildRouter(AuthCubit auth, Listenable refresh) => GoRouter(
   redirect: (_, state) => authRedirect(auth.state, state.uri.path),
   routes: [
     GoRoute(path: loginPath, builder: (context, state) => const LoginPage()),
+    GoRoute(
+      path: policiesPath,
+      builder: (context, state) => BlocProvider<PoliciesCubit>(
+        create: (_) => serviceLocator<PoliciesCubit>(),
+        child: PoliciesPage(
+          lotId: int.tryParse(state.uri.queryParameters['lot'] ?? ''),
+        ),
+      ),
+    ),
+    GoRoute(
+      path: evidencePath,
+      builder: (context, state) => BlocProvider<EvidenceCubit>(
+        create: (_) => serviceLocator<EvidenceCubit>(),
+        child: PublicEvidencePage(
+          sessionId: int.tryParse(state.uri.queryParameters['session'] ?? ''),
+          plate: state.uri.queryParameters['plate'],
+        ),
+      ),
+    ),
     GoRoute(
       path: '/scan',
       builder: (context, state) => BlocProvider<PlateScanningCubit>(
@@ -101,7 +130,11 @@ GoRouter buildRouter(AuthCubit auth, Listenable refresh) => GoRouter(
 
 GoRoute _homeRoute(AuthCubit auth) => GoRoute(
   path: homePath,
-  builder: (context, state) => const HomePage(),
+  builder: (context, state) => HomePage(
+    reservations: serviceLocator.isRegistered<ReservationRepository>()
+        ? serviceLocator<ReservationRepository>()
+        : null,
+  ),
   routes: [
     GoRoute(
       path: 'check-in',
@@ -121,6 +154,8 @@ GoRoute _homeRoute(AuthCubit auth) => GoRoute(
           capture: serviceLocator<PlateImageCapture>(),
           canScan: serviceLocator<PlateScanner>().isSupported,
           initialPlate: state.uri.queryParameters['plate'],
+          reservations: serviceLocator<ReservationRepository>(),
+          vehicles: serviceLocator<VehicleRepository>(),
         ),
       ),
     ),
@@ -180,6 +215,13 @@ GoRoute _homeRoute(AuthCubit auth) => GoRoute(
       },
     ),
     GoRoute(
+      path: 'records',
+      builder: (context, state) => BlocProvider<RecordsCubit>(
+        create: (_) => serviceLocator<RecordsCubit>(),
+        child: const RecordsPage(),
+      ),
+    ),
+    GoRoute(
       path: 'history',
       builder: (context, state) => BlocProvider<VehicleHistoryCubit>(
         create: (_) => serviceLocator<VehicleHistoryCubit>(),
@@ -219,6 +261,17 @@ GoRoute _homeRoute(AuthCubit auth) => GoRoute(
       'settings',
       settings.loadLibrary,
       () => settings.buildSettingsEntry(),
+    ),
+    _deferred(
+      'spots',
+      spots.loadLibrary,
+      () => spots.buildSpotsEntry(
+        isAdmin: switch (auth.state) {
+          AuthAuthenticated(:final session) =>
+            session.user.role == UserRole.admin,
+          _ => false,
+        },
+      ),
     ),
     _deferred(
       'contact',

@@ -30,6 +30,26 @@ class FilePendingPhotoStorage implements PendingPhotoStorage {
   ];
 
   @override
+  Future<String?> persistVideo({
+    required String clientRef,
+    required XFile video,
+  }) async {
+    final dir = await _directoryFor(clientRef);
+    await dir.create(recursive: true);
+    final target = path.join(dir.path, 'video${videoExtensionOf(video)}');
+    await video.saveTo(target);
+    return target;
+  }
+
+  @override
+  Future<XFile?> loadVideo(String? ref) async {
+    if (ref == null) {
+      return null;
+    }
+    return XFile(ref, mimeType: videoMimeType(ref));
+  }
+
+  @override
   Future<void> deleteFor(String clientRef) async {
     final dir = await _directoryFor(clientRef);
     if (await dir.exists()) {

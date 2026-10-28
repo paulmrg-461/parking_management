@@ -30,6 +30,31 @@ extension PaymentMethodX on PaymentMethod {
   };
 }
 
+enum CardType { debit, credit }
+
+extension CardTypeX on CardType {
+  String get wire => switch (this) {
+    CardType.debit => 'debit',
+    CardType.credit => 'credit',
+  };
+
+  String label(AppLocalizations l10n) => switch (this) {
+    CardType.debit => l10n.paymentCardDebit,
+    CardType.credit => l10n.paymentCardCredit,
+  };
+
+  IconData get icon => switch (this) {
+    CardType.debit => Icons.savings_outlined,
+    CardType.credit => Icons.credit_score_outlined,
+  };
+}
+
+CardType? cardTypeFromWire(String? value) => switch (value) {
+  'debit' => CardType.debit,
+  'credit' => CardType.credit,
+  _ => null,
+};
+
 PaymentMethod paymentMethodFromWire(String? value) => switch (value) {
   'card' => PaymentMethod.card,
   'transfer' => PaymentMethod.transfer,
@@ -38,7 +63,17 @@ PaymentMethod paymentMethodFromWire(String? value) => switch (value) {
   _ => PaymentMethod.cash,
 };
 
-String paymentMethodLabel(AppLocalizations l10n, String? wire) =>
-    wire == null || wire == 'unknown'
-    ? l10n.paymentUnknown
-    : paymentMethodFromWire(wire).label(l10n);
+String paymentMethodLabel(
+  AppLocalizations l10n,
+  String? wire, {
+  String? cardType,
+}) {
+  if (wire == null || wire == 'unknown') {
+    return l10n.paymentUnknown;
+  }
+  final method = paymentMethodFromWire(wire);
+  final kind = cardTypeFromWire(cardType);
+  return method == PaymentMethod.card && kind != null
+      ? '${method.label(l10n)} · ${kind.label(l10n)}'
+      : method.label(l10n);
+}

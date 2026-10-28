@@ -71,6 +71,9 @@ class SettingsCubit extends ResilientCubit<SettingsState> {
     () => _repository.uploadLogo(bytes),
   );
 
+  /// Loads the server default template (throws a Failure when offline).
+  Future<String> resetLegalPolicy() => _repository.resetLegalPolicy();
+
   /// Keeps the form data on screen while a submission runs; a failing
   /// action reports through [SubmissionFailed] instead of wiping state.
   Future<void> _submit(Future<ParkingSettings> Function() action) async {

@@ -8,12 +8,15 @@ import 'package:parking_management/core/widgets/qr_code.dart';
 import 'package:parking_management/core/receipt/payment_method.dart';
 import 'package:parking_management/core/storage/key_value_store.dart';
 import 'package:parking_management/features/check_out/application/check_out_cubit.dart';
+import 'package:parking_management/features/notifications/application/notifications_cubit.dart';
+import 'package:parking_management/features/notifications/domain/entities/app_notification.dart';
 import 'package:parking_management/features/check_out/application/check_out_vehicle.dart';
 import 'package:parking_management/features/check_out/domain/entities/check_out_preview.dart';
 import 'package:parking_management/features/check_out/domain/entities/check_out_receipt.dart';
 import 'package:parking_management/features/check_out/domain/entities/open_session.dart';
 import 'package:parking_management/features/check_out/domain/entities/capacity_snapshot.dart';
 import 'package:parking_management/features/check_out/domain/entities/occupancy_snapshot.dart';
+import 'package:parking_management/features/check_out/domain/entities/slot_board.dart';
 import 'package:parking_management/features/check_out/domain/entities/today_summary.dart';
 import 'package:parking_management/features/check_out/domain/repositories/check_out_repository.dart';
 import 'package:parking_management/features/check_out/presentation/check_out_page.dart';
@@ -26,18 +29,25 @@ import '../../../helpers/app_harness.dart';
 import '../../../helpers/fake_auth_repository.dart';
 import '../../../helpers/fake_check_out_repository.dart';
 import '../../../helpers/fake_key_value_store.dart';
+import '../../../helpers/fake_notification_repository.dart';
 import '../../../helpers/fake_vehicle_repository.dart';
 import '../../../helpers/test_app.dart';
 
 class _FakeCheckOutRepository implements CheckOutRepository {
   Failure? checkOutError;
   Failure? previewError;
+  int listCalls = 0;
   bool hasPass = false;
+  CheckOutPreview? previewToReturn;
   bool? lastLostTicket;
   String? lastLostTicketReason;
+  String? lastCardType;
 
   @override
   Future<TodaySummary> todaySummary() async => TodaySummary.empty;
+
+  @override
+  Future<SlotBoard> slotBoard() async => SlotBoard.empty;
 
   @override
   Future<CapacitySnapshot> capacitySnapshot() async => CapacitySnapshot.empty;
@@ -56,6 +66,7 @@ class _FakeCheckOutRepository implements CheckOutRepository {
     int limit = defaultPageSize,
     String? plate,
   }) async {
+    listCalls++;
     final all = [
       OpenSession(
         id: 1,
@@ -63,6 +74,7 @@ class _FakeCheckOutRepository implements CheckOutRepository {
         entryTime: DateTime(2026, 1, 1),
         hasPass: firstHasPass,
         photoCount: 2,
+        leftKeys: true,
       ),
       OpenSession(id: 2, vehicleId: 2, entryTime: DateTime(2026, 1, 1)),
     ];
@@ -82,11 +94,12 @@ class _FakeCheckOutRepository implements CheckOutRepository {
     if (error != null) {
       throw error;
     }
-    return CheckOutPreview(
-      sessionId: sessionId,
-      amount: hasPass ? 0 : 5000,
-      hasPass: hasPass,
-    );
+    return previewToReturn ??
+        CheckOutPreview(
+          sessionId: sessionId,
+          amount: hasPass ? 0 : 5000,
+          hasPass: hasPass,
+        );
   }
 
 
@@ -98,11 +111,14 @@ class _FakeCheckOutRepository implements CheckOutRepository {
     String? discountReason,
     bool lostTicket = false,
     String? lostTicketReason,
+    String? cardType,
+    int? cashReceived,
   }) async {
     final error = checkOutError;
     if (error != null) throw error;
     lastLostTicket = lostTicket;
     lastLostTicketReason = lostTicketReason;
+    lastCardType = cardType;
     return CheckOutReceipt(
       id: sessionId,
       plate: sessionId == 1 ? 'ABC123' : 'XYZ999',
@@ -117,6 +133,8 @@ class _FakeCheckOutRepository implements CheckOutRepository {
 void main() {
   late _FakeCheckOutRepository repository;
   late FakeCheckOutRepository occupancy;
+  late FakeNotificationRepository notifications;
+  late NotificationsCubit notificationsCubit;
 
   Future<void> pumpPage(
     WidgetTester tester, {
@@ -128,6 +146,9 @@ void main() {
   }) async {
     repository = _FakeCheckOutRepository()..firstHasPass = firstHasPass;
     occupancy = FakeCheckOutRepository();
+    notifications = FakeNotificationRepository();
+    notificationsCubit = NotificationsCubit(notifications);
+    addTearDown(notificationsCubit.close);
     final vehicles = FakeVehicleRepository(const [
       Vehicle(id: 1, plate: 'ABC123', categoryId: 1),
       Vehicle(id: 2, plate: 'XYZ999', categoryId: 1),
@@ -155,6 +176,9 @@ void main() {
             BlocProvider<DashboardCubit>(
               create: (_) => DashboardCubit(occupancy),
             ),
+            BlocProvider<NotificationsCubit>.value(
+              value: notificationsCubit,
+            ),
           ],
           child: CheckOutPage(
             initialQuery: initialQuery,
@@ -165,6 +189,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    await notificationsCubit.start(1);
   }
 
   testWidgets('Success: renders the open sessions list resolved to plates', (
@@ -233,6 +258,8 @@ void main() {
 
     await tester.tap(find.widgetWithText(FilledButton, 'Cobrar').first);
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Ticket perdido'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Ticket perdido'));
     await tester.pumpAndSettle();
     await tester.enterText(
@@ -252,6 +279,8 @@ void main() {
     await pumpPage(tester);
 
     await tester.tap(find.widgetWithText(FilledButton, 'Cobrar').first);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Ticket perdido'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Ticket perdido'));
     await tester.pumpAndSettle();
@@ -286,7 +315,7 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Cobrar').first);
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Total estimado'), findsOneWidget);
+    expect(find.text('Total a cobrar'), findsOneWidget);
     expect(find.textContaining('5.000'), findsOneWidget);
 
     await tester.tap(find.text('Confirmar'));
@@ -302,7 +331,7 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Cobrar').first);
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Total estimado'), findsNothing);
+    expect(find.text('No se pudo calcular la tarifa'), findsOneWidget);
     expect(find.text('Efectivo'), findsOneWidget);
 
     await tester.tap(find.text('Confirmar'));
@@ -548,5 +577,95 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.byTooltip('Reimprimir recibo de entrada'), findsNWidgets(2));
+  });
+
+  testWidgets('Success: a car that left its keys is flagged', (tester) async {
+    await pumpPage(tester);
+
+    expect(find.text('Llaves'), findsOneWidget);
+  });
+
+  testWidgets('Success: the dialog explains the billed hours', (tester) async {
+    await pumpPage(tester);
+    repository.previewToReturn = const CheckOutPreview(
+      sessionId: 1,
+      amount: 22000,
+      elapsedSeconds: 3900,
+      dayHours: 2,
+      nightHours: 1,
+      days: 1,
+      hourlyRate: 2000,
+      nightlyRate: 8000,
+      dailyRate: 30000,
+      dailyCapApplied: true,
+    );
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Cobrar').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Tiempo: 1 h 5 min'), findsOneWidget);
+    expect(find.text('2 h × \$2.000 (día)'), findsOneWidget);
+    expect(find.text('1 h × \$8.000 (noche)'), findsOneWidget);
+    expect(find.text('Tope diario aplicado (\$30.000)'), findsOneWidget);
+    expect(find.text('\$22.000'), findsOneWidget);
+  });
+
+  testWidgets('Success: the on-screen keypad fills the search', (tester) async {
+    await pumpPage(tester);
+
+    await tester.tap(find.byTooltip('Teclado en pantalla'));
+    await tester.pumpAndSettle();
+    for (final key in ['A', 'B', 'C', '1', '2', '3']) {
+      await tester.tap(find.widgetWithText(OutlinedButton, key));
+      await tester.pump();
+    }
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.text('ABC123'), findsWidgets);
+  });
+
+  testWidgets('Success: another device activity refreshes the list', (
+    tester,
+  ) async {
+    await pumpPage(tester);
+    final before = repository.listCalls;
+
+    notifications.incoming.add(
+      AppNotification(
+        id: 51,
+        type: 'check_in',
+        title: 'Entrada registrada',
+        body: 'Ana registró el ingreso de ABC123',
+        createdAt: DateTime.now(),
+        data: const {
+          'action': 'check_in',
+          'session_id': 12,
+          'plate': 'ABC123',
+          'actor_name': 'Ana',
+        },
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pumpAndSettle();
+
+    expect(repository.listCalls, greaterThan(before));
+  });
+
+  testWidgets('Success: a card payment asks debit or credit', (tester) async {
+    await pumpPage(tester);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Cobrar').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Tarjeta'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Crédito'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Crédito'));
+    await tester.pump();
+    await tester.tap(find.text('Confirmar'));
+    await tester.pumpAndSettle();
+
+    expect(repository.lastCardType, 'credit');
   });
 }

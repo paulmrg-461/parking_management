@@ -22,6 +22,8 @@ echo "granting schema privileges to ${PGUSER}..."
 psql -U "$ADMIN_USER" -d "$PGDATABASE" -v ON_ERROR_STOP=1 <<SQL
 grant create, usage on schema public to ${PGUSER};
 grant all on database ${PGDATABASE} to ${PGUSER};
+-- The runner owns and replaces functions created by earlier admin sessions.
+grant ${ADMIN_USER} to ${PGUSER};
 SQL
 
 psql -v ON_ERROR_STOP=1 <<'SQL'

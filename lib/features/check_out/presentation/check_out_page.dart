@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/di/injection.dart';
 import '../../../core/l10n/failure_messages.dart';
 import '../../../core/l10n/l10n.dart';
+import '../../../core/realtime/local_activity.dart';
 import '../../../core/state/submission.dart';
 import '../../../core/qr/qr_decoder.dart';
 import '../../../core/qr/qr_scan_page.dart';
@@ -16,7 +17,9 @@ import '../../../core/utils/elapsed.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_state.dart';
+import '../../../core/receipt/evidence_link.dart';
 import '../../../core/widgets/receipt_card.dart';
+import '../../../core/widgets/plate_keypad.dart';
 import '../../../core/widgets/search_field.dart';
 import '../../../core/widgets/status_chip.dart';
 import '../../../core/widgets/skeleton.dart';
@@ -29,6 +32,7 @@ import '../../home/application/dashboard_cubit.dart';
 import '../../shifts/application/shift_cubit.dart';
 import '../../receipt_printing/presentation/receipt_print_sheet.dart';
 import '../../notifications/presentation/notification_bell.dart';
+import '../../notifications/presentation/realtime_activity_listener.dart';
 import '../application/check_out_cubit.dart';
 import '../domain/entities/check_out_receipt.dart';
 import '../../../core/receipt/payment_method.dart';
@@ -138,8 +142,25 @@ class _CheckOutPageState extends State<CheckOutPage> {
     }
   }
 
+  /// Another device checked a car in/out: the list must not stay stale.
+  void _refreshFromActivity() {
+    final cubit = context.read<CheckOutCubit>();
+    if (cubit.state is CheckOutLoaded) {
+      cubit.search(_searchController.text);
+    } else {
+      unawaited(cubit.loadOpenSessions());
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    return RealtimeActivityListener(
+      onActivity: _refreshFromActivity,
+      child: _scaffold(context),
+    );
+  }
+
+  Widget _scaffold(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(context.l10n.checkOutTitle),
@@ -169,6 +190,16 @@ class _CheckOutPageState extends State<CheckOutPage> {
                       onChanged: context.read<CheckOutCubit>().search,
                       onSubmitted: (value) =>
                           unawaited(_resolveAndOpen(context, value)),
+                      onKeypad: () => showPlateKeypad(
+                        context,
+                        controller: _searchController,
+                        onChanged: (value) {
+                          context.read<CheckOutCubit>().search(value);
+                          if (mounted) {
+                            setState(() {});
+                          }
+                        },
+                      ),
                     ),
                   ),
                   if (!kIsWeb ||
@@ -204,6 +235,7 @@ class _CheckOutPageState extends State<CheckOutPage> {
   void _onSubmission(BuildContext context, CheckOutState state) {
     switch (_submissionOf(state)) {
       case SubmissionSucceeded<CheckOutReceipt>(:final result):
+        LocalActivity.remember('check_out', result.id);
         final method = _pendingMethod;
         _pendingMethod = null;
         if (method != null) {
@@ -255,14 +287,12 @@ class _CheckOutPageState extends State<CheckOutPage> {
     if (!context.mounted) {
       return;
     }
-    final hasPass = preview?.hasPass ?? false;
     final choice = await showCheckoutDialog(
       context,
       plate: plate,
       canDiscount: _canDiscount(context),
-      estimatedAmount: preview?.amount,
-      hasPass: hasPass,
-      initialMethod: hasPass
+      preview: preview,
+      initialMethod: (preview?.hasPass ?? false)
           ? PaymentMethod.monthlyPass
           : _basePaymentMethod(_rememberedMethod),
     );
@@ -277,6 +307,8 @@ class _CheckOutPageState extends State<CheckOutPage> {
       discountReason: choice.discountReason,
       lostTicket: choice.lostTicket,
       lostTicketReason: choice.lostTicketReason,
+      cardType: choice.cardType?.wire,
+      cashReceived: choice.cashReceived,
     );
   }
 
@@ -366,9 +398,15 @@ class _CheckOutPageState extends State<CheckOutPage> {
     amountCharged: receipt.amountCharged,
     ticketNumber: receipt.ticketNumber,
     paymentMethod: receipt.paymentMethod,
+    cardType: receipt.cardType,
+    cashReceived: receipt.cashReceived,
+    cashChange: receipt.cashChange,
     discountAmount: receipt.discountAmount,
     discountReason: receipt.discountReason,
     pendingSync: receipt.pendingSync,
+    evidenceUrl: receipt.pendingSync
+        ? null
+        : publicEvidenceUrl(receipt.id),
   );
 }
 
@@ -530,6 +568,12 @@ class _SessionTile extends StatelessWidget {
                   tone: StatusTone.success,
                   icon: Icons.card_membership,
                 ),
+              if (session.leftKeys)
+                StatusChip(
+                  label: l10n.checkInLeftKeysShort,
+                  tone: StatusTone.neutral,
+                  icon: Icons.key_outlined,
+                ),
             ],
           ),
         ],
@@ -560,6 +604,7 @@ class _SessionTile extends StatelessWidget {
       plate: plate,
       entryTime: session.entryTime,
       photoCount: session.photoCount,
+      evidenceUrl: publicEvidenceUrl(session.id),
     );
     return showReceipt(
       context,

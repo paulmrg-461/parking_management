@@ -16,6 +16,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get actionClose => 'Close';
 
   @override
+  String activityCheckIn(String actor, String plate) {
+    return '$actor registered the entry of $plate';
+  }
+
+  @override
+  String activityCheckOut(String actor, String plate, String amount) {
+    return '$actor registered the exit of $plate · Charge: $amount';
+  }
+
+  @override
+  String activityCheckOutNoAmount(String actor, String plate) {
+    return '$actor registered the exit of $plate';
+  }
+
+  @override
   String get actionCancel => 'Cancel';
 
   @override
@@ -87,6 +102,74 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get errorStorage => 'Could not save data on this device';
+
+  @override
+  String get evidenceGateTitle => 'Enter the plate to see the evidence';
+
+  @override
+  String get evidenceGateHint =>
+      'The plate printed on the receipt is the access key.';
+
+  @override
+  String get evidenceUnlock => 'See evidence';
+
+  @override
+  String get policiesTitle => 'Policies and contract';
+
+  @override
+  String get policiesInvalid => 'We could not load this parking lot policies.';
+
+  @override
+  String get policiesEmpty =>
+      'This parking lot has not published its policies yet.';
+
+  @override
+  String get policiesHelp =>
+      'By parking the vehicle you accept these policies. Contact the lot if you have questions.';
+
+  @override
+  String get evidenceOpenPolicies =>
+      'See the parking lot policies and contract';
+
+  @override
+  String get evidenceTitle => 'Vehicle evidence';
+
+  @override
+  String get evidenceInvalid =>
+      'This link is not valid or the plate does not match.';
+
+  @override
+  String evidenceKey(String plate) {
+    return 'Access key: $plate';
+  }
+
+  @override
+  String evidenceEntry(String when) {
+    return 'Entry: $when';
+  }
+
+  @override
+  String get evidenceEmpty => 'This visit has no photos or videos.';
+
+  @override
+  String get evidenceNoPhotos => 'No photos.';
+
+  @override
+  String evidencePhotos(int count) {
+    return 'Photos ($count)';
+  }
+
+  @override
+  String evidenceVideos(int count) {
+    return 'Videos ($count)';
+  }
+
+  @override
+  String get evidencePlayVideo => 'Play video';
+
+  @override
+  String get evidenceHelp =>
+      'Share this link only with the vehicle owner. Evidence is deleted according to the parking lot retention.';
 
   @override
   String get errorUnknown => 'Something went wrong';
@@ -452,6 +535,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reservationCheckIn => 'Register entry';
 
   @override
+  String get checkInHoldTitle => 'Active hold';
+
+  @override
   String get reservationCancel => 'Cancel reservation';
 
   @override
@@ -528,6 +614,80 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get notificationsMarkAll => 'Mark all read';
+
+  @override
+  String get navRecords => 'Records';
+
+  @override
+  String get recordsTitle => 'Vehicle records';
+
+  @override
+  String recordsCount(int count) {
+    return '$count records';
+  }
+
+  @override
+  String recordsEmpty(String plate) {
+    return 'No records for “$plate”';
+  }
+
+  @override
+  String get recordsEmptyAll => 'No records at this site yet';
+
+  @override
+  String get recordsClearFilter => 'See all';
+
+  @override
+  String recordsOpenSince(String since, String duration) {
+    return 'Inside since $since · $duration';
+  }
+
+  @override
+  String recordsWindow(String duration, String entry, String exit) {
+    return '$entry → $exit · $duration';
+  }
+
+  @override
+  String get recordsRangeAll => 'All';
+
+  @override
+  String get recordsRangeToday => 'Today';
+
+  @override
+  String get recordsRangeWeek => '7 days';
+
+  @override
+  String get recordsRangeMonth => '30 days';
+
+  @override
+  String get recordsRangeTooltip => 'Date range';
+
+  @override
+  String get recordsExportCsv => 'Copy CSV';
+
+  @override
+  String get recordsExportPdf => 'Export PDF';
+
+  @override
+  String get recordsCsvCopied => 'CSV copied to the clipboard';
+
+  @override
+  String get recordsExportEmpty => 'No records to export';
+
+  @override
+  String get recordsEntry => 'Entry';
+
+  @override
+  String get recordsExit => 'Exit';
+
+  @override
+  String get recordsDuration => 'Duration';
+
+  @override
+  String get recordsAmount => 'Charge';
+
+  @override
+  String get recordsLoadMore => 'Load more';
 
   @override
   String get navHistory => 'History';
@@ -660,6 +820,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get shiftClosedTitle => 'Shift closed';
+
+  @override
+  String get cashCountTitle => 'Count cash';
+
+  @override
+  String cashCountUse(String amount) {
+    return 'Use $amount';
+  }
 
   @override
   String get shiftAdjust => 'Correct shift close';
@@ -855,6 +1023,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get vehicleHistoryOpen => 'In progress';
 
   @override
+  String get navMenu => 'Menu';
+
+  @override
+  String get navMenuTooltip => 'Open the menu';
+
+  @override
   String get navMore => 'More';
 
   @override
@@ -870,6 +1044,148 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsDiscard => 'Discard';
 
   @override
+  String get spotsCapacityHint =>
+      'The map must have exactly the spots configured in Settings.';
+
+  @override
+  String spotsGroupCount(int drawn, int target) {
+    return '$drawn of $target';
+  }
+
+  @override
+  String spotsRemaining(int count) {
+    return '$count more';
+  }
+
+  @override
+  String spotsExcess(int count) {
+    return '$count over';
+  }
+
+  @override
+  String get errorSpotCapacityReached =>
+      'All configured spots are already drawn';
+
+  @override
+  String get errorSpotCapacityRequired =>
+      'The map cannot have fewer spots than configured; change the capacity in Settings first';
+
+  @override
+  String get spotsTitle => 'Parking map';
+
+  @override
+  String get spotsAdminOnly => 'Only an admin can edit the map';
+
+  @override
+  String get spotsAdd => 'Add spot';
+
+  @override
+  String get spotsHint => 'Drag a spot to move it · tap to edit';
+
+  @override
+  String get spotsEmpty => 'No spots yet. Add the first one to build the map.';
+
+  @override
+  String get spotsAddTitle => 'New spot';
+
+  @override
+  String get spotsCode => 'Code';
+
+  @override
+  String get spotsGroup => 'Group';
+
+  @override
+  String get spotsActive => 'Available';
+
+  @override
+  String get spotsActiveHint => 'Turn it off for maintenance';
+
+  @override
+  String get spotsDelete => 'Delete spot';
+
+  @override
+  String get spotsDeleteTitle => 'Delete the spot?';
+
+  @override
+  String spotsDeleteBody(String code) {
+    return 'Spot $code leaves the map. History is kept.';
+  }
+
+  @override
+  String get spotsDragHere => 'Drop here';
+
+  @override
+  String get errorSpotCodeTaken => 'A spot with that code already exists';
+
+  @override
+  String get errorSpotCellTaken => 'That cell is already taken';
+
+  @override
+  String get errorSpotTaken => 'That spot is already taken';
+
+  @override
+  String get errorSpotOutOfService => 'That spot is out of service';
+
+  @override
+  String get errorSpotOccupied =>
+      'A spot with a vehicle inside cannot be deleted';
+
+  @override
+  String get errorSpotGroup => 'The spot does not match the vehicle type';
+
+  @override
+  String get errorSpotCodeInvalid => 'Invalid code (A-Z, 0-9 and dash; max 16)';
+
+  @override
+  String get errorSpotNotFound => 'The spot does not exist';
+
+  @override
+  String get settingsSectionIdentity => 'Identity';
+
+  @override
+  String get settingsSectionSpaces => 'Spots and map';
+
+  @override
+  String get settingsSectionEvidence => 'Evidence';
+
+  @override
+  String get settingsSectionLegal => 'Policies and contract';
+
+  @override
+  String get settingsLegalPolicy => 'Service policy and contract text';
+
+  @override
+  String get settingsLegalPolicyHint =>
+      'Shown to the customer on the evidence page. The text supports tags for the name, address, schedule and phone.';
+
+  @override
+  String get settingsLegalReset => 'Restore template';
+
+  @override
+  String get settingsLegalResetDone => 'Template restored';
+
+  @override
+  String get settingsLegalPreview => 'Preview';
+
+  @override
+  String get settingsLegalPreviewTitle => 'Policy preview';
+
+  @override
+  String get settingsLegalEmpty =>
+      'No text. Use the template or write your own policy.';
+
+  @override
+  String get settingsSectionMessaging => 'Messaging';
+
+  @override
+  String settingsOutOfServiceMapHint(int count) {
+    return '$count bay(s) under maintenance · controlled on the map';
+  }
+
+  @override
+  String get settingsOutOfServiceHint => 'Subtracted from the available spots';
+
+  @override
   String get settingsTitle => 'Parking settings';
 
   @override
@@ -877,6 +1193,27 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsMotoCapacity => 'Spaces for motorcycles';
+
+  @override
+  String get settingsCarOutOfService => 'Cars out of service';
+
+  @override
+  String get settingsMotoOutOfService => 'Motorcycles out of service';
+
+  @override
+  String get settingsOutOfServiceTooMany =>
+      'It cannot exceed the configured capacity';
+
+  @override
+  String capacityOutOfService(int count) {
+    return '$count out of service';
+  }
+
+  @override
+  String get slotMaintenance => 'Maintenance';
+
+  @override
+  String get slotMaintenanceShort => 'Maint.';
 
   @override
   String get settingsKeyCapacity => 'Maximum cars leaving keys';
@@ -1007,10 +1344,88 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeCapacityKeys => 'Cars with keys';
 
   @override
+  String homeReservedCount(int count) {
+    return '$count held';
+  }
+
+  @override
+  String homeReservationsActive(int count) {
+    return '$count active holds';
+  }
+
+  @override
+  String homeReservationsExpiring(int count) {
+    return '$count expiring soon';
+  }
+
+  @override
+  String get homeSeeReservations => 'See holds';
+
+  @override
   String get homeNoLimit => 'no limit';
 
   @override
   String get homeInsideSeeAll => 'See all';
+
+  @override
+  String spotLabel(String code) {
+    return 'Spot $code';
+  }
+
+  @override
+  String get slotNoSpotAssignedOne => '1 vehicle with no spot assigned';
+
+  @override
+  String slotNoSpotAssigned(int count) {
+    return '$count vehicles with no spot assigned';
+  }
+
+  @override
+  String get slotBoardTitle => 'Space map';
+
+  @override
+  String slotBoardFree(int count) {
+    return '$count free';
+  }
+
+  @override
+  String get slotBoardAll => 'All';
+
+  @override
+  String get slotBoardCars => 'Cars';
+
+  @override
+  String get slotBoardMotos => 'Motorcycles';
+
+  @override
+  String get slotBoardHolds => 'Holds';
+
+  @override
+  String get slotBoardHeavy => 'Heavy';
+
+  @override
+  String get slotEstimateUnavailable => 'The fare could not be calculated';
+
+  @override
+  String get slotBoardEmpty => 'Set the parking spaces in Settings';
+
+  @override
+  String get slotBoardConfigure => 'Configure';
+
+  @override
+  String get slotBoardNoHolds => 'No active holds';
+
+  @override
+  String get slotFree => 'Free';
+
+  @override
+  String get slotOccupied => 'Occupied';
+
+  @override
+  String get slotReserved => 'Reserved';
+
+  @override
+  String get slotEstimate => 'Estimated fare';
 
   @override
   String get homeSummary => 'Summary';
@@ -1035,6 +1450,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get plateLabel => 'Plate';
+
+  @override
+  String get plateKeypadTooltip => 'On-screen keypad';
+
+  @override
+  String get plateKeypadBackspace => 'Backspace';
+
+  @override
+  String get plateKeypadClear => 'Clear';
 
   @override
   String get plateHint => 'ABC123';
@@ -1151,6 +1575,54 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get checkInSubmit => 'Register check-in';
+
+  @override
+  String get checkInSpotTitle => 'Spot';
+
+  @override
+  String get checkInSpotAuto => 'Automatic (first free)';
+
+  @override
+  String get checkInSpotNone => 'No free spots for this group';
+
+  @override
+  String checkInSuccessSpot(String plate, String spot) {
+    return 'Entry registered · $plate at $spot';
+  }
+
+  @override
+  String get videoEvidenceTitle => 'Evidence video (optional)';
+
+  @override
+  String get videoEvidenceHint =>
+      'Record a short walk-around (max 60 s) in case of a claim.';
+
+  @override
+  String get videoPick => 'Choose video';
+
+  @override
+  String get videoRecord => 'Record video';
+
+  @override
+  String get videoRecorded => 'Video ready';
+
+  @override
+  String get videoRecordedHint =>
+      'It will be attached to the entry and follows the evidence retention.';
+
+  @override
+  String get videoRemove => 'Remove video';
+
+  @override
+  String get videoPickFailed => 'The video could not be recorded';
+
+  @override
+  String get errorVideoTooLarge => 'The video must be 50 MB or smaller';
+
+  @override
+  String sessionVideos(int count) {
+    return '$count video(s)';
+  }
 
   @override
   String checkInSuccess(String plate) {
@@ -1294,13 +1766,78 @@ class AppLocalizationsEn extends AppLocalizations {
   String get receiptAmount => 'Amount charged';
 
   @override
+  String get receiptCashReceived => 'Received';
+
+  @override
+  String get receiptChange => 'Change';
+
+  @override
   String get receiptPayment => 'Payment';
 
   @override
   String get receiptDiscount => 'Discount';
 
   @override
+  String get checkOutSettlement => 'Settlement';
+
+  @override
+  String fareTime(String duration) {
+    return 'Time: $duration';
+  }
+
+  @override
+  String fareDays(int days) {
+    return '$days days';
+  }
+
+  @override
+  String fareDayHours(int hours, String rate) {
+    return '$hours h × $rate (day)';
+  }
+
+  @override
+  String fareNightHours(int hours, String rate) {
+    return '$hours h × $rate (night)';
+  }
+
+  @override
+  String fareDailyCap(String amount) {
+    return 'Daily cap applied ($amount)';
+  }
+
+  @override
+  String get fareTotal => 'Total due';
+
+  @override
+  String get slotBoardError => 'The space map could not be loaded';
+
+  @override
+  String get slotBoardRetry => 'Retry';
+
+  @override
   String get paymentMethodTitle => 'Payment method';
+
+  @override
+  String get paymentCardDebit => 'Debit';
+
+  @override
+  String get paymentCardCredit => 'Credit';
+
+  @override
+  String get checkoutCashReceived => 'Cash received';
+
+  @override
+  String get checkoutCashChange => 'Change';
+
+  @override
+  String get checkoutCashShort => 'Short by';
+
+  @override
+  String get checkoutCashShortError =>
+      'The cash received does not cover the total';
+
+  @override
+  String get checkoutCardType => 'Card type';
 
   @override
   String get paymentCash => 'Cash';
@@ -1374,6 +1911,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get receiptNewCharge => 'New charge';
 
   @override
+  String get receiptEvidenceHint => 'Vehicle evidence: scan (key: plate)';
+
+  @override
   String get receiptQrHint => 'Show this code at the exit to check out';
 
   @override
@@ -1431,6 +1971,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get categoriesTitle => 'Categories';
+
+  @override
+  String categorySpotsLeft(int count) {
+    return '$count left';
+  }
+
+  @override
+  String get categoryNoSpots => 'no spaces';
 
   @override
   String get categoriesEmpty => 'No categories yet';
