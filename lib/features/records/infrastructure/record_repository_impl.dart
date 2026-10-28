@@ -10,7 +10,15 @@ class RecordRepositoryImpl implements RecordRepository {
   @override
   Future<SessionRecordPage> list({
     String plate = '',
+    DateTime? from,
+    DateTime? to,
     int offset = 0,
     int limit = 50,
-  }) => _remote.list(plate: plate, offset: offset, limit: limit);
+  }) => _remote.list(
+    plate: plate,
+    from: from,
+    to: to,
+    offset: offset,
+    limit: limit,
+  );
 }

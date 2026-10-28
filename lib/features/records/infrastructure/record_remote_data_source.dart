@@ -6,6 +6,8 @@ import '../domain/entities/session_record.dart';
 abstract class RecordRemoteDataSource {
   Future<SessionRecordPage> list({
     required String plate,
+    required DateTime? from,
+    required DateTime? to,
     required int offset,
     required int limit,
   });
@@ -19,6 +21,8 @@ class SupabaseRecordRemoteDataSource implements RecordRemoteDataSource {
   @override
   Future<SessionRecordPage> list({
     required String plate,
+    required DateTime? from,
+    required DateTime? to,
     required int offset,
     required int limit,
   }) async {
@@ -29,6 +33,8 @@ class SupabaseRecordRemoteDataSource implements RecordRemoteDataSource {
           'p_plate': plate.trim().isEmpty ? null : plate.trim(),
           'p_offset': offset,
           'p_limit': limit,
+          'p_from': _date(from),
+          'p_to': _date(to),
         },
       );
       final map = Map<String, dynamic>.from(result as Map);
@@ -44,3 +50,9 @@ class SupabaseRecordRemoteDataSource implements RecordRemoteDataSource {
     }
   }
 }
+
+String? _date(DateTime? value) => value == null
+    ? null
+    : '${value.year.toString().padLeft(4, '0')}-'
+          '${value.month.toString().padLeft(2, '0')}-'
+          '${value.day.toString().padLeft(2, '0')}';

@@ -1130,6 +1130,84 @@ abstract class AppLocalizations {
   /// **'{entry} → {exit} · {duration}'**
   String recordsWindow(String duration, String entry, String exit);
 
+  /// No description provided for @recordsRangeAll.
+  ///
+  /// In es, this message translates to:
+  /// **'Todo'**
+  String get recordsRangeAll;
+
+  /// No description provided for @recordsRangeToday.
+  ///
+  /// In es, this message translates to:
+  /// **'Hoy'**
+  String get recordsRangeToday;
+
+  /// No description provided for @recordsRangeWeek.
+  ///
+  /// In es, this message translates to:
+  /// **'7 días'**
+  String get recordsRangeWeek;
+
+  /// No description provided for @recordsRangeMonth.
+  ///
+  /// In es, this message translates to:
+  /// **'30 días'**
+  String get recordsRangeMonth;
+
+  /// No description provided for @recordsRangeTooltip.
+  ///
+  /// In es, this message translates to:
+  /// **'Rango de fechas'**
+  String get recordsRangeTooltip;
+
+  /// No description provided for @recordsExportCsv.
+  ///
+  /// In es, this message translates to:
+  /// **'Copiar CSV'**
+  String get recordsExportCsv;
+
+  /// No description provided for @recordsExportPdf.
+  ///
+  /// In es, this message translates to:
+  /// **'Exportar PDF'**
+  String get recordsExportPdf;
+
+  /// No description provided for @recordsCsvCopied.
+  ///
+  /// In es, this message translates to:
+  /// **'CSV copiado al portapapeles'**
+  String get recordsCsvCopied;
+
+  /// No description provided for @recordsExportEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay registros para exportar'**
+  String get recordsExportEmpty;
+
+  /// No description provided for @recordsEntry.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingreso'**
+  String get recordsEntry;
+
+  /// No description provided for @recordsExit.
+  ///
+  /// In es, this message translates to:
+  /// **'Salida'**
+  String get recordsExit;
+
+  /// No description provided for @recordsDuration.
+  ///
+  /// In es, this message translates to:
+  /// **'Duración'**
+  String get recordsDuration;
+
+  /// No description provided for @recordsAmount.
+  ///
+  /// In es, this message translates to:
+  /// **'Cobro'**
+  String get recordsAmount;
+
   /// No description provided for @recordsLoadMore.
   ///
   /// In es, this message translates to:

@@ -580,6 +580,45 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get recordsRangeAll => 'All';
+
+  @override
+  String get recordsRangeToday => 'Today';
+
+  @override
+  String get recordsRangeWeek => '7 days';
+
+  @override
+  String get recordsRangeMonth => '30 days';
+
+  @override
+  String get recordsRangeTooltip => 'Date range';
+
+  @override
+  String get recordsExportCsv => 'Copy CSV';
+
+  @override
+  String get recordsExportPdf => 'Export PDF';
+
+  @override
+  String get recordsCsvCopied => 'CSV copied to the clipboard';
+
+  @override
+  String get recordsExportEmpty => 'No records to export';
+
+  @override
+  String get recordsEntry => 'Entry';
+
+  @override
+  String get recordsExit => 'Exit';
+
+  @override
+  String get recordsDuration => 'Duration';
+
+  @override
+  String get recordsAmount => 'Charge';
+
+  @override
   String get recordsLoadMore => 'Load more';
 
   @override

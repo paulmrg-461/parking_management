@@ -11,9 +11,9 @@ HEAD `e7351da`).
 
 - Stack: Flutter (android + web) + self-hosted Supabase only. No FastAPI,
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
-- `supabase/migrations/0001..0062` are the schema owner (applied by
+- `supabase/migrations/0001..0063` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 742 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 750 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -52,6 +52,9 @@ HEAD `e7351da`).
   many times did it enter". Rows open `/history?plate=` for the per-vehicle view
   (visits/spend). Operators can access it (`operatorRoutes` includes
   `/records`), and it sits in `primaryDestinations` (6 items on the phone bar).
+  `session_records` (`0063`) also takes an inclusive business-date range
+  (`p_from`/`p_to`); exports use `RecordsCubit.exportAll()` (pages server-side,
+  cap 2000) with `recordsCsv` (clipboard) and `buildRecordsPdf` (share sheet).
 - Settings hides the per-group out-of-service counters once that group has a
   map (they are a legacy count; with a map, maintenance is per bay). The form
   is sectioned and spaced; fields need `Space.md` between them, helper lines
@@ -678,7 +681,7 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 ## Latest verification (2026-10-28)
 
-- `flutter test`: 742 passed (+1 live-stack integration skipped); `flutter
+- `flutter test`: 750 passed (+1 live-stack integration skipped); `flutter
   analyze` 144 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
 - `supabase/tests/run.sh` passed (migrations `0001`–`0057`); `e2e.sh` passed

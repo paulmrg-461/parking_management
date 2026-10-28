@@ -69,4 +69,42 @@ void main() {
 
     expect(cubit.state.status, RecordsStatus.failure);
   });
+
+  test('Success: the date range is sent with the next load', () async {
+    final repository = FakeRecordRepository([
+      sampleRecord(id: 1, plate: 'ABC123', entryTime: DateTime(2026, 10, 20)),
+      sampleRecord(id: 2, plate: 'ABC123', entryTime: DateTime(2026, 10, 28)),
+    ]);
+    final cubit = RecordsCubit(repository, searchDebounce: Duration.zero);
+    addTearDown(cubit.close);
+    await cubit.load();
+
+    await cubit.setRange(DateTime(2026, 10, 27), DateTime(2026, 10, 28));
+
+    expect(repository.lastFrom, DateTime(2026, 10, 27));
+    expect(repository.lastTo, DateTime(2026, 10, 28));
+    expect(cubit.state.records.single.id, 2);
+
+    await cubit.setRange(null, null);
+    expect(repository.lastFrom, isNull);
+    expect(cubit.state.records, hasLength(2));
+  });
+
+  test('Security: exporting walks every page of the filter', () async {
+    final repository = FakeRecordRepository([
+      for (var i = 0; i < 5; i++) sampleRecord(id: i + 1, plate: 'ABC12$i'),
+    ]);
+    final cubit = RecordsCubit(
+      repository,
+      searchDebounce: Duration.zero,
+      pageSize: 2,
+    );
+    addTearDown(cubit.close);
+    await cubit.load();
+
+    final rows = await cubit.exportAll();
+
+    expect(rows, hasLength(5));
+    expect(rows!.map((row) => row.id).toSet(), hasLength(5));
+  });
 }

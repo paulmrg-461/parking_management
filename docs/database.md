@@ -109,9 +109,9 @@ settings) beside the derived `car_capacity`/`moto_capacity`.
 `report_whatsapp` (customer message delivery).
 
 **Records**
-`session_records(plate, limit, offset)`: lot-scoped session log (entry, exit,
-duration, amount, status) with a partial plate filter and total; powers
-`/records`.
+`session_records(plate, limit, offset, from, to)`: lot-scoped session log
+(entry, exit, duration, amount, status) with a partial plate filter, an
+inclusive business-date range and a total; powers `/records` and its exports.
 
 **Shifts and cash**
 `open_shift`, `current_shift`, `close_shift`, `add_cash_movement`,

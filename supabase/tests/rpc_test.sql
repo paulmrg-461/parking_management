@@ -1795,6 +1795,28 @@ begin
         raise exception 'records invented rows: %', result;
     end if;
 
+    -- Business-date range (inclusive) and validation.
+    result := public.session_records(null, 10, 0, current_date, current_date);
+    if (result ->> 'total')::integer < 2 then
+        raise exception 'date range lost today''s rows: %', result;
+    end if;
+    result := public.session_records(
+        null, 10, 0, current_date + 1, current_date + 7
+    );
+    if (result ->> 'total')::integer <> 0 then
+        raise exception 'future range returned rows: %', result;
+    end if;
+    begin
+        perform public.session_records(
+            null, 10, 0, current_date, current_date - 1
+        );
+        raise exception 'an inverted range was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidReportRangeError%' then
+            raise;
+        end if;
+    end;
+
     -- Another lot never sees these rows.
     set local request.headers = '{"x-lot-id":"2"}';
     result := public.session_records('REC001', 10, 0);

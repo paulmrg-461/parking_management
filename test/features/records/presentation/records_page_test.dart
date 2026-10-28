@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/features/records/application/records_cubit.dart';
@@ -107,5 +108,53 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Sin registros para «ZZZ»'), findsOneWidget);
+  });
+
+  testWidgets('Success: a range preset filters the log', (tester) async {
+    final repository = FakeRecordRepository([
+      sampleRecord(id: 1, plate: 'ABC123', entryTime: DateTime.now()),
+      sampleRecord(id: 2, plate: 'ABC124', entryTime: DateTime(2026, 1, 1)),
+    ]);
+    await pumpPage(tester, repository);
+
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Hoy'));
+    await tester.pumpAndSettle();
+
+    expect(repository.lastFrom, isNotNull);
+    expect(find.text('1 registros'), findsOneWidget);
+    expect(find.text('ABC124'), findsNothing);
+  });
+
+  testWidgets('Success: copying the CSV confirms with a snack', (tester) async {
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async => null,
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
+    );
+    await pumpPage(
+      tester,
+      FakeRecordRepository([sampleRecord(id: 1, plate: 'ABC123')]),
+    );
+
+    await tester.tap(find.byTooltip('Copiar CSV'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('CSV copiado al portapapeles'), findsOneWidget);
+  });
+
+  testWidgets('Failure: exporting an empty filter asks for data', (
+    tester,
+  ) async {
+    await pumpPage(tester, FakeRecordRepository());
+
+    await tester.tap(find.byTooltip('Copiar CSV'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('No hay registros para exportar'), findsOneWidget);
   });
 }

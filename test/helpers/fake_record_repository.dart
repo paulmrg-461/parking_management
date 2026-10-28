@@ -11,16 +11,22 @@ class FakeRecordRepository implements RecordRepository {
   int listCalls = 0;
   String? lastPlate;
   int? lastOffset;
+  DateTime? lastFrom;
+  DateTime? lastTo;
 
   @override
   Future<SessionRecordPage> list({
     String plate = '',
+    DateTime? from,
+    DateTime? to,
     int offset = 0,
     int limit = 50,
   }) async {
     listCalls++;
     lastPlate = plate;
     lastOffset = offset;
+    lastFrom = from;
+    lastTo = to;
     final failure = error;
     if (failure != null) {
       throw failure;
@@ -28,7 +34,13 @@ class FakeRecordRepository implements RecordRepository {
     final term = plate.trim().toUpperCase();
     final filtered = [
       for (final record in records)
-        if (term.isEmpty || record.plate.toUpperCase().contains(term)) record,
+        if (term.isEmpty || record.plate.toUpperCase().contains(term))
+          if (from == null || !record.entryTime.isBefore(from))
+            if (to == null ||
+                !record.entryTime.isAfter(
+                  DateTime(to.year, to.month, to.day, 23, 59, 59),
+                ))
+              record,
     ];
     return SessionRecordPage(
       items: filtered.skip(offset).take(limit).toList(),

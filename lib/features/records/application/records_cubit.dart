@@ -15,6 +15,8 @@ class RecordsState extends Equatable {
     this.records = const [],
     this.total = 0,
     this.query = '',
+    this.from,
+    this.to,
     this.loadingMore = false,
     this.failure,
   });
@@ -23,6 +25,10 @@ class RecordsState extends Equatable {
   final List<SessionRecord> records;
   final int total;
   final String query;
+
+  /// Inclusive business-date range (`null` = every date).
+  final DateTime? from;
+  final DateTime? to;
   final bool loadingMore;
   final Failure? failure;
 
@@ -33,6 +39,9 @@ class RecordsState extends Equatable {
     List<SessionRecord>? records,
     int? total,
     String? query,
+    DateTime? from,
+    DateTime? to,
+    bool clearRange = false,
     bool? loadingMore,
     Failure? failure,
   }) => RecordsState(
@@ -40,6 +49,8 @@ class RecordsState extends Equatable {
     records: records ?? this.records,
     total: total ?? this.total,
     query: query ?? this.query,
+    from: clearRange ? null : (from ?? this.from),
+    to: clearRange ? null : (to ?? this.to),
     loadingMore: loadingMore ?? this.loadingMore,
     failure: failure ?? this.failure,
   );
@@ -50,6 +61,8 @@ class RecordsState extends Equatable {
     records,
     total,
     query,
+    from,
+    to,
     loadingMore,
     failure,
   ];
@@ -80,7 +93,12 @@ class RecordsCubit extends ResilientCubit<RecordsState> {
       ),
     );
     try {
-      final page = await _repository.list(plate: term, limit: pageSize);
+      final page = await _repository.list(
+        plate: term,
+        from: state.from,
+        to: state.to,
+        limit: pageSize,
+      );
       if (isClosed || token != _token) {
         return;
       }
@@ -90,6 +108,8 @@ class RecordsCubit extends ResilientCubit<RecordsState> {
           records: page.items,
           total: page.total,
           query: term,
+          from: state.from,
+          to: state.to,
         ),
       );
     } on Failure catch (failure) {
@@ -107,6 +127,44 @@ class RecordsCubit extends ResilientCubit<RecordsState> {
     _timer = Timer(searchDebounce, () => load(query: query));
   }
 
+  /// `null` clears the range; otherwise both ends are inclusive.
+  Future<void> setRange(DateTime? from, DateTime? to) async {
+    if (from == null || to == null) {
+      emit(state.copyWith(clearRange: true, failure: null));
+    } else {
+      emit(state.copyWith(from: from, to: to, failure: null));
+    }
+    await load();
+  }
+
+  /// Every row matching the current filter (for CSV/PDF), paging server-side.
+  Future<List<SessionRecord>?> exportAll({int max = 2000}) async {
+    final rows = <SessionRecord>[];
+    var offset = 0;
+    try {
+      while (rows.length < max) {
+        final page = await _repository.list(
+          plate: state.query,
+          from: state.from,
+          to: state.to,
+          offset: offset,
+          limit: 200,
+        );
+        rows.addAll(page.items);
+        if (rows.length >= page.total || page.items.isEmpty) {
+          break;
+        }
+        offset += page.items.length;
+      }
+      return rows;
+    } on Failure catch (failure) {
+      if (!isClosed) {
+        emit(state.copyWith(failure: failure));
+      }
+      return null;
+    }
+  }
+
   Future<void> loadMore() async {
     if (state.status != RecordsStatus.loaded ||
         state.loadingMore ||
@@ -117,6 +175,8 @@ class RecordsCubit extends ResilientCubit<RecordsState> {
     try {
       final page = await _repository.list(
         plate: state.query,
+        from: state.from,
+        to: state.to,
         offset: state.records.length,
         limit: pageSize,
       );
