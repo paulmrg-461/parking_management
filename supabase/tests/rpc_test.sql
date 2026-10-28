@@ -1927,4 +1927,66 @@ begin
 end $$;
 reset role;
 
+-- Card payments must say debit or credit; cash ignores the field.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+declare
+    card_cat integer;
+    entry jsonb;
+    sid integer;
+    receipt jsonb;
+    refused boolean;
+begin
+    insert into public.categories (name, capacity, lot_id)
+    values ('cardpay', 0, 1)
+    returning id into card_cat;
+    insert into public.tariffs (category_id, type, amount, active, lot_id)
+    values (card_cat, 'hourly', 1000, true, 1);
+
+    entry := public.check_in(
+        'CARD01', card_cat, null, null, '[]'::jsonb, null,
+        now() - interval '1 minute'
+    );
+    sid := (entry ->> 'id')::integer;
+
+    refused := false;
+    begin
+        perform public.check_out(sid, null, null, 'card');
+        raise exception 'a card payment without debit/credit was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidCardTypeError%' then
+            raise;
+        end if;
+        refused := true;
+    end;
+    if not refused then
+        raise exception 'card type was not required';
+    end if;
+
+    receipt := public.check_out(
+        sid, null, null, 'card', 0, null, false, null, null, 'debit'
+    );
+    if receipt ->> 'card_type' <> 'debit' then
+        raise exception 'card type was not stored: %', receipt;
+    end if;
+    if (select card_type from public.parking_sessions where id = sid)
+       <> 'debit' then
+        raise exception 'session lost the card type';
+    end if;
+
+    -- Cash with a stray card type is ignored (no card fields).
+    entry := public.check_in(
+        'CARD02', card_cat, null, null, '[]'::jsonb, null,
+        now() - interval '1 minute'
+    );
+    sid := (entry ->> 'id')::integer;
+    receipt := public.check_out(
+        sid, null, null, 'cash', 0, null, false, null, null, 'credit'
+    );
+    if receipt ->> 'card_type' is not null then
+        raise exception 'cash kept a card type: %', receipt;
+    end if;
+end $$;
+
 rollback;

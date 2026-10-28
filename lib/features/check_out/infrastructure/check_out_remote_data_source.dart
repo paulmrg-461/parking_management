@@ -28,6 +28,7 @@ abstract class CheckOutRemoteDataSource {
     String? discountReason,
     bool lostTicket = false,
     String? lostTicketReason,
+    String? cardType,
     int? lotId,
   });
 
@@ -145,6 +146,7 @@ class SupabaseCheckOutRemoteDataSource implements CheckOutRemoteDataSource {
     String? discountReason,
     bool lostTicket = false,
     String? lostTicketReason,
+    String? cardType,
     int? lotId,
   }) async {
     try {
@@ -153,6 +155,7 @@ class SupabaseCheckOutRemoteDataSource implements CheckOutRemoteDataSource {
         params: {
           'p_session_id': sessionId,
           'p_payment_method': paymentMethod,
+          'p_card_type': ?cardType,
           if (discountAmount > 0) 'p_discount_amount': discountAmount,
           'p_discount_reason': ?discountReason,
           if (lostTicket) ...{

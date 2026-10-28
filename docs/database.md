@@ -81,7 +81,8 @@ granted to `authenticated` only.
 **Check-in / check-out**
 `check_in` (incl. `p_left_keys`, `p_spot_id` and optional `p_videos`; notifies
 the lot's members), `create_reservation` (holds consume group
-capacity), `check_out` (notifies the lot's members), `check_out_preview` (amount +
+capacity), `check_out` (notifies the lot's members; `p_card_type` required for cards,
+stored in `parking_sessions.card_type`), `check_out_preview` (amount +
 billing breakdown),
 `open_sessions_view` (`has_pass`, `left_keys`), `evidence_photos.kind`
 (`photo`/`video`) with `duration_seconds`, `capacity_snapshot`

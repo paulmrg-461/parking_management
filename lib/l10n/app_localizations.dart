@@ -3308,6 +3308,48 @@ abstract class AppLocalizations {
   /// **'Método de pago'**
   String get paymentMethodTitle;
 
+  /// No description provided for @paymentCardDebit.
+  ///
+  /// In es, this message translates to:
+  /// **'Débito'**
+  String get paymentCardDebit;
+
+  /// No description provided for @paymentCardCredit.
+  ///
+  /// In es, this message translates to:
+  /// **'Crédito'**
+  String get paymentCardCredit;
+
+  /// No description provided for @checkoutCashReceived.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Con cuánto paga?'**
+  String get checkoutCashReceived;
+
+  /// No description provided for @checkoutCashChange.
+  ///
+  /// In es, this message translates to:
+  /// **'Cambio'**
+  String get checkoutCashChange;
+
+  /// No description provided for @checkoutCashShort.
+  ///
+  /// In es, this message translates to:
+  /// **'Falta'**
+  String get checkoutCashShort;
+
+  /// No description provided for @checkoutCashShortError.
+  ///
+  /// In es, this message translates to:
+  /// **'El efectivo recibido no cubre el total'**
+  String get checkoutCashShortError;
+
+  /// No description provided for @checkoutCardType.
+  ///
+  /// In es, this message translates to:
+  /// **'Tipo de tarjeta'**
+  String get checkoutCardType;
+
   /// No description provided for @paymentCash.
   ///
   /// In es, this message translates to:

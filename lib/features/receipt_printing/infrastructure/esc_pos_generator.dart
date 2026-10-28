@@ -90,7 +90,7 @@ class EscPosGenerator {
     }
 
     if (data.isCheckOut && !data.pendingSync && data.paymentMethod != null) {
-      _row(bytes, labels.payment, labels.paymentMethod(data.paymentMethod!));
+      _row(bytes, labels.payment, labels.paymentMethod(data.paymentMethod!, data.cardType));
     }
 
     if (data.isCheckOut && !data.pendingSync && data.ticketNumber != null) {

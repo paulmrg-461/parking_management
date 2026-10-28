@@ -11,9 +11,9 @@ legal policies; HEAD `28893e1`).
 
 - Stack: Flutter (android + web) + self-hosted Supabase only. No FastAPI,
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
-- `supabase/migrations/0001..0065` are the schema owner (applied by
+- `supabase/migrations/0001..0066` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 774 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 780 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -707,10 +707,10 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 ## Latest verification (2026-10-28)
 
-- `flutter test`: 774 passed (+1 live-stack integration skipped); `flutter
+- `flutter test`: 780 passed (+1 live-stack integration skipped); `flutter
   analyze` 151 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
-- `supabase/tests/run.sh` passed (migrations `0001`–`0065`); `e2e.sh` passed
+- `supabase/tests/run.sh` passed (migrations `0001`–`0066`); `e2e.sh` passed
   (login → check-in → check-out → report → history).
 - `healthcheck.sh`: 0 failures (one warning for a dev shift left open >12 h).
 - Batches this session: space board + settlement breakdown (0052/0053),

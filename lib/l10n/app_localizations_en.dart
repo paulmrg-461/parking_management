@@ -1806,6 +1806,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paymentMethodTitle => 'Payment method';
 
   @override
+  String get paymentCardDebit => 'Debit';
+
+  @override
+  String get paymentCardCredit => 'Credit';
+
+  @override
+  String get checkoutCashReceived => 'Cash received';
+
+  @override
+  String get checkoutCashChange => 'Change';
+
+  @override
+  String get checkoutCashShort => 'Short by';
+
+  @override
+  String get checkoutCashShortError =>
+      'The cash received does not cover the total';
+
+  @override
+  String get checkoutCardType => 'Card type';
+
+  @override
   String get paymentCash => 'Cash';
 
   @override

@@ -41,6 +41,7 @@ class _FakeCheckOutRepository implements CheckOutRepository {
   CheckOutPreview? previewToReturn;
   bool? lastLostTicket;
   String? lastLostTicketReason;
+  String? lastCardType;
 
   @override
   Future<TodaySummary> todaySummary() async => TodaySummary.empty;
@@ -110,11 +111,13 @@ class _FakeCheckOutRepository implements CheckOutRepository {
     String? discountReason,
     bool lostTicket = false,
     String? lostTicketReason,
+    String? cardType,
   }) async {
     final error = checkOutError;
     if (error != null) throw error;
     lastLostTicket = lostTicket;
     lastLostTicketReason = lostTicketReason;
+    lastCardType = cardType;
     return CheckOutReceipt(
       id: sessionId,
       plate: sessionId == 1 ? 'ABC123' : 'XYZ999',
@@ -254,6 +257,8 @@ void main() {
 
     await tester.tap(find.widgetWithText(FilledButton, 'Cobrar').first);
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Ticket perdido'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Ticket perdido'));
     await tester.pumpAndSettle();
     await tester.enterText(
@@ -273,6 +278,8 @@ void main() {
     await pumpPage(tester);
 
     await tester.tap(find.widgetWithText(FilledButton, 'Cobrar').first);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Ticket perdido'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Ticket perdido'));
     await tester.pumpAndSettle();
@@ -642,5 +649,22 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(repository.listCalls, greaterThan(before));
+  });
+
+  testWidgets('Success: a card payment asks debit or credit', (tester) async {
+    await pumpPage(tester);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Cobrar').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Tarjeta'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Crédito'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Crédito'));
+    await tester.pump();
+    await tester.tap(find.text('Confirmar'));
+    await tester.pumpAndSettle();
+
+    expect(repository.lastCardType, 'credit');
   });
 }

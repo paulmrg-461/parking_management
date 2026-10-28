@@ -14,6 +14,7 @@ class CheckOutReceiptDto {
     required this.amountCharged,
     required this.ticketNumber,
     this.paymentMethod,
+    this.cardType,
     this.discountAmount = 0,
     this.discountReason,
     this.lostTicket = false,
@@ -39,6 +40,9 @@ class CheckOutReceiptDto {
 
   @JsonKey(name: 'payment_method')
   final String? paymentMethod;
+
+  @JsonKey(name: 'card_type')
+  final String? cardType;
 
   @JsonKey(name: 'discount_amount')
   final int discountAmount;

@@ -135,7 +135,9 @@ class ReceiptSummaryDialog extends StatelessWidget {
                   amount: data.amountCharged!,
                   label: l10n.receiptAmount,
                 ),
-              if (data.isCheckOut && !data.pendingSync && data.discountAmount > 0)
+              if (data.isCheckOut &&
+                  !data.pendingSync &&
+                  data.discountAmount > 0)
                 Padding(
                   padding: const EdgeInsets.only(top: Space.md),
                   child: ReceiptRow(
@@ -150,7 +152,11 @@ class ReceiptSummaryDialog extends StatelessWidget {
                   padding: const EdgeInsets.only(top: Space.md),
                   child: ReceiptRow(
                     label: l10n.receiptPayment,
-                    value: paymentMethodLabel(l10n, data.paymentMethod),
+                    value: paymentMethodLabel(
+                      l10n,
+                      data.paymentMethod,
+                      cardType: data.cardType,
+                    ),
                   ),
                 ),
               if (data.isCheckOut &&
@@ -319,12 +325,14 @@ class ReceiptCard extends StatelessWidget {
             label: l10n.receiptDiscount,
             value: '-${Formatters.money(data.discountAmount)}',
           ),
-        if (data.isCheckOut &&
-            !data.pendingSync &&
-            data.paymentMethod != null)
+        if (data.isCheckOut && !data.pendingSync && data.paymentMethod != null)
           ReceiptRow(
             label: l10n.receiptPayment,
-            value: paymentMethodLabel(l10n, data.paymentMethod),
+            value: paymentMethodLabel(
+              l10n,
+              data.paymentMethod,
+              cardType: data.cardType,
+            ),
           ),
         if (data.isCheckOut && !data.pendingSync && data.ticketNumber != null)
           Padding(
@@ -415,7 +423,9 @@ class _Header extends StatelessWidget {
     final circleColor = data.pendingSync
         ? status.pending.withValues(alpha: 0.15)
         : scheme.primaryContainer;
-    final iconColor = data.pendingSync ? status.pending : scheme.onPrimaryContainer;
+    final iconColor = data.pendingSync
+        ? status.pending
+        : scheme.onPrimaryContainer;
 
     final kicker = data.isCheckOut
         ? l10n.receiptDoneTitle
@@ -477,13 +487,16 @@ class ReceiptRow extends StatelessWidget {
     final labelStyle = emphasized
         ? theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)
         : theme.textTheme.bodyMedium;
-    final effectiveValueStyle = (emphasized
-            ? theme.textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              )
-            : theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500))
-        ?.merge(valueStyle);
+    final effectiveValueStyle =
+        (emphasized
+                ? theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  )
+                : theme.textTheme.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.w500,
+                  ))
+            ?.merge(valueStyle);
 
     return MergeSemantics(
       child: Padding(
@@ -608,9 +621,7 @@ class _DashedDivider extends StatelessWidget {
     return ExcludeSemantics(
       child: CustomPaint(
         size: const Size(double.infinity, 1),
-        painter: _DashPainter(
-          Theme.of(context).colorScheme.outlineVariant,
-        ),
+        painter: _DashPainter(Theme.of(context).colorScheme.outlineVariant),
       ),
     );
   }
@@ -632,7 +643,11 @@ class _DashPainter extends CustomPainter {
     var x = 0.0;
     while (x < size.width) {
       final end = (x + dashWidth).clamp(0.0, size.width);
-      canvas.drawLine(Offset(x, size.height / 2), Offset(end, size.height / 2), paint);
+      canvas.drawLine(
+        Offset(x, size.height / 2),
+        Offset(end, size.height / 2),
+        paint,
+      );
       x += dashWidth + dashGap;
     }
   }

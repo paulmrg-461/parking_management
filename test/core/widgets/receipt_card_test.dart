@@ -22,6 +22,17 @@ ReceiptData _checkInData({String? evidenceUrl}) => ReceiptData(
   evidenceUrl: evidenceUrl,
 );
 
+ReceiptData _cardData() => ReceiptData(
+  kind: ReceiptKind.checkOut,
+  plate: 'ABC123',
+  entryTime: DateTime(2026, 1, 1, 8, 30),
+  exitTime: DateTime(2026, 1, 1, 11, 45),
+  amountCharged: 12500,
+  paymentMethod: 'card',
+  cardType: 'debit',
+  ticketNumber: 'TCK-000042',
+);
+
 void main() {
   testWidgets('check-out receipt formats date, duration and amount', (
     tester,
@@ -214,5 +225,17 @@ void main() {
     );
 
     expect(find.byType(QrCode), findsOneWidget);
+  });
+
+  testWidgets('a card receipt names debit or credit', (tester) async {
+    await tester.pumpWidget(
+      testApp(
+        Scaffold(
+          body: SingleChildScrollView(child: ReceiptCard(data: _cardData())),
+        ),
+      ),
+    );
+
+    expect(find.text('Tarjeta · Débito'), findsOneWidget);
   });
 }

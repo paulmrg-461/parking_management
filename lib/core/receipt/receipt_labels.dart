@@ -44,8 +44,8 @@ class ReceiptLabels {
   final String evidenceHint;
 
   /// Localizes a wire value (`cash`, `card`, `transfer`, `monthly_pass`,
-  /// `exempt`).
-  final String Function(String method) paymentMethod;
+  /// `exempt`) plus the optional card type (`debit`/`credit`).
+  final String Function(String method, String? cardType) paymentMethod;
 
   /// Accent-free labels: thermal printers run on a CP437 code page.
   static const spanish = ReceiptLabels(
@@ -92,7 +92,9 @@ class ReceiptLabels {
   factory ReceiptLabels.forLanguage(String languageCode) =>
       languageCode == 'en' ? english : spanish;
 
-  static String _paymentEs(String method) => switch (method) {
+  static String _paymentEs(String method, String? cardType) => switch (method) {
+    'card' when cardType == 'debit' => 'Tarjeta debito',
+    'card' when cardType == 'credit' => 'Tarjeta credito',
     'cash' => 'Efectivo',
     'card' => 'Tarjeta',
     'transfer' => 'Transferencia',
@@ -101,7 +103,9 @@ class ReceiptLabels {
     _ => method,
   };
 
-  static String _paymentEn(String method) => switch (method) {
+  static String _paymentEn(String method, String? cardType) => switch (method) {
+    'card' when cardType == 'debit' => 'Debit card',
+    'card' when cardType == 'credit' => 'Credit card',
     'cash' => 'Cash',
     'card' => 'Card',
     'transfer' => 'Transfer',

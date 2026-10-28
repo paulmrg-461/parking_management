@@ -99,5 +99,6 @@ class FakeCheckOutRepository implements CheckOutRepository {
     String? discountReason,
     bool lostTicket = false,
     String? lostTicketReason,
+    String? cardType,
   }) => throw UnimplementedError();
 }

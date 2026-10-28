@@ -14,6 +14,7 @@ class ReceiptData {
     this.amountCharged,
     this.ticketNumber,
     this.paymentMethod,
+    this.cardType,
     this.discountAmount = 0,
     this.discountReason,
     this.pendingSync = false,
@@ -28,6 +29,7 @@ class ReceiptData {
   final int? amountCharged;
   final String? ticketNumber;
   final String? paymentMethod;
+  final String? cardType;
   final int discountAmount;
   final String? discountReason;
   final bool pendingSync;

@@ -17,6 +17,7 @@ class CheckOutVehicle {
     String? discountReason,
     bool lostTicket = false,
     String? lostTicketReason,
+    String? cardType,
   }) async {
     if (sessionId <= 0) {
       throw const ValidationFailure(
@@ -31,6 +32,7 @@ class CheckOutVehicle {
       discountReason: discountReason,
       lostTicket: lostTicket,
       lostTicketReason: lostTicketReason,
+      cardType: cardType,
     );
   }
 }

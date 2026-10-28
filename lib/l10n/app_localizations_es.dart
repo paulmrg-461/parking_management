@@ -1817,6 +1817,27 @@ class AppLocalizationsEs extends AppLocalizations {
   String get paymentMethodTitle => 'Método de pago';
 
   @override
+  String get paymentCardDebit => 'Débito';
+
+  @override
+  String get paymentCardCredit => 'Crédito';
+
+  @override
+  String get checkoutCashReceived => '¿Con cuánto paga?';
+
+  @override
+  String get checkoutCashChange => 'Cambio';
+
+  @override
+  String get checkoutCashShort => 'Falta';
+
+  @override
+  String get checkoutCashShortError => 'El efectivo recibido no cubre el total';
+
+  @override
+  String get checkoutCardType => 'Tipo de tarjeta';
+
+  @override
   String get paymentCash => 'Efectivo';
 
   @override
