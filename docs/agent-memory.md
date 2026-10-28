@@ -13,7 +13,7 @@ HEAD `e7351da`).
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0061` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 731 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 732 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -669,8 +669,8 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 ## Latest verification (2026-10-28)
 
-- `flutter test`: 731 passed (+1 live-stack integration skipped); `flutter
-  analyze` 143 infos, all SDK `deprecated_member_use` (zero warnings/errors);
+- `flutter test`: 732 passed (+1 live-stack integration skipped); `flutter
+  analyze` 144 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
 - `supabase/tests/run.sh` passed (migrations `0001`–`0057`); `e2e.sh` passed
   (login → check-in → check-out → report → history).

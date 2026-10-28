@@ -163,6 +163,7 @@ class _PickerCell extends StatelessWidget {
       spot: spot,
       size: size,
       highlighted: selected,
+      occupied: occupied,
       primary: occupied ? session!.plate : spot.code,
       secondary: !spot.active
           ? l10n.slotMaintenanceShort

@@ -16,6 +16,7 @@ class SpotCellView extends StatelessWidget {
     this.secondary,
     this.size = cellSize,
     this.highlighted = false,
+    this.occupied = false,
   });
 
   /// Edge of one bay, in logical pixels.
@@ -37,12 +38,20 @@ class SpotCellView extends StatelessWidget {
   final double size;
   final bool highlighted;
 
+  /// A car is inside: the bay is blue (primary) instead of green, so free and
+  /// occupied bays are easy to tell apart.
+  final bool occupied;
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final status = StatusColors.of(context);
     final active = spot.active;
-    final tint = active ? status.success : scheme.outline;
+    final tint = !active
+        ? scheme.outline
+        : occupied
+        ? scheme.primary
+        : status.success;
     final scale = size / cellSize;
     return Container(
       width: size,
@@ -53,7 +62,7 @@ class SpotCellView extends StatelessWidget {
             : !active
             ? scheme.surfaceContainerHighest
             : Color.alphaBlend(
-                tint.withValues(alpha: 0.14),
+                tint.withValues(alpha: occupied ? 0.18 : 0.14),
                 scheme.surface,
               ),
         borderRadius: BorderRadius.circular(Radii.sm),
@@ -75,7 +84,7 @@ class SpotCellView extends StatelessWidget {
             Icon(
               !active ? Icons.build_circle_outlined : _groupIcon(spot.group),
               size: (16 * scale).clamp(10.0, 16.0),
-              color: active ? status.success : scheme.outline,
+              color: active ? tint : scheme.outline,
             ),
             const SizedBox(height: 2),
             Text(

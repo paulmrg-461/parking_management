@@ -53,6 +53,10 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   holds obey the same limit. Deleting a bay clears the reference on old
   sessions instead of blocking (`0059`). The entry receipt/snackbar names the
   assigned spot.
+- **Occupied bays are blue.** Filled bays use the primary (blue) tint while
+  free bays stay green and maintenance stays grey/hatched, so a car inside is
+  obvious at a glance on the dashboard, the check-in picker and the virtual
+  board (holds keep amber). Covered by a color regression test.
 - **Check-in picks the bay on the map.** The "Espacio" section draws the
   configured layout (same cells as the dashboard): free bays are tappable,
   occupied ones show their plate, maintenance is striped and holes keep the
@@ -356,7 +360,7 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Tests
 
-- 731 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
+- 732 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
   integration test that runs only against a live stack.
 - SQL/RLS/RPC regressions covering capacity, shifts, discounts, passes,
   reservations, multi-site isolation, audit, diagnostics and retention.
@@ -394,7 +398,7 @@ Captured on 2026-10-24 against the local self-hosted stack:
 
 | Check | Result |
 |---|---|
-| `flutter test` | 731 passed (+1 live-stack integration skipped) |
+| `flutter test` | 732 passed (+1 live-stack integration skipped) |
 | `flutter analyze` | 0 errors, 0 warnings (only SDK deprecation infos) |
 | `flutter build web --release` | OK |
 | `supabase/tests/run.sh` | Passed (migrations + RPC/RLS regressions) |

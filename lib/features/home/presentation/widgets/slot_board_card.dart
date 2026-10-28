@@ -579,6 +579,7 @@ class _SpotCell extends StatelessWidget {
     final content = SpotCellView(
       spot: spot,
       size: size,
+      occupied: occupied,
       primary: occupied ? session!.plate : spot.code,
       secondary: !active
           ? l10n.slotMaintenanceShort
