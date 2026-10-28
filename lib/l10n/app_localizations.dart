@@ -2798,6 +2798,60 @@ abstract class AppLocalizations {
   /// **'Entrada registrada · {plate} en {spot}'**
   String checkInSuccessSpot(String plate, String spot);
 
+  /// No description provided for @videoEvidenceTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Video de evidencia (opcional)'**
+  String get videoEvidenceTitle;
+
+  /// No description provided for @videoEvidenceHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Graba un recorrido corto del vehículo (máx. 60 s) por si hay reclamos.'**
+  String get videoEvidenceHint;
+
+  /// No description provided for @videoRecord.
+  ///
+  /// In es, this message translates to:
+  /// **'Grabar video'**
+  String get videoRecord;
+
+  /// No description provided for @videoRecorded.
+  ///
+  /// In es, this message translates to:
+  /// **'Video listo'**
+  String get videoRecorded;
+
+  /// No description provided for @videoRecordedHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Se adjuntará al ingreso y respeta la retención de evidencia.'**
+  String get videoRecordedHint;
+
+  /// No description provided for @videoRemove.
+  ///
+  /// In es, this message translates to:
+  /// **'Quitar video'**
+  String get videoRemove;
+
+  /// No description provided for @videoPickFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo grabar el video'**
+  String get videoPickFailed;
+
+  /// No description provided for @errorVideoTooLarge.
+  ///
+  /// In es, this message translates to:
+  /// **'El video debe pesar menos de 50 MB'**
+  String get errorVideoTooLarge;
+
+  /// No description provided for @sessionVideos.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} video(s)'**
+  String sessionVideos(int count);
+
   /// No description provided for @checkInSuccess.
   ///
   /// In es, this message translates to:

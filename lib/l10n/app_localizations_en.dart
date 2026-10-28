@@ -1491,6 +1491,37 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get videoEvidenceTitle => 'Evidence video (optional)';
+
+  @override
+  String get videoEvidenceHint =>
+      'Record a short walk-around (max 60 s) in case of a claim.';
+
+  @override
+  String get videoRecord => 'Record video';
+
+  @override
+  String get videoRecorded => 'Video ready';
+
+  @override
+  String get videoRecordedHint =>
+      'It will be attached to the entry and follows the evidence retention.';
+
+  @override
+  String get videoRemove => 'Remove video';
+
+  @override
+  String get videoPickFailed => 'The video could not be recorded';
+
+  @override
+  String get errorVideoTooLarge => 'The video must be 50 MB or smaller';
+
+  @override
+  String sessionVideos(int count) {
+    return '$count video(s)';
+  }
+
+  @override
   String checkInSuccess(String plate) {
     return 'Check-in created for $plate';
   }

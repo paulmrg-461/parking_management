@@ -26,6 +26,7 @@ class CheckInMutationReplayer extends MutationReplayer {
       newVehicle: _newVehicleFrom(payload),
       leftKeys: payload['left_keys'] == true,
       spotId: (payload['spot_id'] as num?)?.toInt(),
+      video: await _photos.loadVideo(payload['video_ref'] as String?),
       idempotencyKey: clientRef,
       clientEntryTime: switch (payload['client_entry_time']) {
         final String value => DateTime.parse(value),

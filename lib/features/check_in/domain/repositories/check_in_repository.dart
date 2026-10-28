@@ -12,6 +12,7 @@ abstract class CheckInRepository {
     NewVehicleInfo? newVehicle,
     bool leftKeys = false,
     int? spotId,
+    XFile? video,
   });
 
   Future<List<ParkingSession>> listOpenSessions();

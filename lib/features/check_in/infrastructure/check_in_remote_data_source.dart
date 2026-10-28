@@ -16,6 +16,7 @@ abstract class CheckInRemoteDataSource {
     NewVehicleInfo? newVehicle,
     bool leftKeys = false,
     int? spotId,
+    XFile? video,
     String? idempotencyKey,
     DateTime? clientEntryTime,
     int? lotId,
@@ -39,6 +40,7 @@ class SupabaseCheckInRemoteDataSource implements CheckInRemoteDataSource {
     NewVehicleInfo? newVehicle,
     bool leftKeys = false,
     int? spotId,
+    XFile? video,
     String? idempotencyKey,
     DateTime? clientEntryTime,
     int? lotId,
@@ -46,6 +48,10 @@ class SupabaseCheckInRemoteDataSource implements CheckInRemoteDataSource {
     try {
       final paths = await _uploadPhotos(
         photos,
+        existingIdempotencyKey: idempotencyKey,
+      );
+      final videoPath = await _uploadVideo(
+        video,
         existingIdempotencyKey: idempotencyKey,
       );
       final result = await _client.rpc(
@@ -60,6 +66,13 @@ class SupabaseCheckInRemoteDataSource implements CheckInRemoteDataSource {
             for (final path in paths)
               {
                 'path': path,
+                'taken_at': DateTime.now().toUtc().toIso8601String(),
+              },
+          ],
+          'p_videos': [
+            if (videoPath != null)
+              {
+                'path': videoPath,
                 'taken_at': DateTime.now().toUtc().toIso8601String(),
               },
           ],
@@ -102,6 +115,26 @@ class SupabaseCheckInRemoteDataSource implements CheckInRemoteDataSource {
       paths.add(path);
     }
     return paths;
+  }
+
+  Future<String?> _uploadVideo(
+    XFile? video, {
+    String? existingIdempotencyKey,
+  }) async {
+    if (video == null) {
+      return null;
+    }
+    final folder =
+        existingIdempotencyKey ?? DateTime.now().microsecondsSinceEpoch;
+    final extension = videoExtensionOf(video);
+    final path =
+        '$folder/video_${DateTime.now().microsecondsSinceEpoch}$extension';
+    await _uploadPhoto(
+      path,
+      await video.readAsBytes(),
+      contentType: videoMimeType(extension),
+    );
+    return path;
   }
 
   /// Insert-only: storage cannot allow `upsert` here because its conflict

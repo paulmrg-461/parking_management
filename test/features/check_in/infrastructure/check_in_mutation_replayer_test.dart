@@ -26,6 +26,7 @@ class _FakeRemote implements CheckInRemoteDataSource {
     NewVehicleInfo? newVehicle,
     bool leftKeys = false,
     int? spotId,
+    XFile? video,
     String? idempotencyKey,
     DateTime? clientEntryTime,
     int? lotId,
@@ -68,6 +69,15 @@ class _FakePhotos implements PendingPhotoStorage {
   Future<List<XFile>> load(List<String> refs) async => [
     for (final ref in refs) XFile(ref),
   ];
+
+  @override
+  Future<String?> persistVideo({
+    required String clientRef,
+    required XFile video,
+  }) async => throw UnimplementedError();
+
+  @override
+  Future<XFile?> loadVideo(String? ref) async => ref == null ? null : XFile(ref);
 }
 
 PendingMutation _queued(String payload) => PendingMutation(

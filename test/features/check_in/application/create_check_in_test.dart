@@ -21,6 +21,7 @@ class _FakeRepository implements CheckInRepository {
     NewVehicleInfo? newVehicle,
     bool leftKeys = false,
     int? spotId,
+    XFile? video,
   }) async {
     this.plate = plate;
     this.photos = photos;

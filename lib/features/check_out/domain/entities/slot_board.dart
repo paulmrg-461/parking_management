@@ -22,6 +22,7 @@ class SlotSession extends Equatable {
     required this.plate,
     required this.entryTime,
     this.spotId,
+    this.videoCount = 0,
     this.hasPass = false,
     this.leftKeys = false,
     this.photoCount = 0,
@@ -34,6 +35,7 @@ class SlotSession extends Equatable {
 
   /// Physical bay assigned at check-in (null when the site has no map).
   final int? spotId;
+  final int videoCount;
   final bool hasPass;
   final bool leftKeys;
   final int photoCount;
@@ -44,6 +46,7 @@ class SlotSession extends Equatable {
     plate: json['plate'] as String,
     entryTime: DateTime.parse(json['entry_time'] as String),
     spotId: (json['spot_id'] as num?)?.toInt(),
+    videoCount: (json['video_count'] as num?)?.toInt() ?? 0,
     hasPass: json['has_pass'] == true,
     leftKeys: json['left_keys'] == true,
     photoCount: (json['photo_count'] as num?)?.toInt() ?? 0,
@@ -56,6 +59,7 @@ class SlotSession extends Equatable {
     plate,
     entryTime,
     spotId,
+    videoCount,
     hasPass,
     leftKeys,
     photoCount,

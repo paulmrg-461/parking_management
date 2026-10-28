@@ -1826,4 +1826,52 @@ begin
     set local request.headers = '{"x-lot-id":"1"}';
 end $$;
 
+-- Optional walk-around video: stored as evidence media and painted on the board.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+declare
+    car_cat integer;
+    entry jsonb;
+    vid_session integer;
+    board jsonb;
+begin
+    select id into car_cat
+      from public.categories
+     where lot_id = 1 and lower(name) = 'car'
+     limit 1;
+
+    entry := public.check_in(
+        'VID001', car_cat, null, null, '[]'::jsonb, null,
+        now() - interval '1 minute', null, false, null,
+        '[{"path":"video/ev.mp4","duration_seconds":42}]'::jsonb
+    );
+    vid_session := (entry ->> 'id')::integer;
+
+    if (entry ->> 'video_count')::integer <> 1 then
+        raise exception 'the video was not counted: %', entry;
+    end if;
+    if not exists (
+        select 1 from public.evidence_photos p
+         where p.session_id = vid_session
+           and p.kind = 'video'
+           and p.file_path = 'video/ev.mp4'
+           and p.duration_seconds = 42
+    ) then
+        raise exception 'the video row is missing';
+    end if;
+
+    board := public.slot_board();
+    if not exists (
+        select 1 from jsonb_array_elements(board -> 'sessions') item
+         where item ->> 'plate' = 'VID001'
+           and (item ->> 'video_count')::integer = 1
+    ) then
+        raise exception 'board lost the video count: %', board;
+    end if;
+
+    perform public.check_out(vid_session, null, null, 'cash');
+    delete from public.evidence_photos where session_id = vid_session;
+end $$;
+
 rollback;

@@ -89,6 +89,7 @@ extension FailureMessages on AppLocalizations {
     'InvalidDataError' || 'InvalidUsername' => errorInvalidData,
     'InvalidPin' => pinInvalid,
     'PhotoTooLargeError' || 'PayloadTooLargeError' => errorPhotoTooLarge,
+    'VideoTooLargeError' => errorVideoTooLarge,
     'InternalError' => errorServer,
     ClientFailureCodes.emptyPlate => errorEmptyPlate,
     ClientFailureCodes.ocrNoText => errorOcrNoText,

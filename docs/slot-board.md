@@ -63,8 +63,8 @@ distinct icon per group.
 ### Interactions
 
 - Tap an occupied cell → bottom sheet with the plate, exact entry time, a
-  one-second live clock, pass/keys/photo chips, the server fare breakdown and a
-  primary **Salida** action that opens `/check-out?scan=<plate>`.
+  one-second live clock, pass/keys/photo/video chips, the server fare breakdown
+  and a primary **Salida** action that opens `/check-out?scan=<plate>`.
 - Tap a reserved cell → bottom sheet with the plate and hold expiry. Admins
   additionally get **Cancelar reserva** (confirmation + snack + board reload);
   the reservation id is resolved from `listActive()` by plate and expiry, since

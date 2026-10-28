@@ -42,6 +42,7 @@ class _FakeRemote implements CheckInRemoteDataSource {
     NewVehicleInfo? newVehicle,
     bool leftKeys = false,
     int? spotId,
+    XFile? video,
     String? idempotencyKey,
     DateTime? clientEntryTime,
     int? lotId,

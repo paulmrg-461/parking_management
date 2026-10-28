@@ -1503,6 +1503,37 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get videoEvidenceTitle => 'Video de evidencia (opcional)';
+
+  @override
+  String get videoEvidenceHint =>
+      'Graba un recorrido corto del vehículo (máx. 60 s) por si hay reclamos.';
+
+  @override
+  String get videoRecord => 'Grabar video';
+
+  @override
+  String get videoRecorded => 'Video listo';
+
+  @override
+  String get videoRecordedHint =>
+      'Se adjuntará al ingreso y respeta la retención de evidencia.';
+
+  @override
+  String get videoRemove => 'Quitar video';
+
+  @override
+  String get videoPickFailed => 'No se pudo grabar el video';
+
+  @override
+  String get errorVideoTooLarge => 'El video debe pesar menos de 50 MB';
+
+  @override
+  String sessionVideos(int count) {
+    return '$count video(s)';
+  }
+
+  @override
   String checkInSuccess(String plate) {
     return 'Entrada registrada: $plate';
   }

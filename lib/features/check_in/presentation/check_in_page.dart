@@ -1,10 +1,10 @@
 import 'dart:async';
 
-import 'package:cross_file/cross_file.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/l10n/failure_messages.dart';
@@ -58,6 +58,7 @@ class CheckInPage extends StatefulWidget {
     this.initialPlate,
     this.onMarkExit,
     this.reservations,
+    this.recordVideo,
     this.vehicles,
   });
 
@@ -82,6 +83,9 @@ class CheckInPage extends StatefulWidget {
   /// Known plates for the quick suggestions under the field. Optional.
   final VehicleRepository? vehicles;
 
+  /// Test seam: records (or picks) the optional evidence video.
+  final Future<XFile?> Function()? recordVideo;
+
   @override
   State<CheckInPage> createState() => _CheckInPageState();
 }
@@ -105,6 +109,7 @@ class _CheckInPageState extends State<CheckInPage> {
   Timer? _debounce;
   int? _categoryId;
   int? _spotId;
+  XFile? _video;
   String? _lastPlate;
   bool _sessionsOpen = true;
   bool _leftKeys = false;
@@ -361,6 +366,36 @@ class _CheckInPageState extends State<CheckInPage> {
     setState(() => _photos.removeAt(index));
   }
 
+  Future<XFile?> _defaultRecordVideo() {
+    final picker = ImagePicker();
+    return picker.pickVideo(
+      source: ImageSource.camera,
+      maxDuration: const Duration(seconds: EvidencePolicy.maxVideoSeconds),
+    );
+  }
+
+  Future<void> _pickVideo() async {
+    try {
+      final video = await (widget.recordVideo ?? _defaultRecordVideo)();
+      if (video == null || !mounted) {
+        return;
+      }
+      if (await video.length() > EvidencePolicy.maxVideoBytes) {
+        if (mounted) {
+          showErrorSnack(context, context.l10n.errorVideoTooLarge);
+        }
+        return;
+      }
+      if (mounted) {
+        setState(() => _video = video);
+      }
+    } catch (_) {
+      if (mounted) {
+        showErrorSnack(context, context.l10n.videoPickFailed);
+      }
+    }
+  }
+
   void _submit(BuildContext context, VehicleLookupState lookup) {
     unawaited(
       context.read<CheckInCubit>().submitCheckIn(
@@ -369,6 +404,7 @@ class _CheckInPageState extends State<CheckInPage> {
         newVehicle: lookup is VehicleLookupNotFound ? _newVehicleInfo() : null,
         leftKeys: _leftKeys,
         spotId: _spotId,
+        video: _video,
       ),
     );
   }
@@ -406,6 +442,7 @@ class _CheckInPageState extends State<CheckInPage> {
       _photos.clear();
       _categoryId = null;
       _spotId = null;
+      _video = null;
       _leftKeys = false;
     });
     context.read<VehicleLookupCubit>().reset();
@@ -634,6 +671,52 @@ class _CheckInPageState extends State<CheckInPage> {
     );
   }
 
+  Widget _buildVideoEvidence(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final video = _video;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(l10n.videoEvidenceTitle, style: theme.textTheme.titleSmall),
+        const SizedBox(height: Space.xs),
+        Text(
+          l10n.videoEvidenceHint,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: Space.sm),
+        if (video == null)
+          OutlinedButton.icon(
+            key: const Key('check_in_record_video'),
+            onPressed: _pickVideo,
+            icon: const Icon(Icons.videocam_outlined),
+            label: Text(l10n.videoRecord),
+          )
+        else
+          Card(
+            margin: EdgeInsets.zero,
+            child: ListTile(
+              leading: const Icon(Icons.video_file_outlined),
+              title: Text(
+                video.name.isEmpty ? l10n.videoRecorded : video.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              subtitle: Text(l10n.videoRecordedHint),
+              trailing: IconButton(
+                key: const Key('check_in_remove_video'),
+                tooltip: l10n.videoRemove,
+                icon: const Icon(Icons.delete_outline),
+                onPressed: () => setState(() => _video = null),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
   Widget _buildFormFields(BuildContext context, VehicleLookupState lookup) {
     final l10n = context.l10n;
     final openSession = _openSessionFor(_plateController.text);
@@ -733,6 +816,8 @@ class _CheckInPageState extends State<CheckInPage> {
           onAdd: _addPhoto,
           onRemove: _removePhoto,
         ),
+        const SizedBox(height: 16),
+        _buildVideoEvidence(context),
         const SizedBox(height: 16),
         BlocSelector<CheckInCubit, CheckInState, bool>(
           selector: (state) => state.submission.isInProgress,

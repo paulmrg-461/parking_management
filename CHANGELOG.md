@@ -53,6 +53,13 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   holds obey the same limit. Deleting a bay clears the reference on old
   sessions instead of blocking (`0059`). The entry receipt/snackbar names the
   assigned spot.
+- **Optional walk-around video at check-in.** The operator can record a short
+  clip (max 60 s, 50 MB) of the vehicle's condition; it is optional like the
+  photos, uploads to the same evidence bucket and is stored as
+  `evidence_photos.kind = 'video'` (`0064`) so retention/archive and the
+  membership read policy keep working. The check-in response and the space
+  sheet show the video count, and the queued (offline) check-in persists the
+  clip until it replays.
 - **Records filters and exports.** The log filters by business-date range
   (All / Today / 7 days / 30 days or a custom picker, `0063`) next to the plate,
   shows the matching total and can export the **whole filtered set**: CSV to the
@@ -378,7 +385,7 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Tests
 
-- 750 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
+- 752 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
   integration test that runs only against a live stack.
 - SQL/RLS/RPC regressions covering capacity, shifts, discounts, passes,
   reservations, multi-site isolation, audit, diagnostics and retention.
@@ -416,7 +423,7 @@ Captured on 2026-10-24 against the local self-hosted stack:
 
 | Check | Result |
 |---|---|
-| `flutter test` | 750 passed (+1 live-stack integration skipped) |
+| `flutter test` | 752 passed (+1 live-stack integration skipped) |
 | `flutter analyze` | 0 errors, 0 warnings (only SDK deprecation infos) |
 | `flutter build web --release` | OK |
 | `supabase/tests/run.sh` | Passed (migrations + RPC/RLS regressions) |

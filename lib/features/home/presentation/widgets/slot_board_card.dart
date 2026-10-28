@@ -1090,6 +1090,12 @@ class _SessionSheetState extends State<_SessionSheet> {
                     tone: StatusTone.neutral,
                     icon: Icons.photo_camera_outlined,
                   ),
+                if (session.videoCount > 0)
+                  StatusChip(
+                    label: l10n.sessionVideos(session.videoCount),
+                    tone: StatusTone.neutral,
+                    icon: Icons.videocam_outlined,
+                  ),
               ],
             ),
             const SizedBox(height: Space.md),

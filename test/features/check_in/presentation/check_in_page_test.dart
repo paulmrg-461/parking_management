@@ -44,6 +44,7 @@ class _FakeCheckInRepository implements CheckInRepository {
   String? lastPlate;
   bool? lastLeftKeys;
   int? lastSpotId;
+  XFile? lastVideo;
   NewVehicleInfo? lastNewVehicle;
   List<XFile> lastPhotos = const [];
 
@@ -54,11 +55,13 @@ class _FakeCheckInRepository implements CheckInRepository {
     NewVehicleInfo? newVehicle,
     bool leftKeys = false,
     int? spotId,
+    XFile? video,
   }) async {
     createCalls++;
     lastPlate = plate;
     lastLeftKeys = leftKeys;
     lastSpotId = spotId;
+    lastVideo = video;
     lastNewVehicle = newVehicle;
     lastPhotos = photos;
     final error = createError;
@@ -213,6 +216,7 @@ void main() {
     ReservationRepository? reservations,
     List<String> knownPlates = const [],
     bool withVehicles = true,
+    Future<XFile?> Function()? recordVideo,
   }) async {
     // Tall viewport: the form, the keys switch and the sessions accordion must
     // fit without fighting the CustomScrollView while tapping.
@@ -250,6 +254,7 @@ void main() {
             initialPlate: initialPlate,
             onMarkExit: onMarkExit,
             reservations: reservations,
+            recordVideo: recordVideo,
             vehicles: withVehicles
                 ? _FakeVehicleRepository(plates: knownPlates)
                 : null,
@@ -891,5 +896,49 @@ void main() {
     await tapSubmit(tester);
 
     expect(checkIns.lastSpotId, isNull);
+  });
+
+  testWidgets('Success: an optional evidence video is attached', (
+    tester,
+  ) async {
+    final video = XFile.fromData(
+      Uint8List.fromList([1, 2, 3]),
+      name: 'walkaround.mp4',
+      mimeType: 'video/mp4',
+    );
+    await pumpPage(tester, recordVideo: () async => video);
+
+    await enterPlate(tester, 'ABC123');
+    final record = find.byKey(const Key('check_in_record_video'));
+    await tester.ensureVisible(record);
+    await tester.pumpAndSettle();
+    await tester.tap(record);
+    await tester.pumpAndSettle();
+    expect(find.text('Video listo'), findsOneWidget);
+
+    await tapSubmit(tester);
+
+    expect(checkIns.lastVideo, video);
+  });
+
+  testWidgets('Failure: the video can be removed before submitting', (
+    tester,
+  ) async {
+    final video = XFile.fromData(
+      Uint8List.fromList([1, 2, 3]),
+      name: 'walkaround.mp4',
+    );
+    await pumpPage(tester, recordVideo: () async => video);
+
+    final record = find.byKey(const Key('check_in_record_video'));
+    await tester.ensureVisible(record);
+    await tester.pumpAndSettle();
+    await tester.tap(record);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('check_in_remove_video')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Video listo'), findsNothing);
+    expect(find.byKey(const Key('check_in_record_video')), findsOneWidget);
   });
 }
