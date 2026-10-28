@@ -71,6 +71,9 @@ class ParkingSettingsRepositoryImpl implements ParkingSettingsRepository {
   }
 
   @override
+  Future<String> resetLegalPolicy() => _remote.resetLegalPolicy();
+
+  @override
   Future<ParkingSettings> uploadLogo(Uint8List bytes) async {
     // Connectivity is required by design: logo bytes are never queued, so a
     // failure here propagates and the cached logo stays untouched.

@@ -44,6 +44,18 @@ class FakeParkingSettingsRepository implements ParkingSettingsRepository {
   Future<Uint8List?> loadLogo(int version) async =>
       version == settings.logoVersion ? logoBytes : null;
 
+  String defaultPolicy = 'POLITICAS {{parking}}';
+  Failure? resetError;
+
+  @override
+  Future<String> resetLegalPolicy() async {
+    final error = resetError;
+    if (error != null) {
+      throw error;
+    }
+    return defaultPolicy;
+  }
+
   @override
   Future<ParkingSettings> uploadLogo(Uint8List bytes) async {
     final error = logoError;

@@ -1,0 +1,149 @@
+-- Holds obey the same usable pool: a reservation may not take a spot that is
+-- out of service, and a group with everything out of service is full.
+-- Replaces create_reservation from 0049 (unchanged except for the capacity
+-- it checks).
+create or replace function public.create_reservation(
+    p_plate text,
+    p_category_id integer,
+    p_until timestamptz,
+    p_notes text default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+    actor integer := public.require_app_user();
+    normalized text := upper(regexp_replace(coalesce(p_plate, ''), '\s', '', 'g'));
+    capacity integer;
+    open_count integer;
+    reserved_count integer;
+    category_name text;
+    car_capacity integer := 0;
+    moto_capacity integer := 0;
+    car_out integer := 0;
+    moto_out integer := 0;
+    group_configured boolean := false;
+    group_capacity integer := 0;
+    is_car boolean;
+    is_moto boolean;
+    reservation public.category_reservations%rowtype;
+begin
+    if normalized = '' then
+        raise exception 'InvalidPlateError';
+    end if;
+    if p_category_id is null then
+        raise exception 'CategoryNotFoundError';
+    end if;
+    if p_until is null or p_until <= now() then
+        raise exception 'InvalidReservationWindowError';
+    end if;
+
+    perform pg_advisory_xact_lock(hashtext('category:' || p_category_id));
+
+    select c.capacity, lower(c.name) into capacity, category_name
+      from public.categories c
+     where c.id = p_category_id
+       and c.lot_id = public.current_lot_id();
+    if not found then
+        raise exception 'CategoryNotFoundError';
+    end if;
+
+    if exists (
+        select 1 from public.parking_sessions s
+          join public.vehicles v on v.id = s.vehicle_id
+         where v.plate = normalized and s.status = 'open'
+    ) then
+        raise exception 'VehicleAlreadyInsideError';
+    end if;
+
+    if coalesce(capacity, 0) > 0 then
+        select count(*) into open_count
+          from public.parking_sessions s
+          join public.vehicles v on v.id = s.vehicle_id
+         where v.category_id = p_category_id
+           and s.status = 'open'
+           and s.lot_id = public.current_lot_id();
+        select count(*) into reserved_count
+          from public.category_reservations r
+         where r.category_id = p_category_id
+           and r.lot_id = public.current_lot_id()
+           and r.status = 'active'
+           and r.reserved_until > now();
+        if open_count + reserved_count >= capacity then
+            raise exception 'CategoryFullError';
+        end if;
+    end if;
+
+    is_car := category_name in ('car', 'carro', 'auto', 'camioneta', 'suv');
+    is_moto := category_name in ('moto', 'motos', 'motorcycle');
+    select coalesce(ps.car_capacity, 0), coalesce(ps.moto_capacity, 0),
+           coalesce(ps.car_out_of_service, 0),
+           coalesce(ps.moto_out_of_service, 0)
+      into car_capacity, moto_capacity, car_out, moto_out
+      from public.parking_settings ps
+     where ps.lot_id = public.current_lot_id();
+
+    group_configured := case
+        when is_car then car_capacity > 0
+        when is_moto then moto_capacity > 0
+        else false
+    end;
+
+    group_capacity := case
+        when is_car then public.usable_capacity(car_capacity, car_out)
+        when is_moto then public.usable_capacity(moto_capacity, moto_out)
+        else 0
+    end;
+
+    if group_configured then
+        perform pg_advisory_xact_lock(
+            hashtext('group:' || public.current_lot_id() || ':' || category_name)
+        );
+        select count(*) into open_count
+          from public.parking_sessions s
+          join public.vehicles v on v.id = s.vehicle_id
+          join public.categories c on c.id = v.category_id
+         where s.status = 'open'
+           and s.lot_id = public.current_lot_id()
+           and (
+               (is_car and lower(c.name) in ('car', 'carro', 'auto', 'camioneta', 'suv'))
+               or (is_moto and lower(c.name) in ('moto', 'motos', 'motorcycle'))
+           );
+        select count(*) into reserved_count
+          from public.category_reservations r
+          join public.categories c on c.id = r.category_id
+         where r.lot_id = public.current_lot_id()
+           and r.status = 'active'
+           and r.reserved_until > now()
+           and (
+               (is_car and lower(c.name) in ('car', 'carro', 'auto', 'camioneta', 'suv'))
+               or (is_moto and lower(c.name) in ('moto', 'motos', 'motorcycle'))
+           );
+        if open_count + reserved_count >= group_capacity then
+            raise exception 'ParkingFullError';
+        end if;
+    end if;
+
+    insert into public.category_reservations (
+        plate, category_id, reserved_until, notes, created_by, lot_id
+    )
+    values (
+        normalized, p_category_id, p_until,
+        nullif(btrim(coalesce(p_notes, '')), ''), actor, public.current_lot_id()
+    )
+    returning * into reservation;
+
+    return jsonb_build_object(
+        'id', reservation.id,
+        'plate', reservation.plate,
+        'category_id', reservation.category_id,
+        'reserved_from', reservation.reserved_from,
+        'reserved_until', reservation.reserved_until,
+        'status', reservation.status,
+        'lot_id', reservation.lot_id,
+        'notes', reservation.notes
+    );
+end;
+$$;

@@ -17,6 +17,9 @@ class ParkingSettings extends Equatable {
     this.carCapacity = 0,
     this.motoCapacity = 0,
     this.keyCapacity = 0,
+    this.carOutOfService = 0,
+    this.motoOutOfService = 0,
+    this.legalPolicy = '',
   });
 
   final String name;
@@ -47,6 +50,15 @@ class ParkingSettings extends Equatable {
   /// How many cars may leave their keys at once; `0` = no limit.
   final int keyCapacity;
 
+  /// Car spots out of the usable pool (maintenance, blocked area).
+  final int carOutOfService;
+
+  /// Motorcycle spots out of the usable pool.
+  final int motoOutOfService;
+
+  /// Service contract / legal policy shown to customers (editable template).
+  final String legalPolicy;
+
   /// The never-configured record (mirrors the backend default).
   static ParkingSettings defaults() => const ParkingSettings();
 
@@ -63,6 +75,9 @@ class ParkingSettings extends Equatable {
     int? carCapacity,
     int? motoCapacity,
     int? keyCapacity,
+    int? carOutOfService,
+    int? motoOutOfService,
+    String? legalPolicy,
   }) => ParkingSettings(
     name: name ?? this.name,
     address: address ?? this.address,
@@ -71,12 +86,14 @@ class ParkingSettings extends Equatable {
     website: website ?? this.website,
     whatsapp: whatsapp ?? this.whatsapp,
     logoVersion: logoVersion ?? this.logoVersion,
-    evidenceRetentionDays:
-        evidenceRetentionDays ?? this.evidenceRetentionDays,
+    evidenceRetentionDays: evidenceRetentionDays ?? this.evidenceRetentionDays,
     whatsappAuto: whatsappAuto ?? this.whatsappAuto,
     carCapacity: carCapacity ?? this.carCapacity,
     motoCapacity: motoCapacity ?? this.motoCapacity,
     keyCapacity: keyCapacity ?? this.keyCapacity,
+    carOutOfService: carOutOfService ?? this.carOutOfService,
+    motoOutOfService: motoOutOfService ?? this.motoOutOfService,
+    legalPolicy: legalPolicy ?? this.legalPolicy,
   );
 
   /// Editable fields (metadata excluded).
@@ -92,6 +109,9 @@ class ParkingSettings extends Equatable {
     'car_capacity': carCapacity,
     'moto_capacity': motoCapacity,
     'key_capacity': keyCapacity,
+    'car_out_of_service': carOutOfService,
+    'moto_out_of_service': motoOutOfService,
+    'legal_policy': legalPolicy,
   };
 
   @override
@@ -108,5 +128,8 @@ class ParkingSettings extends Equatable {
     carCapacity,
     motoCapacity,
     keyCapacity,
+    carOutOfService,
+    motoOutOfService,
+    legalPolicy,
   ];
 }

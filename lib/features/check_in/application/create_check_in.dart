@@ -19,15 +19,32 @@ class CreateCheckIn {
     required List<XFile> photos,
     NewVehicleInfo? newVehicle,
     bool leftKeys = false,
+    int? spotId,
+    XFile? video,
   }) async {
     final normalized = normalizePlate(plate);
     await _validatePhotos(photos);
+    await _validateVideo(video);
     return _repository.createCheckIn(
       plate: normalized,
       photos: photos,
       newVehicle: newVehicle,
       leftKeys: leftKeys,
+      spotId: spotId,
+      video: video,
     );
+  }
+
+  Future<void> _validateVideo(XFile? video) async {
+    if (video == null) {
+      return;
+    }
+    if (await video.length() > EvidencePolicy.maxVideoBytes) {
+      throw const ValidationFailure(
+        'The evidence video must be 50 MB or smaller',
+        ClientFailureCodes.videoTooLarge,
+      );
+    }
   }
 
   Future<void> _validatePhotos(List<XFile> photos) async {

@@ -19,6 +19,9 @@ class ParkingSettingsDto {
     this.carCapacity = 0,
     this.motoCapacity = 0,
     this.keyCapacity = 0,
+    this.carOutOfService = 0,
+    this.motoOutOfService = 0,
+    this.legalPolicy = '',
   });
 
   factory ParkingSettingsDto.fromJson(Map<String, dynamic> json) =>
@@ -36,6 +39,9 @@ class ParkingSettingsDto {
   final int carCapacity;
   final int motoCapacity;
   final int keyCapacity;
+  final int carOutOfService;
+  final int motoOutOfService;
+  final String legalPolicy;
 
   Map<String, dynamic> toJson() => _$ParkingSettingsDtoToJson(this);
 
@@ -52,5 +58,8 @@ class ParkingSettingsDto {
     carCapacity: carCapacity,
     motoCapacity: motoCapacity,
     keyCapacity: keyCapacity,
+    carOutOfService: carOutOfService,
+    motoOutOfService: motoOutOfService,
+    legalPolicy: legalPolicy,
   );
 }

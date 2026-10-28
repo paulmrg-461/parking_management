@@ -35,6 +35,26 @@ class HivePendingPhotoStorage implements PendingPhotoStorage {
   }
 
   @override
+  Future<String?> persistVideo({
+    required String clientRef,
+    required XFile video,
+  }) async {
+    final box = await _box();
+    final ref = '$clientRef/video${videoExtensionOf(video)}';
+    await box.put(ref, await video.readAsBytes());
+    return ref;
+  }
+
+  @override
+  Future<XFile?> loadVideo(String? ref) async {
+    if (ref == null) {
+      return null;
+    }
+    final box = await _box();
+    return _fileFor(ref, box.get(ref));
+  }
+
+  @override
   Future<void> deleteFor(String clientRef) async {
     final box = await _box();
     final prefix = '$clientRef/';

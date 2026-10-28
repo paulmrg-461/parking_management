@@ -3,6 +3,7 @@ import '../entities/capacity_snapshot.dart';
 import '../entities/check_out_preview.dart';
 import '../entities/check_out_receipt.dart';
 import '../entities/occupancy_snapshot.dart';
+import '../entities/slot_board.dart';
 import '../entities/open_session.dart';
 import '../entities/today_summary.dart';
 
@@ -24,6 +25,8 @@ abstract class CheckOutRepository {
     String? discountReason,
     bool lostTicket = false,
     String? lostTicketReason,
+    String? cardType,
+    int? cashReceived,
   });
 
   /// Fare the customer would pay right now (no side effects).
@@ -31,6 +34,9 @@ abstract class CheckOutRepository {
 
   /// Space configuration and what is inside (home dashboard).
   Future<CapacitySnapshot> capacitySnapshot();
+
+  /// Visual board: capacities, cars inside and active holds.
+  Future<SlotBoard> slotBoard();
 
   /// Open sessions + capacity per category (any signed-in user).
   Future<OccupancySnapshot> occupancy();

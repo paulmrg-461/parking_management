@@ -67,6 +67,7 @@ abstract final class ClientFailureCodes {
   static const emptyPlate = 'EmptyPlate';
   static const ocrNoText = 'OcrNoText';
   static const scanUnavailable = 'ScanUnavailable';
+  static const videoTooLarge = 'VideoTooLargeError';
   static const tooManyPhotos = 'TooManyPhotos';
   static const photoTooLarge = 'PhotoTooLargeError';
   static const pendingSyncCheckOut = 'PendingSyncCheckOut';

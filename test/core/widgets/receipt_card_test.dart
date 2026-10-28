@@ -14,6 +14,37 @@ ReceiptData _checkOutData() => ReceiptData(
   ticketNumber: 'TCK-000042',
 );
 
+ReceiptData _checkInData({String? evidenceUrl}) => ReceiptData(
+  kind: ReceiptKind.checkIn,
+  plate: 'ABC123',
+  entryTime: DateTime(2026, 1, 1, 8, 30),
+  photoCount: 1,
+  evidenceUrl: evidenceUrl,
+);
+
+ReceiptData _cardData() => ReceiptData(
+  kind: ReceiptKind.checkOut,
+  plate: 'ABC123',
+  entryTime: DateTime(2026, 1, 1, 8, 30),
+  exitTime: DateTime(2026, 1, 1, 11, 45),
+  amountCharged: 12500,
+  paymentMethod: 'card',
+  cardType: 'debit',
+  ticketNumber: 'TCK-000042',
+);
+
+ReceiptData _cashData() => ReceiptData(
+  kind: ReceiptKind.checkOut,
+  plate: 'ABC123',
+  entryTime: DateTime(2026, 1, 1, 8, 30),
+  exitTime: DateTime(2026, 1, 1, 11, 45),
+  amountCharged: 12500,
+  paymentMethod: 'cash',
+  cashReceived: 20000,
+  cashChange: 7500,
+  ticketNumber: 'TCK-000042',
+);
+
 void main() {
   testWidgets('check-out receipt formats date, duration and amount', (
     tester,
@@ -162,5 +193,110 @@ void main() {
     );
 
     expect(find.byType(QrCode), findsNothing);
+  });
+
+  testWidgets('the check-out QR is bigger and the evidence QR sits below', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      testApp(
+        Scaffold(
+          body: SingleChildScrollView(
+            child: ReceiptCard(
+              data: _checkInData(
+                evidenceUrl:
+                    'https://app.test/evidence?session=43&plate=ABC123',
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final codes = tester.widgetList<QrCode>(find.byType(QrCode)).toList();
+    expect(codes, hasLength(2));
+    expect(codes[0].data, 'ABC123');
+    expect(codes[0].size, 176);
+    expect(codes[1].data, contains('/evidence?session=43'));
+    expect(codes[1].size, 88);
+    expect(
+      find.text('Evidencias del vehículo: escanea (clave: placa)'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('no evidence QR when the app URL is not configured', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      testApp(
+        Scaffold(
+          body: SingleChildScrollView(child: ReceiptCard(data: _checkInData())),
+        ),
+      ),
+    );
+
+    expect(find.byType(QrCode), findsOneWidget);
+  });
+
+  testWidgets('a card receipt names debit or credit', (tester) async {
+    await tester.pumpWidget(
+      testApp(
+        Scaffold(
+          body: SingleChildScrollView(child: ReceiptCard(data: _cardData())),
+        ),
+      ),
+    );
+
+    expect(find.text('Tarjeta · Débito'), findsOneWidget);
+  });
+
+  testWidgets('a cash receipt shows the amount received and change', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      testApp(
+        Scaffold(
+          body: SingleChildScrollView(child: ReceiptCard(data: _cashData())),
+        ),
+      ),
+    );
+
+    expect(find.text('Recibido'), findsOneWidget);
+    expect(find.text(r'$20.000'), findsOneWidget);
+    expect(find.text('Cambio'), findsOneWidget);
+    expect(find.text(r'$7.500'), findsOneWidget);
+  });
+
+  testWidgets('Imprimir closes the receipt before the print sheet', (
+    tester,
+  ) async {
+    var printed = false;
+    await tester.pumpWidget(
+      testApp(
+        Scaffold(
+          body: Builder(
+            builder: (context) => FilledButton(
+              onPressed: () => showReceipt(
+                context,
+                _checkOutData(),
+                onPrint: () async => printed = true,
+              ),
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    expect(find.byType(ReceiptCard), findsOneWidget);
+
+    await tester.tap(find.text('Imprimir'));
+    await tester.pumpAndSettle();
+
+    expect(printed, isTrue);
+    expect(find.byType(ReceiptCard), findsNothing);
   });
 }

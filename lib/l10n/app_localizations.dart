@@ -110,6 +110,24 @@ abstract class AppLocalizations {
   /// **'Cerrar'**
   String get actionClose;
 
+  /// No description provided for @activityCheckIn.
+  ///
+  /// In es, this message translates to:
+  /// **'{actor} registró el ingreso de {plate}'**
+  String activityCheckIn(String actor, String plate);
+
+  /// No description provided for @activityCheckOut.
+  ///
+  /// In es, this message translates to:
+  /// **'{actor} registró la salida de {plate} · Cobro: {amount}'**
+  String activityCheckOut(String actor, String plate, String amount);
+
+  /// No description provided for @activityCheckOutNoAmount.
+  ///
+  /// In es, this message translates to:
+  /// **'{actor} registró la salida de {plate}'**
+  String activityCheckOutNoAmount(String actor, String plate);
+
   /// No description provided for @actionCancel.
   ///
   /// In es, this message translates to:
@@ -253,6 +271,114 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'No se pudo guardar la información en el dispositivo'**
   String get errorStorage;
+
+  /// No description provided for @evidenceGateTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresa la placa para ver las evidencias'**
+  String get evidenceGateTitle;
+
+  /// No description provided for @evidenceGateHint.
+  ///
+  /// In es, this message translates to:
+  /// **'La placa impresa en el recibo es la clave de acceso.'**
+  String get evidenceGateHint;
+
+  /// No description provided for @evidenceUnlock.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver evidencias'**
+  String get evidenceUnlock;
+
+  /// No description provided for @policiesTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Políticas y contrato'**
+  String get policiesTitle;
+
+  /// No description provided for @policiesInvalid.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos cargar las políticas de este parqueadero.'**
+  String get policiesInvalid;
+
+  /// No description provided for @policiesEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Este parqueadero aún no publicó sus políticas.'**
+  String get policiesEmpty;
+
+  /// No description provided for @policiesHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Al ingresar el vehículo aceptas estas políticas. Si tienes dudas, contacta al parqueadero.'**
+  String get policiesHelp;
+
+  /// No description provided for @evidenceOpenPolicies.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver políticas y contrato del parqueadero'**
+  String get evidenceOpenPolicies;
+
+  /// No description provided for @evidenceTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Evidencias del vehículo'**
+  String get evidenceTitle;
+
+  /// No description provided for @evidenceInvalid.
+  ///
+  /// In es, this message translates to:
+  /// **'Este enlace no es válido o la placa no coincide.'**
+  String get evidenceInvalid;
+
+  /// No description provided for @evidenceKey.
+  ///
+  /// In es, this message translates to:
+  /// **'Clave de acceso: {plate}'**
+  String evidenceKey(String plate);
+
+  /// No description provided for @evidenceEntry.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingreso: {when}'**
+  String evidenceEntry(String when);
+
+  /// No description provided for @evidenceEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Este ingreso no tiene fotos ni videos.'**
+  String get evidenceEmpty;
+
+  /// No description provided for @evidenceNoPhotos.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin fotos.'**
+  String get evidenceNoPhotos;
+
+  /// No description provided for @evidencePhotos.
+  ///
+  /// In es, this message translates to:
+  /// **'Fotos ({count})'**
+  String evidencePhotos(int count);
+
+  /// No description provided for @evidenceVideos.
+  ///
+  /// In es, this message translates to:
+  /// **'Videos ({count})'**
+  String evidenceVideos(int count);
+
+  /// No description provided for @evidencePlayVideo.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver video'**
+  String get evidencePlayVideo;
+
+  /// No description provided for @evidenceHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Comparte este enlace solo con el propietario del vehículo. Las evidencias se eliminan según la retención del parqueadero.'**
+  String get evidenceHelp;
 
   /// No description provided for @errorUnknown.
   ///
@@ -908,6 +1034,12 @@ abstract class AppLocalizations {
   /// **'Registrar entrada'**
   String get reservationCheckIn;
 
+  /// No description provided for @checkInHoldTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Reserva activa'**
+  String get checkInHoldTitle;
+
   /// No description provided for @reservationCancel.
   ///
   /// In es, this message translates to:
@@ -1057,6 +1189,138 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Marcar todo leído'**
   String get notificationsMarkAll;
+
+  /// No description provided for @navRecords.
+  ///
+  /// In es, this message translates to:
+  /// **'Registros'**
+  String get navRecords;
+
+  /// No description provided for @recordsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Registros de vehículos'**
+  String get recordsTitle;
+
+  /// No description provided for @recordsCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} registros'**
+  String recordsCount(int count);
+
+  /// No description provided for @recordsEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin registros para «{plate}»'**
+  String recordsEmpty(String plate);
+
+  /// No description provided for @recordsEmptyAll.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no hay registros en esta sede'**
+  String get recordsEmptyAll;
+
+  /// No description provided for @recordsClearFilter.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver todos'**
+  String get recordsClearFilter;
+
+  /// No description provided for @recordsOpenSince.
+  ///
+  /// In es, this message translates to:
+  /// **'Dentro desde {since} · {duration}'**
+  String recordsOpenSince(String since, String duration);
+
+  /// No description provided for @recordsWindow.
+  ///
+  /// In es, this message translates to:
+  /// **'{entry} → {exit} · {duration}'**
+  String recordsWindow(String duration, String entry, String exit);
+
+  /// No description provided for @recordsRangeAll.
+  ///
+  /// In es, this message translates to:
+  /// **'Todo'**
+  String get recordsRangeAll;
+
+  /// No description provided for @recordsRangeToday.
+  ///
+  /// In es, this message translates to:
+  /// **'Hoy'**
+  String get recordsRangeToday;
+
+  /// No description provided for @recordsRangeWeek.
+  ///
+  /// In es, this message translates to:
+  /// **'7 días'**
+  String get recordsRangeWeek;
+
+  /// No description provided for @recordsRangeMonth.
+  ///
+  /// In es, this message translates to:
+  /// **'30 días'**
+  String get recordsRangeMonth;
+
+  /// No description provided for @recordsRangeTooltip.
+  ///
+  /// In es, this message translates to:
+  /// **'Rango de fechas'**
+  String get recordsRangeTooltip;
+
+  /// No description provided for @recordsExportCsv.
+  ///
+  /// In es, this message translates to:
+  /// **'Copiar CSV'**
+  String get recordsExportCsv;
+
+  /// No description provided for @recordsExportPdf.
+  ///
+  /// In es, this message translates to:
+  /// **'Exportar PDF'**
+  String get recordsExportPdf;
+
+  /// No description provided for @recordsCsvCopied.
+  ///
+  /// In es, this message translates to:
+  /// **'CSV copiado al portapapeles'**
+  String get recordsCsvCopied;
+
+  /// No description provided for @recordsExportEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay registros para exportar'**
+  String get recordsExportEmpty;
+
+  /// No description provided for @recordsEntry.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingreso'**
+  String get recordsEntry;
+
+  /// No description provided for @recordsExit.
+  ///
+  /// In es, this message translates to:
+  /// **'Salida'**
+  String get recordsExit;
+
+  /// No description provided for @recordsDuration.
+  ///
+  /// In es, this message translates to:
+  /// **'Duración'**
+  String get recordsDuration;
+
+  /// No description provided for @recordsAmount.
+  ///
+  /// In es, this message translates to:
+  /// **'Cobro'**
+  String get recordsAmount;
+
+  /// No description provided for @recordsLoadMore.
+  ///
+  /// In es, this message translates to:
+  /// **'Cargar más'**
+  String get recordsLoadMore;
 
   /// No description provided for @navHistory.
   ///
@@ -1309,6 +1573,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Turno cerrado'**
   String get shiftClosedTitle;
+
+  /// No description provided for @cashCountTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Contar efectivo'**
+  String get cashCountTitle;
+
+  /// No description provided for @cashCountUse.
+  ///
+  /// In es, this message translates to:
+  /// **'Usar {amount}'**
+  String cashCountUse(String amount);
 
   /// No description provided for @shiftAdjust.
   ///
@@ -1658,6 +1934,18 @@ abstract class AppLocalizations {
   /// **'En curso'**
   String get vehicleHistoryOpen;
 
+  /// No description provided for @navMenu.
+  ///
+  /// In es, this message translates to:
+  /// **'Menú'**
+  String get navMenu;
+
+  /// No description provided for @navMenuTooltip.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir el menú'**
+  String get navMenuTooltip;
+
   /// No description provided for @navMore.
   ///
   /// In es, this message translates to:
@@ -1688,6 +1976,258 @@ abstract class AppLocalizations {
   /// **'Descartar'**
   String get settingsDiscard;
 
+  /// No description provided for @spotsCapacityHint.
+  ///
+  /// In es, this message translates to:
+  /// **'El mapa debe tener exactamente los espacios configurados en Ajustes.'**
+  String get spotsCapacityHint;
+
+  /// No description provided for @spotsGroupCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{drawn} de {target}'**
+  String spotsGroupCount(int drawn, int target);
+
+  /// No description provided for @spotsRemaining.
+  ///
+  /// In es, this message translates to:
+  /// **'Faltan {count}'**
+  String spotsRemaining(int count);
+
+  /// No description provided for @spotsExcess.
+  ///
+  /// In es, this message translates to:
+  /// **'Sobran {count}'**
+  String spotsExcess(int count);
+
+  /// No description provided for @errorSpotCapacityReached.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya dibujaste todos los espacios configurados'**
+  String get errorSpotCapacityReached;
+
+  /// No description provided for @errorSpotCapacityRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'No puedes dejar menos espacios que los configurados; ajusta la capacidad en Ajustes'**
+  String get errorSpotCapacityRequired;
+
+  /// No description provided for @spotsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Mapa del parqueadero'**
+  String get spotsTitle;
+
+  /// No description provided for @spotsAdminOnly.
+  ///
+  /// In es, this message translates to:
+  /// **'Solo un administrador puede editar el mapa'**
+  String get spotsAdminOnly;
+
+  /// No description provided for @spotsAdd.
+  ///
+  /// In es, this message translates to:
+  /// **'Agregar espacio'**
+  String get spotsAdd;
+
+  /// No description provided for @spotsHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Arrastra un espacio para moverlo · toca para editar'**
+  String get spotsHint;
+
+  /// No description provided for @spotsEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no hay espacios. Agrega el primero para armar el mapa.'**
+  String get spotsEmpty;
+
+  /// No description provided for @spotsAddTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Nuevo espacio'**
+  String get spotsAddTitle;
+
+  /// No description provided for @spotsCode.
+  ///
+  /// In es, this message translates to:
+  /// **'Código'**
+  String get spotsCode;
+
+  /// No description provided for @spotsGroup.
+  ///
+  /// In es, this message translates to:
+  /// **'Grupo'**
+  String get spotsGroup;
+
+  /// No description provided for @spotsActive.
+  ///
+  /// In es, this message translates to:
+  /// **'Disponible'**
+  String get spotsActive;
+
+  /// No description provided for @spotsActiveHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Desactívalo para mantenimiento'**
+  String get spotsActiveHint;
+
+  /// No description provided for @spotsDelete.
+  ///
+  /// In es, this message translates to:
+  /// **'Eliminar espacio'**
+  String get spotsDelete;
+
+  /// No description provided for @spotsDeleteTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Eliminar el espacio?'**
+  String get spotsDeleteTitle;
+
+  /// No description provided for @spotsDeleteBody.
+  ///
+  /// In es, this message translates to:
+  /// **'El espacio {code} saldrá del mapa. El historial se conserva.'**
+  String spotsDeleteBody(String code);
+
+  /// No description provided for @spotsDragHere.
+  ///
+  /// In es, this message translates to:
+  /// **'Suelta aquí'**
+  String get spotsDragHere;
+
+  /// No description provided for @errorSpotCodeTaken.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya existe un espacio con ese código'**
+  String get errorSpotCodeTaken;
+
+  /// No description provided for @errorSpotCellTaken.
+  ///
+  /// In es, this message translates to:
+  /// **'Esa celda ya está ocupada'**
+  String get errorSpotCellTaken;
+
+  /// No description provided for @errorSpotTaken.
+  ///
+  /// In es, this message translates to:
+  /// **'Ese espacio ya está ocupado'**
+  String get errorSpotTaken;
+
+  /// No description provided for @errorSpotOutOfService.
+  ///
+  /// In es, this message translates to:
+  /// **'Ese espacio está fuera de servicio'**
+  String get errorSpotOutOfService;
+
+  /// No description provided for @errorSpotOccupied.
+  ///
+  /// In es, this message translates to:
+  /// **'No puedes eliminar un espacio con un vehículo dentro'**
+  String get errorSpotOccupied;
+
+  /// No description provided for @errorSpotGroup.
+  ///
+  /// In es, this message translates to:
+  /// **'El espacio no corresponde al tipo de vehículo'**
+  String get errorSpotGroup;
+
+  /// No description provided for @errorSpotCodeInvalid.
+  ///
+  /// In es, this message translates to:
+  /// **'Código inválido (A-Z, 0-9 y guion; máximo 16)'**
+  String get errorSpotCodeInvalid;
+
+  /// No description provided for @errorSpotNotFound.
+  ///
+  /// In es, this message translates to:
+  /// **'El espacio no existe'**
+  String get errorSpotNotFound;
+
+  /// No description provided for @settingsSectionIdentity.
+  ///
+  /// In es, this message translates to:
+  /// **'Identidad'**
+  String get settingsSectionIdentity;
+
+  /// No description provided for @settingsSectionSpaces.
+  ///
+  /// In es, this message translates to:
+  /// **'Espacios y mapa'**
+  String get settingsSectionSpaces;
+
+  /// No description provided for @settingsSectionEvidence.
+  ///
+  /// In es, this message translates to:
+  /// **'Evidencia'**
+  String get settingsSectionEvidence;
+
+  /// No description provided for @settingsSectionLegal.
+  ///
+  /// In es, this message translates to:
+  /// **'Políticas y contrato'**
+  String get settingsSectionLegal;
+
+  /// No description provided for @settingsLegalPolicy.
+  ///
+  /// In es, this message translates to:
+  /// **'Texto de políticas y contrato de servicio'**
+  String get settingsLegalPolicy;
+
+  /// No description provided for @settingsLegalPolicyHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Se muestra al cliente en la página de evidencias. El texto admite etiquetas para el nombre, la dirección, el horario y el teléfono.'**
+  String get settingsLegalPolicyHint;
+
+  /// No description provided for @settingsLegalReset.
+  ///
+  /// In es, this message translates to:
+  /// **'Restaurar plantilla'**
+  String get settingsLegalReset;
+
+  /// No description provided for @settingsLegalResetDone.
+  ///
+  /// In es, this message translates to:
+  /// **'Plantilla restaurada'**
+  String get settingsLegalResetDone;
+
+  /// No description provided for @settingsLegalPreview.
+  ///
+  /// In es, this message translates to:
+  /// **'Vista previa'**
+  String get settingsLegalPreview;
+
+  /// No description provided for @settingsLegalPreviewTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Vista previa de las políticas'**
+  String get settingsLegalPreviewTitle;
+
+  /// No description provided for @settingsLegalEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin texto. Usa la plantilla o escribe tus políticas.'**
+  String get settingsLegalEmpty;
+
+  /// No description provided for @settingsSectionMessaging.
+  ///
+  /// In es, this message translates to:
+  /// **'Mensajería'**
+  String get settingsSectionMessaging;
+
+  /// No description provided for @settingsOutOfServiceMapHint.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} bahía(s) en mantenimiento · se controla en el mapa'**
+  String settingsOutOfServiceMapHint(int count);
+
+  /// No description provided for @settingsOutOfServiceHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Se descuentan de los espacios disponibles'**
+  String get settingsOutOfServiceHint;
+
   /// No description provided for @settingsTitle.
   ///
   /// In es, this message translates to:
@@ -1705,6 +2245,42 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Espacios para motos'**
   String get settingsMotoCapacity;
+
+  /// No description provided for @settingsCarOutOfService.
+  ///
+  /// In es, this message translates to:
+  /// **'Carros fuera de servicio'**
+  String get settingsCarOutOfService;
+
+  /// No description provided for @settingsMotoOutOfService.
+  ///
+  /// In es, this message translates to:
+  /// **'Motos fuera de servicio'**
+  String get settingsMotoOutOfService;
+
+  /// No description provided for @settingsOutOfServiceTooMany.
+  ///
+  /// In es, this message translates to:
+  /// **'No puede superar la capacidad configurada'**
+  String get settingsOutOfServiceTooMany;
+
+  /// No description provided for @capacityOutOfService.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} fuera de servicio'**
+  String capacityOutOfService(int count);
+
+  /// No description provided for @slotMaintenance.
+  ///
+  /// In es, this message translates to:
+  /// **'Mantenimiento'**
+  String get slotMaintenance;
+
+  /// No description provided for @slotMaintenanceShort.
+  ///
+  /// In es, this message translates to:
+  /// **'Mant.'**
+  String get slotMaintenanceShort;
 
   /// No description provided for @settingsKeyCapacity.
   ///
@@ -1952,6 +2528,30 @@ abstract class AppLocalizations {
   /// **'Vehículos con llaves'**
   String get homeCapacityKeys;
 
+  /// No description provided for @homeReservedCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} reservados'**
+  String homeReservedCount(int count);
+
+  /// No description provided for @homeReservationsActive.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} reservas activas'**
+  String homeReservationsActive(int count);
+
+  /// No description provided for @homeReservationsExpiring.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} por vencer'**
+  String homeReservationsExpiring(int count);
+
+  /// No description provided for @homeSeeReservations.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver reservas'**
+  String get homeSeeReservations;
+
   /// No description provided for @homeNoLimit.
   ///
   /// In es, this message translates to:
@@ -1963,6 +2563,114 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Ver todos'**
   String get homeInsideSeeAll;
+
+  /// No description provided for @spotLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Espacio {code}'**
+  String spotLabel(String code);
+
+  /// No description provided for @slotNoSpotAssignedOne.
+  ///
+  /// In es, this message translates to:
+  /// **'1 vehículo sin espacio asignado'**
+  String get slotNoSpotAssignedOne;
+
+  /// No description provided for @slotNoSpotAssigned.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} vehículos sin espacio asignado'**
+  String slotNoSpotAssigned(int count);
+
+  /// No description provided for @slotBoardTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Mapa de espacios'**
+  String get slotBoardTitle;
+
+  /// No description provided for @slotBoardFree.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} libres'**
+  String slotBoardFree(int count);
+
+  /// No description provided for @slotBoardAll.
+  ///
+  /// In es, this message translates to:
+  /// **'Todos'**
+  String get slotBoardAll;
+
+  /// No description provided for @slotBoardCars.
+  ///
+  /// In es, this message translates to:
+  /// **'Carros'**
+  String get slotBoardCars;
+
+  /// No description provided for @slotBoardMotos.
+  ///
+  /// In es, this message translates to:
+  /// **'Motos'**
+  String get slotBoardMotos;
+
+  /// No description provided for @slotBoardHolds.
+  ///
+  /// In es, this message translates to:
+  /// **'Reservas'**
+  String get slotBoardHolds;
+
+  /// No description provided for @slotBoardHeavy.
+  ///
+  /// In es, this message translates to:
+  /// **'Pesados'**
+  String get slotBoardHeavy;
+
+  /// No description provided for @slotEstimateUnavailable.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo calcular la tarifa'**
+  String get slotEstimateUnavailable;
+
+  /// No description provided for @slotBoardEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Configura los espacios del parqueadero en Ajustes'**
+  String get slotBoardEmpty;
+
+  /// No description provided for @slotBoardConfigure.
+  ///
+  /// In es, this message translates to:
+  /// **'Configurar'**
+  String get slotBoardConfigure;
+
+  /// No description provided for @slotBoardNoHolds.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay reservas activas'**
+  String get slotBoardNoHolds;
+
+  /// No description provided for @slotFree.
+  ///
+  /// In es, this message translates to:
+  /// **'Libre'**
+  String get slotFree;
+
+  /// No description provided for @slotOccupied.
+  ///
+  /// In es, this message translates to:
+  /// **'Ocupado'**
+  String get slotOccupied;
+
+  /// No description provided for @slotReserved.
+  ///
+  /// In es, this message translates to:
+  /// **'Reservado'**
+  String get slotReserved;
+
+  /// No description provided for @slotEstimate.
+  ///
+  /// In es, this message translates to:
+  /// **'Tarifa estimada'**
+  String get slotEstimate;
 
   /// No description provided for @homeSummary.
   ///
@@ -2011,6 +2719,24 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Placa'**
   String get plateLabel;
+
+  /// No description provided for @plateKeypadTooltip.
+  ///
+  /// In es, this message translates to:
+  /// **'Teclado en pantalla'**
+  String get plateKeypadTooltip;
+
+  /// No description provided for @plateKeypadBackspace.
+  ///
+  /// In es, this message translates to:
+  /// **'Borrar'**
+  String get plateKeypadBackspace;
+
+  /// No description provided for @plateKeypadClear.
+  ///
+  /// In es, this message translates to:
+  /// **'Limpiar'**
+  String get plateKeypadClear;
 
   /// No description provided for @plateHint.
   ///
@@ -2215,6 +2941,90 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Registrar entrada'**
   String get checkInSubmit;
+
+  /// No description provided for @checkInSpotTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Espacio'**
+  String get checkInSpotTitle;
+
+  /// No description provided for @checkInSpotAuto.
+  ///
+  /// In es, this message translates to:
+  /// **'Automático (primer libre)'**
+  String get checkInSpotAuto;
+
+  /// No description provided for @checkInSpotNone.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin espacios libres para este grupo'**
+  String get checkInSpotNone;
+
+  /// No description provided for @checkInSuccessSpot.
+  ///
+  /// In es, this message translates to:
+  /// **'Entrada registrada · {plate} en {spot}'**
+  String checkInSuccessSpot(String plate, String spot);
+
+  /// No description provided for @videoEvidenceTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Video de evidencia (opcional)'**
+  String get videoEvidenceTitle;
+
+  /// No description provided for @videoEvidenceHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Graba un recorrido corto del vehículo (máx. 60 s) por si hay reclamos.'**
+  String get videoEvidenceHint;
+
+  /// No description provided for @videoPick.
+  ///
+  /// In es, this message translates to:
+  /// **'Elegir video'**
+  String get videoPick;
+
+  /// No description provided for @videoRecord.
+  ///
+  /// In es, this message translates to:
+  /// **'Grabar video'**
+  String get videoRecord;
+
+  /// No description provided for @videoRecorded.
+  ///
+  /// In es, this message translates to:
+  /// **'Video listo'**
+  String get videoRecorded;
+
+  /// No description provided for @videoRecordedHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Se adjuntará al ingreso y respeta la retención de evidencia.'**
+  String get videoRecordedHint;
+
+  /// No description provided for @videoRemove.
+  ///
+  /// In es, this message translates to:
+  /// **'Quitar video'**
+  String get videoRemove;
+
+  /// No description provided for @videoPickFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo grabar el video'**
+  String get videoPickFailed;
+
+  /// No description provided for @errorVideoTooLarge.
+  ///
+  /// In es, this message translates to:
+  /// **'El video debe pesar menos de 50 MB'**
+  String get errorVideoTooLarge;
+
+  /// No description provided for @sessionVideos.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} video(s)'**
+  String sessionVideos(int count);
 
   /// No description provided for @checkInSuccess.
   ///
@@ -2438,6 +3248,18 @@ abstract class AppLocalizations {
   /// **'Total cobrado'**
   String get receiptAmount;
 
+  /// No description provided for @receiptCashReceived.
+  ///
+  /// In es, this message translates to:
+  /// **'Recibido'**
+  String get receiptCashReceived;
+
+  /// No description provided for @receiptChange.
+  ///
+  /// In es, this message translates to:
+  /// **'Cambio'**
+  String get receiptChange;
+
   /// No description provided for @receiptPayment.
   ///
   /// In es, this message translates to:
@@ -2450,11 +3272,107 @@ abstract class AppLocalizations {
   /// **'Descuento'**
   String get receiptDiscount;
 
+  /// No description provided for @checkOutSettlement.
+  ///
+  /// In es, this message translates to:
+  /// **'Liquidación'**
+  String get checkOutSettlement;
+
+  /// No description provided for @fareTime.
+  ///
+  /// In es, this message translates to:
+  /// **'Tiempo: {duration}'**
+  String fareTime(String duration);
+
+  /// No description provided for @fareDays.
+  ///
+  /// In es, this message translates to:
+  /// **'{days} días'**
+  String fareDays(int days);
+
+  /// No description provided for @fareDayHours.
+  ///
+  /// In es, this message translates to:
+  /// **'{hours} h × {rate} (día)'**
+  String fareDayHours(int hours, String rate);
+
+  /// No description provided for @fareNightHours.
+  ///
+  /// In es, this message translates to:
+  /// **'{hours} h × {rate} (noche)'**
+  String fareNightHours(int hours, String rate);
+
+  /// No description provided for @fareDailyCap.
+  ///
+  /// In es, this message translates to:
+  /// **'Tope diario aplicado ({amount})'**
+  String fareDailyCap(String amount);
+
+  /// No description provided for @fareTotal.
+  ///
+  /// In es, this message translates to:
+  /// **'Total a cobrar'**
+  String get fareTotal;
+
+  /// No description provided for @slotBoardError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo cargar el mapa de espacios'**
+  String get slotBoardError;
+
+  /// No description provided for @slotBoardRetry.
+  ///
+  /// In es, this message translates to:
+  /// **'Reintentar'**
+  String get slotBoardRetry;
+
   /// No description provided for @paymentMethodTitle.
   ///
   /// In es, this message translates to:
   /// **'Método de pago'**
   String get paymentMethodTitle;
+
+  /// No description provided for @paymentCardDebit.
+  ///
+  /// In es, this message translates to:
+  /// **'Débito'**
+  String get paymentCardDebit;
+
+  /// No description provided for @paymentCardCredit.
+  ///
+  /// In es, this message translates to:
+  /// **'Crédito'**
+  String get paymentCardCredit;
+
+  /// No description provided for @checkoutCashReceived.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Con cuánto paga?'**
+  String get checkoutCashReceived;
+
+  /// No description provided for @checkoutCashChange.
+  ///
+  /// In es, this message translates to:
+  /// **'Cambio'**
+  String get checkoutCashChange;
+
+  /// No description provided for @checkoutCashShort.
+  ///
+  /// In es, this message translates to:
+  /// **'Falta'**
+  String get checkoutCashShort;
+
+  /// No description provided for @checkoutCashShortError.
+  ///
+  /// In es, this message translates to:
+  /// **'El efectivo recibido no cubre el total'**
+  String get checkoutCashShortError;
+
+  /// No description provided for @checkoutCardType.
+  ///
+  /// In es, this message translates to:
+  /// **'Tipo de tarjeta'**
+  String get checkoutCardType;
 
   /// No description provided for @paymentCash.
   ///
@@ -2588,6 +3506,12 @@ abstract class AppLocalizations {
   /// **'Nuevo cobro'**
   String get receiptNewCharge;
 
+  /// No description provided for @receiptEvidenceHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Evidencias del vehículo: escanea (clave: placa)'**
+  String get receiptEvidenceHint;
+
   /// No description provided for @receiptQrHint.
   ///
   /// In es, this message translates to:
@@ -2701,6 +3625,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Categorías'**
   String get categoriesTitle;
+
+  /// No description provided for @categorySpotsLeft.
+  ///
+  /// In es, this message translates to:
+  /// **'quedan {count}'**
+  String categorySpotsLeft(int count);
+
+  /// No description provided for @categoryNoSpots.
+  ///
+  /// In es, this message translates to:
+  /// **'sin cupo'**
+  String get categoryNoSpots;
 
   /// No description provided for @categoriesEmpty.
   ///

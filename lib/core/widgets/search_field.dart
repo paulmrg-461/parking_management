@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../l10n/l10n.dart';
+
 /// The search field currently on screen (`null` when the page has none), so
 /// the global Ctrl/Cmd+K shortcut knows where to send focus.
 _SearchFieldState? _activeSearchField;
@@ -42,6 +44,7 @@ class SearchField extends StatefulWidget {
     this.initialValue,
     this.controller,
     this.onSubmitted,
+    this.onKeypad,
     this.textCapitalization = TextCapitalization.characters,
   });
 
@@ -54,6 +57,9 @@ class SearchField extends StatefulWidget {
   /// Optional external controller (e.g. a scanned plate fills the field).
   final TextEditingController? controller;
   final ValueChanged<String>? onSubmitted;
+
+  /// Opens the on-screen keypad (touch cabins); hidden when null.
+  final VoidCallback? onKeypad;
   final TextCapitalization textCapitalization;
 
   @override
@@ -117,13 +123,25 @@ class _SearchFieldState extends State<SearchField> {
           labelText: widget.label,
           hintText: widget.hint,
           prefixIcon: const Icon(Icons.search),
-          suffixIcon: _controller.text.isEmpty
+          suffixIcon: widget.onKeypad == null && _controller.text.isEmpty
               ? null
-              : IconButton(
-                  tooltip: MaterialLocalizations.of(context)
-                      .deleteButtonTooltip,
-                  icon: const Icon(Icons.clear),
-                  onPressed: _clear,
+              : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (widget.onKeypad != null)
+                      IconButton(
+                        tooltip: context.l10n.plateKeypadTooltip,
+                        icon: const Icon(Icons.keyboard_outlined),
+                        onPressed: widget.onKeypad,
+                      ),
+                    if (_controller.text.isNotEmpty)
+                      IconButton(
+                        tooltip: MaterialLocalizations.of(context)
+                            .deleteButtonTooltip,
+                        icon: const Icon(Icons.clear),
+                        onPressed: _clear,
+                      ),
+                  ],
                 ),
         ),
         onChanged: (value) {

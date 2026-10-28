@@ -107,7 +107,11 @@ class SystemDialogReceiptPrinter implements ReceiptPrinter {
             '-${CopFormatter.format(data.discountAmount)}',
           ),
         if (data.isCheckOut && !data.pendingSync && data.paymentMethod != null)
-          _row(context, labels.payment, labels.paymentMethod(data.paymentMethod!)),
+          _row(context, labels.payment, labels.paymentMethod(data.paymentMethod!, data.cardType)),
+        if (data.isCheckOut && !data.pendingSync && data.cashReceived != null)
+          _row(context, labels.received, CopFormatter.format(data.cashReceived!)),
+        if (data.isCheckOut && !data.pendingSync && data.cashChange != null)
+          _row(context, labels.change, CopFormatter.format(data.cashChange!)),
         if (data.isCheckOut && !data.pendingSync && data.ticketNumber != null)
           _row(context, labels.ticket, data.ticketNumber!),
         pw.Divider(),
@@ -117,14 +121,30 @@ class SystemDialogReceiptPrinter implements ReceiptPrinter {
             child: pw.BarcodeWidget(
               barcode: Barcode.qrCode(),
               data: data.plate,
-              width: 84,
-              height: 84,
+              width: 140,
+              height: 140,
             ),
           ),
           pw.Text(
             labels.scanHint,
             textAlign: pw.TextAlign.center,
             style: const pw.TextStyle(fontSize: 8),
+          ),
+        ],
+        if (data.evidenceUrl != null) ...[
+          pw.SizedBox(height: 10),
+          pw.Center(
+            child: pw.BarcodeWidget(
+              barcode: Barcode.qrCode(),
+              data: data.evidenceUrl!,
+              width: 70,
+              height: 70,
+            ),
+          ),
+          pw.Text(
+            labels.evidenceHint,
+            textAlign: pw.TextAlign.center,
+            style: const pw.TextStyle(fontSize: 7),
           ),
         ],
         pw.SizedBox(height: 8),

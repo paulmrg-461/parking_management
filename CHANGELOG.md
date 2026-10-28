@@ -11,6 +11,153 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Added
 
+**Operator UI/UX (space board and settlement)**
+
+- Home **space board** (`slot_board()` + `SlotBoardCard`): virtual capacity
+  cells for cars+pickups and motorcycles with four semantic states (free,
+  occupied with plate and elapsed time, reserved, and the skeleton/empty/error
+  states), per-group headers (`free / capacity`), filter chips with icons
+  (all/cars/motorcycles/holds) and 44×48 dp targets. Tapping a vehicle opens a
+  sheet with its exact entry time, a one-second clock, pass/keys/photo chips,
+  the server fare breakdown and a direct exit.
+- Settlement dialog explains the charge: elapsed time, billed day hours ×
+  hourly rate, night hours × nightly rate, daily cap, total, and the payment
+  methods with icons. A monthly pass shows as covered; a failed preview still
+  lets the operator charge.
+- `fare_breakdown` (`0053`) is the single source of truth for money:
+  `calculate_fare` is a thin wrapper over it and `check_out_preview` returns the
+  breakdown, so the explanation can never drift from the charge.
+- The occupancy KPI adds a radial gauge (percentage as text) next to the
+  existing bar.
+- Check-in suggests known plates after two typed characters (tap to fill and
+  look it up); it is optional and never blocks the manual field.
+- Cash closing is safer: the close/adjust dialogs show the **expected cash**
+  and a live **difference** while typing, and a **denomination counter**
+  (100.000 → 100 COP notes/coins) totals the drawer and fills the counted
+  amount, so the arqueo is arithmetic the app does, not the operator.
+- On-screen alphanumeric keypad (`PlateKeypad`) for touch cabins: opens from the
+  plate field and the check-out search, 52 dp keys, backspace/clear, respects
+  the plate length limit and feeds the normal lookup/debounce.
+- Admins can **release a hold from the board**: tapping a reserved cell opens
+  its sheet with "Cancelar reserva" (confirmation, snack, board reload); the
+  reservation id is resolved from the active list by plate + expiry, so the
+  board payload stays small. Operators do not see the action.
+- **Physical parking map (drag & drop).** Admins lay out the site once in
+  `/spots`: add bays, drag them on a grid, rename them, take them out of
+  service or delete them (`parking_spots`, audited). Each bay has a code,
+  group (cars / motorcycles / heavy) and grid position. Check-in then offers
+  that group's free bays (default "Automatic" = first free, top-left first) and
+  `check_in` assigns the bay; the home board paints the real map with the car
+  in its bay and the fare sheet shows the spot. With a map, the group's capacity
+  **is** its active bays (`0058`), out-of-service bays are never offered, and
+  holds obey the same limit. Deleting a bay clears the reference on old
+  sessions instead of blocking (`0059`). The entry receipt/snackbar names the
+  assigned spot.
+- **Print no longer hides behind the receipt.** "Imprimir" closes the receipt
+  dialog first (post-frame) and then opens the print sheet, so the
+  printer/PDF choice is always on top.
+- **Mobile navigation: 5 tabs + drawer.** The phone layout keeps four main
+  destinations (Inicio, Entrada, Salida, Registros) and a fifth **Menú** tab
+  that opens a drawer with the rest (notifications, contact, management
+  sections for admins) plus the site/user header and sign-out; the wide layout
+  keeps the sidebar.
+- **Cash received and change are stored.** The amount handed over and the
+  change go into `parking_sessions.cash_received/cash_change` (`0067`,
+  `check_out(p_cash_received)`); short cash is refused server-side and the
+  receipt (screen/PDF/thermal) prints "Recibido" and "Cambio".
+- **Cash change and card type at settlement.** Cash payments ask "how much did
+  the customer hand over?" and show the change (or shortfall) live, blocking the
+  charge when the cash does not cover the total. Card payments ask **debit or
+  credit** and store it in `parking_sessions.card_type` (`0066`,
+  `check_out(p_card_type)`, required for cards); receipts and the PDF/thermal
+  print "Tarjeta débito/crédito".
+- **Editable legal policy / service contract.** Ajustes gains a "Policies and
+  contract" section with the full text (seeded from a server default template
+  with `{{parking}}`, `{{address}}`, `{{schedule}}`, `{{phone}}` tags), a
+  "Restore template" action (`reset_legal_policy`) and a preview. The public
+  evidence page links to `/policies?lot=..`, where the customer reads the
+  contract with the tags filled in — no login, identity/contact/policy only
+  (`public_lot_profile`, `0065`).
+- **Shareable evidence with the ticket.** Every receipt now prints two codes:
+  the **check-out QR** (the plate) is bigger (176 px on screen / 140 in the PDF)
+  and, below it, a **smaller evidence QR** linking to the public page
+  `/evidence?session=..`, where the vehicle's photos and videos are shown after
+  the customer types the **plate as the access key** (no login; the link alone
+  is not enough). The page fetches
+  short-lived signed URLs from the new `public-evidence` Edge Function, which
+  verifies the session + plate and never exposes other sessions. Requires
+  `--dart-define=APP_URL=<public app URL>` so the printed link is reachable.
+  `tool/evidence-web.nginx.conf` serves the public build with the SPA fallback
+  needed by the path URL strategy (dev host runs on port 8080).
+- **Optional walk-around video at check-in.** The operator can record a short
+  clip (max 60 s, 50 MB) of the vehicle's condition; it is optional like the
+  photos, uploads to the same evidence bucket and is stored as
+  `evidence_photos.kind = 'video'` (`0064`) so retention/archive and the
+  membership read policy keep working. The check-in response and the space
+  sheet show the video count, and the queued (offline) check-in persists the
+  clip until it replays.
+- **Records filters and exports.** The log filters by business-date range
+  (All / Today / 7 days / 30 days or a custom picker, `0063`) next to the plate,
+  shows the matching total and can export the **whole filtered set**: CSV to the
+  clipboard (raw numbers, RFC 4180 quoting) or a PDF with a summary and one row
+  per session, shared through the OS sheet.
+- **Records section.** New `/records` page (nav "Registros" and the home
+  shortcut) lists the site's latest sessions with plate, entry → exit,
+  duration, charge or "Dentro"; the plate filter is server-side and debounced,
+  the header shows the matching total (how many times that vehicle entered),
+  paging loads more, and tapping a row opens that vehicle's full history
+  (visits, spend, notes, WhatsApp). Backed by `session_records()` (`0062`),
+  lot-scoped and tested for filter/paging/isolation.
+- **Settings form reorganized.** The page is split into Identity / Spots and
+  map / Evidence / Messaging sections with even spacing between fields (the
+  helper lines no longer collide with the next outline) and two-line helpers.
+  When a site already has a map, the per-group "out of service" counters are
+  replaced by a note with the bays under maintenance and a link to the map,
+  because out-of-service is then a per-bay state.
+- **Occupied bays are blue.** Filled bays use the primary (blue) tint while
+  free bays stay green and maintenance stays grey/hatched, so a car inside is
+  obvious at a glance on the dashboard, the check-in picker and the virtual
+  board (holds keep amber). Covered by a color regression test.
+- **Check-in picks the bay on the map.** The "Espacio" section draws the
+  configured layout (same cells as the dashboard): free bays are tappable,
+  occupied ones show their plate, maintenance is striped and holes keep the
+  shape; "Automatic" stays the default (server takes the first free bay).
+- **Board map alignment.** Dashboard bays now scale uniformly to fit the card
+  (`SpotCellView` 56–72 px, same gap as the editor), empty holes are exactly the
+  same size as filled bays, and the "N vehicles with no spot" note has a
+  singular form.
+- **The configured capacity is the number of bays.** The map editor shows
+  `drawn / configured` per group (`0060`): a group cannot take more bays than
+  its capacity and cannot drop below it (lower the capacity in Ajustes first);
+  the add dialog disables full groups and the server enforces the same rule
+  (`SpotCapacityReachedError` / `SpotCapacityRequiredError`). `capacity_snapshot`
+  exposes the configured target next to the drawn count (`0061`), so the editor
+  keeps the right goal after the first bays exist. The editor and the
+  dashboard board share one `SpotCellView` (72 px bays, 6 px gaps, same colors,
+  stripes and icons), so the dashboard draws an exact copy of the configured
+  layout.
+- **Live activity notifications.** Every check-in/check-out now notifies the
+  whole site (all active members, not only admins) with the actor's name, the
+  plate and the charge on exits (`0056`), so the admin desk sees the operator's
+  phone activity and the phone sees the web's, through Supabase Realtime. The
+  snackbar is localized from the payload, the inbox keeps the row, and the
+  acting device ignores the echo of its own write (`LocalActivity`).
+- **Realtime refresh.** Receiving an activity alert now refetches the data as
+  well as showing the snackbar: the shell reloads the dashboard and shift
+  summaries, the check-out list reloads (preserving the search) and the check-in
+  open sessions/holds reload, so the other device never shows a stale counter.
+- **Realtime fix.** The notifications policy used `current_lot_id()`, which
+  Realtime evaluates without the `x-lot-id` header: the subscription died with
+  `LotRequiredError` and live snackbars never arrived. It now uses the
+  security-definer `can_read_lot()` membership check (`0057`), verified with a
+  real WebSocket subscription (join → check-in → `postgres_changes` payload).
+- **Out-of-service spaces.** Admins can take car or motorcycle spots out of the
+  usable pool in Ajustes (`car_out_of_service`, `moto_out_of_service`). They
+  stay in the configured capacity, are painted as striped "Mantenimiento" cells
+  on the board, and are never offered: the capacity guard, reservations, the
+  dashboard snapshot and the check-in remaining-spaces labels all use
+  `usable_capacity()` (`capacity - out_of_service`, `0` capacity = no limit).
+
 **Core operations**
 
 - Offline-first check-in/check-out with a Hive outbox, idempotency keys
@@ -132,11 +279,25 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - The home is a real dashboard: a **capacity card** (cars/pickups, motorcycles
   and keys: inside vs. limit, with bars) and a **cars-inside list** with plates,
   elapsed time, pass/photo hints and "See all" to check-out.
+- The home capacity card summarizes active holds (and how many expire within
+  two hours) with a shortcut to the reservations screen for admins; the
+  check-in screen shows the plate's active hold and can cancel it when the
+  customer does not arrive.
+- The home capacity card shows spots on hold (active reservations) next to
+  the occupied ones (`0050`).
+- Active reservations consume the configured **group spaces** too: a site
+  cannot promise more spots than it has and a walk-in cannot take a promised
+  one (`0049`).
 - Ajustes gains the site's **space configuration**: spaces for cars and
   pickups (shared), spaces for motorcycles and the maximum number of cars that
   may leave their keys (`0` = no limit). The check-in form has a "Leaves the
   keys" switch, the list shows it, and the server enforces the three limits
   (`ParkingFullError`/`KeysFullError`); trucks and buses are not limited.
+- The check-in category dropdown shows the **remaining spaces** of the group
+  (held spots included) next to each option, so the operator knows before
+  choosing.
+- Check-out shows a **keys** chip on cars that left them, and
+  `evidence-archive.sh` honors the gateway port from `.env`.
 - The check-in "vehicles inside" widget is an **accordion** with the count:
   each car offers its receipt (QR + print) and **Mark exit**, which jumps to
   check-out with that plate.
@@ -260,7 +421,7 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Tests
 
-- 662 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
+- 785 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
   integration test that runs only against a live stack.
 - SQL/RLS/RPC regressions covering capacity, shifts, discounts, passes,
   reservations, multi-site isolation, audit, diagnostics and retention.
@@ -290,6 +451,7 @@ Migrations are append-only and applied in filename order by `supabase-migrate`.
 | `0027`–`0032` | Per-lot branding, retention, shift filters, header contract |
 | `0033`–`0038` | Evidence retention, storage membership, diagnostics, audit export, report comparison, home KPIs |
 | `0039`–`0044` | Site comparison fields, ticket reprint, customer phone, WhatsApp queue/report |
+| `0045`–`0059` | Check-out preview, pass flag, capacity groups, reservations consuming group capacity, reserved counts, hold counters, space board, fare breakdown, out-of-service spaces, live activity notifications, physical spot map and its editor |
 
 ## Verification snapshot
 
@@ -297,7 +459,7 @@ Captured on 2026-10-24 against the local self-hosted stack:
 
 | Check | Result |
 |---|---|
-| `flutter test` | 662 passed (+1 live-stack integration skipped) |
+| `flutter test` | 785 passed (+1 live-stack integration skipped) |
 | `flutter analyze` | 0 errors, 0 warnings (only SDK deprecation infos) |
 | `flutter build web --release` | OK |
 | `supabase/tests/run.sh` | Passed (migrations + RPC/RLS regressions) |

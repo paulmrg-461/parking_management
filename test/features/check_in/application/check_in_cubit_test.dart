@@ -25,6 +25,8 @@ class _FakeCheckInRepository implements CheckInRepository {
     required List<XFile> photos,
     NewVehicleInfo? newVehicle,
     bool leftKeys = false,
+    int? spotId,
+    XFile? video,
   }) async {
     createCheckInCalled = true;
     lastNewVehicle = newVehicle;

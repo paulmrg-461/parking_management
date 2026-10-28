@@ -3,4 +3,8 @@
 abstract final class EvidencePolicy {
   static const maxPhotos = 5;
   static const maxPhotoBytes = 5 * 1024 * 1024;
+
+  /// One optional walk-around video, capped like the storage bucket allows.
+  static const maxVideoBytes = 50 * 1024 * 1024;
+  static const maxVideoSeconds = 60;
 }

@@ -90,7 +90,14 @@ class EscPosGenerator {
     }
 
     if (data.isCheckOut && !data.pendingSync && data.paymentMethod != null) {
-      _row(bytes, labels.payment, labels.paymentMethod(data.paymentMethod!));
+      _row(bytes, labels.payment, labels.paymentMethod(data.paymentMethod!, data.cardType));
+    }
+
+    if (data.isCheckOut && !data.pendingSync && data.cashReceived != null) {
+      _row(bytes, labels.received, CopFormatter.format(data.cashReceived!));
+    }
+    if (data.isCheckOut && !data.pendingSync && data.cashChange != null) {
+      _row(bytes, labels.change, CopFormatter.format(data.cashChange!));
     }
 
     if (data.isCheckOut && !data.pendingSync && data.ticketNumber != null) {
@@ -100,6 +107,13 @@ class EscPosGenerator {
     if (!data.isCheckOut) {
       _qr(bytes, data.plate);
       _text(bytes, labels.scanHint, align: 1);
+    }
+    if (data.evidenceUrl != null) {
+      _rule(bytes);
+      _qr(bytes, data.evidenceUrl!);
+      _text(bytes, labels.evidenceHint, align: 1);
+    }
+    if (!data.isCheckOut || data.evidenceUrl != null) {
       _rule(bytes);
     }
 

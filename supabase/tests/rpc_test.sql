@@ -3,6 +3,11 @@
 -- Runs in one transaction and rolls back; no fixture survives.
 begin;
 
+-- The suite runs on the site's business day (UTC-5), so `current_date` in the
+-- fixtures matches what the RPCs compute locally. Without this, tests fail
+-- between 00:00 and 05:00 UTC (evening in Bogota).
+set local timezone = 'America/Bogota';
+
 -- The x-lot-id header is mandatory since the contract migration; the suite
 -- runs against the default lot unless a block switches it.
 set local request.headers = '{"x-lot-id":"1"}';
@@ -765,7 +770,11 @@ set local request.headers = '{"x-lot-id":"2"}';
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
 do $$
 declare
-    report jsonb := public.report_whatsapp(current_date, current_date);
+    -- The business day is the site's local date; `current_date` is UTC and
+    -- would miss a message sent in the evening at UTC-5 (test flake at UTC
+    -- midnight). A ±1 day window is deterministic.
+    local_date date := (now() at time zone 'America/Bogota')::date;
+    report jsonb := public.report_whatsapp(local_date - 1, local_date + 1);
 begin
     if (report ->> 'sent')::integer < 1 then
         raise exception 'whatsapp report ignored sent messages';
@@ -1030,16 +1039,46 @@ begin
     end if;
 end $$;
 
--- RLS: the operator must not read the admin's notifications.
+-- RLS: users only read their own rows. Operators now receive the site's
+-- activity alerts, but never anyone else's.
 set local role authenticated;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
 do $$
 begin
-    if (select count(*) from public.notifications) <> 0 then
-        raise exception 'RLS leak: operator can read admin notifications';
+    if exists (select 1 from public.notifications where user_id <> 2) then
+        raise exception 'RLS leak: operator reads another user''s notifications';
+    end if;
+    if not exists (select 1 from public.notifications where user_id = 2) then
+        raise exception 'the operator lost their own activity alerts';
     end if;
 end $$;
 reset role;
+
+-- Realtime evaluates the same policy with no x-lot-id header: a membership
+-- check must not raise LotRequiredError there.
+set local request.headers = '{}';
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    if not exists (
+        select 1 from public.notifications
+         where user_id = 2 and lot_id = 1
+    ) then
+        raise exception 'the operator lost their own lot alerts';
+    end if;
+    if public.can_read_lot(999) then
+        raise exception 'lot membership helper invented a membership';
+    end if;
+    if exists (
+        select 1 from public.notifications
+         where user_id = 2 and lot_id is not null and not public.can_read_lot(lot_id)
+    ) then
+        raise exception 'the operator read a lot they do not belong to';
+    end if;
+end $$;
+reset role;
+set local request.headers = '{"x-lot-id":"1"}';
 
 -- Capacity groups: cars/pickups share the lot's car spots, motorcycles have
 -- their own, and cars that leave their keys have a separate cap. Trucks and
@@ -1137,6 +1176,857 @@ begin
     update public.parking_settings
        set car_capacity = 0, moto_capacity = 0, key_capacity = 0
      where lot_id = 1;
+end $$;
+
+-- Holds consume the same group spaces as parked cars: a site cannot promise
+-- more spots than it has, and a walk-in cannot take a promised one.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    car_cat integer;
+    car_open integer;
+    car_reserved integer;
+    refused boolean := false;
+begin
+    select id into car_cat from public.categories
+     where lot_id = 1 and lower(name) = 'car';
+    update public.categories set capacity = 0 where id = car_cat;
+    update public.parking_settings
+       set car_capacity = 0, moto_capacity = 0, key_capacity = 0
+     where lot_id = 1;
+
+    select count(*) into car_open
+      from public.parking_sessions s
+      join public.vehicles v on v.id = s.vehicle_id
+      join public.categories c on c.id = v.category_id
+     where s.status = 'open' and s.lot_id = 1
+       and lower(c.name) in ('car', 'carro', 'auto', 'camioneta', 'suv');
+    select count(*) into car_reserved
+      from public.category_reservations r
+      join public.categories c on c.id = r.category_id
+     where r.status = 'active' and r.reserved_until > now() and r.lot_id = 1
+       and lower(c.name) in ('car', 'carro', 'auto', 'camioneta', 'suv');
+
+    update public.parking_settings
+       set car_capacity = car_open + car_reserved + 2
+     where lot_id = 1;
+
+    perform public.create_reservation('HOLDG1', car_cat, now() + interval '2 hours');
+    perform public.create_reservation('HOLDG2', car_cat, now() + interval '2 hours');
+
+    begin
+        perform public.create_reservation('HOLDG3', car_cat, now() + interval '2 hours');
+    exception when others then
+        if sqlerrm like '%ParkingFullError%' or sqlerrm like '%CategoryFullError%' then
+            refused := true;
+        else
+            raise;
+        end if;
+    end;
+    if not refused then
+        raise exception 'reservations ignored the group capacity';
+    end if;
+
+    refused := false;
+    begin
+        perform public.check_in('CAPWALK1', car_cat, null, null, '[]'::jsonb);
+    exception when others then
+        if sqlerrm like '%ParkingFullError%' or sqlerrm like '%CategoryFullError%' then
+            refused := true;
+        else
+            raise;
+        end if;
+    end;
+    if not refused then
+        raise exception 'a walk-in took a reserved space';
+    end if;
+
+    update public.parking_settings
+       set car_capacity = 0, moto_capacity = 0, key_capacity = 0
+     where lot_id = 1;
+end $$;
+
+-- Fare breakdown: the explanation shown to the operator is the same math the
+-- server charges, including the night window and the daily cap.
+do $$
+declare
+    brk_cat integer;
+    night_cat integer;
+    breakdown jsonb;
+    night jsonb;
+    entry_at timestamptz := timestamptz '2026-03-10 10:15:00-05';
+    exit_at timestamptz := timestamptz '2026-03-10 13:40:00-05';
+begin
+    insert into public.categories (name, capacity, lot_id)
+    values ('brkcar', 0, 1)
+    returning id into brk_cat;
+    insert into public.tariffs (category_id, type, amount, active, lot_id) values
+        (brk_cat, 'hourly', 3000, true, 1),
+        (brk_cat, 'daily', 10000, true, 1);
+
+    breakdown := public.fare_breakdown(brk_cat, entry_at, exit_at, false);
+    if (breakdown ->> 'amount')::integer
+       <> public.calculate_fare(brk_cat, entry_at, exit_at, false) then
+        raise exception 'fare breakdown disagrees with calculate_fare';
+    end if;
+    if (breakdown ->> 'day_hours')::integer <> 4 then
+        raise exception 'fare breakdown billed the wrong day hours: %', breakdown;
+    end if;
+    if (breakdown ->> 'night_hours')::integer <> 0
+       or (breakdown ->> 'days')::integer <> 1 then
+        raise exception 'fare breakdown invented night hours: %', breakdown;
+    end if;
+    if not (breakdown ->> 'daily_cap_applied')::boolean
+       or (breakdown ->> 'amount')::integer <> 10000 then
+        raise exception 'fare breakdown ignored the daily cap: %', breakdown;
+    end if;
+    if (breakdown ->> 'elapsed_seconds')::integer <> 12300 then
+        raise exception 'fare breakdown lost the elapsed time: %', breakdown;
+    end if;
+
+    if (public.fare_breakdown(brk_cat, entry_at, exit_at, true) ->> 'amount')::integer <> 0 then
+        raise exception 'a monthly pass was charged';
+    end if;
+
+    insert into public.categories (name, capacity, lot_id)
+    values ('brknight', 0, 1)
+    returning id into night_cat;
+    insert into public.tariffs (
+        category_id, type, amount, active, lot_id, start_time, end_time
+    ) values
+        (night_cat, 'hourly', 3000, true, 1, null, null),
+        (night_cat, 'nightly', 9000, true, 1, '20:00', '06:00');
+
+    night := public.fare_breakdown(
+        night_cat,
+        timestamptz '2026-03-10 21:00:00-05',
+        timestamptz '2026-03-10 23:00:00-05',
+        false
+    );
+    if (night ->> 'night_hours')::integer <> 2
+       or (night ->> 'day_hours')::integer <> 0
+       or (night ->> 'amount')::integer <> 18000 then
+        raise exception 'night window was not billed separately: %', night;
+    end if;
+
+    begin
+        perform public.fare_breakdown(brk_cat, exit_at, entry_at, false);
+        raise exception 'an empty billing period was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidBillingPeriodError%' then
+            raise;
+        end if;
+    end;
+end $$;
+
+-- Slot board: the visual map is lot-scoped and groups by category.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+declare
+    free_cat integer;
+    board jsonb;
+begin
+    insert into public.categories (name, capacity, lot_id)
+    values ('brdwalk', 0, 1)
+    returning id into free_cat;
+
+    perform public.check_in('BOARD1', free_cat, null, null, '[]'::jsonb);
+
+    board := public.slot_board();
+    if (board ->> 'car_capacity')::integer
+       <> (select car_capacity from public.parking_settings where lot_id = 1) then
+        raise exception 'slot board lost the car capacity';
+    end if;
+    if not exists (
+        select 1 from jsonb_array_elements(board -> 'sessions') item
+         where item ->> 'plate' = 'BOARD1'
+           and item ->> 'group' = 'heavy'
+    ) then
+        raise exception 'slot board did not paint the vehicle inside: %', board;
+    end if;
+
+    set local request.headers = '{"x-lot-id":"2"}';
+    board := public.slot_board();
+    if exists (
+        select 1 from jsonb_array_elements(board -> 'sessions') item
+         where item ->> 'plate' = 'BOARD1'
+    ) then
+        raise exception 'slot board leaked another lot';
+    end if;
+    set local request.headers = '{"x-lot-id":"1"}';
+end $$;
+
+-- Out-of-service spots: they stay in the configured capacity but are never
+-- offered, neither to a walk-in nor to a hold.
+set local request.headers = '{"x-lot-id":"2"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+declare
+    moto_cat integer;
+    refused boolean := false;
+    snapshot jsonb;
+    board jsonb;
+begin
+    insert into public.categories (name, capacity, lot_id)
+    values ('moto', 0, 2)
+    returning id into moto_cat;
+    update public.parking_settings
+       set moto_capacity = 2, moto_out_of_service = 2
+     where lot_id = 2;
+
+    snapshot := public.capacity_snapshot();
+    if (snapshot ->> 'moto_capacity')::integer <> 2
+       or (snapshot ->> 'moto_available')::integer <> 0
+       or (snapshot ->> 'moto_out_of_service')::integer <> 2 then
+        raise exception 'snapshot ignored the out-of-service spots: %', snapshot;
+    end if;
+
+    board := public.slot_board();
+    if (board ->> 'moto_out_of_service')::integer <> 2
+       or (board ->> 'moto_capacity')::integer <> 2 then
+        raise exception 'board ignored the out-of-service spots: %', board;
+    end if;
+
+    begin
+        perform public.check_in('OOSM1', moto_cat, null, null, '[]'::jsonb);
+        raise exception 'a check-in took a spot out of service';
+    exception when others then
+        if sqlerrm not like '%ParkingFullError%' then
+            raise;
+        end if;
+        refused := true;
+    end;
+    if not refused then
+        raise exception 'out-of-service check-in was accepted';
+    end if;
+
+    refused := false;
+    begin
+        perform public.create_reservation('OOSM2', moto_cat, now() + interval '1 hour');
+        raise exception 'a hold took a spot out of service';
+    exception when others then
+        if sqlerrm not like '%ParkingFullError%' then
+            raise;
+        end if;
+        refused := true;
+    end;
+    if not refused then
+        raise exception 'out-of-service hold was accepted';
+    end if;
+
+    -- One usable spot: it can be sold once, never twice.
+    update public.parking_settings set moto_out_of_service = 1 where lot_id = 2;
+    perform public.check_in('OOSM3', moto_cat, null, null, '[]'::jsonb);
+
+    refused := false;
+    begin
+        perform public.check_in('OOSM4', moto_cat, null, null, '[]'::jsonb);
+    exception when others then
+        if sqlerrm not like '%ParkingFullError%' then
+            raise;
+        end if;
+        refused := true;
+    end;
+    if not refused then
+        raise exception 'the usable spot was oversold';
+    end if;
+
+    update public.parking_settings
+       set moto_capacity = 0, moto_out_of_service = 0
+     where lot_id = 2;
+end $$;
+set local request.headers = '{"x-lot-id":"1"}';
+
+-- Live activity: the whole site is told who registered an entry/exit, and the
+-- alert never leaves the lot.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+declare
+    rtn_cat integer;
+    session_json jsonb;
+    session_id integer;
+    actor_name text;
+    alert jsonb;
+    outsider integer;
+begin
+    insert into public.categories (name, capacity, lot_id)
+    values ('rtncat', 0, 1)
+    returning id into rtn_cat;
+    insert into public.tariffs (category_id, type, amount, active, lot_id)
+    values (rtn_cat, 'hourly', 1000, true, 1);
+
+    session_json := public.check_in(
+        'RTN001', rtn_cat, null, null, '[]'::jsonb, null,
+        now() - interval '1 minute'
+    );
+    session_id := (session_json ->> 'id')::integer;
+    select display_name into actor_name from public.users where id = 2;
+
+    select to_jsonb(n) into alert
+      from public.notifications n
+     where n.type = 'check_in'
+       and n.user_id = 2
+       and n.data ->> 'session_id' = session_id::text;
+    if alert is null then
+        raise exception 'the operator did not get the activity alert';
+    end if;
+    if (alert ->> 'body') not like '%' || actor_name || '%'
+       or (alert ->> 'body') not like '%RTN001%' then
+        raise exception 'the activity alert does not name actor and plate: %', alert;
+    end if;
+    if (alert -> 'data' ->> 'action') <> 'check_in' then
+        raise exception 'the activity alert has no action payload: %', alert;
+    end if;
+
+    select u.id into outsider
+      from public.users u
+     where u.username = 'norte2';
+    if exists (
+        select 1 from public.notifications n
+         where n.user_id = outsider
+           and n.data ->> 'session_id' = session_id::text
+    ) then
+        raise exception 'the activity alert leaked to another lot';
+    end if;
+
+    -- Someone else closes it: the alert names the actual actor.
+    set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+    perform public.check_out(session_id, null, null, 'cash');
+
+    select to_jsonb(n) into alert
+      from public.notifications n
+     where n.type = 'check_out'
+       and n.user_id = 2
+       and n.data ->> 'session_id' = session_id::text;
+    if alert is null then
+        raise exception 'the operator did not get the exit alert';
+    end if;
+    if (alert ->> 'body') not like '%Cobro%'
+       or (alert -> 'data' ->> 'action') <> 'check_out'
+       or (alert -> 'data' ->> 'amount_charged') is null then
+        raise exception 'the exit alert has no charge: %', alert;
+    end if;
+end $$;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+
+-- Physical spots: the map defines the group capacity, check-in takes the
+-- chosen spot or the first free one, and check-out frees it.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    spot_cat integer;
+    spot_a integer;
+    spot_b integer;
+    spot_oos integer;
+    first_in jsonb;
+    second_in jsonb;
+    board jsonb;
+    moved jsonb;
+    refused boolean;
+begin
+    -- Deterministic: no other open session competes for the group's spots.
+    update public.parking_sessions
+       set status = 'closed', exit_time = now(), amount_charged = 0
+     where status = 'open' and lot_id = 1;
+
+    insert into public.categories (name, capacity, lot_id)
+    values ('spotcar', 0, 1)
+    returning id into spot_cat;
+    insert into public.tariffs (category_id, type, amount, active, lot_id)
+    values (spot_cat, 'hourly', 1000, true, 1);
+
+    delete from public.parking_spots where lot_id = 1;
+
+    spot_a := (public.save_parking_spot('T1', 'heavy', 0, 0) ->> 'id')::integer;
+    spot_b := (public.save_parking_spot('T2', 'heavy', 0, 1) ->> 'id')::integer;
+    spot_oos := (
+        public.save_parking_spot('T3', 'heavy', 1, 0, null, false) ->> 'id'
+    )::integer;
+
+    -- Out of service is not offered, even when requested.
+    refused := false;
+    begin
+        perform public.check_in(
+            'SPOTA0', spot_cat, null, null, '[]'::jsonb, null, null, null,
+            false, spot_oos
+        );
+        raise exception 'an out-of-service spot was accepted';
+    exception when others then
+        if sqlerrm not like '%SpotOutOfServiceError%' then
+            raise;
+        end if;
+        refused := true;
+    end;
+    if not refused then
+        raise exception 'out-of-service spot was not refused';
+    end if;
+
+    -- Automatic: first free spot, top-left first.
+    first_in := public.check_in(
+        'SPOTA1', spot_cat, null, null, '[]'::jsonb, null,
+        now() - interval '1 minute'
+    );
+    if first_in ->> 'spot_code' <> 'T1' then
+        raise exception 'auto-assignment did not take the first spot: %', first_in;
+    end if;
+
+    -- Explicit spot, when the operator picks one.
+    second_in := public.check_in(
+        'SPOTA2', spot_cat, null, null, '[]'::jsonb, null,
+        now() - interval '1 minute', null, false, spot_b
+    );
+    if (second_in ->> 'spot_id')::integer <> spot_b then
+        raise exception 'the requested spot was ignored: %', second_in;
+    end if;
+
+    -- The map defines the capacity: two active spots, both taken.
+    refused := false;
+    begin
+        perform public.check_in('SPOTA3', spot_cat);
+        raise exception 'a third car took a spot that does not exist';
+    exception when others then
+        if sqlerrm not like '%ParkingFullError%' then
+            raise;
+        end if;
+        refused := true;
+    end;
+    if not refused then
+        raise exception 'the map capacity was ignored';
+    end if;
+
+    -- Moving: a taken spot is refused; automatic keeps the current one.
+    refused := false;
+    begin
+        perform public.assign_session_spot(
+            (second_in ->> 'id')::integer, spot_a
+        );
+        raise exception 'two cars shared a spot';
+    exception when others then
+        if sqlerrm not like '%SpotTakenError%' then
+            raise;
+        end if;
+        refused := true;
+    end;
+    if not refused then
+        raise exception 'spot conflict was not refused';
+    end if;
+
+    moved := public.assign_session_spot((first_in ->> 'id')::integer, null);
+    if (moved ->> 'spot_id')::integer <> spot_a then
+        raise exception 'automatic move changed the spot: %', moved;
+    end if;
+
+    -- A spot with a car inside cannot be removed.
+    refused := false;
+    begin
+        perform public.delete_parking_spot(spot_a);
+        raise exception 'an occupied spot was deleted';
+    exception when others then
+        if sqlerrm not like '%SpotOccupiedError%' then
+            raise;
+        end if;
+        refused := true;
+    end;
+    if not refused then
+        raise exception 'occupied spot deletion was not refused';
+    end if;
+
+    board := public.slot_board();
+    if jsonb_array_length(board -> 'spots') <> 3 then
+        raise exception 'board did not paint the map: %', board;
+    end if;
+    if not exists (
+        select 1 from jsonb_array_elements(board -> 'sessions') item
+         where item ->> 'plate' = 'SPOTA1'
+           and (item ->> 'spot_id')::integer = spot_a
+    ) then
+        raise exception 'board lost the assigned spot';
+    end if;
+
+    -- Check-out frees the spot for the next car.
+    perform public.check_out((first_in ->> 'id')::integer, null, null, 'cash');
+    perform public.check_out((second_in ->> 'id')::integer, null, null, 'cash');
+    perform public.delete_parking_spot(spot_a);
+    perform public.delete_parking_spot(spot_b);
+    perform public.delete_parking_spot(spot_oos);
+
+    -- A clean map keeps the configured capacity and no spots.
+    board := public.slot_board();
+    if jsonb_array_length(board -> 'spots') <> 0 then
+        raise exception 'spots survived deletion';
+    end if;
+end $$;
+
+-- The configured capacity is the number of bays: no more, no fewer.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    car_space jsonb;
+    refused boolean;
+begin
+    update public.parking_settings
+       set car_capacity = 2, moto_capacity = 0
+     where lot_id = 1;
+    delete from public.parking_spots where lot_id = 1;
+
+    perform public.save_parking_spot('C1', 'car', 0, 0);
+    perform public.save_parking_spot('C2', 'car', 0, 1);
+
+    -- The snapshot keeps the configured target next to the drawn bays.
+    update public.parking_settings set car_capacity = 3 where lot_id = 1;
+    select public.capacity_snapshot() into car_space;
+    if (car_space ->> 'car_capacity')::integer <> 2
+       or (car_space ->> 'car_target_capacity')::integer <> 3 then
+        raise exception 'snapshot lost drawn vs target bays: %', car_space;
+    end if;
+    update public.parking_settings set car_capacity = 2 where lot_id = 1;
+
+    refused := false;
+    begin
+        perform public.save_parking_spot('C3', 'car', 1, 0);
+        raise exception 'the map exceeded the configured capacity';
+    exception when others then
+        if sqlerrm not like '%SpotCapacityReachedError%' then
+            raise;
+        end if;
+        refused := true;
+    end;
+    if not refused then
+        raise exception 'extra bay was accepted';
+    end if;
+
+    refused := false;
+    begin
+        perform public.delete_parking_spot(
+            (select id from public.parking_spots where lot_id = 1 and code = 'C1')
+        );
+        raise exception 'the map went below the configured capacity';
+    exception when others then
+        if sqlerrm not like '%SpotCapacityRequiredError%' then
+            raise;
+        end if;
+        refused := true;
+    end;
+    if not refused then
+        raise exception 'bay deletion below capacity was accepted';
+    end if;
+
+    -- Lowering the target first makes the removal legal.
+    update public.parking_settings set car_capacity = 1 where lot_id = 1;
+    perform public.delete_parking_spot(
+        (select id from public.parking_spots where lot_id = 1 and code = 'C2')
+    );
+    update public.parking_settings
+       set car_capacity = 0, moto_capacity = 0
+     where lot_id = 1;
+    delete from public.parking_spots where lot_id = 1;
+
+    select public.capacity_snapshot() into car_space;
+    if (car_space ->> 'car_available')::integer <> 0 then
+        raise exception 'snapshot kept stale bays: %', car_space;
+    end if;
+end $$;
+
+-- Records log: lot-scoped, plate filter, totals and paging.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+declare
+    car_cat integer;
+    closed_id integer;
+    result jsonb;
+begin
+    select id into car_cat
+      from public.categories
+     where lot_id = 1 and lower(name) = 'car'
+     limit 1;
+
+    perform public.check_in(
+        'REC001', car_cat, null, null, '[]'::jsonb, null,
+        now() - interval '2 hours'
+    );
+    select s.id into closed_id
+      from public.parking_sessions s
+      join public.vehicles v on v.id = s.vehicle_id
+     where v.plate = 'REC001' and s.status = 'open' and s.lot_id = 1
+     order by s.id desc limit 1;
+    perform public.check_out(closed_id, null, null, 'cash');
+
+    perform public.check_in(
+        'REC002', car_cat, null, null, '[]'::jsonb, null,
+        now() - interval '1 hour'
+    );
+
+    result := public.session_records('REC00', 10, 0);
+    if (result ->> 'total')::integer <> 2 then
+        raise exception 'records lost the plate filter: %', result;
+    end if;
+    if not exists (
+        select 1 from jsonb_array_elements(result -> 'records') item
+         where item ->> 'plate' = 'REC001'
+           and item ->> 'status' = 'closed'
+           and item ->> 'exit_time' is not null
+           and (item ->> 'duration_seconds')::integer >= 3600
+    ) then
+        raise exception 'closed record is incomplete: %', result;
+    end if;
+    if not exists (
+        select 1 from jsonb_array_elements(result -> 'records') item
+         where item ->> 'plate' = 'REC002'
+           and item ->> 'status' = 'open'
+           and item ->> 'exit_time' is null
+    ) then
+        raise exception 'open record is incomplete: %', result;
+    end if;
+
+    result := public.session_records('REC001', 10, 0);
+    if (result ->> 'total')::integer <> 1 then
+        raise exception 'records ignored the exact plate: %', result;
+    end if;
+
+    result := public.session_records('ZZZ999', 10, 0);
+    if (result ->> 'total')::integer <> 0
+       or jsonb_array_length(result -> 'records') <> 0 then
+        raise exception 'records invented rows: %', result;
+    end if;
+
+    -- Business-date range (inclusive) and validation.
+    result := public.session_records(null, 10, 0, current_date, current_date);
+    if (result ->> 'total')::integer < 2 then
+        raise exception 'date range lost today''s rows: %', result;
+    end if;
+    result := public.session_records(
+        null, 10, 0, current_date + 1, current_date + 7
+    );
+    if (result ->> 'total')::integer <> 0 then
+        raise exception 'future range returned rows: %', result;
+    end if;
+    begin
+        perform public.session_records(
+            null, 10, 0, current_date, current_date - 1
+        );
+        raise exception 'an inverted range was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidReportRangeError%' then
+            raise;
+        end if;
+    end;
+
+    -- Another lot never sees these rows.
+    set local request.headers = '{"x-lot-id":"2"}';
+    result := public.session_records('REC001', 10, 0);
+    if (result ->> 'total')::integer <> 0 then
+        raise exception 'records leaked to another lot: %', result;
+    end if;
+    set local request.headers = '{"x-lot-id":"1"}';
+end $$;
+
+-- Optional walk-around video: stored as evidence media and painted on the board.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+declare
+    car_cat integer;
+    entry jsonb;
+    vid_session integer;
+    board jsonb;
+begin
+    select id into car_cat
+      from public.categories
+     where lot_id = 1 and lower(name) = 'car'
+     limit 1;
+
+    entry := public.check_in(
+        'VID001', car_cat, null, null, '[]'::jsonb, null,
+        now() - interval '1 minute', null, false, null,
+        '[{"path":"video/ev.mp4","duration_seconds":42}]'::jsonb
+    );
+    vid_session := (entry ->> 'id')::integer;
+
+    if (entry ->> 'video_count')::integer <> 1 then
+        raise exception 'the video was not counted: %', entry;
+    end if;
+    if not exists (
+        select 1 from public.evidence_photos p
+         where p.session_id = vid_session
+           and p.kind = 'video'
+           and p.file_path = 'video/ev.mp4'
+           and p.duration_seconds = 42
+    ) then
+        raise exception 'the video row is missing';
+    end if;
+
+    board := public.slot_board();
+    if not exists (
+        select 1 from jsonb_array_elements(board -> 'sessions') item
+         where item ->> 'plate' = 'VID001'
+           and (item ->> 'video_count')::integer = 1
+    ) then
+        raise exception 'board lost the video count: %', board;
+    end if;
+
+    perform public.check_out(vid_session, null, null, 'cash');
+    delete from public.evidence_photos where session_id = vid_session;
+end $$;
+
+-- Legal policy: a public profile for customers and an admin-only template reset.
+set local request.headers = '{"x-lot-id":"1"}';
+set local role anon;
+do $$
+declare
+    profile jsonb;
+begin
+    profile := public.public_lot_profile(1);
+    if profile is null
+       or coalesce(profile ->> 'legal_policy', '') = ''
+       or coalesce(profile ->> 'name', '') = '' then
+        raise exception 'public profile is incomplete: %', profile;
+    end if;
+    if profile ? 'pin_hash' or profile ? 'whatsapp_auto'
+       or profile ? 'key_capacity' then
+        raise exception 'public profile leaked private settings: %', profile;
+    end if;
+end $$;
+reset role;
+
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    begin
+        perform public.reset_legal_policy();
+        raise exception 'an operator reset the legal policy';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then
+            raise;
+        end if;
+    end;
+end $$;
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    template text;
+begin
+    update public.parking_settings
+       set legal_policy = 'texto temporal'
+     where lot_id = 1;
+    template := public.reset_legal_policy();
+    if template is null or template not like '%POLÍTICAS Y CONTRATO%' then
+        raise exception 'reset did not return the template';
+    end if;
+    if (select legal_policy from public.parking_settings where lot_id = 1)
+       <> template then
+        raise exception 'reset did not store the template';
+    end if;
+end $$;
+reset role;
+
+-- Card payments must say debit or credit; cash ignores the field.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+declare
+    card_cat integer;
+    entry jsonb;
+    sid integer;
+    receipt jsonb;
+    refused boolean;
+begin
+    insert into public.categories (name, capacity, lot_id)
+    values ('cardpay', 0, 1)
+    returning id into card_cat;
+    insert into public.tariffs (category_id, type, amount, active, lot_id)
+    values (card_cat, 'hourly', 1000, true, 1);
+
+    entry := public.check_in(
+        'CARD01', card_cat, null, null, '[]'::jsonb, null,
+        now() - interval '1 minute'
+    );
+    sid := (entry ->> 'id')::integer;
+
+    refused := false;
+    begin
+        perform public.check_out(sid, null, null, 'card');
+        raise exception 'a card payment without debit/credit was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidCardTypeError%' then
+            raise;
+        end if;
+        refused := true;
+    end;
+    if not refused then
+        raise exception 'card type was not required';
+    end if;
+
+    receipt := public.check_out(
+        sid, null, null, 'card', 0, null, false, null, null, 'debit'
+    );
+    if receipt ->> 'card_type' <> 'debit' then
+        raise exception 'card type was not stored: %', receipt;
+    end if;
+    if (select card_type from public.parking_sessions where id = sid)
+       <> 'debit' then
+        raise exception 'session lost the card type';
+    end if;
+
+    -- Cash can record the amount received and the change; short cash is refused.
+    entry := public.check_in(
+        'CASH01', card_cat, null, null, '[]'::jsonb, null,
+        now() - interval '1 minute'
+    );
+    sid := (entry ->> 'id')::integer;
+    receipt := public.check_out(
+        sid, null, null, 'cash', 0, null, false, null, null, null, 5000
+    );
+    if (receipt ->> 'cash_received')::integer <> 5000
+       or (receipt ->> 'cash_change')::integer <> 4000 then
+        raise exception 'cash change was not stored: %', receipt;
+    end if;
+    if (select cash_received from public.parking_sessions where id = sid) <> 5000
+       or (select cash_change from public.parking_sessions where id = sid) <> 4000 then
+        raise exception 'session lost the cash change';
+    end if;
+
+    entry := public.check_in(
+        'CASH02', card_cat, null, null, '[]'::jsonb, null,
+        now() - interval '1 minute'
+    );
+    sid := (entry ->> 'id')::integer;
+    refused := false;
+    begin
+        perform public.check_out(
+            sid, null, null, 'cash', 0, null, false, null, null, null, 500
+        );
+        raise exception 'short cash was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidCashReceivedError%' then
+            raise;
+        end if;
+        refused := true;
+    end;
+    if not refused then
+        raise exception 'short cash was not refused';
+    end if;
+    perform public.check_out(sid, null, null, 'cash');
+
+    -- Cash with a stray card type is ignored (no card fields).
+    entry := public.check_in(
+        'CARD02', card_cat, null, null, '[]'::jsonb, null,
+        now() - interval '1 minute'
+    );
+    sid := (entry ->> 'id')::integer;
+    receipt := public.check_out(
+        sid, null, null, 'cash', 0, null, false, null, null, 'credit'
+    );
+    if receipt ->> 'card_type' is not null then
+        raise exception 'cash kept a card type: %', receipt;
+    end if;
 end $$;
 
 rollback;

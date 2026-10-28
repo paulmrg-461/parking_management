@@ -83,6 +83,8 @@ class CheckInCubit extends ResilientCubit<CheckInState> {
     required List<XFile> photos,
     NewVehicleInfo? newVehicle,
     bool leftKeys = false,
+    int? spotId,
+    XFile? video,
   }) async {
     emit(state.copyWith(submission: const SubmissionInProgress()));
     try {
@@ -91,6 +93,8 @@ class CheckInCubit extends ResilientCubit<CheckInState> {
         photos: photos,
         newVehicle: newVehicle,
         leftKeys: leftKeys,
+        spotId: spotId,
+        video: video,
       );
       emit(
         state.copyWith(

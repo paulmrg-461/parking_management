@@ -30,6 +30,7 @@ Storage directly, and business rules live in PostgreSQL functions.
 | [`docs/architecture.md`](docs/architecture.md) | Components, Flutter layers and the check-in/billing/shift/notification/multi-site flows. |
 | [`docs/infrastructure.md`](docs/infrastructure.md) | Services, ports, volumes, env vars, operations, scaling and CI. |
 | [`docs/database.md`](docs/database.md) | ER diagram, tables, RPC catalog, RLS model and migration rules. |
+| [`docs/slot-board.md`](docs/slot-board.md) | Space board and settlement dialog: states, data contract, accessibility, limits. |
 | [`docs/agent-memory.md`](docs/agent-memory.md) | Current state, invariants and gotchas for the next session. |
 
 ## Architecture
@@ -40,7 +41,7 @@ Flutter (hexagonal, per feature)
                                 |
                  Supabase client (JWT, PostgREST, Storage, Functions)
                                 |
-        Envoy gateway :8000 -> GoTrue / PostgREST / Storage / Realtime
+        Envoy gateway :8000 (API_GW_HTTP_PORT) -> GoTrue / PostgREST / Storage / Realtime
                                 |
                       PostgreSQL 17 (public schema + RLS)
 ```
@@ -57,47 +58,148 @@ Flutter (hexagonal, per feature)
 - **Offline**: Hive cache + outbox; replays the same RPCs and `client_ref`
   idempotency keys.
 
-## Quickstart
+## Quick start (local stack)
+
+Requirements: Docker Engine + Compose v2, the Flutter SDK (beta channel, see
+CI), `curl` and `python3`. Android also needs the Android SDK and a device with
+USB debugging or wireless debugging.
+
+### 1. Configure the environment
 
 ```bash
 cp .env.example .env
-sh supabase/generate-env.sh     # generates DB/JWT/dashboard/API keys
-docker compose up -d --build    # pulls Supabase, applies migrations
+sh supabase/generate-env.sh     # DB/JWT/dashboard/API keys
+chmod 600 .env
+```
 
+`.env` also owns the **gateway port** and the three public URLs. The default is
+8000; this workspace runs on 8017:
+
+```dotenv
+API_GW_HTTP_PORT=8017
+SUPABASE_PUBLIC_URL=http://localhost:8017
+API_EXTERNAL_URL=http://localhost:8017/auth/v1
+SITE_URL=http://localhost:8017
+```
+
+Changing the port requires recreating the gateway and auth:
+`docker compose up -d --force-recreate api-gw auth`.
+
+### 2. Start the stack
+
+```bash
+docker compose up -d
+docker compose logs --tail=20 supabase-migrate   # wait for "migrations up to date"
+```
+
+Everything (Auth, REST, Storage, Realtime, Edge Functions, Studio) is exposed
+through the Envoy gateway. `supabase-migrate` applies
+`supabase/migrations/0001..0048` once.
+
+### 3. Create the kiosk admin
+
+```bash
 sh supabase/create-operator.sh admin 123456 admin
 ```
 
-| What | Where |
-|---|---|
-| Supabase API gateway | http://localhost:8000 |
-| Studio | http://localhost:8000 (basic auth `DASHBOARD_*`) |
-| Auth | http://localhost:8000/auth/v1 |
-| REST | http://localhost:8000/rest/v1 |
-| Storage | http://localhost:8000/storage/v1 |
-| Postgres (Supavisor) | `localhost:5432`, database `parking` |
+PINs are 6 digits; usernames map to `<username>@parking.local`. Add operators
+with `sh supabase/create-operator.sh juan 123456 operator` (or from `/users`).
 
-Migrations in `supabase/migrations/` are applied once by the
-`supabase-migrate` one-shot service and tracked in `public.schema_migrations`.
-See [`docs/setup-local.md`](docs/setup-local.md) for the full walkthrough
-(requirements, emulator host, tests, troubleshooting) and
-[`docs/infrastructure.md`](docs/infrastructure.md) for operations, resets and
-security notes.
+### 4. Read the port and the public key
 
-## Flutter
+```bash
+PORT=$(grep -E '^API_GW_HTTP_PORT=' .env | cut -d= -f2-)
+ANON=$(grep -E '^ANON_KEY=' .env | cut -d= -f2-)
+echo "http://localhost:$PORT"
+```
 
-Requires the Flutter SDK (beta channel, see CI) and the running stack.
+The `ANON_KEY` is public (it ships in the binary); never put the service-role
+or secret key in the app.
+
+### 5. Run the web app
 
 ```bash
 flutter pub get
-flutter run \
-  --dart-define=SUPABASE_URL=http://localhost:8000 \
-  --dart-define=SUPABASE_ANON_KEY=<ANON_KEY from .env>
+flutter run -d chrome \
+  --dart-define=SUPABASE_URL="http://localhost:$PORT" \
+  --dart-define=SUPABASE_ANON_KEY="$ANON"
 ```
 
-- Android emulator: use `http://10.0.2.2:8000` (debug builds allow cleartext).
+### 6. Run the Android app
+
+**USB or wireless adb (recommended).** The script finds the device, reverses
+the configured port and launches Flutter against `localhost`:
+
+```bash
+sh tool/run-android.sh            # or: sh tool/run-android.sh <serial>
+```
+
+**Emulator:** the host is `10.0.2.2`, not `localhost`:
+
+```bash
+flutter run -d emulator-5554 \
+  --dart-define=SUPABASE_URL="http://10.0.2.2:$PORT" \
+  --dart-define=SUPABASE_ANON_KEY="$ANON"
+```
+
+### 7. Log in
+
+`admin` / `123456` (or the PIN you chose). The app selects the active site
+before exposing the session; users with more than one site can switch it from
+the sidebar footer (web) or the home chip (phone).
+
+### 8. Verify
+
+```bash
+sh supabase/healthcheck.sh        # services, migrations, warnings
+sh supabase/tests/e2e.sh          # login -> check-in -> check-out -> report
+flutter test                      # widget/unit suite
+flutter analyze                   # 0 errors/warnings (SDK deprecation infos only)
+```
+
+Manual smoke: login → check-in (ticket with QR + print) → inside list → scan
+the QR or “Mark exit” → payment dialog → today/report → audit/diagnostics.
+
+### 9. Ports
+
+| What | URL |
+|---|---|
+| API gateway (Auth/REST/Storage/Realtime/Functions) | `http://localhost:$PORT` |
+| Studio | `http://localhost:$PORT` (basic auth `DASHBOARD_*`) |
+| Postgres (Supavisor) | `localhost:5432`, database `parking` |
+| Web dev server | the URL Flutter prints (e.g. `http://localhost:5000` with `--web-port 5000`) |
+
+### 10. Common issues
+
+| Symptom | Fix |
+|---|---|
+| App says it cannot reach the server (phone) | Wireless adb reconnects drop the tunnel: `adb reverse tcp:$PORT tcp:$PORT` or rerun `sh tool/run-android.sh`. |
+| 401 on `/rest/v1/` | Expected without an API key; the gateway is up. |
+| Login says invalid credentials | Create the kiosk user (step 3) and check `flutter run` points at this stack. |
+| Port changed | Update the four `.env` values, recreate `api-gw`/`auth` and rebuild the app with the new URL. |
+| Emulator cannot connect | Use `10.0.2.2:$PORT`, not `localhost`. |
+
+Full walkthrough: [`docs/setup-local.md`](docs/setup-local.md). One page of
+commands: [`QUICKSTART.md`](QUICKSTART.md).
+
+## Flutter
+
+Requires the Flutter SDK (beta channel) and the running stack. Keep the
+`--dart-define` values in every build (debug, release, web):
+
+```bash
+flutter pub get
+flutter run -d chrome \
+  --dart-define=SUPABASE_URL="http://localhost:$PORT" \
+  --dart-define=SUPABASE_ANON_KEY="$ANON"
+```
+
+- Physical Android: `sh tool/run-android.sh` handles `adb reverse` and the
+  port; the emulator uses `http://10.0.2.2:$PORT` (debug builds allow
+  cleartext).
 - Release builds must point at an HTTPS gateway; Android blocks cleartext by
   default, so terminate TLS in front of Envoy (Caddy/nginx) for production.
-- Web: run `flutter run -d chrome --web-port 5000`; the gateway allows the
+- Web: add `--web-port 5000` if you need a fixed dev URL; the gateway allows the
   origins configured by the stack (adjust `supabase/volumes/api/envoy` if you
   restrict them).
 - Tests: `flutter test`. Static analysis: `flutter analyze`.
@@ -282,8 +384,9 @@ they keep working without a header.
 - The reports screen has a **Todas las sedes** switch for platform admins
   (`report_revenue_all`), which adds a per-site breakdown on top of the active
   lot's report.
-- Users with more than one membership get a lot bar under the app chrome to
-  switch sites; switching refreshes the dashboard and the shift card.
+- Users with more than one membership switch sites from the web sidebar footer
+  or the chip in the home content (phone); switching refreshes the dashboard
+  and the shift card.
 - Reports and occupancy are per lot; the consolidated switch keeps the same
   screen and adds the per-site breakdown.
 - Queued offline check-ins/check-outs capture the lot where the operator acted
@@ -291,18 +394,25 @@ they keep working without a header.
 
 ## Dashboard
 
-Home shows current occupancy plus today's numbers for the active site
-(`rpc/dashboard_today`): revenue, cash collected, monthly-pass collections,
-entries and exits. Counters reset at local midnight using the site's
-`business_timezone`; a slow summary never blocks the occupancy card.
+Home is the operations dashboard: entry/exit actions first, then a responsive
+KPI grid with occupancy, the configured spaces (cars+pickups, motorcycles and
+cars with keys, from `rpc/capacity_snapshot`), today's numbers
+(`rpc/dashboard_today`: revenue, cash, pass collections, entries and exits) and
+the shift state. A cars-inside list shows plates, elapsed time and
+pass/photo hints; on wide screens it moves to a side panel. Counters reset at
+local midnight using the site's `business_timezone`; a slow summary never
+blocks the occupancy card.
 
 ## Capacity and reservations
 
-Each category has an optional capacity (0 = unlimited). The dashboard shows
-used/total vehicles, a progress bar and the names of full categories; a
-check-in into a full category is rejected with a localized error, enforced in
-the database under a per-category lock. The check-in form loads a fresh
-occupancy snapshot and disables full categories before submitting.
+Each category has an optional capacity (0 = unlimited) and Ajustes adds the
+site's **space configuration**: cars + pickups share a pool, motorcycles have
+their own, and there is a cap on cars that leave their keys (0 = no limit;
+trucks and buses are not limited). Check-in offers a “Leaves the keys” switch.
+Limits are enforced in the database under advisory locks
+(`ParkingFullError`/`KeysFullError`) and shown in the dashboard's capacity
+card; active reservations consume the same spaces, and the check-in form
+disables a category when its whole group is full.
 
 Reservations (`/reservations`, admins) hold a slot for a plate until it checks
 in, the hold is cancelled or it expires. Active holds count against the

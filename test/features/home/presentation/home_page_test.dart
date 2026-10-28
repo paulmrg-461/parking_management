@@ -8,15 +8,20 @@ import 'package:parking_management/features/auth/domain/entities/user.dart';
 import 'package:parking_management/features/check_out/domain/entities/capacity_snapshot.dart';
 import 'package:parking_management/features/check_out/domain/entities/today_summary.dart';
 import 'package:parking_management/features/check_out/domain/entities/open_session.dart';
+import 'package:parking_management/features/check_out/domain/entities/slot_board.dart';
 import 'package:parking_management/features/home/application/dashboard_cubit.dart';
 import 'package:parking_management/features/home/presentation/home_page.dart';
 import 'package:parking_management/features/home/presentation/widgets/dashboard_widgets.dart';
+import 'package:parking_management/features/reservations/domain/entities/reservation.dart';
+import 'package:parking_management/features/spots/domain/entities/parking_spot.dart';
+import 'package:parking_management/features/reservations/domain/repositories/reservation_repository.dart';
 import 'package:parking_management/features/settings/application/branding_cubit.dart';
 import 'package:parking_management/features/vehicles/domain/entities/vehicle.dart';
 
 import '../../../helpers/app_harness.dart';
 import '../../../helpers/fake_auth_repository.dart';
 import '../../../helpers/fake_check_out_repository.dart';
+import '../../../helpers/fake_reservation_repository.dart';
 import '../../../helpers/fake_settings_repository.dart';
 import '../../../helpers/fake_vehicle_repository.dart';
 import '../../../helpers/test_app.dart';
@@ -28,6 +33,8 @@ Future<FakeCheckOutRepository> _pump(
   TodaySummary today = TodaySummary.empty,
   int capacity = 0,
   CapacitySnapshot? space,
+  SlotBoard? board,
+  ReservationRepository? reservations,
   Size size = const Size(800, 1600),
 }) async {
   // Tall viewport: the dashboard now stacks occupancy, capacity, the inside
@@ -35,16 +42,21 @@ Future<FakeCheckOutRepository> _pump(
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
-  final sessions = FakeCheckOutRepository(
-    capacity: capacity,
-    sessions: [
-      for (var i = 1; i <= 4; i++)
-        OpenSession(id: i, vehicleId: i, entryTime: DateTime(2026)),
-    ],
-    listError: error,
-    today: today,
-  )..capacityToReturn = space ?? CapacitySnapshot.empty;
-  final auth = AuthCubit(FakeAuthRepository(sessionToRestore: sessionFor(role)));
+  final sessions =
+      FakeCheckOutRepository(
+          capacity: capacity,
+          sessions: [
+            for (var i = 1; i <= 4; i++)
+              OpenSession(id: i, vehicleId: i, entryTime: DateTime(2026)),
+          ],
+          listError: error,
+          today: today,
+        )
+        ..capacityToReturn = space ?? CapacitySnapshot.empty
+        ..slotBoardToReturn = board ?? SlotBoard.empty;
+  final auth = AuthCubit(
+    FakeAuthRepository(sessionToRestore: sessionFor(role)),
+  );
   await auth.restore();
   final router = GoRouter(
     routes: [
@@ -58,7 +70,7 @@ Future<FakeCheckOutRepository> _pump(
               Vehicle(id: 2, plate: 'XYZ999', categoryId: 1),
             ]),
           ),
-          child: const HomePage(),
+          child: HomePage(reservations: reservations),
         ),
         routes: [
           GoRoute(
@@ -68,6 +80,10 @@ Future<FakeCheckOutRepository> _pump(
           GoRoute(
             path: 'check-out',
             builder: (_, _) => const Scaffold(body: Text('check-out page')),
+          ),
+          GoRoute(
+            path: 'reservations',
+            builder: (_, _) => const Scaffold(body: Text('reservations page')),
           ),
         ],
       ),
@@ -132,7 +148,16 @@ void main() {
 
   testWidgets('Success: admins get management shortcuts', (tester) async {
     await _pump(tester, role: UserRole.admin);
-    await tester.scrollUntilVisible(find.text('Gestión'), 200);
+    await tester.scrollUntilVisible(
+      find.text('Gestión'),
+      200,
+      scrollable: find
+          .descendant(
+            of: find.byType(RefreshIndicator),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
     expect(find.text('Gestión'), findsOneWidget);
     expect(find.text('Reportes'), findsOneWidget);
   });
@@ -178,18 +203,14 @@ void main() {
   ) async {
     tester.platformDispatcher.accessibilityFeaturesTestValue =
         const FakeAccessibilityFeatures(disableAnimations: true);
-    addTearDown(
-      tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
-    );
+    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
 
     await _pump(tester, capacity: 8);
 
     expect(find.byType(TweenAnimationBuilder<double>), findsNothing);
     expect(
       tester
-          .widget<LinearProgressIndicator>(
-            find.byType(LinearProgressIndicator),
-          )
+          .widget<LinearProgressIndicator>(find.byType(LinearProgressIndicator))
           .value,
       0.5,
     );
@@ -204,6 +225,7 @@ void main() {
       space: const CapacitySnapshot(
         carOpen: 4,
         carCapacity: 10,
+        carReserved: 2,
         motoOpen: 1,
         motoCapacity: 5,
         keysOpen: 2,
@@ -220,6 +242,7 @@ void main() {
     expect(find.text('2 / 3'), findsOneWidget);
     // The big occupancy uses the configured spaces (cars 4+1 of 10+5).
     expect(find.text('5 / 15'), findsOneWidget);
+    expect(find.text('2 reservados'), findsOneWidget);
   });
 
   testWidgets('Success: the home lists the cars inside', (tester) async {
@@ -254,9 +277,336 @@ void main() {
     );
     expect(inside, findsOneWidget);
     final panel = tester.getTopLeft(inside).dx;
-    final capacityCard = tester.getTopLeft(
-      find.text('Capacidad del parqueadero'),
-    ).dx;
+    final capacityCard = tester
+        .getTopLeft(find.text('Capacidad del parqueadero'))
+        .dx;
     expect(panel, greaterThan(capacityCard));
+  });
+
+  testWidgets('Success: active holds are summarized with a shortcut', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      role: UserRole.admin,
+      capacity: 8,
+      space: const CapacitySnapshot(
+        reservationsActive: 3,
+        reservationsExpiring: 1,
+      ),
+    );
+
+    expect(find.text('3 reservas activas'), findsOneWidget);
+    expect(find.text('1 por vencer'), findsOneWidget);
+    await tester.tap(find.text('Ver reservas'));
+    await tester.pumpAndSettle();
+    expect(find.text('reservations page'), findsOneWidget);
+  });
+
+  testWidgets('Security: operators do not get the holds shortcut', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      capacity: 8,
+      space: const CapacitySnapshot(reservationsActive: 3),
+    );
+
+    expect(find.text('3 reservas activas'), findsOneWidget);
+    expect(find.text('Ver reservas'), findsNothing);
+  });
+
+  testWidgets('Success: the space map paints free, occupied and held cells', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      capacity: 8,
+      board: SlotBoard(
+        carCapacity: 4,
+        motoCapacity: 2,
+        sessions: [
+          SlotSession(
+            sessionId: 9,
+            plate: 'BRD001',
+            entryTime: DateTime(2026, 1, 1),
+          ),
+          SlotSession(
+            sessionId: 10,
+            plate: 'BRD002',
+            entryTime: DateTime(2026, 1, 1),
+          ),
+        ],
+        holds: [
+          SlotHold(
+            plate: 'HOLD01',
+            until: DateTime.now().add(const Duration(hours: 1)),
+          ),
+        ],
+      ),
+    );
+
+    expect(find.text('Mapa de espacios'), findsOneWidget);
+    expect(find.text('3 libres'), findsOneWidget);
+    expect(find.text('BRD001'), findsOneWidget);
+    expect(find.textContaining('HOLD01'), findsOneWidget);
+
+    await tester.tap(find.text('Reservas'));
+    await tester.pumpAndSettle();
+    expect(find.text('BRD001'), findsNothing);
+    expect(find.textContaining('HOLD01'), findsOneWidget);
+  });
+
+  testWidgets('Success: an occupied cell opens its details and check-out', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      capacity: 8,
+      board: SlotBoard(
+        carCapacity: 4,
+        sessions: [
+          SlotSession(
+            sessionId: 9,
+            plate: 'BRD001',
+            entryTime: DateTime(2026, 1, 1),
+          ),
+        ],
+      ),
+    );
+
+    await tester.tap(find.text('BRD001'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Total a cobrar'), findsOneWidget);
+    expect(find.textContaining('5.000'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Salida'));
+    await tester.pumpAndSettle();
+    expect(find.text('check-out page'), findsOneWidget);
+  });
+
+  testWidgets('Success: occupancy adds a radial gauge on top of the bar', (
+    tester,
+  ) async {
+    await _pump(tester, capacity: 8);
+
+    expect(find.text('50%'), findsOneWidget);
+    final gauge = tester.widget<CircularProgressIndicator>(
+      find.byType(CircularProgressIndicator),
+    );
+    expect(gauge.value, closeTo(0.5, 0.001));
+  });
+
+  testWidgets('A11y: space cells announce state, plate and group', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    await _pump(
+      tester,
+      capacity: 8,
+      board: SlotBoard(
+        carCapacity: 4,
+        sessions: [
+          SlotSession(
+            sessionId: 9,
+            plate: 'BRD001',
+            entryTime: DateTime(2026, 1, 1),
+          ),
+        ],
+        holds: [
+          SlotHold(
+            plate: 'HOLD01',
+            until: DateTime.now().add(const Duration(hours: 1)),
+          ),
+        ],
+      ),
+    );
+
+    expect(find.bySemanticsLabel(RegExp('^Ocupado BRD001')), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp('^Reservado HOLD01')), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp('^Libre Carros')), findsWidgets);
+    semantics.dispose();
+  });
+
+  testWidgets('A11y: space cells keep cabin-sized tap targets', (tester) async {
+    await _pump(tester, capacity: 8, board: const SlotBoard(carCapacity: 4));
+
+    final cell = tester.getSize(find.byTooltip('Libre Carros y camionetas 1'));
+    expect(cell.width, greaterThanOrEqualTo(44));
+    expect(cell.height, greaterThanOrEqualTo(48));
+  });
+
+  testWidgets('Security: a free cell opens nothing', (tester) async {
+    await _pump(tester, capacity: 8, board: const SlotBoard(carCapacity: 4));
+
+    await tester.tap(find.byTooltip('Libre Carros y camionetas 1'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Total a cobrar'), findsNothing);
+    expect(find.text('check-out page'), findsNothing);
+  });
+
+  testWidgets('Success: out-of-service spots are painted and never offered', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      capacity: 8,
+      space: const CapacitySnapshot(
+        carOpen: 3,
+        carCapacity: 8,
+        carOutOfService: 2,
+      ),
+      board: SlotBoard(
+        carCapacity: 4,
+        carOutOfService: 1,
+        sessions: [
+          SlotSession(
+            sessionId: 9,
+            plate: 'BRD001',
+            entryTime: DateTime(2026, 1, 1),
+          ),
+        ],
+      ),
+    );
+
+    // 4 configured - 1 occupied - 1 in maintenance = 2 free.
+    expect(find.text('2 libres'), findsOneWidget);
+    expect(find.text('Mantenimiento'), findsOneWidget);
+    expect(find.text('2 / 4'), findsOneWidget);
+
+    // The dashboard counts only usable spots (8 - 2 = 6).
+    expect(find.text('3 / 6'), findsWidgets);
+    expect(find.text('2 fuera de servicio'), findsWidgets);
+  });
+
+  testWidgets('Security: maintenance cells are not interactive', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      capacity: 8,
+      board: const SlotBoard(carCapacity: 2, carOutOfService: 2),
+    );
+
+    final cell = find.byTooltip('Mantenimiento Carros y camionetas').first;
+    await tester.ensureVisible(cell);
+    await tester.pumpAndSettle();
+    await tester.tap(cell);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Total a cobrar'), findsNothing);
+  });
+
+  testWidgets('Success: an admin releases a hold from the board', (
+    tester,
+  ) async {
+    final until = DateTime.now().add(const Duration(hours: 1));
+    final holds = FakeReservationRepository([
+      Reservation(id: 5, plate: 'HOLD01', categoryId: 1, reservedUntil: until),
+    ]);
+    await _pump(
+      tester,
+      role: UserRole.admin,
+      capacity: 8,
+      reservations: holds,
+      board: SlotBoard(
+        carCapacity: 2,
+        holds: [SlotHold(plate: 'HOLD01', until: until)],
+      ),
+    );
+
+    // The exact label is time-dependent; the plate is enough to find the cell.
+    final holdCell = find.byTooltip(RegExp('Reservado HOLD01')).first;
+    await tester.ensureVisible(holdCell);
+    await tester.pumpAndSettle();
+    await tester.tap(holdCell);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.widgetWithText(OutlinedButton, 'Cancelar reserva'),
+      findsOneWidget,
+    );
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Cancelar reserva'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Cancelar reserva'));
+    await tester.pumpAndSettle();
+
+    expect(holds.cancelledId, 5);
+    expect(find.text('Reserva cancelada'), findsOneWidget);
+  });
+
+  testWidgets('Security: operators cannot release a hold from the board', (
+    tester,
+  ) async {
+    final until = DateTime.now().add(const Duration(hours: 1));
+    final holds = FakeReservationRepository([
+      Reservation(id: 5, plate: 'HOLD01', categoryId: 1, reservedUntil: until),
+    ]);
+    await _pump(
+      tester,
+      capacity: 8,
+      reservations: holds,
+      board: SlotBoard(
+        carCapacity: 2,
+        holds: [SlotHold(plate: 'HOLD01', until: until)],
+      ),
+    );
+
+    final holdCell = find.byTooltip(RegExp('Reservado HOLD01')).first;
+    await tester.ensureVisible(holdCell);
+    await tester.pumpAndSettle();
+    await tester.tap(holdCell);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Cancelar reserva'), findsNothing);
+    expect(holds.cancelledId, isNull);
+  });
+
+  testWidgets('Success: the map paints the real bays and their cars', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      capacity: 8,
+      board: SlotBoard(
+        spots: const [
+          ParkingSpot(id: 1, code: 'A1', group: SlotGroup.car, row: 0, col: 0),
+          ParkingSpot(id: 2, code: 'A2', group: SlotGroup.car, row: 0, col: 1),
+          ParkingSpot(
+            id: 3,
+            code: 'A3',
+            group: SlotGroup.car,
+            row: 1,
+            col: 0,
+            active: false,
+          ),
+        ],
+        sessions: [
+          SlotSession(
+            sessionId: 9,
+            plate: 'ABC123',
+            entryTime: DateTime.now().subtract(const Duration(minutes: 20)),
+            spotId: 1,
+          ),
+        ],
+      ),
+    );
+
+    final bay = find.byTooltip(RegExp('^Ocupado ABC123, A1'));
+    expect(bay, findsOneWidget);
+    expect(find.text('A2'), findsOneWidget);
+    expect(find.text('Mant.'), findsOneWidget);
+    // Empty holes are exactly the same size as the filled bays.
+    final empty = tester.getSize(find.byKey(const ValueKey('empty_1_1')));
+    expect(empty.width, tester.getSize(bay).width);
+    expect(empty.height, tester.getSize(bay).height);
+
+    await tester.tap(bay);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Espacio A1'), findsOneWidget);
+    expect(find.text('Total a cobrar'), findsOneWidget);
   });
 }

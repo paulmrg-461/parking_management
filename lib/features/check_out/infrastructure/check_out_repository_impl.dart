@@ -10,6 +10,7 @@ import '../domain/entities/capacity_snapshot.dart';
 import '../domain/entities/check_out_preview.dart';
 import '../domain/entities/check_out_receipt.dart';
 import '../domain/entities/occupancy_snapshot.dart';
+import '../domain/entities/slot_board.dart';
 import '../domain/entities/open_session.dart';
 import '../domain/entities/today_summary.dart';
 import '../domain/repositories/check_out_repository.dart';
@@ -41,6 +42,9 @@ class CheckOutRepositoryImpl implements CheckOutRepository {
   Future<CapacitySnapshot> capacitySnapshot() => _remote.capacitySnapshot();
 
   @override
+  Future<SlotBoard> slotBoard() => _remote.slotBoard();
+
+  @override
   Future<TodaySummary> todaySummary() => _remote.todaySummary();
 
   @override
@@ -54,6 +58,8 @@ class CheckOutRepositoryImpl implements CheckOutRepository {
     String? discountReason,
     bool lostTicket = false,
     String? lostTicketReason,
+    String? cardType,
+    int? cashReceived,
   }) async {
     // Same key for the online attempt and any queued replay: a response lost
     // after the server committed must not become a dead letter on retry.
@@ -68,6 +74,8 @@ class CheckOutRepositoryImpl implements CheckOutRepository {
         discountReason: discountReason,
         lostTicket: lostTicket,
         lostTicketReason: lostTicketReason,
+        cardType: cardType,
+        cashReceived: cashReceived,
       );
     } on NetworkFailure {
       return _queueCheckOut(
@@ -79,6 +87,8 @@ class CheckOutRepositoryImpl implements CheckOutRepository {
         discountReason: discountReason,
         lostTicket: lostTicket,
         lostTicketReason: lostTicketReason,
+        cardType: cardType,
+        cashReceived: cashReceived,
       );
     }
   }
@@ -95,6 +105,8 @@ class CheckOutRepositoryImpl implements CheckOutRepository {
     required String? discountReason,
     required bool lostTicket,
     required String? lostTicketReason,
+    required String? cardType,
+    required int? cashReceived,
   }) async {
     await _outbox.enqueue(
       PendingMutation(
@@ -108,6 +120,8 @@ class CheckOutRepositoryImpl implements CheckOutRepository {
           'payment_method': paymentMethod,
           'discount_amount': discountAmount,
           'discount_reason': ?discountReason,
+          'card_type': ?cardType,
+          'cash_received': ?cashReceived,
           if (lostTicket) ...{
             'lost_ticket': true,
             'lost_ticket_reason': ?lostTicketReason,

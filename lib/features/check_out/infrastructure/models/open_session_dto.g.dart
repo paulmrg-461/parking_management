@@ -13,6 +13,7 @@ OpenSessionDto _$OpenSessionDtoFromJson(Map<String, dynamic> json) =>
       entryTime: DateTime.parse(json['entry_time'] as String),
       hasPass: json['has_pass'] as bool? ?? false,
       photoCount: (json['photo_count'] as num?)?.toInt() ?? 0,
+      leftKeys: json['left_keys'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$OpenSessionDtoToJson(OpenSessionDto instance) =>
@@ -22,4 +23,5 @@ Map<String, dynamic> _$OpenSessionDtoToJson(OpenSessionDto instance) =>
       'entry_time': instance.entryTime.toIso8601String(),
       'has_pass': instance.hasPass,
       'photo_count': instance.photoCount,
+      'left_keys': instance.leftKeys,
     };

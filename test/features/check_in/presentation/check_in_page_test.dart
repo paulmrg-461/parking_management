@@ -6,6 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/pagination/paged_result.dart';
 import 'package:parking_management/features/categories/domain/entities/category.dart';
 import 'package:parking_management/features/check_out/domain/entities/capacity_snapshot.dart';
+import 'package:parking_management/features/check_out/domain/entities/slot_board.dart';
+import 'package:parking_management/features/spots/domain/entities/parking_spot.dart';
 import 'package:parking_management/features/check_out/domain/entities/occupancy_snapshot.dart';
 import 'package:parking_management/features/categories/domain/repositories/category_repository.dart';
 import 'package:parking_management/features/check_in/application/check_in_cubit.dart';
@@ -20,6 +22,7 @@ import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/core/storage/key_value_store.dart';
 import 'package:parking_management/core/widgets/qr_code.dart';
 import 'package:parking_management/features/home/application/dashboard_cubit.dart';
+import 'package:parking_management/features/reservations/domain/repositories/reservation_repository.dart';
 import 'package:parking_management/features/plate_scanning/application/plate_scanning_cubit.dart';
 import 'package:parking_management/features/plate_scanning/domain/entities/plate_scan_result.dart';
 import 'package:parking_management/features/plate_scanning/domain/repositories/plate_image_capture.dart';
@@ -30,6 +33,7 @@ import 'package:parking_management/features/vehicles/domain/entities/vehicle.dar
 import 'package:parking_management/features/vehicles/domain/repositories/vehicle_repository.dart';
 
 import '../../../helpers/fake_check_out_repository.dart';
+import '../../../helpers/fake_reservation_repository.dart';
 import '../../../helpers/fake_key_value_store.dart';
 import '../../../helpers/test_app.dart';
 import '../../../helpers/test_png.dart';
@@ -39,6 +43,8 @@ class _FakeCheckInRepository implements CheckInRepository {
   Failure? createError;
   String? lastPlate;
   bool? lastLeftKeys;
+  int? lastSpotId;
+  XFile? lastVideo;
   NewVehicleInfo? lastNewVehicle;
   List<XFile> lastPhotos = const [];
 
@@ -48,10 +54,14 @@ class _FakeCheckInRepository implements CheckInRepository {
     required List<XFile> photos,
     NewVehicleInfo? newVehicle,
     bool leftKeys = false,
+    int? spotId,
+    XFile? video,
   }) async {
     createCalls++;
     lastPlate = plate;
     lastLeftKeys = leftKeys;
+    lastSpotId = spotId;
+    lastVideo = video;
     lastNewVehicle = newVehicle;
     lastPhotos = photos;
     final error = createError;
@@ -78,6 +88,10 @@ class _FakeCheckInRepository implements CheckInRepository {
 }
 
 class _FakeVehicleRepository implements VehicleRepository {
+  _FakeVehicleRepository({this.plates = const []});
+
+  final List<String> plates;
+
   static const known = Vehicle(
     id: 7,
     plate: 'ABC123',
@@ -91,7 +105,13 @@ class _FakeVehicleRepository implements VehicleRepository {
     int offset = 0,
     int limit = defaultPageSize,
     String? plate,
-  }) => throw UnimplementedError();
+  }) async {
+    final items = [
+      for (final (index, value) in plates.indexed)
+        Vehicle(id: index + 1, plate: value, categoryId: 1),
+    ];
+    return PagedResult(items, total: items.length);
+  }
 
   @override
   Future<Vehicle?> findByPlate(String plate) async =>
@@ -190,8 +210,13 @@ void main() {
     _FakeScanner? scanner,
     List<CategoryOccupancySnapshot> occupancyCategories = const [],
     CapacitySnapshot space = CapacitySnapshot.empty,
+    SlotBoard? board,
     String? initialPlate,
     void Function(BuildContext context, String plate)? onMarkExit,
+    ReservationRepository? reservations,
+    List<String> knownPlates = const [],
+    bool withVehicles = true,
+    Future<XFile?> Function()? recordVideo,
   }) async {
     // Tall viewport: the form, the keys switch and the sessions accordion must
     // fit without fighting the CustomScrollView while tapping.
@@ -200,7 +225,8 @@ void main() {
     addTearDown(tester.view.reset);
     checkIns = _FakeCheckInRepository();
     occupancy = FakeCheckOutRepository(categories: occupancyCategories)
-      ..capacityToReturn = space;
+      ..capacityToReturn = space
+      ..slotBoardToReturn = board ?? SlotBoard.empty;
     await tester.pumpWidget(
       testApp(
         MultiBlocProvider(
@@ -227,6 +253,11 @@ void main() {
             canScan: canScan,
             initialPlate: initialPlate,
             onMarkExit: onMarkExit,
+            reservations: reservations,
+            recordVideo: recordVideo,
+            vehicles: withVehicles
+                ? _FakeVehicleRepository(plates: knownPlates)
+                : null,
           ),
         ),
       ),
@@ -702,5 +733,212 @@ void main() {
 
     expect(find.text('Car · La categoría está llena'), findsOneWidget);
     expect(find.text('Motorcycle'), findsOneWidget);
+  });
+
+  testWidgets('Success: category options show the remaining spaces', (
+    tester,
+  ) async {
+    await pumpPage(
+      tester,
+      space: const CapacitySnapshot(
+        carOpen: 1,
+        carCapacity: 4,
+        carReserved: 1,
+      ),
+    );
+
+    await enterPlate(tester, 'NEW999');
+    await scrollTo(tester, categoryField());
+    await tester.tap(categoryField());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Car · quedan 2'), findsOneWidget);
+    // Motorcycles have no configured limit, so the option stays plain.
+    expect(find.text('Motorcycle'), findsOneWidget);
+  });
+
+  testWidgets('Success: an active hold can be cancelled from check-in', (
+    tester,
+  ) async {
+    final holds = FakeReservationRepository([
+      sampleReservation(plate: 'OPEN01'),
+    ]);
+    await pumpPage(tester, reservations: holds);
+
+    await enterPlate(tester, 'open01');
+    expect(find.text('Reserva activa'), findsOneWidget);
+
+    await tester.tap(find.text('Cancelar reserva'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Cancelar reserva'));
+    await tester.pumpAndSettle();
+
+    expect(holds.cancelledId, 1);
+    expect(find.text('Reserva activa'), findsNothing);
+    expect(find.text('Reserva cancelada'), findsOneWidget);
+  });
+
+  testWidgets('Success: two letters suggest a known plate', (tester) async {
+    await pumpPage(tester, knownPlates: ['ABC123', 'ABX999']);
+
+    await enterPlate(tester, 'AB');
+
+    expect(find.widgetWithText(ActionChip, 'ABC123'), findsOneWidget);
+    expect(find.widgetWithText(ActionChip, 'ABX999'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(ActionChip, 'ABC123'));
+    await tester.pump(const Duration(milliseconds: 600));
+
+    expect(find.text('ABC123'), findsWidgets);
+    expect(find.widgetWithText(ActionChip, 'ABC123'), findsNothing);
+  });
+
+  testWidgets('Failure: a single letter does not suggest plates', (
+    tester,
+  ) async {
+    await pumpPage(tester, knownPlates: ['ABC123']);
+
+    await enterPlate(tester, 'A');
+
+    expect(find.byType(ActionChip), findsNothing);
+  });
+
+  testWidgets('Security: suggestions stay off without a repository', (
+    tester,
+  ) async {
+    await pumpPage(tester, knownPlates: const ['ABC123'],
+        withVehicles: false);
+
+    await enterPlate(tester, 'ABC');
+
+    expect(find.byType(ActionChip), findsNothing);
+  });
+
+  testWidgets('Success: out-of-service spots reduce the remaining spaces', (
+    tester,
+  ) async {
+    await pumpPage(
+      tester,
+      space: const CapacitySnapshot(carCapacity: 4, carOutOfService: 2),
+    );
+
+    await enterPlate(tester, 'NEW998');
+    await scrollTo(tester, categoryField());
+    await tester.tap(categoryField());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Car · quedan 2'), findsOneWidget);
+  });
+
+  testWidgets('Success: the on-screen keypad fills the plate', (tester) async {
+    await pumpPage(tester);
+
+    final keypadButton = find.byTooltip('Teclado en pantalla');
+    await tester.ensureVisible(keypadButton);
+    await tester.pumpAndSettle();
+    await tester.tap(keypadButton);
+    await tester.pumpAndSettle();
+
+    for (final key in ['A', 'B', 'C', '1', '2', '3']) {
+      await tester.tap(find.widgetWithText(OutlinedButton, key));
+      await tester.pump();
+    }
+    await tester.pump(const Duration(milliseconds: 600));
+
+    expect(find.text('ABC123'), findsWidgets);
+  });
+
+  testWidgets('Success: the picker offers the group bays and sends one', (
+    tester,
+  ) async {
+    await pumpPage(
+      tester,
+      board: const SlotBoard(
+        spots: [
+          ParkingSpot(id: 1, code: 'A1', group: SlotGroup.car, row: 0, col: 0),
+          ParkingSpot(id: 2, code: 'A2', group: SlotGroup.car, row: 0, col: 1),
+          ParkingSpot(id: 3, code: 'A3', group: SlotGroup.car, row: 1, col: 0, active: false),
+        ],
+      ),
+    );
+
+    await enterPlate(tester, 'ABC123');
+    expect(find.widgetWithText(ChoiceChip, 'Automático (primer libre)'), findsOneWidget);
+    expect(find.text('A1'), findsOneWidget);
+    expect(find.text('A2'), findsOneWidget);
+    // Out of service is drawn but cannot be picked.
+    expect(find.text('A3'), findsOneWidget);
+    expect(find.text('Mant.'), findsOneWidget);
+
+    await tester.tap(find.text('A3'));
+    await tester.pump();
+    expect(find.text('Espacio A3'), findsNothing);
+
+    await tester.tap(find.text('A2'));
+    await tester.pump();
+    expect(find.text('Espacio A2'), findsOneWidget);
+    await tapSubmit(tester);
+
+    expect(checkIns.lastSpotId, 2);
+  });
+
+  testWidgets('Success: automatic keeps the first free spot', (tester) async {
+    await pumpPage(
+      tester,
+      board: const SlotBoard(
+        spots: [
+          ParkingSpot(id: 1, code: 'A1', group: SlotGroup.car, row: 0, col: 0),
+        ],
+      ),
+    );
+
+    await enterPlate(tester, 'ABC123');
+    await tapSubmit(tester);
+
+    expect(checkIns.lastSpotId, isNull);
+  });
+
+  testWidgets('Success: an optional evidence video is attached', (
+    tester,
+  ) async {
+    final video = XFile.fromData(
+      Uint8List.fromList([1, 2, 3]),
+      name: 'walkaround.mp4',
+      mimeType: 'video/mp4',
+    );
+    await pumpPage(tester, recordVideo: () async => video);
+
+    await enterPlate(tester, 'ABC123');
+    final record = find.byKey(const Key('check_in_record_video'));
+    await tester.ensureVisible(record);
+    await tester.pumpAndSettle();
+    await tester.tap(record);
+    await tester.pumpAndSettle();
+    expect(find.text('Video listo'), findsOneWidget);
+
+    await tapSubmit(tester);
+
+    expect(checkIns.lastVideo, video);
+  });
+
+  testWidgets('Failure: the video can be removed before submitting', (
+    tester,
+  ) async {
+    final video = XFile.fromData(
+      Uint8List.fromList([1, 2, 3]),
+      name: 'walkaround.mp4',
+    );
+    await pumpPage(tester, recordVideo: () async => video);
+
+    final record = find.byKey(const Key('check_in_record_video'));
+    await tester.ensureVisible(record);
+    await tester.pumpAndSettle();
+    await tester.tap(record);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('check_in_remove_video')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Video listo'), findsNothing);
+    expect(find.byKey(const Key('check_in_record_video')), findsOneWidget);
   });
 }

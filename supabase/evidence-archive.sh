@@ -16,7 +16,8 @@ set -eu
 cd "$(dirname "$0")/.."
 
 getenv() { grep -E "^$1=" .env 2>/dev/null | head -1 | cut -d= -f2-; }
-api=${SUPABASE_PUBLIC_URL:-http://localhost:8000}
+api=${SUPABASE_PUBLIC_URL:-$(getenv SUPABASE_PUBLIC_URL)}
+api=${api:-http://localhost:8000}
 service=${SERVICE_ROLE_KEY:-$(getenv SERVICE_ROLE_KEY)}
 
 [ -n "$service" ] || { echo "missing SERVICE_ROLE_KEY in .env" >&2; exit 2; }

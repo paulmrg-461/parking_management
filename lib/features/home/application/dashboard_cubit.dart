@@ -3,7 +3,9 @@ import 'package:equatable/equatable.dart';
 import '../../../core/error/failure.dart';
 import '../../check_out/domain/entities/capacity_snapshot.dart';
 import '../../check_out/domain/entities/occupancy_snapshot.dart';
+import '../../check_out/domain/entities/check_out_preview.dart';
 import '../../check_out/domain/entities/open_session.dart';
+import '../../check_out/domain/entities/slot_board.dart';
 import '../../check_out/domain/entities/today_summary.dart';
 import '../../check_out/domain/repositories/check_out_repository.dart';
 import '../../vehicles/domain/entities/vehicle.dart';
@@ -30,6 +32,7 @@ final class DashboardLoaded extends DashboardState {
     this.capacity = CapacitySnapshot.empty,
     this.sessions = const [],
     this.plates = const {},
+    this.slotBoard = SlotBoard.empty,
   });
 
   /// Vehicles currently inside (open sessions).
@@ -45,6 +48,9 @@ final class DashboardLoaded extends DashboardState {
   final List<OpenSession> sessions;
   final Map<int, String> plates;
 
+  /// Visual board (spaces, cars inside, holds).
+  final SlotBoard slotBoard;
+
   bool get isFull => totalCapacity > 0 && openSessions >= totalCapacity;
 
   String plateOf(OpenSession session) =>
@@ -52,7 +58,16 @@ final class DashboardLoaded extends DashboardState {
 
   @override
   List<Object?> get props =>
-      [openSessions, totalCapacity, categories, today, capacity, sessions, plates];
+      [
+        openSessions,
+        totalCapacity,
+        categories,
+        today,
+        capacity,
+        sessions,
+        plates,
+        slotBoard,
+      ];
 }
 
 final class DashboardFailure extends DashboardState {
@@ -88,6 +103,9 @@ class DashboardCubit extends ResilientCubit<DashboardState> {
       final capacity = await _sessions
           .capacitySnapshot()
           .catchError((Object _) => CapacitySnapshot.empty);
+      final slotBoard = await _sessions
+          .slotBoard()
+          .catchError((Object _) => SlotBoard.empty);
       final inside = await _inside();
       _emit(
         DashboardLoaded(
@@ -98,6 +116,7 @@ class DashboardCubit extends ResilientCubit<DashboardState> {
           capacity: capacity,
           sessions: inside.sessions,
           plates: inside.plates,
+          slotBoard: slotBoard,
         ),
       );
     } on Failure catch (failure) {
@@ -127,6 +146,15 @@ class DashboardCubit extends ResilientCubit<DashboardState> {
         sessions: const <OpenSession>[],
         plates: const <int, String>{},
       );
+    }
+  }
+
+  /// Fare estimate for the board sheet (best effort).
+  Future<CheckOutPreview?> preview(int sessionId) async {
+    try {
+      return await _sessions.preview(sessionId);
+    } on Failure {
+      return null;
     }
   }
 
