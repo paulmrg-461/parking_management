@@ -2240,6 +2240,12 @@ abstract class AppLocalizations {
   /// **'Espacio {code}'**
   String spotLabel(String code);
 
+  /// No description provided for @slotNoSpotAssignedOne.
+  ///
+  /// In es, this message translates to:
+  /// **'1 vehículo sin espacio asignado'**
+  String get slotNoSpotAssignedOne;
+
   /// No description provided for @slotNoSpotAssigned.
   ///
   /// In es, this message translates to:

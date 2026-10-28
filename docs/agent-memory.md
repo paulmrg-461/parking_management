@@ -44,8 +44,9 @@ HEAD `e7351da`).
   exposes `car_target_capacity`/`moto_target_capacity` (raw settings) next to
   the derived `car_capacity`, because once bays exist the latter reports the
   drawn count; the editor targets the former. The editor and the board share
-  `SpotCellView` (72 px + 6 px gap) so the dashboard mirrors the layout
-  exactly. `assign_session_spot` and check-in still use the drawn bays.
+  `SpotCellView` (72 px in the editor; the board scales 56–72 px to fit the
+  card, same 6 px gap) so the dashboard mirrors the layout exactly. Empty holes
+  use the same size as filled bays (no extra margins). `assign_session_spot` and check-in still use the drawn bays.
 - **Physical map** (`0058`/`0059`): `parking_spots` (code, group, row/col,
   active) authored in `/spots` by admins (`save/delete_parking_spot`, audited).
   A group with spots derives capacity from its active bays; without spots it

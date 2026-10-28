@@ -598,6 +598,10 @@ void main() {
     expect(bay, findsOneWidget);
     expect(find.text('A2'), findsOneWidget);
     expect(find.text('Mant.'), findsOneWidget);
+    // Empty holes are exactly the same size as the filled bays.
+    final empty = tester.getSize(find.byKey(const ValueKey('empty_1_1')));
+    expect(empty.width, tester.getSize(bay).width);
+    expect(empty.height, tester.getSize(bay).height);
 
     await tester.tap(bay);
     await tester.pumpAndSettle();

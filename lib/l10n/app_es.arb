@@ -405,6 +405,7 @@
   "homeInsideSeeAll": "Ver todos",
   "spotLabel": "Espacio {code}",
   "@spotLabel": {"placeholders": {"code": {"type": "String"}}},
+  "slotNoSpotAssignedOne": "1 vehículo sin espacio asignado",
   "slotNoSpotAssigned": "{count} vehículos sin espacio asignado",
   "@slotNoSpotAssigned": {"placeholders": {"count": {"type": "int"}}},
   "slotBoardTitle": "Mapa de espacios",

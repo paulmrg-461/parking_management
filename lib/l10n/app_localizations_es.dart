@@ -1193,6 +1193,9 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get slotNoSpotAssignedOne => '1 vehículo sin espacio asignado';
+
+  @override
   String slotNoSpotAssigned(int count) {
     return '$count vehículos sin espacio asignado';
   }

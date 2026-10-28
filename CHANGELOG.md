@@ -53,6 +53,10 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   holds obey the same limit. Deleting a bay clears the reference on old
   sessions instead of blocking (`0059`). The entry receipt/snackbar names the
   assigned spot.
+- **Board map alignment.** Dashboard bays now scale uniformly to fit the card
+  (`SpotCellView` 56–72 px, same gap as the editor), empty holes are exactly the
+  same size as filled bays, and the "N vehicles with no spot" note has a
+  singular form.
 - **The configured capacity is the number of bays.** The map editor shows
   `drawn / configured` per group (`0060`): a group cannot take more bays than
   its capacity and cannot drop below it (lower the capacity in Ajustes first);

@@ -24,6 +24,9 @@ class SpotCellView extends StatelessWidget {
   /// Gap between bays, identical in the editor and the board.
   static const cellGap = 6.0;
 
+  /// Smallest bay the dashboard draws when it scales the map to fit.
+  static const minBoardSize = 56.0;
+
   final ParkingSpot spot;
 
   /// Big text (plate when occupied, else the bay code).
@@ -40,6 +43,7 @@ class SpotCellView extends StatelessWidget {
     final status = StatusColors.of(context);
     final active = spot.active;
     final tint = active ? status.success : scheme.outline;
+    final scale = size / cellSize;
     return Container(
       width: size,
       height: size,
@@ -70,7 +74,7 @@ class SpotCellView extends StatelessWidget {
           children: [
             Icon(
               !active ? Icons.build_circle_outlined : _groupIcon(spot.group),
-              size: 16,
+              size: (16 * scale).clamp(10.0, 16.0),
               color: active ? status.success : scheme.outline,
             ),
             const SizedBox(height: 2),
@@ -80,7 +84,7 @@ class SpotCellView extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 10,
+                fontSize: (10 * scale).clamp(7.0, 10.0),
                 height: 1.1,
                 fontFamily: primary != null && primary != spot.code
                     ? 'monospace'
@@ -96,7 +100,7 @@ class SpotCellView extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 8,
+                  fontSize: (8 * scale).clamp(6.0, 8.0),
                   height: 1.1,
                   color: scheme.onSurfaceVariant,
                 ),

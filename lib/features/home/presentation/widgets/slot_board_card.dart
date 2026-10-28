@@ -194,7 +194,11 @@ class _Board extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(top: Space.sm),
                   child: Text(
-                    l10n.slotNoSpotAssigned(board.unassignedSessions.length),
+                    board.unassignedSessions.length == 1
+                        ? l10n.slotNoSpotAssignedOne
+                        : l10n.slotNoSpotAssigned(
+                            board.unassignedSessions.length,
+                          ),
                     style: Theme.of(context).textTheme.labelSmall,
                   ),
                 ),
@@ -480,53 +484,71 @@ class _SpotMap extends StatelessWidget {
     };
     return Padding(
       padding: const EdgeInsets.only(top: Space.sm),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            for (var row = 0; row < rows; row++)
-              Padding(
-                padding: const EdgeInsets.only(bottom: Space.xs),
-                child: Row(
-                  children: [
-                    for (var col = 0; col < cols; col++)
-                      Padding(
-                        padding: const EdgeInsets.only(
-                          right: SpotCellView.cellGap,
-                        ),
-                        child: switch (byCell['$row:$col']) {
-                          final spot? => _SpotCell(
-                            spot: spot,
-                            session: board.sessionAt(spot),
-                            reservations: reservations,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // The dashboard scales the whole map uniformly to fit the card (it
+          // never distorts individual cells) and scrolls only when the phone
+          // is narrower than the minimum readable cell.
+          final available = constraints.maxWidth;
+          final rawSize = available.isFinite
+              ? (available - SpotCellView.cellGap * (cols - 1)) / cols
+              : SpotCellView.cellSize;
+          final size = rawSize
+              .clamp(SpotCellView.minBoardSize, SpotCellView.cellSize)
+              .toDouble();
+          return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (var row = 0; row < rows; row++)
+                  Padding(
+                    padding: const EdgeInsets.only(
+                      bottom: SpotCellView.cellGap,
+                    ),
+                    child: Row(
+                      children: [
+                        for (var col = 0; col < cols; col++)
+                          Padding(
+                            padding: const EdgeInsets.only(
+                              right: SpotCellView.cellGap,
+                            ),
+                            child: switch (byCell['$row:$col']) {
+                              final spot? => _SpotCell(
+                                spot: spot,
+                                session: board.sessionAt(spot),
+                                reservations: reservations,
+                                size: size,
+                              ),
+                              _ => _EmptySpotCell(
+                                key: ValueKey('empty_${row}_$col'),
+                                size: size,
+                              ),
+                            },
                           ),
-                          _ => const _EmptySpotCell(),
-                        },
-                      ),
-                  ],
-                ),
-              ),
-          ],
-        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
 }
 
 class _EmptySpotCell extends StatelessWidget {
-  const _EmptySpotCell();
+  const _EmptySpotCell({super.key, this.size = SpotCellView.cellSize});
+
+  final double size;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Container(
-      width: SpotCellView.cellSize,
-      height: SpotCellView.cellSize,
-      margin: const EdgeInsets.only(
-        right: SpotCellView.cellGap,
-        bottom: SpotCellView.cellGap,
-      ),
+      width: size,
+      height: size,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(Radii.sm),
         border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.4)),
@@ -540,11 +562,13 @@ class _SpotCell extends StatelessWidget {
     required this.spot,
     this.session,
     this.reservations,
+    this.size = SpotCellView.cellSize,
   });
 
   final ParkingSpot spot;
   final SlotSession? session;
   final ReservationRepository? reservations;
+  final double size;
 
   @override
   Widget build(BuildContext context) {
@@ -554,6 +578,7 @@ class _SpotCell extends StatelessWidget {
 
     final content = SpotCellView(
       spot: spot,
+      size: size,
       primary: occupied ? session!.plate : spot.code,
       secondary: !active
           ? l10n.slotMaintenanceShort

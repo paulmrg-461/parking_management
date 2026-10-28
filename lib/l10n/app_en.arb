@@ -390,6 +390,7 @@
   "homeInsideSeeAll": "See all",
   "spotLabel": "Spot {code}",
   "@spotLabel": {"placeholders": {"code": {"type": "String"}}},
+  "slotNoSpotAssignedOne": "1 vehicle with no spot assigned",
   "slotNoSpotAssigned": "{count} vehicles with no spot assigned",
   "@slotNoSpotAssigned": {"placeholders": {"count": {"type": "int"}}},
   "slotBoardTitle": "Space map",
