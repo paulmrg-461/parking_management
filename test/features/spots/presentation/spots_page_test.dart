@@ -4,8 +4,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/features/check_out/domain/entities/slot_board.dart';
 import 'package:parking_management/features/spots/application/spots_cubit.dart';
 import 'package:parking_management/features/spots/domain/entities/parking_spot.dart';
+import 'package:parking_management/features/check_out/domain/entities/capacity_snapshot.dart';
+import 'package:parking_management/features/home/application/dashboard_cubit.dart';
 import 'package:parking_management/features/spots/presentation/spots_page.dart';
 
+import '../../../helpers/fake_check_out_repository.dart';
 import '../../../helpers/fake_spot_repository.dart';
 import '../../../helpers/test_app.dart';
 
@@ -13,16 +16,26 @@ Future<SpotsCubit> pumpPage(
   WidgetTester tester,
   FakeSpotRepository repository, {
   bool isAdmin = true,
+  CapacitySnapshot? capacity,
 }) async {
   tester.view.physicalSize = const Size(900, 1400);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   final cubit = SpotsCubit(repository);
   addTearDown(cubit.close);
+  final dashboard = DashboardCubit(
+    FakeCheckOutRepository()
+      ..capacityToReturn = capacity ?? CapacitySnapshot.empty,
+  );
+  addTearDown(dashboard.close);
+  await dashboard.load();
   await tester.pumpWidget(
     testApp(
-      BlocProvider<SpotsCubit>.value(
-        value: cubit,
+      MultiBlocProvider(
+        providers: [
+          BlocProvider<SpotsCubit>.value(value: cubit),
+          BlocProvider<DashboardCubit>.value(value: dashboard),
+        ],
         child: SpotsPage(isAdmin: isAdmin),
       ),
     ),
@@ -103,5 +116,44 @@ void main() {
     final moved = repository.spots.firstWhere((spot) => spot.code == 'A1');
     expect(moved.row, 1);
     expect(moved.col, 1);
+  });
+
+  testWidgets('Success: the map shows progress against the configured spots', (
+    tester,
+  ) async {
+    await pumpPage(
+      tester,
+      sampleRepository(),
+      capacity: const CapacitySnapshot(carCapacity: 3),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Carros y camionetas 2 de 3'), findsOneWidget);
+    expect(find.text('Faltan 1'), findsOneWidget);
+    expect(find.text('El mapa debe tener exactamente los espacios configurados en Ajustes.'), findsOneWidget);
+  });
+
+  testWidgets('Failure: a full group cannot take another bay', (tester) async {
+    final repository = sampleRepository();
+    await pumpPage(
+      tester,
+      repository,
+      capacity: const CapacitySnapshot(carCapacity: 2),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Carros y camionetas 2 de 2'), findsOneWidget);
+    await tester.tap(find.text('Agregar espacio'));
+    await tester.pumpAndSettle();
+
+    // Only heavy (no limit) is available; the car option is disabled.
+    await tester.tap(find.byType(DropdownButtonFormField<SlotGroup>));
+    await tester.pumpAndSettle();
+    final car = tester.widget<DropdownMenuItem<SlotGroup>>(
+      find
+          .widgetWithText(DropdownMenuItem<SlotGroup>, 'Carros y camionetas')
+          .last,
+    );
+    expect(car.enabled, isFalse);
   });
 }

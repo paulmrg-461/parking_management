@@ -1724,6 +1724,42 @@ abstract class AppLocalizations {
   /// **'Descartar'**
   String get settingsDiscard;
 
+  /// No description provided for @spotsCapacityHint.
+  ///
+  /// In es, this message translates to:
+  /// **'El mapa debe tener exactamente los espacios configurados en Ajustes.'**
+  String get spotsCapacityHint;
+
+  /// No description provided for @spotsGroupCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{drawn} de {target}'**
+  String spotsGroupCount(int drawn, int target);
+
+  /// No description provided for @spotsRemaining.
+  ///
+  /// In es, this message translates to:
+  /// **'Faltan {count}'**
+  String spotsRemaining(int count);
+
+  /// No description provided for @spotsExcess.
+  ///
+  /// In es, this message translates to:
+  /// **'Sobran {count}'**
+  String spotsExcess(int count);
+
+  /// No description provided for @errorSpotCapacityReached.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya dibujaste todos los espacios configurados'**
+  String get errorSpotCapacityReached;
+
+  /// No description provided for @errorSpotCapacityRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'No puedes dejar menos espacios que los configurados; ajusta la capacidad en Ajustes'**
+  String get errorSpotCapacityRequired;
+
   /// No description provided for @spotsTitle.
   ///
   /// In es, this message translates to:

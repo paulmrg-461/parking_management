@@ -902,6 +902,33 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsDiscard => 'Descartar';
 
   @override
+  String get spotsCapacityHint =>
+      'El mapa debe tener exactamente los espacios configurados en Ajustes.';
+
+  @override
+  String spotsGroupCount(int drawn, int target) {
+    return '$drawn de $target';
+  }
+
+  @override
+  String spotsRemaining(int count) {
+    return 'Faltan $count';
+  }
+
+  @override
+  String spotsExcess(int count) {
+    return 'Sobran $count';
+  }
+
+  @override
+  String get errorSpotCapacityReached =>
+      'Ya dibujaste todos los espacios configurados';
+
+  @override
+  String get errorSpotCapacityRequired =>
+      'No puedes dejar menos espacios que los configurados; ajusta la capacidad en Ajustes';
+
+  @override
   String get spotsTitle => 'Mapa del parqueadero';
 
   @override

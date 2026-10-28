@@ -896,6 +896,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsDiscard => 'Discard';
 
   @override
+  String get spotsCapacityHint =>
+      'The map must have exactly the spots configured in Settings.';
+
+  @override
+  String spotsGroupCount(int drawn, int target) {
+    return '$drawn of $target';
+  }
+
+  @override
+  String spotsRemaining(int count) {
+    return '$count more';
+  }
+
+  @override
+  String spotsExcess(int count) {
+    return '$count over';
+  }
+
+  @override
+  String get errorSpotCapacityReached =>
+      'All configured spots are already drawn';
+
+  @override
+  String get errorSpotCapacityRequired =>
+      'The map cannot have fewer spots than configured; change the capacity in Settings first';
+
+  @override
   String get spotsTitle => 'Parking map';
 
   @override

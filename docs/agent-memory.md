@@ -11,9 +11,9 @@ HEAD `e7351da`).
 
 - Stack: Flutter (android + web) + self-hosted Supabase only. No FastAPI,
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
-- `supabase/migrations/0001..0059` are the schema owner (applied by
+- `supabase/migrations/0001..0060` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 724 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 728 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -37,6 +37,12 @@ HEAD `e7351da`).
 
 ## Operator UI + realtime (2026-10-28)
 
+- **Capacity is the bay count** (`0060`): the editor shows `drawn / configured`
+  per group, only lets you add up to the target and refuses deletions below it
+  (lower the capacity in Ajustes first); the server enforces the same with
+  `SpotCapacityReachedError`/`SpotCapacityRequiredError`. The editor and the
+  board share `SpotCellView` (72 px + 6 px gap) so the dashboard mirrors the
+  layout exactly. `assign_session_spot` and check-in still use the drawn bays.
 - **Physical map** (`0058`/`0059`): `parking_spots` (code, group, row/col,
   active) authored in `/spots` by admins (`save/delete_parking_spot`, audited).
   A group with spots derives capacity from its active bays; without spots it
@@ -659,7 +665,7 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 ## Latest verification (2026-10-28)
 
-- `flutter test`: 724 passed (+1 live-stack integration skipped); `flutter
+- `flutter test`: 728 passed (+1 live-stack integration skipped); `flutter
   analyze` 141 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
 - `supabase/tests/run.sh` passed (migrations `0001`–`0057`); `e2e.sh` passed

@@ -81,6 +81,8 @@ extension FailureMessages on AppLocalizations {
     'InvalidSpotGroupError' ||
     'InvalidSpotPositionError' => errorSpotCodeInvalid,
     'SpotNotFoundError' => errorSpotNotFound,
+    'SpotCapacityReachedError' => errorSpotCapacityReached,
+    'SpotCapacityRequiredError' => errorSpotCapacityRequired,
     'InvalidPhoneError' => errorInvalidPhone,
     'WhatsappDisabledError' => errorWhatsappDisabled,
     'InvalidPhotoError' => errorInvalidPhoto,

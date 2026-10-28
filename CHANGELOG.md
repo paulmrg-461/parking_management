@@ -53,6 +53,14 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   holds obey the same limit. Deleting a bay clears the reference on old
   sessions instead of blocking (`0059`). The entry receipt/snackbar names the
   assigned spot.
+- **The configured capacity is the number of bays.** The map editor shows
+  `drawn / configured` per group (`0060`): a group cannot take more bays than
+  its capacity and cannot drop below it (lower the capacity in Ajustes first);
+  the add dialog disables full groups and the server enforces the same rule
+  (`SpotCapacityReachedError` / `SpotCapacityRequiredError`). The editor and the
+  dashboard board share one `SpotCellView` (72 px bays, 6 px gaps, same colors,
+  stripes and icons), so the dashboard draws an exact copy of the configured
+  layout.
 - **Live activity notifications.** Every check-in/check-out now notifies the
   whole site (all active members, not only admins) with the actor's name, the
   plate and the charge on exits (`0056`), so the admin desk sees the operator's
@@ -338,7 +346,7 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Tests
 
-- 724 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
+- 728 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
   integration test that runs only against a live stack.
 - SQL/RLS/RPC regressions covering capacity, shifts, discounts, passes,
   reservations, multi-site isolation, audit, diagnostics and retention.
@@ -376,7 +384,7 @@ Captured on 2026-10-24 against the local self-hosted stack:
 
 | Check | Result |
 |---|---|
-| `flutter test` | 724 passed (+1 live-stack integration skipped) |
+| `flutter test` | 728 passed (+1 live-stack integration skipped) |
 | `flutter analyze` | 0 errors, 0 warnings (only SDK deprecation infos) |
 | `flutter build web --release` | OK |
 | `supabase/tests/run.sh` | Passed (migrations + RPC/RLS regressions) |

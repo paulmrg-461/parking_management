@@ -21,6 +21,15 @@ chosen bay or the first free one (row-major), out-of-service bays are never
 offered, holds consume the same pool, and deleting a bay keeps the visit
 history (`spot_id` set null).
 
+The **number of bays equals the configured capacity** (`car_capacity` /
+`moto_capacity` in Ajustes; `0` = no limit). The editor shows
+`drawn / configured` per group and warns `Faltan N` / `Sobran N`; it blocks
+adding past the target and deleting below it, and the server enforces the same
+(`SpotCapacityReachedError` / `SpotCapacityRequiredError`). To remove bays,
+lower the capacity in Ajustes first. The editor and the board share
+`SpotCellView` (72 px bay, 6 px gap, same icon/colors/stripes), so the
+dashboard is an exact copy of the configured distribution.
+
 Free spots are `capacity - sessions - holds - out_of_service`, clamped to
 zero. Out-of-service spots are set in Ajustes and are **never offered**: the
 capacity trigger, `create_reservation`, the dashboard snapshot and the

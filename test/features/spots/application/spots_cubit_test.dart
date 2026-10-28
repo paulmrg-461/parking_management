@@ -67,4 +67,41 @@ void main() {
     expect(moved, isNull);
     expect(cubit.state.spots.first.col, 0);
   });
+
+  test('Failure: a group cannot exceed the configured spots', () async {
+    final repository = FakeSpotRepository(const [
+      ParkingSpot(id: 1, code: 'A1', group: SlotGroup.car, row: 0, col: 0),
+      ParkingSpot(id: 2, code: 'A2', group: SlotGroup.car, row: 0, col: 1),
+    ]);
+    final cubit = SpotsCubit(repository);
+    addTearDown(cubit.close);
+    await cubit.load();
+    cubit.setTargets(const {SlotGroup.car: 2});
+
+    final added = await cubit.add(code: 'A3', group: SlotGroup.car);
+
+    expect(added, isNull);
+    expect(repository.spots, hasLength(2));
+    expect(cubit.state.actionError?.code, 'SpotCapacityReachedError');
+  });
+
+  test('Security: deleting below the configured spots is refused', () async {
+    final repository = FakeSpotRepository(const [
+      ParkingSpot(id: 1, code: 'A1', group: SlotGroup.car, row: 0, col: 0),
+      ParkingSpot(id: 2, code: 'A2', group: SlotGroup.car, row: 0, col: 1),
+    ]);
+    final cubit = SpotsCubit(repository);
+    addTearDown(cubit.close);
+    await cubit.load();
+    cubit.setTargets(const {SlotGroup.car: 2});
+
+    final removed = await cubit.remove(cubit.state.spots.first);
+
+    expect(removed, isFalse);
+    expect(repository.spots, hasLength(2));
+
+    // Lowering the target in Ajustes makes the removal legal.
+    cubit.setTargets(const {SlotGroup.car: 1});
+    expect(await cubit.remove(cubit.state.spots.first), isTrue);
+  });
 }

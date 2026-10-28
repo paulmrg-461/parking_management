@@ -1661,4 +1661,66 @@ begin
     end if;
 end $$;
 
+-- The configured capacity is the number of bays: no more, no fewer.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    car_space jsonb;
+    refused boolean;
+begin
+    update public.parking_settings
+       set car_capacity = 2, moto_capacity = 0
+     where lot_id = 1;
+    delete from public.parking_spots where lot_id = 1;
+
+    perform public.save_parking_spot('C1', 'car', 0, 0);
+    perform public.save_parking_spot('C2', 'car', 0, 1);
+
+    refused := false;
+    begin
+        perform public.save_parking_spot('C3', 'car', 1, 0);
+        raise exception 'the map exceeded the configured capacity';
+    exception when others then
+        if sqlerrm not like '%SpotCapacityReachedError%' then
+            raise;
+        end if;
+        refused := true;
+    end;
+    if not refused then
+        raise exception 'extra bay was accepted';
+    end if;
+
+    refused := false;
+    begin
+        perform public.delete_parking_spot(
+            (select id from public.parking_spots where lot_id = 1 and code = 'C1')
+        );
+        raise exception 'the map went below the configured capacity';
+    exception when others then
+        if sqlerrm not like '%SpotCapacityRequiredError%' then
+            raise;
+        end if;
+        refused := true;
+    end;
+    if not refused then
+        raise exception 'bay deletion below capacity was accepted';
+    end if;
+
+    -- Lowering the target first makes the removal legal.
+    update public.parking_settings set car_capacity = 1 where lot_id = 1;
+    perform public.delete_parking_spot(
+        (select id from public.parking_spots where lot_id = 1 and code = 'C2')
+    );
+    update public.parking_settings
+       set car_capacity = 0, moto_capacity = 0
+     where lot_id = 1;
+    delete from public.parking_spots where lot_id = 1;
+
+    select public.capacity_snapshot() into car_space;
+    if (car_space ->> 'car_available')::integer <> 0 then
+        raise exception 'snapshot kept stale bays: %', car_space;
+    end if;
+end $$;
+
 rollback;

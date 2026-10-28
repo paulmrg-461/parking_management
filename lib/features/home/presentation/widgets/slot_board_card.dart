@@ -21,6 +21,7 @@ import '../../../auth/domain/entities/user.dart';
 import '../../../check_out/domain/entities/check_out_preview.dart';
 import '../../../check_out/domain/entities/slot_board.dart';
 import '../../../spots/domain/entities/parking_spot.dart';
+import '../../../spots/presentation/widgets/spot_cell_view.dart';
 import '../../../check_out/presentation/widgets/fare_breakdown_view.dart';
 import '../../../reservations/domain/entities/reservation.dart';
 import '../../../reservations/domain/repositories/reservation_repository.dart';
@@ -491,7 +492,9 @@ class _SpotMap extends StatelessWidget {
                   children: [
                     for (var col = 0; col < cols; col++)
                       Padding(
-                        padding: const EdgeInsets.only(right: Space.xs),
+                        padding: const EdgeInsets.only(
+                          right: SpotCellView.cellGap,
+                        ),
                         child: switch (byCell['$row:$col']) {
                           final spot? => _SpotCell(
                             spot: spot,
@@ -518,8 +521,12 @@ class _EmptySpotCell extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Container(
-      width: 72,
-      height: 72,
+      width: SpotCellView.cellSize,
+      height: SpotCellView.cellSize,
+      margin: const EdgeInsets.only(
+        right: SpotCellView.cellGap,
+        bottom: SpotCellView.cellGap,
+      ),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(Radii.sm),
         border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.4)),
@@ -542,81 +549,17 @@ class _SpotCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final scheme = Theme.of(context).colorScheme;
-    final status = StatusColors.of(context);
     final active = spot.active;
     final occupied = session != null;
 
-    final tint = !active
-        ? scheme.outline
-        : occupied
-        ? scheme.primary
-        : status.success;
-    final content = Container(
-      width: 72,
-      height: 72,
-      decoration: BoxDecoration(
-        color: !active
-            ? scheme.surfaceContainerHighest
-            : Color.alphaBlend(
-                tint.withValues(alpha: occupied ? 0.10 : 0.14),
-                scheme.surface,
-              ),
-        borderRadius: BorderRadius.circular(Radii.sm),
-        border: Border.all(
-          color: !active
-              ? scheme.outline
-              : occupied
-              ? scheme.outlineVariant
-              : tint.withValues(alpha: 0.7),
-          width: 1.2,
-        ),
-      ),
-      padding: const EdgeInsets.all(2),
-      child: CustomPaint(
-        painter: !active ? _StripesPainter(scheme.outline) : null,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              !active
-                  ? Icons.build_circle_outlined
-                  : _groupIcon(spot.group),
-              size: 16,
-              color: occupied ? scheme.onSurfaceVariant : tint,
-            ),
-            const SizedBox(height: 2),
-            Text(
-              occupied ? session!.plate : spot.code,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 10,
-                height: 1.1,
-                fontFamily: occupied ? 'monospace' : null,
-                fontWeight: FontWeight.w700,
-                color: scheme.onSurface,
-              ),
-            ),
-            Text(
-              !active
-                  ? l10n.slotMaintenanceShort
-                  : occupied
-                  ? elapsedLabel(l10n, session!.entryTime)
-                  : l10n.slotFree,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 8,
-                height: 1.1,
-                color: scheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
-      ),
+    final content = SpotCellView(
+      spot: spot,
+      primary: occupied ? session!.plate : spot.code,
+      secondary: !active
+          ? l10n.slotMaintenanceShort
+          : occupied
+          ? elapsedLabel(l10n, session!.entryTime)
+          : l10n.slotFree,
     );
 
     final semantics = !active

@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../../core/error/failure.dart';
 import '../../../core/state/resilient_cubit.dart';
@@ -49,6 +50,28 @@ class SpotsCubit extends ResilientCubit<SpotsState> {
 
   final SpotRepository _repository;
 
+  /// Spots configured in Ajustes per group (`0` = no limit); the map may not
+  /// differ from this.
+  Map<SlotGroup, int> _targets = const {};
+
+  void setTargets(Map<SlotGroup, int> targets) {
+    if (mapEquals(_targets, targets)) {
+      return;
+    }
+    _targets = targets;
+  }
+
+  int targetOf(SlotGroup group) => _targets[group] ?? 0;
+
+  int drawnOf(SlotGroup group) =>
+      state.spots.where((spot) => spot.group == group).length;
+
+  bool canAddTo(SlotGroup group) =>
+      targetOf(group) == 0 || drawnOf(group) < targetOf(group);
+
+  bool canRemove(ParkingSpot spot) =>
+      targetOf(spot.group) == 0 || drawnOf(spot.group) > targetOf(spot.group);
+
   Future<void> load() async {
     emit(state.copyWith(status: SpotsStatus.loading, error: null));
     try {
@@ -79,6 +102,17 @@ class SpotsCubit extends ResilientCubit<SpotsState> {
     required SlotGroup group,
     bool active = true,
   }) async {
+    if (!canAddTo(group)) {
+      emit(
+        state.copyWith(
+          actionError: const ValidationFailure(
+            'All configured spots are already drawn',
+            'SpotCapacityReachedError',
+          ),
+        ),
+      );
+      return null;
+    }
     final (row, col) = firstFreeCell();
     return _write(
       save: () => _repository.save(
@@ -126,19 +160,49 @@ class SpotsCubit extends ResilientCubit<SpotsState> {
     }
   }
 
-  Future<ParkingSpot?> update(ParkingSpot spot) => _write(
-    save: () => _repository.save(
+  Future<ParkingSpot?> update(ParkingSpot spot) {
+    final previous = state.spots
+        .where((item) => item.id == spot.id)
+        .map((item) => item.group)
+        .firstOrNull;
+    if (previous != null &&
+        previous != spot.group &&
+        !canAddTo(spot.group)) {
+      emit(
+        state.copyWith(
+          actionError: const ValidationFailure(
+            'All configured spots are already drawn',
+            'SpotCapacityReachedError',
+          ),
+        ),
+      );
+      return Future.value();
+    }
+    return _write(
+      save: () => _repository.save(
       id: spot.id,
       code: spot.code,
       group: spot.group,
-      row: spot.row,
-      col: spot.col,
-      active: spot.active,
-    ),
-    onSaved: (saved) => state.copyWith(spots: _replace(spot.id, saved)),
-  );
+        row: spot.row,
+        col: spot.col,
+        active: spot.active,
+      ),
+      onSaved: (saved) => state.copyWith(spots: _replace(spot.id, saved)),
+    );
+  }
 
   Future<bool> remove(ParkingSpot spot) async {
+    if (!canRemove(spot)) {
+      emit(
+        state.copyWith(
+          actionError: const ValidationFailure(
+            'The map cannot have fewer spots than configured',
+            'SpotCapacityRequiredError',
+          ),
+        ),
+      );
+      return false;
+    }
     final previous = state.spots;
     emit(
       state.copyWith(

@@ -11,8 +11,10 @@ import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/error_state.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../../check_out/domain/entities/slot_board.dart';
+import '../../home/application/dashboard_cubit.dart';
 import '../application/spots_cubit.dart';
 import '../domain/entities/parking_spot.dart';
+import 'widgets/spot_cell_view.dart';
 
 /// Admin editor for the site's physical map: add bays, drag them around a
 /// grid, rename them or take them out of service. The map is configured once;
@@ -31,6 +33,23 @@ class _SpotsPageState extends State<SpotsPage> {
   void initState() {
     super.initState();
     unawaited(context.read<SpotsCubit>().load());
+  }
+
+  /// Spots configured in Ajustes (`0` = no limit), read from the shell
+  /// dashboard snapshot. The editor may not draw a different number.
+  Map<SlotGroup, int> _targets(BuildContext context) {
+    try {
+      final state = context.watch<DashboardCubit>().state;
+      if (state is DashboardLoaded) {
+        return {
+          SlotGroup.car: state.capacity.carCapacity,
+          SlotGroup.moto: state.capacity.motoCapacity,
+        };
+      }
+    } on ProviderNotFoundException {
+      // Isolated tests: no targets, the server still enforces them.
+    }
+    return const {};
   }
 
   @override
@@ -77,7 +96,10 @@ class _SpotsPageState extends State<SpotsPage> {
                   message: context.l10n.failure(state.error!),
                   onRetry: context.read<SpotsCubit>().load,
                 ),
-                SpotsStatus.loaded => _MapEditor(state: state),
+                SpotsStatus.loaded => _MapEditor(
+                  state: state,
+                  targets: _targets(context),
+                ),
               },
             ),
     );
@@ -85,15 +107,41 @@ class _SpotsPageState extends State<SpotsPage> {
 }
 
 class _MapEditor extends StatelessWidget {
-  const _MapEditor({required this.state});
+  const _MapEditor({required this.state, this.targets = const {}});
 
   final SpotsState state;
+  final Map<SlotGroup, int> targets;
+
+  int _target(SlotGroup group) => targets[group] ?? 0;
+
+  int _drawn(SlotGroup group) =>
+      state.spots.where((spot) => spot.group == group).length;
+
+  bool _canAdd(SlotGroup group) {
+    final target = _target(group);
+    return target == 0 || _drawn(group) < target;
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final theme = Theme.of(context);
     final spots = state.spots;
+    for (final group in SlotGroup.values) {
+      if (_target(group) > 0 || _drawn(group) > 0) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          // Keep the cubit enforcement in sync with the configured count.
+          if (context.mounted) {
+            final cubit = context.read<SpotsCubit>();
+            cubit.setTargets({
+              for (final entry in targets.entries)
+                if (entry.value > 0) entry.key: entry.value,
+            });
+          }
+        });
+        break;
+      }
+    }
     final rows = spots.fold<int>(3, (max, spot) => spot.row + 1 > max ? spot.row + 1 : max) + 1;
     final cols = spots.fold<int>(4, (max, spot) => spot.col + 1 > max ? spot.col + 1 : max) + 1;
     final byCell = {for (final spot in spots) (spot.row, spot.col): spot};
@@ -126,6 +174,35 @@ class _MapEditor extends StatelessWidget {
             ],
           ),
         ),
+        if (targets.values.any((value) => value > 0))
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: Space.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Wrap(
+                  spacing: Space.md,
+                  runSpacing: Space.xs,
+                  children: [
+                    for (final group in SlotGroup.values)
+                      if (_target(group) > 0 || _drawn(group) > 0)
+                        _GroupProgress(
+                          group: group,
+                          drawn: _drawn(group),
+                          target: _target(group),
+                        ),
+                  ],
+                ),
+                const SizedBox(height: Space.xs),
+                Text(
+                  l10n.spotsCapacityHint,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
         const _Legend(),
         Expanded(
           child: spots.isEmpty
@@ -165,10 +242,20 @@ class _MapEditor extends StatelessWidget {
 
   Future<void> _addSpot(BuildContext context, SpotsState state) async {
     final cubit = context.read<SpotsCubit>();
+    final available = {
+      for (final group in SlotGroup.values) group: _canAdd(group),
+    };
+    if (!available.values.any((canAdd) => canAdd)) {
+      showErrorSnack(context, context.l10n.errorSpotCapacityReached);
+      return;
+    }
     final suggestion = 'S${state.spots.length + 1}';
     final draft = await showDialog<_SpotDraft>(
       context: context,
-      builder: (_) => _AddSpotDialog(initialCode: suggestion),
+      builder: (_) => _AddSpotDialog(
+        initialCode: suggestion,
+        available: available,
+      ),
     );
     if (draft == null) {
       return;
@@ -235,20 +322,17 @@ class _CellTarget extends StatelessWidget {
       builder: (context, candidate, rejected) {
         final highlighted = candidate.isNotEmpty;
         return Container(
-          width: 76,
-          height: 76,
-          margin: const EdgeInsets.only(right: 6, bottom: 6),
+          width: SpotCellView.cellSize + SpotCellView.cellGap,
+          height: SpotCellView.cellSize + SpotCellView.cellGap,
+          margin: EdgeInsets.zero,
           decoration: BoxDecoration(
             color: highlighted
                 ? scheme.primaryContainer.withValues(alpha: 0.4)
                 : null,
             borderRadius: BorderRadius.circular(Radii.sm),
-            border: Border.all(
-              color: highlighted
-                  ? scheme.primary
-                  : scheme.outlineVariant.withValues(alpha: 0.5),
-              width: highlighted ? 2 : 1,
-            ),
+            border: highlighted
+                ? Border.all(color: scheme.primary, width: 2)
+                : null,
           ),
           child: switch (spot) {
             final spot? => LongPressDraggable<ParkingSpot>(
@@ -302,52 +386,15 @@ class _SpotCard extends StatelessWidget {
   final bool dragging;
 
   @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final status = StatusColors.of(context);
-    final tint = spot.active ? status.success : scheme.outline;
-    return Container(
-      decoration: BoxDecoration(
-        color: spot.active
-            ? status.success.withValues(alpha: 0.14)
-            : scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(Radii.sm),
-        border: Border.all(color: tint.withValues(alpha: 0.7)),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            spot.active
-                ? switch (spot.group) {
-                    SlotGroup.car => Icons.directions_car,
-                    SlotGroup.moto => Icons.two_wheeler,
-                    SlotGroup.heavy => Icons.local_shipping,
-                  }
-                : Icons.build_circle_outlined,
-            size: 16,
-            color: spot.active ? status.success : scheme.outline,
-          ),
-          const SizedBox(height: 2),
-          Text(
-            spot.code,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              color: scheme.onSurface,
-            ),
-          ),
-          if (dragging)
-            Text(
-              context.l10n.spotsDragHere,
-              style: TextStyle(fontSize: 8, color: scheme.onSurfaceVariant),
-            ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => SpotCellView(
+    spot: spot,
+    primary: spot.code,
+    secondary: !spot.active
+        ? context.l10n.slotMaintenanceShort
+        : dragging
+        ? context.l10n.spotsDragHere
+        : null,
+  );
 }
 
 class _SpotDraft {
@@ -358,9 +405,12 @@ class _SpotDraft {
 }
 
 class _AddSpotDialog extends StatefulWidget {
-  const _AddSpotDialog({required this.initialCode});
+  const _AddSpotDialog({required this.initialCode, this.available = const {}});
 
   final String initialCode;
+
+  /// Groups with room left (false = already at the configured count).
+  final Map<SlotGroup, bool> available;
 
   @override
   State<_AddSpotDialog> createState() => _AddSpotDialogState();
@@ -370,7 +420,10 @@ class _AddSpotDialogState extends State<_AddSpotDialog> {
   late final TextEditingController _code = TextEditingController(
     text: widget.initialCode,
   );
-  SlotGroup _group = SlotGroup.car;
+  late SlotGroup _group = [
+    for (final group in SlotGroup.values)
+      if (widget.available[group] != false) group,
+  ].firstOrNull ?? SlotGroup.car;
 
   @override
   void dispose() {
@@ -396,6 +449,7 @@ class _AddSpotDialogState extends State<_AddSpotDialog> {
           _GroupField(
             value: _group,
             onChanged: (value) => setState(() => _group = value),
+            enabled: widget.available,
           ),
         ],
       ),
@@ -524,10 +578,17 @@ class _EditSpotSheetState extends State<_EditSpotSheet> {
 }
 
 class _GroupField extends StatelessWidget {
-  const _GroupField({required this.value, required this.onChanged});
+  const _GroupField({
+    required this.value,
+    required this.onChanged,
+    this.enabled = const {},
+  });
 
   final SlotGroup value;
   final ValueChanged<SlotGroup> onChanged;
+
+  /// A false entry disables that group (already at its configured count).
+  final Map<SlotGroup, bool> enabled;
 
   @override
   Widget build(BuildContext context) {
@@ -536,24 +597,82 @@ class _GroupField extends StatelessWidget {
       initialValue: value,
       decoration: InputDecoration(labelText: l10n.spotsGroup),
       items: [
-        DropdownMenuItem(
-          value: SlotGroup.car,
-          child: Text(l10n.homeCapacityCars),
-        ),
-        DropdownMenuItem(
-          value: SlotGroup.moto,
-          child: Text(l10n.homeCapacityMotos),
-        ),
-        DropdownMenuItem(
-          value: SlotGroup.heavy,
-          child: Text(l10n.slotBoardHeavy),
-        ),
+        for (final (group, label) in [
+          (SlotGroup.car, l10n.homeCapacityCars),
+          (SlotGroup.moto, l10n.homeCapacityMotos),
+          (SlotGroup.heavy, l10n.slotBoardHeavy),
+        ])
+          DropdownMenuItem(
+            value: group,
+            enabled: enabled[group] != false,
+            child: Text(label),
+          ),
       ],
       onChanged: (next) {
         if (next != null) {
           onChanged(next);
         }
       },
+    );
+  }
+}
+
+class _GroupProgress extends StatelessWidget {
+  const _GroupProgress({
+    required this.group,
+    required this.drawn,
+    required this.target,
+  });
+
+  final SlotGroup group;
+  final int drawn;
+  final int target;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final scheme = Theme.of(context).colorScheme;
+    final label = switch (group) {
+      SlotGroup.car => l10n.homeCapacityCars,
+      SlotGroup.moto => l10n.homeCapacityMotos,
+      SlotGroup.heavy => l10n.slotBoardHeavy,
+    };
+    final mismatch = target > 0 && drawn != target;
+    final detail = target > 0
+        ? l10n.spotsGroupCount(drawn, target)
+        : '$drawn';
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          switch (group) {
+            SlotGroup.car => Icons.directions_car,
+            SlotGroup.moto => Icons.two_wheeler,
+            SlotGroup.heavy => Icons.local_shipping,
+          },
+          size: 16,
+          color: scheme.onSurfaceVariant,
+        ),
+        const SizedBox(width: Space.xs),
+        Text(
+          '$label $detail',
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+            color: mismatch ? scheme.error : scheme.onSurface,
+            fontWeight: mismatch ? FontWeight.w700 : null,
+          ),
+        ),
+        if (mismatch) ...[
+          const SizedBox(width: Space.xs),
+          Text(
+            drawn < target
+                ? l10n.spotsRemaining(target - drawn)
+                : l10n.spotsExcess(drawn - target),
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: scheme.error,
+            ),
+          ),
+        ],
+      ],
     );
   }
 }
