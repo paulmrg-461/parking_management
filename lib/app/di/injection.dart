@@ -22,6 +22,7 @@ import 'modules/plate_scanning_module.dart';
 import 'modules/platform_module.dart';
 import 'modules/receipt_printing_module.dart';
 import 'modules/reports_module.dart';
+import 'modules/evidence_module.dart';
 import 'modules/records_module.dart';
 import 'modules/reservations_module.dart';
 import 'modules/spots_module.dart';
@@ -122,6 +123,7 @@ void registerAllModules(GetIt sl, AppConfig config) {
   registerReportsModule(sl);
   registerReservationsModule(sl);
   registerRecordsModule(sl);
+  registerEvidenceModule(sl);
   registerSpotsModule(sl);
   registerSettingsModule(sl);
   registerShiftsModule(sl);

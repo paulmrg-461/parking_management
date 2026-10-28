@@ -18,6 +18,7 @@ class ReceiptLabels {
     required this.generatedOn,
     required this.thanks,
     required this.scanHint,
+    required this.evidenceHint,
     required this.paymentMethod,
   });
 
@@ -38,6 +39,9 @@ class ReceiptLabels {
 
   /// Caption under the QR that opens the check-out flow.
   final String scanHint;
+
+  /// Caption under the smaller QR that opens the public evidence page.
+  final String evidenceHint;
 
   /// Localizes a wire value (`cash`, `card`, `transfer`, `monthly_pass`,
   /// `exempt`).
@@ -60,6 +64,7 @@ class ReceiptLabels {
     generatedOn: 'Generado el',
     thanks: 'Gracias por su visita',
     scanHint: 'Presente este codigo al salir',
+    evidenceHint: 'Evidencias del vehiculo (clave: placa)',
     paymentMethod: _paymentEs,
   );
 
@@ -79,6 +84,7 @@ class ReceiptLabels {
     generatedOn: 'Generated on',
     thanks: 'Thank you for your visit',
     scanHint: 'Show this code at the exit',
+    evidenceHint: 'Vehicle evidence (key: plate)',
     paymentMethod: _paymentEn,
   );
 

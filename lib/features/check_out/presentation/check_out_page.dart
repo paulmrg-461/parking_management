@@ -17,6 +17,7 @@ import '../../../core/utils/elapsed.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_state.dart';
+import '../../../core/receipt/evidence_link.dart';
 import '../../../core/widgets/receipt_card.dart';
 import '../../../core/widgets/plate_keypad.dart';
 import '../../../core/widgets/search_field.dart';
@@ -398,6 +399,9 @@ class _CheckOutPageState extends State<CheckOutPage> {
     discountAmount: receipt.discountAmount,
     discountReason: receipt.discountReason,
     pendingSync: receipt.pendingSync,
+    evidenceUrl: receipt.pendingSync
+        ? null
+        : publicEvidenceUrl(receipt.id, receipt.plate),
   );
 }
 
@@ -595,6 +599,7 @@ class _SessionTile extends StatelessWidget {
       plate: plate,
       entryTime: session.entryTime,
       photoCount: session.photoCount,
+      evidenceUrl: publicEvidenceUrl(session.id, plate),
     );
     return showReceipt(
       context,

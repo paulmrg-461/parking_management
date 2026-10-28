@@ -43,7 +43,7 @@ WhatsApp (manual or automated).
 | Secrets / PIN operations | Complete (scripts + runbook) | PIN rotation verified live |
 | E2E and CI | Complete (API + Flutter client, real stack) | CI job `supabase-e2e` |
 
-Quality snapshot (2026-10-24, local stack): **752 Flutter tests + 1 integration
+Quality snapshot (2026-10-24, local stack): **764 Flutter tests + 1 integration
 test**, SQL/RLS suite green, web build green, analyzer with **0 errors and 0
 warnings** (only SDK deprecation infos from the pinned beta channel), restore
 drill green.
@@ -82,7 +82,7 @@ the main data it touches.
 | `app` | DI modules, router, shell | — |
 
 **Edge Functions** (`supabase/volumes/functions`): `admin-users`,
-`push-dispatch`, `evidence-archive`, `whatsapp-dispatch` (the `hello`/`main`
+`push-dispatch`, `evidence-archive`, `whatsapp-dispatch`, `public-evidence` (the `hello`/`main`
 folders are Supabase scaffolding, not used by the app).
 
 ## 4. Architecture in one paragraph

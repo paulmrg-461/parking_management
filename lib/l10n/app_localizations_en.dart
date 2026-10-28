@@ -104,6 +104,46 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorStorage => 'Could not save data on this device';
 
   @override
+  String get evidenceTitle => 'Vehicle evidence';
+
+  @override
+  String get evidenceInvalid =>
+      'This link is not valid or the plate does not match.';
+
+  @override
+  String evidenceKey(String plate) {
+    return 'Access key: $plate';
+  }
+
+  @override
+  String evidenceEntry(String when) {
+    return 'Entry: $when';
+  }
+
+  @override
+  String get evidenceEmpty => 'This visit has no photos or videos.';
+
+  @override
+  String get evidenceNoPhotos => 'No photos.';
+
+  @override
+  String evidencePhotos(int count) {
+    return 'Photos ($count)';
+  }
+
+  @override
+  String evidenceVideos(int count) {
+    return 'Videos ($count)';
+  }
+
+  @override
+  String get evidencePlayVideo => 'Play video';
+
+  @override
+  String get evidenceHelp =>
+      'Share this link only with the vehicle owner. Evidence is deleted according to the parking lot retention.';
+
+  @override
   String get errorUnknown => 'Something went wrong';
 
   @override
@@ -1781,6 +1821,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get receiptNewCharge => 'New charge';
+
+  @override
+  String get receiptEvidenceHint => 'Vehicle evidence: scan (key: plate)';
 
   @override
   String get receiptQrHint => 'Show this code at the exit to check out';

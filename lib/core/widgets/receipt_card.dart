@@ -346,6 +346,7 @@ class ReceiptCard extends StatelessWidget {
               label: l10n.receiptQrHint,
               child: QrCode(
                 data: data.plate,
+                size: 176,
                 semanticLabel: l10n.receiptQrHint,
               ),
             ),
@@ -353,6 +354,27 @@ class ReceiptCard extends StatelessWidget {
           const SizedBox(height: Space.xs),
           Text(
             l10n.receiptQrHint,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+        if (!data.pendingSync && data.evidenceUrl != null) ...[
+          const SizedBox(height: Space.md),
+          Center(
+            child: Semantics(
+              label: l10n.receiptEvidenceHint,
+              child: QrCode(
+                data: data.evidenceUrl!,
+                size: 88,
+                semanticLabel: l10n.receiptEvidenceHint,
+              ),
+            ),
+          ),
+          const SizedBox(height: Space.xs),
+          Text(
+            l10n.receiptEvidenceHint,
             textAlign: TextAlign.center,
             style: theme.textTheme.bodySmall?.copyWith(
               color: scheme.onSurfaceVariant,

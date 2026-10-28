@@ -110,6 +110,11 @@ settings) beside the derived `car_capacity`/`moto_capacity`.
 `report_occupancy`, `occupancy_snapshot`, `dashboard_today` (home KPIs),
 `report_whatsapp` (customer message delivery).
 
+**Public evidence**
+`public-evidence` Edge Function (service role): verifies a session + plate and
+returns 1-hour signed URLs for that session's photos/videos (no login; the
+plate is the key).
+
 **Records**
 `session_records(plate, limit, offset, from, to)`: lot-scoped session log
 (entry, exit, duration, amount, status) with a partial plate filter, an

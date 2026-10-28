@@ -100,6 +100,13 @@ class EscPosGenerator {
     if (!data.isCheckOut) {
       _qr(bytes, data.plate);
       _text(bytes, labels.scanHint, align: 1);
+    }
+    if (data.evidenceUrl != null) {
+      _rule(bytes);
+      _qr(bytes, data.evidenceUrl!);
+      _text(bytes, labels.evidenceHint, align: 1);
+    }
+    if (!data.isCheckOut || data.evidenceUrl != null) {
       _rule(bytes);
     }
 

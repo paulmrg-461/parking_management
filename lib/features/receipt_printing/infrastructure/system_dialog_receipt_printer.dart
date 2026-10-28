@@ -117,14 +117,30 @@ class SystemDialogReceiptPrinter implements ReceiptPrinter {
             child: pw.BarcodeWidget(
               barcode: Barcode.qrCode(),
               data: data.plate,
-              width: 84,
-              height: 84,
+              width: 140,
+              height: 140,
             ),
           ),
           pw.Text(
             labels.scanHint,
             textAlign: pw.TextAlign.center,
             style: const pw.TextStyle(fontSize: 8),
+          ),
+        ],
+        if (data.evidenceUrl != null) ...[
+          pw.SizedBox(height: 10),
+          pw.Center(
+            child: pw.BarcodeWidget(
+              barcode: Barcode.qrCode(),
+              data: data.evidenceUrl!,
+              width: 70,
+              height: 70,
+            ),
+          ),
+          pw.Text(
+            labels.evidenceHint,
+            textAlign: pw.TextAlign.center,
+            style: const pw.TextStyle(fontSize: 7),
           ),
         ],
         pw.SizedBox(height: 8),

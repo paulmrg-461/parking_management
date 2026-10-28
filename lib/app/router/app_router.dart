@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/qr/qr_decoder.dart';
+import '../../core/receipt/evidence_link.dart';
 import '../../features/reservations/domain/repositories/reservation_repository.dart';
 import '../../features/vehicles/domain/repositories/vehicle_repository.dart';
 import '../../core/widgets/deferred_page.dart';
@@ -20,6 +21,8 @@ import '../../features/check_in/application/vehicle_lookup_cubit.dart';
 import '../../features/check_in/presentation/check_in_page.dart';
 import '../../features/check_out/application/check_out_cubit.dart';
 import '../../features/check_out/presentation/check_out_page.dart';
+import '../../features/evidence/application/evidence_cubit.dart';
+import '../../features/evidence/presentation/public_evidence_page.dart';
 import '../../features/records/application/records_cubit.dart';
 import '../../features/records/presentation/records_page.dart';
 import '../../features/home/application/dashboard_cubit.dart';
@@ -64,6 +67,16 @@ GoRouter buildRouter(AuthCubit auth, Listenable refresh) => GoRouter(
   redirect: (_, state) => authRedirect(auth.state, state.uri.path),
   routes: [
     GoRoute(path: loginPath, builder: (context, state) => const LoginPage()),
+    GoRoute(
+      path: evidencePath,
+      builder: (context, state) => BlocProvider<EvidenceCubit>(
+        create: (_) => serviceLocator<EvidenceCubit>(),
+        child: PublicEvidencePage(
+          sessionId: int.tryParse(state.uri.queryParameters['session'] ?? ''),
+          plate: state.uri.queryParameters['plate'],
+        ),
+      ),
+    ),
     GoRoute(
       path: '/scan',
       builder: (context, state) => BlocProvider<PlateScanningCubit>(

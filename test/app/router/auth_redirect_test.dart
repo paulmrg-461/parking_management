@@ -46,6 +46,19 @@ void main() {
       expect(authRedirect(const AuthUnauthenticated(), '/login'), isNull);
     });
 
+    test('Security: the evidence page is public (plate-keyed link)', () {
+      expect(authRedirect(const AuthUnauthenticated(), '/evidence'), isNull);
+      expect(
+        authRedirect(
+          const AuthUnauthenticated(),
+          '/evidence?session=43&plate=ABC123',
+        ),
+        isNull,
+      );
+      expect(authRedirect(_as(UserRole.operator), '/evidence'), isNull);
+      expect(authRedirect(_as(UserRole.admin), '/evidence'), isNull);
+    });
+
     test('Security: operators are bounced from every admin-only route', () {
       for (final route in _adminOnly) {
         expect(authRedirect(_as(UserRole.operator), route), '/', reason: route);

@@ -272,6 +272,66 @@ abstract class AppLocalizations {
   /// **'No se pudo guardar la información en el dispositivo'**
   String get errorStorage;
 
+  /// No description provided for @evidenceTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Evidencias del vehículo'**
+  String get evidenceTitle;
+
+  /// No description provided for @evidenceInvalid.
+  ///
+  /// In es, this message translates to:
+  /// **'Este enlace no es válido o la placa no coincide.'**
+  String get evidenceInvalid;
+
+  /// No description provided for @evidenceKey.
+  ///
+  /// In es, this message translates to:
+  /// **'Clave de acceso: {plate}'**
+  String evidenceKey(String plate);
+
+  /// No description provided for @evidenceEntry.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingreso: {when}'**
+  String evidenceEntry(String when);
+
+  /// No description provided for @evidenceEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Este ingreso no tiene fotos ni videos.'**
+  String get evidenceEmpty;
+
+  /// No description provided for @evidenceNoPhotos.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin fotos.'**
+  String get evidenceNoPhotos;
+
+  /// No description provided for @evidencePhotos.
+  ///
+  /// In es, this message translates to:
+  /// **'Fotos ({count})'**
+  String evidencePhotos(int count);
+
+  /// No description provided for @evidenceVideos.
+  ///
+  /// In es, this message translates to:
+  /// **'Videos ({count})'**
+  String evidenceVideos(int count);
+
+  /// No description provided for @evidencePlayVideo.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver video'**
+  String get evidencePlayVideo;
+
+  /// No description provided for @evidenceHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Comparte este enlace solo con el propietario del vehículo. Las evidencias se eliminan según la retención del parqueadero.'**
+  String get evidenceHelp;
+
   /// No description provided for @errorUnknown.
   ///
   /// In es, this message translates to:
@@ -3283,6 +3343,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Nuevo cobro'**
   String get receiptNewCharge;
+
+  /// No description provided for @receiptEvidenceHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Evidencias del vehículo: escanea (clave: placa)'**
+  String get receiptEvidenceHint;
 
   /// No description provided for @receiptQrHint.
   ///

@@ -105,6 +105,46 @@ class AppLocalizationsEs extends AppLocalizations {
       'No se pudo guardar la información en el dispositivo';
 
   @override
+  String get evidenceTitle => 'Evidencias del vehículo';
+
+  @override
+  String get evidenceInvalid =>
+      'Este enlace no es válido o la placa no coincide.';
+
+  @override
+  String evidenceKey(String plate) {
+    return 'Clave de acceso: $plate';
+  }
+
+  @override
+  String evidenceEntry(String when) {
+    return 'Ingreso: $when';
+  }
+
+  @override
+  String get evidenceEmpty => 'Este ingreso no tiene fotos ni videos.';
+
+  @override
+  String get evidenceNoPhotos => 'Sin fotos.';
+
+  @override
+  String evidencePhotos(int count) {
+    return 'Fotos ($count)';
+  }
+
+  @override
+  String evidenceVideos(int count) {
+    return 'Videos ($count)';
+  }
+
+  @override
+  String get evidencePlayVideo => 'Ver video';
+
+  @override
+  String get evidenceHelp =>
+      'Comparte este enlace solo con el propietario del vehículo. Las evidencias se eliminan según la retención del parqueadero.';
+
+  @override
   String get errorUnknown => 'Ocurrió un error inesperado';
 
   @override
@@ -1793,6 +1833,10 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get receiptNewCharge => 'Nuevo cobro';
+
+  @override
+  String get receiptEvidenceHint =>
+      'Evidencias del vehículo: escanea (clave: placa)';
 
   @override
   String get receiptQrHint =>

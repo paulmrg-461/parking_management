@@ -25,6 +25,7 @@ import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/photo_strip.dart';
 import '../../../core/widgets/plate_input_field.dart';
 import '../../../core/widgets/plate_keypad.dart';
+import '../../../core/receipt/evidence_link.dart';
 import '../../../core/widgets/receipt_card.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/widgets/sync_badge.dart';
@@ -486,6 +487,9 @@ class _CheckInPageState extends State<CheckInPage> {
       entryTime: result.entryTime,
       photoCount: result.photoCount,
       pendingSync: result.status == ParkingSessionStatus.pendingSync,
+      evidenceUrl: result.status == ParkingSessionStatus.pendingSync
+          ? null
+          : publicEvidenceUrl(result.id, result.plate),
     );
     await showReceipt(
       context,
@@ -1146,6 +1150,9 @@ class _SessionTile extends StatelessWidget {
       entryTime: session.entryTime,
       photoCount: session.photoCount,
       pendingSync: session.status == ParkingSessionStatus.pendingSync,
+      evidenceUrl: session.status == ParkingSessionStatus.pendingSync
+          ? null
+          : publicEvidenceUrl(session.id, session.plate),
     );
     showReceipt(
       context,

@@ -53,6 +53,14 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   holds obey the same limit. Deleting a bay clears the reference on old
   sessions instead of blocking (`0059`). The entry receipt/snackbar names the
   assigned spot.
+- **Shareable evidence with the ticket.** Every receipt now prints two codes:
+  the **check-out QR** (the plate) is bigger (176 px on screen / 140 in the PDF)
+  and, below it, a **smaller evidence QR** linking to the public page
+  `/evidence?session=..&plate=..`, where the vehicle's photos and videos are
+  shown with the **plate as the access key** (no login). The page fetches
+  short-lived signed URLs from the new `public-evidence` Edge Function, which
+  verifies the session + plate and never exposes other sessions. Requires
+  `--dart-define=APP_URL=<public app URL>` so the printed link is reachable.
 - **Optional walk-around video at check-in.** The operator can record a short
   clip (max 60 s, 50 MB) of the vehicle's condition; it is optional like the
   photos, uploads to the same evidence bucket and is stored as
@@ -385,7 +393,7 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Tests
 
-- 752 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
+- 764 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
   integration test that runs only against a live stack.
 - SQL/RLS/RPC regressions covering capacity, shifts, discounts, passes,
   reservations, multi-site isolation, audit, diagnostics and retention.
@@ -423,7 +431,7 @@ Captured on 2026-10-24 against the local self-hosted stack:
 
 | Check | Result |
 |---|---|
-| `flutter test` | 752 passed (+1 live-stack integration skipped) |
+| `flutter test` | 764 passed (+1 live-stack integration skipped) |
 | `flutter analyze` | 0 errors, 0 warnings (only SDK deprecation infos) |
 | `flutter build web --release` | OK |
 | `supabase/tests/run.sh` | Passed (migrations + RPC/RLS regressions) |
