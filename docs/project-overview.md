@@ -133,6 +133,9 @@ Deployment: [`setup-cloud.md`](setup-cloud.md) (single VM + TLS proxy) and
 - **`pg_cron` is not available in the shipped image's app database**, so
   scheduled work runs from host cron (documented); the functions are the same.
 - **Single currency and single tax regime** assumptions.
+- **No physical bay numbers.** The space board paints virtual capacity cells;
+  maintenance bays and bicycles are not modelled, so there is no "out of
+  service" state yet.
 - **Beta Flutter SDK pinned**; analyzer output is limited to SDK deprecation
   infos until the pin moves to stable.
 
@@ -141,6 +144,8 @@ Deployment: [`setup-cloud.md`](setup-cloud.md) (single VM + TLS proxy) and
 - Real FCM/Meta/VAPID credentials for production push and automated WhatsApp.
 - Cold-storage archival for evidence files (currently deleted after retention).
 - Historical per-site metrics dashboard (today's KPIs exist; trends do not).
+- Physical bays with an out-of-service state, plus an on-screen keypad for
+  entry (the field currently relies on the keyboard or a USB reader).
 - iOS target if required.
 - Template management UI for automated WhatsApp.
 - Conflict resolution for offline reference-data edits (last-write-wins today).
