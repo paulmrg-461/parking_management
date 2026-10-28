@@ -931,5 +931,10 @@
   "@monthlyPassesCount": {"placeholders": {"count": {"type": "int"}}},
   "monthlyPassesList": "Mensualidades registradas",
   "categoriesEmptyHint": "Crea las categorías del parqueadero (moto, carro, camioneta…) para asignar tarifas y cupos.",
-  "tariffsEmptyHint": "Agrega tarifas por hora, día, noche o mensualidad para cada categoría."
+  "tariffsEmptyHint": "Agrega tarifas por hora, día, noche o mensualidad para cada categoría.",
+  "diagnosticsPendingQueue": "Cola pendiente",
+  "diagnosticsAlerts": "Alertas",
+  "diagnosticsOpenNow": "Dentro ahora",
+  "vehiclesCount": "{count} vehículos",
+  "@vehiclesCount": {"placeholders": {"count": {"type": "int"}}}
 }

@@ -9,7 +9,10 @@ import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/error_state.dart';
+import '../../../core/widgets/metric_card.dart';
+import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/skeleton.dart';
+import '../../../core/widgets/status_chip.dart';
 import '../application/diagnostics_cubit.dart';
 import '../domain/entities/client_error_report.dart';
 import '../domain/entities/diagnostics_snapshot.dart';
@@ -47,7 +50,8 @@ class _DiagnosticsPageState extends State<DiagnosticsPage> {
       ),
       body: BlocBuilder<DiagnosticsCubit, DiagnosticsState>(
         builder: (context, state) => switch (state) {
-          DiagnosticsInitial() || DiagnosticsLoading() => const SkeletonList(),
+          DiagnosticsInitial() ||
+          DiagnosticsLoading() => const SkeletonCardList(itemCount: 3),
           DiagnosticsFailure(:final message, :final failure) => ErrorState(
             message: context.l10n.errorText(message, failure),
             onRetry: () => context.read<DiagnosticsCubit>().load(),
@@ -80,9 +84,49 @@ class _Body extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final alerts =
+        errors.length +
+        snapshot.staleSessions24h +
+        snapshot.deadPush +
+        snapshot.whatsappFailed;
     return ListView(
       padding: const EdgeInsets.all(Space.md),
       children: [
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: MetricCard(
+                  icon: Icons.directions_car_outlined,
+                  label: l10n.diagnosticsOpenNow,
+                  value: '${snapshot.openSessions}',
+                ),
+              ),
+              const SizedBox(width: Space.sm),
+              Expanded(
+                child: MetricCard(
+                  icon: Icons.outbox_outlined,
+                  label: l10n.diagnosticsPendingQueue,
+                  value: '${snapshot.pendingPush + snapshot.whatsappPending}',
+                  tone: snapshot.pendingPush + snapshot.whatsappPending > 0
+                      ? MetricTone.warning
+                      : MetricTone.neutral,
+                ),
+              ),
+              const SizedBox(width: Space.sm),
+              Expanded(
+                child: MetricCard(
+                  icon: Icons.health_and_safety_outlined,
+                  label: l10n.diagnosticsAlerts,
+                  value: '$alerts',
+                  tone: alerts > 0 ? MetricTone.danger : MetricTone.success,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: Space.lg),
         _Section(
           title: l10n.diagnosticsSystem,
           icon: snapshot.hasWarnings
@@ -215,29 +259,33 @@ class _Section extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: Space.md),
-      child: Padding(
-        padding: const EdgeInsets.all(Space.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, size: 20),
-                const SizedBox(width: Space.sm),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: Space.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SectionHeader(icon: icon, title: title),
+          if (rows.isNotEmpty) ...[
+            const SizedBox(height: Space.sm),
+            Card(
+              margin: EdgeInsets.zero,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: Space.md,
+                  vertical: Space.sm,
                 ),
-              ],
+                child: Column(
+                  children: [
+                    for (var index = 0; index < rows.length; index++) ...[
+                      if (index > 0) const Divider(height: 1),
+                      rows[index],
+                    ],
+                  ],
+                ),
+              ),
             ),
-            if (rows.isNotEmpty) const SizedBox(height: Space.sm),
-            ...rows,
           ],
-        ),
+        ],
       ),
     );
   }
@@ -252,17 +300,28 @@ class _Metric extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final style = warning
-        ? TextStyle(color: scheme.error, fontWeight: FontWeight.w600)
-        : null;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
+    final theme = Theme.of(context);
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 40),
       child: Row(
         children: [
-          Expanded(child: Text(label, style: style)),
+          Expanded(child: Text(label, style: theme.textTheme.bodyMedium)),
           const SizedBox(width: Space.sm),
-          Text(value, style: style),
+          if (warning)
+            Padding(
+              padding: const EdgeInsets.only(right: Space.sm),
+              child: StatusChip(
+                label: context.l10n.diagnosticsAlerts,
+                tone: StatusTone.warning,
+              ),
+            ),
+          Text(
+            value,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
         ],
       ),
     );
@@ -289,10 +348,21 @@ class _WhatsappTile extends StatelessWidget {
       Formatters.dateTime(message.createdAt),
       if (message.attempts > 0) l10n.diagnosticsWhatsappAttempts(message.attempts),
     ].join(' · ');
+    final scheme = Theme.of(context).colorScheme;
+    final failed = message.status == 'failed';
     return Card(
       margin: const EdgeInsets.only(bottom: Space.sm),
       child: ListTile(
-        leading: Icon(_icon),
+        leading: CircleAvatar(
+          backgroundColor: failed
+              ? scheme.errorContainer
+              : scheme.surfaceContainerHighest,
+          child: Icon(
+            _icon,
+            size: 20,
+            color: failed ? scheme.onErrorContainer : scheme.onSurfaceVariant,
+          ),
+        ),
         title: Text('${message.template} · ${message.toPhone}'),
         subtitle: Text(
           message.error == null || message.error!.isEmpty
@@ -300,6 +370,13 @@ class _WhatsappTile extends StatelessWidget {
               : '${message.error}\n$subtitle',
         ),
         isThreeLine: message.error != null && message.error!.isNotEmpty,
+        trailing: failed
+            ? Icon(
+                Icons.error_outline,
+                color: scheme.error,
+                semanticLabel: context.l10n.diagnosticsWhatsappFailedCount,
+              )
+            : null,
       ),
     );
   }
@@ -320,7 +397,14 @@ class _ErrorTile extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: Space.sm),
       child: ListTile(
-        leading: const Icon(Icons.bug_report_outlined),
+        leading: CircleAvatar(
+          backgroundColor: Theme.of(context).colorScheme.errorContainer,
+          child: Icon(
+            Icons.bug_report_outlined,
+            size: 20,
+            color: Theme.of(context).colorScheme.onErrorContainer,
+          ),
+        ),
         title: Text(
           report.message,
           maxLines: 2,

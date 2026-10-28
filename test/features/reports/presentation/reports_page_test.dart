@@ -10,6 +10,7 @@ import 'package:parking_management/features/reports/domain/entities/revenue_repo
 import 'package:parking_management/features/reports/domain/entities/whatsapp_report.dart';
 import 'package:parking_management/features/reports/domain/repositories/report_repository.dart';
 import 'package:parking_management/features/reports/presentation/report_colors.dart';
+import 'package:parking_management/core/widgets/metric_card.dart';
 import 'package:parking_management/features/reports/presentation/reports_page.dart';
 
 import '../../../helpers/test_app.dart';
@@ -227,6 +228,15 @@ void main() {
 
     expect(find.text('+50 % vs. periodo anterior'), findsOneWidget);
     expect(find.text('Antes: \$100.000'), findsOneWidget);
+  });
+
+  testWidgets('Success: revenue and occupancy use summary cards', (
+    tester,
+  ) async {
+    await _pump(tester);
+
+    expect(find.byType(MetricCard), findsWidgets);
+    expect(find.text('Ingresos totales'), findsOneWidget);
   });
 
   testWidgets('Success: the CSV button copies the report', (tester) async {

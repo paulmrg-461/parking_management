@@ -48,7 +48,7 @@ void main() {
 
     expect(find.text('Diagnóstico'), findsOneWidget);
     expect(find.text('Sesiones abiertas'), findsOneWidget);
-    expect(find.text('3'), findsOneWidget);
+    expect(find.text('3'), findsWidgets);
     expect(find.text('12'), findsOneWidget);
     expect(find.textContaining('evidence'), findsOneWidget);
   });

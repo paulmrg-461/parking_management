@@ -862,5 +862,9 @@
   "monthlyPassesFilteredEmpty": "No passes match the filter",
   "monthlyPassesList": "Registered passes",
   "categoriesEmptyHint": "Create the lot categories (motorcycle, car, pickup…) to assign tariffs and spaces.",
-  "tariffsEmptyHint": "Add hourly, daily, night or monthly prices for each category."
+  "tariffsEmptyHint": "Add hourly, daily, night or monthly prices for each category.",
+  "diagnosticsPendingQueue": "Pending queue",
+  "diagnosticsAlerts": "Alerts",
+  "diagnosticsOpenNow": "Parked now",
+  "vehiclesCount": "{count} vehicles"
 }

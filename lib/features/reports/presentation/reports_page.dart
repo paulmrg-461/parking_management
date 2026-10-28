@@ -11,7 +11,8 @@ import '../../../core/utils/formatters.dart';
 import '../../lots/application/lots_cubit.dart';
 import '../../../core/widgets/app_icon_button.dart';
 import '../../../core/widgets/async_view.dart';
-import '../../../core/widgets/money_text.dart';
+import '../../../core/widgets/metric_card.dart';
+import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/widgets/sync_badge.dart';
 import '../application/reports_cubit.dart';
@@ -265,49 +266,86 @@ class _ReportsBody extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final revenue = loaded.revenue;
     final occupancy = loaded.occupancy;
+    final occupancyLabel = occupancy.totalCapacity > 0
+        ? l10n.reportsOccupancyOf(
+            occupancy.totalOpen,
+            occupancy.totalCapacity,
+          )
+        : l10n.reportsOpenSessions(occupancy.totalOpen);
     return ListView(
       padding: const EdgeInsets.all(Space.md),
       children: [
-        Text(
-          l10n.monthlyPassPeriod(
+        MetricCard(
+          icon: Icons.payments_outlined,
+          tone: MetricTone.primary,
+          label: l10n.reportsTotalRevenue,
+          value: Formatters.money(revenue.total),
+          caption: l10n.monthlyPassPeriod(
             Formatters.date(range.start),
             Formatters.date(range.end),
           ),
-          style: textTheme.bodyMedium,
+          trailing: loaded.deltaPercent == null
+              ? null
+              : _DeltaRow(
+                  delta: loaded.deltaPercent!,
+                  previous: loaded.previousTotal!,
+                ),
         ),
-        const SizedBox(height: Space.sm),
-        Text(l10n.reportsTotalRevenue, style: textTheme.labelLarge),
-        MoneyText(revenue.total, style: textTheme.headlineMedium),
-        if (loaded.deltaPercent case final delta?) ...[
-          const SizedBox(height: Space.xs),
-          _DeltaRow(delta: delta, previous: loaded.previousTotal!),
+        if (revenue.passRevenue > 0 || revenue.totalDiscounts > 0) ...[
+          const SizedBox(height: Space.sm),
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (revenue.passRevenue > 0)
+                  Expanded(
+                    child: MetricCard(
+                      icon: Icons.card_membership,
+                      label: l10n.reportsPassRevenue,
+                      value: Formatters.money(revenue.passRevenue),
+                    ),
+                  ),
+                if (revenue.passRevenue > 0 && revenue.totalDiscounts > 0)
+                  const SizedBox(width: Space.sm),
+                if (revenue.totalDiscounts > 0)
+                  Expanded(
+                    child: MetricCard(
+                      icon: Icons.percent,
+                      label: l10n.reportsTotalDiscounts,
+                      value: Formatters.money(revenue.totalDiscounts),
+                      caption: l10n.reportsDiscountedSessions(
+                        revenue.discountedSessions,
+                      ),
+                      tone: MetricTone.warning,
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ],
         if (loaded.allLots && revenue.byLot.isNotEmpty) ...[
           const SizedBox(height: Space.lg),
-          _SectionTitle(l10n.reportsByLot),
-          LotComparison(lots: revenue.byLot),
-        ],
-        if (revenue.totalDiscounts > 0) ...[
-          const SizedBox(height: Space.sm),
-          Row(
-            children: [
-              Text(l10n.reportsTotalDiscounts, style: textTheme.bodyMedium),
-              const SizedBox(width: Space.xs),
-              MoneyText(revenue.totalDiscounts, style: textTheme.titleSmall),
-              const SizedBox(width: Space.sm),
-              Text(
-                l10n.reportsDiscountedSessions(revenue.discountedSessions),
-                style: textTheme.bodySmall,
-              ),
-            ],
+          SectionHeader(
+            icon: Icons.location_city_outlined,
+            title: l10n.reportsByLot,
           ),
+          const SizedBox(height: Space.sm),
+          LotComparison(lots: revenue.byLot),
         ],
         if (revenue.discountAudit.isNotEmpty) ...[
           const SizedBox(height: Space.lg),
-          _SectionTitle(l10n.reportsDiscountLog),
+          SectionHeader(
+            icon: Icons.percent,
+            title: l10n.reportsDiscountLog,
+            action: Text(
+              '${revenue.discountAudit.length}',
+              style: textTheme.labelMedium,
+            ),
+          ),
           for (final discount in revenue.discountAudit)
             ListTile(
               contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.percent, size: 20),
               title: Text(
                 '${discount.plate} · ${Formatters.dateTime(discount.discountAt)}',
               ),
@@ -324,29 +362,37 @@ class _ReportsBody extends StatelessWidget {
               ),
             ),
         ],
-        if (revenue.passRevenue > 0) ...[
+        if (revenue.passByPayment.isNotEmpty) ...[
           const SizedBox(height: Space.lg),
-          _SectionTitle(l10n.reportsPassRevenue),
-          MoneyText(revenue.passRevenue, style: textTheme.headlineSmall),
-          if (revenue.passByPayment.isNotEmpty) ...[
-            const SizedBox(height: Space.sm),
-            CategoryBarList(
-              items: [
-                for (final payment in revenue.passByPayment)
-                  CategoryBarItem(
-                    label: paymentMethodLabel(l10n, payment.paymentMethod),
-                    value: payment.amount,
-                  ),
-              ],
-              formatValue: Formatters.money,
-            ),
-          ],
+          SectionHeader(
+            icon: Icons.card_membership,
+            title: l10n.reportsPassRevenue,
+          ),
+          const SizedBox(height: Space.sm),
+          CategoryBarList(
+            items: [
+              for (final payment in revenue.passByPayment)
+                CategoryBarItem(
+                  label: paymentMethodLabel(l10n, payment.paymentMethod),
+                  value: payment.amount,
+                ),
+            ],
+            formatValue: Formatters.money,
+          ),
         ],
         const SizedBox(height: Space.lg),
-        _SectionTitle(l10n.reportsRevenueByDay),
+        SectionHeader(
+          icon: Icons.show_chart,
+          title: l10n.reportsRevenueByDay,
+        ),
+        const SizedBox(height: Space.sm),
         RevenueByDayChart(byDay: revenue.byDay),
         const SizedBox(height: Space.lg),
-        _SectionTitle(l10n.reportsRevenueByCategory),
+        SectionHeader(
+          icon: Icons.category_outlined,
+          title: l10n.reportsRevenueByCategory,
+        ),
+        const SizedBox(height: Space.sm),
         CategoryBarList(
           items: [
             for (final category in revenue.byCategory)
@@ -357,9 +403,13 @@ class _ReportsBody extends StatelessWidget {
           ],
           formatValue: Formatters.money,
         ),
-        const SizedBox(height: Space.lg),
         if (revenue.byPayment.isNotEmpty) ...[
-          _SectionTitle(l10n.reportsRevenueByPayment),
+          const SizedBox(height: Space.lg),
+          SectionHeader(
+            icon: Icons.credit_card_outlined,
+            title: l10n.reportsRevenueByPayment,
+          ),
+          const SizedBox(height: Space.sm),
           CategoryBarList(
             items: [
               for (final payment in revenue.byPayment)
@@ -370,32 +420,46 @@ class _ReportsBody extends StatelessWidget {
             ],
             formatValue: Formatters.money,
           ),
-          const SizedBox(height: Space.lg),
         ],
         if (loaded.whatsapp.hasData) ...[
-          _SectionTitle(l10n.reportsWhatsapp),
-          Row(
-            children: [
-              Expanded(
-                child: _WhatsappMetric(
-                  label: l10n.reportsWhatsappSent,
-                  value: '${loaded.whatsapp.sent}',
+          const SizedBox(height: Space.lg),
+          SectionHeader(
+            icon: Icons.chat_outlined,
+            title: l10n.reportsWhatsapp,
+          ),
+          const SizedBox(height: Space.sm),
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: MetricCard(
+                    icon: Icons.send_outlined,
+                    label: l10n.reportsWhatsappSent,
+                    value: '${loaded.whatsapp.sent}',
+                  ),
                 ),
-              ),
-              Expanded(
-                child: _WhatsappMetric(
-                  label: l10n.reportsWhatsappFailed,
-                  value: '${loaded.whatsapp.failed}',
-                  warning: loaded.whatsapp.failed > 0,
+                const SizedBox(width: Space.sm),
+                Expanded(
+                  child: MetricCard(
+                    icon: Icons.error_outline,
+                    label: l10n.reportsWhatsappFailed,
+                    value: '${loaded.whatsapp.failed}',
+                    tone: loaded.whatsapp.failed > 0
+                        ? MetricTone.danger
+                        : MetricTone.neutral,
+                  ),
                 ),
-              ),
-              Expanded(
-                child: _WhatsappMetric(
-                  label: l10n.reportsWhatsappPending,
-                  value: '${loaded.whatsapp.pending}',
+                const SizedBox(width: Space.sm),
+                Expanded(
+                  child: MetricCard(
+                    icon: Icons.schedule,
+                    label: l10n.reportsWhatsappPending,
+                    value: '${loaded.whatsapp.pending}',
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
           const SizedBox(height: Space.sm),
           for (final day in loaded.whatsapp.byDay)
@@ -411,17 +475,20 @@ class _ReportsBody extends StatelessWidget {
                 ],
               ),
             ),
-          const SizedBox(height: Space.lg),
         ],
-        _SectionTitle(l10n.reportsOccupancy),
-        Text(
-          occupancy.totalCapacity > 0
-              ? l10n.reportsOccupancyOf(
-                  occupancy.totalOpen,
-                  occupancy.totalCapacity,
-                )
-              : l10n.reportsOpenSessions(occupancy.totalOpen),
-          style: textTheme.headlineSmall,
+        const SizedBox(height: Space.lg),
+        SectionHeader(
+          icon: Icons.local_parking_outlined,
+          title: l10n.reportsOccupancy,
+        ),
+        const SizedBox(height: Space.sm),
+        MetricCard(
+          icon: Icons.directions_car_outlined,
+          label: l10n.reportsOccupancy,
+          value: occupancyLabel,
+          caption: occupancy.totalCapacity > 0
+              ? '${(occupancy.totalOpen * 100 / occupancy.totalCapacity).round()}%'
+              : null,
         ),
         const SizedBox(height: Space.sm),
         CategoryBarList(
@@ -437,48 +504,6 @@ class _ReportsBody extends StatelessWidget {
           ],
           formatValue: (value) => value.toString(),
         ),
-      ],
-    );
-  }
-}
-
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: Space.sm),
-    child: Semantics(
-      header: true,
-      child: Text(text, style: Theme.of(context).textTheme.titleMedium),
-    ),
-  );
-}
-
-class _WhatsappMetric extends StatelessWidget {
-  const _WhatsappMetric({
-    required this.label,
-    required this.value,
-    this.warning = false,
-  });
-
-  final String label;
-  final String value;
-  final bool warning;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final color = warning
-        ? Theme.of(context).colorScheme.error
-        : textTheme.titleSmall?.color;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: textTheme.labelSmall),
-        Text(value, style: textTheme.titleMedium?.copyWith(color: color)),
       ],
     );
   }

@@ -13,6 +13,17 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 **UI/UX pass across every module**
 
+- Reports: total revenue opens as a primary metric card with the period and
+  previous-period delta; pass revenue, discounts, WhatsApp counters and
+  occupancy are metric cards too, and every block uses the shared section
+  header.
+- Diagnostics: top metrics for open sessions, pending queue and alerts, section
+  headers with divided rows, warning chips and tonal avatars on WhatsApp/error
+  rows.
+- Categories, tariffs, vehicles and sites render as cards with tonal avatars;
+  vehicles add a filter bar with the result count.
+- Contact is a branded card plus tappable rows with tonal icon avatars; the open
+  shift card shows its status chip.
 - Mobile app bar keeps only the notification bell and sync badge. Language,
   appearance and sign-out moved to the drawer (with the current value as
   subtitle and a bottom sheet to switch), and the drawer header gained an

@@ -102,10 +102,29 @@ class _LotTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final scheme = Theme.of(context).colorScheme;
     return Card(
       margin: const EdgeInsets.fromLTRB(Space.md, Space.xs, Space.md, Space.xs),
+      clipBehavior: Clip.antiAlias,
       child: ListTile(
-        title: Text(lot.name),
+        leading: CircleAvatar(
+          backgroundColor: lot.active
+              ? scheme.primaryContainer
+              : scheme.surfaceContainerHighest,
+          child: Icon(
+            Icons.storefront_outlined,
+            size: 20,
+            color: lot.active
+                ? scheme.onPrimaryContainer
+                : scheme.onSurfaceVariant,
+          ),
+        ),
+        title: Text(
+          lot.name,
+          style: Theme.of(
+            context,
+          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+        ),
         subtitle: Text(
           [
             lot.code,

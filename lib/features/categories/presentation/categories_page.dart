@@ -110,31 +110,50 @@ class _CategoryTile extends StatelessWidget {
   final Category category;
 
   @override
-  Widget build(BuildContext context) => ListTile(
-    leading: const Icon(Icons.category_outlined),
-    title: Text(category.name),
-    subtitle: Text(
-      category.capacity == 0
-          ? context.l10n.categoryCapacityUnlimited
-          : context.l10n.categoryCapacity(category.capacity),
-    ),
-    trailing: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        AppIconButton(
-          icon: Icons.groups_outlined,
-          tooltip: context.l10n.categoryCapacityTitle(category.name),
-          onPressed: () => _capacity(context),
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Card(
+      margin: const EdgeInsets.fromLTRB(Space.md, Space.xs, Space.md, Space.xs),
+      clipBehavior: Clip.antiAlias,
+      child: ListTile(
+        onTap: () => _rename(context),
+        leading: CircleAvatar(
+          backgroundColor: scheme.surfaceContainerHighest,
+          child: Icon(
+            Icons.category_outlined,
+            size: 20,
+            color: scheme.onSurfaceVariant,
+          ),
         ),
-        AppIconButton(
-          icon: Icons.delete_outline,
-          tooltip: context.l10n.categoryDeleteTooltip(category.name),
-          onPressed: () => _confirmDelete(context),
+        title: Text(
+          category.name,
+          style: Theme.of(
+            context,
+          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
         ),
-      ],
-    ),
-    onTap: () => _rename(context),
-  );
+        subtitle: Text(
+          category.capacity == 0
+              ? context.l10n.categoryCapacityUnlimited
+              : context.l10n.categoryCapacity(category.capacity),
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppIconButton(
+              icon: Icons.groups_outlined,
+              tooltip: context.l10n.categoryCapacityTitle(category.name),
+              onPressed: () => _capacity(context),
+            ),
+            AppIconButton(
+              icon: Icons.delete_outline,
+              tooltip: context.l10n.categoryDeleteTooltip(category.name),
+              onPressed: () => _confirmDelete(context),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   void _capacity(BuildContext context) {
     final cubit = context.read<CategoriesCubit>();

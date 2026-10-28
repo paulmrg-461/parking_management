@@ -18,6 +18,7 @@ import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_state.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/skeleton.dart';
+import '../../../core/widgets/status_chip.dart';
 import '../../../core/widgets/money_text.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../../lots/application/lots_cubit.dart';
@@ -355,16 +356,48 @@ class _OpenShiftCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final textTheme = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(Space.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(l10n.shiftOpenTitle, style: textTheme.titleMedium),
-            Text(
-              l10n.shiftOpenedAt(Formatters.dateTimeFull(shift.openedAt)),
-              style: textTheme.bodySmall,
+            Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: scheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(Radii.sm),
+                  ),
+                  child: Icon(
+                    Icons.point_of_sale,
+                    size: 20,
+                    color: scheme.onPrimaryContainer,
+                  ),
+                ),
+                const SizedBox(width: Space.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(l10n.shiftOpenTitle, style: textTheme.titleMedium),
+                      Text(
+                        l10n.shiftOpenedAt(
+                          Formatters.dateTimeFull(shift.openedAt),
+                        ),
+                        style: textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                ),
+                StatusChip(
+                  label: l10n.statusOpen,
+                  tone: StatusTone.success,
+                ),
+              ],
             ),
             const SizedBox(height: Space.md),
             _MetricRow(label: l10n.shiftOpeningFloat, amount: shift.openingFloat),

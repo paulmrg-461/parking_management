@@ -2680,4 +2680,18 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get tariffsEmptyHint =>
       'Add hourly, daily, night or monthly prices for each category.';
+
+  @override
+  String get diagnosticsPendingQueue => 'Pending queue';
+
+  @override
+  String get diagnosticsAlerts => 'Alerts';
+
+  @override
+  String get diagnosticsOpenNow => 'Parked now';
+
+  @override
+  String vehiclesCount(int count) {
+    return '$count vehicles';
+  }
 }

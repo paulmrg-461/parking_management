@@ -2695,4 +2695,18 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get tariffsEmptyHint =>
       'Agrega tarifas por hora, día, noche o mensualidad para cada categoría.';
+
+  @override
+  String get diagnosticsPendingQueue => 'Cola pendiente';
+
+  @override
+  String get diagnosticsAlerts => 'Alertas';
+
+  @override
+  String get diagnosticsOpenNow => 'Dentro ahora';
+
+  @override
+  String vehiclesCount(int count) {
+    return '$count vehículos';
+  }
 }

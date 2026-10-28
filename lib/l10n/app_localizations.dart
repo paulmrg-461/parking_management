@@ -4861,6 +4861,30 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Agrega tarifas por hora, día, noche o mensualidad para cada categoría.'**
   String get tariffsEmptyHint;
+
+  /// No description provided for @diagnosticsPendingQueue.
+  ///
+  /// In es, this message translates to:
+  /// **'Cola pendiente'**
+  String get diagnosticsPendingQueue;
+
+  /// No description provided for @diagnosticsAlerts.
+  ///
+  /// In es, this message translates to:
+  /// **'Alertas'**
+  String get diagnosticsAlerts;
+
+  /// No description provided for @diagnosticsOpenNow.
+  ///
+  /// In es, this message translates to:
+  /// **'Dentro ahora'**
+  String get diagnosticsOpenNow;
+
+  /// No description provided for @vehiclesCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} vehículos'**
+  String vehiclesCount(int count);
 }
 
 class _AppLocalizationsDelegate

@@ -11,6 +11,7 @@ import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/app_icon_button.dart';
 import '../../../core/widgets/async_view.dart';
 import '../../../core/widgets/confirm_dialog.dart';
+import '../../../core/widgets/filter_bar.dart';
 import '../../../core/widgets/list_page_scaffold.dart';
 import '../../../core/widgets/load_more_tile.dart';
 import '../../../core/widgets/plate_text.dart';
@@ -53,16 +54,23 @@ class _VehiclesPageState extends State<VehiclesPage> {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(
-                Space.md,
-                Space.sm,
-                Space.md,
-                0,
-              ),
-              child: SearchField(
-                fieldKey: const Key('vehicles_search'),
-                label: context.l10n.vehiclesSearch,
-                onChanged: context.read<VehiclesCubit>().search,
+              padding: const EdgeInsets.all(Space.md),
+              child: FilterBar(
+                summary: switch (context.watch<VehiclesCubit>().state) {
+                  VehiclesLoaded(:final total, :final vehicles) =>
+                    context.l10n.vehiclesCount(total ?? vehicles.length),
+                  _ => null,
+                },
+                children: [
+                  SizedBox(
+                    width: 260,
+                    child: SearchField(
+                      fieldKey: const Key('vehicles_search'),
+                      label: context.l10n.vehiclesSearch,
+                      onChanged: context.read<VehiclesCubit>().search,
+                    ),
+                  ),
+                ],
               ),
             ),
             Expanded(
@@ -202,14 +210,26 @@ class _VehicleTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: const Icon(Icons.directions_car_outlined),
-      title: PlateText(vehicle.plate),
-      subtitle: Text(_subtitle),
-      trailing: AppIconButton(
-        icon: Icons.delete_outline,
-        tooltip: context.l10n.vehicleDeleteTooltip(vehicle.plate),
-        onPressed: vehicle.id == null ? null : () => _confirmDelete(context),
+    final scheme = Theme.of(context).colorScheme;
+    return Card(
+      margin: const EdgeInsets.fromLTRB(Space.md, Space.xs, Space.md, Space.xs),
+      clipBehavior: Clip.antiAlias,
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: scheme.surfaceContainerHighest,
+          child: Icon(
+            Icons.directions_car_outlined,
+            size: 20,
+            color: scheme.onSurfaceVariant,
+          ),
+        ),
+        title: PlateText(vehicle.plate),
+        subtitle: Text(_subtitle),
+        trailing: AppIconButton(
+          icon: Icons.delete_outline,
+          tooltip: context.l10n.vehicleDeleteTooltip(vehicle.plate),
+          onPressed: vehicle.id == null ? null : () => _confirmDelete(context),
+        ),
       ),
     );
   }
