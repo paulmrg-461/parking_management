@@ -40,6 +40,9 @@ flowchart TB
 
 ## 1. Sizing
 
+Full sizing, capacity math (video evidence), network, security and the go-live
+checklist: [`deployment-requirements.md`](deployment-requirements.md).
+
 | Installation | vCPU | RAM | Disk | Notes |
 |---|---|---|---|---|
 | 1 site, ~100 vehicles/day | 2 | 4 GB | 40 GB SSD | Comfortable; DB and app on the same host. |
