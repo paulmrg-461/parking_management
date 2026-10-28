@@ -4,7 +4,8 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-10-28, branch `feature/supabase` (operator UI + realtime).
+Last updated: 2026-10-28, branch `feature/supabase` (operator UI + realtime,
+HEAD `e7351da`).
 
 ## Where we are
 
@@ -64,7 +65,9 @@ Last updated: 2026-10-28, branch `feature/supabase` (operator UI + realtime).
   shell reloads `DashboardCubit` + `ShiftCubit`, and
   `RealtimeActivityListener` reloads the check-out list (keeping the search) and
   the check-in open sessions/holds, so data does not stay stale on the other
-  device.
+  device. The first version only showed the snackbar and the dashboard kept
+  showing the old counters: a realtime signal that implies changed data must
+  **also refetch** the cubits that own it.
 - **0057 fixed the blocker**: the notifications policy used
   `current_lot_id()`, which Realtime evaluates **without** the lot header, so
   the channel died silently with `LotRequiredError`. Policies read by
@@ -970,43 +973,6 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   `BrandingCubit.logoOrNull` has bytes, else this asset, else the parking icon.
 - `web/manifest.json`/`index.html` use the asphalt background (`#0B0D10`);
   keep them in sync if the mark changes.
-
-## Evidence uploads
-
-- Storage evidence is **insert-only** from the client: the SELECT policy uses
-  `can_read_evidence(name)`, which is true only after `check_in` inserts the
-  `evidence_photos` row. `upsert: true` therefore fails (INSERT ... ON CONFLICT
-  needs to read the row) with a misleading "permission" error.
-- `isDuplicateUpload` treats storage `409`/`Duplicate` as success: a replay of
-  the same queued entry already stored that exact path. Never swallow 403.
-- Verified against the live stack: insert 200 → duplicate 409 → `check_in` with
-  the photo path returns `photo_count: 1`.
-
-## Latest verification (2026-10-28)
-
-- `flutter test`: 712 passed (+1 live-stack integration skipped); `flutter
-  analyze` 139 infos, all SDK `deprecated_member_use` (zero warnings/errors);
-  `flutter build web --release` OK.
-- `supabase/tests/run.sh` passed (migrations `0001`–`0057`); `e2e.sh` passed
-  (login → check-in → check-out → report → history).
-- `healthcheck.sh`: 0 failures (one warning for a dev shift left open >12 h).
-- UI/UX batches landed this session: reports comparison (screen, PDF, CSV),
-  remember payment method, shift confirmations + mismatch guard, Ctrl/Cmd+K,
-  reservations expiry chip + jump to check-in, continuous "Nuevo cobro",
-  shared plate input, staggered rows, users role filter, passes plate search,
-  monthly-pass chip on check-out, device appearance, the "already inside"
-  check-in warning, the app mark/launcher icons, the site switcher moved from a
-  shell strip into a compact home chip, reservation quick-hold chips (+2 h,
-  +4 h, end of day), one-tap 30-day renewal for expiring monthly passes, and
-  first-action buttons inside empty lists (users, vehicles, passes), and a
-  discard-changes guard on the settings form, and an empty/no-match state on
-  check-out with a "clear search" action, and a web-style collapsible sidebar
-  (grouped sections, site + user footer, collapse persisted), and a receipt QR
-  that opens check-out from the camera or a USB scanner.
-- Hardware run found and fixed two boot bugs: Hive now initializes before the
-  Supabase session cleanup, and evidence uploads are insert-only (see above).
-- Current HEAD after the polish: `21f0149` (site switcher) on top of
-  `dece16c` (branding) and `9d4225e` (run-android helper).
 
 ## Backlog / next moves
 
