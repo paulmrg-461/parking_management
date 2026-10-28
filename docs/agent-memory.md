@@ -58,6 +58,11 @@ currency, es/en language, records exports).
 - Gotcha: a lazily built `ListView` only builds visible children, so tests that
   assert the last row must use a tall viewport or scroll before asserting.
 
+- **Sidebar (2026-10-28)**: tonal logo mark + role dot, gradient surface,
+  rounded nav pills with accent bar, management accordion with count badge and
+  indented guide line, site card and user card with online dot. Keys/tooltips
+  and the persisted `sidebar_collapsed`/`sidebar_management_open` preferences
+  are unchanged (shell tests depend on them).
 - **Login and sparse screens (2026-10-28)**: the sign-in page splits into a
   brand panel + form card from `Layout.railBreakpoint` (and ≥ 560 px tall),
   keeps the PIN obscured with an eye toggle, renders failures as an inline

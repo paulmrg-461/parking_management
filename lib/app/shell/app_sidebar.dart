@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/l10n/l10n.dart';
 import '../../core/storage/key_value_store.dart';
+import '../../core/theme/status_colors.dart';
 import '../../core/theme/tokens.dart';
 import '../../features/auth/application/auth_cubit.dart';
 import '../../features/auth/domain/entities/auth_session.dart';
@@ -53,32 +54,25 @@ class _AppSidebarState extends State<AppSidebar> {
     }
   }
 
-  Future<void> _toggleManagement() async {
-    setState(() => _managementOpen = !_managementOpen);
+  Future<void> _remember(String key, bool value) async {
     if (!serviceLocator.isRegistered<KeyValueStore>()) {
       return;
     }
     try {
-      await serviceLocator<KeyValueStore>().put(
-        _box,
-        _managementKey,
-        _managementOpen,
-      );
+      await serviceLocator<KeyValueStore>().put(_box, key, value);
     } catch (_) {
       // A layout preference is not worth an error dialog.
     }
   }
 
+  Future<void> _toggleManagement() async {
+    setState(() => _managementOpen = !_managementOpen);
+    await _remember(_managementKey, _managementOpen);
+  }
+
   Future<void> _toggle() async {
     setState(() => _collapsed = !_collapsed);
-    if (!serviceLocator.isRegistered<KeyValueStore>()) {
-      return;
-    }
-    try {
-      await serviceLocator<KeyValueStore>().put(_box, _key, _collapsed);
-    } catch (_) {
-      // A layout preference is not worth an error dialog.
-    }
+    await _remember(_key, _collapsed);
   }
 
   @override
@@ -99,7 +93,11 @@ class _AppSidebarState extends State<AppSidebar> {
       clipBehavior: Clip.hardEdge,
       width: _collapsed ? Layout.sidebarCollapsed : Layout.sidebar,
       decoration: BoxDecoration(
-        color: scheme.surfaceContainerLow,
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [scheme.surfaceContainerLow, scheme.surface],
+        ),
         border: Border(
           right: BorderSide(
             color: scheme.outlineVariant.withValues(alpha: 0.6),
@@ -111,7 +109,13 @@ class _AppSidebarState extends State<AppSidebar> {
         child: Column(
           children: [
             _header(context),
-            const SizedBox(height: Space.sm),
+            Divider(
+              height: 1,
+              indent: _collapsed ? Space.sm : Space.md,
+              endIndent: _collapsed ? Space.sm : Space.md,
+              color: scheme.outlineVariant.withValues(alpha: 0.5),
+            ),
+            const SizedBox(height: Space.xs),
             Expanded(
               child: ListView(
                 padding: EdgeInsets.symmetric(
@@ -132,6 +136,7 @@ class _AppSidebarState extends State<AppSidebar> {
                       _ManagementSection(
                         label: l10n.navGroupManagement,
                         open: _managementOpen,
+                        count: management.length,
                         onTap: _toggleManagement,
                         children: _accordionItems(context, management),
                       ),
@@ -141,7 +146,10 @@ class _AppSidebarState extends State<AppSidebar> {
                 ],
               ),
             ),
-            const Divider(height: 1),
+            Divider(
+              height: 1,
+              color: scheme.outlineVariant.withValues(alpha: 0.5),
+            ),
             _footer(context),
           ],
         ),
@@ -152,40 +160,36 @@ class _AppSidebarState extends State<AppSidebar> {
   Widget _header(BuildContext context) {
     final l10n = context.l10n;
     final scheme = Theme.of(context).colorScheme;
-    final logo = ClipRRect(
-      borderRadius: BorderRadius.circular(Space.xs),
-      child: Image.asset(
-        'assets/branding/logo.png',
-        width: 34,
-        height: 34,
-        errorBuilder: (_, _, _) =>
-            Icon(Icons.local_parking_rounded, size: 30, color: scheme.primary),
-      ),
-    );
-    final toggle = IconButton(
+    final session = _session(context);
+    final roleLabel = session == null
+        ? null
+        : session.user.role == UserRole.admin
+        ? l10n.roleAdmin
+        : l10n.roleOperator;
+    final toggle = _CollapseButton(
+      collapsed: _collapsed,
       tooltip: _collapsed ? l10n.sidebarExpand : l10n.sidebarCollapse,
       onPressed: _toggle,
-      icon: Icon(_collapsed ? Icons.chevron_right : Icons.chevron_left),
     );
 
     if (_collapsed) {
       return Padding(
-        padding: const EdgeInsets.only(top: Space.sm),
+        padding: const EdgeInsets.symmetric(vertical: Space.sm),
         child: Column(
           children: [
-            logo,
-            const SizedBox(height: Space.xs),
+            const _BrandMark(size: 38),
+            const SizedBox(height: Space.sm),
             toggle,
           ],
         ),
       );
     }
-    final session = _session(context);
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(Space.md, Space.sm, Space.xs, 0),
+      padding: const EdgeInsets.fromLTRB(Space.md, Space.md, Space.xs, Space.md),
       child: Row(
         children: [
-          logo,
+          const _BrandMark(size: 40),
           const SizedBox(width: Space.sm),
           Expanded(
             child: Column(
@@ -195,19 +199,33 @@ class _AppSidebarState extends State<AppSidebar> {
                   _title(context),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleSmall
-                      ?.copyWith(fontWeight: FontWeight.w700),
-                ),
-                if (session != null)
-                  Text(
-                    session.user.role == UserRole.admin
-                        ? l10n.roleAdmin
-                        : l10n.roleOperator,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall
-                        ?.copyWith(color: scheme.onSurfaceVariant),
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.1,
                   ),
+                ),
+                if (roleLabel != null) ...[
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      _StatusDot(
+                        color: session?.user.role == UserRole.admin
+                            ? scheme.primary
+                            : StatusColors.of(context).success,
+                      ),
+                      const SizedBox(width: Space.xs),
+                      Flexible(
+                        child: Text(
+                          roleLabel,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: scheme.onSurfaceVariant),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
@@ -255,11 +273,17 @@ class _AppSidebarState extends State<AppSidebar> {
   }
 
   Widget _groupLabel(BuildContext context, String label) => Padding(
-    padding: const EdgeInsets.fromLTRB(Space.sm, Space.sm, Space.sm, Space.xs),
+    padding: const EdgeInsets.fromLTRB(
+      Space.sm,
+      Space.md,
+      Space.sm,
+      Space.sm,
+    ),
     child: Text(
       label.toUpperCase(),
       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-        letterSpacing: 1.1,
+        letterSpacing: 1.4,
+        fontWeight: FontWeight.w700,
         color: Theme.of(context).colorScheme.onSurfaceVariant,
       ),
     ),
@@ -271,28 +295,33 @@ class _AppSidebarState extends State<AppSidebar> {
   ) {
     final scheme = Theme.of(context).colorScheme;
     return [
-      for (final destination in destinations)
-        Padding(
-          padding: const EdgeInsets.only(left: Space.sm, bottom: 2),
-          child: Container(
-            decoration: BoxDecoration(
-              border: Border(
-                left: BorderSide(
-                  color: scheme.outlineVariant.withValues(alpha: 0.8),
-                  width: 2,
-                ),
+      Padding(
+        padding: const EdgeInsets.only(left: Space.sm, bottom: Space.xs),
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border(
+              left: BorderSide(
+                color: scheme.outlineVariant.withValues(alpha: 0.7),
+                width: 1.5,
               ),
             ),
-            padding: const EdgeInsets.only(left: Space.sm),
-            child: _SidebarItem(
-              key: ValueKey('sidebar_item_${destination.path}'),
-              destination: destination,
-              collapsed: false,
-              selected: destination.matches(widget.location),
-              onTap: () => context.go(destination.path),
-            ),
+          ),
+          padding: const EdgeInsets.only(left: Space.sm),
+          child: Column(
+            children: [
+              for (final destination in destinations)
+                _SidebarItem(
+                  key: ValueKey('sidebar_item_${destination.path}'),
+                  destination: destination,
+                  collapsed: false,
+                  dense: true,
+                  selected: destination.matches(widget.location),
+                  onTap: () => context.go(destination.path),
+                ),
+            ],
           ),
         ),
+      ),
     ];
   }
 
@@ -301,21 +330,17 @@ class _AppSidebarState extends State<AppSidebar> {
     List<AppDestination> destinations,
   ) => [
     for (final destination in destinations)
-      Padding(
-        padding: const EdgeInsets.symmetric(vertical: 2),
-        child: _SidebarItem(
-          key: ValueKey('sidebar_item_${destination.path}'),
-          destination: destination,
-          collapsed: _collapsed,
-          selected: destination.matches(widget.location),
-          onTap: () => context.go(destination.path),
-        ),
+      _SidebarItem(
+        key: ValueKey('sidebar_item_${destination.path}'),
+        destination: destination,
+        collapsed: _collapsed,
+        selected: destination.matches(widget.location),
+        onTap: () => context.go(destination.path),
       ),
   ];
 
   Widget _footer(BuildContext context) {
     final l10n = context.l10n;
-    final scheme = Theme.of(context).colorScheme;
     final session = _session(context);
     final lots = _lots(context);
 
@@ -330,44 +355,16 @@ class _AppSidebarState extends State<AppSidebar> {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (lots != null && lots.canSwitch && lots.active != null)
-            Tooltip(
-              message: l10n.lotSwitchTooltip(lots.active!.name),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(Radii.sm),
-                onTap: () => showLotSwitcher(context, lots.lots, lots.active!),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: _collapsed ? 0 : Space.sm,
-                    vertical: Space.sm,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: _collapsed
-                        ? MainAxisAlignment.center
-                        : MainAxisAlignment.start,
-                    children: [
-                      Icon(
-                        Icons.location_on_outlined,
-                        size: 20,
-                        color: scheme.primary,
-                      ),
-                      if (!_collapsed) ...[
-                        const SizedBox(width: Space.sm),
-                        Expanded(
-                          child: Text(
-                            lots.active!.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.labelLarge,
-                          ),
-                        ),
-                        const Icon(Icons.expand_more, size: 18),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
+            _SiteCard(
+              collapsed: _collapsed,
+              name: lots.active!.name,
+              tooltip: l10n.lotSwitchTooltip(lots.active!.name),
+              onTap: () =>
+                  showLotSwitcher(context, lots.lots, lots.active!),
             ),
-          if (session != null)
+          if (session != null) ...[
+            if (lots != null && lots.canSwitch && lots.active != null)
+              const SizedBox(height: Space.sm),
             _UserCard(
               collapsed: _collapsed,
               displayName: session.user.displayName,
@@ -377,6 +374,7 @@ class _AppSidebarState extends State<AppSidebar> {
               initials: _initials(session.user.displayName),
               onLogout: () => context.read<AuthCubit>().logout(),
             ),
+          ],
         ],
       ),
     );
@@ -405,6 +403,89 @@ class _AppSidebarState extends State<AppSidebar> {
   }
 }
 
+/// Logo inside a tonal tile so the brand reads as an app mark, not a photo.
+class _BrandMark extends StatelessWidget {
+  const _BrandMark({required this.size});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      width: size,
+      height: size,
+      padding: EdgeInsets.all(size * 0.12),
+      decoration: BoxDecoration(
+        color: scheme.primaryContainer,
+        borderRadius: BorderRadius.circular(Radii.md),
+        border: Border.all(color: scheme.primary.withValues(alpha: 0.25)),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(Radii.sm),
+        child: Image.asset(
+          'assets/branding/logo.png',
+          fit: BoxFit.contain,
+          errorBuilder: (_, _, _) => Icon(
+            Icons.local_parking_rounded,
+            size: size * 0.58,
+            color: scheme.onPrimaryContainer,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StatusDot extends StatelessWidget {
+  const _StatusDot({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 7,
+    height: 7,
+    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+  );
+}
+
+/// Small square button that expands/collapses the rail.
+class _CollapseButton extends StatelessWidget {
+  const _CollapseButton({
+    required this.collapsed,
+    required this.tooltip,
+    required this.onPressed,
+  });
+
+  final bool collapsed;
+  final String tooltip;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return IconButton(
+      tooltip: tooltip,
+      onPressed: onPressed,
+      visualDensity: VisualDensity.compact,
+      style: IconButton.styleFrom(
+        backgroundColor: scheme.surfaceContainerHighest.withValues(alpha: 0.6),
+        foregroundColor: scheme.onSurfaceVariant,
+        minimumSize: const Size(Layout.minTouch, Layout.minTouch),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(Radii.sm),
+        ),
+      ),
+      icon: AnimatedRotation(
+        turns: collapsed ? 0.5 : 0,
+        duration: Motion.short,
+        child: Icon(collapsed ? Icons.chevron_right : Icons.chevron_left),
+      ),
+    );
+  }
+}
+
 class _SidebarItem extends StatelessWidget {
   const _SidebarItem({
     super.key,
@@ -412,6 +493,7 @@ class _SidebarItem extends StatelessWidget {
     required this.collapsed,
     required this.selected,
     required this.onTap,
+    this.dense = false,
   });
 
   final AppDestination destination;
@@ -419,61 +501,191 @@ class _SidebarItem extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
 
+  /// Nested management rows use a slightly tighter type scale.
+  final bool dense;
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final label = destination.label(l10n);
     final foreground = selected
         ? scheme.onSecondaryContainer
         : scheme.onSurfaceVariant;
+    final radius = BorderRadius.circular(Radii.md);
 
-    final row = Material(
-      color: selected ? scheme.secondaryContainer : Colors.transparent,
-      borderRadius: BorderRadius.circular(Radii.sm),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(Radii.sm),
-        onTap: onTap,
-        child: Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: collapsed ? 0 : Space.sm,
-            vertical: 10,
-          ),
-          child: Row(
-            mainAxisAlignment: collapsed
-                ? MainAxisAlignment.center
-                : MainAxisAlignment.start,
-            children: [
-              Icon(
-                selected ? destination.selectedIcon : destination.icon,
-                size: 22,
-                color: foreground,
-              ),
-              if (!collapsed) ...[
-                const SizedBox(width: Space.sm),
+    final row = Semantics(
+      selected: selected,
+      button: true,
+      label: label,
+      child: Material(
+        color: selected ? scheme.secondaryContainer : Colors.transparent,
+        borderRadius: radius,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: Layout.minTouch),
+            child: Row(
+              children: [
+                AnimatedContainer(
+                  duration: Motion.short,
+                  width: selected ? 3 : 0,
+                  height: 22,
+                  margin: EdgeInsets.only(
+                    left: collapsed ? 0 : Space.xs,
+                    right: collapsed ? 0 : Space.sm,
+                  ),
+                  decoration: BoxDecoration(
+                    color: selected ? scheme.primary : Colors.transparent,
+                    borderRadius: BorderRadius.circular(Radii.pill),
+                  ),
+                ),
                 Expanded(
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: foreground,
-                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: collapsed ? 0 : Space.sm,
+                      vertical: Space.sm,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: collapsed
+                          ? MainAxisAlignment.center
+                          : MainAxisAlignment.start,
+                      children: [
+                        Icon(
+                          selected
+                              ? destination.selectedIcon
+                              : destination.icon,
+                          size: dense ? 20 : 21,
+                          color: foreground,
+                        ),
+                        if (!collapsed) ...[
+                          const SizedBox(width: Space.sm),
+                          Expanded(
+                            child: Text(
+                              label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: (dense
+                                      ? theme.textTheme.bodyMedium
+                                      : theme.textTheme.labelLarge)
+                                  ?.copyWith(
+                                    color: foreground,
+                                    fontWeight: selected
+                                        ? FontWeight.w700
+                                        : FontWeight.w500,
+                                  ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                 ),
               ],
-            ],
+            ),
           ),
         ),
       ),
     );
 
-    return Semantics(
-      selected: selected,
-      button: true,
-      label: label,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 1),
       child: collapsed ? Tooltip(message: label, child: row) : row,
+    );
+  }
+}
+
+/// Active-site pill in the footer (becomes a tooltip-only icon when collapsed).
+class _SiteCard extends StatelessWidget {
+  const _SiteCard({
+    required this.collapsed,
+    required this.name,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  final bool collapsed;
+  final String name;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    if (collapsed) {
+      return Tooltip(
+        message: tooltip,
+        child: IconButton(
+          onPressed: onTap,
+          icon: Icon(Icons.location_on_outlined, color: scheme.primary),
+          style: IconButton.styleFrom(
+            minimumSize: const Size(Layout.minTouch, Layout.minTouch),
+          ),
+        ),
+      );
+    }
+    return Material(
+      color: scheme.surfaceContainerHigh,
+      borderRadius: BorderRadius.circular(Radii.md),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(Radii.md),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: Space.sm,
+            vertical: Space.sm,
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: scheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(Radii.sm),
+                ),
+                child: Icon(
+                  Icons.location_on_outlined,
+                  size: 17,
+                  color: scheme.onPrimaryContainer,
+                ),
+              ),
+              const SizedBox(width: Space.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      context.l10n.lotLabel,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                    Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.unfold_more,
+                size: 18,
+                color: scheme.onSurfaceVariant,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -498,20 +710,46 @@ class _UserCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final scheme = Theme.of(context).colorScheme;
-    final avatar = CircleAvatar(
-      radius: 18,
-      backgroundColor: scheme.primaryContainer,
-      child: Text(
-        initials,
-        style: Theme.of(context).textTheme.labelLarge
-            ?.copyWith(color: scheme.onPrimaryContainer),
-      ),
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final avatar = Stack(
+      clipBehavior: Clip.none,
+      children: [
+        CircleAvatar(
+          radius: 18,
+          backgroundColor: scheme.primary,
+          child: Text(
+            initials,
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: scheme.onPrimary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        Positioned(
+          right: -1,
+          bottom: -1,
+          child: Container(
+            width: 10,
+            height: 10,
+            decoration: BoxDecoration(
+              color: StatusColors.of(context).success,
+              shape: BoxShape.circle,
+              border: Border.all(color: scheme.surfaceContainerHigh, width: 2),
+            ),
+          ),
+        ),
+      ],
     );
     final logout = IconButton(
       tooltip: l10n.actionLogout,
       onPressed: onLogout,
-      icon: const Icon(Icons.logout, size: 20),
+      visualDensity: VisualDensity.compact,
+      style: IconButton.styleFrom(
+        minimumSize: const Size(Layout.minTouch, Layout.minTouch),
+        foregroundColor: scheme.onSurfaceVariant,
+      ),
+      icon: const Icon(Icons.logout, size: 19),
     );
 
     if (collapsed) {
@@ -526,12 +764,7 @@ class _UserCard extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(
-        Space.sm,
-        Space.sm,
-        Space.xs,
-        Space.sm,
-      ),
+      padding: const EdgeInsets.fromLTRB(Space.sm, Space.sm, Space.xs, Space.sm),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(Radii.md),
@@ -549,14 +782,17 @@ class _UserCard extends StatelessWidget {
                   displayName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.labelLarge,
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 Text(
                   roleLabel,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall
-                      ?.copyWith(color: scheme.onSurfaceVariant),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -574,18 +810,21 @@ class _ManagementSection extends StatelessWidget {
   const _ManagementSection({
     required this.label,
     required this.open,
+    required this.count,
     required this.onTap,
     required this.children,
   });
 
   final String label;
   final bool open;
+  final int count;
   final VoidCallback onTap;
   final List<Widget> children;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -595,45 +834,63 @@ class _ManagementSection extends StatelessWidget {
           label: label,
           child: Material(
             color: Colors.transparent,
-            borderRadius: BorderRadius.circular(Radii.sm),
+            borderRadius: BorderRadius.circular(Radii.md),
             child: InkWell(
               key: const Key('sidebar_management_toggle'),
-              borderRadius: BorderRadius.circular(Radii.sm),
+              borderRadius: BorderRadius.circular(Radii.md),
               onTap: onTap,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: Space.sm,
-                  vertical: 10,
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.space_dashboard_outlined,
-                      size: 22,
-                      color: scheme.onSurfaceVariant,
-                    ),
-                    const SizedBox(width: Space.sm),
-                    Expanded(
-                      child: Text(
-                        label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                    AnimatedRotation(
-                      turns: open ? 0 : -0.25,
-                      duration: Motion.short,
-                      child: Icon(
-                        Icons.expand_more,
-                        size: 20,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: Layout.minTouch),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: Space.sm),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.space_dashboard_outlined,
+                        size: 21,
                         color: scheme.onSurfaceVariant,
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: Space.sm),
+                      Expanded(
+                        child: Text(
+                          label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: Space.xs,
+                          vertical: 1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: scheme.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(Radii.pill),
+                        ),
+                        child: Text(
+                          '$count',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: Space.xs),
+                      AnimatedRotation(
+                        turns: open ? 0 : -0.25,
+                        duration: Motion.short,
+                        child: Icon(
+                          Icons.expand_more,
+                          size: 20,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

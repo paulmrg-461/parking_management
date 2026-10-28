@@ -13,6 +13,13 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 **UI/UX pass across every module**
 
+- Side navigation: branded logo tile and role dot, hairline under the header,
+  rounded nav pills with a primary accent bar for the active page, denser
+  nested management rows under a guide line, a count badge and rotating
+  chevron on the management accordion, active-site card with icon tile and a
+  user card with gradient avatar, online dot and compact logout; the collapsed
+  rail keeps tonal icon squares, tooltips and the avatar. Tokens and
+  `ColorScheme` only.
 - Sign-in screen: on wide screens it splits into a tonal brand panel (identity,
   tagline and the three operator jobs) and a bordered form card; phones keep
   one column with the compact brand header. The PIN can be revealed with an
