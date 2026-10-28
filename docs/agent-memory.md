@@ -58,6 +58,10 @@ currency, es/en language, records exports).
 - Gotcha: a lazily built `ListView` only builds visible children, so tests that
   assert the last row must use a tall viewport or scroll before asserting.
 
+- **Scan shortcut (2026-10-28)**: the shell FAB is hidden whenever
+  `isManagementLocation(location)` (any `managementDestinations` entry) so
+  admin/reference screens stay clean; it remains on home, check-in/out,
+  records, notifications, contact and vehicle history.
 - **Sidebar (2026-10-28)**: tonal logo mark + role dot, gradient surface,
   rounded nav pills with accent bar, management accordion with count badge and
   indented guide line, site card and user card with online dot. Keys/tooltips

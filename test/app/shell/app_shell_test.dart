@@ -339,6 +339,27 @@ void main() {
     expect(find.byIcon(Icons.chat), findsNothing);
   });
 
+  testWidgets('Security: the QR shortcut is hidden on management routes', (
+    tester,
+  ) async {
+    await pumpApp(tester, role: UserRole.admin, size: const Size(1200, 1100));
+    final sidebar = find.byType(AppSidebar);
+
+    expect(find.byIcon(Icons.qr_code_scanner), findsOneWidget);
+
+    await tester.tap(
+      find.descendant(of: sidebar, matching: find.text('Usuarios')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byIcon(Icons.qr_code_scanner), findsNothing);
+
+    await tester.tap(
+      find.descendant(of: sidebar, matching: find.text('Inicio')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byIcon(Icons.qr_code_scanner), findsOneWidget);
+  });
+
   testWidgets('Success: online hides the OfflineBanner', (tester) async {
     final connectivity = ConnectivityCubit(_FixedConnectivity(online: true));
     addTearDown(connectivity.close);

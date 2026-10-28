@@ -171,7 +171,9 @@ class _WideShell extends StatelessWidget {
           Expanded(child: content),
         ],
       ),
-      floatingActionButton: const _ScanQrFab(),
+      floatingActionButton: isManagementLocation(location)
+          ? null
+          : const _ScanQrFab(),
     );
   }
 }
@@ -234,7 +236,9 @@ class _NarrowShellState extends State<_NarrowShell> {
         },
       ),
       body: widget.content,
-      floatingActionButton: const _ScanQrFab(),
+      floatingActionButton: isManagementLocation(widget.location)
+          ? null
+          : const _ScanQrFab(),
       bottomNavigationBar: NavigationBar(
         selectedIndex: selected >= 0 ? selected : menuIndex,
         onDestinationSelected: (index) {

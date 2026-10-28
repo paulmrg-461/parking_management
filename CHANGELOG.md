@@ -13,6 +13,9 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 **UI/UX pass across every module**
 
+- The scan-to-check-out shortcut is now hidden on every management route
+  (vehicles, tariffs, categories, diagnostics, audit, sites, reservations,
+  passes, users, reports, settings); it stays on the operator screens.
 - Side navigation: branded logo tile and role dot, hairline under the header,
   rounded nav pills with a primary accent bar for the active page, denser
   nested management rows under a guide line, a count badge and rotating
