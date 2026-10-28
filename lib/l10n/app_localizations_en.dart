@@ -1498,6 +1498,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Record a short walk-around (max 60 s) in case of a claim.';
 
   @override
+  String get videoPick => 'Choose video';
+
+  @override
   String get videoRecord => 'Record video';
 
   @override

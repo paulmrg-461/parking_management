@@ -496,6 +496,7 @@
   "@checkInSuccessSpot": {"placeholders": {"plate": {"type": "String"}, "spot": {"type": "String"}}},
   "videoEvidenceTitle": "Evidence video (optional)",
   "videoEvidenceHint": "Record a short walk-around (max 60 s) in case of a claim.",
+  "videoPick": "Choose video",
   "videoRecord": "Record video",
   "videoRecorded": "Video ready",
   "videoRecordedHint": "It will be attached to the entry and follows the evidence retention.",

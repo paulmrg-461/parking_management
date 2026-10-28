@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
@@ -692,7 +693,7 @@ class _CheckInPageState extends State<CheckInPage> {
             key: const Key('check_in_record_video'),
             onPressed: _pickVideo,
             icon: const Icon(Icons.videocam_outlined),
-            label: Text(l10n.videoRecord),
+            label: Text(kIsWeb ? l10n.videoPick : l10n.videoRecord),
           )
         else
           Card(

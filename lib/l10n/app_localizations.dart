@@ -2810,6 +2810,12 @@ abstract class AppLocalizations {
   /// **'Graba un recorrido corto del vehículo (máx. 60 s) por si hay reclamos.'**
   String get videoEvidenceHint;
 
+  /// No description provided for @videoPick.
+  ///
+  /// In es, this message translates to:
+  /// **'Elegir video'**
+  String get videoPick;
+
   /// No description provided for @videoRecord.
   ///
   /// In es, this message translates to:

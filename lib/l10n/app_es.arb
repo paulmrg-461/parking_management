@@ -518,6 +518,7 @@
   "@checkInSuccessSpot": {"placeholders": {"plate": {"type": "String"}, "spot": {"type": "String"}}},
   "videoEvidenceTitle": "Video de evidencia (opcional)",
   "videoEvidenceHint": "Graba un recorrido corto del vehículo (máx. 60 s) por si hay reclamos.",
+  "videoPick": "Elegir video",
   "videoRecord": "Grabar video",
   "videoRecorded": "Video listo",
   "videoRecordedHint": "Se adjuntará al ingreso y respeta la retención de evidencia.",

@@ -1510,6 +1510,9 @@ class AppLocalizationsEs extends AppLocalizations {
       'Graba un recorrido corto del vehículo (máx. 60 s) por si hay reclamos.';
 
   @override
+  String get videoPick => 'Elegir video';
+
+  @override
   String get videoRecord => 'Grabar video';
 
   @override
