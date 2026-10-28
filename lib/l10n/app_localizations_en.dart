@@ -1023,6 +1023,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get vehicleHistoryOpen => 'In progress';
 
   @override
+  String get navMenu => 'Menu';
+
+  @override
+  String get navMenuTooltip => 'Open the menu';
+
+  @override
   String get navMore => 'More';
 
   @override

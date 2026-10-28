@@ -24,7 +24,7 @@ import 'widgets/slot_board_card.dart';
 
 /// Dashboard at `/`: greeting, current occupancy and the two primary
 /// operator actions (Entrada / Salida). Admins also get management
-/// shortcuts (the rail / "Más" menu stays the main way in).
+/// shortcuts (the rail / menu drawer stays the main way in).
 class HomePage extends StatefulWidget {
   const HomePage({super.key, this.reservations});
 

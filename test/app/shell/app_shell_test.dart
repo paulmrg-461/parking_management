@@ -27,10 +27,75 @@ void main() {
 
     expect(find.byType(NavigationBar), findsOneWidget);
     expect(find.byType(NavigationRail), findsNothing);
-    for (final label in ['Inicio', 'Entrada', 'Salida', 'Registros']) {
+    for (final label in ['Inicio', 'Entrada', 'Salida', 'Registros', 'Menú']) {
       expect(find.widgetWithText(NavigationBar, label), findsOneWidget);
     }
-    expect(find.widgetWithText(NavigationBar, 'Más'), findsNothing);
+    for (final label in ['Avisos', 'Contacto', 'Vehículos', 'Ajustes']) {
+      expect(find.widgetWithText(NavigationBar, label), findsNothing);
+    }
+  });
+
+  testWidgets('Success: the menu drawer holds the remaining sections', (
+    tester,
+  ) async {
+    await pumpApp(tester, role: UserRole.admin);
+
+    await tester.tap(find.text('Menú'));
+    await tester.pumpAndSettle();
+
+    final drawer = find.byType(Drawer);
+    expect(drawer, findsOneWidget);
+    for (final label in ['Avisos', 'Contacto', 'Vehículos']) {
+      expect(
+        find.descendant(of: drawer, matching: find.text(label)),
+        findsOneWidget,
+      );
+    }
+    for (final label in ['Inicio', 'Entrada', 'Salida', 'Registros']) {
+      expect(
+        find.descendant(of: drawer, matching: find.text(label)),
+        findsNothing,
+      );
+    }
+  });
+
+  testWidgets('Security: operators only get allowed drawer sections', (
+    tester,
+  ) async {
+    await pumpApp(tester, role: UserRole.operator);
+
+    await tester.tap(find.text('Menú'));
+    await tester.pumpAndSettle();
+
+    final drawer = find.byType(Drawer);
+    expect(
+      find.descendant(of: drawer, matching: find.text('Avisos')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: drawer, matching: find.text('Vehículos')),
+      findsNothing,
+    );
+    expect(
+      find.descendant(of: drawer, matching: find.text('Ajustes')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('Success: a drawer item navigates and closes the menu', (
+    tester,
+  ) async {
+    await pumpApp(tester, role: UserRole.operator);
+
+    await tester.tap(find.text('Menú'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(of: find.byType(Drawer), matching: find.text('Avisos')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(AppBar, 'Notificaciones'), findsOneWidget);
+    expect(find.byType(Drawer), findsNothing);
   });
 
   testWidgets(
@@ -170,23 +235,24 @@ void main() {
     );
   });
 
-  testWidgets('Success: admin on a phone reaches management via "Más"', (
+  testWidgets('Success: admin on a phone reaches management via the drawer', (
     tester,
   ) async {
     await pumpApp(tester, role: UserRole.admin);
 
-    await tester.tap(find.text('Más'));
+    await tester.tap(find.text('Menú'));
     await tester.pumpAndSettle();
+    final drawer = find.byType(Drawer);
     final usuarios = find.descendant(
-      of: find.byType(BottomSheet),
+      of: drawer,
       matching: find.text('Usuarios'),
     );
-    // The management sheet has more entries than fit on screen.
+    // The drawer list has more entries than fit on screen.
     await tester.scrollUntilVisible(
       usuarios,
       200,
       scrollable: find.descendant(
-        of: find.byType(BottomSheet),
+        of: drawer,
         matching: find.byType(Scrollable),
       ),
     );

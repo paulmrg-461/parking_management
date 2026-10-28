@@ -336,6 +336,8 @@
   "vehicleHistoryNoSessions": "No sessions recorded",
   "vehicleHistoryDuration": "Duration: {duration}",
   "vehicleHistoryOpen": "In progress",
+  "navMenu": "Menu",
+  "navMenuTooltip": "Open the menu",
   "navMore": "More",
   "navMoreTooltip": "More management sections",
 

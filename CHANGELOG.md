@@ -53,6 +53,11 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   holds obey the same limit. Deleting a bay clears the reference on old
   sessions instead of blocking (`0059`). The entry receipt/snackbar names the
   assigned spot.
+- **Mobile navigation: 5 tabs + drawer.** The phone layout keeps four main
+  destinations (Inicio, Entrada, Salida, Registros) and a fifth **Menú** tab
+  that opens a drawer with the rest (notifications, contact, management
+  sections for admins) plus the site/user header and sign-out; the wide layout
+  keeps the sidebar.
 - **Cash received and change are stored.** The amount handed over and the
   change go into `parking_sessions.cash_received/cash_change` (`0067`,
   `check_out(p_cash_received)`); short cash is refused server-side and the
@@ -413,7 +418,7 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Tests
 
-- 781 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
+- 784 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
   integration test that runs only against a live stack.
 - SQL/RLS/RPC regressions covering capacity, shifts, discounts, passes,
   reservations, multi-site isolation, audit, diagnostics and retention.
@@ -451,7 +456,7 @@ Captured on 2026-10-24 against the local self-hosted stack:
 
 | Check | Result |
 |---|---|
-| `flutter test` | 781 passed (+1 live-stack integration skipped) |
+| `flutter test` | 784 passed (+1 live-stack integration skipped) |
 | `flutter analyze` | 0 errors, 0 warnings (only SDK deprecation infos) |
 | `flutter build web --release` | OK |
 | `supabase/tests/run.sh` | Passed (migrations + RPC/RLS regressions) |

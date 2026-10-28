@@ -126,7 +126,7 @@ RPCs own business logic and the Flutter client calls Supabase directly.
   browser push uses `web/push-sw.js` + VAPID (`web_push_subscriptions`);
   `FCM_SERVICE_ACCOUNT_JSON` + `supabase/notifications-cron.sh` enable
   background FCM. `push-dispatch` is service-role-only; never expose the key.
-- Tests: `flutter test` (781, plus a live-stack e2e) + `flutter analyze`; CI
+- Tests: `flutter test` (784, plus a live-stack e2e) + `flutter analyze`; CI
   validates compose and runs `supabase/tests/run.sh` (real migrations +
   RPC/RLS tests) against `supabase/postgres`. The only expected analyzer output
   is SDK `deprecated_member_use` infos from the pinned beta channel (no other
@@ -179,6 +179,10 @@ Write 3 tests (Success / Failure / Security) BEFORE logic.
   the profile. Logout clears reference-data caches and signs out locally
   (`SignOutScope.local`) but never clears the outbox. The auth-state listener
   refreshes the Hive token snapshot.
+- **Mobile navigation**: the phone shell shows four main tabs (home, check-in,
+  check-out, records) plus a **Menú** tab that opens the drawer with every other
+  allowed destination and sign-out; never put more than five items in the
+  bottom bar. The wide layout keeps the sidebar.
 - **Lists used for lookups** (open sessions, vehicles, monthly passes) must
   walk every Supabase page; PostgREST caps rows per request.
 - **UI text**: always `context.l10n`; no hardcoded operator-facing strings.

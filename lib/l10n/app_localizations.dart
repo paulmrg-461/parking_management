@@ -1934,6 +1934,18 @@ abstract class AppLocalizations {
   /// **'En curso'**
   String get vehicleHistoryOpen;
 
+  /// No description provided for @navMenu.
+  ///
+  /// In es, this message translates to:
+  /// **'Menú'**
+  String get navMenu;
+
+  /// No description provided for @navMenuTooltip.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir el menú'**
+  String get navMenuTooltip;
+
   /// No description provided for @navMore.
   ///
   /// In es, this message translates to:

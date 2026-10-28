@@ -348,6 +348,8 @@
   "vehicleHistoryDuration": "Duración: {duration}",
   "@vehicleHistoryDuration": {"placeholders": {"duration": {"type": "String"}}},
   "vehicleHistoryOpen": "En curso",
+  "navMenu": "Menú",
+  "navMenuTooltip": "Abrir el menú",
   "navMore": "Más",
   "navMoreTooltip": "Más secciones de gestión",
 

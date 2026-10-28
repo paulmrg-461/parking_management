@@ -176,7 +176,7 @@ class _WideShell extends StatelessWidget {
   }
 }
 
-class _NarrowShell extends StatelessWidget {
+class _NarrowShell extends StatefulWidget {
   const _NarrowShell({
     required this.role,
     required this.location,
@@ -188,68 +188,189 @@ class _NarrowShell extends StatelessWidget {
   final Widget content;
 
   @override
+  State<_NarrowShell> createState() => _NarrowShellState();
+}
+
+class _NarrowShellState extends State<_NarrowShell> {
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  static const _barCount = 4;
+
+  List<AppDestination> get _bar =>
+      destinationsFor(widget.role, management: false).take(_barCount).toList();
+
+  /// Everything not in the bottom bar (the "rest"), for the drawer.
+  List<AppDestination> get _drawerDestinations {
+    final barPaths = {for (final destination in _bar) destination.path};
+    return [
+      for (final destination in destinationsFor(widget.role))
+        if (!barPaths.contains(destination.path)) destination,
+    ];
+  }
+
+  void _openDrawer() => _scaffoldKey.currentState?.openDrawer();
+
+  void _navigate(String path) {
+    _scaffoldKey.currentState?.closeDrawer();
+    context.go(path);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final primary = destinationsFor(role, management: false);
-    final more = destinationsFor(role).skip(primary.length).toList();
+    final bar = _bar;
+    final destinations = _drawerDestinations;
+    final menuIndex = bar.length;
+    final selected = bar.indexWhere((d) => d.matches(widget.location));
     return Scaffold(
-      body: content,
+      key: _scaffoldKey,
+      drawer: _AppMenuDrawer(
+        role: widget.role,
+        location: widget.location,
+        destinations: destinations,
+        onNavigate: _navigate,
+        onLogout: () {
+          _scaffoldKey.currentState?.closeDrawer();
+          context.read<AuthCubit>().logout();
+        },
+      ),
+      body: widget.content,
       floatingActionButton: const _ScanQrFab(),
       bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex(primary, more),
-        onDestinationSelected: (i) => i < primary.length
-            ? context.go(primary[i].path)
-            : _showMore(context, more),
+        selectedIndex: selected >= 0 ? selected : menuIndex,
+        onDestinationSelected: (index) {
+          if (index == menuIndex) {
+            _openDrawer();
+            return;
+          }
+          context.go(bar[index].path);
+        },
         destinations: [
-          for (final d in primary)
+          for (final destination in bar)
             NavigationDestination(
-              icon: _NavIcon(destination: d, icon: d.icon),
+              icon: _NavIcon(destination: destination, icon: destination.icon),
               selectedIcon: _NavIcon(
-                destination: d,
-                icon: d.selectedIcon,
+                destination: destination,
+                icon: destination.selectedIcon,
               ),
-              label: d.label(context.l10n),
+              label: destination.label(context.l10n),
             ),
-          if (more.isNotEmpty)
-            NavigationDestination(
-              icon: const Icon(Icons.more_horiz),
-              label: context.l10n.navMore,
-              tooltip: context.l10n.navMoreTooltip,
-            ),
+          NavigationDestination(
+            icon: const Icon(Icons.menu),
+            label: context.l10n.navMenu,
+            tooltip: context.l10n.navMenuTooltip,
+          ),
         ],
       ),
     );
   }
+}
 
-  int _selectedIndex(List<AppDestination> primary, List<AppDestination> more) {
-    final index = primary.indexWhere((d) => d.matches(location));
-    if (index >= 0) {
-      return index;
-    }
-    return more.any((d) => d.matches(location)) ? primary.length : 0;
-  }
+/// Side menu for the phone layout: everything that does not fit in the five
+/// bottom tabs (notifications, contact, management sections) plus the account.
+class _AppMenuDrawer extends StatelessWidget {
+  const _AppMenuDrawer({
+    required this.role,
+    required this.location,
+    required this.destinations,
+    required this.onNavigate,
+    required this.onLogout,
+  });
 
-  void _showMore(BuildContext context, List<AppDestination> more) {
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (sheetContext) => SafeArea(
-        child: ListView(
-          shrinkWrap: true,
+  final UserRole role;
+  final String location;
+  final List<AppDestination> destinations;
+  final ValueChanged<String> onNavigate;
+  final VoidCallback onLogout;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final user = switch (context.watch<AuthCubit>().state) {
+      AuthAuthenticated(:final session) => session.user,
+      _ => null,
+    };
+    final title = _lotTitle(context, l10n);
+    return Drawer(
+      child: SafeArea(
+        child: Column(
           children: [
-            for (final d in more)
-              ListTile(
-                leading: Icon(d.icon),
-                title: Text(d.label(context.l10n)),
-                selected: d.matches(location),
-                onTap: () {
-                  Navigator.of(sheetContext).pop();
-                  context.go(d.path);
-                },
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                Space.md,
+                Space.md,
+                Space.md,
+                Space.sm,
               ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.local_parking_rounded,
+                    size: 32,
+                    color: theme.colorScheme.primary,
+                  ),
+                  const SizedBox(width: Space.sm),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleMedium,
+                        ),
+                        if (user != null)
+                          Text(
+                            '${user.displayName} · '
+                            '${user.role == UserRole.admin ? l10n.roleAdmin : l10n.roleOperator}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(vertical: Space.sm),
+                children: [
+                  for (final destination in destinations)
+                    ListTile(
+                      leading: Icon(destination.icon),
+                      title: Text(destination.label(l10n)),
+                      selected: destination.matches(location),
+                      onTap: () => onNavigate(destination.path),
+                    ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            ListTile(
+              leading: const Icon(Icons.logout),
+              title: Text(l10n.actionLogout),
+              onTap: onLogout,
+            ),
           ],
         ),
       ),
     );
+  }
+
+  String _lotTitle(BuildContext context, AppLocalizations l10n) {
+    try {
+      return context.select<BrandingCubit, String>(
+        (cubit) => cubit.state.titleFor(l10n),
+      );
+    } on ProviderNotFoundException {
+      return l10n.navHome;
+    }
   }
 }
 
