@@ -243,7 +243,14 @@ class _ReceiptDialog extends StatelessWidget {
                   const SizedBox(height: Space.lg),
                   if (onPrint != null) ...[
                     OutlinedButton.icon(
-                      onPressed: () => onPrint!(),
+                      onPressed: () {
+                        // Close the receipt first: the print sheet must not
+                        // stack behind this dialog.
+                        Navigator.of(context).pop();
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          onPrint!();
+                        });
+                      },
                       icon: const Icon(Icons.print),
                       label: Text(l10n.printReceipt),
                     ),

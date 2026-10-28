@@ -267,4 +267,36 @@ void main() {
     expect(find.text('Cambio'), findsOneWidget);
     expect(find.text(r'$7.500'), findsOneWidget);
   });
+
+  testWidgets('Imprimir closes the receipt before the print sheet', (
+    tester,
+  ) async {
+    var printed = false;
+    await tester.pumpWidget(
+      testApp(
+        Scaffold(
+          body: Builder(
+            builder: (context) => FilledButton(
+              onPressed: () => showReceipt(
+                context,
+                _checkOutData(),
+                onPrint: () async => printed = true,
+              ),
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    expect(find.byType(ReceiptCard), findsOneWidget);
+
+    await tester.tap(find.text('Imprimir'));
+    await tester.pumpAndSettle();
+
+    expect(printed, isTrue);
+    expect(find.byType(ReceiptCard), findsNothing);
+  });
 }

@@ -53,6 +53,9 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   holds obey the same limit. Deleting a bay clears the reference on old
   sessions instead of blocking (`0059`). The entry receipt/snackbar names the
   assigned spot.
+- **Print no longer hides behind the receipt.** "Imprimir" closes the receipt
+  dialog first (post-frame) and then opens the print sheet, so the
+  printer/PDF choice is always on top.
 - **Mobile navigation: 5 tabs + drawer.** The phone layout keeps four main
   destinations (Inicio, Entrada, Salida, Registros) and a fifth **Menú** tab
   that opens a drawer with the rest (notifications, contact, management
@@ -418,7 +421,7 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Tests
 
-- 784 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
+- 785 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
   integration test that runs only against a live stack.
 - SQL/RLS/RPC regressions covering capacity, shifts, discounts, passes,
   reservations, multi-site isolation, audit, diagnostics and retention.
@@ -456,7 +459,7 @@ Captured on 2026-10-24 against the local self-hosted stack:
 
 | Check | Result |
 |---|---|
-| `flutter test` | 784 passed (+1 live-stack integration skipped) |
+| `flutter test` | 785 passed (+1 live-stack integration skipped) |
 | `flutter analyze` | 0 errors, 0 warnings (only SDK deprecation infos) |
 | `flutter build web --release` | OK |
 | `supabase/tests/run.sh` | Passed (migrations + RPC/RLS regressions) |
