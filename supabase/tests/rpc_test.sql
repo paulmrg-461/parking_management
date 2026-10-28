@@ -1677,6 +1677,15 @@ begin
     perform public.save_parking_spot('C1', 'car', 0, 0);
     perform public.save_parking_spot('C2', 'car', 0, 1);
 
+    -- The snapshot keeps the configured target next to the drawn bays.
+    update public.parking_settings set car_capacity = 3 where lot_id = 1;
+    select public.capacity_snapshot() into car_space;
+    if (car_space ->> 'car_capacity')::integer <> 2
+       or (car_space ->> 'car_target_capacity')::integer <> 3 then
+        raise exception 'snapshot lost drawn vs target bays: %', car_space;
+    end if;
+    update public.parking_settings set car_capacity = 2 where lot_id = 1;
+
     refused := false;
     begin
         perform public.save_parking_spot('C3', 'car', 1, 0);

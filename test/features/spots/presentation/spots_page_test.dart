@@ -156,4 +156,21 @@ void main() {
     );
     expect(car.enabled, isFalse);
   });
+
+  testWidgets('Success: the drawn bays do not change the configured target', (
+    tester,
+  ) async {
+    await pumpPage(
+      tester,
+      sampleRepository(),
+      capacity: const CapacitySnapshot(
+        carCapacity: 2,
+        carTargetCapacity: 4,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Carros y camionetas 2 de 4'), findsOneWidget);
+    expect(find.text('Faltan 2'), findsOneWidget);
+  });
 }

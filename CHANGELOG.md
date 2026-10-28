@@ -57,7 +57,9 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   `drawn / configured` per group (`0060`): a group cannot take more bays than
   its capacity and cannot drop below it (lower the capacity in Ajustes first);
   the add dialog disables full groups and the server enforces the same rule
-  (`SpotCapacityReachedError` / `SpotCapacityRequiredError`). The editor and the
+  (`SpotCapacityReachedError` / `SpotCapacityRequiredError`). `capacity_snapshot`
+  exposes the configured target next to the drawn count (`0061`), so the editor
+  keeps the right goal after the first bays exist. The editor and the
   dashboard board share one `SpotCellView` (72 px bays, 6 px gaps, same colors,
   stripes and icons), so the dashboard draws an exact copy of the configured
   layout.
@@ -346,7 +348,7 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Tests
 
-- 728 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
+- 731 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
   integration test that runs only against a live stack.
 - SQL/RLS/RPC regressions covering capacity, shifts, discounts, passes,
   reservations, multi-site isolation, audit, diagnostics and retention.
@@ -384,7 +386,7 @@ Captured on 2026-10-24 against the local self-hosted stack:
 
 | Check | Result |
 |---|---|
-| `flutter test` | 728 passed (+1 live-stack integration skipped) |
+| `flutter test` | 731 passed (+1 live-stack integration skipped) |
 | `flutter analyze` | 0 errors, 0 warnings (only SDK deprecation infos) |
 | `flutter build web --release` | OK |
 | `supabase/tests/run.sh` | Passed (migrations + RPC/RLS regressions) |

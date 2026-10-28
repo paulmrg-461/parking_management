@@ -42,8 +42,8 @@ class _SpotsPageState extends State<SpotsPage> {
       final state = context.watch<DashboardCubit>().state;
       if (state is DashboardLoaded) {
         return {
-          SlotGroup.car: state.capacity.carCapacity,
-          SlotGroup.moto: state.capacity.motoCapacity,
+          SlotGroup.car: state.capacity.carTarget,
+          SlotGroup.moto: state.capacity.motoTarget,
         };
       }
     } on ProviderNotFoundException {

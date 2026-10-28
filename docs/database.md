@@ -100,6 +100,8 @@ bay), `save_parking_spot`, `delete_parking_spot`, `assign_session_spot`,
 `category_group(name)`, `spot_target_capacity(lot, group)`; a group with spots
 limits check-ins and holds to its active bays, and `save/delete_parking_spot`
 keep the drawn bays equal to the configured capacity (`0` = no limit).
+`capacity_snapshot` returns `car_target_capacity`/`moto_target_capacity` (raw
+settings) beside the derived `car_capacity`/`moto_capacity`.
 
 **Billing and reports**
 `report_revenue` (active lot), `report_revenue_all` (platform admins),

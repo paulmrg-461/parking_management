@@ -7,10 +7,12 @@ class CapacitySnapshot extends Equatable {
     this.carOpen = 0,
     this.carCapacity = 0,
     this.carOutOfService = 0,
+    this.carTargetCapacity = 0,
     this.carReserved = 0,
     this.motoOpen = 0,
     this.motoCapacity = 0,
     this.motoOutOfService = 0,
+    this.motoTargetCapacity = 0,
     this.motoReserved = 0,
     this.keysOpen = 0,
     this.keyCapacity = 0,
@@ -24,11 +26,18 @@ class CapacitySnapshot extends Equatable {
   /// Car spots out of the usable pool (maintenance, blocked area).
   final int carOutOfService;
 
+  /// Capacity configured in Ajustes, even when bays are already drawn (the
+  /// map editor must match it). Falls back to [carCapacity].
+  final int carTargetCapacity;
+
   /// Active holds for the car group (spots promised, not occupied yet).
   final int carReserved;
   final int motoOpen;
   final int motoCapacity;
   final int motoOutOfService;
+
+  /// Capacity configured in Ajustes (see [carTargetCapacity]).
+  final int motoTargetCapacity;
   final int motoReserved;
   final int keysOpen;
   final int keyCapacity;
@@ -38,6 +47,13 @@ class CapacitySnapshot extends Equatable {
   final int reservationsExpiring;
 
   static const empty = CapacitySnapshot();
+
+  /// Configured target, falling back to the derived capacity for payloads
+  /// written before the target field existed.
+  int get carTarget => carTargetCapacity > 0 ? carTargetCapacity : carCapacity;
+
+  /// Configured moto target (see [carTarget]).
+  int get motoTarget => motoTargetCapacity > 0 ? motoTargetCapacity : motoCapacity;
 
   /// Usable car spots: configured capacity minus the ones out of service.
   /// `0` capacity means "no limit", so this stays `0` too.
@@ -70,10 +86,18 @@ class CapacitySnapshot extends Equatable {
         carOpen: (json['car_open'] as num?)?.toInt() ?? 0,
         carCapacity: (json['car_capacity'] as num?)?.toInt() ?? 0,
         carOutOfService: (json['car_out_of_service'] as num?)?.toInt() ?? 0,
+        carTargetCapacity:
+            (json['car_target_capacity'] as num?)?.toInt() ??
+            (json['car_capacity'] as num?)?.toInt() ??
+            0,
         carReserved: (json['car_reserved'] as num?)?.toInt() ?? 0,
         motoOpen: (json['moto_open'] as num?)?.toInt() ?? 0,
         motoCapacity: (json['moto_capacity'] as num?)?.toInt() ?? 0,
         motoOutOfService: (json['moto_out_of_service'] as num?)?.toInt() ?? 0,
+        motoTargetCapacity:
+            (json['moto_target_capacity'] as num?)?.toInt() ??
+            (json['moto_capacity'] as num?)?.toInt() ??
+            0,
         motoReserved: (json['moto_reserved'] as num?)?.toInt() ?? 0,
         keysOpen: (json['keys_open'] as num?)?.toInt() ?? 0,
         keyCapacity: (json['key_capacity'] as num?)?.toInt() ?? 0,
@@ -87,10 +111,12 @@ class CapacitySnapshot extends Equatable {
     carOpen,
     carCapacity,
     carOutOfService,
+    carTargetCapacity,
     carReserved,
     motoOpen,
     motoCapacity,
     motoOutOfService,
+    motoTargetCapacity,
     motoReserved,
     keysOpen,
     keyCapacity,

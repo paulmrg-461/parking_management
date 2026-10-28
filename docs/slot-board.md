@@ -25,8 +25,10 @@ The **number of bays equals the configured capacity** (`car_capacity` /
 `moto_capacity` in Ajustes; `0` = no limit). The editor shows
 `drawn / configured` per group and warns `Faltan N` / `Sobran N`; it blocks
 adding past the target and deleting below it, and the server enforces the same
-(`SpotCapacityReachedError` / `SpotCapacityRequiredError`). To remove bays,
-lower the capacity in Ajustes first. The editor and the board share
+(`SpotCapacityReachedError` / `SpotCapacityRequiredError`). The snapshot carries
+the configured target (`car_target_capacity`) next to the drawn count, so the
+editor keeps the right goal once bays exist. To remove bays, lower the capacity
+in Ajustes first. The editor and the board share
 `SpotCellView` (72 px bay, 6 px gap, same icon/colors/stripes), so the
 dashboard is an exact copy of the configured distribution.
 

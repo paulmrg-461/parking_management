@@ -30,4 +30,24 @@ void main() {
     expect(capacity.carFree, 0);
     expect(capacity.carsFull, isFalse);
   });
+
+  test('Success: the configured target survives a drawn map', () {
+    final capacity = CapacitySnapshot.fromJson(const {
+      'car_capacity': 2,
+      'car_available': 2,
+      'car_target_capacity': 4,
+    });
+
+    expect(capacity.carCapacity, 2);
+    expect(capacity.carTarget, 4);
+  });
+
+  test('Failure: older payloads fall back to the derived capacity', () {
+    final capacity = CapacitySnapshot.fromJson(const {
+      'car_capacity': 6,
+      'car_available': 6,
+    });
+
+    expect(capacity.carTarget, 6);
+  });
 }
