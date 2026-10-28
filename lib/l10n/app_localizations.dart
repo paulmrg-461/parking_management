@@ -290,6 +290,36 @@ abstract class AppLocalizations {
   /// **'Ver evidencias'**
   String get evidenceUnlock;
 
+  /// No description provided for @policiesTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Políticas y contrato'**
+  String get policiesTitle;
+
+  /// No description provided for @policiesInvalid.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos cargar las políticas de este parqueadero.'**
+  String get policiesInvalid;
+
+  /// No description provided for @policiesEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Este parqueadero aún no publicó sus políticas.'**
+  String get policiesEmpty;
+
+  /// No description provided for @policiesHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Al ingresar el vehículo aceptas estas políticas. Si tienes dudas, contacta al parqueadero.'**
+  String get policiesHelp;
+
+  /// No description provided for @evidenceOpenPolicies.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver políticas y contrato del parqueadero'**
+  String get evidenceOpenPolicies;
+
   /// No description provided for @evidenceTitle.
   ///
   /// In es, this message translates to:
@@ -2119,6 +2149,54 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Evidencia'**
   String get settingsSectionEvidence;
+
+  /// No description provided for @settingsSectionLegal.
+  ///
+  /// In es, this message translates to:
+  /// **'Políticas y contrato'**
+  String get settingsSectionLegal;
+
+  /// No description provided for @settingsLegalPolicy.
+  ///
+  /// In es, this message translates to:
+  /// **'Texto de políticas y contrato de servicio'**
+  String get settingsLegalPolicy;
+
+  /// No description provided for @settingsLegalPolicyHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Se muestra al cliente en la página de evidencias. El texto admite etiquetas para el nombre, la dirección, el horario y el teléfono.'**
+  String get settingsLegalPolicyHint;
+
+  /// No description provided for @settingsLegalReset.
+  ///
+  /// In es, this message translates to:
+  /// **'Restaurar plantilla'**
+  String get settingsLegalReset;
+
+  /// No description provided for @settingsLegalResetDone.
+  ///
+  /// In es, this message translates to:
+  /// **'Plantilla restaurada'**
+  String get settingsLegalResetDone;
+
+  /// No description provided for @settingsLegalPreview.
+  ///
+  /// In es, this message translates to:
+  /// **'Vista previa'**
+  String get settingsLegalPreview;
+
+  /// No description provided for @settingsLegalPreviewTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Vista previa de las políticas'**
+  String get settingsLegalPreviewTitle;
+
+  /// No description provided for @settingsLegalEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin texto. Usa la plantilla o escribe tus políticas.'**
+  String get settingsLegalEmpty;
 
   /// No description provided for @settingsSectionMessaging.
   ///

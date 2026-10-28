@@ -114,6 +114,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get evidenceUnlock => 'See evidence';
 
   @override
+  String get policiesTitle => 'Policies and contract';
+
+  @override
+  String get policiesInvalid => 'We could not load this parking lot policies.';
+
+  @override
+  String get policiesEmpty =>
+      'This parking lot has not published its policies yet.';
+
+  @override
+  String get policiesHelp =>
+      'By parking the vehicle you accept these policies. Contact the lot if you have questions.';
+
+  @override
+  String get evidenceOpenPolicies =>
+      'See the parking lot policies and contract';
+
+  @override
   String get evidenceTitle => 'Vehicle evidence';
 
   @override
@@ -1123,6 +1141,32 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsSectionEvidence => 'Evidence';
+
+  @override
+  String get settingsSectionLegal => 'Policies and contract';
+
+  @override
+  String get settingsLegalPolicy => 'Service policy and contract text';
+
+  @override
+  String get settingsLegalPolicyHint =>
+      'Shown to the customer on the evidence page. The text supports tags for the name, address, schedule and phone.';
+
+  @override
+  String get settingsLegalReset => 'Restore template';
+
+  @override
+  String get settingsLegalResetDone => 'Template restored';
+
+  @override
+  String get settingsLegalPreview => 'Preview';
+
+  @override
+  String get settingsLegalPreviewTitle => 'Policy preview';
+
+  @override
+  String get settingsLegalEmpty =>
+      'No text. Use the template or write your own policy.';
 
   @override
   String get settingsSectionMessaging => 'Messaging';

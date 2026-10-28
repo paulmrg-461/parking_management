@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/l10n/l10n.dart';
@@ -287,6 +288,15 @@ class _EvidenceBody extends StatelessWidget {
                 ),
               ),
           ],
+        ],
+        if (evidence.lotId case final lotId?) ...[
+          const SizedBox(height: Space.md),
+          OutlinedButton.icon(
+            key: const Key('evidence_policies'),
+            onPressed: () => context.push('/policies?lot=$lotId'),
+            icon: const Icon(Icons.gavel_outlined),
+            label: Text(l10n.evidenceOpenPolicies),
+          ),
         ],
         const SizedBox(height: Space.lg),
         Text(

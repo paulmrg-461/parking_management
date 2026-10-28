@@ -7,12 +7,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../core/error/failure.dart';
 import '../../../core/l10n/failure_messages.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/list_page_scaffold.dart';
 import '../../../core/widgets/submission_feedback.dart';
+import '../../../core/utils/policy_template.dart';
 import '../../../core/widgets/submission_listener.dart';
 import '../application/branding_cubit.dart';
 import '../application/settings_cubit.dart';
@@ -54,6 +56,7 @@ class _SettingsPageState extends State<SettingsPage> {
   late final TextEditingController _keyCapacity;
   late final TextEditingController _carOutOfService;
   late final TextEditingController _motoOutOfService;
+  late final TextEditingController _legalPolicy;
   var _seeded = false;
   bool _whatsappAuto = false;
   List<String>? _baseline;
@@ -77,6 +80,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _keyCapacity = TextEditingController();
     _carOutOfService = TextEditingController();
     _motoOutOfService = TextEditingController();
+    _legalPolicy = TextEditingController();
     unawaited(context.read<SettingsCubit>().load());
     unawaited(_loadSpotCounts());
   }
@@ -95,6 +99,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _keyCapacity.dispose();
     _carOutOfService.dispose();
     _motoOutOfService.dispose();
+    _legalPolicy.dispose();
     super.dispose();
   }
 
@@ -115,6 +120,7 @@ class _SettingsPageState extends State<SettingsPage> {
         child: ListPageScaffold(
           title: context.l10n.settingsTitle,
           onRefresh: cubit.load,
+          bottomBar: _saveBar(context),
           body: BlocConsumer<SettingsCubit, SettingsState>(
             listenWhen: (previous, current) =>
                 current is SettingsLoaded && previous is! SettingsLoaded,
@@ -179,6 +185,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _keyCapacity.text,
     _carOutOfService.text,
     _motoOutOfService.text,
+    _legalPolicy.text,
     '$_whatsappAuto',
   ];
 
@@ -221,6 +228,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _keyCapacity.text = settings.keyCapacity.toString();
     _carOutOfService.text = settings.carOutOfService.toString();
     _motoOutOfService.text = settings.motoOutOfService.toString();
+    _legalPolicy.text = settings.legalPolicy;
     _whatsappAuto = settings.whatsappAuto;
     _baseline = _snapshot();
   }
@@ -236,7 +244,12 @@ class _SettingsPageState extends State<SettingsPage> {
     return Form(
       key: _formKey,
       child: ListView(
-        padding: const EdgeInsets.all(Space.md),
+        padding: const EdgeInsets.fromLTRB(
+          Space.md,
+          Space.md,
+          Space.md,
+          Space.xxl,
+        ),
         children: [
           _logoSection(context),
           const SizedBox(height: Space.lg),
@@ -424,9 +437,118 @@ class _SettingsPageState extends State<SettingsPage> {
             subtitle: Text(l10n.settingsWhatsappAutoHint),
           ),
           const SizedBox(height: Space.lg),
-          FilledButton(
+          _SectionHeader(
+            icon: Icons.gavel_outlined,
+            title: l10n.settingsSectionLegal,
+          ),
+          const SizedBox(height: Space.sm),
+          TextFormField(
+            key: const Key('settings_legal_policy'),
+            controller: _legalPolicy,
+            minLines: 8,
+            maxLines: 20,
+            keyboardType: TextInputType.multiline,
+            decoration: InputDecoration(
+              labelText: l10n.settingsLegalPolicy,
+              helperText: l10n.settingsLegalPolicyHint,
+              helperMaxLines: 2,
+              alignLabelWithHint: true,
+            ),
+          ),
+          const SizedBox(height: Space.sm),
+          Wrap(
+            spacing: Space.sm,
+            runSpacing: Space.sm,
+            children: [
+              OutlinedButton.icon(
+                key: const Key('settings_legal_reset'),
+                onPressed: () => _resetLegalPolicy(context),
+                icon: const Icon(Icons.restore),
+                label: Text(l10n.settingsLegalReset),
+              ),
+              TextButton.icon(
+                key: const Key('settings_legal_preview'),
+                onPressed: () => _previewLegalPolicy(context),
+                icon: const Icon(Icons.visibility_outlined),
+                label: Text(l10n.settingsLegalPreview),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _saveBar(BuildContext context) {
+    final l10n = context.l10n;
+    final settings = switch (context.watch<SettingsCubit>().state) {
+      SettingsLoaded(:final settings) => settings,
+      _ => ParkingSettings.defaults(),
+    };
+    return Material(
+      elevation: 8,
+      color: Theme.of(context).colorScheme.surface,
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            Space.md,
+            Space.sm,
+            Space.md,
+            Space.sm,
+          ),
+          child: FilledButton(
+            key: const Key('settings_save'),
             onPressed: () => _save(context, settings),
             child: Text(l10n.actionSave),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _resetLegalPolicy(BuildContext context) async {
+    final l10n = context.l10n;
+    final cubit = context.read<SettingsCubit>();
+    try {
+      final template = await cubit.resetLegalPolicy();
+      if (!context.mounted) {
+        return;
+      }
+      setState(() => _legalPolicy.text = template);
+      showInfoSnack(context, l10n.settingsLegalResetDone);
+    } on Failure catch (failure) {
+      if (context.mounted) {
+        showErrorSnack(context, l10n.failure(failure));
+      }
+    }
+  }
+
+  Future<void> _previewLegalPolicy(BuildContext context) async {
+    final l10n = context.l10n;
+    final rendered = renderPolicyTemplate(
+      _legalPolicy.text,
+      parking: _name.text,
+      address: _address.text,
+      schedule: _schedule.text,
+      phone: _phone.text,
+    );
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.settingsLegalPreviewTitle),
+        content: SizedBox(
+          width: 520,
+          child: SingleChildScrollView(
+            child: SelectableText(
+              rendered.trim().isEmpty ? l10n.settingsLegalEmpty : rendered,
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(l10n.actionClose),
           ),
         ],
       ),
@@ -491,6 +613,7 @@ class _SettingsPageState extends State<SettingsPage> {
         keyCapacity: int.tryParse(_keyCapacity.text.trim()) ?? 0,
         carOutOfService: int.tryParse(_carOutOfService.text.trim()) ?? 0,
         motoOutOfService: int.tryParse(_motoOutOfService.text.trim()) ?? 0,
+        legalPolicy: _legalPolicy.text.trim(),
       ),
     );
   }

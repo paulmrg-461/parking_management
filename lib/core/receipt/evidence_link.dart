@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 /// Public page that shows a session's evidence. The plate is the key, so the
 /// link is only useful to whoever holds the receipt.
 const evidencePath = '/evidence';
+const policiesPath = '/policies';
 
 /// Base URL of the deployed app (set with `--dart-define=APP_URL=...`). On web
 /// it falls back to the current origin; mobile needs the define to print a

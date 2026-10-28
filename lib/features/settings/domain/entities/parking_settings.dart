@@ -19,6 +19,7 @@ class ParkingSettings extends Equatable {
     this.keyCapacity = 0,
     this.carOutOfService = 0,
     this.motoOutOfService = 0,
+    this.legalPolicy = '',
   });
 
   final String name;
@@ -55,6 +56,9 @@ class ParkingSettings extends Equatable {
   /// Motorcycle spots out of the usable pool.
   final int motoOutOfService;
 
+  /// Service contract / legal policy shown to customers (editable template).
+  final String legalPolicy;
+
   /// The never-configured record (mirrors the backend default).
   static ParkingSettings defaults() => const ParkingSettings();
 
@@ -73,6 +77,7 @@ class ParkingSettings extends Equatable {
     int? keyCapacity,
     int? carOutOfService,
     int? motoOutOfService,
+    String? legalPolicy,
   }) => ParkingSettings(
     name: name ?? this.name,
     address: address ?? this.address,
@@ -88,6 +93,7 @@ class ParkingSettings extends Equatable {
     keyCapacity: keyCapacity ?? this.keyCapacity,
     carOutOfService: carOutOfService ?? this.carOutOfService,
     motoOutOfService: motoOutOfService ?? this.motoOutOfService,
+    legalPolicy: legalPolicy ?? this.legalPolicy,
   );
 
   /// Editable fields (metadata excluded).
@@ -105,6 +111,7 @@ class ParkingSettings extends Equatable {
     'key_capacity': keyCapacity,
     'car_out_of_service': carOutOfService,
     'moto_out_of_service': motoOutOfService,
+    'legal_policy': legalPolicy,
   };
 
   @override
@@ -123,5 +130,6 @@ class ParkingSettings extends Equatable {
     keyCapacity,
     carOutOfService,
     motoOutOfService,
+    legalPolicy,
   ];
 }

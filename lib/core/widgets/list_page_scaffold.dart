@@ -13,6 +13,7 @@ class ListPageScaffold extends StatelessWidget {
     this.onAdd,
     this.addTooltip,
     this.actions = const [],
+    this.bottomBar,
   });
 
   final String title;
@@ -21,6 +22,10 @@ class ListPageScaffold extends StatelessWidget {
   final VoidCallback? onAdd;
   final String? addTooltip;
   final List<Widget> actions;
+
+  /// Sticky action bar (e.g. a form save button), kept reachable while the
+  /// list scrolls.
+  final Widget? bottomBar;
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -33,5 +38,6 @@ class ListPageScaffold extends StatelessWidget {
             child: const Icon(Icons.add),
           ),
     body: RefreshIndicator(onRefresh: onRefresh, child: body),
+    bottomNavigationBar: bottomBar,
   );
 }

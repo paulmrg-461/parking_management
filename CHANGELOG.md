@@ -53,6 +53,13 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   holds obey the same limit. Deleting a bay clears the reference on old
   sessions instead of blocking (`0059`). The entry receipt/snackbar names the
   assigned spot.
+- **Editable legal policy / service contract.** Ajustes gains a "Policies and
+  contract" section with the full text (seeded from a server default template
+  with `{{parking}}`, `{{address}}`, `{{schedule}}`, `{{phone}}` tags), a
+  "Restore template" action (`reset_legal_policy`) and a preview. The public
+  evidence page links to `/policies?lot=..`, where the customer reads the
+  contract with the tags filled in — no login, identity/contact/policy only
+  (`public_lot_profile`, `0065`).
 - **Shareable evidence with the ticket.** Every receipt now prints two codes:
   the **check-out QR** (the plate) is bigger (176 px on screen / 140 in the PDF)
   and, below it, a **smaller evidence QR** linking to the public page
@@ -396,7 +403,7 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Tests
 
-- 766 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
+- 774 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
   integration test that runs only against a live stack.
 - SQL/RLS/RPC regressions covering capacity, shifts, discounts, passes,
   reservations, multi-site isolation, audit, diagnostics and retention.
@@ -434,7 +441,7 @@ Captured on 2026-10-24 against the local self-hosted stack:
 
 | Check | Result |
 |---|---|
-| `flutter test` | 766 passed (+1 live-stack integration skipped) |
+| `flutter test` | 774 passed (+1 live-stack integration skipped) |
 | `flutter analyze` | 0 errors, 0 warnings (only SDK deprecation infos) |
 | `flutter build web --release` | OK |
 | `supabase/tests/run.sh` | Passed (migrations + RPC/RLS regressions) |

@@ -254,4 +254,43 @@ void main() {
       findsWidgets,
     );
   });
+
+  testWidgets('Success: the legal policy is edited and saved', (tester) async {
+    final repository = FakeParkingSettingsRepository(_configured);
+    await pumpPage(tester, repository: repository);
+
+    final field = find.byKey(const Key('settings_legal_policy'));
+    await tester.scrollUntilVisible(
+      field,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(field, 'Nuevas políticas del parqueadero');
+    await tester.tap(find.byKey(const Key('settings_save')));
+    await tester.pumpAndSettle();
+
+    expect(repository.settings.legalPolicy, 'Nuevas políticas del parqueadero');
+  });
+
+  testWidgets('Success: the default template can be restored', (tester) async {
+    final repository = FakeParkingSettingsRepository(_configured);
+    await pumpPage(tester, repository: repository);
+
+    final reset = find.byKey(const Key('settings_legal_reset'));
+    await tester.scrollUntilVisible(
+      reset,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(reset);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Plantilla restaurada'), findsOneWidget);
+    final field = tester.widget<TextFormField>(
+      find.byKey(const Key('settings_legal_policy')),
+    );
+    expect(field.controller?.text, 'POLITICAS {{parking}}');
+  });
 }

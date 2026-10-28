@@ -110,6 +110,11 @@ settings) beside the derived `car_capacity`/`moto_capacity`.
 `report_occupancy`, `occupancy_snapshot`, `dashboard_today` (home KPIs),
 `report_whatsapp` (customer message delivery).
 
+**Legal policy**
+`parking_settings.legal_policy` (template), `default_legal_policy()`,
+`reset_legal_policy()` (lot admin), `public_lot_profile(lot_id)` (anon:
+identity, contact, policy).
+
 **Public evidence**
 `public-evidence` Edge Function (service role): verifies a session + plate and
 returns 1-hour signed URLs for that session's photos/videos (no login; the

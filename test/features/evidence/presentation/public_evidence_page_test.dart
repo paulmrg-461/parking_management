@@ -40,6 +40,7 @@ void main() {
         evidence: PublicEvidence(
           plate: 'ABC123',
           entryTime: DateTime(2026, 10, 28, 8),
+          lotId: 1,
           photos: [
             EvidenceMedia(url: 'https://x/1.jpg', takenAt: DateTime(2026)),
             EvidenceMedia(url: 'https://x/2.jpg', takenAt: DateTime(2026)),
@@ -60,6 +61,7 @@ void main() {
     expect(find.text('Fotos (2)'), findsOneWidget);
     expect(find.text('Videos (1)'), findsOneWidget);
     expect(find.text('Ver video'), findsOneWidget);
+    expect(find.byKey(const Key('evidence_policies')), findsOneWidget);
   });
 
   testWidgets('Failure: a wrong or incomplete link explains the key', (

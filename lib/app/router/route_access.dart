@@ -27,7 +27,7 @@ bool canAccess(UserRole role, String location) =>
 String? authRedirect(AuthState auth, String location) {
   final path = _normalize(location);
   // The evidence page is public: the receipt QR carries the key (the plate).
-  if (path == evidencePath) {
+  if (path == evidencePath || path == policiesPath) {
     return null;
   }
   final atLogin = path == loginPath;

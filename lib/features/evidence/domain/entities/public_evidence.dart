@@ -30,6 +30,7 @@ class PublicEvidence extends Equatable {
   const PublicEvidence({
     required this.plate,
     required this.entryTime,
+    this.lotId,
     this.exitTime,
     this.status = 'open',
     this.photos = const [],
@@ -38,6 +39,9 @@ class PublicEvidence extends Equatable {
 
   final String plate;
   final DateTime entryTime;
+
+  /// Site that owns the session, for the public policy link.
+  final int? lotId;
   final DateTime? exitTime;
   final String status;
   final List<EvidenceMedia> photos;
@@ -48,6 +52,7 @@ class PublicEvidence extends Equatable {
   factory PublicEvidence.fromJson(Map<String, dynamic> json) => PublicEvidence(
     plate: json['plate'] as String,
     entryTime: DateTime.parse(json['entry_time'] as String),
+    lotId: (json['lot_id'] as num?)?.toInt(),
     exitTime: json['exit_time'] == null
         ? null
         : DateTime.parse(json['exit_time'] as String),
@@ -66,6 +71,7 @@ class PublicEvidence extends Equatable {
   List<Object?> get props => [
     plate,
     entryTime,
+    lotId,
     exitTime,
     status,
     photos,

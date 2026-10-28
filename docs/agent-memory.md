@@ -11,9 +11,9 @@ HEAD `e7351da`).
 
 - Stack: Flutter (android + web) + self-hosted Supabase only. No FastAPI,
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
-- `supabase/migrations/0001..0064` are the schema owner (applied by
+- `supabase/migrations/0001..0065` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 766 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 774 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -55,6 +55,11 @@ HEAD `e7351da`).
   `session_records` (`0063`) also takes an inclusive business-date range
   (`p_from`/`p_to`); exports use `RecordsCubit.exportAll()` (pages server-side,
   cap 2000) with `recordsCsv` (clipboard) and `buildRecordsPdf` (share sheet).
+- Legal policy (`0065`): `parking_settings.legal_policy` seeded with
+  `default_legal_policy()`, editable in Ajustes (multiline + reset + preview),
+  tags rendered by `renderPolicyTemplate`; `/policies?lot=..` is public and reads
+  `public_lot_profile` (anon, identity/contact/policy only). The evidence page
+  links to it when the function returns `lot_id`.
 - Public evidence: `/evidence?session=..` is a **public route** whose gate asks
   for the plate (the link never carries it);
   (`authRedirect` allows it) backed by the `public-evidence` Edge Function
@@ -702,7 +707,7 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 ## Latest verification (2026-10-28)
 
-- `flutter test`: 766 passed (+1 live-stack integration skipped); `flutter
+- `flutter test`: 774 passed (+1 live-stack integration skipped); `flutter
   analyze` 144 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
 - `supabase/tests/run.sh` passed (migrations `0001`–`0057`); `e2e.sh` passed

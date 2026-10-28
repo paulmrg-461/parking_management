@@ -23,6 +23,8 @@ import '../../features/check_out/application/check_out_cubit.dart';
 import '../../features/check_out/presentation/check_out_page.dart';
 import '../../features/evidence/application/evidence_cubit.dart';
 import '../../features/evidence/presentation/public_evidence_page.dart';
+import '../../features/policies/application/policies_cubit.dart';
+import '../../features/policies/presentation/policies_page.dart';
 import '../../features/records/application/records_cubit.dart';
 import '../../features/records/presentation/records_page.dart';
 import '../../features/home/application/dashboard_cubit.dart';
@@ -67,6 +69,15 @@ GoRouter buildRouter(AuthCubit auth, Listenable refresh) => GoRouter(
   redirect: (_, state) => authRedirect(auth.state, state.uri.path),
   routes: [
     GoRoute(path: loginPath, builder: (context, state) => const LoginPage()),
+    GoRoute(
+      path: policiesPath,
+      builder: (context, state) => BlocProvider<PoliciesCubit>(
+        create: (_) => serviceLocator<PoliciesCubit>(),
+        child: PoliciesPage(
+          lotId: int.tryParse(state.uri.queryParameters['lot'] ?? ''),
+        ),
+      ),
+    ),
     GoRoute(
       path: evidencePath,
       builder: (context, state) => BlocProvider<EvidenceCubit>(

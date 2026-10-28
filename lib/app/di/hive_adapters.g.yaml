@@ -119,7 +119,7 @@ types:
         index: 7
   ParkingSettings:
     typeId: 9
-    nextIndex: 14
+    nextIndex: 15
     fields:
       name:
         index: 0
@@ -149,3 +149,5 @@ types:
         index: 12
       motoOutOfService:
         index: 13
+      legalPolicy:
+        index: 14

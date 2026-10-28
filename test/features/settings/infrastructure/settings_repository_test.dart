@@ -74,6 +74,12 @@ class _FakeRemote implements ParkingSettingsRemoteDataSource {
     _ensureOnline();
     return Uint8List.fromList(_logo);
   }
+
+  @override
+  Future<String> resetLegalPolicy() async {
+    _ensureOnline();
+    return 'POLITICAS {{parking}}';
+  }
 }
 
 void main() {

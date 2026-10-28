@@ -1874,4 +1874,57 @@ begin
     delete from public.evidence_photos where session_id = vid_session;
 end $$;
 
+-- Legal policy: a public profile for customers and an admin-only template reset.
+set local request.headers = '{"x-lot-id":"1"}';
+set local role anon;
+do $$
+declare
+    profile jsonb;
+begin
+    profile := public.public_lot_profile(1);
+    if profile is null
+       or coalesce(profile ->> 'legal_policy', '') = ''
+       or coalesce(profile ->> 'name', '') = '' then
+        raise exception 'public profile is incomplete: %', profile;
+    end if;
+    if profile ? 'pin_hash' or profile ? 'whatsapp_auto'
+       or profile ? 'key_capacity' then
+        raise exception 'public profile leaked private settings: %', profile;
+    end if;
+end $$;
+reset role;
+
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    begin
+        perform public.reset_legal_policy();
+        raise exception 'an operator reset the legal policy';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then
+            raise;
+        end if;
+    end;
+end $$;
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    template text;
+begin
+    update public.parking_settings
+       set legal_policy = 'texto temporal'
+     where lot_id = 1;
+    template := public.reset_legal_policy();
+    if template is null or template not like '%POLÍTICAS Y CONTRATO%' then
+        raise exception 'reset did not return the template';
+    end if;
+    if (select legal_policy from public.parking_settings where lot_id = 1)
+       <> template then
+        raise exception 'reset did not store the template';
+    end if;
+end $$;
+reset role;
+
 rollback;

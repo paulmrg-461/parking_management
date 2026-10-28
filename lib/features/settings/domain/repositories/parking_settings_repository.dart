@@ -20,4 +20,7 @@ abstract class ParkingSettingsRepository {
   /// Online only by design: bytes are never queued. Throws `NetworkFailure`
   /// offline with the cached logo untouched.
   Future<ParkingSettings> uploadLogo(Uint8List bytes);
+
+  /// Server-side default contract template (admin; online only).
+  Future<String> resetLegalPolicy();
 }

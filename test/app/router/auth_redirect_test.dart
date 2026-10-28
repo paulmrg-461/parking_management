@@ -57,6 +57,8 @@ void main() {
       );
       expect(authRedirect(_as(UserRole.operator), '/evidence'), isNull);
       expect(authRedirect(_as(UserRole.admin), '/evidence'), isNull);
+      expect(authRedirect(const AuthUnauthenticated(), '/policies'), isNull);
+      expect(authRedirect(_as(UserRole.operator), '/policies'), isNull);
     });
 
     test('Security: operators are bounced from every admin-only route', () {

@@ -426,13 +426,14 @@ class ParkingSettingsAdapter extends TypeAdapter<ParkingSettings> {
       keyCapacity: fields[11] == null ? 0 : (fields[11] as num).toInt(),
       carOutOfService: fields[12] == null ? 0 : (fields[12] as num).toInt(),
       motoOutOfService: fields[13] == null ? 0 : (fields[13] as num).toInt(),
+      legalPolicy: fields[14] == null ? '' : fields[14] as String,
     );
   }
 
   @override
   void write(BinaryWriter writer, ParkingSettings obj) {
     writer
-      ..writeByte(14)
+      ..writeByte(15)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
@@ -460,7 +461,9 @@ class ParkingSettingsAdapter extends TypeAdapter<ParkingSettings> {
       ..writeByte(12)
       ..write(obj.carOutOfService)
       ..writeByte(13)
-      ..write(obj.motoOutOfService);
+      ..write(obj.motoOutOfService)
+      ..writeByte(14)
+      ..write(obj.legalPolicy);
   }
 
   @override

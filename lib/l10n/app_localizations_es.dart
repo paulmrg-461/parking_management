@@ -115,6 +115,23 @@ class AppLocalizationsEs extends AppLocalizations {
   String get evidenceUnlock => 'Ver evidencias';
 
   @override
+  String get policiesTitle => 'Políticas y contrato';
+
+  @override
+  String get policiesInvalid =>
+      'No pudimos cargar las políticas de este parqueadero.';
+
+  @override
+  String get policiesEmpty => 'Este parqueadero aún no publicó sus políticas.';
+
+  @override
+  String get policiesHelp =>
+      'Al ingresar el vehículo aceptas estas políticas. Si tienes dudas, contacta al parqueadero.';
+
+  @override
+  String get evidenceOpenPolicies => 'Ver políticas y contrato del parqueadero';
+
+  @override
   String get evidenceTitle => 'Evidencias del vehículo';
 
   @override
@@ -1131,6 +1148,32 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get settingsSectionEvidence => 'Evidencia';
+
+  @override
+  String get settingsSectionLegal => 'Políticas y contrato';
+
+  @override
+  String get settingsLegalPolicy => 'Texto de políticas y contrato de servicio';
+
+  @override
+  String get settingsLegalPolicyHint =>
+      'Se muestra al cliente en la página de evidencias. El texto admite etiquetas para el nombre, la dirección, el horario y el teléfono.';
+
+  @override
+  String get settingsLegalReset => 'Restaurar plantilla';
+
+  @override
+  String get settingsLegalResetDone => 'Plantilla restaurada';
+
+  @override
+  String get settingsLegalPreview => 'Vista previa';
+
+  @override
+  String get settingsLegalPreviewTitle => 'Vista previa de las políticas';
+
+  @override
+  String get settingsLegalEmpty =>
+      'Sin texto. Usa la plantilla o escribe tus políticas.';
 
   @override
   String get settingsSectionMessaging => 'Mensajería';
