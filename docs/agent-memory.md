@@ -61,7 +61,13 @@ HEAD `e7351da`).
   caller host so the links are reachable). Receipts print a big check-out QR
   (plate) and a smaller evidence QR; `APP_URL` (`--dart-define`) builds the
   link and the QR is omitted when unset. Deploy the public page with LAN/public
-  Supabase URLs for customers.
+  Supabase URLs for customers. Dev sharing: build it with
+  `flutter build web --release --output build/web-public
+  --dart-define=SUPABASE_URL=http://<lan-ip>:8017 --dart-define=ANON...` and serve
+  it from Docker (host ports are firewalled, Docker-published ones are not):
+  `docker run -d --name parking-evidence-web -p 8080:80 -v $PWD/build/web-public:/usr/share/nginx/html:ro -v $PWD/tool/evidence-web.nginx.conf:/etc/nginx/conf.d/default.conf:ro nginx:alpine`.
+  The nginx config falls back to index.html (path URL strategy). The app prints
+  `APP_URL=http://<lan-ip>:8080`.
 - Video evidence (`0064`): one optional clip per check-in (`p_videos`), same
   `evidence` bucket and `evidence_photos` rows with `kind='video'` +
   `duration_seconds`; the bucket accepts mp4/quicktime/webm up to 50 MB. The

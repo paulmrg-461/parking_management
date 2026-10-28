@@ -61,6 +61,8 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   short-lived signed URLs from the new `public-evidence` Edge Function, which
   verifies the session + plate and never exposes other sessions. Requires
   `--dart-define=APP_URL=<public app URL>` so the printed link is reachable.
+  `tool/evidence-web.nginx.conf` serves the public build with the SPA fallback
+  needed by the path URL strategy (dev host runs on port 8080).
 - **Optional walk-around video at check-in.** The operator can record a short
   clip (max 60 s, 50 MB) of the vehicle's condition; it is optional like the
   photos, uploads to the same evidence bucket and is stored as
