@@ -12,12 +12,15 @@ import 'package:parking_management/features/check_out/domain/entities/slot_board
 import 'package:parking_management/features/home/application/dashboard_cubit.dart';
 import 'package:parking_management/features/home/presentation/home_page.dart';
 import 'package:parking_management/features/home/presentation/widgets/dashboard_widgets.dart';
+import 'package:parking_management/features/reservations/domain/entities/reservation.dart';
+import 'package:parking_management/features/reservations/domain/repositories/reservation_repository.dart';
 import 'package:parking_management/features/settings/application/branding_cubit.dart';
 import 'package:parking_management/features/vehicles/domain/entities/vehicle.dart';
 
 import '../../../helpers/app_harness.dart';
 import '../../../helpers/fake_auth_repository.dart';
 import '../../../helpers/fake_check_out_repository.dart';
+import '../../../helpers/fake_reservation_repository.dart';
 import '../../../helpers/fake_settings_repository.dart';
 import '../../../helpers/fake_vehicle_repository.dart';
 import '../../../helpers/test_app.dart';
@@ -30,6 +33,7 @@ Future<FakeCheckOutRepository> _pump(
   int capacity = 0,
   CapacitySnapshot? space,
   SlotBoard? board,
+  ReservationRepository? reservations,
   Size size = const Size(800, 1600),
 }) async {
   // Tall viewport: the dashboard now stacks occupancy, capacity, the inside
@@ -37,18 +41,21 @@ Future<FakeCheckOutRepository> _pump(
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
-  final sessions = FakeCheckOutRepository(
-    capacity: capacity,
-    sessions: [
-      for (var i = 1; i <= 4; i++)
-        OpenSession(id: i, vehicleId: i, entryTime: DateTime(2026)),
-    ],
-    listError: error,
-    today: today,
-  )
-    ..capacityToReturn = space ?? CapacitySnapshot.empty
-    ..slotBoardToReturn = board ?? SlotBoard.empty;
-  final auth = AuthCubit(FakeAuthRepository(sessionToRestore: sessionFor(role)));
+  final sessions =
+      FakeCheckOutRepository(
+          capacity: capacity,
+          sessions: [
+            for (var i = 1; i <= 4; i++)
+              OpenSession(id: i, vehicleId: i, entryTime: DateTime(2026)),
+          ],
+          listError: error,
+          today: today,
+        )
+        ..capacityToReturn = space ?? CapacitySnapshot.empty
+        ..slotBoardToReturn = board ?? SlotBoard.empty;
+  final auth = AuthCubit(
+    FakeAuthRepository(sessionToRestore: sessionFor(role)),
+  );
   await auth.restore();
   final router = GoRouter(
     routes: [
@@ -62,7 +69,7 @@ Future<FakeCheckOutRepository> _pump(
               Vehicle(id: 2, plate: 'XYZ999', categoryId: 1),
             ]),
           ),
-          child: const HomePage(),
+          child: HomePage(reservations: reservations),
         ),
         routes: [
           GoRoute(
@@ -195,18 +202,14 @@ void main() {
   ) async {
     tester.platformDispatcher.accessibilityFeaturesTestValue =
         const FakeAccessibilityFeatures(disableAnimations: true);
-    addTearDown(
-      tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
-    );
+    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
 
     await _pump(tester, capacity: 8);
 
     expect(find.byType(TweenAnimationBuilder<double>), findsNothing);
     expect(
       tester
-          .widget<LinearProgressIndicator>(
-            find.byType(LinearProgressIndicator),
-          )
+          .widget<LinearProgressIndicator>(find.byType(LinearProgressIndicator))
           .value,
       0.5,
     );
@@ -273,9 +276,9 @@ void main() {
     );
     expect(inside, findsOneWidget);
     final panel = tester.getTopLeft(inside).dx;
-    final capacityCard = tester.getTopLeft(
-      find.text('Capacidad del parqueadero'),
-    ).dx;
+    final capacityCard = tester
+        .getTopLeft(find.text('Capacidad del parqueadero'))
+        .dx;
     expect(panel, greaterThan(capacityCard));
   });
 
@@ -419,26 +422,14 @@ void main() {
       ),
     );
 
-    expect(
-      find.bySemanticsLabel(RegExp('^Ocupado BRD001')),
-      findsOneWidget,
-    );
-    expect(
-      find.bySemanticsLabel(RegExp('^Reservado HOLD01')),
-      findsOneWidget,
-    );
+    expect(find.bySemanticsLabel(RegExp('^Ocupado BRD001')), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp('^Reservado HOLD01')), findsOneWidget);
     expect(find.bySemanticsLabel(RegExp('^Libre Carros')), findsWidgets);
     semantics.dispose();
   });
 
-  testWidgets('A11y: space cells keep cabin-sized tap targets', (
-    tester,
-  ) async {
-    await _pump(
-      tester,
-      capacity: 8,
-      board: const SlotBoard(carCapacity: 4),
-    );
+  testWidgets('A11y: space cells keep cabin-sized tap targets', (tester) async {
+    await _pump(tester, capacity: 8, board: const SlotBoard(carCapacity: 4));
 
     final cell = tester.getSize(find.byTooltip('Libre Carros y camionetas 1'));
     expect(cell.width, greaterThanOrEqualTo(44));
@@ -446,11 +437,7 @@ void main() {
   });
 
   testWidgets('Security: a free cell opens nothing', (tester) async {
-    await _pump(
-      tester,
-      capacity: 8,
-      board: const SlotBoard(carCapacity: 4),
-    );
+    await _pump(tester, capacity: 8, board: const SlotBoard(carCapacity: 4));
 
     await tester.tap(find.byTooltip('Libre Carros y camionetas 1'));
     await tester.pumpAndSettle();
@@ -509,5 +496,70 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Total a cobrar'), findsNothing);
+  });
+
+  testWidgets('Success: an admin releases a hold from the board', (
+    tester,
+  ) async {
+    final until = DateTime.now().add(const Duration(hours: 1));
+    final holds = FakeReservationRepository([
+      Reservation(id: 5, plate: 'HOLD01', categoryId: 1, reservedUntil: until),
+    ]);
+    await _pump(
+      tester,
+      role: UserRole.admin,
+      capacity: 8,
+      reservations: holds,
+      board: SlotBoard(
+        carCapacity: 2,
+        holds: [SlotHold(plate: 'HOLD01', until: until)],
+      ),
+    );
+
+    // The exact label is time-dependent; the plate is enough to find the cell.
+    final holdCell = find.byTooltip(RegExp('Reservado HOLD01')).first;
+    await tester.ensureVisible(holdCell);
+    await tester.pumpAndSettle();
+    await tester.tap(holdCell);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.widgetWithText(OutlinedButton, 'Cancelar reserva'),
+      findsOneWidget,
+    );
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Cancelar reserva'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Cancelar reserva'));
+    await tester.pumpAndSettle();
+
+    expect(holds.cancelledId, 5);
+    expect(find.text('Reserva cancelada'), findsOneWidget);
+  });
+
+  testWidgets('Security: operators cannot release a hold from the board', (
+    tester,
+  ) async {
+    final until = DateTime.now().add(const Duration(hours: 1));
+    final holds = FakeReservationRepository([
+      Reservation(id: 5, plate: 'HOLD01', categoryId: 1, reservedUntil: until),
+    ]);
+    await _pump(
+      tester,
+      capacity: 8,
+      reservations: holds,
+      board: SlotBoard(
+        carCapacity: 2,
+        holds: [SlotHold(plate: 'HOLD01', until: until)],
+      ),
+    );
+
+    final holdCell = find.byTooltip(RegExp('Reservado HOLD01')).first;
+    await tester.ensureVisible(holdCell);
+    await tester.pumpAndSettle();
+    await tester.tap(holdCell);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Cancelar reserva'), findsNothing);
+    expect(holds.cancelledId, isNull);
   });
 }

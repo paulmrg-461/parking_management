@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/shell/app_destinations.dart';
 import '../../../core/l10n/l10n.dart';
+import '../../reservations/domain/repositories/reservation_repository.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/app_icon_button.dart';
 import '../../../core/widgets/sync_badge.dart';
@@ -25,7 +26,10 @@ import 'widgets/slot_board_card.dart';
 /// operator actions (Entrada / Salida). Admins also get management
 /// shortcuts (the rail / "Más" menu stays the main way in).
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  const HomePage({super.key, this.reservations});
+
+  /// Admins may release holds from the space board; optional in tests.
+  final ReservationRepository? reservations;
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -76,7 +80,10 @@ class _HomePageState extends State<HomePage> {
       ),
       body: BlocBuilder<AuthCubit, AuthState>(
         builder: (context, state) => switch (state) {
-          AuthAuthenticated(:final session) => _Dashboard(session: session),
+          AuthAuthenticated(:final session) => _Dashboard(
+            session: session,
+            reservations: widget.reservations,
+          ),
           _ => Center(
             child: CircularProgressIndicator(semanticsLabel: l10n.loading),
           ),
@@ -87,9 +94,10 @@ class _HomePageState extends State<HomePage> {
 }
 
 class _Dashboard extends StatelessWidget {
-  const _Dashboard({required this.session});
+  const _Dashboard({required this.session, this.reservations});
 
   final AuthSession session;
+  final ReservationRepository? reservations;
 
   @override
   Widget build(BuildContext context) {
@@ -143,14 +151,11 @@ class _Dashboard extends StatelessWidget {
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: Space.sm),
-          const _SummaryGrid(cards: [
-            OccupancyCard(),
-            CapacityCard(),
-            TodayCard(),
-            ShiftCard(),
-          ]),
+          const _SummaryGrid(
+            cards: [OccupancyCard(), CapacityCard(), TodayCard(), ShiftCard()],
+          ),
           const SizedBox(height: Space.md),
-          const SlotBoardCard(),
+          SlotBoardCard(reservations: reservations),
           const SizedBox(height: Space.md),
           if (!split) const InsideCard(),
           // The sidebar already lists every management section on desktop.

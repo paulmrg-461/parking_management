@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/error/failure.dart';
 import '../../../../core/l10n/failure_messages.dart';
 import '../../../../core/l10n/l10n.dart';
 import '../../../../core/theme/status_colors.dart';
@@ -12,12 +13,16 @@ import '../../../../core/utils/elapsed.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/error_state.dart';
+import '../../../../core/widgets/confirm_dialog.dart';
 import '../../../../core/widgets/status_chip.dart';
+import '../../../../core/widgets/submission_feedback.dart';
 import '../../../auth/application/auth_cubit.dart';
 import '../../../auth/domain/entities/user.dart';
 import '../../../check_out/domain/entities/check_out_preview.dart';
 import '../../../check_out/domain/entities/slot_board.dart';
 import '../../../check_out/presentation/widgets/fare_breakdown_view.dart';
+import '../../../reservations/domain/entities/reservation.dart';
+import '../../../reservations/domain/repositories/reservation_repository.dart';
 import '../../application/dashboard_cubit.dart';
 
 /// What the operator is looking at: everything, one vehicle group, or only the
@@ -28,7 +33,10 @@ enum SlotFilter { all, car, moto, holds }
 /// elapsed time) and active holds. Tapping a cell opens its details with the
 /// live fare and a direct check-out.
 class SlotBoardCard extends StatefulWidget {
-  const SlotBoardCard({super.key});
+  const SlotBoardCard({super.key, this.reservations});
+
+  /// Lets an admin release a hold from the board. Optional in tests.
+  final ReservationRepository? reservations;
 
   @override
   State<SlotBoardCard> createState() => _SlotBoardCardState();
@@ -50,6 +58,7 @@ class _SlotBoardCardState extends State<SlotBoardCard> {
           board: slotBoard,
           filter: _filter,
           onFilter: (filter) => setState(() => _filter = filter),
+          reservations: widget.reservations,
         ),
         DashboardFailure(:final failure) => Card(
           child: Padding(
@@ -111,11 +120,13 @@ class _Board extends StatelessWidget {
     required this.board,
     required this.filter,
     required this.onFilter,
+    this.reservations,
   });
 
   final SlotBoard board;
   final SlotFilter filter;
   final ValueChanged<SlotFilter> onFilter;
+  final ReservationRepository? reservations;
 
   @override
   Widget build(BuildContext context) {
@@ -172,6 +183,7 @@ class _Board extends StatelessWidget {
                 board: board,
                 group: group,
                 onlyHolds: filter == SlotFilter.holds,
+                reservations: reservations,
               ),
           ],
         ),
@@ -281,11 +293,13 @@ class _GroupSection extends StatelessWidget {
     required this.board,
     required this.group,
     required this.onlyHolds,
+    this.reservations,
   });
 
   final SlotBoard board;
   final SlotGroup group;
   final bool onlyHolds;
+  final ReservationRepository? reservations;
 
   @override
   Widget build(BuildContext context) {
@@ -331,6 +345,7 @@ class _GroupSection extends StatelessWidget {
           capacity: capacity,
           outOfService: board.outOfServiceIn(group),
           onlyHolds: onlyHolds,
+          reservations: reservations,
         ),
       ],
     );
@@ -345,6 +360,7 @@ class _CellsGrid extends StatelessWidget {
     required this.capacity,
     required this.outOfService,
     required this.onlyHolds,
+    this.reservations,
   });
 
   final List<SlotSession> sessions;
@@ -353,6 +369,7 @@ class _CellsGrid extends StatelessWidget {
   final int capacity;
   final int outOfService;
   final bool onlyHolds;
+  final ReservationRepository? reservations;
 
   static const _target = 76.0;
 
@@ -360,10 +377,14 @@ class _CellsGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final cells = <Widget>[];
     if (onlyHolds) {
-      cells.addAll(holds.map(_SlotCell.hold));
+      cells.addAll(
+        holds.map((hold) => _SlotCell.hold(hold, reservations: reservations)),
+      );
     } else {
       cells.addAll(sessions.map(_SlotCell.session));
-      cells.addAll(holds.map(_SlotCell.hold));
+      cells.addAll(
+        holds.map((hold) => _SlotCell.hold(hold, reservations: reservations)),
+      );
       // Heavy vehicles have no configured capacity: one cell per car.
       final maintenance = capacity == 0 ? 0 : outOfService.clamp(0, capacity);
       for (var i = 0; i < maintenance; i++) {
@@ -408,13 +429,16 @@ class _SlotCell extends StatelessWidget {
     this.hold,
     this.index,
     this.maintenance = false,
+    this.reservations,
   });
 
   factory _SlotCell.session(SlotSession session) =>
       _SlotCell._(group: session.group, session: session);
 
-  factory _SlotCell.hold(SlotHold hold) =>
-      _SlotCell._(group: hold.group, hold: hold);
+  factory _SlotCell.hold(
+    SlotHold hold, {
+    ReservationRepository? reservations,
+  }) => _SlotCell._(group: hold.group, hold: hold, reservations: reservations);
 
   factory _SlotCell.free(SlotGroup group, {required int index}) =>
       _SlotCell._(group: group, index: index);
@@ -427,6 +451,7 @@ class _SlotCell extends StatelessWidget {
   final SlotHold? hold;
   final int? index;
   final bool maintenance;
+  final ReservationRepository? reservations;
 
   @override
   Widget build(BuildContext context) {
@@ -539,7 +564,7 @@ class _SlotCell extends StatelessWidget {
             onTap: occupied
                 ? () => _showSession(context, session!)
                 : held
-                ? () => _showHold(context, hold!)
+                ? () => _showHold(context, hold!, reservations)
                 : null,
             child: content,
           ),
@@ -560,12 +585,106 @@ Future<void> _showSession(BuildContext context, SlotSession session) async {
   );
 }
 
-Future<void> _showHold(BuildContext context, SlotHold hold) async {
-  final l10n = context.l10n;
+Future<void> _showHold(
+  BuildContext context,
+  SlotHold hold,
+  ReservationRepository? reservations,
+) async {
+  final cubit = context.read<DashboardCubit>();
   await showModalBottomSheet<void>(
     context: context,
     showDragHandle: true,
-    builder: (sheetContext) => SafeArea(
+    builder: (_) =>
+        _HoldSheet(hold: hold, cubit: cubit, reservations: reservations),
+  );
+}
+
+/// Hold details. Admins can release the hold when the customer does not
+/// arrive; operators only see the promise.
+class _HoldSheet extends StatefulWidget {
+  const _HoldSheet({
+    required this.hold,
+    required this.cubit,
+    this.reservations,
+  });
+
+  final SlotHold hold;
+  final DashboardCubit cubit;
+  final ReservationRepository? reservations;
+
+  @override
+  State<_HoldSheet> createState() => _HoldSheetState();
+}
+
+class _HoldSheetState extends State<_HoldSheet> {
+  bool _busy = false;
+
+  Future<void> _cancel() async {
+    final l10n = context.l10n;
+    final repository = widget.reservations;
+    if (repository == null) {
+      return;
+    }
+    final confirmed = await ConfirmDialog.show(
+      context,
+      ConfirmDialog(
+        title: l10n.reservationCancelTitle,
+        body: l10n.reservationCancelBody(widget.hold.plate),
+        confirmLabel: l10n.reservationCancel,
+        destructive: true,
+      ),
+    );
+    if (!confirmed || !mounted) {
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      final active = await repository.listActive();
+      final match = _match(active);
+      if (match != null) {
+        await repository.cancel(match.id);
+      }
+      if (!mounted) {
+        return;
+      }
+      Navigator.of(context).pop();
+      showInfoSnack(context, l10n.reservationCancelled);
+      unawaited(widget.cubit.load());
+    } on Failure catch (failure) {
+      if (mounted) {
+        setState(() => _busy = false);
+        showErrorSnack(context, context.l10n.failure(failure));
+      }
+    }
+  }
+
+  /// The board payload has no reservation id, so the plate + expiry identify
+  /// it in the active list (expiry to the minute, server clock).
+  Reservation? _match(List<Reservation> active) {
+    final plate = widget.hold.plate.toUpperCase();
+    for (final reservation in active) {
+      if (reservation.plate.toUpperCase() != plate) {
+        continue;
+      }
+      final delta = reservation.reservedUntil.difference(widget.hold.until);
+      if (delta.inSeconds.abs() <= 60) {
+        return reservation;
+      }
+    }
+    for (final reservation in active) {
+      if (reservation.plate.toUpperCase() == plate) {
+        return reservation;
+      }
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final admin = _isAdmin(context);
+    final canCancel = admin && widget.reservations != null && !_busy;
+    return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(
           Space.md,
@@ -577,11 +696,13 @@ Future<void> _showHold(BuildContext context, SlotHold hold) async {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _SheetTitle(text: hold.plate),
+            _SheetTitle(text: widget.hold.plate),
             const SizedBox(height: Space.xs),
             Text(
-              l10n.reservationUntil(Formatters.dateTime(hold.until.toLocal())),
-              style: Theme.of(sheetContext).textTheme.bodySmall,
+              l10n.reservationUntil(
+                Formatters.dateTime(widget.hold.until.toLocal()),
+              ),
+              style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: Space.md),
             StatusChip(
@@ -589,11 +710,22 @@ Future<void> _showHold(BuildContext context, SlotHold hold) async {
               tone: StatusTone.warning,
               icon: Icons.event_available,
             ),
+            if (canCancel) ...[
+              const SizedBox(height: Space.md),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _cancel,
+                  icon: const Icon(Icons.event_busy),
+                  label: Text(l10n.reservationCancel),
+                ),
+              ),
+            ],
           ],
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _SheetTitle extends StatelessWidget {

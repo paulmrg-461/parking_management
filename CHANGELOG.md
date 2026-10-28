@@ -34,6 +34,10 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - On-screen alphanumeric keypad (`PlateKeypad`) for touch cabins: opens from the
   plate field and the check-out search, 52 dp keys, backspace/clear, respects
   the plate length limit and feeds the normal lookup/debounce.
+- Admins can **release a hold from the board**: tapping a reserved cell opens
+  its sheet with "Cancelar reserva" (confirmation, snack, board reload); the
+  reservation id is resolved from the active list by plate + expiry, so the
+  board payload stays small. Operators do not see the action.
 - **Out-of-service spaces.** Admins can take car or motorcycle spots out of the
   usable pool in Ajustes (`car_out_of_service`, `moto_out_of_service`). They
   stay in the configured capacity, are painted as striped "Mantenimiento" cells
@@ -304,7 +308,7 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Tests
 
-- 698 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
+- 700 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
   integration test that runs only against a live stack.
 - SQL/RLS/RPC regressions covering capacity, shifts, discounts, passes,
   reservations, multi-site isolation, audit, diagnostics and retention.
@@ -342,7 +346,7 @@ Captured on 2026-10-24 against the local self-hosted stack:
 
 | Check | Result |
 |---|---|
-| `flutter test` | 698 passed (+1 live-stack integration skipped) |
+| `flutter test` | 700 passed (+1 live-stack integration skipped) |
 | `flutter analyze` | 0 errors, 0 warnings (only SDK deprecation infos) |
 | `flutter build web --release` | OK |
 | `supabase/tests/run.sh` | Passed (migrations + RPC/RLS regressions) |

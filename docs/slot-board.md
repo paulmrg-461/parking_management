@@ -49,7 +49,10 @@ distinct icon per group.
 - Tap an occupied cell → bottom sheet with the plate, exact entry time, a
   one-second live clock, pass/keys/photo chips, the server fare breakdown and a
   primary **Salida** action that opens `/check-out?scan=<plate>`.
-- Tap a reserved cell → bottom sheet with the plate and hold expiry.
+- Tap a reserved cell → bottom sheet with the plate and hold expiry. Admins
+  additionally get **Cancelar reserva** (confirmation + snack + board reload);
+  the reservation id is resolved from `listActive()` by plate and expiry, since
+  the board payload carries no id.
 - Free cells are not interactive (no dead-end sheets).
 
 ### UI states

@@ -103,7 +103,11 @@ GoRouter buildRouter(AuthCubit auth, Listenable refresh) => GoRouter(
 
 GoRoute _homeRoute(AuthCubit auth) => GoRoute(
   path: homePath,
-  builder: (context, state) => const HomePage(),
+  builder: (context, state) => HomePage(
+    reservations: serviceLocator.isRegistered<ReservationRepository>()
+        ? serviceLocator<ReservationRepository>()
+        : null,
+  ),
   routes: [
     GoRoute(
       path: 'check-in',
