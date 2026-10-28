@@ -31,6 +31,7 @@ import '../../home/application/dashboard_cubit.dart';
 import '../../shifts/application/shift_cubit.dart';
 import '../../receipt_printing/presentation/receipt_print_sheet.dart';
 import '../../notifications/presentation/notification_bell.dart';
+import '../../notifications/presentation/realtime_activity_listener.dart';
 import '../application/check_out_cubit.dart';
 import '../domain/entities/check_out_receipt.dart';
 import '../../../core/receipt/payment_method.dart';
@@ -140,8 +141,25 @@ class _CheckOutPageState extends State<CheckOutPage> {
     }
   }
 
+  /// Another device checked a car in/out: the list must not stay stale.
+  void _refreshFromActivity() {
+    final cubit = context.read<CheckOutCubit>();
+    if (cubit.state is CheckOutLoaded) {
+      cubit.search(_searchController.text);
+    } else {
+      unawaited(cubit.loadOpenSessions());
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    return RealtimeActivityListener(
+      onActivity: _refreshFromActivity,
+      child: _scaffold(context),
+    );
+  }
+
+  Widget _scaffold(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(context.l10n.checkOutTitle),

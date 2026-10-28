@@ -34,6 +34,7 @@ import '../../reservations/domain/entities/reservation.dart';
 import '../../reservations/domain/repositories/reservation_repository.dart';
 import '../../vehicles/domain/repositories/vehicle_repository.dart';
 import '../../notifications/presentation/notification_bell.dart';
+import '../../notifications/presentation/realtime_activity_listener.dart';
 import '../application/check_in_cubit.dart';
 import '../application/vehicle_lookup_cubit.dart';
 import '../domain/entities/new_vehicle_info.dart';
@@ -447,9 +448,21 @@ class _CheckInPageState extends State<CheckInPage> {
     }
   }
 
+  void _refreshFromActivity() {
+    unawaited(context.read<CheckInCubit>().loadOpenSessions());
+    unawaited(_loadHolds());
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    return RealtimeActivityListener(
+      onActivity: _refreshFromActivity,
+      child: _scaffold(context, l10n),
+    );
+  }
+
+  Widget _scaffold(BuildContext context, AppLocalizations l10n) {
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.checkInTitle),

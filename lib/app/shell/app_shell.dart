@@ -55,13 +55,20 @@ class AppShell extends StatelessWidget {
           previous is LotsLoaded &&
           current is LotsLoaded &&
           previous.activeId != current.activeId,
-      listener: (context, state) => _reloadForLot(context),
+      listener: (context, state) =>
+          _reloadForLot(context, admin: role == UserRole.admin),
       child: BlocListener<NotificationsCubit, NotificationsState>(
       listenWhen: (previous, current) =>
           previous.latestArrived?.id != current.latestArrived?.id,
       listener: (context, state) {
         final notification = state.latestArrived;
-        if (notification == null || _isOwnEcho(notification)) {
+        if (notification == null) {
+          return;
+        }
+        // Another device moved a vehicle: refetch the shell summaries. The
+        // acting device already refreshed locally, so the echo is harmless.
+        _reloadForLot(context, admin: role == UserRole.admin);
+        if (_isOwnEcho(notification)) {
           return;
         }
         showInfoSnack(context, activityMessage(context, notification));
@@ -126,14 +133,14 @@ String activityMessage(BuildContext context, AppNotification notification) {
 
 /// Refreshes the shell-scoped summaries after a lot switch. Providers are
 /// optional so isolated tests can omit them.
-void _reloadForLot(BuildContext context) {
+void _reloadForLot(BuildContext context, {bool admin = false}) {
   try {
     unawaited(context.read<DashboardCubit>().load());
   } on ProviderNotFoundException {
     // no dashboard in this context
   }
   try {
-    unawaited(context.read<ShiftCubit>().load());
+    unawaited(context.read<ShiftCubit>().load(admin: admin));
   } on ProviderNotFoundException {
     // no shift cubit in this context
   }

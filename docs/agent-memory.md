@@ -12,7 +12,7 @@ Last updated: 2026-10-28, branch `feature/supabase` (operator UI + realtime).
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0057` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 710 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 712 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -60,7 +60,11 @@ Last updated: 2026-10-28, branch `feature/supabase` (operator UI + realtime).
   members** with `action`, `session_id`, `plate`, `actor_name`, `actor_role`
   and (exits) `amount_charged`. The shell composes the snackbar with l10n from
   the payload; `LocalActivity` suppresses the acting device's own echo for 30 s
-  (the inbox keeps the row).
+  (the inbox keeps the row). The arrival also **refreshes the screen**: the
+  shell reloads `DashboardCubit` + `ShiftCubit`, and
+  `RealtimeActivityListener` reloads the check-out list (keeping the search) and
+  the check-in open sessions/holds, so data does not stay stale on the other
+  device.
 - **0057 fixed the blocker**: the notifications policy used
   `current_lot_id()`, which Realtime evaluates **without** the lot header, so
   the channel died silently with `LotRequiredError`. Policies read by
@@ -642,8 +646,8 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 ## Latest verification (2026-10-28)
 
-- `flutter test`: 710 passed (+1 live-stack integration skipped); `flutter
-  analyze` 138 infos, all SDK `deprecated_member_use` (zero warnings/errors);
+- `flutter test`: 712 passed (+1 live-stack integration skipped); `flutter
+  analyze` 139 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
 - `supabase/tests/run.sh` passed (migrations `0001`–`0057`); `e2e.sh` passed
   (login → check-in → check-out → report → history).
@@ -980,8 +984,8 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 ## Latest verification (2026-10-28)
 
-- `flutter test`: 710 passed (+1 live-stack integration skipped); `flutter
-  analyze` 138 infos, all SDK `deprecated_member_use` (zero warnings/errors);
+- `flutter test`: 712 passed (+1 live-stack integration skipped); `flutter
+  analyze` 139 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
 - `supabase/tests/run.sh` passed (migrations `0001`–`0057`); `e2e.sh` passed
   (login → check-in → check-out → report → history).

@@ -48,6 +48,10 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   phone activity and the phone sees the web's, through Supabase Realtime. The
   snackbar is localized from the payload, the inbox keeps the row, and the
   acting device ignores the echo of its own write (`LocalActivity`).
+- **Realtime refresh.** Receiving an activity alert now refetches the data as
+  well as showing the snackbar: the shell reloads the dashboard and shift
+  summaries, the check-out list reloads (preserving the search) and the check-in
+  open sessions/holds reload, so the other device never shows a stale counter.
 - **Realtime fix.** The notifications policy used `current_lot_id()`, which
   Realtime evaluates without the `x-lot-id` header: the subscription died with
   `LotRequiredError` and live snackbars never arrived. It now uses the
@@ -323,7 +327,7 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Tests
 
-- 710 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
+- 712 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
   integration test that runs only against a live stack.
 - SQL/RLS/RPC regressions covering capacity, shifts, discounts, passes,
   reservations, multi-site isolation, audit, diagnostics and retention.
@@ -361,7 +365,7 @@ Captured on 2026-10-24 against the local self-hosted stack:
 
 | Check | Result |
 |---|---|
-| `flutter test` | 710 passed (+1 live-stack integration skipped) |
+| `flutter test` | 712 passed (+1 live-stack integration skipped) |
 | `flutter analyze` | 0 errors, 0 warnings (only SDK deprecation infos) |
 | `flutter build web --release` | OK |
 | `supabase/tests/run.sh` | Passed (migrations + RPC/RLS regressions) |

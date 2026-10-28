@@ -15,6 +15,7 @@ import 'package:parking_management/features/notifications/domain/entities/app_no
 import 'package:parking_management/core/realtime/local_activity.dart';
 
 import '../../helpers/app_harness.dart';
+import '../../helpers/fake_check_out_repository.dart';
 import '../../helpers/fake_notification_repository.dart';
 import '../../helpers/fake_sync_outbox.dart';
 
@@ -351,6 +352,41 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.textContaining('registró el ingreso de ABC123'), findsNothing);
+  });
+
+  testWidgets('Success: an activity refreshes the shell summaries', (
+    tester,
+  ) async {
+    final dashboard = FakeCheckOutRepository();
+    final notifications = FakeNotificationRepository();
+    await pumpApp(
+      tester,
+      role: UserRole.admin,
+      notifications: notifications,
+      dashboardRepository: dashboard,
+    );
+    final before = dashboard.occupancyCalls;
+
+    notifications.incoming.add(
+      AppNotification(
+        id: 43,
+        type: 'check_in',
+        title: 'Entrada registrada',
+        body: 'Ana registró el ingreso de ABC123',
+        createdAt: DateTime.now(),
+        data: const {
+          'action': 'check_in',
+          'session_id': 8,
+          'plate': 'ABC123',
+          'actor_name': 'Ana',
+        },
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pumpAndSettle();
+
+    expect(dashboard.occupancyCalls, greaterThan(before));
   });
 }
 

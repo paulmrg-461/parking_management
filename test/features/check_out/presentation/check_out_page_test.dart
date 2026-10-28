@@ -8,6 +8,8 @@ import 'package:parking_management/core/widgets/qr_code.dart';
 import 'package:parking_management/core/receipt/payment_method.dart';
 import 'package:parking_management/core/storage/key_value_store.dart';
 import 'package:parking_management/features/check_out/application/check_out_cubit.dart';
+import 'package:parking_management/features/notifications/application/notifications_cubit.dart';
+import 'package:parking_management/features/notifications/domain/entities/app_notification.dart';
 import 'package:parking_management/features/check_out/application/check_out_vehicle.dart';
 import 'package:parking_management/features/check_out/domain/entities/check_out_preview.dart';
 import 'package:parking_management/features/check_out/domain/entities/check_out_receipt.dart';
@@ -27,12 +29,14 @@ import '../../../helpers/app_harness.dart';
 import '../../../helpers/fake_auth_repository.dart';
 import '../../../helpers/fake_check_out_repository.dart';
 import '../../../helpers/fake_key_value_store.dart';
+import '../../../helpers/fake_notification_repository.dart';
 import '../../../helpers/fake_vehicle_repository.dart';
 import '../../../helpers/test_app.dart';
 
 class _FakeCheckOutRepository implements CheckOutRepository {
   Failure? checkOutError;
   Failure? previewError;
+  int listCalls = 0;
   bool hasPass = false;
   CheckOutPreview? previewToReturn;
   bool? lastLostTicket;
@@ -61,6 +65,7 @@ class _FakeCheckOutRepository implements CheckOutRepository {
     int limit = defaultPageSize,
     String? plate,
   }) async {
+    listCalls++;
     final all = [
       OpenSession(
         id: 1,
@@ -124,6 +129,8 @@ class _FakeCheckOutRepository implements CheckOutRepository {
 void main() {
   late _FakeCheckOutRepository repository;
   late FakeCheckOutRepository occupancy;
+  late FakeNotificationRepository notifications;
+  late NotificationsCubit notificationsCubit;
 
   Future<void> pumpPage(
     WidgetTester tester, {
@@ -135,6 +142,9 @@ void main() {
   }) async {
     repository = _FakeCheckOutRepository()..firstHasPass = firstHasPass;
     occupancy = FakeCheckOutRepository();
+    notifications = FakeNotificationRepository();
+    notificationsCubit = NotificationsCubit(notifications);
+    addTearDown(notificationsCubit.close);
     final vehicles = FakeVehicleRepository(const [
       Vehicle(id: 1, plate: 'ABC123', categoryId: 1),
       Vehicle(id: 2, plate: 'XYZ999', categoryId: 1),
@@ -162,6 +172,9 @@ void main() {
             BlocProvider<DashboardCubit>(
               create: (_) => DashboardCubit(occupancy),
             ),
+            BlocProvider<NotificationsCubit>.value(
+              value: notificationsCubit,
+            ),
           ],
           child: CheckOutPage(
             initialQuery: initialQuery,
@@ -172,6 +185,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    await notificationsCubit.start(1);
   }
 
   testWidgets('Success: renders the open sessions list resolved to plates', (
@@ -600,5 +614,33 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.text('ABC123'), findsWidgets);
+  });
+
+  testWidgets('Success: another device activity refreshes the list', (
+    tester,
+  ) async {
+    await pumpPage(tester);
+    final before = repository.listCalls;
+
+    notifications.incoming.add(
+      AppNotification(
+        id: 51,
+        type: 'check_in',
+        title: 'Entrada registrada',
+        body: 'Ana registró el ingreso de ABC123',
+        createdAt: DateTime.now(),
+        data: const {
+          'action': 'check_in',
+          'session_id': 12,
+          'plate': 'ABC123',
+          'actor_name': 'Ana',
+        },
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pumpAndSettle();
+
+    expect(repository.listCalls, greaterThan(before));
   });
 }
