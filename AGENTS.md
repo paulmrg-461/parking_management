@@ -1,210 +1,131 @@
-# Parking Management — Agent Conventions
+# Parking Management — Agent Conventions & System Blueprint
 
-## Session memory
+## 1. Session Memory & Governance
 
-Read `docs/agent-memory.md` at the start of a session: current branch state,
-commands, invariants and known gotchas. Update it when a batch lands.
+Read `docs/agent-memory.md` at the start of a session: current branch state, commands, invariants, and known gotchas. Update it when a batch lands.
+Deployment and design docs live in `docs/` (`README.md` indexes them): `environment-guide.en.md` / `environment-guide.md` (onboarding, EN/ES), `setup-local.md`, `setup-cloud.md`, `deployment-requirements.md`, `architecture.md`, `infrastructure.md` and `database.md`; `QUICKSTART.md` at the root is the one-page command sheet.
+`docs/project-overview.md` is the executive summary (module status, limitations) and `CHANGELOG.md` tracks notable changes. Keep the changelog, the overview, and the Mermaid diagrams in sync with code changes.
 
-Deployment and design docs live in `docs/` (`README.md` indexes them):
-`environment-guide.en.md` / `environment-guide.md` (onboarding, EN/ES),
-`setup-local.md`, `setup-cloud.md`, `deployment-requirements.md`,
-`architecture.md`, `infrastructure.md` and `database.md`; `QUICKSTART.md` at the
-root is the one-page command sheet.
-`docs/project-overview.md` is the executive summary (module status, limitations)
-and `CHANGELOG.md` tracks notable changes. Keep the changelog, the overview and
-the Mermaid diagrams in sync with code changes.
+---
 
-## Overview
+## 2. Overview & Architectural Mandates (MANDATORY)
 
-Parking management system (parqueadero): vehicle registration/control, time-based
-billing, vehicle categories, night rates, damage evidence photos, and automatic
-license plate detection.
+Parking management system: vehicle registration/control, time-based billing, vehicle categories, night rates, damage evidence photos, and automatic license plate detection.
 
 Monorepo:
-- `lib/` — Flutter app (targets: `android` + `web`)
-- `supabase/` — self-hosted Supabase (Postgres schema, RPCs, RLS, Storage, Edge Functions) — source of truth
-- `openspec/` — specs and changes (spec-driven development via OpenSpec)
+* `lib/` — Flutter app (targets: `android`, `web`, and `linux` for head-of-line integration/desktop POS)
+* `supabase/` — self-hosted Supabase (Postgres schema, RPCs, RLS, Storage, Edge Functions) — single source of truth
+* `openspec/` — specs and changes (spec-driven development via OpenSpec)
 
-## Architecture (MANDATORY)
+### Hexagonal + Clean Architecture (by feature)
 
-Hexagonal (Ports & Adapters) + Clean Architecture, organized **by feature**.
-
-```
+```text
 lib/features/<feature>/
-├── domain/           # entities + repository ports (abstract). Depends on nothing.
-├── application/      # use cases + cubits (orchestration + state)
-├── infrastructure/   # adapters (Supabase, Hive), models, mappers
-└── presentation/     # pages, widgets
+├── domain/           # Pure entities + repository interfaces (ports). Zero external dependencies.
+├── application/      # Use cases + Cubits (orchestration, business rules, state).
+├── infrastructure/   # Adapters (Supabase RPCs, Hive CE), DTOs, mappers.
+└── presentation/     # Screens, atomic widgets, theme-aware layouts.
 ```
 
-- Outer layers depend on inner layers; `domain/` depends on nothing.
-- SOLID strictly. Clean Code: functions ≤ 20 lines, max 2 params, meaningful names.
-- Patterns: Repository, UseCase, Adapter, Factory, DI Singleton (get_it), Observer (Cubit).
+* Outer layers depend on inner layers; `domain/` depends on pure Dart only.
+* Clean Code rules: functions $\le 20$ lines, max 2 parameters, self-documenting identifiers.
+* Patterns: Repository, UseCase, Adapter, Factory, DI Singleton (`get_it`), Observer (`Cubit`).
+* All identifiers, code, comments, and OpenSpec artifacts MUST be in English.
 
-## Naming
+---
 
-ALL code, classes, variables, files, and comments MUST be in English.
-OpenSpec artifacts (proposal, specs, design, tasks) MUST be in English.
+## 3. UI/UX Design System & Accessibility Mandates
 
-## Stack
+Every operator screen and dashboard view must adhere to strict enterprise usability standards:
 
-Flutter: BLoC/Cubit + Equatable, `get_it` (manual registration), Hive CE
-(offline-first local store), `supabase_flutter`, `go_router`, `camera` +
-`image_picker`, `google_mlkit_text_recognition`, `intl` (COP, no decimals).
+### A. The 4 UI States Rule
 
-Backend: self-hosted Supabase (PostgreSQL 17 + RLS, GoTrue, PostgREST,
-Storage, Edge Functions) in `supabase/`. There is no application server: SQL
-RPCs own business logic and the Flutter client calls Supabase directly.
+Every screen or interactive widget must handle four explicit states via sealed `Equatable` states:
 
-## Current state (post-migration, 2026-10-23)
+1. **Loading State:** Shimmer skeletons replicating the exact geometry of cards, tables, or slot grids (no raw, unaligned progress indicators).
+2. **Success State:** High-contrast, responsive layout reflecting real-time updates without layout shifts.
+3. **Empty State:** Informative visual icon, friendly guidance text, and an explicit Call to Action (e.g., "No active vehicles in this category. Register Check-In").
+4. **Error State:** User-friendly localized message with an explicit "Retry" action; raw exceptions must never reach the view layer.
 
-- Branch `feature/supabase`: FastAPI, Alembic, Dio, Redis and `backend/` are
-  deleted. Do not reintroduce them.
-- `docker compose up -d` from the repo root is the whole stack. Gateway/Studio
-  are on `:8000`; schema is applied by `supabase-migrate`.
-- Local admin: `sh supabase/create-operator.sh admin 123456 admin` (6-digit
-  PIN; rotate outside a disposable dev DB).
-- Flutter needs `--dart-define=SUPABASE_URL=...` and
-  `--dart-define=SUPABASE_ANON_KEY=...`; `configureDependencies()` fails fast
-  without them.
-- Key files: `supabase/migrations/0001..0016` (schema/RLS/RPCs/constraints/
-  notifications/payments/history/capacity/shifts/renewal/audit/pass charges), `supabase/volumes/functions/{admin-users,push-dispatch}`,
-  `lib/app/di/injection.dart`, `lib/core/network/supabase_error_mapper.dart`.
-- Payments: check-out requires a method; monthly passes force `monthly_pass`.
-  Discounts are admin-only with a required reason; shifts reconcile cash by
-  operator; categories may cap capacity; auto-renew passes create linked rows.
-  Vehicle history is `rpc/vehicle_history`; overstay alerts use
-  `parking_settings.overstay_hours`. A lost ticket charges the full daily tariff
-  with a mandatory reason; blacklisted vehicles cannot check in; reservations
-  (`category_reservations`) hold capacity until used, cancelled or expired.
-- UX invariants: check-out search is server-side/paginated; the shift card and
-  no-shift warning live in the shell-scoped `ShiftCubit`; discount audit detail
-  is exposed only in the admin revenue report. Cash/shift actions (open, close,
-  movement, adjust, pass collection) are disabled offline with a banner — they
-  are never queued. Notification taps deep-link by type via
-  `notification_routes.dart`.
-- Printed receipts localize through `ReceiptLabels` (es/en); nothing may
-  hardcode receipt labels. Branding is per lot (`branding/logo_<lotId>`,
-  `set_branding_logo` restricted to the active lot) and evidence objects are
-  readable only through a session of the active lot.
-- Multi-lot: every site-owned table carries `lot_id`; RLS and RPCs resolve the
-  active lot with `current_lot_id()` from the **mandatory** `x-lot-id` header
-  (validated against `lot_members`, `LotRequiredError` when missing or forged).
-  The app selects the lot before exposing the session; scheduled jobs must not
-  call `current_lot_id()`. Never trust a client lot id except through
-  `resolve_lot()`. New site data must be stamped with the lot and filtered in
-  reads; queued mutations capture `lot_id` at enqueue time.
-- Customer contact: `vehicles.owner_phone` (optional, 7–15 digits) is set
-  through `update_vehicle_flags`; receipts are shared as `wa.me` links with a
-  prefilled message: receipts from the history and pass-expiry reminders from
-  the passes list. Missing WhatsApp is a snack, never a crash. With
-  `whatsapp_auto` on, the app enqueues into `whatsapp_messages` instead and
-  `whatsapp-dispatch` sends it with the Meta token (never in the client).
-- Realtime and Storage evaluate RLS **without** the `x-lot-id` header: a policy
-  that calls `current_lot_id()` raises `LotRequiredError` and silently kills the
-  subscription/object read. Use `can_read_lot()` (notifications) or
-  `can_read_evidence()` (Storage) membership checks in those policies, never the
-  active-lot helper.
-- Evidence: `parking_settings.evidence_retention_days` (0 = keep) drives the
-  `evidence-archive` Edge Function (Storage delete + row delete, service-role
-  only, daily cron). Storage cannot see `x-lot-id`, so the bucket policy uses
-  `can_read_evidence()` (membership-based), not `current_lot_id()`.
-- Audit: reference-data tables have `trg_audit_row` (actor from `auth.uid()`,
-  changed columns only); user changes are audited inside `admin-users` because
-  service-role writes have no `auth.uid()`. Never store secrets (the trigger
-  drops `pin_hash`). Admins read it at `/audit` (filters by table/actor/date,
-  exports PDF/CSV) or `rpc/list_audit_log`.
-- Diagnostics: `/diagnostics` (admins) reads `rpc/diagnostics_snapshot`,
-  `rpc/list_client_error_reports`, `rpc/list_whatsapp_messages` and
-  `rpc/report_whatsapp`; keep it in
-  sync with
-  `supabase/diagnostics.sql` when adding a new counter.
-- Observability: uncaught errors go through `core/observability` into
-  `client_error_reports` (never report expected `Failure`s, never throw from
-  the reporter); Edge Functions log one JSON line per request; run
-  `sh supabase/healthcheck.sh` / `diagnostics.sh` when triaging.
-- Notifications: in-app rows + Supabase Realtime work with no extra config;
-  browser push uses `web/push-sw.js` + VAPID (`web_push_subscriptions`);
-  `FCM_SERVICE_ACCOUNT_JSON` + `supabase/notifications-cron.sh` enable
-  background FCM. `push-dispatch` is service-role-only; never expose the key.
-- Tests: `flutter test` (797, plus a live-stack e2e) + `flutter analyze`; CI
-  validates compose and runs `supabase/tests/run.sh` (real migrations +
-  RPC/RLS tests) against `supabase/postgres`. The only expected analyzer output
-  is SDK `deprecated_member_use` infos from the pinned beta channel (no other
-  infos, warnings or errors).
-- E2E: `sh supabase/tests/e2e.sh` and
-  `SUPABASE_URL=... SUPABASE_ANON_KEY=... flutter test test/integration`
-  exercise the real stack; update them when an RPC contract changes.
-- Secrets: `.env` only, `chmod 600`; review quarterly with
-  `sh supabase/check-secrets.sh`; PIN rotation via
-  `sh supabase/rotate-pin.sh`; JWT/DB rotation and leak response are in
-  `docs/runbook-secrets.md`.
-- Backups: drill them with `sh supabase/restore-drill.sh` (scratch DB, safe)
-  at least monthly; restore with
-  `RESTORE_CONFIRM=yes sh supabase/restore.sh <dir>`. `.env` is not included.
-  The full procedure is `docs/runbook-restore.md`.
-- Known operational notes: pre-migration data needs a manual `pg_dump`/restore;
-  Android release requires HTTPS in front of Envoy; `idempotency_keys` has no
-  automatic TTL purge yet.
+### B. Tokens, Ergonomics & Accessibility (WCAG 2.1 AA)
 
-## Business rules
+* **Design Tokens Exclusivity:** Consume `Theme.of(context)` tokens exclusively. Zero hardcoded color literals (`Color(0xFF...)`) or absolute font stylings in widgets.
+* **Touch Target Integrity:** All interactive buttons, slot cards, and keyboard actions must meet the $\ge 48 \times 48\text{ dp}$ touch target threshold for touch-screen POS/cabin terminals.
+* **Semantic Colors:**
+* Free/Available slots: Emerald green (`#10B981` / semantic success).
+* Occupied/Active: Slate / Zinc neutral with clear vehicle plate badges.
+* Overstay / High Risk / Negative Cash: Rose/Red alert (`#F43F5E`) used *strictly* for actionable anomalies.
+* **Typography & Localization:** Formatting via `Money` (`core/money`) and localized labels via `context.l10n` exclusively.
 
-- Categories: moto, car, camioneta, camion, bus (configurable).
-- Tariffs per category: hourly, daily, nightly, monthly (COP).
-- Night tariff is a time window that REPLACES the day tariff during that window.
-- Billing: fractional hours ceil to next hour; daily cap; monthly pass → 0.
-- Evidence photos (dents/scratches) at check-in.
-- Offline-first: Hive CE local source of truth + outbox sync queue.
-- Receipt/ticket internal only (no electronic invoicing).
+---
 
-## TDD
+## 4. Testing Mandates & Linux Native Verification (Strict TDD)
 
-Write 3 tests (Success / Failure / Security) BEFORE logic.
+Testing follows the **Red $\rightarrow$ Green $\rightarrow$ Refactor** discipline. Tests are written **BEFORE** implementation code.
 
-## Implementation invariants (from the review hardening pass)
+### A. Unit & Feature Testing
 
-- **Retryable writes**: generate `client_ref` BEFORE the first attempt, send
-  it as `Idempotency-Key`, and persist the SAME ref if the attempt is queued.
-  Never create the key only inside the failure branch.
-- **Offline timestamps**: capture `client_entry_time` / `client_exit_time`
-  before the first request (not at replay) and validate them server-side with
-  `MAX_CLIENT_CLOCK_SKEW`.
-- **Sync lifecycle**: restore the session before `SyncService.start()`;
-  `AuthCubit` flushes the outbox on login. 401 stops the drain (login
-  resumes); 403 is a `ValidationFailure` and dead-letters only that entry.
-- **Cubits**: extend `ResilientCubit` (never raw `Cubit`) so an in-flight
-  future that resolves after `close()` cannot throw. Submission flows must
-  catch non-`Failure` errors and always leave `SubmissionInProgress`.
-- **Auth storage**: both the app JWT (`TokenStore`) and the Supabase SDK session
-  (`SecureSupabaseStorage`) live in `flutter_secure_storage`; Hive only stores
-  the profile. Logout clears reference-data caches and signs out locally
-  (`SignOutScope.local`) but never clears the outbox. The auth-state listener
-  refreshes the Hive token snapshot.
-- **Mobile navigation**: the phone shell shows four main tabs (home, check-in,
-  check-out, records) plus a **Menú** tab that opens the drawer with every other
-  allowed destination and sign-out; never put more than five items in the
-  bottom bar. The wide layout keeps the sidebar.
-- **Lists used for lookups** (open sessions, vehicles, monthly passes) must
-  walk every Supabase page; PostgREST caps rows per request.
-- **UI text**: always `context.l10n`; no hardcoded operator-facing strings.
-- **Money**: amounts are integers in the site currency's **minor unit** (COP
-  pesos, USD cents). Format/parse only through `Money` (`core/money`); it is
-  configured from `parking_settings.currency` by `BrandingCubit`. CSV exports
-  use `Money.major`, screens/receipts `Money.format`. Never hardcode `$` or
-  divide by 100 in a widget.
-- **Language**: the device picks system/`es`/`en` via `LocaleCubit`; keep every
-  new string in both ARB files and never read `Platform.localeName` directly.
-- **Supabase**: `supabase/migrations` is the only schema owner (applied by
-  `supabase-migrate`). Every new table ships grants + RLS before PostgREST sees
-  it; writes go through `security definer` RPCs that derive the operator from
-  `auth.uid()` and enforce idempotency.
-- **Auth**: GoTrue only. Usernames map to `<username>@parking.local` with a
-  6-digit PIN as password; `public.users` is mirrored by the `auth.users`
-  trigger. Never put the service-role key in the client — admin user changes go
-  through the `admin-users` Edge Function.
+* **Coverage Target:** $\ge 90\%$ coverage on `domain/`, `application/`, and `infrastructure/` mappers.
+* **Isolation:** Use `mocktail` for dependency isolation and `bloc_test` for Cubit state emissions.
+* **Test Structure:** Strict Arrange $\rightarrow$ Act $\rightarrow$ Assert. Every test case must verify:
+1. *Success Case* (nominal execution path).
+2. *Failure / Edge Case* (network drop, validation error, out-of-capacity).
+3. *Security / RLS Invariant* (unauthorized role, wrong lot ID, expired token).
 
-## Spec-driven workflow (OpenSpec)
+### B. Linux Integration & E2E Testing
 
-- Plan with OpenSpec: `openspec new change <name>` then fill proposal → specs → design → tasks.
-- Implement via tasks; archive with `openspec archive <name>`.
-- Before implementation, read `openspec/changes/<name>/` artifacts.
+Critical operator workflows (Check-in, Check-out calculation, Cash shift reconciliation, Pass renewal) must be covered by integration tests runnable directly on Linux headless CI:
+
+```bash
+# 1. Static and Unit Analysis
+flutter analyze
+flutter test --coverage
+dart run tool/check_coverage.dart
+
+# 2. Native Linux E2E & Flow Verification
+flutter test -d linux integration_test/parking_workflow_test.dart
+```
+* Integration tests exercise real Hive local storage, mock/fake network boundaries, and assert that UI state transitions and receipts render within acceptable time budgets ($< 250\text{ ms}$).
+* Zero skipped tests or deleted assertions are permitted to force a green build.
+
+---
+
+## 5. Implementation Invariants & Business Logic
+
+* **Retryable Writes & Idempotency:** Generate `client_ref` BEFORE the first attempt, send it as `Idempotency-Key`, and persist the SAME ref if queued in Hive outbox. Never generate idempotency keys inside failure catch blocks.
+* **Offline Timestamps:** Capture `client_entry_time` and `client_exit_time` at the moment of operator confirmation (not at sync time); validate server-side against `MAX_CLIENT_CLOCK_SKEW`.
+* **Resilient Cubits:** All Cubits must extend `ResilientCubit` to prevent unhandled post-close emissions.
+* **Shift & Cash Actions:** Cash intake, shift opening, closing, and reconciliation are strictly disabled while offline; they must never be queued in the outbox.
+* **Multi-Lot Isolation:** Every table carries `lot_id`. RLS policies must read `current_lot_id()` from the mandatory `x-lot-id` header. Storage and Realtime must use membership checks (`can_read_evidence()`, `can_read_lot()`) because headers are stripped.
+* **Money Handling:** Amounts are strictly integers in minor units (COP pesos, USD cents) formatted only through `Money` (`core/money`). Never divide by 100 or hardcode `$` in widgets.
+
+---
+
+## 6. Gatekeeper Checklist
+
+Before closing any task or pushing to Git:
+
+1. **Static Analysis & Linting:**
+```bash
+flutter analyze
+```
+
+*Must report 0 errors, 0 warnings (only pinned SDK deprecation infos allowed).*
+
+2. **Full Test Suite & Coverage:**
+```bash
+flutter test --coverage
+```
+
+*All unit tests must pass in green.*
+
+3. **Backend & Integration Verification:**
+```bash
+sh supabase/tests/run.sh
+flutter test -d linux integration_test/app_flow_test.dart
+```
+
+4. **Delivery & Commit:**
+* Commit with Conventional Commits (`feat:`, `fix:`, `test:`, `refactor:`).
+
+* Push immediately to the remote branch; never leave completed tasks unpushed.

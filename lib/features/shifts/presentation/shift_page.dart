@@ -14,7 +14,10 @@ import '../../../core/theme/status_colors.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/confirm_dialog.dart';
+import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_state.dart';
+import '../../../core/widgets/section_header.dart';
+import '../../../core/widgets/skeleton.dart';
 import '../../../core/widgets/money_text.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../../lots/application/lots_cubit.dart';
@@ -114,9 +117,8 @@ class _ShiftPageState extends State<ShiftPage> {
         ),
         body: BlocBuilder<ShiftCubit, ShiftState>(
           builder: (context, state) => switch (state.status) {
-            ShiftStatus.initial || ShiftStatus.loading => const Center(
-              child: CircularProgressIndicator(),
-            ),
+            ShiftStatus.initial ||
+            ShiftStatus.loading => const SkeletonCardList(itemCount: 3),
             ShiftStatus.failure => ErrorState(
               message: state.error == null
                   ? l10n.errorUnknown
@@ -168,34 +170,36 @@ class _Content extends StatelessWidget {
         ],
         if (isAdmin) ...[
           const SizedBox(height: Space.xl),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  l10n.shiftHistory,
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-              ),
-              if (state.historyFrom != null || state.historyTo != null)
-                TextButton(
-                  onPressed: () => context.read<ShiftCubit>().load(
-                    admin: true,
-                    clearHistoryRange: true,
+          SectionHeader(
+            icon: Icons.receipt_long_outlined,
+            title: l10n.shiftHistory,
+            action: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (state.historyFrom != null || state.historyTo != null)
+                  TextButton(
+                    onPressed: () => context.read<ShiftCubit>().load(
+                      admin: true,
+                      clearHistoryRange: true,
+                    ),
+                    child: Text(l10n.shiftHistoryClearFilter),
                   ),
-                  child: Text(l10n.shiftHistoryClearFilter),
+                IconButton(
+                  tooltip: l10n.shiftHistoryFilter,
+                  onPressed: () => _pickHistoryRange(context, state),
+                  icon: const Icon(Icons.date_range),
                 ),
-              IconButton(
-                tooltip: l10n.shiftHistoryFilter,
-                onPressed: () => _pickHistoryRange(context, state),
-                icon: const Icon(Icons.date_range),
-              ),
-            ],
+              ],
+            ),
           ),
           const SizedBox(height: Space.sm),
           if (state.history.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: Space.md),
-              child: Text(l10n.shiftHistoryEmpty),
+            SizedBox(
+              height: 220,
+              child: EmptyState(
+                icon: Icons.point_of_sale_outlined,
+                message: l10n.shiftHistoryEmpty,
+              ),
             )
           else
             for (final shift in state.history) _HistoryTile(shift: shift),

@@ -154,6 +154,11 @@ void main() {
   testWidgets('Success: sessions are filtered and tagged by site', (
     tester,
   ) async {
+    // Tall viewport: the session list is lazy and both tickets plus the
+    // header must be built to assert the chips.
+    tester.view.physicalSize = const Size(1000, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     final repository = FakeVehicleHistoryRepository(history: sampleHistory());
     final cubit = VehicleHistoryCubit(repository);
     addTearDown(cubit.close);

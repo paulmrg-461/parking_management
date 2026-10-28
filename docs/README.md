@@ -13,6 +13,7 @@ Start here, then open the page you need.
 | [`architecture.md`](architecture.md) | How the system is put together: components, Flutter layers, and the flows for check-in, billing, shifts, notifications and multi-site. |
 | [`infrastructure.md`](infrastructure.md) | Services, ports, volumes, environment variables, operations (logs, health, backup/restore, cron, scaling). |
 | [`database.md`](database.md) | Tables, relationships (ER diagram), RPC catalog, RLS model and migration rules. |
+| [`ui-kit.md`](ui-kit.md) | **Design system**: four screen states, shared widgets, tokens, accessibility and per-module conventions. |
 | [`runbook-restore.md`](runbook-restore.md) | Backup contents, monthly restore drill, production restore and verification checklist. |
 | [`runbook-secrets.md`](runbook-secrets.md) | Secret inventory, quarterly review, PIN/JWT/DB rotation procedures and leak response. |
 | [`agent-memory.md`](agent-memory.md) | Current state, invariants and gotchas for whoever (human or agent) picks the work up next. |

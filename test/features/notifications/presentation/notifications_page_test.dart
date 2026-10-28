@@ -57,7 +57,99 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('No hay notificaciones'), findsOneWidget);
+    expect(find.text('Bandeja vacía'), findsOneWidget);
+    expect(
+      find.text(
+        'Los avisos de entradas, salidas, turnos y mensualidades aparecerán aquí.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Ver registros'), findsOneWidget);
+  });
+
+  testWidgets('Success: the unread filter hides read notifications', (
+    tester,
+  ) async {
+    final repository = FakeNotificationRepository(
+      items: [
+        _notification(1),
+        AppNotification(
+          id: 2,
+          type: 'check_in',
+          title: 'Vehículo XYZ2 entró',
+          body: 'Ingreso registrado',
+          createdAt: DateTime.now(),
+          isRead: true,
+        ),
+      ],
+    );
+    final cubit = NotificationsCubit(repository);
+    await cubit.start(1);
+    addTearDown(cubit.close);
+    addTearDown(repository.dispose);
+    await tester.pumpWidget(
+      testApp(
+        BlocProvider.value(value: cubit, child: const NotificationsPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Vehículo XYZ2 entró'), findsOneWidget);
+
+    await tester.tap(find.text('No leídas'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Vehículo XYZ2 entró'), findsNothing);
+    expect(find.text('Vehículo ABC1 salió'), findsOneWidget);
+  });
+
+  testWidgets('Success: notifications are grouped by day', (tester) async {
+    final repository = FakeNotificationRepository(
+      items: [
+        AppNotification(
+          id: 3,
+          type: 'check_in',
+          title: 'Vehículo HOY3 entró',
+          body: 'Ingreso registrado',
+          createdAt: DateTime.now(),
+        ),
+        _notification(1),
+      ],
+    );
+    final cubit = NotificationsCubit(repository);
+    await cubit.start(1);
+    addTearDown(cubit.close);
+    addTearDown(repository.dispose);
+    await tester.pumpWidget(
+      testApp(
+        BlocProvider.value(value: cubit, child: const NotificationsPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Hoy'), findsOneWidget);
+    expect(find.text('Anteriores'), findsOneWidget);
+  });
+
+  testWidgets('A11y: inbox rows and filters meet touch and contrast', (
+    tester,
+  ) async {
+    final repository = FakeNotificationRepository(
+      items: [_notification(1), _notification(2)],
+    );
+    final cubit = NotificationsCubit(repository);
+    await cubit.start(1);
+    addTearDown(cubit.close);
+    addTearDown(repository.dispose);
+    await tester.pumpWidget(
+      testApp(
+        BlocProvider.value(value: cubit, child: const NotificationsPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+    await expectLater(tester, meetsGuideline(textContrastGuideline));
   });
 
   testWidgets('Security: the bell exposes the unread count', (tester) async {

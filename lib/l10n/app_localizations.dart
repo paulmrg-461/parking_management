@@ -1439,7 +1439,7 @@ abstract class AppLocalizations {
   /// No description provided for @shiftOpeningFloat.
   ///
   /// In es, this message translates to:
-  /// **'Base inicial (COP)'**
+  /// **'Base inicial'**
   String get shiftOpeningFloat;
 
   /// No description provided for @shiftOpen.
@@ -2879,7 +2879,7 @@ abstract class AppLocalizations {
   /// No description provided for @fieldAmount.
   ///
   /// In es, this message translates to:
-  /// **'Valor (COP)'**
+  /// **'Valor'**
   String get fieldAmount;
 
   /// No description provided for @fieldType.
@@ -3485,7 +3485,7 @@ abstract class AppLocalizations {
   /// No description provided for @discountAmount.
   ///
   /// In es, this message translates to:
-  /// **'Descuento (COP)'**
+  /// **'Descuento'**
   String get discountAmount;
 
   /// No description provided for @discountReason.
@@ -4471,6 +4471,240 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Sin ingresos en este rango'**
   String get reportsNoRevenue;
+
+  /// No description provided for @errorTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Algo salió mal'**
+  String get errorTitle;
+
+  /// No description provided for @actionClearFilters.
+  ///
+  /// In es, this message translates to:
+  /// **'Limpiar filtros'**
+  String get actionClearFilters;
+
+  /// No description provided for @notificationsToday.
+  ///
+  /// In es, this message translates to:
+  /// **'Hoy'**
+  String get notificationsToday;
+
+  /// No description provided for @notificationsYesterday.
+  ///
+  /// In es, this message translates to:
+  /// **'Ayer'**
+  String get notificationsYesterday;
+
+  /// No description provided for @notificationsEarlier.
+  ///
+  /// In es, this message translates to:
+  /// **'Anteriores'**
+  String get notificationsEarlier;
+
+  /// No description provided for @notificationsEmptyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Bandeja vacía'**
+  String get notificationsEmptyTitle;
+
+  /// No description provided for @notificationsEmptyHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Los avisos de entradas, salidas, turnos y mensualidades aparecerán aquí.'**
+  String get notificationsEmptyHint;
+
+  /// No description provided for @notificationsOpenRecords.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver registros'**
+  String get notificationsOpenRecords;
+
+  /// No description provided for @notificationsUnreadOnly.
+  ///
+  /// In es, this message translates to:
+  /// **'No leídas'**
+  String get notificationsUnreadOnly;
+
+  /// No description provided for @notificationsAll.
+  ///
+  /// In es, this message translates to:
+  /// **'Todas'**
+  String get notificationsAll;
+
+  /// No description provided for @notificationsFilterLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Filtrar notificaciones'**
+  String get notificationsFilterLabel;
+
+  /// No description provided for @auditActionInsert.
+  ///
+  /// In es, this message translates to:
+  /// **'Crear'**
+  String get auditActionInsert;
+
+  /// No description provided for @auditActionUpdate.
+  ///
+  /// In es, this message translates to:
+  /// **'Editar'**
+  String get auditActionUpdate;
+
+  /// No description provided for @auditActionDelete.
+  ///
+  /// In es, this message translates to:
+  /// **'Eliminar'**
+  String get auditActionDelete;
+
+  /// No description provided for @auditEmptyFiltered.
+  ///
+  /// In es, this message translates to:
+  /// **'Ningún cambio coincide con los filtros'**
+  String get auditEmptyFiltered;
+
+  /// No description provided for @usersSearchHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscar por nombre o usuario'**
+  String get usersSearchHint;
+
+  /// No description provided for @usersEmptyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin usuarios'**
+  String get usersEmptyTitle;
+
+  /// No description provided for @usersEmptyHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Agrega el primer operador para empezar a registrar movimientos.'**
+  String get usersEmptyHint;
+
+  /// No description provided for @usersAddFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Agregar usuario'**
+  String get usersAddFirst;
+
+  /// No description provided for @recordsSummarySessions.
+  ///
+  /// In es, this message translates to:
+  /// **'Sesiones'**
+  String get recordsSummarySessions;
+
+  /// No description provided for @recordsSummaryCharged.
+  ///
+  /// In es, this message translates to:
+  /// **'Cobrado'**
+  String get recordsSummaryCharged;
+
+  /// No description provided for @recordsEmptyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin movimientos'**
+  String get recordsEmptyTitle;
+
+  /// No description provided for @homeQuickActions.
+  ///
+  /// In es, this message translates to:
+  /// **'Accesos rápidos'**
+  String get homeQuickActions;
+
+  /// No description provided for @homeSummaryHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Estado del parqueadero en tiempo real'**
+  String get homeSummaryHint;
+
+  /// No description provided for @shiftSummaryTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Resumen del turno'**
+  String get shiftSummaryTitle;
+
+  /// No description provided for @spotsLegend.
+  ///
+  /// In es, this message translates to:
+  /// **'Convenciones'**
+  String get spotsLegend;
+
+  /// No description provided for @spotsLegendFree.
+  ///
+  /// In es, this message translates to:
+  /// **'Libre'**
+  String get spotsLegendFree;
+
+  /// No description provided for @spotsLegendOccupied.
+  ///
+  /// In es, this message translates to:
+  /// **'Ocupado'**
+  String get spotsLegendOccupied;
+
+  /// No description provided for @spotsLegendHold.
+  ///
+  /// In es, this message translates to:
+  /// **'Reserva'**
+  String get spotsLegendHold;
+
+  /// No description provided for @spotsLegendMaintenance.
+  ///
+  /// In es, this message translates to:
+  /// **'Mantenimiento'**
+  String get spotsLegendMaintenance;
+
+  /// No description provided for @diagnosticsSummary.
+  ///
+  /// In es, this message translates to:
+  /// **'Resumen operativo'**
+  String get diagnosticsSummary;
+
+  /// No description provided for @notificationsUnreadEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'No tienes notificaciones sin leer'**
+  String get notificationsUnreadEmpty;
+
+  /// No description provided for @auditCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} cambios'**
+  String auditCount(int count);
+
+  /// No description provided for @auditEmptyHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Los cambios en datos maestros se registran automáticamente.'**
+  String get auditEmptyHint;
+
+  /// No description provided for @auditEmptyFilteredHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Prueba con otro rango de fechas, tabla o actor.'**
+  String get auditEmptyFilteredHint;
+
+  /// No description provided for @auditBefore.
+  ///
+  /// In es, this message translates to:
+  /// **'Antes'**
+  String get auditBefore;
+
+  /// No description provided for @auditAfter.
+  ///
+  /// In es, this message translates to:
+  /// **'Después'**
+  String get auditAfter;
+
+  /// No description provided for @auditField.
+  ///
+  /// In es, this message translates to:
+  /// **'Campo'**
+  String get auditField;
+
+  /// No description provided for @usersSearchLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscar usuario'**
+  String get usersSearchLabel;
 }
 
 class _AppLocalizationsDelegate

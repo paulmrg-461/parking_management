@@ -749,7 +749,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shiftNoOpen => 'No open shift';
 
   @override
-  String get shiftOpeningFloat => 'Opening float (COP)';
+  String get shiftOpeningFloat => 'Opening float';
 
   @override
   String get shiftOpen => 'Open shift';
@@ -1535,7 +1535,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fieldVehicle => 'Vehicle';
 
   @override
-  String get fieldAmount => 'Amount (COP)';
+  String get fieldAmount => 'Amount';
 
   @override
   String get fieldType => 'Type';
@@ -1895,7 +1895,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get lostTicketReasonRequired => 'Enter the lost ticket reason';
 
   @override
-  String get discountAmount => 'Discount (COP)';
+  String get discountAmount => 'Discount';
 
   @override
   String get discountReason => 'Discount reason';
@@ -2470,4 +2470,127 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reportsNoRevenue => 'No revenue for this range';
+
+  @override
+  String get errorTitle => 'Something went wrong';
+
+  @override
+  String get actionClearFilters => 'Clear filters';
+
+  @override
+  String get notificationsToday => 'Today';
+
+  @override
+  String get notificationsYesterday => 'Yesterday';
+
+  @override
+  String get notificationsEarlier => 'Earlier';
+
+  @override
+  String get notificationsEmptyTitle => 'Inbox empty';
+
+  @override
+  String get notificationsEmptyHint =>
+      'Check-in, check-out, shift and pass alerts will appear here.';
+
+  @override
+  String get notificationsOpenRecords => 'View records';
+
+  @override
+  String get notificationsUnreadOnly => 'Unread';
+
+  @override
+  String get notificationsAll => 'All';
+
+  @override
+  String get notificationsFilterLabel => 'Filter notifications';
+
+  @override
+  String get auditActionInsert => 'Create';
+
+  @override
+  String get auditActionUpdate => 'Update';
+
+  @override
+  String get auditActionDelete => 'Delete';
+
+  @override
+  String get auditEmptyFiltered => 'No changes match the filters';
+
+  @override
+  String get usersSearchHint => 'Search by name or username';
+
+  @override
+  String get usersEmptyTitle => 'No users yet';
+
+  @override
+  String get usersEmptyHint =>
+      'Add the first operator to start recording movements.';
+
+  @override
+  String get usersAddFirst => 'Add user';
+
+  @override
+  String get recordsSummarySessions => 'Sessions';
+
+  @override
+  String get recordsSummaryCharged => 'Charged';
+
+  @override
+  String get recordsEmptyTitle => 'No movements';
+
+  @override
+  String get homeQuickActions => 'Quick actions';
+
+  @override
+  String get homeSummaryHint => 'Parking status in real time';
+
+  @override
+  String get shiftSummaryTitle => 'Shift summary';
+
+  @override
+  String get spotsLegend => 'Legend';
+
+  @override
+  String get spotsLegendFree => 'Free';
+
+  @override
+  String get spotsLegendOccupied => 'Occupied';
+
+  @override
+  String get spotsLegendHold => 'Hold';
+
+  @override
+  String get spotsLegendMaintenance => 'Maintenance';
+
+  @override
+  String get diagnosticsSummary => 'Operational summary';
+
+  @override
+  String get notificationsUnreadEmpty => 'You have no unread notifications';
+
+  @override
+  String auditCount(int count) {
+    return '$count changes';
+  }
+
+  @override
+  String get auditEmptyHint =>
+      'Changes to master data are recorded automatically.';
+
+  @override
+  String get auditEmptyFilteredHint =>
+      'Try another date range, table or actor.';
+
+  @override
+  String get auditBefore => 'Before';
+
+  @override
+  String get auditAfter => 'After';
+
+  @override
+  String get auditField => 'Field';
+
+  @override
+  String get usersSearchLabel => 'Search users';
 }

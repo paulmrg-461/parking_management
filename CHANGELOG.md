@@ -11,6 +11,30 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Added
 
+**UI/UX pass across every module**
+
+- Shared UI kit (`core/widgets`): `SectionHeader`, `MetricCard`, `FilterBar`,
+  `SkeletonCardList`/`SkeletonTable`, and upgraded `EmptyState`/`ErrorState`
+  with a title, tonal icon, explicit call to action and localized retry.
+  Documented in [`docs/ui-kit.md`](docs/ui-kit.md).
+- Notifications: grouped by day (today / yesterday / earlier), unread filter
+  with a count, tonal type icons, unread emphasis and an empty state that leads
+  to the records page.
+- Audit: filter card with the entry count and date chip, localized action chips
+  (create/update/delete), row dialog that compares **before → after** per field
+  and a clear-filters empty state.
+- Users: search by name or username, role segments, initials avatars, role
+  chips and a first-user CTA.
+- Records: search and range filters inside one card with the result summary,
+  exports behind a single menu and a title on the empty state.
+- Home: quick actions as 48 dp tiles, section headers with hints for quick
+  actions and the live summary.
+- Vehicle history: visit/spend as `MetricCard`s and a section header for the
+  movement list. Shifts and spots use card skeletons and empty states; settings
+  reuses the shared section header.
+- Currency labels stop hardcoding COP: "Valor", "Descuento" and "Base inicial"
+  follow the site currency (the symbol comes from `Money`).
+
 **Multi-currency (COP/USD) and Spanish/English**
 
 - `parking_settings.currency` (`0068`, `COP` default, `USD` allowed) is exposed

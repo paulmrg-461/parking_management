@@ -11,6 +11,7 @@ import '../../reservations/domain/repositories/reservation_repository.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/app_icon_button.dart';
 import '../../../core/widgets/language_button.dart';
+import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/sync_badge.dart';
 import '../../../core/theme/theme_cubit.dart';
 import '../../../core/widgets/theme_mode_button.dart';
@@ -141,26 +142,36 @@ class _Dashboard extends StatelessWidget {
             onEntry: () => context.go('/check-in'),
             onExit: () => context.go('/check-out'),
           ),
+          const SizedBox(height: Space.lg),
+          SectionHeader(
+            icon: Icons.bolt_outlined,
+            title: l10n.homeQuickActions,
+          ),
           const SizedBox(height: Space.sm),
-          Wrap(
-            spacing: Space.sm,
+          Row(
             children: [
-              TextButton.icon(
-                onPressed: () => context.go('/records'),
-                icon: const Icon(Icons.history),
-                label: Text(l10n.navRecords),
+              Expanded(
+                child: _QuickAction(
+                  icon: Icons.history,
+                  label: l10n.navRecords,
+                  onTap: () => context.go('/records'),
+                ),
               ),
-              TextButton.icon(
-                onPressed: () => context.go('/shift'),
-                icon: const Icon(Icons.point_of_sale),
-                label: Text(l10n.homeShift),
+              const SizedBox(width: Space.md),
+              Expanded(
+                child: _QuickAction(
+                  icon: Icons.point_of_sale,
+                  label: l10n.homeShift,
+                  onTap: () => context.go('/shift'),
+                ),
               ),
             ],
           ),
           const SizedBox(height: Space.lg),
-          Text(
-            l10n.homeSummary,
-            style: Theme.of(context).textTheme.titleMedium,
+          SectionHeader(
+            icon: Icons.insights_outlined,
+            title: l10n.homeSummary,
+            subtitle: l10n.homeSummaryHint,
           ),
           const SizedBox(height: Space.sm),
           const _SummaryGrid(
@@ -249,6 +260,66 @@ class _SummaryGrid extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+
+/// Compact secondary shortcut (records, shift): a tonal icon and a label on a
+/// bordered surface, with a 48 dp minimum target.
+class _QuickAction extends StatelessWidget {
+  const _QuickAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: Layout.minTouch),
+      child: Material(
+        color: scheme.surfaceContainerLow,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(Radii.md),
+          side: BorderSide(color: scheme.outlineVariant),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: Space.md,
+              vertical: Space.sm,
+            ),
+            child: Row(
+              children: [
+                Icon(icon, size: 20, color: scheme.primary),
+                const SizedBox(width: Space.sm),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right,
+                  size: 18,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

@@ -4,8 +4,8 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-10-28, branch `feature/supabase` (COP/USD currency, es/en
-language, records exports, deployment requirements).
+Last updated: 2026-10-28, branch `feature/supabase` (UI kit pass, COP/USD
+currency, es/en language, records exports).
 
 ## Where we are
 
@@ -13,7 +13,7 @@ language, records exports, deployment requirements).
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0068` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 797 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 809 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -34,6 +34,29 @@ language, records exports, deployment requirements).
    `0024` (`current_lot_id`, lot CRUD, re-scoped policies/RPCs/reports,
    `report_revenue_all`), `0025` (offline replay lot capture via
    `resolve_lot`), `0026` (`list_lot_members`).
+
+## UI kit pass (2026-10-28)
+
+- New shared widgets, documented in [`docs/ui-kit.md`](ui-kit.md): `SectionHeader`
+  (icon chip + title/subtitle + trailing action), `MetricCard` (label, tabular
+  value, caption, tonal icon, 48 dp when tappable), `FilterBar` (search/filters
+  card with summary + clear action), `SkeletonCardList`/`SkeletonTable` next to
+  `SkeletonList`, and stronger `EmptyState`/`ErrorState` (title + tinted icon +
+  explicit CTA/retry). `AsyncEmpty` now forwards an optional `title`.
+- Rules: no private `_SectionHeader` clones; list screens put search+filters in
+  `FilterBar` and keep the count in its `summary`; pages use a skeleton that
+  matches the geometry (rows, cards or table); empty states always offer the
+  next step; errors only show localized messages with retry.
+- Module changes: notifications grouped by day with an unread filter + CTA;
+  audit has a filter card, action chips and a before → after field dialog; users
+  gain search, initials avatars and role chips; records moved exports to one
+  menu and filters into a card; home has quick-action tiles; vehicle history
+  uses metric cards; shifts/spots/check-in use card skeletons and empty states;
+  settings reuses `SectionHeader`.
+- Currency labels no longer hardcode COP (`Valor`, `Descuento`, `Base inicial`);
+  the symbol comes from `Money`.
+- Gotcha: a lazily built `ListView` only builds visible children, so tests that
+  assert the last row must use a tall viewport or scroll before asserting.
 
 ## Currency and language (2026-10-28)
 
@@ -733,7 +756,7 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 ## Latest verification (2026-10-28)
 
-- `flutter test`: 797 passed (+1 live-stack integration skipped); `flutter
+- `flutter test`: 809 passed (+1 live-stack integration skipped); `flutter
   analyze` 152 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
 - `supabase/tests/run.sh` passed (migrations `0001`–`0067`); `e2e.sh` passed

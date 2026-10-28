@@ -31,13 +31,43 @@ void main() {
 
     expect(find.text('tariffs #3'), findsOneWidget);
     expect(find.textContaining('admin'), findsOneWidget);
-    expect(find.text('update'), findsOneWidget);
+    expect(find.text('Editar'), findsOneWidget);
   });
 
   testWidgets('Empty: no changes shows the empty state', (tester) async {
     await pumpPage(tester);
 
     expect(find.text('Sin cambios registrados'), findsOneWidget);
+  });
+
+  testWidgets('Success: a row opens the before/after comparison', (
+    tester,
+  ) async {
+    await pumpPage(tester, entries: [sampleAudit()]);
+
+    await tester.tap(find.text('tariffs #3'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Cambios'), findsOneWidget);
+    expect(find.text('Antes'), findsOneWidget);
+    expect(find.text('Después'), findsOneWidget);
+    expect(find.text('5000'), findsOneWidget);
+    expect(find.text('6000'), findsOneWidget);
+  });
+
+  testWidgets('Failure: filters with no results offer to clear them', (
+    tester,
+  ) async {
+    await pumpPage(tester, entries: [sampleAudit()]);
+
+    await tester.tap(find.text('Actor'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('admin').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Limpiar filtros'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('tariffs #3'), findsOneWidget);
   });
 
   testWidgets('Success: the export menu offers PDF and CSV', (tester) async {

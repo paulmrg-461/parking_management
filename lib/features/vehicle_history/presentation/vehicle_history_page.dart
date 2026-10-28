@@ -21,6 +21,8 @@ import '../../settings/application/whatsapp_mode.dart';
 import '../../settings/domain/whatsapp_url.dart';
 import '../../../core/widgets/money_text.dart';
 import '../../../core/widgets/receipt_card.dart';
+import '../../../core/widgets/metric_card.dart';
+import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/status_chip.dart';
 import '../../receipt_printing/presentation/receipt_print_sheet.dart';
 import '../application/vehicle_history_cubit.dart';
@@ -310,30 +312,28 @@ class _HistoryBodyState extends State<_HistoryBody> {
                   Text(details, style: textTheme.bodyMedium),
                 ],
                 const SizedBox(height: Space.md),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _Metric(
-                        label: l10n.vehicleHistoryVisits,
-                        value: '${history.visits}',
+                IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(
+                        child: MetricCard(
+                          icon: Icons.directions_car_outlined,
+                          label: l10n.vehicleHistoryVisits,
+                          value: '${history.visits}',
+                        ),
                       ),
-                    ),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            l10n.vehicleHistoryTotalSpent,
-                            style: textTheme.labelMedium,
-                          ),
-                          MoneyText(
-                            history.totalSpent,
-                            style: textTheme.titleLarge,
-                          ),
-                        ],
+                      const SizedBox(width: Space.sm),
+                      Expanded(
+                        child: MetricCard(
+                          icon: Icons.payments_outlined,
+                          label: l10n.vehicleHistoryTotalSpent,
+                          value: Formatters.money(history.totalSpent),
+                          tone: MetricTone.primary,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -414,32 +414,27 @@ class _HistoryBodyState extends State<_HistoryBody> {
           ),
         ],
         const SizedBox(height: Space.lg),
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                l10n.vehicleHistorySessions,
-                style: textTheme.titleMedium,
-              ),
-            ),
-            if (history.lots.length > 1)
-              DropdownButton<int?>(
-                value: _lotFilter,
-                underline: const SizedBox.shrink(),
-                items: [
-                  DropdownMenuItem(
-                    value: null,
-                    child: Text(l10n.vehicleHistoryAllLots),
-                  ),
-                  for (final lot in history.lots)
+        SectionHeader(
+          icon: Icons.timeline,
+          title: l10n.vehicleHistorySessions,
+          action: history.lots.length <= 1
+              ? null
+              : DropdownButton<int?>(
+                  value: _lotFilter,
+                  underline: const SizedBox.shrink(),
+                  items: [
                     DropdownMenuItem(
-                      value: lot.id,
-                      child: Text(lot.name),
+                      value: null,
+                      child: Text(l10n.vehicleHistoryAllLots),
                     ),
-                ],
-                onChanged: (value) => setState(() => _lotFilter = value),
-              ),
-          ],
+                    for (final lot in history.lots)
+                      DropdownMenuItem(
+                        value: lot.id,
+                        child: Text(lot.name),
+                      ),
+                  ],
+                  onChanged: (value) => setState(() => _lotFilter = value),
+                ),
         ),
         const SizedBox(height: Space.sm),
         if (history.sessions.isEmpty)
@@ -460,25 +455,6 @@ class _HistoryBodyState extends State<_HistoryBody> {
               phone: history.ownerPhone,
               onCharge: widget.onCharge,
             ),
-      ],
-    );
-  }
-}
-
-class _Metric extends StatelessWidget {
-  const _Metric({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: textTheme.labelMedium),
-        Text(value, style: textTheme.titleLarge),
       ],
     );
   }

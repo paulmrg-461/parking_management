@@ -10,7 +10,10 @@ import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/async_view.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/filter_bar.dart';
 import '../../../core/widgets/list_page_scaffold.dart';
+import '../../../core/widgets/search_field.dart';
+import '../../../core/widgets/status_chip.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/widgets/submission_listener.dart';
 import '../../auth/application/auth_cubit.dart';
@@ -32,6 +35,7 @@ enum _RoleFilter { all, admin, operator }
 
 class _UsersPageState extends State<UsersPage> {
   _RoleFilter _filter = _RoleFilter.all;
+  String _query = '';
 
   @override
   void initState() {
@@ -84,7 +88,14 @@ class _UsersPageState extends State<UsersPage> {
             builder: (users) => _UsersList(
               users: users,
               filter: _filter,
+              query: _query,
               onFilter: (filter) => setState(() => _filter = filter),
+              onQuery: (query) => setState(() => _query = query),
+              onReset: () => setState(() {
+                _filter = _RoleFilter.all;
+                _query = '';
+              }),
+              onAdd: () => _addUser(context, context.read<UsersCubit>()),
             ),
           ),
         ),
@@ -100,12 +111,13 @@ class _UsersPageState extends State<UsersPage> {
           context.read<UsersCubit>().load,
         ),
         UsersLoaded(:final users) when users.isEmpty => AsyncEmpty(
-          context.l10n.usersEmpty,
+          context.l10n.usersEmptyHint,
+          title: context.l10n.usersEmptyTitle,
           icon: Icons.people_outline,
           action: FilledButton.icon(
             onPressed: () => _addUser(context, context.read<UsersCubit>()),
             icon: const Icon(Icons.add),
-            label: Text(context.l10n.userAddTooltip),
+            label: Text(context.l10n.usersAddFirst),
           ),
         ),
         UsersLoaded(:final users) => AsyncReady(users),
@@ -119,24 +131,36 @@ class _UsersList extends StatelessWidget {
   const _UsersList({
     required this.users,
     required this.filter,
+    required this.query,
     required this.onFilter,
+    required this.onQuery,
+    required this.onReset,
+    required this.onAdd,
   });
 
   final List<User> users;
   final _RoleFilter filter;
+  final String query;
   final ValueChanged<_RoleFilter> onFilter;
+  final ValueChanged<String> onQuery;
+  final VoidCallback onReset;
+  final VoidCallback onAdd;
 
-  List<User> get _visible => switch (filter) {
-    _RoleFilter.all => users,
-    _RoleFilter.admin => [
+  List<User> get _visible {
+    final needle = query.trim().toLowerCase();
+    return [
       for (final user in users)
-        if (user.role == UserRole.admin) user,
-    ],
-    _RoleFilter.operator => [
-      for (final user in users)
-        if (user.role == UserRole.operator) user,
-    ],
-  };
+        if (switch (filter) {
+              _RoleFilter.all => true,
+              _RoleFilter.admin => user.role == UserRole.admin,
+              _RoleFilter.operator => user.role == UserRole.operator,
+            } &&
+            (needle.isEmpty ||
+                user.displayName.toLowerCase().contains(needle) ||
+                user.username.toLowerCase().contains(needle)))
+          user,
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -144,27 +168,44 @@ class _UsersList extends StatelessWidget {
     final visible = _visible;
     return Column(
       children: [
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.fromLTRB(Space.md, Space.sm, Space.md, 0),
-          child: SegmentedButton<_RoleFilter>(
-            showSelectedIcon: false,
-            segments: [
-              ButtonSegment(
-                value: _RoleFilter.all,
-                label: Text(l10n.usersFilterAll),
+        Padding(
+          padding: const EdgeInsets.all(Space.md),
+          child: FilterBar(
+            summary: l10n.recordsCount(visible.length),
+            onClear: filter == _RoleFilter.all && query.isEmpty
+                ? null
+                : onReset,
+            clearLabel: l10n.actionClearFilters,
+            children: [
+              SizedBox(
+                width: 260,
+                child: SearchField(
+                  label: l10n.usersSearchLabel,
+                  hint: l10n.usersSearchHint,
+                  textCapitalization: TextCapitalization.words,
+                  onChanged: onQuery,
+                ),
               ),
-              ButtonSegment(
-                value: _RoleFilter.admin,
-                label: Text(l10n.roleAdmin),
-              ),
-              ButtonSegment(
-                value: _RoleFilter.operator,
-                label: Text(l10n.roleOperator),
+              SegmentedButton<_RoleFilter>(
+                showSelectedIcon: false,
+                segments: [
+                  ButtonSegment(
+                    value: _RoleFilter.all,
+                    label: Text(l10n.usersFilterAll),
+                  ),
+                  ButtonSegment(
+                    value: _RoleFilter.admin,
+                    label: Text(l10n.roleAdmin),
+                  ),
+                  ButtonSegment(
+                    value: _RoleFilter.operator,
+                    label: Text(l10n.roleOperator),
+                  ),
+                ],
+                selected: {filter},
+                onSelectionChanged: (selection) => onFilter(selection.first),
               ),
             ],
-            selected: {filter},
-            onSelectionChanged: (selection) => onFilter(selection.first),
           ),
         ),
         Expanded(
@@ -172,12 +213,14 @@ class _UsersList extends StatelessWidget {
               ? EmptyState(
                   message: l10n.usersFilterEmpty,
                   icon: Icons.filter_alt_off_outlined,
+                  action: FilledButton.tonalIcon(
+                    onPressed: onAdd,
+                    icon: const Icon(Icons.add),
+                    label: Text(l10n.usersAddFirst),
+                  ),
                 )
               : ListView.separated(
-                  padding: const EdgeInsets.only(
-                    top: Space.sm,
-                    bottom: Space.xxl * 2,
-                  ),
+                  padding: const EdgeInsets.only(bottom: Space.xxl * 2),
                   itemCount: visible.length,
                   separatorBuilder: (_, _) => const Divider(height: 1),
                   itemBuilder: (context, index) =>
@@ -194,13 +237,46 @@ class _UserTile extends StatelessWidget {
 
   final User user;
 
+  String get _initials {
+    final name = user.displayName.trim();
+    if (name.isEmpty) {
+      return user.username.characters.first.toUpperCase();
+    }
+    final parts = name.split(RegExp(r'\s+'));
+    final first = parts.first.characters.first;
+    final last = parts.length > 1 ? parts.last.characters.first : '';
+    return '$first$last'.toUpperCase();
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final scheme = Theme.of(context).colorScheme;
+    final admin = user.role == UserRole.admin;
     return ListTile(
-      leading: const Icon(Icons.person_outline),
-      title: Text(user.displayName),
-      subtitle: Text('${user.username} · ${user.role.label(l10n)}'),
+      leading: CircleAvatar(
+        backgroundColor: admin
+            ? scheme.primaryContainer
+            : scheme.surfaceContainerHighest,
+        foregroundColor: admin
+            ? scheme.onPrimaryContainer
+            : scheme.onSurfaceVariant,
+        child: Text(
+          _initials,
+          style: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+      ),
+      title: Row(
+        children: [
+          Flexible(child: Text(user.displayName)),
+          const SizedBox(width: Space.sm),
+          StatusChip(
+            label: user.role.label(l10n),
+            tone: admin ? StatusTone.pending : StatusTone.neutral,
+          ),
+        ],
+      ),
+      subtitle: Text('@${user.username}'),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [

@@ -13,6 +13,7 @@ import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/list_page_scaffold.dart';
+import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/utils/policy_template.dart';
 import '../../../core/widgets/submission_listener.dart';
@@ -256,7 +257,7 @@ class _SettingsPageState extends State<SettingsPage> {
         children: [
           _logoSection(context),
           const SizedBox(height: Space.lg),
-          _SectionHeader(
+          SectionHeader(
             icon: Icons.badge_outlined,
             title: l10n.settingsSectionIdentity,
           ),
@@ -315,7 +316,7 @@ class _SettingsPageState extends State<SettingsPage> {
             decoration: InputDecoration(labelText: l10n.settingsWhatsapp),
           ),
           const SizedBox(height: Space.lg),
-          _SectionHeader(
+          SectionHeader(
             icon: Icons.grid_view_rounded,
             title: l10n.settingsSectionSpaces,
           ),
@@ -404,7 +405,7 @@ class _SettingsPageState extends State<SettingsPage> {
             label: Text(l10n.spotsTitle),
           ),
           const SizedBox(height: Space.lg),
-          _SectionHeader(
+          SectionHeader(
             icon: Icons.photo_camera_outlined,
             title: l10n.settingsSectionEvidence,
           ),
@@ -427,7 +428,7 @@ class _SettingsPageState extends State<SettingsPage> {
             },
           ),
           const SizedBox(height: Space.lg),
-          _SectionHeader(
+          SectionHeader(
             icon: Icons.chat_outlined,
             title: l10n.settingsSectionMessaging,
           ),
@@ -440,7 +441,7 @@ class _SettingsPageState extends State<SettingsPage> {
             subtitle: Text(l10n.settingsWhatsappAutoHint),
           ),
           const SizedBox(height: Space.lg),
-          _SectionHeader(
+          SectionHeader(
             icon: Icons.tune,
             title: l10n.settingsSectionPreferences,
           ),
@@ -464,7 +465,7 @@ class _SettingsPageState extends State<SettingsPage> {
             },
           ),
           const SizedBox(height: Space.lg),
-          _SectionHeader(
+          SectionHeader(
             icon: Icons.gavel_outlined,
             title: l10n.settingsSectionLegal,
           ),
@@ -690,31 +691,6 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 }
 
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.icon, required this.title});
-
-  final IconData icon;
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Row(
-      children: [
-        Icon(icon, size: 18, color: theme.colorScheme.primary),
-        const SizedBox(width: Space.xs),
-        Text(
-          title,
-          style: theme.textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// Out-of-service is a per-bay state once the site has a map.
 class _MapMaintenanceNote extends StatelessWidget {
   const _MapMaintenanceNote({required this.label, required this.bays});
 

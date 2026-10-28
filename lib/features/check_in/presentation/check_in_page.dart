@@ -27,6 +27,7 @@ import '../../../core/widgets/plate_input_field.dart';
 import '../../../core/widgets/plate_keypad.dart';
 import '../../../core/receipt/evidence_link.dart';
 import '../../../core/widgets/receipt_card.dart';
+import '../../../core/widgets/skeleton.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/widgets/sync_badge.dart';
 import '../../../app/di/injection.dart';
@@ -1071,10 +1072,7 @@ class _OpenSessionsSliver extends StatelessWidget {
       builder: (context, state) {
         if (state.status == SessionsStatus.loading && state.sessions.isEmpty) {
           return const SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.symmetric(vertical: 16),
-              child: Center(child: CircularProgressIndicator()),
-            ),
+            child: SizedBox(height: 180, child: SkeletonList(itemCount: 3)),
           );
         }
         if (state.sessions.isEmpty) {

@@ -37,7 +37,14 @@ void main() {
 
     expect(find.text('Usuarios'), findsOneWidget);
     expect(find.text('Ana'), findsOneWidget);
-    expect(find.text('ana · Operador'), findsOneWidget);
+    expect(find.text('@ana'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(ListTile),
+        matching: find.text('Operador'),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('Success: deactivation can be undone from the SnackBar', (
@@ -78,7 +85,13 @@ void main() {
 
   testWidgets('Empty: no users offers the first user', (tester) async {
     await pumpPage(tester, users: const []);
-    expect(find.text('Aún no hay usuarios'), findsOneWidget);
+    expect(find.text('Sin usuarios'), findsOneWidget);
+    expect(
+      find.text(
+        'Agrega el primer operador para empezar a registrar movimientos.',
+      ),
+      findsOneWidget,
+    );
 
     await tester.tap(find.text('Agregar usuario'));
     await tester.pumpAndSettle();
@@ -114,7 +127,9 @@ void main() {
       ],
     );
 
-    await tester.tap(find.text('Administrador'));
+    // The first match is the filter segment; the second is the admin chip
+    // on the user row.
+    await tester.tap(find.text('Administrador').first);
     await tester.pumpAndSettle();
     expect(find.text('Ana'), findsOneWidget);
     expect(find.text('Beto'), findsNothing);
@@ -125,12 +140,40 @@ void main() {
     expect(find.text('Beto'), findsOneWidget);
   });
 
+  testWidgets('Success: the search narrows by name or username', (tester) async {
+    await pumpPage(
+      tester,
+      users: const [
+        User(
+          id: 1,
+          username: 'ana',
+          displayName: 'Ana',
+          role: UserRole.operator,
+        ),
+        User(
+          id: 2,
+          username: 'beto',
+          displayName: 'Beto',
+          role: UserRole.operator,
+        ),
+      ],
+    );
+
+    await tester.enterText(find.byType(TextField), 'bet');
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ana'), findsNothing);
+    expect(find.text('Beto'), findsOneWidget);
+  });
+
   testWidgets('Failure: a filter with no matches explains itself', (
     tester,
   ) async {
     await pumpPage(tester);
 
-    await tester.tap(find.text('Administrador'));
+    // The first match is the filter segment; the second is the admin chip
+    // on the user row.
+    await tester.tap(find.text('Administrador').first);
     await tester.pumpAndSettle();
 
     expect(find.text('No hay usuarios con este filtro'), findsOneWidget);
