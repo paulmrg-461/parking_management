@@ -70,6 +70,7 @@ Future<AuthCubit> pumpApp(
   FakeNotificationRepository? notifications,
   FakeCheckOutRepository? dashboardRepository,
   LocaleCubit? localeCubit,
+  ThemeCubit? themeCubit,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -108,8 +109,10 @@ Future<AuthCubit> pumpApp(
     );
   addTearDown(serviceLocator.reset);
   final syncOutbox = outbox ?? FakeSyncOutbox();
-  final themeCubit = ThemeCubit(FakeKeyValueStore());
-  addTearDown(themeCubit.close);
+  final theme = themeCubit ?? ThemeCubit(FakeKeyValueStore());
+  if (themeCubit == null) {
+    addTearDown(theme.close);
+  }
   final auth = AuthCubit(repository);
   await auth.restore();
   final syncStatus = SyncStatusCubit(syncOutbox, syncOutbox.remove);
@@ -122,7 +125,7 @@ Future<AuthCubit> pumpApp(
           branding ?? BrandingCubit(FakeParkingSettingsRepository()),
       connectivityCubit: connectivity,
       lotsCubit: serviceLocator<LotsCubit>(),
-      themeCubit: themeCubit,
+      themeCubit: theme,
       localeCubit: localeCubit,
     ),
   );

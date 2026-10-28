@@ -13,6 +13,11 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 **UI/UX pass across every module**
 
+- Mobile app bar keeps only the notification bell and sync badge. Language,
+  appearance and sign-out moved to the drawer (with the current value as
+  subtitle and a bottom sheet to switch), and the drawer header gained an
+  explicit close button. On desktop the same preferences sit in the sidebar
+  footer next to the account card.
 - The scan-to-check-out shortcut is now hidden on every management route
   (vehicles, tariffs, categories, diagnostics, audit, sites, reservations,
   passes, users, reports, settings); it stays on the operator screens.

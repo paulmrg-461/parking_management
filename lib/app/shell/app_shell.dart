@@ -6,7 +6,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/l10n/l10n.dart';
+import '../../core/l10n/locale_cubit.dart';
 import '../../core/realtime/local_activity.dart';
+import '../../core/theme/theme_cubit.dart';
 import '../di/injection.dart';
 import '../../core/qr/qr_decoder.dart';
 import '../../core/qr/qr_scan_page.dart';
@@ -337,6 +339,13 @@ class _AppMenuDrawer extends StatelessWidget {
                       ],
                     ),
                   ),
+                  IconButton(
+                    tooltip: MaterialLocalizations.of(
+                      context,
+                    ).closeButtonTooltip,
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close),
+                  ),
                 ],
               ),
             ),
@@ -352,14 +361,10 @@ class _AppMenuDrawer extends StatelessWidget {
                       selected: destination.matches(location),
                       onTap: () => onNavigate(destination.path),
                     ),
+                  const Divider(),
+                  _DrawerPreferences(onLogout: onLogout),
                 ],
               ),
-            ),
-            const Divider(height: 1),
-            ListTile(
-              leading: const Icon(Icons.logout),
-              title: Text(l10n.actionLogout),
-              onTap: onLogout,
             ),
           ],
         ),
@@ -375,6 +380,176 @@ class _AppMenuDrawer extends StatelessWidget {
     } on ProviderNotFoundException {
       return l10n.navHome;
     }
+  }
+}
+
+/// Language, appearance and sign-out moved out of the phone app bar: they
+/// live at the bottom of the drawer, with the current value as subtitle.
+class _DrawerPreferences extends StatelessWidget {
+  const _DrawerPreferences({required this.onLogout});
+
+  final VoidCallback onLogout;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final localeCubit = _locale(context);
+    final themeCubit = _theme(context);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            Space.md,
+            Space.md,
+            Space.md,
+            Space.xs,
+          ),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              l10n.settingsSectionPreferences.toUpperCase(),
+              style: theme.textTheme.labelSmall?.copyWith(
+                letterSpacing: 1.2,
+                fontWeight: FontWeight.w700,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ),
+        if (localeCubit != null)
+          ListTile(
+            leading: const Icon(Icons.translate),
+            title: Text(l10n.languageTooltip),
+            subtitle: Text(_languageName(l10n, localeCubit.state)),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _pickLanguage(context, localeCubit),
+          ),
+        if (themeCubit != null)
+          ListTile(
+            leading: Icon(_themeIcon(themeCubit.state)),
+            title: Text(l10n.themeMode),
+            subtitle: Text(_themeName(l10n, themeCubit.state)),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _pickTheme(context, themeCubit),
+          ),
+        const Divider(height: 1),
+        ListTile(
+          leading: const Icon(Icons.logout),
+          title: Text(l10n.actionLogout),
+          onTap: onLogout,
+        ),
+      ],
+    );
+  }
+
+  LocaleCubit? _locale(BuildContext context) {
+    try {
+      return context.watch<LocaleCubit>();
+    } on ProviderNotFoundException {
+      return null;
+    }
+  }
+
+  ThemeCubit? _theme(BuildContext context) {
+    try {
+      return context.watch<ThemeCubit>();
+    } on ProviderNotFoundException {
+      return null;
+    }
+  }
+
+  String _languageName(AppLocalizations l10n, Locale? locale) =>
+      switch (locale?.languageCode) {
+        'es' => l10n.languageSpanish,
+        'en' => l10n.languageEnglish,
+        _ => l10n.languageSystem,
+      };
+
+  String _themeName(AppLocalizations l10n, ThemeMode mode) => switch (mode) {
+    ThemeMode.light => l10n.themeLight,
+    ThemeMode.dark => l10n.themeDark,
+    ThemeMode.system => l10n.themeSystem,
+  };
+
+  IconData _themeIcon(ThemeMode mode) => switch (mode) {
+    ThemeMode.light => Icons.light_mode_outlined,
+    ThemeMode.dark => Icons.dark_mode_outlined,
+    ThemeMode.system => Icons.brightness_auto_outlined,
+  };
+
+  Future<void> _pickLanguage(
+    BuildContext context,
+    LocaleCubit cubit,
+  ) async {
+    final l10n = context.l10n;
+    final current = cubit.state?.languageCode ?? 'system';
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheet) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final option in [
+              ('system', l10n.languageSystem),
+              ('es', l10n.languageSpanish),
+              ('en', l10n.languageEnglish),
+            ])
+              ListTile(
+                leading: Icon(
+                  option.$1 == current
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_unchecked,
+                ),
+                title: Text(option.$2),
+                selected: option.$1 == current,
+                onTap: () => Navigator.of(sheet).pop(option.$1),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (choice == null) {
+      return;
+    }
+    await cubit.select(choice == 'system' ? null : Locale(choice));
+  }
+
+  Future<void> _pickTheme(BuildContext context, ThemeCubit cubit) async {
+    final l10n = context.l10n;
+    final current = cubit.state;
+    final choice = await showModalBottomSheet<ThemeMode>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheet) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final option in [
+              (ThemeMode.system, l10n.themeSystem),
+              (ThemeMode.light, l10n.themeLight),
+              (ThemeMode.dark, l10n.themeDark),
+            ])
+              ListTile(
+                leading: Icon(
+                  option.$1 == current
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_unchecked,
+                ),
+                title: Text(option.$2),
+                selected: option.$1 == current,
+                onTap: () => Navigator.of(sheet).pop(option.$1),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (choice == null) {
+      return;
+    }
+    await cubit.select(choice);
   }
 }
 

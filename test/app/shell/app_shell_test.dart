@@ -8,6 +8,7 @@ import 'package:parking_management/core/theme/tokens.dart';
 import 'package:parking_management/core/network/connectivity_cubit.dart';
 import 'package:parking_management/core/network/connectivity_service.dart';
 import 'package:parking_management/core/l10n/locale_cubit.dart';
+import 'package:parking_management/core/theme/theme_cubit.dart';
 import 'package:parking_management/core/sync/pending_mutation.dart';
 import 'package:parking_management/core/widgets/sync_badge.dart';
 import 'package:parking_management/features/auth/domain/entities/user.dart';
@@ -319,6 +320,37 @@ void main() {
     expect(find.byIcon(Icons.sync), findsOneWidget);
   });
 
+  testWidgets('Success: phones keep preferences and logout in the drawer', (
+    tester,
+  ) async {
+    final locale = LocaleCubit(FakeKeyValueStore());
+    final theme = ThemeCubit(FakeKeyValueStore());
+    addTearDown(locale.close);
+    addTearDown(theme.close);
+    await locale.select(const Locale('es'));
+    await pumpApp(
+      tester,
+      role: UserRole.operator,
+      localeCubit: locale,
+      themeCubit: theme,
+    );
+
+    expect(find.byTooltip('Idioma'), findsNothing);
+    expect(find.byTooltip('Apariencia'), findsNothing);
+    expect(find.byTooltip('Cerrar sesión'), findsNothing);
+
+    await tester.tap(find.text('Menú'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Idioma'), findsOneWidget);
+    expect(find.text('Apariencia'), findsOneWidget);
+    expect(find.text('Cerrar sesión'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.close));
+    await tester.pumpAndSettle();
+    expect(find.byType(Drawer), findsNothing);
+  });
+
   testWidgets('Failure: offline shows the OfflineBanner above the content', (
     tester,
   ) async {
@@ -496,16 +528,19 @@ void main() {
     await locale.select(const Locale('es'));
     await pumpApp(tester, role: UserRole.operator, localeCubit: locale);
 
-    await tester.tap(find.byIcon(Icons.translate));
+    await tester.tap(find.text('Menú'));
     await tester.pumpAndSettle();
-    // The menu item's Text is not hit-testable itself; the item handles it.
-    await tester.tap(find.text('English'), warnIfMissed: false);
+    // Preferences live in the drawer on phones, not in the app bar.
+    expect(find.text('Idioma'), findsOneWidget);
+    expect(find.text('Cerrar sesión'), findsOneWidget);
+    await tester.tap(find.text('Idioma'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('English'));
     await tester.pumpAndSettle();
 
     expect(locale.state?.languageCode, 'en');
-    // The shell switches every label: no Spanish tooltip survives the change.
-    expect(find.byTooltip('Language'), findsOneWidget);
-    expect(find.byTooltip('Idioma'), findsNothing);
+    expect(find.text('Idioma'), findsNothing);
+    expect(find.text('Language'), findsOneWidget);
   });
 }
 

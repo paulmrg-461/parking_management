@@ -5,7 +5,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/l10n/l10n.dart';
+import '../../core/l10n/locale_cubit.dart';
 import '../../core/storage/key_value_store.dart';
+import '../../core/theme/theme_cubit.dart';
+import '../../core/widgets/language_button.dart';
+import '../../core/widgets/theme_mode_button.dart';
 import '../../core/theme/status_colors.dart';
 import '../../core/theme/tokens.dart';
 import '../../features/auth/application/auth_cubit.dart';
@@ -354,7 +358,8 @@ class _AppSidebarState extends State<AppSidebar> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (lots != null && lots.canSwitch && lots.active != null)
+          _Preferences(collapsed: _collapsed),
+          if (lots != null && lots.canSwitch && lots.active != null) ...[
             _SiteCard(
               collapsed: _collapsed,
               name: lots.active!.name,
@@ -362,6 +367,7 @@ class _AppSidebarState extends State<AppSidebar> {
               onTap: () =>
                   showLotSwitcher(context, lots.lots, lots.active!),
             ),
+          ],
           if (session != null) ...[
             if (lots != null && lots.canSwitch && lots.active != null)
               const SizedBox(height: Space.sm),
@@ -400,6 +406,44 @@ class _AppSidebarState extends State<AppSidebar> {
         ? parts[1].substring(0, 1)
         : '';
     return '$first$second'.toUpperCase();
+  }
+}
+
+/// Language and appearance live with the account, not in the page app bar.
+class _Preferences extends StatelessWidget {
+  const _Preferences({required this.collapsed});
+
+  final bool collapsed;
+
+  @override
+  Widget build(BuildContext context) {
+    final language = _provided<LocaleCubit>(context);
+    final theme = _provided<ThemeCubit>(context);
+    if (!language && !theme) {
+      return const SizedBox.shrink();
+    }
+    final buttons = [
+      if (language) const LanguageButton(),
+      if (theme) const ThemeModeButton(),
+    ];
+    return Padding(
+      padding: const EdgeInsets.only(bottom: Space.sm),
+      child: collapsed
+          ? Column(children: buttons)
+          : Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: buttons,
+            ),
+    );
+  }
+
+  static bool _provided<T>(BuildContext context) {
+    try {
+      context.read<T>();
+      return true;
+    } on ProviderNotFoundException {
+      return false;
+    }
   }
 }
 

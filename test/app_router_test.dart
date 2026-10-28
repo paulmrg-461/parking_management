@@ -16,13 +16,17 @@ void main() {
       await pumpApp(tester, role: UserRole.admin);
 
       expect(find.text('Hola, Juan'), findsOneWidget);
-      expect(find.byTooltip('Cerrar sesión'), findsOneWidget);
+      await tester.tap(find.text('Menú'));
+      await tester.pumpAndSettle();
+      expect(find.text('Cerrar sesión'), findsOneWidget);
     });
 
     testWidgets('Success: logout lands on /login (no infinite spinner)', (tester) async {
       await pumpApp(tester, role: UserRole.operator);
 
-      await tester.tap(find.byTooltip('Cerrar sesión'));
+      await tester.tap(find.text('Menú'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Cerrar sesión'));
       await tester.pumpAndSettle();
 
       expect(find.text('Ingresar'), findsOneWidget);
