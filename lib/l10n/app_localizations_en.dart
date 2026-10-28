@@ -2593,4 +2593,91 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get usersSearchLabel => 'Search users';
+
+  @override
+  String get loginOperatorAccess => 'Operator access';
+
+  @override
+  String get loginHelper =>
+      'Use the username and 6-digit PIN assigned by your administrator.';
+
+  @override
+  String get loginSecure => 'Protected connection';
+
+  @override
+  String get loginShowPin => 'Show PIN';
+
+  @override
+  String get loginHidePin => 'Hide PIN';
+
+  @override
+  String get loginFeatureCheckIn => 'Check-in and check-out in seconds';
+
+  @override
+  String get loginFeatureCash => 'Balanced cash and shifts';
+
+  @override
+  String get loginFeatureReports => 'Real-time reports';
+
+  @override
+  String get reservationsActive => 'Active holds';
+
+  @override
+  String get reservationsExpiring => 'Expiring soon';
+
+  @override
+  String get reservationsEmptyTitle => 'No holds';
+
+  @override
+  String get reservationsEmptyHint =>
+      'Hold a spot for a customer so their entry is guaranteed.';
+
+  @override
+  String get reservationsSearchLabel => 'Search holds';
+
+  @override
+  String get reservationsSearchHint => 'Plate';
+
+  @override
+  String get reservationsOnlyExpiring => 'Expiring only';
+
+  @override
+  String reservationsCount(int count) {
+    return '$count holds';
+  }
+
+  @override
+  String get reservationsFilteredEmpty => 'No holds match the filter';
+
+  @override
+  String get monthlyPassesEmptyTitle => 'No passes yet';
+
+  @override
+  String get monthlyPassesEmptyHint =>
+      'Create a pass to charge ahead and speed up check-out.';
+
+  @override
+  String get monthlyPassesActive => 'Active';
+
+  @override
+  String monthlyPassesCount(int count) {
+    return '$count passes';
+  }
+
+  @override
+  String get monthlyPassesOnlyActive => 'Active only';
+
+  @override
+  String get monthlyPassesFilteredEmpty => 'No passes match the filter';
+
+  @override
+  String get monthlyPassesList => 'Registered passes';
+
+  @override
+  String get categoriesEmptyHint =>
+      'Create the lot categories (motorcycle, car, pickup…) to assign tariffs and spaces.';
+
+  @override
+  String get tariffsEmptyHint =>
+      'Add hourly, daily, night or monthly prices for each category.';
 }

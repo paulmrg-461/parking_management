@@ -103,6 +103,40 @@ void main() {
     expect(tester.getSemantics(error), isSemantics(isLiveRegion: true));
   });
 
+  testWidgets('Success: the PIN is hidden until the eye reveals it', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_wrap(AuthCubit(FakeAuthRepository())));
+
+    TextField pinField() =>
+        tester.widget<TextField>(find.byType(TextField).at(1));
+
+    expect(pinField().obscureText, isTrue);
+
+    await tester.tap(find.byTooltip('Mostrar PIN'));
+    await tester.pumpAndSettle();
+    expect(pinField().obscureText, isFalse);
+
+    await tester.tap(find.byTooltip('Ocultar PIN'));
+    await tester.pumpAndSettle();
+    expect(pinField().obscureText, isTrue);
+  });
+
+  testWidgets('Success: wide screens add the brand panel and its features', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1400, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(_wrap(AuthCubit(FakeAuthRepository())));
+
+    expect(find.text('Acceso de operador'), findsOneWidget);
+    expect(find.text('Entradas y salidas en segundos'), findsOneWidget);
+    expect(find.text('Caja y turnos cuadrados'), findsOneWidget);
+    expect(find.text('Reportes en tiempo real'), findsOneWidget);
+    expect(find.text('Conexión protegida'), findsOneWidget);
+  });
+
   testWidgets('A11y: button shows a spinner and is disabled while signing in', (
     tester,
   ) async {

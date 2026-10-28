@@ -116,6 +116,7 @@ class _ParkingAppState extends State<ParkingApp> {
   }
 
   Widget _app(ThemeMode mode, Locale? locale) => MaterialApp.router(
+    debugShowCheckedModeBanner: false,
     onGenerateTitle: (context) =>
         context.read<BrandingCubit>().state.titleFor(context.l10n),
     theme: AppTheme.light(),

@@ -82,8 +82,14 @@ class _TariffsPageState extends State<TariffsPage> {
       context.read<TariffsCubit>().load,
     ),
     TariffsLoaded(:final tariffs) when tariffs.isEmpty => AsyncEmpty(
-      context.l10n.tariffsEmpty,
+      context.l10n.tariffsEmptyHint,
+      title: context.l10n.tariffsEmpty,
       icon: Icons.payments_outlined,
+      action: FilledButton.icon(
+        onPressed: () => _showCreateDialog(context),
+        icon: const Icon(Icons.add),
+        label: Text(context.l10n.tariffNew),
+      ),
     ),
     final TariffsLoaded loaded => AsyncReady(loaded),
   };

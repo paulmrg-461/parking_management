@@ -4705,6 +4705,162 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Buscar usuario'**
   String get usersSearchLabel;
+
+  /// No description provided for @loginOperatorAccess.
+  ///
+  /// In es, this message translates to:
+  /// **'Acceso de operador'**
+  String get loginOperatorAccess;
+
+  /// No description provided for @loginHelper.
+  ///
+  /// In es, this message translates to:
+  /// **'Usa el usuario y el PIN de 6 dígitos asignados por el administrador.'**
+  String get loginHelper;
+
+  /// No description provided for @loginSecure.
+  ///
+  /// In es, this message translates to:
+  /// **'Conexión protegida'**
+  String get loginSecure;
+
+  /// No description provided for @loginShowPin.
+  ///
+  /// In es, this message translates to:
+  /// **'Mostrar PIN'**
+  String get loginShowPin;
+
+  /// No description provided for @loginHidePin.
+  ///
+  /// In es, this message translates to:
+  /// **'Ocultar PIN'**
+  String get loginHidePin;
+
+  /// No description provided for @loginFeatureCheckIn.
+  ///
+  /// In es, this message translates to:
+  /// **'Entradas y salidas en segundos'**
+  String get loginFeatureCheckIn;
+
+  /// No description provided for @loginFeatureCash.
+  ///
+  /// In es, this message translates to:
+  /// **'Caja y turnos cuadrados'**
+  String get loginFeatureCash;
+
+  /// No description provided for @loginFeatureReports.
+  ///
+  /// In es, this message translates to:
+  /// **'Reportes en tiempo real'**
+  String get loginFeatureReports;
+
+  /// No description provided for @reservationsActive.
+  ///
+  /// In es, this message translates to:
+  /// **'Reservas activas'**
+  String get reservationsActive;
+
+  /// No description provided for @reservationsExpiring.
+  ///
+  /// In es, this message translates to:
+  /// **'Por vencer'**
+  String get reservationsExpiring;
+
+  /// No description provided for @reservationsEmptyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin reservas'**
+  String get reservationsEmptyTitle;
+
+  /// No description provided for @reservationsEmptyHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Reserva el cupo de un cliente para asegurar su entrada.'**
+  String get reservationsEmptyHint;
+
+  /// No description provided for @reservationsSearchLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscar reserva'**
+  String get reservationsSearchLabel;
+
+  /// No description provided for @reservationsSearchHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Placa'**
+  String get reservationsSearchHint;
+
+  /// No description provided for @reservationsOnlyExpiring.
+  ///
+  /// In es, this message translates to:
+  /// **'Solo por vencer'**
+  String get reservationsOnlyExpiring;
+
+  /// No description provided for @reservationsCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} reservas'**
+  String reservationsCount(int count);
+
+  /// No description provided for @reservationsFilteredEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Ninguna reserva coincide con el filtro'**
+  String get reservationsFilteredEmpty;
+
+  /// No description provided for @monthlyPassesEmptyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin mensualidades'**
+  String get monthlyPassesEmptyTitle;
+
+  /// No description provided for @monthlyPassesEmptyHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Crea una mensualidad para cobrar por adelantado y agilizar la salida.'**
+  String get monthlyPassesEmptyHint;
+
+  /// No description provided for @monthlyPassesActive.
+  ///
+  /// In es, this message translates to:
+  /// **'Vigentes'**
+  String get monthlyPassesActive;
+
+  /// No description provided for @monthlyPassesCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} mensualidades'**
+  String monthlyPassesCount(int count);
+
+  /// No description provided for @monthlyPassesOnlyActive.
+  ///
+  /// In es, this message translates to:
+  /// **'Solo vigentes'**
+  String get monthlyPassesOnlyActive;
+
+  /// No description provided for @monthlyPassesFilteredEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Ninguna mensualidad coincide con el filtro'**
+  String get monthlyPassesFilteredEmpty;
+
+  /// No description provided for @monthlyPassesList.
+  ///
+  /// In es, this message translates to:
+  /// **'Mensualidades registradas'**
+  String get monthlyPassesList;
+
+  /// No description provided for @categoriesEmptyHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Crea las categorías del parqueadero (moto, carro, camioneta…) para asignar tarifas y cupos.'**
+  String get categoriesEmptyHint;
+
+  /// No description provided for @tariffsEmptyHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Agrega tarifas por hora, día, noche o mensualidad para cada categoría.'**
+  String get tariffsEmptyHint;
 }
 
 class _AppLocalizationsDelegate

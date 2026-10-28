@@ -13,6 +13,24 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 **UI/UX pass across every module**
 
+- Sign-in screen: on wide screens it splits into a tonal brand panel (identity,
+  tagline and the three operator jobs) and a bordered form card; phones keep
+  one column with the compact brand header. The PIN can be revealed with an
+  explicit toggle, errors render as an inline high-contrast banner (live
+  region), the button keeps a 48 dp target and device language/appearance pick
+  from the corner before signing in. The debug banner is gone.
+- Capacity reservations: summary metrics (active / expiring soon), a filter
+  card with plate search and "expiring only", cards that show the hold window,
+  category chip, notes and warning countdown, and an empty state that explains
+  holds and creates the first one.
+- Monthly passes: summary metrics (active passes and pending payments with the
+  amount due), filter card with plate search and "active only", section
+  headers for pending payments and registered passes, a typed empty state and
+  no-match state with a clear action.
+- Categories and tariffs empty states explain what is missing and offer the
+  matching create action.
+**UI/UX pass across every module**
+
 - Shared UI kit (`core/widgets`): `SectionHeader`, `MetricCard`, `FilterBar`,
   `SkeletonCardList`/`SkeletonTable`, and upgraded `EmptyState`/`ErrorState`
   with a title, tonal icon, explicit call to action and localized retry.

@@ -65,8 +65,14 @@ class _CategoriesPageState extends State<CategoriesPage> {
       context.read<CategoriesCubit>().load,
     ),
     CategoriesLoaded(:final categories) when categories.isEmpty => AsyncEmpty(
-      context.l10n.categoriesEmpty,
+      context.l10n.categoriesEmptyHint,
+      title: context.l10n.categoriesEmpty,
       icon: Icons.category_outlined,
+      action: FilledButton.icon(
+        onPressed: () => _showCreateDialog(context),
+        icon: const Icon(Icons.add),
+        label: Text(context.l10n.categoryAddTooltip),
+      ),
     ),
     CategoriesLoaded(:final categories) => AsyncReady(categories),
   };

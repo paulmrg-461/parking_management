@@ -2606,4 +2606,93 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get usersSearchLabel => 'Buscar usuario';
+
+  @override
+  String get loginOperatorAccess => 'Acceso de operador';
+
+  @override
+  String get loginHelper =>
+      'Usa el usuario y el PIN de 6 dígitos asignados por el administrador.';
+
+  @override
+  String get loginSecure => 'Conexión protegida';
+
+  @override
+  String get loginShowPin => 'Mostrar PIN';
+
+  @override
+  String get loginHidePin => 'Ocultar PIN';
+
+  @override
+  String get loginFeatureCheckIn => 'Entradas y salidas en segundos';
+
+  @override
+  String get loginFeatureCash => 'Caja y turnos cuadrados';
+
+  @override
+  String get loginFeatureReports => 'Reportes en tiempo real';
+
+  @override
+  String get reservationsActive => 'Reservas activas';
+
+  @override
+  String get reservationsExpiring => 'Por vencer';
+
+  @override
+  String get reservationsEmptyTitle => 'Sin reservas';
+
+  @override
+  String get reservationsEmptyHint =>
+      'Reserva el cupo de un cliente para asegurar su entrada.';
+
+  @override
+  String get reservationsSearchLabel => 'Buscar reserva';
+
+  @override
+  String get reservationsSearchHint => 'Placa';
+
+  @override
+  String get reservationsOnlyExpiring => 'Solo por vencer';
+
+  @override
+  String reservationsCount(int count) {
+    return '$count reservas';
+  }
+
+  @override
+  String get reservationsFilteredEmpty =>
+      'Ninguna reserva coincide con el filtro';
+
+  @override
+  String get monthlyPassesEmptyTitle => 'Sin mensualidades';
+
+  @override
+  String get monthlyPassesEmptyHint =>
+      'Crea una mensualidad para cobrar por adelantado y agilizar la salida.';
+
+  @override
+  String get monthlyPassesActive => 'Vigentes';
+
+  @override
+  String monthlyPassesCount(int count) {
+    return '$count mensualidades';
+  }
+
+  @override
+  String get monthlyPassesOnlyActive => 'Solo vigentes';
+
+  @override
+  String get monthlyPassesFilteredEmpty =>
+      'Ninguna mensualidad coincide con el filtro';
+
+  @override
+  String get monthlyPassesList => 'Mensualidades registradas';
+
+  @override
+  String get categoriesEmptyHint =>
+      'Crea las categorías del parqueadero (moto, carro, camioneta…) para asignar tarifas y cupos.';
+
+  @override
+  String get tariffsEmptyHint =>
+      'Agrega tarifas por hora, día, noche o mensualidad para cada categoría.';
 }

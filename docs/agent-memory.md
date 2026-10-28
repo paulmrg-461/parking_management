@@ -13,7 +13,7 @@ currency, es/en language, records exports).
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0068` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 809 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 815 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -57,6 +57,15 @@ currency, es/en language, records exports).
   the symbol comes from `Money`.
 - Gotcha: a lazily built `ListView` only builds visible children, so tests that
   assert the last row must use a tall viewport or scroll before asserting.
+
+- **Login and sparse screens (2026-10-28)**: the sign-in page splits into a
+  brand panel + form card from `Layout.railBreakpoint` (and ≥ 560 px tall),
+  keeps the PIN obscured with an eye toggle, renders failures as an inline
+  error banner (live region) and shows language/theme only when those cubits
+  are provided (tests omit them). Reservations and monthly passes now open with
+  metric cards, a `FilterBar` (search + state chip), section headers and an
+  empty state with the create/clear CTA; categories and tariffs do the same.
+  `debugShowCheckedModeBanner` is off, so dev builds no longer show the banner.
 
 ## Currency and language (2026-10-28)
 
@@ -756,7 +765,7 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 ## Latest verification (2026-10-28)
 
-- `flutter test`: 809 passed (+1 live-stack integration skipped); `flutter
+- `flutter test`: 815 passed (+1 live-stack integration skipped); `flutter
   analyze` 152 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
 - `supabase/tests/run.sh` passed (migrations `0001`–`0067`); `e2e.sh` passed
