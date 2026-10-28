@@ -4,8 +4,8 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-10-28, branch `feature/supabase` (cash/card settlement,
-mobile drawer, receipt print fix; HEAD `7a8df53`).
+Last updated: 2026-10-28, branch `feature/supabase` (settlement, mobile drawer,
+receipt print fix, deployment requirements; HEAD `4d80348`).
 
 ## Where we are
 
@@ -156,9 +156,11 @@ mobile drawer, receipt print fix; HEAD `7a8df53`).
 
 `docs/README.md` indexes the set: `project-overview.md` (executive summary),
 `environment-guide.en.md` / `environment-guide.md` (onboarding, EN/ES),
-`setup-local.md`, `setup-cloud.md`, `architecture.md`, `infrastructure.md`,
-`database.md`; root `QUICKSTART.md` (commands) and `CHANGELOG.md` (changes +
-migration history). Diagrams are Mermaid in
+`setup-local.md`, `setup-cloud.md`, `deployment-requirements.md` (hardware
+minimum/recommended, evidence-based disk math, OS/network/TLS/security, cloud
+sizing and go-live checklist — English), `architecture.md`,
+`infrastructure.md`, `database.md`; root `QUICKSTART.md` (commands) and
+`CHANGELOG.md` (changes + migration history). Diagrams are Mermaid in
 Markdown; update the diagram with the code change (new table → `database.md`,
 new service/port → `infrastructure.md`, new flow → `architecture.md`).
 
@@ -723,6 +725,18 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   `docs/slot-board.md`.
 - Hardware run found and fixed two boot bugs: Hive now initializes before the
   Supabase session cleanup, and evidence uploads are insert-only (see above).
+
+## Deployment requirements (2026-10-28)
+
+- `docs/deployment-requirements.md` is the canonical English list: shapes (edge
+  VM / cloud VM / managed Supabase), 2 vCPU/4 GB/40 GB minimum and
+  4/8/80–160 recommended (8/16/320+ multi-site), disk formula
+  `vehicles/day × (photos + video% × video MB) × retention ÷ 1024`, Ubuntu
+  24.04 + Docker 24/Compose v2, only 443 public (8000/5432/6543 loopback),
+  WebSocket + ≥60 MB body limit, bandwidth ≥5 Mbps upload for video, offsite
+  encrypted backups + restore drill, and the go-live checklist.
+- Idle full stack ≈1.2 GB RAM (docker stats); plan 2–3× headroom. Studio/meta
+  can be disabled in production; amd64 images only.
 
 ## Backlog / next moves
 
