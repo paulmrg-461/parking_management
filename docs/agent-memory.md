@@ -4,8 +4,8 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-10-28, branch `feature/supabase` (shareable evidence +
-legal policies; HEAD `28893e1`).
+Last updated: 2026-10-28, branch `feature/supabase` (cash/card settlement,
+mobile drawer, receipt print fix; HEAD `7a8df53`).
 
 ## Where we are
 
@@ -708,7 +708,7 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 ## Latest verification (2026-10-28)
 
 - `flutter test`: 785 passed (+1 live-stack integration skipped); `flutter
-  analyze` 151 infos, all SDK `deprecated_member_use` (zero warnings/errors);
+  analyze` 152 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
 - `supabase/tests/run.sh` passed (migrations `0001`–`0067`); `e2e.sh` passed
   (login → check-in → check-out → report → history).
@@ -717,8 +717,10 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   out-of-service (0054/0055), plate keypad, hold release, cash counter, realtime
   notifications (0056/0057), physical map + editor (0058/0059), capacity=bays
   (0060/0061), records + exports (0062/0063), evidence video (0064), shareable
-  evidence + plate-keyed public page + legal policy (0065). Full list in
-  `CHANGELOG.md`; specs in `docs/slot-board.md`.
+  evidence + plate-keyed public page + legal policy (0065), card debit/credit
+  (0066), cash received/change (0067), 5-tab phone nav + drawer and the
+  receipt print-sheet fix. Full list in `CHANGELOG.md`; specs in
+  `docs/slot-board.md`.
 - Hardware run found and fixed two boot bugs: Hive now initializes before the
   Supabase session cleanup, and evidence uploads are insert-only (see above).
 
