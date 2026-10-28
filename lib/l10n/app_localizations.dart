@@ -110,6 +110,24 @@ abstract class AppLocalizations {
   /// **'Cerrar'**
   String get actionClose;
 
+  /// No description provided for @activityCheckIn.
+  ///
+  /// In es, this message translates to:
+  /// **'{actor} registró el ingreso de {plate}'**
+  String activityCheckIn(String actor, String plate);
+
+  /// No description provided for @activityCheckOut.
+  ///
+  /// In es, this message translates to:
+  /// **'{actor} registró la salida de {plate} · Cobro: {amount}'**
+  String activityCheckOut(String actor, String plate, String amount);
+
+  /// No description provided for @activityCheckOutNoAmount.
+  ///
+  /// In es, this message translates to:
+  /// **'{actor} registró la salida de {plate}'**
+  String activityCheckOutNoAmount(String actor, String plate);
+
   /// No description provided for @actionCancel.
   ///
   /// In es, this message translates to:

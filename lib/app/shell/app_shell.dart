@@ -6,16 +6,19 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/l10n/l10n.dart';
+import '../../core/realtime/local_activity.dart';
 import '../di/injection.dart';
 import '../../core/qr/qr_decoder.dart';
 import '../../core/qr/qr_scan_page.dart';
 import '../../core/theme/tokens.dart';
+import '../../core/utils/formatters.dart';
 import '../../core/widgets/offline_banner.dart';
 import '../../core/widgets/submission_feedback.dart';
 import '../../features/auth/application/auth_cubit.dart';
 import '../../features/auth/domain/entities/user.dart';
 import '../../features/home/application/dashboard_cubit.dart';
 import '../../features/lots/application/lots_cubit.dart';
+import '../../features/notifications/domain/entities/app_notification.dart';
 import '../../features/notifications/application/notifications_cubit.dart';
 import '../../features/shifts/application/shift_cubit.dart';
 import '../../features/plate_scanning/domain/repositories/plate_image_capture.dart';
@@ -58,9 +61,10 @@ class AppShell extends StatelessWidget {
           previous.latestArrived?.id != current.latestArrived?.id,
       listener: (context, state) {
         final notification = state.latestArrived;
-        if (notification != null) {
-          showInfoSnack(context, '${notification.title} · ${notification.body}');
+        if (notification == null || _isOwnEcho(notification)) {
+          return;
         }
+        showInfoSnack(context, activityMessage(context, notification));
       },
       child: Column(
         children: [
@@ -84,6 +88,40 @@ class AppShell extends StatelessWidget {
           : _NarrowShell(role: role, location: location, content: content),
     );
   }
+}
+
+/// A realtime row for the check-in/check-out this same device just wrote is
+/// already visible locally; the snackbar would be a duplicate.
+bool _isOwnEcho(AppNotification notification) {
+  final action = notification.data['action'];
+  final sessionId = notification.data['session_id'];
+  return action is String &&
+      sessionId is num &&
+      LocalActivity.owns(action, sessionId.toInt());
+}
+
+/// Localized text for the live activity feed; other notification types keep
+/// the server body.
+String activityMessage(BuildContext context, AppNotification notification) {
+  final l10n = context.l10n;
+  final data = notification.data;
+  final actor = data['actor_name'];
+  final plate = data['plate'];
+  if (actor is! String || actor.isEmpty || plate is! String || plate.isEmpty) {
+    return '${notification.title} · ${notification.body}';
+  }
+  return switch (data['action']) {
+    'check_in' => l10n.activityCheckIn(actor, plate),
+    'check_out' => switch (data['amount_charged']) {
+      final num amount => l10n.activityCheckOut(
+        actor,
+        plate,
+        Formatters.money(amount.toInt()),
+      ),
+      _ => l10n.activityCheckOutNoAmount(actor, plate),
+    },
+    _ => '${notification.title} · ${notification.body}',
+  };
 }
 
 /// Refreshes the shell-scoped summaries after a lot switch. Providers are

@@ -10,6 +10,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/l10n/failure_messages.dart';
 import '../../../core/error/failure.dart';
 import '../../../core/l10n/l10n.dart';
+import '../../../core/realtime/local_activity.dart';
 import '../../../core/state/submission.dart';
 import '../../../core/utils/elapsed.dart';
 import '../../../core/utils/vehicle_groups.dart';
@@ -406,6 +407,7 @@ class _CheckInPageState extends State<CheckInPage> {
   void _onSubmission(BuildContext context, CheckInState state) {
     switch (state.submission) {
       case SubmissionSucceeded<ParkingSession>(:final result):
+        LocalActivity.remember('check_in', result.id);
         HapticFeedback.mediumImpact();
         _resetForm();
         _plateFocus.requestFocus();

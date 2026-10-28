@@ -79,8 +79,9 @@ All RPCs are `security definer`, derive the actor from `auth.uid()`, and are
 granted to `authenticated` only.
 
 **Check-in / check-out**
-`check_in` (incl. `p_left_keys`), `create_reservation` (holds consume group
-capacity), `check_out`, `check_out_preview` (amount + billing breakdown),
+`check_in` (incl. `p_left_keys`; notifies the lot's members), `create_reservation` (holds consume group
+capacity), `check_out` (notifies the lot's members), `check_out_preview` (amount +
+billing breakdown),
 `open_sessions_view` (`has_pass`, `left_keys`), `capacity_snapshot`
 (`car_open/capacity/available/out_of_service/reserved`, motos, keys,
 active/expiring holds),

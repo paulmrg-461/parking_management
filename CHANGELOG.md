@@ -42,6 +42,12 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   its sheet with "Cancelar reserva" (confirmation, snack, board reload); the
   reservation id is resolved from the active list by plate + expiry, so the
   board payload stays small. Operators do not see the action.
+- **Live activity notifications.** Every check-in/check-out now notifies the
+  whole site (all active members, not only admins) with the actor's name, the
+  plate and the charge on exits (`0056`), so the admin desk sees the operator's
+  phone activity and the phone sees the web's, through Supabase Realtime. The
+  snackbar is localized from the payload, the inbox keeps the row, and the
+  acting device ignores the echo of its own write (`LocalActivity`).
 - **Out-of-service spaces.** Admins can take car or motorcycle spots out of the
   usable pool in Ajustes (`car_out_of_service`, `moto_out_of_service`). They
   stay in the configured capacity, are painted as striped "Mantenimiento" cells
@@ -312,7 +318,7 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Tests
 
-- 705 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
+- 710 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
   integration test that runs only against a live stack.
 - SQL/RLS/RPC regressions covering capacity, shifts, discounts, passes,
   reservations, multi-site isolation, audit, diagnostics and retention.
@@ -342,7 +348,7 @@ Migrations are append-only and applied in filename order by `supabase-migrate`.
 | `0027`–`0032` | Per-lot branding, retention, shift filters, header contract |
 | `0033`–`0038` | Evidence retention, storage membership, diagnostics, audit export, report comparison, home KPIs |
 | `0039`–`0044` | Site comparison fields, ticket reprint, customer phone, WhatsApp queue/report |
-| `0045`–`0055` | Check-out preview, pass flag, capacity groups, reservations consuming group capacity, reserved counts, hold counters, space board, fare breakdown, out-of-service spaces |
+| `0045`–`0056` | Check-out preview, pass flag, capacity groups, reservations consuming group capacity, reserved counts, hold counters, space board, fare breakdown, out-of-service spaces, live activity notifications |
 
 ## Verification snapshot
 
@@ -350,7 +356,7 @@ Captured on 2026-10-24 against the local self-hosted stack:
 
 | Check | Result |
 |---|---|
-| `flutter test` | 705 passed (+1 live-stack integration skipped) |
+| `flutter test` | 710 passed (+1 live-stack integration skipped) |
 | `flutter analyze` | 0 errors, 0 warnings (only SDK deprecation infos) |
 | `flutter build web --release` | OK |
 | `supabase/tests/run.sh` | Passed (migrations + RPC/RLS regressions) |

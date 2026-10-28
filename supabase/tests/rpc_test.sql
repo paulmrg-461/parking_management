@@ -1039,13 +1039,17 @@ begin
     end if;
 end $$;
 
--- RLS: the operator must not read the admin's notifications.
+-- RLS: users only read their own rows. Operators now receive the site's
+-- activity alerts, but never anyone else's.
 set local role authenticated;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
 do $$
 begin
-    if (select count(*) from public.notifications) <> 0 then
-        raise exception 'RLS leak: operator can read admin notifications';
+    if exists (select 1 from public.notifications where user_id <> 2) then
+        raise exception 'RLS leak: operator reads another user''s notifications';
+    end if;
+    if not exists (select 1 from public.notifications where user_id = 2) then
+        raise exception 'the operator lost their own activity alerts';
     end if;
 end $$;
 reset role;
@@ -1408,5 +1412,78 @@ begin
      where lot_id = 2;
 end $$;
 set local request.headers = '{"x-lot-id":"1"}';
+
+-- Live activity: the whole site is told who registered an entry/exit, and the
+-- alert never leaves the lot.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+declare
+    rtn_cat integer;
+    session_json jsonb;
+    session_id integer;
+    actor_name text;
+    alert jsonb;
+    outsider integer;
+begin
+    insert into public.categories (name, capacity, lot_id)
+    values ('rtncat', 0, 1)
+    returning id into rtn_cat;
+    insert into public.tariffs (category_id, type, amount, active, lot_id)
+    values (rtn_cat, 'hourly', 1000, true, 1);
+
+    session_json := public.check_in(
+        'RTN001', rtn_cat, null, null, '[]'::jsonb, null,
+        now() - interval '1 minute'
+    );
+    session_id := (session_json ->> 'id')::integer;
+    select display_name into actor_name from public.users where id = 2;
+
+    select to_jsonb(n) into alert
+      from public.notifications n
+     where n.type = 'check_in'
+       and n.user_id = 2
+       and n.data ->> 'session_id' = session_id::text;
+    if alert is null then
+        raise exception 'the operator did not get the activity alert';
+    end if;
+    if (alert ->> 'body') not like '%' || actor_name || '%'
+       or (alert ->> 'body') not like '%RTN001%' then
+        raise exception 'the activity alert does not name actor and plate: %', alert;
+    end if;
+    if (alert -> 'data' ->> 'action') <> 'check_in' then
+        raise exception 'the activity alert has no action payload: %', alert;
+    end if;
+
+    select u.id into outsider
+      from public.users u
+     where u.username = 'norte2';
+    if exists (
+        select 1 from public.notifications n
+         where n.user_id = outsider
+           and n.data ->> 'session_id' = session_id::text
+    ) then
+        raise exception 'the activity alert leaked to another lot';
+    end if;
+
+    -- Someone else closes it: the alert names the actual actor.
+    set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+    perform public.check_out(session_id, null, null, 'cash');
+
+    select to_jsonb(n) into alert
+      from public.notifications n
+     where n.type = 'check_out'
+       and n.user_id = 2
+       and n.data ->> 'session_id' = session_id::text;
+    if alert is null then
+        raise exception 'the operator did not get the exit alert';
+    end if;
+    if (alert ->> 'body') not like '%Cobro%'
+       or (alert -> 'data' ->> 'action') <> 'check_out'
+       or (alert -> 'data' ->> 'amount_charged') is null then
+        raise exception 'the exit alert has no charge: %', alert;
+    end if;
+end $$;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
 
 rollback;

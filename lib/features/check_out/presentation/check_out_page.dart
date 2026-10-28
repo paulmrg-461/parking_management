@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/di/injection.dart';
 import '../../../core/l10n/failure_messages.dart';
 import '../../../core/l10n/l10n.dart';
+import '../../../core/realtime/local_activity.dart';
 import '../../../core/state/submission.dart';
 import '../../../core/qr/qr_decoder.dart';
 import '../../../core/qr/qr_scan_page.dart';
@@ -215,6 +216,7 @@ class _CheckOutPageState extends State<CheckOutPage> {
   void _onSubmission(BuildContext context, CheckOutState state) {
     switch (_submissionOf(state)) {
       case SubmissionSucceeded<CheckOutReceipt>(:final result):
+        LocalActivity.remember('check_out', result.id);
         final method = _pendingMethod;
         _pendingMethod = null;
         if (method != null) {

@@ -4,6 +4,12 @@
   "@appTitle": {"description": "Application name shown in the task switcher and login."},
 
   "actionClose": "Cerrar",
+  "activityCheckIn": "{actor} registró el ingreso de {plate}",
+  "@activityCheckIn": {"placeholders": {"actor": {"type": "String"}, "plate": {"type": "String"}}},
+  "activityCheckOut": "{actor} registró la salida de {plate} · Cobro: {amount}",
+  "@activityCheckOut": {"placeholders": {"actor": {"type": "String"}, "plate": {"type": "String"}, "amount": {"type": "String"}}},
+  "activityCheckOutNoAmount": "{actor} registró la salida de {plate}",
+  "@activityCheckOutNoAmount": {"placeholders": {"actor": {"type": "String"}, "plate": {"type": "String"}}},
   "actionCancel": "Cancelar",
   "actionSave": "Guardar",
   "actionCreate": "Crear",

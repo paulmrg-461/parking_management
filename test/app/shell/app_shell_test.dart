@@ -11,8 +11,11 @@ import 'package:parking_management/core/sync/pending_mutation.dart';
 import 'package:parking_management/core/widgets/sync_badge.dart';
 import 'package:parking_management/features/auth/domain/entities/user.dart';
 import 'package:parking_management/features/home/presentation/widgets/dashboard_widgets.dart';
+import 'package:parking_management/features/notifications/domain/entities/app_notification.dart';
+import 'package:parking_management/core/realtime/local_activity.dart';
 
 import '../../helpers/app_harness.dart';
+import '../../helpers/fake_notification_repository.dart';
 import '../../helpers/fake_sync_outbox.dart';
 
 void main() {
@@ -46,7 +49,10 @@ void main() {
         findsOneWidget,
       );
       expect(
-        find.descendant(of: sidebar, matching: find.text('Operación'.toUpperCase())),
+        find.descendant(
+          of: sidebar,
+          matching: find.text('Operación'.toUpperCase()),
+        ),
         findsOneWidget,
       );
     },
@@ -112,10 +118,7 @@ void main() {
     await tester.tap(find.byTooltip('Contraer menú'));
     await tester.pumpAndSettle();
 
-    expect(
-      find.byKey(const ValueKey('sidebar_item_/reports')),
-      findsOneWidget,
-    );
+    expect(find.byKey(const ValueKey('sidebar_item_/reports')), findsOneWidget);
     expect(find.byType(AppSidebar), findsOneWidget);
   });
 
@@ -252,10 +255,7 @@ void main() {
   testWidgets('Success: the QR shortcut sits in the shell', (tester) async {
     await pumpApp(tester, role: UserRole.operator);
 
-    expect(
-      find.byTooltip('Escanear QR y registrar salida'),
-      findsOneWidget,
-    );
+    expect(find.byTooltip('Escanear QR y registrar salida'), findsOneWidget);
     expect(find.byIcon(Icons.qr_code_scanner), findsOneWidget);
     expect(find.byIcon(Icons.chat), findsNothing);
   });
@@ -289,10 +289,68 @@ void main() {
     addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
     await pumpApp(tester, role: UserRole.operator);
 
-    expect(Theme.of(tester.element(find.byType(Scaffold).first)).brightness,
-        Brightness.dark);
+    expect(
+      Theme.of(tester.element(find.byType(Scaffold).first)).brightness,
+      Brightness.dark,
+    );
     await expectLater(tester, meetsGuideline(textContrastGuideline));
     await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+  });
+
+  testWidgets('Success: another device activity shows a live snackbar', (
+    tester,
+  ) async {
+    final notifications = FakeNotificationRepository();
+    await pumpApp(tester, role: UserRole.admin, notifications: notifications);
+
+    notifications.incoming.add(
+      AppNotification(
+        id: 41,
+        type: 'check_in',
+        title: 'Entrada registrada',
+        body: 'El servidor dice otra cosa',
+        createdAt: DateTime.now(),
+        data: const {
+          'action': 'check_in',
+          'session_id': 7,
+          'plate': 'ABC123',
+          'actor_name': 'Ana',
+        },
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.text('Ana registró el ingreso de ABC123'), findsOneWidget);
+  });
+
+  testWidgets('Security: the acting device does not echo its own write', (
+    tester,
+  ) async {
+    LocalActivity.remember('check_in', 7);
+    addTearDown(LocalActivity.clear);
+    final notifications = FakeNotificationRepository();
+    await pumpApp(tester, role: UserRole.admin, notifications: notifications);
+
+    notifications.incoming.add(
+      AppNotification(
+        id: 42,
+        type: 'check_in',
+        title: 'Entrada registrada',
+        body: 'Ana registró el ingreso de ABC123',
+        createdAt: DateTime.now(),
+        data: const {
+          'action': 'check_in',
+          'session_id': 7,
+          'plate': 'ABC123',
+          'actor_name': 'Ana',
+        },
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.textContaining('registró el ingreso de ABC123'), findsNothing);
   });
 }
 

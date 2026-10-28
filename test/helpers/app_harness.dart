@@ -66,6 +66,7 @@ Future<AuthCubit> pumpApp(
   FakeSyncOutbox? outbox,
   ConnectivityCubit? connectivity,
   BrandingCubit? branding,
+  FakeNotificationRepository? notifications,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -80,7 +81,7 @@ Future<AuthCubit> pumpApp(
       () => DashboardCubit(FakeCheckOutRepository()),
     )
     ..registerFactory<NotificationsCubit>(
-      () => NotificationsCubit(FakeNotificationRepository()),
+      () => NotificationsCubit(notifications ?? FakeNotificationRepository()),
     )
     ..registerFactory<ShiftCubit>(() => ShiftCubit(FakeShiftRepository()))
     ..registerFactory<AuditCubit>(() => AuditCubit(FakeAuditRepository()))

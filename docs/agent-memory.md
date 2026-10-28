@@ -10,9 +10,9 @@ Last updated: 2026-10-26, branch `feature/supabase` (post-UI/UX polish).
 
 - Stack: Flutter (android + web) + self-hosted Supabase only. No FastAPI,
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
-- `supabase/migrations/0001..0055` are the schema owner (applied by
+- `supabase/migrations/0001..0056` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 705 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 710 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -477,6 +477,13 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   reserved cells carry the hold expiry. A board failure falls back to an empty
   board so the dashboard keeps working. The detail sheet refreshes the clock
   every second and the preview every 60 s.
+- `0056` notifies **every active lot member** (including the actor) on
+  check-in/check-out with `data.action`, `session_id`, `plate`, `actor_name`,
+  `actor_role` and (exits) `amount_charged`; Realtime delivers it to each
+  member. The shell composes the snackbar with l10n from the payload (not the
+  Spanish server body) and skips it when `LocalActivity.owns(action, sessionId)`
+  (the acting device remembers its write for 30 s). Operators now receive their
+  own rows; the RLS test asserts they never read another user's.
 - Cash closing shows the expected cash and a live difference, and a
   denomination counter (`CashCountSheet`, COP notes/coins) fills the counted
   amount; both the close and the admin adjust dialogs use it.
@@ -584,10 +591,10 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 ## Latest verification (2026-10-28)
 
-- `flutter test`: 705 passed (+1 live-stack integration skipped); `flutter
+- `flutter test`: 710 passed (+1 live-stack integration skipped); `flutter
   analyze` 138 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
-- `supabase/tests/run.sh` passed (migrations `0001`–`0055`); `e2e.sh` passed
+- `supabase/tests/run.sh` passed (migrations `0001`–`0056`); `e2e.sh` passed
   (login → check-in → check-out → report → history).
 - `healthcheck.sh`: 0 failures (one warning for a dev shift left open >12 h).
 - UI/UX batches landed this session: reports comparison (screen, PDF, CSV),

@@ -16,6 +16,21 @@ class AppLocalizationsEs extends AppLocalizations {
   String get actionClose => 'Cerrar';
 
   @override
+  String activityCheckIn(String actor, String plate) {
+    return '$actor registró el ingreso de $plate';
+  }
+
+  @override
+  String activityCheckOut(String actor, String plate, String amount) {
+    return '$actor registró la salida de $plate · Cobro: $amount';
+  }
+
+  @override
+  String activityCheckOutNoAmount(String actor, String plate) {
+    return '$actor registró la salida de $plate';
+  }
+
+  @override
   String get actionCancel => 'Cancelar';
 
   @override
