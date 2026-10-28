@@ -71,6 +71,16 @@ extension FailureMessages on AppLocalizations {
     'ConflictError' => errorConflict,
     'VehicleNotRegisteredError' => errorVehicleNotRegistered,
     'VehicleBlacklistedError' => errorVehicleBlacklisted,
+    'SpotCodeTakenError' => errorSpotCodeTaken,
+    'SpotCellTakenError' => errorSpotCellTaken,
+    'SpotTakenError' => errorSpotTaken,
+    'SpotOutOfServiceError' => errorSpotOutOfService,
+    'SpotOccupiedError' => errorSpotOccupied,
+    'SpotGroupMismatchError' => errorSpotGroup,
+    'InvalidSpotCodeError' ||
+    'InvalidSpotGroupError' ||
+    'InvalidSpotPositionError' => errorSpotCodeInvalid,
+    'SpotNotFoundError' => errorSpotNotFound,
     'InvalidPhoneError' => errorInvalidPhone,
     'WhatsappDisabledError' => errorWhatsappDisabled,
     'InvalidPhotoError' => errorInvalidPhoto,

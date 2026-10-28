@@ -1724,6 +1724,138 @@ abstract class AppLocalizations {
   /// **'Descartar'**
   String get settingsDiscard;
 
+  /// No description provided for @spotsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Mapa del parqueadero'**
+  String get spotsTitle;
+
+  /// No description provided for @spotsAdminOnly.
+  ///
+  /// In es, this message translates to:
+  /// **'Solo un administrador puede editar el mapa'**
+  String get spotsAdminOnly;
+
+  /// No description provided for @spotsAdd.
+  ///
+  /// In es, this message translates to:
+  /// **'Agregar espacio'**
+  String get spotsAdd;
+
+  /// No description provided for @spotsHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Arrastra un espacio para moverlo · toca para editar'**
+  String get spotsHint;
+
+  /// No description provided for @spotsEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no hay espacios. Agrega el primero para armar el mapa.'**
+  String get spotsEmpty;
+
+  /// No description provided for @spotsAddTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Nuevo espacio'**
+  String get spotsAddTitle;
+
+  /// No description provided for @spotsCode.
+  ///
+  /// In es, this message translates to:
+  /// **'Código'**
+  String get spotsCode;
+
+  /// No description provided for @spotsGroup.
+  ///
+  /// In es, this message translates to:
+  /// **'Grupo'**
+  String get spotsGroup;
+
+  /// No description provided for @spotsActive.
+  ///
+  /// In es, this message translates to:
+  /// **'Disponible'**
+  String get spotsActive;
+
+  /// No description provided for @spotsActiveHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Desactívalo para mantenimiento'**
+  String get spotsActiveHint;
+
+  /// No description provided for @spotsDelete.
+  ///
+  /// In es, this message translates to:
+  /// **'Eliminar espacio'**
+  String get spotsDelete;
+
+  /// No description provided for @spotsDeleteTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Eliminar el espacio?'**
+  String get spotsDeleteTitle;
+
+  /// No description provided for @spotsDeleteBody.
+  ///
+  /// In es, this message translates to:
+  /// **'El espacio {code} saldrá del mapa. El historial se conserva.'**
+  String spotsDeleteBody(String code);
+
+  /// No description provided for @spotsDragHere.
+  ///
+  /// In es, this message translates to:
+  /// **'Suelta aquí'**
+  String get spotsDragHere;
+
+  /// No description provided for @errorSpotCodeTaken.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya existe un espacio con ese código'**
+  String get errorSpotCodeTaken;
+
+  /// No description provided for @errorSpotCellTaken.
+  ///
+  /// In es, this message translates to:
+  /// **'Esa celda ya está ocupada'**
+  String get errorSpotCellTaken;
+
+  /// No description provided for @errorSpotTaken.
+  ///
+  /// In es, this message translates to:
+  /// **'Ese espacio ya está ocupado'**
+  String get errorSpotTaken;
+
+  /// No description provided for @errorSpotOutOfService.
+  ///
+  /// In es, this message translates to:
+  /// **'Ese espacio está fuera de servicio'**
+  String get errorSpotOutOfService;
+
+  /// No description provided for @errorSpotOccupied.
+  ///
+  /// In es, this message translates to:
+  /// **'No puedes eliminar un espacio con un vehículo dentro'**
+  String get errorSpotOccupied;
+
+  /// No description provided for @errorSpotGroup.
+  ///
+  /// In es, this message translates to:
+  /// **'El espacio no corresponde al tipo de vehículo'**
+  String get errorSpotGroup;
+
+  /// No description provided for @errorSpotCodeInvalid.
+  ///
+  /// In es, this message translates to:
+  /// **'Código inválido (A-Z, 0-9 y guion; máximo 16)'**
+  String get errorSpotCodeInvalid;
+
+  /// No description provided for @errorSpotNotFound.
+  ///
+  /// In es, this message translates to:
+  /// **'El espacio no existe'**
+  String get errorSpotNotFound;
+
   /// No description provided for @settingsTitle.
   ///
   /// In es, this message translates to:
@@ -2065,6 +2197,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Ver todos'**
   String get homeInsideSeeAll;
+
+  /// No description provided for @spotLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Espacio {code}'**
+  String spotLabel(String code);
+
+  /// No description provided for @slotNoSpotAssigned.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} vehículos sin espacio asignado'**
+  String slotNoSpotAssigned(int count);
 
   /// No description provided for @slotBoardTitle.
   ///
@@ -2425,6 +2569,30 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Registrar entrada'**
   String get checkInSubmit;
+
+  /// No description provided for @checkInSpotTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Espacio'**
+  String get checkInSpotTitle;
+
+  /// No description provided for @checkInSpotAuto.
+  ///
+  /// In es, this message translates to:
+  /// **'Automático (primer libre)'**
+  String get checkInSpotAuto;
+
+  /// No description provided for @checkInSpotNone.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin espacios libres para este grupo'**
+  String get checkInSpotNone;
+
+  /// No description provided for @checkInSuccessSpot.
+  ///
+  /// In es, this message translates to:
+  /// **'Entrada registrada · {plate} en {spot}'**
+  String checkInSuccessSpot(String plate, String spot);
 
   /// No description provided for @checkInSuccess.
   ///

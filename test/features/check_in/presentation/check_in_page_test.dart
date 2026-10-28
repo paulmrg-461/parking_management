@@ -6,6 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/pagination/paged_result.dart';
 import 'package:parking_management/features/categories/domain/entities/category.dart';
 import 'package:parking_management/features/check_out/domain/entities/capacity_snapshot.dart';
+import 'package:parking_management/features/check_out/domain/entities/slot_board.dart';
+import 'package:parking_management/features/spots/domain/entities/parking_spot.dart';
 import 'package:parking_management/features/check_out/domain/entities/occupancy_snapshot.dart';
 import 'package:parking_management/features/categories/domain/repositories/category_repository.dart';
 import 'package:parking_management/features/check_in/application/check_in_cubit.dart';
@@ -41,6 +43,7 @@ class _FakeCheckInRepository implements CheckInRepository {
   Failure? createError;
   String? lastPlate;
   bool? lastLeftKeys;
+  int? lastSpotId;
   NewVehicleInfo? lastNewVehicle;
   List<XFile> lastPhotos = const [];
 
@@ -50,10 +53,12 @@ class _FakeCheckInRepository implements CheckInRepository {
     required List<XFile> photos,
     NewVehicleInfo? newVehicle,
     bool leftKeys = false,
+    int? spotId,
   }) async {
     createCalls++;
     lastPlate = plate;
     lastLeftKeys = leftKeys;
+    lastSpotId = spotId;
     lastNewVehicle = newVehicle;
     lastPhotos = photos;
     final error = createError;
@@ -202,6 +207,7 @@ void main() {
     _FakeScanner? scanner,
     List<CategoryOccupancySnapshot> occupancyCategories = const [],
     CapacitySnapshot space = CapacitySnapshot.empty,
+    SlotBoard? board,
     String? initialPlate,
     void Function(BuildContext context, String plate)? onMarkExit,
     ReservationRepository? reservations,
@@ -215,7 +221,8 @@ void main() {
     addTearDown(tester.view.reset);
     checkIns = _FakeCheckInRepository();
     occupancy = FakeCheckOutRepository(categories: occupancyCategories)
-      ..capacityToReturn = space;
+      ..capacityToReturn = space
+      ..slotBoardToReturn = board ?? SlotBoard.empty;
     await tester.pumpWidget(
       testApp(
         MultiBlocProvider(
@@ -834,5 +841,48 @@ void main() {
     await tester.pump(const Duration(milliseconds: 600));
 
     expect(find.text('ABC123'), findsWidgets);
+  });
+
+  testWidgets('Success: the picker offers the group bays and sends one', (
+    tester,
+  ) async {
+    await pumpPage(
+      tester,
+      board: const SlotBoard(
+        spots: [
+          ParkingSpot(id: 1, code: 'A1', group: SlotGroup.car, row: 0, col: 0),
+          ParkingSpot(id: 2, code: 'A2', group: SlotGroup.car, row: 0, col: 1),
+          ParkingSpot(id: 3, code: 'A3', group: SlotGroup.car, row: 1, col: 0, active: false),
+        ],
+      ),
+    );
+
+    await enterPlate(tester, 'ABC123');
+    expect(find.text('Automático (primer libre)'), findsOneWidget);
+    expect(find.widgetWithText(ChoiceChip, 'A1'), findsOneWidget);
+    expect(find.widgetWithText(ChoiceChip, 'A2'), findsOneWidget);
+    expect(find.widgetWithText(ChoiceChip, 'A3'), findsNothing);
+
+    await tester.tap(find.widgetWithText(ChoiceChip, 'A2'));
+    await tester.pump();
+    await tapSubmit(tester);
+
+    expect(checkIns.lastSpotId, 2);
+  });
+
+  testWidgets('Success: automatic keeps the first free spot', (tester) async {
+    await pumpPage(
+      tester,
+      board: const SlotBoard(
+        spots: [
+          ParkingSpot(id: 1, code: 'A1', group: SlotGroup.car, row: 0, col: 0),
+        ],
+      ),
+    );
+
+    await enterPlate(tester, 'ABC123');
+    await tapSubmit(tester);
+
+    expect(checkIns.lastSpotId, isNull);
   });
 }

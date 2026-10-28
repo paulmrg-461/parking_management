@@ -1,5 +1,7 @@
 import 'package:equatable/equatable.dart';
 
+import '../../../spots/domain/entities/parking_spot.dart';
+
 /// Space group used by the visual board and the capacity settings.
 enum SlotGroup {
   car,
@@ -19,6 +21,7 @@ class SlotSession extends Equatable {
     required this.sessionId,
     required this.plate,
     required this.entryTime,
+    this.spotId,
     this.hasPass = false,
     this.leftKeys = false,
     this.photoCount = 0,
@@ -28,6 +31,9 @@ class SlotSession extends Equatable {
   final int sessionId;
   final String plate;
   final DateTime entryTime;
+
+  /// Physical bay assigned at check-in (null when the site has no map).
+  final int? spotId;
   final bool hasPass;
   final bool leftKeys;
   final int photoCount;
@@ -37,6 +43,7 @@ class SlotSession extends Equatable {
     sessionId: (json['session_id'] as num).toInt(),
     plate: json['plate'] as String,
     entryTime: DateTime.parse(json['entry_time'] as String),
+    spotId: (json['spot_id'] as num?)?.toInt(),
     hasPass: json['has_pass'] == true,
     leftKeys: json['left_keys'] == true,
     photoCount: (json['photo_count'] as num?)?.toInt() ?? 0,
@@ -48,6 +55,7 @@ class SlotSession extends Equatable {
     sessionId,
     plate,
     entryTime,
+    spotId,
     hasPass,
     leftKeys,
     photoCount,
@@ -86,6 +94,7 @@ class SlotBoard extends Equatable {
     this.motoOutOfService = 0,
     this.sessions = const [],
     this.holds = const [],
+    this.spots = const [],
   });
 
   final int carCapacity;
@@ -97,9 +106,33 @@ class SlotBoard extends Equatable {
   final List<SlotSession> sessions;
   final List<SlotHold> holds;
 
+  /// The site's physical map (empty until the admin lays it out).
+  final List<ParkingSpot> spots;
+
   static const empty = SlotBoard();
 
-  bool get isEmpty => carCapacity == 0 && motoCapacity == 0 && sessions.isEmpty;
+  bool get isEmpty =>
+      carCapacity == 0 &&
+      motoCapacity == 0 &&
+      sessions.isEmpty &&
+      spots.isEmpty;
+
+  bool get hasMap => spots.isNotEmpty;
+
+  /// Sessions with no bay (the site had no map when they checked in).
+  List<SlotSession> get unassignedSessions => [
+    for (final session in sessions)
+      if (session.spotId == null) session,
+  ];
+
+  SlotSession? sessionAt(ParkingSpot spot) {
+    for (final session in sessions) {
+      if (session.spotId == spot.id) {
+        return session;
+      }
+    }
+    return null;
+  }
 
   List<SlotSession> sessionsIn(SlotGroup group) => [
     for (final session in sessions)
@@ -124,6 +157,10 @@ class SlotBoard extends Equatable {
       for (final item in (json['holds'] as List<dynamic>? ?? const []))
         SlotHold.fromJson(Map<String, dynamic>.from(item as Map)),
     ],
+    spots: [
+      for (final item in (json['spots'] as List<dynamic>? ?? const []))
+        ParkingSpot.fromJson(Map<String, dynamic>.from(item as Map)),
+    ],
   );
 
   int outOfServiceIn(SlotGroup group) => switch (group) {
@@ -140,5 +177,6 @@ class SlotBoard extends Equatable {
     motoOutOfService,
     sessions,
     holds,
+    spots,
   ];
 }

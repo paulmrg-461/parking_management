@@ -41,6 +41,7 @@ class _FakeRemote implements CheckInRemoteDataSource {
     required List<XFile> photos,
     NewVehicleInfo? newVehicle,
     bool leftKeys = false,
+    int? spotId,
     String? idempotencyKey,
     DateTime? clientEntryTime,
     int? lotId,

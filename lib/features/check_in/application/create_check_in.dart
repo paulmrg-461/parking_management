@@ -19,6 +19,7 @@ class CreateCheckIn {
     required List<XFile> photos,
     NewVehicleInfo? newVehicle,
     bool leftKeys = false,
+    int? spotId,
   }) async {
     final normalized = normalizePlate(plate);
     await _validatePhotos(photos);
@@ -27,6 +28,7 @@ class CreateCheckIn {
       photos: photos,
       newVehicle: newVehicle,
       leftKeys: leftKeys,
+      spotId: spotId,
     );
   }
 

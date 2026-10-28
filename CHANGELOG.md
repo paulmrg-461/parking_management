@@ -42,6 +42,17 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   its sheet with "Cancelar reserva" (confirmation, snack, board reload); the
   reservation id is resolved from the active list by plate + expiry, so the
   board payload stays small. Operators do not see the action.
+- **Physical parking map (drag & drop).** Admins lay out the site once in
+  `/spots`: add bays, drag them on a grid, rename them, take them out of
+  service or delete them (`parking_spots`, audited). Each bay has a code,
+  group (cars / motorcycles / heavy) and grid position. Check-in then offers
+  that group's free bays (default "Automatic" = first free, top-left first) and
+  `check_in` assigns the bay; the home board paints the real map with the car
+  in its bay and the fare sheet shows the spot. With a map, the group's capacity
+  **is** its active bays (`0058`), out-of-service bays are never offered, and
+  holds obey the same limit. Deleting a bay clears the reference on old
+  sessions instead of blocking (`0059`). The entry receipt/snackbar names the
+  assigned spot.
 - **Live activity notifications.** Every check-in/check-out now notifies the
   whole site (all active members, not only admins) with the actor's name, the
   plate and the charge on exits (`0056`), so the admin desk sees the operator's
@@ -327,7 +338,7 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Tests
 
-- 712 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
+- 724 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
   integration test that runs only against a live stack.
 - SQL/RLS/RPC regressions covering capacity, shifts, discounts, passes,
   reservations, multi-site isolation, audit, diagnostics and retention.
@@ -357,7 +368,7 @@ Migrations are append-only and applied in filename order by `supabase-migrate`.
 | `0027`–`0032` | Per-lot branding, retention, shift filters, header contract |
 | `0033`–`0038` | Evidence retention, storage membership, diagnostics, audit export, report comparison, home KPIs |
 | `0039`–`0044` | Site comparison fields, ticket reprint, customer phone, WhatsApp queue/report |
-| `0045`–`0056` | Check-out preview, pass flag, capacity groups, reservations consuming group capacity, reserved counts, hold counters, space board, fare breakdown, out-of-service spaces, live activity notifications |
+| `0045`–`0059` | Check-out preview, pass flag, capacity groups, reservations consuming group capacity, reserved counts, hold counters, space board, fare breakdown, out-of-service spaces, live activity notifications, physical spot map and its editor |
 
 ## Verification snapshot
 
@@ -365,7 +376,7 @@ Captured on 2026-10-24 against the local self-hosted stack:
 
 | Check | Result |
 |---|---|
-| `flutter test` | 712 passed (+1 live-stack integration skipped) |
+| `flutter test` | 724 passed (+1 live-stack integration skipped) |
 | `flutter analyze` | 0 errors, 0 warnings (only SDK deprecation infos) |
 | `flutter build web --release` | OK |
 | `supabase/tests/run.sh` | Passed (migrations + RPC/RLS regressions) |

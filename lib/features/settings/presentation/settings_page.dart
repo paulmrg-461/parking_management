@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../core/l10n/failure_messages.dart';
@@ -319,6 +320,13 @@ class _SettingsPageState extends State<SettingsPage> {
               helperText: l10n.settingsCapacityHint,
             ),
             validator: _capacity,
+          ),
+          const SizedBox(height: Space.sm),
+          OutlinedButton.icon(
+            key: const Key('settings_spots_map'),
+            onPressed: () => context.go('/spots'),
+            icon: const Icon(Icons.grid_view_rounded),
+            label: Text(l10n.spotsTitle),
           ),
           SwitchListTile(
             key: const Key('settings_whatsapp_auto'),

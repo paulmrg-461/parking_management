@@ -20,6 +20,7 @@ import '../../../auth/application/auth_cubit.dart';
 import '../../../auth/domain/entities/user.dart';
 import '../../../check_out/domain/entities/check_out_preview.dart';
 import '../../../check_out/domain/entities/slot_board.dart';
+import '../../../spots/domain/entities/parking_spot.dart';
 import '../../../check_out/presentation/widgets/fare_breakdown_view.dart';
 import '../../../reservations/domain/entities/reservation.dart';
 import '../../../reservations/domain/repositories/reservation_repository.dart';
@@ -169,22 +170,41 @@ class _Board extends StatelessWidget {
             ),
             const SizedBox(height: Space.sm),
             _Filters(board: board, selected: filter, onSelected: onFilter),
-            if (groups.isEmpty && filter == SlotFilter.holds) ...[
-              Padding(
-                padding: const EdgeInsets.only(top: Space.md),
-                child: Text(
-                  l10n.slotBoardNoHolds,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ),
-            ],
-            for (final group in groups)
-              _GroupSection(
+            if (filter == SlotFilter.holds) ...[
+              if (board.holds.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: Space.md),
+                  child: Text(
+                    l10n.slotBoardNoHolds,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                )
+              else
+                _HoldsStrip(board: board, reservations: reservations),
+            ] else if (board.hasMap) ...[
+              _SpotMap(
                 board: board,
-                group: group,
-                onlyHolds: filter == SlotFilter.holds,
+                filter: filter,
                 reservations: reservations,
               ),
+              if (board.holds.isNotEmpty)
+                _HoldsStrip(board: board, reservations: reservations),
+              if (board.unassignedSessions.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: Space.sm),
+                  child: Text(
+                    l10n.slotNoSpotAssigned(board.unassignedSessions.length),
+                    style: Theme.of(context).textTheme.labelSmall,
+                  ),
+                ),
+            ] else
+              for (final group in groups)
+                _GroupSection(
+                  board: board,
+                  group: group,
+                  onlyHolds: false,
+                  reservations: reservations,
+                ),
           ],
         ),
       ),
@@ -422,6 +442,243 @@ class _CellsGrid extends StatelessWidget {
   }
 }
 
+/// The site's physical map: one cell per bay, positioned by the admin. Free
+/// bays show their code, occupied ones the plate and elapsed time, and
+/// out-of-service bays the striped maintenance state.
+class _SpotMap extends StatelessWidget {
+  const _SpotMap({
+    required this.board,
+    required this.filter,
+    this.reservations,
+  });
+
+  final SlotBoard board;
+  final SlotFilter filter;
+  final ReservationRepository? reservations;
+
+  bool _shows(ParkingSpot spot) => switch (filter) {
+    SlotFilter.all => true,
+    SlotFilter.car => spot.group == SlotGroup.car,
+    SlotFilter.moto => spot.group == SlotGroup.moto,
+    SlotFilter.holds => false,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final spots = [
+      for (final spot in board.spots)
+        if (_shows(spot)) spot,
+    ];
+    if (spots.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    final rows = spots.map((spot) => spot.row).reduce((a, b) => a > b ? a : b) + 1;
+    final cols = spots.map((spot) => spot.col).reduce((a, b) => a > b ? a : b) + 1;
+    final byCell = {
+      for (final spot in spots) '${spot.row}:${spot.col}': spot,
+    };
+    return Padding(
+      padding: const EdgeInsets.only(top: Space.sm),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (var row = 0; row < rows; row++)
+              Padding(
+                padding: const EdgeInsets.only(bottom: Space.xs),
+                child: Row(
+                  children: [
+                    for (var col = 0; col < cols; col++)
+                      Padding(
+                        padding: const EdgeInsets.only(right: Space.xs),
+                        child: switch (byCell['$row:$col']) {
+                          final spot? => _SpotCell(
+                            spot: spot,
+                            session: board.sessionAt(spot),
+                            reservations: reservations,
+                          ),
+                          _ => const _EmptySpotCell(),
+                        },
+                      ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptySpotCell extends StatelessWidget {
+  const _EmptySpotCell();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      width: 72,
+      height: 72,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(Radii.sm),
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.4)),
+      ),
+    );
+  }
+}
+
+class _SpotCell extends StatelessWidget {
+  const _SpotCell({
+    required this.spot,
+    this.session,
+    this.reservations,
+  });
+
+  final ParkingSpot spot;
+  final SlotSession? session;
+  final ReservationRepository? reservations;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final scheme = Theme.of(context).colorScheme;
+    final status = StatusColors.of(context);
+    final active = spot.active;
+    final occupied = session != null;
+
+    final tint = !active
+        ? scheme.outline
+        : occupied
+        ? scheme.primary
+        : status.success;
+    final content = Container(
+      width: 72,
+      height: 72,
+      decoration: BoxDecoration(
+        color: !active
+            ? scheme.surfaceContainerHighest
+            : Color.alphaBlend(
+                tint.withValues(alpha: occupied ? 0.10 : 0.14),
+                scheme.surface,
+              ),
+        borderRadius: BorderRadius.circular(Radii.sm),
+        border: Border.all(
+          color: !active
+              ? scheme.outline
+              : occupied
+              ? scheme.outlineVariant
+              : tint.withValues(alpha: 0.7),
+          width: 1.2,
+        ),
+      ),
+      padding: const EdgeInsets.all(2),
+      child: CustomPaint(
+        painter: !active ? _StripesPainter(scheme.outline) : null,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              !active
+                  ? Icons.build_circle_outlined
+                  : _groupIcon(spot.group),
+              size: 16,
+              color: occupied ? scheme.onSurfaceVariant : tint,
+            ),
+            const SizedBox(height: 2),
+            Text(
+              occupied ? session!.plate : spot.code,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 10,
+                height: 1.1,
+                fontFamily: occupied ? 'monospace' : null,
+                fontWeight: FontWeight.w700,
+                color: scheme.onSurface,
+              ),
+            ),
+            Text(
+              !active
+                  ? l10n.slotMaintenanceShort
+                  : occupied
+                  ? elapsedLabel(l10n, session!.entryTime)
+                  : l10n.slotFree,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 8,
+                height: 1.1,
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    final semantics = !active
+        ? '${l10n.slotMaintenance} ${spot.code}'
+        : occupied
+        ? '${l10n.slotOccupied} ${session!.plate}, ${spot.code}, '
+              '${elapsedLabel(l10n, session!.entryTime)}'
+        : '${l10n.slotFree} ${spot.code}';
+    return Semantics(
+      label: semantics,
+      button: occupied,
+      excludeSemantics: true,
+      child: Tooltip(
+        message: semantics,
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(Radii.sm),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(Radii.sm),
+            onTap: occupied
+                ? () => _showSession(context, session!, spotCode: spot.code)
+                : null,
+            child: content,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Holds have no bay yet: they are promised spots, shown as a compact strip.
+class _HoldsStrip extends StatelessWidget {
+  const _HoldsStrip({required this.board, this.reservations});
+
+  final SlotBoard board;
+  final ReservationRepository? reservations;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Padding(
+      padding: const EdgeInsets.only(top: Space.sm),
+      child: Wrap(
+        spacing: Space.xs,
+        runSpacing: Space.xs,
+        children: [
+          for (final hold in board.holds)
+            ActionChip(
+              avatar: const Icon(Icons.event_available, size: 18),
+              label: Text(
+                '${hold.plate} · ${Formatters.time(hold.until.toLocal())}',
+              ),
+              onPressed: () => _showHold(context, hold, reservations),
+            ),
+          if (board.holds.isEmpty)
+            Text(l10n.slotBoardNoHolds),
+        ],
+      ),
+    );
+  }
+}
+
 class _SlotCell extends StatelessWidget {
   const _SlotCell._({
     required this.group,
@@ -575,13 +832,21 @@ class _SlotCell extends StatelessWidget {
   }
 }
 
-Future<void> _showSession(BuildContext context, SlotSession session) async {
+Future<void> _showSession(
+  BuildContext context,
+  SlotSession session, {
+  String? spotCode,
+}) async {
   final cubit = context.read<DashboardCubit>();
   await showModalBottomSheet<void>(
     context: context,
     showDragHandle: true,
     isScrollControlled: true,
-    builder: (_) => _SessionSheet(session: session, cubit: cubit),
+    builder: (_) => _SessionSheet(
+      session: session,
+      cubit: cubit,
+      spotCode: spotCode,
+    ),
   );
 }
 
@@ -747,10 +1012,15 @@ class _SheetTitle extends StatelessWidget {
 /// Session details with a one-second clock (elapsed time) and a fare preview
 /// refreshed once a minute; the amount is always the server's.
 class _SessionSheet extends StatefulWidget {
-  const _SessionSheet({required this.session, required this.cubit});
+  const _SessionSheet({
+    required this.session,
+    required this.cubit,
+    this.spotCode,
+  });
 
   final SlotSession session;
   final DashboardCubit cubit;
+  final String? spotCode;
 
   @override
   State<_SessionSheet> createState() => _SessionSheetState();
@@ -822,6 +1092,12 @@ class _SessionSheetState extends State<_SessionSheet> {
               spacing: Space.xs,
               runSpacing: Space.xs,
               children: [
+                if (widget.spotCode case final code?)
+                  StatusChip(
+                    label: l10n.spotLabel(code),
+                    tone: StatusTone.neutral,
+                    icon: Icons.grid_view_rounded,
+                  ),
                 StatusChip(
                   label: elapsedLabel(l10n, session.entryTime),
                   tone: StatusTone.neutral,
@@ -899,9 +1175,9 @@ class _EmptyBoard extends StatelessWidget {
               icon: Icons.grid_view_outlined,
               action: configure
                   ? FilledButton.icon(
-                      onPressed: () => context.go('/settings'),
-                      icon: const Icon(Icons.tune),
-                      label: Text(l10n.slotBoardConfigure),
+                      onPressed: () => context.go('/spots'),
+                      icon: const Icon(Icons.grid_view_rounded),
+                      label: Text(l10n.spotsTitle),
                     )
                   : null,
             ),

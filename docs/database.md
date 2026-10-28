@@ -93,6 +93,13 @@ money: day/night hours, rates, daily cap, elapsed time),
 `can_read_lot(lot_id)` backs the notifications RLS for Realtime (no lot header
 there).
 
+**Physical map**
+`parking_spots` (`code`, `group_name`, `grid_row`, `grid_col`, `status`;
+unique code and cell per lot), `parking_sessions.spot_id` (one open session per
+bay), `save_parking_spot`, `delete_parking_spot`, `assign_session_spot`,
+`category_group(name)`; a group with spots limits check-ins and holds to its
+active bays.
+
 **Billing and reports**
 `report_revenue` (active lot), `report_revenue_all` (platform admins),
 `report_occupancy`, `occupancy_snapshot`, `dashboard_today` (home KPIs),

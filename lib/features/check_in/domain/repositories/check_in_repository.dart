@@ -11,6 +11,7 @@ abstract class CheckInRepository {
     required List<XFile> photos,
     NewVehicleInfo? newVehicle,
     bool leftKeys = false,
+    int? spotId,
   });
 
   Future<List<ParkingSession>> listOpenSessions();

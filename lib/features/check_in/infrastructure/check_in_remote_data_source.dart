@@ -15,6 +15,7 @@ abstract class CheckInRemoteDataSource {
     required List<XFile> photos,
     NewVehicleInfo? newVehicle,
     bool leftKeys = false,
+    int? spotId,
     String? idempotencyKey,
     DateTime? clientEntryTime,
     int? lotId,
@@ -37,6 +38,7 @@ class SupabaseCheckInRemoteDataSource implements CheckInRemoteDataSource {
     required List<XFile> photos,
     NewVehicleInfo? newVehicle,
     bool leftKeys = false,
+    int? spotId,
     String? idempotencyKey,
     DateTime? clientEntryTime,
     int? lotId,
@@ -62,6 +64,7 @@ class SupabaseCheckInRemoteDataSource implements CheckInRemoteDataSource {
               },
           ],
           'p_left_keys': leftKeys,
+          'p_spot_id': ?spotId,
           'p_idempotency_key': ?idempotencyKey,
           if (clientEntryTime != null)
             'p_client_entry_time': clientEntryTime.toUtc().toIso8601String(),

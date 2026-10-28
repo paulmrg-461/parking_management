@@ -13,6 +13,8 @@ class ParkingSessionDto {
     required this.entryTime,
     required this.photoCount,
     this.leftKeys = false,
+    this.spotId,
+    this.spotCode,
   });
 
   factory ParkingSessionDto.fromJson(Map<String, dynamic> json) =>
@@ -31,6 +33,12 @@ class ParkingSessionDto {
   @JsonKey(name: 'photo_count')
   final int photoCount;
 
+  @JsonKey(name: 'spot_id')
+  final int? spotId;
+
+  @JsonKey(name: 'spot_code')
+  final String? spotCode;
+
   Map<String, dynamic> toJson() => _$ParkingSessionDtoToJson(this);
 
   ParkingSession toDomain() => ParkingSession(
@@ -42,5 +50,7 @@ class ParkingSessionDto {
         entryTime: entryTime,
         photoCount: photoCount,
         leftKeys: leftKeys,
+        spotId: spotId,
+        spotCode: spotCode,
       );
 }

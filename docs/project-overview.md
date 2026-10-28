@@ -43,7 +43,7 @@ WhatsApp (manual or automated).
 | Secrets / PIN operations | Complete (scripts + runbook) | PIN rotation verified live |
 | E2E and CI | Complete (API + Flutter client, real stack) | CI job `supabase-e2e` |
 
-Quality snapshot (2026-10-24, local stack): **712 Flutter tests + 1 integration
+Quality snapshot (2026-10-24, local stack): **724 Flutter tests + 1 integration
 test**, SQL/RLS suite green, web build green, analyzer with **0 errors and 0
 warnings** (only SDK deprecation infos from the pinned beta channel), restore
 drill green.
@@ -57,7 +57,8 @@ the main data it touches.
 | Module (`lib/features/…`) | Responsibility | Backing data / RPCs |
 |---|---|---|
 | `auth` | PIN login, session restore, logout | GoTrue, `users`, `lot_members` |
-| `home` | Dashboard: occupancy + radial, space board, today KPIs, shift card, shortcuts | `occupancy_snapshot`, `dashboard_today`, `slot_board` |
+| `home` | Dashboard: occupancy + radial, space board (physical map), today KPIs, shift card, shortcuts | `occupancy_snapshot`, `dashboard_today`, `slot_board` |
+| `spots` | Admin drag & drop map editor and bay layout | `parking_spots`, `save/delete_parking_spot` |
 | `check_in` | Plate lookup, evidence photos, offline queue | `check_in`, `vehicles`, Storage `evidence` |
 | `check_out` | Open sessions (paged), payment, receipt | `check_out`, `calculate_fare`, `open_sessions_view` |
 | `vehicle_history` | Timeline, notes, blacklist, phone, reprint, WhatsApp | `vehicle_history`, `update_vehicle_flags` |
@@ -133,9 +134,9 @@ Deployment: [`setup-cloud.md`](setup-cloud.md) (single VM + TLS proxy) and
 - **`pg_cron` is not available in the shipped image's app database**, so
   scheduled work runs from host cron (documented); the functions are the same.
 - **Single currency and single tax regime** assumptions.
-- **No physical bay numbers.** The space board paints virtual capacity cells;
-  "out of service" is a per-group count (not a specific bay) and bicycles are
-  not modelled.
+- **Physical bays are optional.** Without a map the board paints virtual
+  capacity cells and capacity comes from Ajustes; with a map the bays define the
+  capacity. Bicycles are not modelled.
 - **Beta Flutter SDK pinned**; analyzer output is limited to SDK deprecation
   infos until the pin moves to stable.
 

@@ -43,6 +43,7 @@ import 'deferred/contact_entry.dart' deferred as contact;
 import 'deferred/monthly_passes_entry.dart' deferred as monthly_passes;
 import 'deferred/reports_entry.dart' deferred as reports;
 import 'deferred/settings_entry.dart' deferred as settings;
+import 'deferred/spots_entry.dart' deferred as spots;
 import 'deferred/tariffs_entry.dart' deferred as tariffs;
 import 'deferred/users_entry.dart' deferred as users;
 import 'deferred/vehicles_entry.dart' deferred as vehicles;
@@ -227,6 +228,17 @@ GoRoute _homeRoute(AuthCubit auth) => GoRoute(
       'settings',
       settings.loadLibrary,
       () => settings.buildSettingsEntry(),
+    ),
+    _deferred(
+      'spots',
+      spots.loadLibrary,
+      () => spots.buildSpotsEntry(
+        isAdmin: switch (auth.state) {
+          AuthAuthenticated(:final session) =>
+            session.user.role == UserRole.admin,
+          _ => false,
+        },
+      ),
     ),
     _deferred(
       'contact',

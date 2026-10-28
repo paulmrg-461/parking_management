@@ -1512,4 +1512,153 @@ begin
 end $$;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
 
+-- Physical spots: the map defines the group capacity, check-in takes the
+-- chosen spot or the first free one, and check-out frees it.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    spot_cat integer;
+    spot_a integer;
+    spot_b integer;
+    spot_oos integer;
+    first_in jsonb;
+    second_in jsonb;
+    board jsonb;
+    moved jsonb;
+    refused boolean;
+begin
+    -- Deterministic: no other open session competes for the group's spots.
+    update public.parking_sessions
+       set status = 'closed', exit_time = now(), amount_charged = 0
+     where status = 'open' and lot_id = 1;
+
+    insert into public.categories (name, capacity, lot_id)
+    values ('spotcar', 0, 1)
+    returning id into spot_cat;
+    insert into public.tariffs (category_id, type, amount, active, lot_id)
+    values (spot_cat, 'hourly', 1000, true, 1);
+
+    delete from public.parking_spots where lot_id = 1;
+
+    spot_a := (public.save_parking_spot('T1', 'heavy', 0, 0) ->> 'id')::integer;
+    spot_b := (public.save_parking_spot('T2', 'heavy', 0, 1) ->> 'id')::integer;
+    spot_oos := (
+        public.save_parking_spot('T3', 'heavy', 1, 0, null, false) ->> 'id'
+    )::integer;
+
+    -- Out of service is not offered, even when requested.
+    refused := false;
+    begin
+        perform public.check_in(
+            'SPOTA0', spot_cat, null, null, '[]'::jsonb, null, null, null,
+            false, spot_oos
+        );
+        raise exception 'an out-of-service spot was accepted';
+    exception when others then
+        if sqlerrm not like '%SpotOutOfServiceError%' then
+            raise;
+        end if;
+        refused := true;
+    end;
+    if not refused then
+        raise exception 'out-of-service spot was not refused';
+    end if;
+
+    -- Automatic: first free spot, top-left first.
+    first_in := public.check_in(
+        'SPOTA1', spot_cat, null, null, '[]'::jsonb, null,
+        now() - interval '1 minute'
+    );
+    if first_in ->> 'spot_code' <> 'T1' then
+        raise exception 'auto-assignment did not take the first spot: %', first_in;
+    end if;
+
+    -- Explicit spot, when the operator picks one.
+    second_in := public.check_in(
+        'SPOTA2', spot_cat, null, null, '[]'::jsonb, null,
+        now() - interval '1 minute', null, false, spot_b
+    );
+    if (second_in ->> 'spot_id')::integer <> spot_b then
+        raise exception 'the requested spot was ignored: %', second_in;
+    end if;
+
+    -- The map defines the capacity: two active spots, both taken.
+    refused := false;
+    begin
+        perform public.check_in('SPOTA3', spot_cat);
+        raise exception 'a third car took a spot that does not exist';
+    exception when others then
+        if sqlerrm not like '%ParkingFullError%' then
+            raise;
+        end if;
+        refused := true;
+    end;
+    if not refused then
+        raise exception 'the map capacity was ignored';
+    end if;
+
+    -- Moving: a taken spot is refused; automatic keeps the current one.
+    refused := false;
+    begin
+        perform public.assign_session_spot(
+            (second_in ->> 'id')::integer, spot_a
+        );
+        raise exception 'two cars shared a spot';
+    exception when others then
+        if sqlerrm not like '%SpotTakenError%' then
+            raise;
+        end if;
+        refused := true;
+    end;
+    if not refused then
+        raise exception 'spot conflict was not refused';
+    end if;
+
+    moved := public.assign_session_spot((first_in ->> 'id')::integer, null);
+    if (moved ->> 'spot_id')::integer <> spot_a then
+        raise exception 'automatic move changed the spot: %', moved;
+    end if;
+
+    -- A spot with a car inside cannot be removed.
+    refused := false;
+    begin
+        perform public.delete_parking_spot(spot_a);
+        raise exception 'an occupied spot was deleted';
+    exception when others then
+        if sqlerrm not like '%SpotOccupiedError%' then
+            raise;
+        end if;
+        refused := true;
+    end;
+    if not refused then
+        raise exception 'occupied spot deletion was not refused';
+    end if;
+
+    board := public.slot_board();
+    if jsonb_array_length(board -> 'spots') <> 3 then
+        raise exception 'board did not paint the map: %', board;
+    end if;
+    if not exists (
+        select 1 from jsonb_array_elements(board -> 'sessions') item
+         where item ->> 'plate' = 'SPOTA1'
+           and (item ->> 'spot_id')::integer = spot_a
+    ) then
+        raise exception 'board lost the assigned spot';
+    end if;
+
+    -- Check-out frees the spot for the next car.
+    perform public.check_out((first_in ->> 'id')::integer, null, null, 'cash');
+    perform public.check_out((second_in ->> 'id')::integer, null, null, 'cash');
+    perform public.delete_parking_spot(spot_a);
+    perform public.delete_parking_spot(spot_b);
+    perform public.delete_parking_spot(spot_oos);
+
+    -- A clean map keeps the configured capacity and no spots.
+    board := public.slot_board();
+    if jsonb_array_length(board -> 'spots') <> 0 then
+        raise exception 'spots survived deletion';
+    end if;
+end $$;
+
 rollback;

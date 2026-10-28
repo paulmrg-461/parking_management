@@ -167,6 +167,7 @@ void main() {
 
     expect(repository.settings.carCapacity, 12);
     expect(repository.settings.carOutOfService, 2);
+    expect(find.byKey(const Key('settings_spots_map')), findsOneWidget);
   });
 
   testWidgets('Failure: out-of-service cannot exceed the capacity', (

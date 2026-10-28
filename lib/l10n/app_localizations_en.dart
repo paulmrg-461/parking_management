@@ -896,6 +896,75 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsDiscard => 'Discard';
 
   @override
+  String get spotsTitle => 'Parking map';
+
+  @override
+  String get spotsAdminOnly => 'Only an admin can edit the map';
+
+  @override
+  String get spotsAdd => 'Add spot';
+
+  @override
+  String get spotsHint => 'Drag a spot to move it · tap to edit';
+
+  @override
+  String get spotsEmpty => 'No spots yet. Add the first one to build the map.';
+
+  @override
+  String get spotsAddTitle => 'New spot';
+
+  @override
+  String get spotsCode => 'Code';
+
+  @override
+  String get spotsGroup => 'Group';
+
+  @override
+  String get spotsActive => 'Available';
+
+  @override
+  String get spotsActiveHint => 'Turn it off for maintenance';
+
+  @override
+  String get spotsDelete => 'Delete spot';
+
+  @override
+  String get spotsDeleteTitle => 'Delete the spot?';
+
+  @override
+  String spotsDeleteBody(String code) {
+    return 'Spot $code leaves the map. History is kept.';
+  }
+
+  @override
+  String get spotsDragHere => 'Drop here';
+
+  @override
+  String get errorSpotCodeTaken => 'A spot with that code already exists';
+
+  @override
+  String get errorSpotCellTaken => 'That cell is already taken';
+
+  @override
+  String get errorSpotTaken => 'That spot is already taken';
+
+  @override
+  String get errorSpotOutOfService => 'That spot is out of service';
+
+  @override
+  String get errorSpotOccupied =>
+      'A spot with a vehicle inside cannot be deleted';
+
+  @override
+  String get errorSpotGroup => 'The spot does not match the vehicle type';
+
+  @override
+  String get errorSpotCodeInvalid => 'Invalid code (A-Z, 0-9 and dash; max 16)';
+
+  @override
+  String get errorSpotNotFound => 'The spot does not exist';
+
+  @override
   String get settingsTitle => 'Parking settings';
 
   @override
@@ -1079,6 +1148,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homeInsideSeeAll => 'See all';
+
+  @override
+  String spotLabel(String code) {
+    return 'Spot $code';
+  }
+
+  @override
+  String slotNoSpotAssigned(int count) {
+    return '$count vehicles with no spot assigned';
+  }
 
   @override
   String get slotBoardTitle => 'Space map';
@@ -1275,6 +1354,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get checkInSubmit => 'Register check-in';
+
+  @override
+  String get checkInSpotTitle => 'Spot';
+
+  @override
+  String get checkInSpotAuto => 'Automatic (first free)';
+
+  @override
+  String get checkInSpotNone => 'No free spots for this group';
+
+  @override
+  String checkInSuccessSpot(String plate, String spot) {
+    return 'Entry registered · $plate at $spot';
+  }
 
   @override
   String checkInSuccess(String plate) {

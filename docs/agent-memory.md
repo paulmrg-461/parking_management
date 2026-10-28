@@ -11,9 +11,9 @@ HEAD `e7351da`).
 
 - Stack: Flutter (android + web) + self-hosted Supabase only. No FastAPI,
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
-- `supabase/migrations/0001..0057` are the schema owner (applied by
+- `supabase/migrations/0001..0059` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 712 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 724 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -37,6 +37,16 @@ HEAD `e7351da`).
 
 ## Operator UI + realtime (2026-10-28)
 
+- **Physical map** (`0058`/`0059`): `parking_spots` (code, group, row/col,
+  active) authored in `/spots` by admins (`save/delete_parking_spot`, audited).
+  A group with spots derives capacity from its active bays; without spots it
+  falls back to Ajustes. `check_in(p_spot_id)` validates lot/group/active/free
+  or auto-assigns the first free bay (row, col); `assign_session_spot` moves a
+  car. The board paints the real map and the check-in picker offers the group's
+  free bays ("Automático" sends null). Delete keeps history (`spot_id` null).
+  The migration runner now grants `supabase_admin` to `postgres` because a
+  manual apply left `check_in` owned by the admin role, blocking a signature
+  change — keep that grant in `supabase/migrate.sh`.
 - **Space board** (`slot_board`, `0052`): virtual capacity cells with four
   states (free / occupied with plate + live elapsed / reserved / striped
   maintenance), icon filters, 44x48 targets, and a sheet with the exact entry
@@ -457,7 +467,7 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 - Backend: `docker compose up -d` from the repo root; all services healthy,
   gateway/Studio on <http://localhost:8017> (`API_GW_HTTP_PORT` in `.env`);
-  migrations `0001`-`0057` applied.
+  migrations `0001`-`0059` applied.
 - Flutter web: `flutter run -d chrome --dart-define=SUPABASE_URL=http://localhost:8017
   --dart-define=SUPABASE_ANON_KEY=<ANON_KEY>` (log: `/tmp/opencode/flutter-web.log`).
 - Android (Samsung S901E over wireless adb): `sh tool/run-android.sh` — it
@@ -649,8 +659,8 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 ## Latest verification (2026-10-28)
 
-- `flutter test`: 712 passed (+1 live-stack integration skipped); `flutter
-  analyze` 139 infos, all SDK `deprecated_member_use` (zero warnings/errors);
+- `flutter test`: 724 passed (+1 live-stack integration skipped); `flutter
+  analyze` 141 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
 - `supabase/tests/run.sh` passed (migrations `0001`–`0057`); `e2e.sh` passed
   (login → check-in → check-out → report → history).
@@ -795,7 +805,7 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 - Backend: `docker compose up -d` from the repo root; all services healthy,
   gateway/Studio on <http://localhost:8017> (`API_GW_HTTP_PORT` in `.env`);
-  migrations `0001`-`0057` applied.
+  migrations `0001`-`0059` applied.
 - Flutter web: `flutter run -d chrome --dart-define=SUPABASE_URL=http://localhost:8017
   --dart-define=SUPABASE_ANON_KEY=<ANON_KEY>` (log: `/tmp/opencode/flutter-web.log`).
 - Android (Samsung S901E over wireless adb): `sh tool/run-android.sh` — it

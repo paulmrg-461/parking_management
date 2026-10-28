@@ -13,6 +13,7 @@ import 'package:parking_management/features/home/application/dashboard_cubit.dar
 import 'package:parking_management/features/home/presentation/home_page.dart';
 import 'package:parking_management/features/home/presentation/widgets/dashboard_widgets.dart';
 import 'package:parking_management/features/reservations/domain/entities/reservation.dart';
+import 'package:parking_management/features/spots/domain/entities/parking_spot.dart';
 import 'package:parking_management/features/reservations/domain/repositories/reservation_repository.dart';
 import 'package:parking_management/features/settings/application/branding_cubit.dart';
 import 'package:parking_management/features/vehicles/domain/entities/vehicle.dart';
@@ -348,12 +349,12 @@ void main() {
     expect(find.text('Mapa de espacios'), findsOneWidget);
     expect(find.text('3 libres'), findsOneWidget);
     expect(find.text('BRD001'), findsOneWidget);
-    expect(find.text('HOLD01'), findsOneWidget);
+    expect(find.textContaining('HOLD01'), findsOneWidget);
 
     await tester.tap(find.text('Reservas'));
     await tester.pumpAndSettle();
     expect(find.text('BRD001'), findsNothing);
-    expect(find.text('HOLD01'), findsOneWidget);
+    expect(find.textContaining('HOLD01'), findsOneWidget);
   });
 
   testWidgets('Success: an occupied cell opens its details and check-out', (
@@ -561,5 +562,47 @@ void main() {
 
     expect(find.text('Cancelar reserva'), findsNothing);
     expect(holds.cancelledId, isNull);
+  });
+
+  testWidgets('Success: the map paints the real bays and their cars', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      capacity: 8,
+      board: SlotBoard(
+        spots: const [
+          ParkingSpot(id: 1, code: 'A1', group: SlotGroup.car, row: 0, col: 0),
+          ParkingSpot(id: 2, code: 'A2', group: SlotGroup.car, row: 0, col: 1),
+          ParkingSpot(
+            id: 3,
+            code: 'A3',
+            group: SlotGroup.car,
+            row: 1,
+            col: 0,
+            active: false,
+          ),
+        ],
+        sessions: [
+          SlotSession(
+            sessionId: 9,
+            plate: 'ABC123',
+            entryTime: DateTime.now().subtract(const Duration(minutes: 20)),
+            spotId: 1,
+          ),
+        ],
+      ),
+    );
+
+    final bay = find.byTooltip(RegExp('^Ocupado ABC123, A1'));
+    expect(bay, findsOneWidget);
+    expect(find.text('A2'), findsOneWidget);
+    expect(find.text('Mant.'), findsOneWidget);
+
+    await tester.tap(bay);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Espacio A1'), findsOneWidget);
+    expect(find.text('Total a cobrar'), findsOneWidget);
   });
 }

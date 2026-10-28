@@ -902,6 +902,77 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsDiscard => 'Descartar';
 
   @override
+  String get spotsTitle => 'Mapa del parqueadero';
+
+  @override
+  String get spotsAdminOnly => 'Solo un administrador puede editar el mapa';
+
+  @override
+  String get spotsAdd => 'Agregar espacio';
+
+  @override
+  String get spotsHint => 'Arrastra un espacio para moverlo · toca para editar';
+
+  @override
+  String get spotsEmpty =>
+      'Aún no hay espacios. Agrega el primero para armar el mapa.';
+
+  @override
+  String get spotsAddTitle => 'Nuevo espacio';
+
+  @override
+  String get spotsCode => 'Código';
+
+  @override
+  String get spotsGroup => 'Grupo';
+
+  @override
+  String get spotsActive => 'Disponible';
+
+  @override
+  String get spotsActiveHint => 'Desactívalo para mantenimiento';
+
+  @override
+  String get spotsDelete => 'Eliminar espacio';
+
+  @override
+  String get spotsDeleteTitle => '¿Eliminar el espacio?';
+
+  @override
+  String spotsDeleteBody(String code) {
+    return 'El espacio $code saldrá del mapa. El historial se conserva.';
+  }
+
+  @override
+  String get spotsDragHere => 'Suelta aquí';
+
+  @override
+  String get errorSpotCodeTaken => 'Ya existe un espacio con ese código';
+
+  @override
+  String get errorSpotCellTaken => 'Esa celda ya está ocupada';
+
+  @override
+  String get errorSpotTaken => 'Ese espacio ya está ocupado';
+
+  @override
+  String get errorSpotOutOfService => 'Ese espacio está fuera de servicio';
+
+  @override
+  String get errorSpotOccupied =>
+      'No puedes eliminar un espacio con un vehículo dentro';
+
+  @override
+  String get errorSpotGroup => 'El espacio no corresponde al tipo de vehículo';
+
+  @override
+  String get errorSpotCodeInvalid =>
+      'Código inválido (A-Z, 0-9 y guion; máximo 16)';
+
+  @override
+  String get errorSpotNotFound => 'El espacio no existe';
+
+  @override
   String get settingsTitle => 'Configuración del parqueadero';
 
   @override
@@ -1088,6 +1159,16 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get homeInsideSeeAll => 'Ver todos';
+
+  @override
+  String spotLabel(String code) {
+    return 'Espacio $code';
+  }
+
+  @override
+  String slotNoSpotAssigned(int count) {
+    return '$count vehículos sin espacio asignado';
+  }
 
   @override
   String get slotBoardTitle => 'Mapa de espacios';
@@ -1285,6 +1366,20 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get checkInSubmit => 'Registrar entrada';
+
+  @override
+  String get checkInSpotTitle => 'Espacio';
+
+  @override
+  String get checkInSpotAuto => 'Automático (primer libre)';
+
+  @override
+  String get checkInSpotNone => 'Sin espacios libres para este grupo';
+
+  @override
+  String checkInSuccessSpot(String plate, String spot) {
+    return 'Entrada registrada · $plate en $spot';
+  }
 
   @override
   String checkInSuccess(String plate) {

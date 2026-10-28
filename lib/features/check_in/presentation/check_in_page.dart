@@ -14,6 +14,7 @@ import '../../../core/realtime/local_activity.dart';
 import '../../../core/state/submission.dart';
 import '../../../core/utils/elapsed.dart';
 import '../../../core/utils/vehicle_groups.dart';
+import '../../spots/domain/entities/parking_spot.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/storage/key_value_store.dart';
 import '../../../core/theme/tokens.dart';
@@ -101,6 +102,7 @@ class _CheckInPageState extends State<CheckInPage> {
   final List<_Photo> _photos = [];
   Timer? _debounce;
   int? _categoryId;
+  int? _spotId;
   String? _lastPlate;
   bool _sessionsOpen = true;
   bool _leftKeys = false;
@@ -364,6 +366,7 @@ class _CheckInPageState extends State<CheckInPage> {
         photos: [for (final photo in _photos) photo.file],
         newVehicle: lookup is VehicleLookupNotFound ? _newVehicleInfo() : null,
         leftKeys: _leftKeys,
+        spotId: _spotId,
       ),
     );
   }
@@ -400,6 +403,7 @@ class _CheckInPageState extends State<CheckInPage> {
     setState(() {
       _photos.clear();
       _categoryId = null;
+      _spotId = null;
       _leftKeys = false;
     });
     context.read<VehicleLookupCubit>().reset();
@@ -417,7 +421,12 @@ class _CheckInPageState extends State<CheckInPage> {
         unawaited(_loadHolds());
         unawaited(_loadKnownPlates());
         unawaited(context.read<DashboardCubit>().load());
-        final message = context.l10n.checkInSuccess(result.plate);
+        final message = result.spotCode == null
+            ? context.l10n.checkInSuccess(result.plate)
+            : context.l10n.checkInSuccessSpot(
+                result.plate,
+                result.spotCode!,
+              );
         SemanticsService.announce(message, Directionality.of(context));
         showInfoSnack(context, message);
         unawaited(_showReceipt(context, result));
@@ -504,7 +513,10 @@ class _CheckInPageState extends State<CheckInPage> {
   Widget _buildForm(BuildContext context) {
     return BlocConsumer<VehicleLookupCubit, VehicleLookupState>(
       listenWhen: (previous, current) => current is VehicleLookupNotFound,
-      listener: (context, _) => setState(() => _categoryId = null),
+      listener: (context, _) => setState(() {
+        _categoryId = null;
+        _spotId = null;
+      }),
       builder: (context, lookup) => _buildFormFields(context, lookup),
     );
   }
@@ -526,6 +538,133 @@ class _CheckInPageState extends State<CheckInPage> {
       // Isolated tests may not provide the sessions cubit.
     }
     return null;
+  }
+
+  /// Capacity group of the vehicle being checked in (cars, motorcycles or the
+  /// unlimited heavy group), used to offer that group's bays.
+  String? _spotGroup(VehicleLookupState lookup) {
+    final String? name = switch (lookup) {
+      VehicleLookupFound(:final categoryName) => categoryName,
+      VehicleLookupNotFound(:final categories) => switch (_categoryId) {
+        final int id => switch (categories) {
+          final list => list
+              .where((category) => category.id == id)
+              .map((category) => category.name)
+              .firstOrNull,
+        },
+        _ => null,
+      },
+      _ => null,
+    };
+    if (name == null) {
+      return null;
+    }
+    if (isCarGroup(name)) {
+      return 'car';
+    }
+    if (isMotoGroup(name)) {
+      return 'moto';
+    }
+    return 'heavy';
+  }
+
+  /// Bays of the vehicle's group: [configured] is false on sites without a map
+  /// (or before the group is known), so the picker stays hidden.
+  ({List<ParkingSpot> free, bool configured}) _spotOptions(
+    VehicleLookupState lookup,
+  ) {
+    final group = _spotGroup(lookup);
+    if (group == null) {
+      return (free: const [], configured: false);
+    }
+    try {
+      final state = context.watch<DashboardCubit>().state;
+      if (state is! DashboardLoaded) {
+        return (free: const [], configured: false);
+      }
+      final board = state.slotBoard;
+      final groupSpots = [
+        for (final spot in board.spots)
+          if (spot.group.name == group) spot,
+      ];
+      if (groupSpots.isEmpty) {
+        return (free: const [], configured: false);
+      }
+      final occupied = {
+        for (final session in board.sessions) ?session.spotId,
+      };
+      return (
+        free: [
+          for (final spot in groupSpots)
+            if (spot.active && !occupied.contains(spot.id)) spot,
+        ],
+        configured: true,
+      );
+    } on ProviderNotFoundException {
+      return (free: const [], configured: false);
+    }
+  }
+
+  Widget _buildSpotPicker(BuildContext context, VehicleLookupState lookup) {
+    final l10n = context.l10n;
+    final options = _spotOptions(lookup);
+    if (!options.configured) {
+      return const SizedBox.shrink();
+    }
+    final selected = _spotId;
+    if (selected != null &&
+        !options.free.any((spot) => spot.id == selected)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() => _spotId = null);
+        }
+      });
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 8),
+        Text(l10n.checkInSpotTitle, style: Theme.of(context).textTheme.labelLarge),
+        const SizedBox(height: 4),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 48),
+              child: ChoiceChip(
+                label: Text(l10n.checkInSpotAuto),
+                selected: _spotId == null,
+                showCheckmark: false,
+                materialTapTargetSize: MaterialTapTargetSize.padded,
+                onSelected: (_) => setState(() => _spotId = null),
+              ),
+            ),
+            for (final spot in options.free)
+              ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 48),
+                child: ChoiceChip(
+                  label: Text(spot.code),
+                  selected: _spotId == spot.id,
+                  showCheckmark: false,
+                  materialTapTargetSize: MaterialTapTargetSize.padded,
+                  onSelected: (_) => setState(() => _spotId = spot.id),
+                ),
+              ),
+          ],
+        ),
+        if (options.free.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              l10n.checkInSpotNone,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.error,
+              ),
+            ),
+          ),
+      ],
+    );
   }
 
   Widget _buildFormFields(BuildContext context, VehicleLookupState lookup) {
@@ -610,6 +749,7 @@ class _CheckInPageState extends State<CheckInPage> {
         ],
         const SizedBox(height: 8),
         VehicleLookupSection(state: lookup, registration: _buildRegistration),
+        _buildSpotPicker(context, lookup),
         SwitchListTile(
           key: const Key('check_in_left_keys'),
           contentPadding: EdgeInsets.zero,
@@ -760,7 +900,10 @@ class _CheckInPageState extends State<CheckInPage> {
                     ),
                   ),
             ],
-            onChanged: (value) => setState(() => _categoryId = value),
+            onChanged: (value) => setState(() {
+              _categoryId = value;
+              _spotId = null;
+            }),
           ),
         const SizedBox(height: 16),
         TextField(

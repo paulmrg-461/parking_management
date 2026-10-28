@@ -9,12 +9,17 @@ Both read money from the server only; the client never computes a fare.
 
 ## 1. Space board
 
-The site has capacity counts per group (cars + pickups, motorcycles), not
-physical bay numbers, so the board paints **virtual capacity cells**: the first
-cells are the vehicles inside, then the active holds, then the spots the admin
-took out of service (striped), then free cells. A group with capacity `0`
-means "no limit" and only paints the vehicles inside (`Pesados`/heavy: trucks
-and buses are not limited).
+The site can have a **physical map** (`parking_spots`): an admin lays out the
+bays once in `/spots` (drag & drop on a grid), and the board paints that map
+with each car in its bay. Without a map, the board falls back to **virtual
+capacity cells**: vehicles inside, active holds, out-of-service spots
+(striped), then free cells. A group with capacity `0` means "no limit" and only
+paints the vehicles inside (`Pesados`/heavy: trucks and buses are not limited).
+
+With a map, the group's capacity **is** its active bays: check-in takes the
+chosen bay or the first free one (row-major), out-of-service bays are never
+offered, holds consume the same pool, and deleting a bay keeps the visit
+history (`spot_id` set null).
 
 Free spots are `capacity - sessions - holds - out_of_service`, clamped to
 zero. Out-of-service spots are set in Ajustes and are **never offered**: the
@@ -136,10 +141,10 @@ derived from the category name: `car/carro/auto/camioneta/suv` → car,
 
 ## 5. Known limits
 
-- No physical bay numbers or bicycles in the data model, so the board is a
-  capacity map. "Out of service" is a count per group, not a specific bay.
-  Adding bay rows later would only replace the free-cell generator, not the
-  card.
+- Bicycles are not modelled. Without a map, "out of service" is a count per
+  group; with a map it is a per-bay state.
+- The map editor is a discrete grid (bay per cell, no arbitrary coordinates or
+  zoom); `parking_spots` is unique per cell and code.
 - The live amount refreshes every 60 s (and the clock every second) to avoid
   hammering the RPC; the authoritative amount is still the one computed at
   check-out.
