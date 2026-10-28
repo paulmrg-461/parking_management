@@ -1129,6 +1129,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get plateLabel => 'Plate';
 
   @override
+  String get plateKeypadTooltip => 'On-screen keypad';
+
+  @override
+  String get plateKeypadBackspace => 'Backspace';
+
+  @override
+  String get plateKeypadClear => 'Clear';
+
+  @override
   String get plateHint => 'ABC123';
 
   @override

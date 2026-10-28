@@ -587,4 +587,18 @@ void main() {
     expect(find.text('Tope diario aplicado (\$30.000)'), findsOneWidget);
     expect(find.text('\$22.000'), findsOneWidget);
   });
+
+  testWidgets('Success: the on-screen keypad fills the search', (tester) async {
+    await pumpPage(tester);
+
+    await tester.tap(find.byTooltip('Teclado en pantalla'));
+    await tester.pumpAndSettle();
+    for (final key in ['A', 'B', 'C', '1', '2', '3']) {
+      await tester.tap(find.widgetWithText(OutlinedButton, key));
+      await tester.pump();
+    }
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.text('ABC123'), findsWidgets);
+  });
 }

@@ -387,6 +387,9 @@
   "homeRefreshTooltip": "Actualizar ocupación",
 
   "plateLabel": "Placa",
+  "plateKeypadTooltip": "Teclado en pantalla",
+  "plateKeypadBackspace": "Borrar",
+  "plateKeypadClear": "Limpiar",
   "plateHint": "ABC123",
   "plateScanTooltip": "Escanear placa con la cámara",
   "plateDetected": "Placa detectada: {plate}",

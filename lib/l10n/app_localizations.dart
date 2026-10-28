@@ -2174,6 +2174,24 @@ abstract class AppLocalizations {
   /// **'Placa'**
   String get plateLabel;
 
+  /// No description provided for @plateKeypadTooltip.
+  ///
+  /// In es, this message translates to:
+  /// **'Teclado en pantalla'**
+  String get plateKeypadTooltip;
+
+  /// No description provided for @plateKeypadBackspace.
+  ///
+  /// In es, this message translates to:
+  /// **'Borrar'**
+  String get plateKeypadBackspace;
+
+  /// No description provided for @plateKeypadClear.
+  ///
+  /// In es, this message translates to:
+  /// **'Limpiar'**
+  String get plateKeypadClear;
+
   /// No description provided for @plateHint.
   ///
   /// In es, this message translates to:

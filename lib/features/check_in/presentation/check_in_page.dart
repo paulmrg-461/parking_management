@@ -19,6 +19,7 @@ import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/photo_strip.dart';
 import '../../../core/widgets/plate_input_field.dart';
+import '../../../core/widgets/plate_keypad.dart';
 import '../../../core/widgets/receipt_card.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/widgets/sync_badge.dart';
@@ -534,6 +535,12 @@ class _CheckInPageState extends State<CheckInPage> {
           focusNode: _plateFocus,
           onChanged: _onPlateChanged,
           onSubmitted: (_) => _lookupNow(),
+          onKeypad: () => showPlateKeypad(
+            context,
+            controller: _plateController,
+            maxLength: PlateInputField.maxLength,
+            onChanged: _onPlateChanged,
+          ),
         ),
         if (_plateSuggestions() case final suggestions
             when suggestions.isNotEmpty)

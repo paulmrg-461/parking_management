@@ -17,6 +17,7 @@ import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_state.dart';
 import '../../../core/widgets/receipt_card.dart';
+import '../../../core/widgets/plate_keypad.dart';
 import '../../../core/widgets/search_field.dart';
 import '../../../core/widgets/status_chip.dart';
 import '../../../core/widgets/skeleton.dart';
@@ -169,6 +170,16 @@ class _CheckOutPageState extends State<CheckOutPage> {
                       onChanged: context.read<CheckOutCubit>().search,
                       onSubmitted: (value) =>
                           unawaited(_resolveAndOpen(context, value)),
+                      onKeypad: () => showPlateKeypad(
+                        context,
+                        controller: _searchController,
+                        onChanged: (value) {
+                          context.read<CheckOutCubit>().search(value);
+                          if (mounted) {
+                            setState(() {});
+                          }
+                        },
+                      ),
                     ),
                   ),
                   if (!kIsWeb ||

@@ -32,6 +32,7 @@ class PlateInputField extends StatelessWidget {
     this.onChanged,
     this.onSubmitted,
     this.onScan,
+    this.onKeypad,
     this.autofocus = false,
     this.label,
   });
@@ -44,6 +45,9 @@ class PlateInputField extends StatelessWidget {
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
   final VoidCallback? onScan;
+
+  /// Opens the on-screen keypad for touch devices; hidden when null.
+  final VoidCallback? onKeypad;
   final bool autofocus;
   final String? label;
 
@@ -66,12 +70,24 @@ class PlateInputField extends StatelessWidget {
       decoration: InputDecoration(
         labelText: label ?? l10n.plateLabel,
         hintText: l10n.plateHint,
-        suffixIcon: onScan == null
+        suffixIcon: onScan == null && onKeypad == null
             ? null
-            : AppIconButton(
-                icon: Icons.photo_camera_outlined,
-                tooltip: l10n.plateScanTooltip,
-                onPressed: onScan,
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (onKeypad != null)
+                    AppIconButton(
+                      icon: Icons.keyboard_outlined,
+                      tooltip: l10n.plateKeypadTooltip,
+                      onPressed: onKeypad,
+                    ),
+                  if (onScan != null)
+                    AppIconButton(
+                      icon: Icons.photo_camera_outlined,
+                      tooltip: l10n.plateScanTooltip,
+                      onPressed: onScan,
+                    ),
+                ],
               ),
       ),
       validator: (value) =>

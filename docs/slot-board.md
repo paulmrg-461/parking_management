@@ -140,9 +140,9 @@ derived from the category name: `car/carro/auto/camioneta/suv` → car,
 - The live amount refreshes every 60 s (and the clock every second) to avoid
   hammering the RPC; the authoritative amount is still the one computed at
   check-out.
-- The entry form keeps its text field plus lookup (USB readers and keyboards)
-  and suggests known plates after two characters; a full on-screen
-  alphanumeric keypad is not implemented.
+- The entry form keeps its text field plus lookup (USB readers and keyboards),
+  suggests known plates after two characters, and opens an on-screen
+  alphanumeric keypad from the field (and from the check-out search).
 
 ## 6. Tests
 

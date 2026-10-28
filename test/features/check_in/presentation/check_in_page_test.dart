@@ -817,4 +817,22 @@ void main() {
 
     expect(find.text('Car · quedan 2'), findsOneWidget);
   });
+
+  testWidgets('Success: the on-screen keypad fills the plate', (tester) async {
+    await pumpPage(tester);
+
+    final keypadButton = find.byTooltip('Teclado en pantalla');
+    await tester.ensureVisible(keypadButton);
+    await tester.pumpAndSettle();
+    await tester.tap(keypadButton);
+    await tester.pumpAndSettle();
+
+    for (final key in ['A', 'B', 'C', '1', '2', '3']) {
+      await tester.tap(find.widgetWithText(OutlinedButton, key));
+      await tester.pump();
+    }
+    await tester.pump(const Duration(milliseconds: 600));
+
+    expect(find.text('ABC123'), findsWidgets);
+  });
 }
