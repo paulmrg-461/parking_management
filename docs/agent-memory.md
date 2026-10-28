@@ -4,8 +4,8 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-10-28, branch `feature/supabase` (operator UI + realtime,
-HEAD `e7351da`).
+Last updated: 2026-10-28, branch `feature/supabase` (shareable evidence +
+legal policies; HEAD `28893e1`).
 
 ## Where we are
 
@@ -708,16 +708,17 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 ## Latest verification (2026-10-28)
 
 - `flutter test`: 774 passed (+1 live-stack integration skipped); `flutter
-  analyze` 144 infos, all SDK `deprecated_member_use` (zero warnings/errors);
+  analyze` 151 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
-- `supabase/tests/run.sh` passed (migrations `0001`–`0057`); `e2e.sh` passed
+- `supabase/tests/run.sh` passed (migrations `0001`–`0065`); `e2e.sh` passed
   (login → check-in → check-out → report → history).
 - `healthcheck.sh`: 0 failures (one warning for a dev shift left open >12 h).
-- Operator UI batches this session: space board + settlement breakdown (0052/
-  0053), out-of-service spaces (0054/0055), on-screen plate keypad, hold release
-  from the board, cash denomination counter with live difference, and realtime
-  activity notifications (0056) with the Realtime RLS fix (0057). Full list in
-  `CHANGELOG.md`; component spec in `docs/slot-board.md`.
+- Batches this session: space board + settlement breakdown (0052/0053),
+  out-of-service (0054/0055), plate keypad, hold release, cash counter, realtime
+  notifications (0056/0057), physical map + editor (0058/0059), capacity=bays
+  (0060/0061), records + exports (0062/0063), evidence video (0064), shareable
+  evidence + plate-keyed public page + legal policy (0065). Full list in
+  `CHANGELOG.md`; specs in `docs/slot-board.md`.
 - Hardware run found and fixed two boot bugs: Hive now initializes before the
   Supabase session cleanup, and evidence uploads are insert-only (see above).
 
@@ -1039,7 +1040,7 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 - Optional polish: per-lot receipt footer beyond settings, audit free-text
   search, configurable shifts; the lot switcher could later live in an app-bar
   menu instead of the home chip.
-- Dev DB artifacts from smoke tests: lot `NORTH` ("Sede Norte", no categories)
-  and user `norte2` (operator, PIN `123456`, member of lot 2). Safe to delete.
-- Closed dev sessions from probing (`PERMTEST1`, `PHOTOE2E`) were checked out and
-  are only history rows; storage probes were test artifacts.
+- Dev DB is intentionally minimal (see "Dev DB cleaned"): do not recreate the
+  `NORTH` lot, `norte2`/audit users or test vehicles; clean `E2E*` rows after
+  running the e2e suite. The public evidence container
+  (`parking-evidence-web`, port 8080) must stay up for shared links in dev.
