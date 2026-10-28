@@ -14,7 +14,9 @@ import '../../../core/realtime/local_activity.dart';
 import '../../../core/state/submission.dart';
 import '../../../core/utils/elapsed.dart';
 import '../../../core/utils/vehicle_groups.dart';
+import '../../check_out/domain/entities/slot_board.dart';
 import '../../spots/domain/entities/parking_spot.dart';
+import '../../spots/presentation/widgets/spot_picker.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/storage/key_value_store.dart';
 import '../../../core/theme/tokens.dart';
@@ -568,19 +570,19 @@ class _CheckInPageState extends State<CheckInPage> {
     return 'heavy';
   }
 
-  /// Bays of the vehicle's group: [configured] is false on sites without a map
-  /// (or before the group is known), so the picker stays hidden.
-  ({List<ParkingSpot> free, bool configured}) _spotOptions(
-    VehicleLookupState lookup,
-  ) {
+  /// Bays of the vehicle's group on the configured map. [configured] is false
+  /// on sites without a map (or before the group is known), so the picker
+  /// stays hidden.
+  ({List<ParkingSpot> spots, List<SlotSession> sessions, bool configured})
+  _groupMap(VehicleLookupState lookup) {
     final group = _spotGroup(lookup);
     if (group == null) {
-      return (free: const [], configured: false);
+      return (spots: const [], sessions: const [], configured: false);
     }
     try {
       final state = context.watch<DashboardCubit>().state;
       if (state is! DashboardLoaded) {
-        return (free: const [], configured: false);
+        return (spots: const [], sessions: const [], configured: false);
       }
       final board = state.slotBoard;
       final groupSpots = [
@@ -588,82 +590,47 @@ class _CheckInPageState extends State<CheckInPage> {
           if (spot.group.name == group) spot,
       ];
       if (groupSpots.isEmpty) {
-        return (free: const [], configured: false);
+        return (spots: const [], sessions: const [], configured: false);
       }
-      final occupied = {
-        for (final session in board.sessions) ?session.spotId,
-      };
+      final ids = {for (final spot in groupSpots) spot.id};
       return (
-        free: [
-          for (final spot in groupSpots)
-            if (spot.active && !occupied.contains(spot.id)) spot,
+        spots: groupSpots,
+        sessions: [
+          for (final session in board.sessions)
+            if (session.spotId case final id? when ids.contains(id)) session,
         ],
         configured: true,
       );
     } on ProviderNotFoundException {
-      return (free: const [], configured: false);
+      return (spots: const [], sessions: const [], configured: false);
     }
   }
 
   Widget _buildSpotPicker(BuildContext context, VehicleLookupState lookup) {
-    final l10n = context.l10n;
-    final options = _spotOptions(lookup);
-    if (!options.configured) {
+    final map = _groupMap(lookup);
+    if (!map.configured) {
       return const SizedBox.shrink();
     }
+    final occupied = {
+      for (final session in map.sessions) ?session.spotId,
+    };
+    final free = [
+      for (final spot in map.spots)
+        if (spot.active && !occupied.contains(spot.id)) spot,
+    ];
     final selected = _spotId;
-    if (selected != null &&
-        !options.free.any((spot) => spot.id == selected)) {
+    if (selected != null && !free.any((spot) => spot.id == selected)) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           setState(() => _spotId = null);
         }
       });
     }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 8),
-        Text(l10n.checkInSpotTitle, style: Theme.of(context).textTheme.labelLarge),
-        const SizedBox(height: 4),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 48),
-              child: ChoiceChip(
-                label: Text(l10n.checkInSpotAuto),
-                selected: _spotId == null,
-                showCheckmark: false,
-                materialTapTargetSize: MaterialTapTargetSize.padded,
-                onSelected: (_) => setState(() => _spotId = null),
-              ),
-            ),
-            for (final spot in options.free)
-              ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 48),
-                child: ChoiceChip(
-                  label: Text(spot.code),
-                  selected: _spotId == spot.id,
-                  showCheckmark: false,
-                  materialTapTargetSize: MaterialTapTargetSize.padded,
-                  onSelected: (_) => setState(() => _spotId = spot.id),
-                ),
-              ),
-          ],
-        ),
-        if (options.free.isEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Text(
-              l10n.checkInSpotNone,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.error,
-              ),
-            ),
-          ),
-      ],
+    return SpotPicker(
+      spots: map.spots,
+      sessions: map.sessions,
+      selectedId: _spotId,
+      onSelected: (id) => setState(() => _spotId = id),
     );
   }
 

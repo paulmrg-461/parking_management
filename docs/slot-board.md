@@ -162,6 +162,9 @@ derived from the category name: `car/carro/auto/camioneta/suv` → car,
 - The entry form keeps its text field plus lookup (USB readers and keyboards),
   suggests known plates after two characters, and opens an on-screen
   alphanumeric keypad from the field (and from the check-out search).
+- The entry "Espacio" picker draws the configured map (`SpotPicker`) instead of
+  a flat list, so the operator assigns a bay by its real position; the default
+  stays "Automatic" (first free bay).
 
 ## 6. Tests
 

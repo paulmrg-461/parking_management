@@ -670,7 +670,7 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 ## Latest verification (2026-10-28)
 
 - `flutter test`: 731 passed (+1 live-stack integration skipped); `flutter
-  analyze` 141 infos, all SDK `deprecated_member_use` (zero warnings/errors);
+  analyze` 143 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
 - `supabase/tests/run.sh` passed (migrations `0001`–`0057`); `e2e.sh` passed
   (login → check-in → check-out → report → history).

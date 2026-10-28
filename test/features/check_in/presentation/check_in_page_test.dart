@@ -858,13 +858,20 @@ void main() {
     );
 
     await enterPlate(tester, 'ABC123');
-    expect(find.text('Automático (primer libre)'), findsOneWidget);
-    expect(find.widgetWithText(ChoiceChip, 'A1'), findsOneWidget);
-    expect(find.widgetWithText(ChoiceChip, 'A2'), findsOneWidget);
-    expect(find.widgetWithText(ChoiceChip, 'A3'), findsNothing);
+    expect(find.widgetWithText(ChoiceChip, 'Automático (primer libre)'), findsOneWidget);
+    expect(find.text('A1'), findsOneWidget);
+    expect(find.text('A2'), findsOneWidget);
+    // Out of service is drawn but cannot be picked.
+    expect(find.text('A3'), findsOneWidget);
+    expect(find.text('Mant.'), findsOneWidget);
 
-    await tester.tap(find.widgetWithText(ChoiceChip, 'A2'));
+    await tester.tap(find.text('A3'));
     await tester.pump();
+    expect(find.text('Espacio A3'), findsNothing);
+
+    await tester.tap(find.text('A2'));
+    await tester.pump();
+    expect(find.text('Espacio A2'), findsOneWidget);
     await tapSubmit(tester);
 
     expect(checkIns.lastSpotId, 2);

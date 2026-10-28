@@ -53,6 +53,10 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   holds obey the same limit. Deleting a bay clears the reference on old
   sessions instead of blocking (`0059`). The entry receipt/snackbar names the
   assigned spot.
+- **Check-in picks the bay on the map.** The "Espacio" section draws the
+  configured layout (same cells as the dashboard): free bays are tappable,
+  occupied ones show their plate, maintenance is striped and holes keep the
+  shape; "Automatic" stays the default (server takes the first free bay).
 - **Board map alignment.** Dashboard bays now scale uniformly to fit the card
   (`SpotCellView` 56–72 px, same gap as the editor), empty holes are exactly the
   same size as filled bays, and the "N vehicles with no spot" note has a
