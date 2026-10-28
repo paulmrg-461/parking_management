@@ -53,6 +53,13 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   holds obey the same limit. Deleting a bay clears the reference on old
   sessions instead of blocking (`0059`). The entry receipt/snackbar names the
   assigned spot.
+- **Records section.** New `/records` page (nav "Registros" and the home
+  shortcut) lists the site's latest sessions with plate, entry → exit,
+  duration, charge or "Dentro"; the plate filter is server-side and debounced,
+  the header shows the matching total (how many times that vehicle entered),
+  paging loads more, and tapping a row opens that vehicle's full history
+  (visits, spend, notes, WhatsApp). Backed by `session_records()` (`0062`),
+  lot-scoped and tested for filter/paging/isolation.
 - **Settings form reorganized.** The page is split into Identity / Spots and
   map / Evidence / Messaging sections with even spacing between fields (the
   helper lines no longer collide with the next outline) and two-line helpers.
@@ -366,7 +373,7 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Tests
 
-- 734 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
+- 742 Flutter tests (unit/widget/cubit/router/a11y) across 109 files, plus one
   integration test that runs only against a live stack.
 - SQL/RLS/RPC regressions covering capacity, shifts, discounts, passes,
   reservations, multi-site isolation, audit, diagnostics and retention.
@@ -404,7 +411,7 @@ Captured on 2026-10-24 against the local self-hosted stack:
 
 | Check | Result |
 |---|---|
-| `flutter test` | 734 passed (+1 live-stack integration skipped) |
+| `flutter test` | 742 passed (+1 live-stack integration skipped) |
 | `flutter analyze` | 0 errors, 0 warnings (only SDK deprecation infos) |
 | `flutter build web --release` | OK |
 | `supabase/tests/run.sh` | Passed (migrations + RPC/RLS regressions) |

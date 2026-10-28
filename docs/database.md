@@ -108,6 +108,11 @@ settings) beside the derived `car_capacity`/`moto_capacity`.
 `report_occupancy`, `occupancy_snapshot`, `dashboard_today` (home KPIs),
 `report_whatsapp` (customer message delivery).
 
+**Records**
+`session_records(plate, limit, offset)`: lot-scoped session log (entry, exit,
+duration, amount, status) with a partial plate filter and total; powers
+`/records`.
+
 **Shifts and cash**
 `open_shift`, `current_shift`, `close_shift`, `add_cash_movement`,
 `shift_totals`, `list_shifts` (limit + date range), `adjust_shift`.

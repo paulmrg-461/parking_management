@@ -1082,6 +1082,60 @@ abstract class AppLocalizations {
   /// **'Marcar todo leído'**
   String get notificationsMarkAll;
 
+  /// No description provided for @navRecords.
+  ///
+  /// In es, this message translates to:
+  /// **'Registros'**
+  String get navRecords;
+
+  /// No description provided for @recordsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Registros de vehículos'**
+  String get recordsTitle;
+
+  /// No description provided for @recordsCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} registros'**
+  String recordsCount(int count);
+
+  /// No description provided for @recordsEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin registros para «{plate}»'**
+  String recordsEmpty(String plate);
+
+  /// No description provided for @recordsEmptyAll.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no hay registros en esta sede'**
+  String get recordsEmptyAll;
+
+  /// No description provided for @recordsClearFilter.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver todos'**
+  String get recordsClearFilter;
+
+  /// No description provided for @recordsOpenSince.
+  ///
+  /// In es, this message translates to:
+  /// **'Dentro desde {since} · {duration}'**
+  String recordsOpenSince(String since, String duration);
+
+  /// No description provided for @recordsWindow.
+  ///
+  /// In es, this message translates to:
+  /// **'{entry} → {exit} · {duration}'**
+  String recordsWindow(String duration, String entry, String exit);
+
+  /// No description provided for @recordsLoadMore.
+  ///
+  /// In es, this message translates to:
+  /// **'Cargar más'**
+  String get recordsLoadMore;
+
   /// No description provided for @navHistory.
   ///
   /// In es, this message translates to:

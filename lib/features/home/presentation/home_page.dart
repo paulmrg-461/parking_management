@@ -134,9 +134,9 @@ class _Dashboard extends StatelessWidget {
             spacing: Space.sm,
             children: [
               TextButton.icon(
-                onPressed: () => context.go('/history'),
+                onPressed: () => context.go('/records'),
                 icon: const Icon(Icons.history),
-                label: Text(l10n.navHistory),
+                label: Text(l10n.navRecords),
               ),
               TextButton.icon(
                 onPressed: () => context.go('/shift'),

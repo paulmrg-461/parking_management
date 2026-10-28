@@ -1732,4 +1732,76 @@ begin
     end if;
 end $$;
 
+-- Records log: lot-scoped, plate filter, totals and paging.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+declare
+    car_cat integer;
+    closed_id integer;
+    result jsonb;
+begin
+    select id into car_cat
+      from public.categories
+     where lot_id = 1 and lower(name) = 'car'
+     limit 1;
+
+    perform public.check_in(
+        'REC001', car_cat, null, null, '[]'::jsonb, null,
+        now() - interval '2 hours'
+    );
+    select s.id into closed_id
+      from public.parking_sessions s
+      join public.vehicles v on v.id = s.vehicle_id
+     where v.plate = 'REC001' and s.status = 'open' and s.lot_id = 1
+     order by s.id desc limit 1;
+    perform public.check_out(closed_id, null, null, 'cash');
+
+    perform public.check_in(
+        'REC002', car_cat, null, null, '[]'::jsonb, null,
+        now() - interval '1 hour'
+    );
+
+    result := public.session_records('REC00', 10, 0);
+    if (result ->> 'total')::integer <> 2 then
+        raise exception 'records lost the plate filter: %', result;
+    end if;
+    if not exists (
+        select 1 from jsonb_array_elements(result -> 'records') item
+         where item ->> 'plate' = 'REC001'
+           and item ->> 'status' = 'closed'
+           and item ->> 'exit_time' is not null
+           and (item ->> 'duration_seconds')::integer >= 3600
+    ) then
+        raise exception 'closed record is incomplete: %', result;
+    end if;
+    if not exists (
+        select 1 from jsonb_array_elements(result -> 'records') item
+         where item ->> 'plate' = 'REC002'
+           and item ->> 'status' = 'open'
+           and item ->> 'exit_time' is null
+    ) then
+        raise exception 'open record is incomplete: %', result;
+    end if;
+
+    result := public.session_records('REC001', 10, 0);
+    if (result ->> 'total')::integer <> 1 then
+        raise exception 'records ignored the exact plate: %', result;
+    end if;
+
+    result := public.session_records('ZZZ999', 10, 0);
+    if (result ->> 'total')::integer <> 0
+       or jsonb_array_length(result -> 'records') <> 0 then
+        raise exception 'records invented rows: %', result;
+    end if;
+
+    -- Another lot never sees these rows.
+    set local request.headers = '{"x-lot-id":"2"}';
+    result := public.session_records('REC001', 10, 0);
+    if (result ->> 'total')::integer <> 0 then
+        raise exception 'records leaked to another lot: %', result;
+    end if;
+    set local request.headers = '{"x-lot-id":"1"}';
+end $$;
+
 rollback;

@@ -20,6 +20,8 @@ import '../../features/check_in/application/vehicle_lookup_cubit.dart';
 import '../../features/check_in/presentation/check_in_page.dart';
 import '../../features/check_out/application/check_out_cubit.dart';
 import '../../features/check_out/presentation/check_out_page.dart';
+import '../../features/records/application/records_cubit.dart';
+import '../../features/records/presentation/records_page.dart';
 import '../../features/home/application/dashboard_cubit.dart';
 import '../../features/lots/application/lots_cubit.dart';
 import '../../features/lots/presentation/lots_page.dart';
@@ -187,6 +189,13 @@ GoRoute _homeRoute(AuthCubit auth) => GoRoute(
         };
         return ShiftPage(isAdmin: isAdmin);
       },
+    ),
+    GoRoute(
+      path: 'records',
+      builder: (context, state) => BlocProvider<RecordsCubit>(
+        create: (_) => serviceLocator<RecordsCubit>(),
+        child: const RecordsPage(),
+      ),
     ),
     GoRoute(
       path: 'history',

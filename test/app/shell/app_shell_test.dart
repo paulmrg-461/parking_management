@@ -27,7 +27,7 @@ void main() {
 
     expect(find.byType(NavigationBar), findsOneWidget);
     expect(find.byType(NavigationRail), findsNothing);
-    for (final label in ['Inicio', 'Entrada', 'Salida']) {
+    for (final label in ['Inicio', 'Entrada', 'Salida', 'Registros']) {
       expect(find.widgetWithText(NavigationBar, label), findsOneWidget);
     }
     expect(find.widgetWithText(NavigationBar, 'Más'), findsNothing);
@@ -119,6 +119,16 @@ void main() {
     await tester.tap(find.byTooltip('Contraer menú'));
     await tester.pumpAndSettle();
 
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('sidebar_item_/reports')),
+      200,
+      scrollable: find
+          .descendant(
+            of: find.byType(AppSidebar),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
     expect(find.byKey(const ValueKey('sidebar_item_/reports')), findsOneWidget);
     expect(find.byType(AppSidebar), findsOneWidget);
   });

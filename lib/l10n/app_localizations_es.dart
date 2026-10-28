@@ -555,6 +555,41 @@ class AppLocalizationsEs extends AppLocalizations {
   String get notificationsMarkAll => 'Marcar todo leído';
 
   @override
+  String get navRecords => 'Registros';
+
+  @override
+  String get recordsTitle => 'Registros de vehículos';
+
+  @override
+  String recordsCount(int count) {
+    return '$count registros';
+  }
+
+  @override
+  String recordsEmpty(String plate) {
+    return 'Sin registros para «$plate»';
+  }
+
+  @override
+  String get recordsEmptyAll => 'Aún no hay registros en esta sede';
+
+  @override
+  String get recordsClearFilter => 'Ver todos';
+
+  @override
+  String recordsOpenSince(String since, String duration) {
+    return 'Dentro desde $since · $duration';
+  }
+
+  @override
+  String recordsWindow(String duration, String entry, String exit) {
+    return '$entry → $exit · $duration';
+  }
+
+  @override
+  String get recordsLoadMore => 'Cargar más';
+
+  @override
   String get navHistory => 'Historial';
 
   @override

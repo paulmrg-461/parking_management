@@ -11,9 +11,9 @@ HEAD `e7351da`).
 
 - Stack: Flutter (android + web) + self-hosted Supabase only. No FastAPI,
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
-- `supabase/migrations/0001..0061` are the schema owner (applied by
+- `supabase/migrations/0001..0062` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 734 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 742 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -47,6 +47,11 @@ HEAD `e7351da`).
   `SpotCellView` (72 px in the editor; the board scales 56–72 px to fit the
   card, same 6 px gap) so the dashboard mirrors the layout exactly. Empty holes
   use the same size as filled bays (no extra margins). `assign_session_spot` and check-in still use the drawn bays.
+- Records (`/records`, `0062` `session_records`): the site's session log with a
+  debounced server-side plate filter and paging; the header total answers "how
+  many times did it enter". Rows open `/history?plate=` for the per-vehicle view
+  (visits/spend). Operators can access it (`operatorRoutes` includes
+  `/records`), and it sits in `primaryDestinations` (6 items on the phone bar).
 - Settings hides the per-group out-of-service counters once that group has a
   map (they are a legacy count; with a map, maintenance is per bay). The form
   is sectioned and spaced; fields need `Space.md` between them, helper lines
@@ -673,7 +678,7 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 ## Latest verification (2026-10-28)
 
-- `flutter test`: 734 passed (+1 live-stack integration skipped); `flutter
+- `flutter test`: 742 passed (+1 live-stack integration skipped); `flutter
   analyze` 144 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
 - `supabase/tests/run.sh` passed (migrations `0001`–`0057`); `e2e.sh` passed
