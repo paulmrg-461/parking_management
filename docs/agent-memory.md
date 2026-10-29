@@ -14,7 +14,7 @@ module, dialogs, developer page, COP/USD currency, es/en language; HEAD
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0068` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 835 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 836 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -69,6 +69,20 @@ module, dialogs, developer page, COP/USD currency, es/en language; HEAD
   the symbol comes from `Money`.
 - Gotcha: a lazily built `ListView` only builds visible children, so tests that
   assert the last row must use a tall viewport or scroll before asserting.
+
+### Production hardening (2026-10-29)
+
+- `0069_scale_hardening.sql`: `pg_trgm` GIN on `vehicles.plate` (records/history
+  use `ILIKE '%term%'`), lot/entry, pass/lot/end, active-reservation and
+  notification/lot/user/date indexes, plus guarded checks for pass windows,
+  pass amounts and `amount_charged`. `rpc_test.sql` asserts the indexes and the
+  three constraints; the local DB was migrated and the indexes verified.
+- `RouteErrorPage` + `go_router` `errorBuilder` replace raw router exceptions on
+  unknown/deep-link paths, with a home CTA (router test).
+- `/about` shows `FLUTTER_BUILD_NAME (FLUTTER_BUILD_NUMBER)`.
+- `docs/production-readiness.md` is the go-live checklist (SLOs, infra, schema
+  guards, security, resilience, observability, release/rollback, limits);
+  linked from `docs/README.md` and `AGENTS.md`.
 
 ### UI batches (2026-10-29)
 
@@ -855,7 +869,7 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 ## Latest verification (2026-10-28)
 
-- `flutter test`: 835 passed (+1 live-stack integration skipped); `flutter
+- `flutter test`: 836 passed (+1 live-stack integration skipped); `flutter
   analyze` 152 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
 - `supabase/tests/run.sh` passed (migrations `0001`–`0067`); `e2e.sh` passed

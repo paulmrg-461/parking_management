@@ -50,7 +50,7 @@ class AboutDeveloperPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _Hero(version: '$_version ($_build)'),
+                  const _Hero(version: _version, buildNumber: _build),
                   const SizedBox(height: Space.lg),
                   _LinkCard(
                     links: [
@@ -202,9 +202,10 @@ class _AboutLink {
 }
 
 class _Hero extends StatelessWidget {
-  const _Hero({required this.version});
+  const _Hero({required this.version, required this.buildNumber});
 
   final String version;
+  final String buildNumber;
 
   @override
   Widget build(BuildContext context) {
@@ -280,7 +281,7 @@ class _Hero extends StatelessWidget {
               ),
               const SizedBox(height: Space.xs),
               Text(
-                l10n.aboutVersion(version),
+                l10n.aboutVersion('$version ($buildNumber)'),
                 style: theme.textTheme.labelSmall?.copyWith(
                   color: scheme.onSurfaceVariant,
                 ),
