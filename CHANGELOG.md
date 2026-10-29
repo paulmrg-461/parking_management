@@ -13,6 +13,9 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 **UI/UX pass across every module**
 
+- Empty/error blocks are truly centered on wide pages: `CenteredScrollable`
+  now fills the available width instead of shrink-wrapping to the widest line
+  (monthly passes, reservations, history and every other empty state).
 - Notifications label each row with its type (check-in, check-out, pass,
   overstay, shift) next to the timestamp.
 - Shift history rows are cards with a balanced/warning avatar and separate

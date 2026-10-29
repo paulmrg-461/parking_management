@@ -35,6 +35,31 @@ void main() {
     expect(tapped, 1);
   });
 
+  testWidgets('Security: empty and error blocks stay centered on wide pages', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      testApp(
+        Center(
+          child: SizedBox(
+            width: 600,
+            height: 400,
+            child: EmptyState(
+              message: 'Sin datos',
+              icon: Icons.inbox_outlined,
+              action: TextButton(onPressed: () {}, child: const Text('Crear')),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final center = tester.getCenter(find.byType(SizedBox).last);
+    expect(tester.getCenter(find.byIcon(Icons.inbox_outlined)).dx, center.dx);
+    expect(tester.getCenter(find.text('Sin datos')).dx, center.dx);
+    expect(tester.getCenter(find.text('Crear')).dx, center.dx);
+  });
+
   testWidgets('Failure: the error state retries the failed load', (
     tester,
   ) async {
