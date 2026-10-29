@@ -4,8 +4,8 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-10-28, branch `feature/supabase` (UI kit pass, COP/USD
-currency, es/en language, records exports).
+Last updated: 2026-10-28, branch `feature/supabase` (UI/UX pass across every
+module, developer page, COP/USD currency, es/en language; HEAD `f7dabe8`).
 
 ## Where we are
 
@@ -18,6 +18,17 @@ currency, es/en language, records exports).
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
   item is the manual smoke for `add-parking-settings` (task 10.4).
+
+## Owner preferences (durable)
+
+- The owner writes in **Spanish** and expects Spanish replies; code, comments,
+  tests, docs and OpenSpec artifacts stay **English** (see `AGENTS.md`).
+- Visual work is iterative: they ask for "más bonito" and expect the shared
+  design system (tokens, `MetricCard`, `SectionHeader`, `FilterBar`, empty/error
+  states) to be used, never one-off styling. Keep `docs/ui-kit.md` truthful.
+- Every batch: `flutter test` + `flutter analyze` + SQL suite, rebuild web and
+  APK, restart the Chrome dev app, commit and push (never leave it unpushed).
+  Report the phone/adb state honestly when the device is offline.
 
 ## What shipped recently
 
@@ -626,7 +637,7 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 - Backend: `docker compose up -d` from the repo root; all services healthy,
   gateway/Studio on <http://localhost:8017> (`API_GW_HTTP_PORT` in `.env`);
-  migrations `0001`-`0059` applied.
+  migrations `0001`-`0068` applied.
 - Flutter web: `flutter run -d chrome --dart-define=SUPABASE_URL=http://localhost:8017
   --dart-define=SUPABASE_ANON_KEY=<ANON_KEY>` (log: `/tmp/opencode/flutter-web.log`).
 - Android (Samsung S901E over wireless adb): `sh tool/run-android.sh` — it
@@ -639,6 +650,14 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   cannot be registered there until categories/tariffs are created).
 - The apps use `localhost:8017`; if the phone shows "cannot reach the server",
   check `adb reverse --list` first (see below), not `ufw`.
+- **2026-10-28 (night): the phone is offline from adb** (`adb devices` empty and
+  `192.168.0.2:42585` refuses); the APK built but could not be installed.
+  Reconnect wireless adb, run `adb reverse tcp:8017 tcp:8017`, reinstall
+  `build/app/outputs/flutter-apk/app-debug.apk` and start
+  `pro.devpaul.parking_management/.MainActivity`.
+- Chrome dev app is running with `APP_URL=http://192.168.0.17:8080`; the public
+  bundle is served by Docker on `:8080` (restart `parking-evidence-web` after a
+  public build).
 
 ## Android over adb
 
