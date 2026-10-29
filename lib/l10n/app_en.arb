@@ -866,5 +866,9 @@
   "diagnosticsPendingQueue": "Pending queue",
   "diagnosticsAlerts": "Alerts",
   "diagnosticsOpenNow": "Parked now",
-  "vehiclesCount": "{count} vehicles"
+  "vehiclesCount": "{count} vehicles",
+  "parkedCount": "{count} parked",
+  "checkOutEmptyTitle": "Lot is empty",
+  "checkOutEmptyHint": "Register a check-in to see it here and charge it on exit.",
+  "checkOutGoToCheckIn": "Register check-in"
 }

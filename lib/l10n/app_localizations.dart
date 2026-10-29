@@ -4885,6 +4885,30 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'{count} vehículos'**
   String vehiclesCount(int count);
+
+  /// No description provided for @parkedCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} dentro'**
+  String parkedCount(int count);
+
+  /// No description provided for @checkOutEmptyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Parqueadero vacío'**
+  String get checkOutEmptyTitle;
+
+  /// No description provided for @checkOutEmptyHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Registra una entrada para verla aquí y cobrarla al salir.'**
+  String get checkOutEmptyHint;
+
+  /// No description provided for @checkOutGoToCheckIn.
+  ///
+  /// In es, this message translates to:
+  /// **'Registrar entrada'**
+  String get checkOutGoToCheckIn;
 }
 
 class _AppLocalizationsDelegate

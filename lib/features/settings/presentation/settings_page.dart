@@ -255,7 +255,7 @@ class _SettingsPageState extends State<SettingsPage> {
           Space.xxl,
         ),
         children: [
-          _logoSection(context),
+          _logoSection(context, settings),
           const SizedBox(height: Space.lg),
           SectionHeader(
             icon: Icons.badge_outlined,
@@ -583,39 +583,75 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _logoSection(BuildContext context) {
+  Widget _logoSection(BuildContext context, ParkingSettings settings) {
     final l10n = context.l10n;
+    final scheme = Theme.of(context).colorScheme;
     return BlocBuilder<BrandingCubit, BrandingState>(
       builder: (context, branding) {
         final bytes = branding.logoOrNull;
-        return Row(
-          children: [
-            if (bytes != null)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(Space.xs),
-                child: Image.memory(
-                  bytes,
+        return Card(
+          margin: const EdgeInsets.only(bottom: Space.lg),
+          clipBehavior: Clip.antiAlias,
+          child: Padding(
+            padding: const EdgeInsets.all(Space.md),
+            child: Row(
+              children: [
+                Container(
                   width: 64,
                   height: 64,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) =>
-                      const Icon(Icons.broken_image_outlined, size: 64),
+                  padding: const EdgeInsets.all(Space.sm),
+                  decoration: BoxDecoration(
+                    color: scheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(Radii.md),
+                  ),
+                  child: bytes == null
+                      ? Icon(
+                          Icons.local_parking_rounded,
+                          size: 36,
+                          color: scheme.onPrimaryContainer,
+                        )
+                      : ClipRRect(
+                          borderRadius: BorderRadius.circular(Radii.sm),
+                          child: Image.memory(
+                            bytes,
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, _, _) => Icon(
+                              Icons.broken_image_outlined,
+                              color: scheme.onPrimaryContainer,
+                            ),
+                          ),
+                        ),
                 ),
-              )
-            else
-              const Icon(Icons.local_parking_rounded, size: 64),
-            const SizedBox(width: Space.md),
-            Expanded(
-              child: Text(
-                l10n.settingsLogoSection,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
+                const SizedBox(width: Space.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        settings.name.isEmpty ? l10n.appTitle : settings.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        l10n.settingsLogoSection,
+                        style: Theme.of(context).textTheme.bodySmall
+                            ?.copyWith(color: scheme.onSurfaceVariant),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: Space.sm),
+                FilledButton.tonalIcon(
+                  onPressed: _uploadLogo,
+                  icon: const Icon(Icons.image_outlined),
+                  label: Text(l10n.settingsLogoPick),
+                ),
+              ],
             ),
-            FilledButton.tonal(
-              onPressed: _uploadLogo,
-              child: Text(l10n.settingsLogoPick),
-            ),
-          ],
+          ),
         );
       },
     );

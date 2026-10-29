@@ -936,5 +936,10 @@
   "diagnosticsAlerts": "Alertas",
   "diagnosticsOpenNow": "Dentro ahora",
   "vehiclesCount": "{count} vehículos",
-  "@vehiclesCount": {"placeholders": {"count": {"type": "int"}}}
+  "@vehiclesCount": {"placeholders": {"count": {"type": "int"}}},
+  "parkedCount": "{count} dentro",
+  "checkOutEmptyTitle": "Parqueadero vacío",
+  "checkOutEmptyHint": "Registra una entrada para verla aquí y cobrarla al salir.",
+  "checkOutGoToCheckIn": "Registrar entrada",
+  "@parkedCount": {"placeholders": {"count": {"type": "int"}}}
 }

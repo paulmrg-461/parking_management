@@ -2694,4 +2694,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String vehiclesCount(int count) {
     return '$count vehicles';
   }
+
+  @override
+  String parkedCount(int count) {
+    return '$count parked';
+  }
+
+  @override
+  String get checkOutEmptyTitle => 'Lot is empty';
+
+  @override
+  String get checkOutEmptyHint =>
+      'Register a check-in to see it here and charge it on exit.';
+
+  @override
+  String get checkOutGoToCheckIn => 'Register check-in';
 }

@@ -15,7 +15,9 @@ import '../../../core/qr/qr_decoder.dart';
 import '../../../core/qr/qr_scan_page.dart';
 import '../../../core/utils/elapsed.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/filter_bar.dart';
 import '../../../core/widgets/error_state.dart';
 import '../../../core/receipt/evidence_link.dart';
 import '../../../core/widgets/receipt_card.dart';
@@ -180,10 +182,16 @@ class _CheckOutPageState extends State<CheckOutPage> {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
+              padding: const EdgeInsets.all(Space.md),
+              child: FilterBar(
+                summary: switch (context.watch<CheckOutCubit>().state) {
+                  CheckOutLoaded(:final total, :final sessions) =>
+                    context.l10n.parkedCount(total ?? sessions.length),
+                  _ => null,
+                },
                 children: [
-                  Expanded(
+                  SizedBox(
+                    width: 300,
                     child: SearchField(
                       label: context.l10n.searchPlate,
                       controller: _searchController,
@@ -203,14 +211,12 @@ class _CheckOutPageState extends State<CheckOutPage> {
                     ),
                   ),
                   if (!kIsWeb ||
-                      (widget.capture != null && widget.qrDecoder != null)) ...[
-                    const SizedBox(width: 8),
+                      (widget.capture != null && widget.qrDecoder != null))
                     IconButton.filledTonal(
                       tooltip: context.l10n.checkOutScanQr,
                       onPressed: () => unawaited(_scanQr(context)),
                       icon: const Icon(Icons.qr_code_scanner),
                     ),
-                  ],
                 ],
               ),
             ),
@@ -457,12 +463,17 @@ class _SessionsList extends StatelessWidget {
     if (state.visible.isEmpty) {
       final query = state.query;
       return EmptyState(
+        title: query.isEmpty ? context.l10n.checkOutEmptyTitle : null,
         message: query.isEmpty
-            ? context.l10n.openSessionsEmpty
+            ? context.l10n.checkOutEmptyHint
             : context.l10n.checkOutNoMatch(query),
         icon: query.isEmpty ? Icons.local_parking_outlined : Icons.search_off,
         action: query.isEmpty
-            ? null
+            ? FilledButton.tonalIcon(
+                onPressed: () => context.go('/check-in'),
+                icon: const Icon(Icons.login),
+                label: Text(context.l10n.checkOutGoToCheckIn),
+              )
             : TextButton.icon(
                 onPressed: () {
                   context.read<CheckOutCubit>().search('');
@@ -522,10 +533,31 @@ class _SessionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final scheme = Theme.of(context).colorScheme;
     final longStay = isLongStay(session.entryTime);
-    return ListTile(
-      isThreeLine: true,
-      title: Text(plate),
+    return Card(
+      margin: const EdgeInsets.fromLTRB(Space.md, Space.xs, Space.md, Space.xs),
+      clipBehavior: Clip.antiAlias,
+      child: ListTile(
+        isThreeLine: true,
+        // Phones keep the full width for the plate, chips and actions.
+        leading: MediaQuery.sizeOf(context).width < 600
+            ? null
+            : CircleAvatar(
+                backgroundColor: longStay
+                    ? scheme.tertiaryContainer
+                    : scheme.primaryContainer,
+                child: Icon(
+                  longStay
+                      ? Icons.timer_outlined
+                      : Icons.directions_car_outlined,
+                  size: 20,
+                  color: longStay
+                      ? scheme.onTertiaryContainer
+                      : scheme.onPrimaryContainer,
+                ),
+              ),
+        title: Text(plate),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -593,6 +625,7 @@ class _SessionTile extends StatelessWidget {
             child: Text(l10n.checkOutCharge),
           ),
         ],
+        ),
       ),
     );
   }

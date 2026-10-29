@@ -2709,4 +2709,19 @@ class AppLocalizationsEs extends AppLocalizations {
   String vehiclesCount(int count) {
     return '$count vehículos';
   }
+
+  @override
+  String parkedCount(int count) {
+    return '$count dentro';
+  }
+
+  @override
+  String get checkOutEmptyTitle => 'Parqueadero vacío';
+
+  @override
+  String get checkOutEmptyHint =>
+      'Registra una entrada para verla aquí y cobrarla al salir.';
+
+  @override
+  String get checkOutGoToCheckIn => 'Registrar entrada';
 }

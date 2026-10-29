@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/app/di/injection.dart';
 import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/core/pagination/paged_result.dart';
+import 'package:parking_management/core/widgets/filter_bar.dart';
 import 'package:parking_management/core/widgets/qr_code.dart';
 import 'package:parking_management/core/receipt/payment_method.dart';
 import 'package:parking_management/core/storage/key_value_store.dart';
@@ -38,6 +39,7 @@ class _FakeCheckOutRepository implements CheckOutRepository {
   Failure? previewError;
   int listCalls = 0;
   bool hasPass = false;
+  bool empty = false;
   CheckOutPreview? previewToReturn;
   bool? lastLostTicket;
   String? lastLostTicketReason;
@@ -67,6 +69,9 @@ class _FakeCheckOutRepository implements CheckOutRepository {
     String? plate,
   }) async {
     listCalls++;
+    if (empty) {
+      return const PagedResult([], total: 0);
+    }
     final all = [
       OpenSession(
         id: 1,
@@ -143,8 +148,11 @@ void main() {
     bool firstHasPass = false,
     Future<String?> Function(BuildContext context)? scanQr,
     UserRole? role,
+    bool empty = false,
   }) async {
-    repository = _FakeCheckOutRepository()..firstHasPass = firstHasPass;
+    repository = _FakeCheckOutRepository()
+      ..firstHasPass = firstHasPass
+      ..empty = empty;
     occupancy = FakeCheckOutRepository();
     notifications = FakeNotificationRepository();
     notificationsCubit = NotificationsCubit(notifications);
@@ -577,6 +585,22 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.byTooltip('Reimprimir recibo de entrada'), findsNWidgets(2));
+  });
+
+  testWidgets('Success: the filter bar counts the vehicles inside', (
+    tester,
+  ) async {
+    await pumpPage(tester);
+
+    expect(find.textContaining('dentro'), findsOneWidget);
+    expect(find.byType(FilterBar), findsOneWidget);
+  });
+
+  testWidgets('Success: an empty lot explains the next step', (tester) async {
+    await pumpPage(tester, empty: true);
+
+    expect(find.text('Parqueadero vacío'), findsOneWidget);
+    expect(find.text('Registrar entrada'), findsOneWidget);
   });
 
   testWidgets('Success: a car that left its keys is flagged', (tester) async {

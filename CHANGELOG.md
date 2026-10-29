@@ -13,6 +13,11 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 **UI/UX pass across every module**
 
+- Check-out: the plate search and QR button sit in a filter card with the
+  "N inside" count, open sessions render as cards with a long-stay avatar and
+  the empty lot explains the next step with a check-in CTA.
+- Settings opens with a branded header card (tonal logo, site name and logo
+  action); chip labels truncate instead of overflowing on narrow rows.
 - Reports: total revenue opens as a primary metric card with the period and
   previous-period delta; pass revenue, discounts, WhatsApp counters and
   occupancy are metric cards too, and every block uses the shared section

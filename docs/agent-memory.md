@@ -13,7 +13,7 @@ currency, es/en language, records exports).
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0068` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 819 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 821 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -58,6 +58,12 @@ currency, es/en language, records exports).
 - Gotcha: a lazily built `ListView` only builds visible children, so tests that
   assert the last row must use a tall viewport or scroll before asserting.
 
+- **Core flows polish (2026-10-28)**: check-out wraps search + QR in a
+  `FilterBar` with the inside count and renders sessions as cards (the leading
+  avatar is hidden below 600 px because it squeezed the status chips);
+  `StatusChip` truncates its label so chips never overflow; the empty lot has a
+  title/hint/check-in CTA; settings opens with a branded header card. Test
+  count 821.
 - **Dashboard/list polish round 2 (2026-10-28)**: reports and diagnostics use
   `MetricCard` summaries and `SectionHeader` blocks (diagnostics labels were
   split into summary vs section so tests can tell them apart);
@@ -787,7 +793,7 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 ## Latest verification (2026-10-28)
 
-- `flutter test`: 819 passed (+1 live-stack integration skipped); `flutter
+- `flutter test`: 821 passed (+1 live-stack integration skipped); `flutter
   analyze` 152 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
 - `supabase/tests/run.sh` passed (migrations `0001`–`0067`); `e2e.sh` passed
