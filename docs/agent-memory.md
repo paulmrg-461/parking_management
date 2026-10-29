@@ -683,10 +683,11 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   cannot be registered there until categories/tariffs are created).
 - The apps use `localhost:8017`; if the phone shows "cannot reach the server",
   check `adb reverse --list` first (see below), not `ufw`.
-- **2026-10-29: the phone is back over wireless adb at `192.168.0.2:33411`**
-  (the port changes on every reconnect); `adb reverse tcp:8017 tcp:8017` was
-  re-applied and the current APK installed. If it drops again, `adb devices`
-  first, then reconnect by IP:port, re-apply the reverse and reinstall.
+- **2026-10-29: the phone is back over wireless adb** (the port changes on
+  every reconnect; last seen `192.168.0.2:46697`). `adb reverse tcp:8017
+  tcp:8017` was re-applied and the current APK installed. If it drops again,
+  `adb devices` first, then reconnect by IP:port, re-apply the reverse and
+  reinstall.
 - Chrome dev app is running with `APP_URL=http://192.168.0.17:8080`; the public
   bundle is served by Docker on `:8080` (restart `parking-evidence-web` after a
   public build).
