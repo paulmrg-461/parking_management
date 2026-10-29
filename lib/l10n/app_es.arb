@@ -945,5 +945,12 @@
   "checkInVehicleSection": "Vehículo",
   "checkInVehicleHint": "Placa, categoría y datos del vehículo",
   "checkInEvidenceSection": "Evidencia",
-  "checkInEvidenceHint": "Fotos o video del estado del vehículo"
+  "checkInEvidenceHint": "Fotos o video del estado del vehículo",
+  "notifTypeCheckIn": "Entrada",
+  "notifTypeCheckOut": "Salida",
+  "notifTypePassExpiring": "Mensualidad por vencer",
+  "notifTypePassRenewed": "Mensualidad renovada",
+  "notifTypeOverstay": "Estadía larga",
+  "notifTypeShiftClosed": "Cierre de turno",
+  "notifTypeGeneric": "Aviso"
 }

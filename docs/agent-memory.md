@@ -58,6 +58,9 @@ currency, es/en language, records exports).
 - Gotcha: a lazily built `ListView` only builds visible children, so tests that
   assert the last row must use a tall viewport or scroll before asserting.
 
+- **Notifications/shift history (2026-10-28)**: notification metadata appends a
+  localized type label (`notifType*` keys); shift history cards use a
+  balanced/warning avatar and a two-line subtitle. Test count stays 822.
 - **Public pages/history (2026-10-28)**: `/policies` has a brand hero plus
   numbered clauses (split the rendered policy by lines; first line is the
   heading), `/evidence` gates the plate in a centered card, both load with

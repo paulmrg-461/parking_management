@@ -2736,4 +2736,25 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get checkInEvidenceHint => 'Fotos o video del estado del vehículo';
+
+  @override
+  String get notifTypeCheckIn => 'Entrada';
+
+  @override
+  String get notifTypeCheckOut => 'Salida';
+
+  @override
+  String get notifTypePassExpiring => 'Mensualidad por vencer';
+
+  @override
+  String get notifTypePassRenewed => 'Mensualidad renovada';
+
+  @override
+  String get notifTypeOverstay => 'Estadía larga';
+
+  @override
+  String get notifTypeShiftClosed => 'Cierre de turno';
+
+  @override
+  String get notifTypeGeneric => 'Aviso';
 }

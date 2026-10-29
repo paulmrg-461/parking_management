@@ -37,6 +37,7 @@ void main() {
 
     expect(find.text('Notificaciones'), findsOneWidget);
     expect(find.text('Vehículo ABC1 salió'), findsOneWidget);
+    expect(find.textContaining('· Salida'), findsWidgets);
 
     await tester.tap(find.text('Vehículo ABC1 salió'));
     await tester.pumpAndSettle();
@@ -101,6 +102,7 @@ void main() {
 
     expect(find.text('Vehículo XYZ2 entró'), findsNothing);
     expect(find.text('Vehículo ABC1 salió'), findsOneWidget);
+    expect(find.textContaining('· Salida'), findsWidgets);
   });
 
   testWidgets('Success: notifications are grouped by day', (tester) async {

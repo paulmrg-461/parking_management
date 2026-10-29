@@ -563,21 +563,57 @@ class _HistoryTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final scheme = Theme.of(context).colorScheme;
     final difference = shift.difference ?? 0;
+    final balanced = difference == 0;
     return Card(
       margin: const EdgeInsets.only(bottom: Space.sm),
+      clipBehavior: Clip.antiAlias,
       child: ListTile(
         onTap: shift.isOpen ? null : () => _adjust(context),
-        title: Text(Formatters.dateTime(shift.openedAt)),
-        subtitle: Text(
-          '${context.l10n.shiftSales}: ${Formatters.money(shift.revenue)} · '
-          '${context.l10n.shiftDifference}: ${Formatters.money(difference)}',
+        leading: CircleAvatar(
+          backgroundColor: shift.isOpen
+              ? scheme.primaryContainer
+              : balanced
+              ? scheme.surfaceContainerHighest
+              : scheme.errorContainer,
+          child: Icon(
+            shift.isOpen
+                ? Icons.lock_open
+                : balanced
+                ? Icons.check
+                : Icons.warning_amber_outlined,
+            size: 20,
+            color: shift.isOpen
+                ? scheme.onPrimaryContainer
+                : balanced
+                ? scheme.onSurfaceVariant
+                : scheme.onErrorContainer,
+          ),
         ),
+        title: Text(
+          Formatters.dateTime(shift.openedAt),
+          style: Theme.of(
+            context,
+          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('${l10n.shiftSales}: ${Formatters.money(shift.revenue)}'),
+            Text(
+              '${l10n.shiftDifference}: ${Formatters.money(difference)}',
+              style: TextStyle(
+                color: balanced ? null : scheme.error,
+                fontWeight: balanced ? null : FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        isThreeLine: true,
         trailing: shift.isOpen
-            ? Icon(
-                Icons.lock_open,
-                color: Theme.of(context).colorScheme.primary,
-              )
+            ? Icon(Icons.lock_open, color: scheme.primary)
             : PopupMenuButton<String>(
                 tooltip: context.l10n.shiftHistoryFilter,
                 onSelected: (action) => action == 'export'

@@ -13,6 +13,10 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 **UI/UX pass across every module**
 
+- Notifications label each row with its type (check-in, check-out, pass,
+  overstay, shift) next to the timestamp.
+- Shift history rows are cards with a balanced/warning avatar and separate
+  sales/difference lines (difference highlighted when it does not balance).
 - Public pages: `/policies` opens with a branded identity card and renders the
   contract as numbered clauses; the `/evidence` gate is a centered card with a
   tonal lock and a 48 dp unlock button. Both use card skeletons while loading.

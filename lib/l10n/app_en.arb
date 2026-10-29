@@ -874,5 +874,12 @@
   "checkInVehicleSection": "Vehicle",
   "checkInVehicleHint": "Plate, category and vehicle details",
   "checkInEvidenceSection": "Evidence",
-  "checkInEvidenceHint": "Photos or video of the vehicle's condition"
+  "checkInEvidenceHint": "Photos or video of the vehicle's condition",
+  "notifTypeCheckIn": "Check-in",
+  "notifTypeCheckOut": "Check-out",
+  "notifTypePassExpiring": "Pass expiring",
+  "notifTypePassRenewed": "Pass renewed",
+  "notifTypeOverstay": "Overstay",
+  "notifTypeShiftClosed": "Shift closed",
+  "notifTypeGeneric": "Notice"
 }

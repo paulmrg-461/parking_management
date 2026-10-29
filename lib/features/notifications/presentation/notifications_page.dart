@@ -415,7 +415,8 @@ class _NotificationTile extends StatelessWidget {
             Text(notification.body),
             const SizedBox(height: Space.xs),
             Text(
-              Formatters.dateTime(notification.createdAt),
+              '${Formatters.dateTime(notification.createdAt)} · '
+              '${_typeLabel(context.l10n, notification.type)}',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: scheme.onSurfaceVariant,
               ),
@@ -438,6 +439,17 @@ class _NotificationTile extends StatelessWidget {
       context.go(route);
     }
   }
+
+  static String _typeLabel(AppLocalizations l10n, String type) =>
+      switch (type) {
+        'check_in' => l10n.notifTypeCheckIn,
+        'check_out' => l10n.notifTypeCheckOut,
+        'monthly_pass_expiring' => l10n.notifTypePassExpiring,
+        'monthly_pass_renewed' => l10n.notifTypePassRenewed,
+        'overstay' => l10n.notifTypeOverstay,
+        'shift_closed' => l10n.notifTypeShiftClosed,
+        _ => l10n.notifTypeGeneric,
+      };
 
   static IconData _iconFor(String type) => switch (type) {
     'check_in' => Icons.login,

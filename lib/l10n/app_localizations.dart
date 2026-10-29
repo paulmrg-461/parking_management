@@ -4933,6 +4933,48 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Fotos o video del estado del vehículo'**
   String get checkInEvidenceHint;
+
+  /// No description provided for @notifTypeCheckIn.
+  ///
+  /// In es, this message translates to:
+  /// **'Entrada'**
+  String get notifTypeCheckIn;
+
+  /// No description provided for @notifTypeCheckOut.
+  ///
+  /// In es, this message translates to:
+  /// **'Salida'**
+  String get notifTypeCheckOut;
+
+  /// No description provided for @notifTypePassExpiring.
+  ///
+  /// In es, this message translates to:
+  /// **'Mensualidad por vencer'**
+  String get notifTypePassExpiring;
+
+  /// No description provided for @notifTypePassRenewed.
+  ///
+  /// In es, this message translates to:
+  /// **'Mensualidad renovada'**
+  String get notifTypePassRenewed;
+
+  /// No description provided for @notifTypeOverstay.
+  ///
+  /// In es, this message translates to:
+  /// **'Estadía larga'**
+  String get notifTypeOverstay;
+
+  /// No description provided for @notifTypeShiftClosed.
+  ///
+  /// In es, this message translates to:
+  /// **'Cierre de turno'**
+  String get notifTypeShiftClosed;
+
+  /// No description provided for @notifTypeGeneric.
+  ///
+  /// In es, this message translates to:
+  /// **'Aviso'**
+  String get notifTypeGeneric;
 }
 
 class _AppLocalizationsDelegate
