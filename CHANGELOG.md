@@ -13,6 +13,12 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 **UI/UX pass across every module**
 
+- Settlement dialog: payment methods are a segmented choice, cash sits in a
+  tonal panel with a large change figure, errors use an inline banner, the
+  currency symbol/format come from `Money` (no hardcoded `$`, USD decimals
+  parse correctly) and the confirm action has an icon.
+- Notifications gain a type filter (all, check-in, check-out, passes, overstay,
+  shift) in the app bar, with a clear-filters empty state.
 - About the developer (`/about`, public): DevPaul identity with the capybara
   logo, role, bio, website/GitHub/LinkedIn/Instagram links, the app summary
   with its version, and the "Hecho por DevPaul" / "© 2026 DevPaul. All rights

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:parking_management/core/money/currency.dart';
+import 'package:parking_management/core/money/money.dart';
 import 'package:parking_management/core/receipt/payment_method.dart';
 import 'package:parking_management/features/check_out/domain/entities/check_out_preview.dart';
 import 'package:parking_management/features/check_out/presentation/payment_method_dialog.dart';
@@ -62,6 +64,25 @@ void main() {
 
     expect((result())?.cashReceived, 30000);
     expect((result())?.method, PaymentMethod.cash);
+  });
+
+  testWidgets('Security: a USD site prefixes and formats the cash change', (
+    tester,
+  ) async {
+    Money.configure(Currency.usd);
+    addTearDown(() => Money.configure(Currency.cop));
+    await pumpDialog(
+      tester,
+      preview: const CheckOutPreview(sessionId: 1, amount: 500),
+    );
+
+    await tester.enterText(
+      find.byKey(const Key('checkout_cash_received')),
+      '10.00',
+    );
+    await tester.pump();
+
+    expect(find.text('US\$5.00'), findsWidgets);
   });
 
   testWidgets('Failure: cash below the total blocks the charge', (

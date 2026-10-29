@@ -346,12 +346,12 @@ void main() {
     await tester.pumpAndSettle();
   });
 
-  RadioListTile<PaymentMethod> methodTile(
-    WidgetTester tester,
-    String label,
-  ) => tester.widget<RadioListTile<PaymentMethod>>(
-    find.widgetWithText(RadioListTile<PaymentMethod>, label),
-  );
+  PaymentMethod selectedMethod(WidgetTester tester) => tester
+      .widget<SegmentedButton<PaymentMethod>>(
+        find.byType(SegmentedButton<PaymentMethod>),
+      )
+      .selected
+      .single;
 
   testWidgets('Success: the last payment method is preselected', (
     tester,
@@ -365,7 +365,7 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Cobrar').first);
     await tester.pumpAndSettle();
 
-    expect(methodTile(tester, 'Tarjeta').groupValue, PaymentMethod.card);
+    expect(selectedMethod(tester), PaymentMethod.card);
 
     await tester.tap(find.text('Confirmar'));
     await tester.pumpAndSettle();
@@ -401,7 +401,7 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Cobrar').first);
     await tester.pumpAndSettle();
 
-    expect(methodTile(tester, 'Efectivo').groupValue, PaymentMethod.cash);
+    expect(selectedMethod(tester), PaymentMethod.cash);
 
     await tester.tap(find.text('Confirmar'));
     await tester.pumpAndSettle();
@@ -416,10 +416,7 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Cobrar').first);
     await tester.pumpAndSettle();
 
-    expect(
-      methodTile(tester, 'Mensualidad').groupValue,
-      PaymentMethod.monthlyPass,
-    );
+    expect(selectedMethod(tester), PaymentMethod.monthlyPass);
     expect(find.textContaining('sin cobro'), findsOneWidget);
 
     await tester.tap(find.text('Confirmar'));

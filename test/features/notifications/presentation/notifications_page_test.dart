@@ -133,6 +133,40 @@ void main() {
     expect(find.text('Anteriores'), findsOneWidget);
   });
 
+  testWidgets('Success: the type filter narrows the inbox', (tester) async {
+    final repository = FakeNotificationRepository(
+      items: [
+        _notification(1),
+        AppNotification(
+          id: 4,
+          type: 'check_in',
+          title: 'Vehículo XYZ4 entró',
+          body: 'Ingreso registrado',
+          createdAt: DateTime.now(),
+        ),
+      ],
+    );
+    final cubit = NotificationsCubit(repository);
+    await cubit.start(1);
+    addTearDown(cubit.close);
+    addTearDown(repository.dispose);
+    await tester.pumpWidget(
+      testApp(
+        BlocProvider.value(value: cubit, child: const NotificationsPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Vehículo ABC1 salió'), findsOneWidget);
+    await tester.tap(find.byTooltip('Filtrar notificaciones'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Entrada'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Vehículo ABC1 salió'), findsNothing);
+    expect(find.text('Vehículo XYZ4 entró'), findsOneWidget);
+  });
+
   testWidgets('A11y: inbox rows and filters meet touch and contrast', (
     tester,
   ) async {

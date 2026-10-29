@@ -13,7 +13,7 @@ module, developer page, COP/USD currency, es/en language; HEAD `f7dabe8`).
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0068` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 830 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 832 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -69,6 +69,12 @@ module, developer page, COP/USD currency, es/en language; HEAD `f7dabe8`).
 - Gotcha: a lazily built `ListView` only builds visible children, so tests that
   assert the last row must use a tall viewport or scroll before asserting.
 
+- **Settlement/notifications (2026-10-29)**: the checkout dialog uses a
+  `SegmentedButton<PaymentMethod>` (tests read `selected.single` instead of
+  `RadioListTile.groupValue`), a tonal cash panel with `Money.format` and the
+  currency symbol, an inline error banner and `Money.parse` for discounts;
+  notifications add an app-bar type filter (`monthly_pass` matches both pass
+  types). Test count 832.
 - **Developer page (2026-10-28)**: `/about` is public (`route_access.aboutPath`,
   allowed in `authRedirect`) and shows the DevPaul identity, links and the
   authorship/rights notices; the logo lives at `assets/branding/devpaul.png`
@@ -837,7 +843,7 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 ## Latest verification (2026-10-28)
 
-- `flutter test`: 830 passed (+1 live-stack integration skipped); `flutter
+- `flutter test`: 832 passed (+1 live-stack integration skipped); `flutter
   analyze` 152 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
 - `supabase/tests/run.sh` passed (migrations `0001`–`0067`); `e2e.sh` passed

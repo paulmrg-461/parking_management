@@ -20,11 +20,18 @@ import 'notification_routes.dart';
 /// Inbox grouped by day (today / yesterday / earlier) with an unread filter,
 /// a tonal icon per notification type and an empty state that points to the
 /// records page. Tapping a row marks it read and deep-links by type.
-class NotificationsPage extends StatelessWidget {
+class NotificationsPage extends StatefulWidget {
   const NotificationsPage({super.key, this.onOpenRecords});
 
   /// Test seam: receives the CTA tap instead of navigating with the router.
   final VoidCallback? onOpenRecords;
+
+  @override
+  State<NotificationsPage> createState() => _NotificationsPageState();
+}
+
+class _NotificationsPageState extends State<NotificationsPage> {
+  String? _type;
 
   @override
   Widget build(BuildContext context) {
@@ -43,6 +50,26 @@ class NotificationsPage extends StatelessWidget {
         appBar: AppBar(
           title: Text(context.l10n.notificationsTitle),
           actions: [
+            PopupMenuButton<String?>(
+              tooltip: context.l10n.notificationsFilterLabel,
+              icon: const Icon(Icons.tune),
+              initialValue: _type,
+              onSelected: (value) => setState(() => _type = value),
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                  value: null,
+                  child: Text(context.l10n.notificationsAll),
+                ),
+                for (final entry in [
+                  ('check_in', context.l10n.notifTypeCheckIn),
+                  ('check_out', context.l10n.notifTypeCheckOut),
+                  ('monthly_pass', context.l10n.notifTypePassExpiring),
+                  ('overstay', context.l10n.notifTypeOverstay),
+                  ('shift_closed', context.l10n.notifTypeShiftClosed),
+                ])
+                  PopupMenuItem(value: entry.$1, child: Text(entry.$2)),
+              ],
+            ),
             BlocBuilder<NotificationsCubit, NotificationsState>(
               builder: (context, state) => TextButton(
                 onPressed: state.unreadCount == 0
@@ -69,8 +96,10 @@ class NotificationsPage extends StatelessWidget {
                   ),
                   NotificationsStatus.loaded => _Inbox(
                     state: state,
+                    type: _type,
+                    onClearType: () => setState(() => _type = null),
                     onOpenRecords:
-                        onOpenRecords ?? () => context.go('/records'),
+                        widget.onOpenRecords ?? () => context.go('/records'),
                   ),
                 },
               ),
@@ -171,9 +200,16 @@ class _WebPushToggleState extends State<WebPushToggle> {
 }
 
 class _Inbox extends StatefulWidget {
-  const _Inbox({required this.state, required this.onOpenRecords});
+  const _Inbox({
+    required this.state,
+    required this.type,
+    required this.onClearType,
+    required this.onOpenRecords,
+  });
 
   final NotificationsState state;
+  final String? type;
+  final VoidCallback onClearType;
   final VoidCallback onOpenRecords;
 
   @override
@@ -183,12 +219,22 @@ class _Inbox extends StatefulWidget {
 class _InboxState extends State<_Inbox> {
   bool _unreadOnly = false;
 
-  List<AppNotification> get _visible => _unreadOnly
-      ? [
-          for (final item in widget.state.items)
-            if (!item.isRead) item,
-        ]
-      : widget.state.items;
+  bool _matchesType(AppNotification item) {
+    final type = widget.type;
+    if (type == null) {
+      return true;
+    }
+    if (type == 'monthly_pass') {
+      return item.type == 'monthly_pass_expiring' ||
+          item.type == 'monthly_pass_renewed';
+    }
+    return item.type == type;
+  }
+
+  List<AppNotification> get _visible => [
+    for (final item in widget.state.items)
+      if (_matchesType(item) && (!_unreadOnly || !item.isRead)) item,
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -229,9 +275,23 @@ class _InboxState extends State<_Inbox> {
             Padding(
               padding: const EdgeInsets.only(top: Space.xl),
               child: EmptyState(
-                icon: Icons.mark_email_read_outlined,
-                title: l10n.notificationsUnreadOnly,
-                message: l10n.notificationsUnreadEmpty,
+                icon: Icons.filter_alt_off_outlined,
+                title: widget.type == null
+                    ? l10n.notificationsUnreadOnly
+                    : l10n.notificationsAll,
+                message: widget.type == null
+                    ? l10n.notificationsUnreadEmpty
+                    : l10n.notificationsEmptyHint,
+                action: widget.type == null
+                    ? null
+                    : FilledButton.tonalIcon(
+                        onPressed: () {
+                          widget.onClearType();
+                          setState(() => _unreadOnly = false);
+                        },
+                        icon: const Icon(Icons.filter_alt_off_outlined),
+                        label: Text(l10n.actionClearFilters),
+                      ),
               ),
             )
           else
