@@ -2743,4 +2743,53 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get notifTypeGeneric => 'Notice';
+
+  @override
+  String get aboutDeveloper => 'About the developer';
+
+  @override
+  String get aboutRole => 'Software development';
+
+  @override
+  String get aboutIntro =>
+      'Hi, I am Paul Realpe (DevPaul). I design and build mobile and web apps with Flutter, caring about the experience and the details.';
+
+  @override
+  String get aboutFindMe => 'Find me';
+
+  @override
+  String get aboutWebsite => 'Website';
+
+  @override
+  String get aboutGitHub => 'GitHub';
+
+  @override
+  String get aboutLinkedIn => 'LinkedIn';
+
+  @override
+  String get aboutInstagram => 'Instagram';
+
+  @override
+  String get aboutAppTitle => 'About the app';
+
+  @override
+  String get aboutAppBody =>
+      'Parking management system: check-in and check-out, time-based billing, cash shifts, monthly passes, reservations and real-time reports.';
+
+  @override
+  String aboutVersion(String version) {
+    return 'Version $version';
+  }
+
+  @override
+  String get aboutMadeBy => 'Made by DevPaul';
+
+  @override
+  String get aboutRights => '© 2026 DevPaul. All rights reserved.';
+
+  @override
+  String get aboutLogoLabel => 'DevPaul logo';
+
+  @override
+  String get aboutOpenError => 'Could not open the link';
 }

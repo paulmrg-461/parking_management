@@ -2757,4 +2757,53 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get notifTypeGeneric => 'Aviso';
+
+  @override
+  String get aboutDeveloper => 'Acerca del desarrollador';
+
+  @override
+  String get aboutRole => 'Desarrollo de software';
+
+  @override
+  String get aboutIntro =>
+      'Hola, soy Paul Realpe (DevPaul). Diseño y construyo aplicaciones móviles y web con Flutter, cuidando la experiencia de uso y los detalles.';
+
+  @override
+  String get aboutFindMe => 'Encuéntrame';
+
+  @override
+  String get aboutWebsite => 'Sitio web';
+
+  @override
+  String get aboutGitHub => 'GitHub';
+
+  @override
+  String get aboutLinkedIn => 'LinkedIn';
+
+  @override
+  String get aboutInstagram => 'Instagram';
+
+  @override
+  String get aboutAppTitle => 'Sobre la app';
+
+  @override
+  String get aboutAppBody =>
+      'Sistema de gestión de parqueadero: entradas y salidas, cobro por tiempo, turnos de caja, mensualidades, reservas y reportes en tiempo real.';
+
+  @override
+  String aboutVersion(String version) {
+    return 'Versión $version';
+  }
+
+  @override
+  String get aboutMadeBy => 'Hecho por DevPaul';
+
+  @override
+  String get aboutRights => '© 2026 DevPaul. Todos los derechos reservados.';
+
+  @override
+  String get aboutLogoLabel => 'Logotipo de DevPaul';
+
+  @override
+  String get aboutOpenError => 'No se pudo abrir el enlace';
 }

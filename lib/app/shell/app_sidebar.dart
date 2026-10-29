@@ -19,6 +19,7 @@ import '../../features/lots/application/lots_cubit.dart';
 import '../../features/lots/presentation/lot_switcher.dart';
 import '../../features/settings/application/branding_cubit.dart';
 import '../di/injection.dart';
+import '../router/route_access.dart';
 import 'app_destinations.dart';
 
 /// Web-style side navigation: brand, role-filtered destinations in groups and
@@ -368,6 +369,17 @@ class _AppSidebarState extends State<AppSidebar> {
                   showLotSwitcher(context, lots.lots, lots.active!),
             ),
           ],
+          if (!_collapsed)
+            Padding(
+              padding: const EdgeInsets.only(top: Space.xs),
+              child: Text(
+                l10n.aboutMadeBy,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
           if (session != null) ...[
             if (lots != null && lots.canSwitch && lots.active != null)
               const SizedBox(height: Space.sm),
@@ -419,12 +431,14 @@ class _Preferences extends StatelessWidget {
   Widget build(BuildContext context) {
     final language = _provided<LocaleCubit>(context);
     final theme = _provided<ThemeCubit>(context);
-    if (!language && !theme) {
-      return const SizedBox.shrink();
-    }
     final buttons = [
       if (language) const LanguageButton(),
       if (theme) const ThemeModeButton(),
+      IconButton.filledTonal(
+        tooltip: context.l10n.aboutDeveloper,
+        onPressed: () => context.go(aboutPath),
+        icon: const Icon(Icons.code),
+      ),
     ];
     return Padding(
       padding: const EdgeInsets.only(bottom: Space.sm),

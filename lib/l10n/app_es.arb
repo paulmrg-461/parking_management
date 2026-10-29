@@ -952,5 +952,21 @@
   "notifTypePassRenewed": "Mensualidad renovada",
   "notifTypeOverstay": "Estadía larga",
   "notifTypeShiftClosed": "Cierre de turno",
-  "notifTypeGeneric": "Aviso"
+  "notifTypeGeneric": "Aviso",
+  "aboutDeveloper": "Acerca del desarrollador",
+  "aboutRole": "Desarrollo de software",
+  "aboutIntro": "Hola, soy Paul Realpe (DevPaul). Diseño y construyo aplicaciones móviles y web con Flutter, cuidando la experiencia de uso y los detalles.",
+  "aboutFindMe": "Encuéntrame",
+  "aboutWebsite": "Sitio web",
+  "aboutGitHub": "GitHub",
+  "aboutLinkedIn": "LinkedIn",
+  "aboutInstagram": "Instagram",
+  "aboutAppTitle": "Sobre la app",
+  "aboutAppBody": "Sistema de gestión de parqueadero: entradas y salidas, cobro por tiempo, turnos de caja, mensualidades, reservas y reportes en tiempo real.",
+  "aboutVersion": "Versión {version}",
+  "aboutMadeBy": "Hecho por DevPaul",
+  "aboutRights": "© 2026 DevPaul. Todos los derechos reservados.",
+  "aboutLogoLabel": "Logotipo de DevPaul",
+  "aboutOpenError": "No se pudo abrir el enlace",
+  "@aboutVersion": {"placeholders": {"version": {"type": "String"}}}
 }

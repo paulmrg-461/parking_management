@@ -44,6 +44,11 @@ void main() {
     expect(find.byType(TextField), findsNWidgets(2));
     expect(find.text('Ingresar'), findsOneWidget);
     expect(find.text('Usuario'), findsOneWidget);
+    expect(find.text('Hecho por DevPaul'), findsOneWidget);
+    expect(
+      find.text('© 2026 DevPaul. Todos los derechos reservados.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('Success: submits credentials and calls login', (tester) async {

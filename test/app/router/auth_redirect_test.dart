@@ -61,6 +61,12 @@ void main() {
       expect(authRedirect(_as(UserRole.operator), '/policies'), isNull);
     });
 
+    test('Security: the developer page is public', () {
+      expect(authRedirect(const AuthUnauthenticated(), '/about'), isNull);
+      expect(authRedirect(_as(UserRole.operator), '/about'), isNull);
+      expect(authRedirect(_as(UserRole.admin), '/about'), isNull);
+    });
+
     test('Security: operators are bounced from every admin-only route', () {
       for (final route in _adminOnly) {
         expect(authRedirect(_as(UserRole.operator), route), '/', reason: route);

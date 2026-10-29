@@ -13,7 +13,7 @@ currency, es/en language, records exports).
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0068` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 823 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 830 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -58,6 +58,13 @@ currency, es/en language, records exports).
 - Gotcha: a lazily built `ListView` only builds visible children, so tests that
   assert the last row must use a tall viewport or scroll before asserting.
 
+- **Developer page (2026-10-28)**: `/about` is public (`route_access.aboutPath`,
+  allowed in `authRedirect`) and shows the DevPaul identity, links and the
+  authorship/rights notices; the logo lives at `assets/branding/devpaul.png`
+  (512 px, registered in pubspec). Entry points: drawer ListTile, desktop
+  sidebar info button (tooltip aboutDeveloper), login footer credit. Links use
+  the injectable `AboutLinkLauncher` seam so tests never leave the process.
+  Test count 830.
 - **Centering fix (2026-10-28)**: `CenteredScrollable` now enforces
   `minWidth` equal to the viewport, otherwise its scroll child shrank to the
   widest line and the empty/error block drifted left on wide pages (the
@@ -811,7 +818,7 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 ## Latest verification (2026-10-28)
 
-- `flutter test`: 823 passed (+1 live-stack integration skipped); `flutter
+- `flutter test`: 830 passed (+1 live-stack integration skipped); `flutter
   analyze` 152 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
 - `supabase/tests/run.sh` passed (migrations `0001`–`0067`); `e2e.sh` passed

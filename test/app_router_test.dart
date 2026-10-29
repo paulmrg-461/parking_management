@@ -18,6 +18,14 @@ void main() {
       expect(find.text('Hola, Juan'), findsOneWidget);
       await tester.tap(find.text('Menú'));
       await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('Cerrar sesión'),
+        200,
+        scrollable: find.descendant(
+          of: find.byType(Drawer),
+          matching: find.byType(Scrollable),
+        ),
+      );
       expect(find.text('Cerrar sesión'), findsOneWidget);
     });
 
@@ -26,6 +34,14 @@ void main() {
 
       await tester.tap(find.text('Menú'));
       await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('Cerrar sesión'),
+        200,
+        scrollable: find.descendant(
+          of: find.byType(Drawer),
+          matching: find.byType(Scrollable),
+        ),
+      );
       await tester.tap(find.text('Cerrar sesión'));
       await tester.pumpAndSettle();
 

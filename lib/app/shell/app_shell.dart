@@ -9,6 +9,7 @@ import '../../core/l10n/l10n.dart';
 import '../../core/l10n/locale_cubit.dart';
 import '../../core/realtime/local_activity.dart';
 import '../../core/theme/theme_cubit.dart';
+import '../router/route_access.dart';
 import '../di/injection.dart';
 import '../../core/qr/qr_decoder.dart';
 import '../../core/qr/qr_scan_page.dart';
@@ -362,7 +363,28 @@ class _AppMenuDrawer extends StatelessWidget {
                       onTap: () => onNavigate(destination.path),
                     ),
                   const Divider(),
+                  ListTile(
+                    leading: const Icon(Icons.code),
+                    title: Text(l10n.aboutDeveloper),
+                    subtitle: Text(l10n.aboutMadeBy),
+                    onTap: () => onNavigate(aboutPath),
+                  ),
                   _DrawerPreferences(onLogout: onLogout),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      Space.md,
+                      Space.xs,
+                      Space.md,
+                      Space.md,
+                    ),
+                    child: Text(
+                      l10n.aboutRights,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),

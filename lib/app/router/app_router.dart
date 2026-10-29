@@ -21,6 +21,7 @@ import '../../features/check_in/application/vehicle_lookup_cubit.dart';
 import '../../features/check_in/presentation/check_in_page.dart';
 import '../../features/check_out/application/check_out_cubit.dart';
 import '../../features/check_out/presentation/check_out_page.dart';
+import '../../features/about/presentation/about_developer_page.dart';
 import '../../features/evidence/application/evidence_cubit.dart';
 import '../../features/evidence/presentation/public_evidence_page.dart';
 import '../../features/policies/application/policies_cubit.dart';
@@ -69,6 +70,10 @@ GoRouter buildRouter(AuthCubit auth, Listenable refresh) => GoRouter(
   redirect: (_, state) => authRedirect(auth.state, state.uri.path),
   routes: [
     GoRoute(path: loginPath, builder: (context, state) => const LoginPage()),
+    GoRoute(
+      path: aboutPath,
+      builder: (context, state) => const AboutDeveloperPage(),
+    ),
     GoRoute(
       path: policiesPath,
       builder: (context, state) => BlocProvider<PoliciesCubit>(

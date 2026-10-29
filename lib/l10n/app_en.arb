@@ -881,5 +881,20 @@
   "notifTypePassRenewed": "Pass renewed",
   "notifTypeOverstay": "Overstay",
   "notifTypeShiftClosed": "Shift closed",
-  "notifTypeGeneric": "Notice"
+  "notifTypeGeneric": "Notice",
+  "aboutDeveloper": "About the developer",
+  "aboutRole": "Software development",
+  "aboutIntro": "Hi, I am Paul Realpe (DevPaul). I design and build mobile and web apps with Flutter, caring about the experience and the details.",
+  "aboutFindMe": "Find me",
+  "aboutWebsite": "Website",
+  "aboutGitHub": "GitHub",
+  "aboutLinkedIn": "LinkedIn",
+  "aboutInstagram": "Instagram",
+  "aboutAppTitle": "About the app",
+  "aboutAppBody": "Parking management system: check-in and check-out, time-based billing, cash shifts, monthly passes, reservations and real-time reports.",
+  "aboutVersion": "Version {version}",
+  "aboutMadeBy": "Made by DevPaul",
+  "aboutRights": "© 2026 DevPaul. All rights reserved.",
+  "aboutLogoLabel": "DevPaul logo",
+  "aboutOpenError": "Could not open the link"
 }

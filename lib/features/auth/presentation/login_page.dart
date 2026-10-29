@@ -13,6 +13,7 @@ import '../../../core/widgets/language_button.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/theme_mode_button.dart';
 import '../../settings/application/branding_cubit.dart';
+import '../../../app/router/route_access.dart';
 import '../application/auth_cubit.dart';
 
 /// Sign-in screen. Wide screens split into a brand panel and a card; phones
@@ -116,6 +117,8 @@ class _LoginPageState extends State<LoginPage> {
               const _InlineBrand(),
               const SizedBox(height: Space.lg),
               _FormCard(child: _buildForm(context)),
+              const SizedBox(height: Space.md),
+              const _DeveloperCredit(),
             ],
           ),
         ),
@@ -129,7 +132,14 @@ class _LoginPageState extends State<LoginPage> {
         padding: const EdgeInsets.all(Space.xl),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: _formWidth),
-          child: _FormCard(child: _buildForm(context)),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _FormCard(child: _buildForm(context)),
+              const SizedBox(height: Space.md),
+              const _DeveloperCredit(),
+            ],
+          ),
         ),
       ),
     );
@@ -423,6 +433,32 @@ class _Logo extends StatelessWidget {
           ),
         },
       ),
+    );
+  }
+}
+
+/// Authorship notice: a link to the developer page plus the rights line.
+class _DeveloperCredit extends StatelessWidget {
+  const _DeveloperCredit();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      children: [
+        TextButton.icon(
+          onPressed: () => context.push(aboutPath),
+          icon: const Icon(Icons.code, size: 18),
+          label: Text(context.l10n.aboutMadeBy),
+        ),
+        Text(
+          context.l10n.aboutRights,
+          textAlign: TextAlign.center,
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
     );
   }
 }

@@ -13,6 +13,11 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 **UI/UX pass across every module**
 
+- About the developer (`/about`, public): DevPaul identity with the capybara
+  logo, role, bio, website/GitHub/LinkedIn/Instagram links, the app summary
+  with its version, and the "Hecho por DevPaul" / "© 2026 DevPaul. All rights
+  reserved." notices (hero chip, app card and page footer). Linked from the
+  drawer, the desktop sidebar and the login footer.
 - Empty/error blocks are truly centered on wide pages: `CenteredScrollable`
   now fills the available width instead of shrink-wrapping to the widest line
   (monthly passes, reservations, history and every other empty state).

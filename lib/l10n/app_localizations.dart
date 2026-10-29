@@ -4975,6 +4975,96 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Aviso'**
   String get notifTypeGeneric;
+
+  /// No description provided for @aboutDeveloper.
+  ///
+  /// In es, this message translates to:
+  /// **'Acerca del desarrollador'**
+  String get aboutDeveloper;
+
+  /// No description provided for @aboutRole.
+  ///
+  /// In es, this message translates to:
+  /// **'Desarrollo de software'**
+  String get aboutRole;
+
+  /// No description provided for @aboutIntro.
+  ///
+  /// In es, this message translates to:
+  /// **'Hola, soy Paul Realpe (DevPaul). Diseño y construyo aplicaciones móviles y web con Flutter, cuidando la experiencia de uso y los detalles.'**
+  String get aboutIntro;
+
+  /// No description provided for @aboutFindMe.
+  ///
+  /// In es, this message translates to:
+  /// **'Encuéntrame'**
+  String get aboutFindMe;
+
+  /// No description provided for @aboutWebsite.
+  ///
+  /// In es, this message translates to:
+  /// **'Sitio web'**
+  String get aboutWebsite;
+
+  /// No description provided for @aboutGitHub.
+  ///
+  /// In es, this message translates to:
+  /// **'GitHub'**
+  String get aboutGitHub;
+
+  /// No description provided for @aboutLinkedIn.
+  ///
+  /// In es, this message translates to:
+  /// **'LinkedIn'**
+  String get aboutLinkedIn;
+
+  /// No description provided for @aboutInstagram.
+  ///
+  /// In es, this message translates to:
+  /// **'Instagram'**
+  String get aboutInstagram;
+
+  /// No description provided for @aboutAppTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Sobre la app'**
+  String get aboutAppTitle;
+
+  /// No description provided for @aboutAppBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Sistema de gestión de parqueadero: entradas y salidas, cobro por tiempo, turnos de caja, mensualidades, reservas y reportes en tiempo real.'**
+  String get aboutAppBody;
+
+  /// No description provided for @aboutVersion.
+  ///
+  /// In es, this message translates to:
+  /// **'Versión {version}'**
+  String aboutVersion(String version);
+
+  /// No description provided for @aboutMadeBy.
+  ///
+  /// In es, this message translates to:
+  /// **'Hecho por DevPaul'**
+  String get aboutMadeBy;
+
+  /// No description provided for @aboutRights.
+  ///
+  /// In es, this message translates to:
+  /// **'© 2026 DevPaul. Todos los derechos reservados.'**
+  String get aboutRights;
+
+  /// No description provided for @aboutLogoLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Logotipo de DevPaul'**
+  String get aboutLogoLabel;
+
+  /// No description provided for @aboutOpenError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo abrir el enlace'**
+  String get aboutOpenError;
 }
 
 class _AppLocalizationsDelegate

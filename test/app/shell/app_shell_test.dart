@@ -320,6 +320,51 @@ void main() {
     expect(find.byIcon(Icons.sync), findsOneWidget);
   });
 
+  testWidgets('Success: the sidebar opens the developer page', (tester) async {
+    await pumpApp(tester, role: UserRole.admin, size: const Size(1200, 900));
+
+    await tester.tap(find.byTooltip('Acerca del desarrollador'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.widgetWithText(AppBar, 'Acerca del desarrollador'),
+      findsOneWidget,
+    );
+    expect(find.text('Hecho por DevPaul'), findsWidgets);
+  });
+
+  testWidgets('Success: the drawer opens the developer page on phones', (
+    tester,
+  ) async {
+    final locale = LocaleCubit(FakeKeyValueStore());
+    addTearDown(locale.close);
+    await locale.select(const Locale('es'));
+    await pumpApp(tester, role: UserRole.operator, localeCubit: locale);
+
+    await tester.tap(find.text('Menú'));
+    await tester.pumpAndSettle();
+    final drawer = find.byType(Drawer);
+    final about = find.descendant(
+      of: drawer,
+      matching: find.text('Acerca del desarrollador'),
+    );
+    await tester.scrollUntilVisible(
+      about,
+      200,
+      scrollable: find.descendant(
+        of: drawer,
+        matching: find.byType(Scrollable),
+      ),
+    );
+    await tester.tap(about);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.widgetWithText(AppBar, 'Acerca del desarrollador'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('Success: phones keep preferences and logout in the drawer', (
     tester,
   ) async {
