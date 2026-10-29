@@ -7,6 +7,8 @@ import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/policy_template.dart';
 import '../../../core/widgets/error_state.dart';
+import '../../../core/widgets/section_header.dart';
+import '../../../core/widgets/skeleton.dart';
 import '../application/policies_cubit.dart';
 import '../domain/entities/lot_profile.dart';
 
@@ -35,9 +37,8 @@ class _PoliciesPageState extends State<PoliciesPage> {
       appBar: AppBar(title: Text(l10n.policiesTitle)),
       body: BlocBuilder<PoliciesCubit, PoliciesState>(
         builder: (context, state) => switch (state.status) {
-          PoliciesStatus.initial || PoliciesStatus.loading => const Center(
-            child: CircularProgressIndicator(),
-          ),
+          PoliciesStatus.initial ||
+          PoliciesStatus.loading => const SkeletonCardList(itemCount: 3),
           PoliciesStatus.failure => ErrorState(
             message: l10n.policiesInvalid,
             onRetry: () =>
@@ -66,47 +67,157 @@ class _PoliciesBody extends StatelessWidget {
       schedule: profile.schedule,
       phone: profile.phone,
     ).trim();
+    final lines = [
+      for (final line in policy.split('\n'))
+        if (line.trim().isNotEmpty) line.trim(),
+    ];
+    final heading = lines.isEmpty ? null : lines.first;
+    final clauses = lines.length <= 1 ? const <String>[] : lines.skip(1).toList();
+    final scheme = theme.colorScheme;
     return ListView(
       padding: const EdgeInsets.all(Space.md),
       children: [
         Card(
+          clipBehavior: Clip.antiAlias,
           child: Padding(
             padding: const EdgeInsets.all(Space.md),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(profile.name, style: theme.textTheme.headlineSmall),
-                const SizedBox(height: Space.sm),
-                if (profile.address.isNotEmpty)
-                  _ContactRow(
-                    icon: Icons.place_outlined,
-                    text: profile.address,
-                  ),
-                if (profile.schedule.isNotEmpty)
-                  _ContactRow(
-                    icon: Icons.schedule,
-                    text: profile.schedule,
-                  ),
-                if (profile.phone.isNotEmpty)
-                  _ContactRow(icon: Icons.phone_outlined, text: profile.phone),
+                Row(
+                  children: [
+                    Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: scheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(Radii.md),
+                      ),
+                      child: Icon(
+                        Icons.local_parking_rounded,
+                        size: 30,
+                        color: scheme.onPrimaryContainer,
+                      ),
+                    ),
+                    const SizedBox(width: Space.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            profile.name,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.headlineSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            l10n.policiesTitle,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                if (profile.address.isNotEmpty ||
+                    profile.schedule.isNotEmpty ||
+                    profile.phone.isNotEmpty) ...[
+                  const SizedBox(height: Space.md),
+                  if (profile.address.isNotEmpty)
+                    _ContactRow(
+                      icon: Icons.place_outlined,
+                      text: profile.address,
+                    ),
+                  if (profile.schedule.isNotEmpty)
+                    _ContactRow(
+                      icon: Icons.schedule_outlined,
+                      text: profile.schedule,
+                    ),
+                  if (profile.phone.isNotEmpty)
+                    _ContactRow(
+                      icon: Icons.phone_outlined,
+                      text: profile.phone,
+                    ),
+                ],
               ],
             ),
           ),
         ),
-        const SizedBox(height: Space.md),
+        const SizedBox(height: Space.lg),
         if (policy.isEmpty)
           Text(l10n.policiesEmpty, style: theme.textTheme.bodyLarge)
-        else
-          SelectableText(
-            policy,
-            style: theme.textTheme.bodyMedium?.copyWith(height: 1.5),
+        else ...[
+          SectionHeader(
+            icon: Icons.gavel_outlined,
+            title: l10n.policiesTitle,
           ),
+          const SizedBox(height: Space.sm),
+          Card(
+            clipBehavior: Clip.antiAlias,
+            child: Padding(
+              padding: const EdgeInsets.all(Space.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (heading != null)
+                    Text(
+                      heading,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  if (heading != null && clauses.isNotEmpty)
+                    const SizedBox(height: Space.md),
+                  for (var index = 0; index < clauses.length; index++)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: Space.md),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 26,
+                            height: 26,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: scheme.surfaceContainerHighest,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Text(
+                              '${index + 1}',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: scheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: Space.sm),
+                          Expanded(
+                            child: SelectableText(
+                              clauses[index],
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                height: 1.5,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
         const SizedBox(height: Space.lg),
         Text(
           l10n.policiesHelp,
           textAlign: TextAlign.center,
           style: theme.textTheme.labelSmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
+            color: scheme.onSurfaceVariant,
           ),
         ),
       ],

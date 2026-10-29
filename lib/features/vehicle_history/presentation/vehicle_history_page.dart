@@ -448,14 +448,70 @@ class _HistoryBodyState extends State<_HistoryBody> {
             child: Text(l10n.vehicleHistoryNoSessions),
           )
         else
-          for (final session in _sessions)
-            _SessionTile(
-              session: session,
-              plate: history.plate,
-              phone: history.ownerPhone,
-              onCharge: widget.onCharge,
+          for (var index = 0; index < _sessions.length; index++)
+            _TimelineEntry(
+              open: _sessions[index].status == 'open',
+              last: index == _sessions.length - 1,
+              child: _SessionTile(
+                session: _sessions[index],
+                plate: history.plate,
+                phone: history.ownerPhone,
+                onCharge: widget.onCharge,
+              ),
             ),
       ],
+    );
+  }
+}
+
+/// Movement timeline: a dot per session joined by a rail, so the visit history
+/// reads chronologically instead of as a plain stack of cards.
+class _TimelineEntry extends StatelessWidget {
+  const _TimelineEntry({
+    required this.open,
+    required this.last,
+    required this.child,
+  });
+
+  final bool open;
+  final bool last;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            width: 26,
+            child: Column(
+              children: [
+                const SizedBox(height: Space.md),
+                Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: open ? scheme.tertiary : scheme.primary,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: scheme.surface, width: 2),
+                  ),
+                ),
+                if (!last)
+                  Expanded(
+                    child: Container(
+                      width: 2,
+                      margin: const EdgeInsets.symmetric(vertical: 2),
+                      color: scheme.outlineVariant,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          Expanded(child: child),
+        ],
+      ),
     );
   }
 }

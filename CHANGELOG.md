@@ -13,6 +13,11 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 **UI/UX pass across every module**
 
+- Public pages: `/policies` opens with a branded identity card and renders the
+  contract as numbered clauses; the `/evidence` gate is a centered card with a
+  tonal lock and a 48 dp unlock button. Both use card skeletons while loading.
+- Vehicle history renders movements on a timeline rail (dot per visit, open
+  stays highlighted).
 - Check-in: the form is split into "Vehículo" and "Evidencia" sections with
   hints, a live pulse chip (`N dentro` / active holds) above the plate field,
   and the submit button gains an icon and a 48 dp target.

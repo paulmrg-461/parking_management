@@ -58,6 +58,11 @@ currency, es/en language, records exports).
 - Gotcha: a lazily built `ListView` only builds visible children, so tests that
   assert the last row must use a tall viewport or scroll before asserting.
 
+- **Public pages/history (2026-10-28)**: `/policies` has a brand hero plus
+  numbered clauses (split the rendered policy by lines; first line is the
+  heading), `/evidence` gates the plate in a centered card, both load with
+  `SkeletonCardList`; vehicle history joins session cards with a timeline rail
+  (open dot uses `tertiary`, closed `primary`).
 - **Check-in/settings (2026-10-28)**: the check-in form is sectioned
   (vehicle/evidence) and starts with a pulse chip (`parkedCount` + active
   reservations); the submit button is an icon button with a 48 dp target.
