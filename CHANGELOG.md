@@ -13,6 +13,10 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 **UI/UX pass across every module**
 
+- Shift: the opening form leads with a tonal lock, title and hint, the amount
+  field shows the currency symbol and the button keeps a 48 dp target; the
+  closed-shift card shows balanced/warning icon and chip plus expected/counted
+  metric cards before the difference row.
 - Reports: the range presets, date picker and all-sites toggle live in one
   filter card with the selected period as summary (matching the other lists).
 - Settlement dialog: payment methods are a segmented choice, cash sits in a

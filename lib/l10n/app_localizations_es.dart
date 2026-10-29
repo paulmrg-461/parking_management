@@ -2806,4 +2806,11 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get aboutOpenError => 'No se pudo abrir el enlace';
+
+  @override
+  String get shiftOpeningHint =>
+      'Cuenta el efectivo con el que inicia la caja.';
+
+  @override
+  String get shiftClosedHint => 'Resumen del último turno cerrado.';
 }

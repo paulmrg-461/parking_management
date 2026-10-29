@@ -5065,6 +5065,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'No se pudo abrir el enlace'**
   String get aboutOpenError;
+
+  /// No description provided for @shiftOpeningHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuenta el efectivo con el que inicia la caja.'**
+  String get shiftOpeningHint;
+
+  /// No description provided for @shiftClosedHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Resumen del último turno cerrado.'**
+  String get shiftClosedHint;
 }
 
 class _AppLocalizationsDelegate

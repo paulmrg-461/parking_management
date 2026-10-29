@@ -896,5 +896,7 @@
   "aboutMadeBy": "Made by DevPaul",
   "aboutRights": "© 2026 DevPaul. All rights reserved.",
   "aboutLogoLabel": "DevPaul logo",
-  "aboutOpenError": "Could not open the link"
+  "aboutOpenError": "Could not open the link",
+  "shiftOpeningHint": "Count the cash the drawer starts with.",
+  "shiftClosedHint": "Summary of the last closed shift."
 }

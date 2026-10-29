@@ -968,5 +968,7 @@
   "aboutRights": "© 2026 DevPaul. Todos los derechos reservados.",
   "aboutLogoLabel": "Logotipo de DevPaul",
   "aboutOpenError": "No se pudo abrir el enlace",
-  "@aboutVersion": {"placeholders": {"version": {"type": "String"}}}
+  "@aboutVersion": {"placeholders": {"version": {"type": "String"}}},
+  "shiftOpeningHint": "Cuenta el efectivo con el que inicia la caja.",
+  "shiftClosedHint": "Resumen del último turno cerrado."
 }

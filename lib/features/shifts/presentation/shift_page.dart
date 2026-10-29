@@ -15,6 +15,7 @@ import '../../../core/theme/tokens.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/metric_card.dart';
 import '../../../core/widgets/error_state.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/skeleton.dart';
@@ -313,9 +314,43 @@ class _OpenShiftFormState extends State<_OpenShiftForm> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                l10n.shiftNoOpen,
-                style: Theme.of(context).textTheme.titleMedium,
+              Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(Radii.sm),
+                    ),
+                    child: Icon(
+                      Icons.lock_outline,
+                      size: 20,
+                      color: Theme.of(context).colorScheme.onPrimaryContainer,
+                    ),
+                  ),
+                  const SizedBox(width: Space.sm),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.shiftNoOpen,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        Text(
+                          l10n.shiftOpeningHint,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: Space.md),
               TextFormField(
@@ -324,6 +359,7 @@ class _OpenShiftFormState extends State<_OpenShiftForm> {
                 inputFormatters: moneyInputFormatters(),
                 decoration: InputDecoration(
                   labelText: l10n.shiftOpeningFloat,
+                  prefixText: '${Money.currency.symbol} ',
                 ),
                 validator: (value) {
                   final amount = Money.parse(value);
@@ -333,10 +369,15 @@ class _OpenShiftFormState extends State<_OpenShiftForm> {
                 },
               ),
               const SizedBox(height: Space.md),
-              FilledButton.icon(
-                onPressed: widget.online ? _open : null,
-                icon: const Icon(Icons.lock_open),
-                label: Text(l10n.shiftOpen),
+              ConstrainedBox(
+                constraints: const BoxConstraints(
+                  minHeight: Layout.minTouch,
+                ),
+                child: FilledButton.icon(
+                  onPressed: widget.online ? _open : null,
+                  icon: const Icon(Icons.lock_open),
+                  label: Text(l10n.shiftOpen),
+                ),
               ),
             ],
           ),
@@ -506,25 +547,86 @@ class _ClosedShiftCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final difference = shift.difference ?? 0;
-    final color = difference == 0
-        ? Theme.of(context).colorScheme.primary
-        : Theme.of(context).colorScheme.error;
+    final balanced = difference == 0;
+    final scheme = Theme.of(context).colorScheme;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(Space.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              l10n.shiftClosedTitle,
-              style: Theme.of(context).textTheme.titleMedium,
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: balanced
+                        ? scheme.primaryContainer
+                        : scheme.errorContainer,
+                    borderRadius: BorderRadius.circular(Radii.sm),
+                  ),
+                  child: Icon(
+                    balanced ? Icons.lock_outline : Icons.warning_amber_outlined,
+                    size: 20,
+                    color: balanced
+                        ? scheme.onPrimaryContainer
+                        : scheme.onErrorContainer,
+                  ),
+                ),
+                const SizedBox(width: Space.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l10n.shiftClosedTitle,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      Text(
+                        l10n.shiftClosedHint,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                StatusChip(
+                  label: balanced
+                      ? l10n.shiftReconciliation
+                      : l10n.shiftDifference,
+                  tone: balanced ? StatusTone.success : StatusTone.warning,
+                ),
+              ],
+            ),
+            const SizedBox(height: Space.md),
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: MetricCard(
+                      icon: Icons.payments_outlined,
+                      label: l10n.shiftExpectedCash,
+                      value: Formatters.money(shift.expectedCash),
+                    ),
+                  ),
+                  const SizedBox(width: Space.sm),
+                  Expanded(
+                    child: MetricCard(
+                      icon: Icons.point_of_sale,
+                      label: l10n.shiftCountedCash,
+                      value: Formatters.money(shift.countedCash ?? 0),
+                      tone: balanced
+                          ? MetricTone.neutral
+                          : MetricTone.warning,
+                    ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: Space.sm),
-            _MetricRow(label: l10n.shiftExpectedCash, amount: shift.expectedCash),
-            _MetricRow(
-              label: l10n.shiftCountedCash,
-              amount: shift.countedCash ?? 0,
-            ),
             Row(
               children: [
                 Text(l10n.shiftDifference),
@@ -532,7 +634,7 @@ class _ClosedShiftCard extends StatelessWidget {
                 MoneyText(
                   difference,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: color,
+                    color: balanced ? scheme.primary : scheme.error,
                   ),
                 ),
               ],

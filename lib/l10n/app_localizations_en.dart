@@ -2792,4 +2792,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aboutOpenError => 'Could not open the link';
+
+  @override
+  String get shiftOpeningHint => 'Count the cash the drawer starts with.';
+
+  @override
+  String get shiftClosedHint => 'Summary of the last closed shift.';
 }

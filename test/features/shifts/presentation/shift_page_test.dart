@@ -25,6 +25,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('No hay turno abierto'), findsOneWidget);
+    expect(
+      find.text('Cuenta el efectivo con el que inicia la caja.'),
+      findsOneWidget,
+    );
 
     await tester.enterText(find.byType(TextFormField), '10000');
     await tester.tap(find.text('Abrir turno'));

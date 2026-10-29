@@ -69,6 +69,10 @@ module, developer page, COP/USD currency, es/en language; HEAD `f7dabe8`).
 - Gotcha: a lazily built `ListView` only builds visible children, so tests that
   assert the last row must use a tall viewport or scroll before asserting.
 
+- **Shift cards (2026-10-29)**: opening form header (tonal lock + hint +
+  currency prefix) and the closed-shift card (balanced/warning chip, two
+  `MetricCard`s for expected/counted). A 4-across home KPI grid was tried and
+  reverted: at the 1080 content cap the cards overflow their internal rows.
 - **Reports filter (2026-10-29)**: presets + date picker + "all sites" chip sit
   in a `FilterBar` whose summary is the selected period; the range button moved
   out of the app bar. The report test now scrolls the lazy list in 40 px steps
