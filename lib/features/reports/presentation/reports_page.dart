@@ -11,6 +11,7 @@ import '../../../core/utils/formatters.dart';
 import '../../lots/application/lots_cubit.dart';
 import '../../../core/widgets/app_icon_button.dart';
 import '../../../core/widgets/async_view.dart';
+import '../../../core/widgets/filter_bar.dart';
 import '../../../core/widgets/metric_card.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/submission_feedback.dart';
@@ -176,53 +177,67 @@ class _ReportsPageState extends State<ReportsPage> {
             tooltip: l10n.reportsExportCsv,
             onPressed: () => _copyCsv(context),
           ),
-          AppIconButton(
-            icon: Icons.date_range,
-            tooltip: l10n.reportsRangeTooltip,
-            onPressed: () => _pickRange(context),
-          ),
           const SyncBadge(),
         ],
       ),
       body: Column(
         children: [
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.fromLTRB(Space.md, Space.sm, Space.md, 0),
-            child: SegmentedButton<_RangePreset>(
-              segments: [
-                ButtonSegment(
-                  value: _RangePreset.today,
-                  label: Text(l10n.reportsToday),
+          Padding(
+            padding: const EdgeInsets.all(Space.md),
+            child: FilterBar(
+              summary:
+                  '${Formatters.date(_range.start)} — '
+                  '${Formatters.date(_range.end)}',
+              children: [
+                SegmentedButton<_RangePreset>(
+                  segments: [
+                    ButtonSegment(
+                      value: _RangePreset.today,
+                      label: Text(l10n.reportsToday),
+                    ),
+                    ButtonSegment(
+                      value: _RangePreset.last7,
+                      label: Text(l10n.reportsLast7),
+                    ),
+                    ButtonSegment(
+                      value: _RangePreset.last30,
+                      label: Text(l10n.reportsLast30),
+                    ),
+                  ],
+                  selected: {?_preset},
+                  emptySelectionAllowed: true,
+                  showSelectedIcon: false,
+                  onSelectionChanged: (selection) {
+                    if (selection.isNotEmpty) {
+                      _selectPreset(selection.first);
+                    }
+                  },
                 ),
-                ButtonSegment(
-                  value: _RangePreset.last7,
-                  label: Text(l10n.reportsLast7),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    minHeight: Layout.minTouch,
+                  ),
+                  child: OutlinedButton.icon(
+                    onPressed: () => _pickRange(context),
+                    icon: const Icon(Icons.date_range),
+                    label: Text(l10n.reportsRangeTooltip),
+                  ),
                 ),
-                ButtonSegment(
-                  value: _RangePreset.last30,
-                  label: Text(l10n.reportsLast30),
+                Tooltip(
+                  message: l10n.reportsAllLotsHint,
+                  child: FilterChip(
+                    selected: _allLots,
+                    showCheckmark: false,
+                    avatar: const Icon(Icons.location_city_outlined, size: 18),
+                    label: Text(l10n.reportsAllLots),
+                    onSelected: (value) {
+                      setState(() => _allLots = value);
+                      _load();
+                    },
+                  ),
                 ),
               ],
-              selected: {?_preset},
-              emptySelectionAllowed: true,
-              showSelectedIcon: false,
-              onSelectionChanged: (selection) {
-                if (selection.isNotEmpty) {
-                  _selectPreset(selection.first);
-                }
-              },
             ),
-          ),
-          SwitchListTile(
-            value: _allLots,
-            onChanged: (value) {
-              setState(() => _allLots = value);
-              _load();
-            },
-            title: Text(l10n.reportsAllLots),
-            subtitle: Text(l10n.reportsAllLotsHint),
-            secondary: const Icon(Icons.location_city_outlined),
           ),
           Expanded(
             child: RefreshIndicator(

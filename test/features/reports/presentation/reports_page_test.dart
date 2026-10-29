@@ -107,17 +107,25 @@ Future<_FakeReportRepository> _pump(
   return repository;
 }
 
-/// The page has two scrollables now (preset row + report list): target the
-/// list inside the refresh indicator.
-Future<void> _scrollTo(WidgetTester tester, Finder finder) =>
-    tester.scrollUntilVisible(
-      finder,
-      200,
-      scrollable: find.descendant(
-        of: find.byType(RefreshIndicator),
-        matching: find.byType(Scrollable),
-      ),
+/// The report list is lazy and disposes rows quickly: move in small steps so
+/// a target is found while it is still built, then let ensureVisible finish.
+Future<void> _scrollTo(WidgetTester tester, Finder finder) async {
+  final state = tester.state<ScrollableState>(find.byType(Scrollable).first);
+  var guard = 0;
+  while (finder.evaluate().isEmpty && guard < 80) {
+    final next = (state.position.pixels + 40).clamp(
+      0.0,
+      state.position.maxScrollExtent,
     );
+    if (next == state.position.pixels) {
+      break;
+    }
+    state.position.jumpTo(next);
+    await tester.pumpAndSettle();
+    guard++;
+  }
+  await Scrollable.ensureVisible(tester.element(finder));
+}
 
 void main() {
   testWidgets('Success: renders total revenue and occupancy in Spanish', (

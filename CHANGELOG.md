@@ -13,6 +13,8 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 **UI/UX pass across every module**
 
+- Reports: the range presets, date picker and all-sites toggle live in one
+  filter card with the selected period as summary (matching the other lists).
 - Settlement dialog: payment methods are a segmented choice, cash sits in a
   tonal panel with a large change figure, errors use an inline banner, the
   currency symbol/format come from `Money` (no hardcoded `$`, USD decimals

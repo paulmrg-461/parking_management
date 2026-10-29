@@ -69,6 +69,11 @@ module, developer page, COP/USD currency, es/en language; HEAD `f7dabe8`).
 - Gotcha: a lazily built `ListView` only builds visible children, so tests that
   assert the last row must use a tall viewport or scroll before asserting.
 
+- **Reports filter (2026-10-29)**: presets + date picker + "all sites" chip sit
+  in a `FilterBar` whose summary is the selected period; the range button moved
+  out of the app bar. The report test now scrolls the lazy list in 40 px steps
+  (`jumpTo`) because the list disposes rows aggressively and overshooting made
+  `scrollUntilVisible`/`dragUntilVisible` fail with "No element".
 - **Settlement/notifications (2026-10-29)**: the checkout dialog uses a
   `SegmentedButton<PaymentMethod>` (tests read `selected.single` instead of
   `RadioListTile.groupValue`), a tonal cash panel with `Money.format` and the
