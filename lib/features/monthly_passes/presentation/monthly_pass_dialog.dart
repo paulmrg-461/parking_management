@@ -5,6 +5,7 @@ import '../../../core/money/money.dart';
 import '../../../core/money/money_input.dart';
 import '../../../core/receipt/payment_method.dart';
 import '../../../core/theme/tokens.dart';
+import '../../../core/widgets/dialog_header.dart';
 import '../../../core/widgets/date_form_field.dart';
 import '../../vehicles/domain/entities/vehicle.dart';
 import '../domain/entities/monthly_pass.dart';
@@ -105,7 +106,10 @@ class _MonthlyPassDialogState extends State<MonthlyPassDialog> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return AlertDialog(
-      title: Text(_editing ? l10n.monthlyPassEdit : l10n.monthlyPassNew),
+      title: DialogHeader(
+        icon: Icons.card_membership_outlined,
+        title: _editing ? l10n.monthlyPassEdit : l10n.monthlyPassNew,
+      ),
       content: Form(
         key: _formKey,
         child: SingleChildScrollView(

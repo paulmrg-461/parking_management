@@ -4,6 +4,7 @@ import '../../../core/l10n/l10n.dart';
 import '../../../core/money/money.dart';
 import '../../../core/money/money_input.dart';
 import '../../../core/theme/tokens.dart';
+import '../../../core/widgets/dialog_header.dart';
 import '../../categories/domain/entities/category.dart';
 import '../domain/commands/create_tariff_command.dart';
 import '../domain/entities/tariff.dart';
@@ -73,7 +74,7 @@ class _CreateTariffDialogState extends State<CreateTariffDialog> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return AlertDialog(
-      title: Text(l10n.tariffNew),
+      title: DialogHeader(icon: Icons.payments_outlined, title: l10n.tariffNew),
       content: Form(
         key: _formKey,
         child: SingleChildScrollView(

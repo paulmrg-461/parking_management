@@ -13,6 +13,8 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 **UI/UX pass across every module**
 
+- Create/edit dialogs (user, vehicle, tariff, reservation, monthly pass, site,
+  category capacity) share a `DialogHeader` with a tonal icon, title and hint.
 - Diagnostics opens with a health banner: a calm "Todo en orden" block or the
   number of items needing attention, above the summary metrics.
 - Shift: the opening form leads with a tonal lock, title and hint, the amount

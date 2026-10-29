@@ -13,7 +13,7 @@ module, developer page, COP/USD currency, es/en language; HEAD `f7dabe8`).
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0068` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 834 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 835 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -69,6 +69,9 @@ module, developer page, COP/USD currency, es/en language; HEAD `f7dabe8`).
 - Gotcha: a lazily built `ListView` only builds visible children, so tests that
   assert the last row must use a tall viewport or scroll before asserting.
 
+- **Dialog header (2026-10-29)**: `DialogHeader` (tonal icon + title +
+  optional hint) is now the `AlertDialog.title` for the user, vehicle, tariff,
+  reservation, monthly-pass, site and capacity dialogs. Test count 835.
 - **Diagnostics banner (2026-10-29)**: a health banner sits above the metric
   row (success block when `alerts == 0`, else "N puntos requieren atención").
   It uses `health_and_safety_outlined` / `report_problem_outlined` — not
@@ -855,7 +858,7 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 ## Latest verification (2026-10-28)
 
-- `flutter test`: 834 passed (+1 live-stack integration skipped); `flutter
+- `flutter test`: 835 passed (+1 live-stack integration skipped); `flutter
   analyze` 152 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
 - `supabase/tests/run.sh` passed (migrations `0001`–`0067`); `e2e.sh` passed

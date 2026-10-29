@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/widgets/empty_state.dart';
 import 'package:parking_management/core/widgets/error_state.dart';
+import 'package:parking_management/core/widgets/dialog_header.dart';
 import 'package:parking_management/core/widgets/filter_bar.dart';
 import 'package:parking_management/core/widgets/metric_card.dart';
 import 'package:parking_management/core/widgets/section_header.dart';
@@ -33,6 +34,24 @@ void main() {
 
     await tester.tap(find.text('Registrar'));
     expect(tapped, 1);
+  });
+
+  testWidgets('Success: dialog headers carry icon, title and hint', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      testApp(
+        const DialogHeader(
+          icon: Icons.person_add_alt_1,
+          title: 'Nuevo usuario',
+          subtitle: 'Usuario y PIN de 6 dígitos',
+        ),
+      ),
+    );
+
+    expect(find.text('Nuevo usuario'), findsOneWidget);
+    expect(find.text('Usuario y PIN de 6 dígitos'), findsOneWidget);
+    expect(find.byIcon(Icons.person_add_alt_1), findsOneWidget);
   });
 
   testWidgets('Security: empty and error blocks stay centered on wide pages', (
