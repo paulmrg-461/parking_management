@@ -4,8 +4,9 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-10-28, branch `feature/supabase` (UI/UX pass across every
-module, developer page, COP/USD currency, es/en language; HEAD `f7dabe8`).
+Last updated: 2026-10-29, branch `feature/supabase` (UI/UX pass across every
+module, dialogs, developer page, COP/USD currency, es/en language; HEAD
+`d51f015`).
 
 ## Where we are
 
@@ -69,35 +70,31 @@ module, developer page, COP/USD currency, es/en language; HEAD `f7dabe8`).
 - Gotcha: a lazily built `ListView` only builds visible children, so tests that
   assert the last row must use a tall viewport or scroll before asserting.
 
-- **Dialog header (2026-10-29)**: `DialogHeader` (tonal icon + title +
-  optional hint) is now the `AlertDialog.title` for the user, vehicle, tariff,
-  reservation, monthly-pass, site and capacity dialogs. Test count 835.
-- **Diagnostics banner (2026-10-29)**: a health banner sits above the metric
-  row (success block when `alerts == 0`, else "N puntos requieren atención").
-  It uses `health_and_safety_outlined` / `report_problem_outlined` — not
-  `warning_amber_outlined`, which the a11y test counts. Test count 834.
-- **Shift cards (2026-10-29)**: opening form header (tonal lock + hint +
-  currency prefix) and the closed-shift card (balanced/warning chip, two
-  `MetricCard`s for expected/counted). A 4-across home KPI grid was tried and
-  reverted: at the 1080 content cap the cards overflow their internal rows.
-- **Reports filter (2026-10-29)**: presets + date picker + "all sites" chip sit
-  in a `FilterBar` whose summary is the selected period; the range button moved
-  out of the app bar. The report test now scrolls the lazy list in 40 px steps
-  (`jumpTo`) because the list disposes rows aggressively and overshooting made
-  `scrollUntilVisible`/`dragUntilVisible` fail with "No element".
-- **Settlement/notifications (2026-10-29)**: the checkout dialog uses a
-  `SegmentedButton<PaymentMethod>` (tests read `selected.single` instead of
-  `RadioListTile.groupValue`), a tonal cash panel with `Money.format` and the
-  currency symbol, an inline error banner and `Money.parse` for discounts;
-  notifications add an app-bar type filter (`monthly_pass` matches both pass
-  types). Test count 832.
-- **Developer page (2026-10-28)**: `/about` is public (`route_access.aboutPath`,
-  allowed in `authRedirect`) and shows the DevPaul identity, links and the
-  authorship/rights notices; the logo lives at `assets/branding/devpaul.png`
-  (512 px, registered in pubspec). Entry points: drawer ListTile, desktop
-  sidebar info button (tooltip aboutDeveloper), login footer credit. Links use
-  the injectable `AboutLinkLauncher` seam so tests never leave the process.
-  Test count 830.
+### UI batches (2026-10-29)
+
+- Settlement: segmented payment methods, tonal cash panel (`Money.format` +
+  currency symbol), inline error banner and `Money.parse` for discounts.
+  Notifications add an app-bar type filter (`monthly_pass` covers expiring and
+  renewed).
+- Reports: presets + date picker + "all sites" chip in one `FilterBar` with the
+  period as summary. Its test scrolls in 40 px `jumpTo` steps: the lazy list
+  disposes rows and overshooting makes `scrollUntilVisible` throw "No element".
+- Shift: opening form header with hint and currency prefix; closed card with a
+  balanced/warning chip and expected/counted `MetricCard`s. A 4-across home KPI
+  grid was tried and reverted (cards overflow their internal rows at the 1080
+  content cap).
+- Diagnostics: health banner above the metrics (`alerts == 0` → success, else
+  "N puntos requieren atención"). It uses `health_and_safety_outlined` /
+  `report_problem_outlined` because the a11y test counts
+  `warning_amber_outlined`.
+- `DialogHeader` (tonal icon + title + optional hint) titles the user, vehicle,
+  tariff, reservation, pass, site and capacity dialogs.
+- Public developer page at `/about` (`route_access.aboutPath`, allowed in
+  `authRedirect`): DevPaul identity, links and authorship/rights notices; logo
+  at `assets/branding/devpaul.png` (512 px, registered in pubspec). Entry
+  points: drawer, desktop sidebar info button (`aboutDeveloper` tooltip) and
+  login footer; links use the injectable `AboutLinkLauncher` seam.
+- Test count: 835.
 - **Centering fix (2026-10-28)**: `CenteredScrollable` now enforces
   `minWidth` equal to the viewport, otherwise its scroll child shrank to the
   widest line and the empty/error block drifted left on wide pages (the
@@ -655,7 +652,7 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   `SUPABASE_PUBLIC_URL` from `.env`.
 - Port 8000 is no longer bound in this environment.
 
-## Dev environment running (2026-10-28)
+## Dev environment running (2026-10-29)
 
 - Backend: `docker compose up -d` from the repo root; all services healthy,
   gateway/Studio on <http://localhost:8017> (`API_GW_HTTP_PORT` in `.env`);
