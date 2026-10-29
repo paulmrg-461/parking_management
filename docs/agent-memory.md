@@ -656,11 +656,10 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   cannot be registered there until categories/tariffs are created).
 - The apps use `localhost:8017`; if the phone shows "cannot reach the server",
   check `adb reverse --list` first (see below), not `ufw`.
-- **2026-10-28 (night): the phone is offline from adb** (`adb devices` empty and
-  `192.168.0.2:42585` refuses); the APK built but could not be installed.
-  Reconnect wireless adb, run `adb reverse tcp:8017 tcp:8017`, reinstall
-  `build/app/outputs/flutter-apk/app-debug.apk` and start
-  `pro.devpaul.parking_management/.MainActivity`.
+- **2026-10-29: the phone is back over wireless adb at `192.168.0.2:33411`**
+  (the port changes on every reconnect); `adb reverse tcp:8017 tcp:8017` was
+  re-applied and the current APK installed. If it drops again, `adb devices`
+  first, then reconnect by IP:port, re-apply the reverse and reinstall.
 - Chrome dev app is running with `APP_URL=http://192.168.0.17:8080`; the public
   bundle is served by Docker on `:8080` (restart `parking-evidence-web` after a
   public build).
