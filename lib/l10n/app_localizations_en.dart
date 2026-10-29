@@ -2812,4 +2812,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get diagnosticsAttentionHint => 'Review the sections marked below.';
+
+  @override
+  String get routeErrorTitle => 'Page not found';
+
+  @override
+  String get routeErrorBody =>
+      'This route does not exist or is no longer available. Go back home to continue.';
+
+  @override
+  String get routeErrorHome => 'Back to home';
 }

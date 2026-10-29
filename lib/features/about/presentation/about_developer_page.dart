@@ -24,6 +24,10 @@ class AboutDeveloperPage extends StatelessWidget {
     'FLUTTER_BUILD_NAME',
     defaultValue: '1.0.0',
   );
+  static const _build = String.fromEnvironment(
+    'FLUTTER_BUILD_NUMBER',
+    defaultValue: '1',
+  );
 
   static const _devpaul = 'https://devpaul.pro';
   static const _github = 'https://github.com/paulmrg-461';
@@ -46,7 +50,7 @@ class AboutDeveloperPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const _Hero(version: _version),
+                  _Hero(version: '$_version ($_build)'),
                   const SizedBox(height: Space.lg),
                   _LinkCard(
                     links: [
@@ -101,7 +105,7 @@ class AboutDeveloperPage extends StatelessWidget {
                                           ),
                                     ),
                                     Text(
-                                      l10n.aboutVersion(_version),
+                                      l10n.aboutVersion('$_version ($_build)'),
                                       style: theme.textTheme.bodySmall
                                           ?.copyWith(
                                             color: scheme.onSurfaceVariant,

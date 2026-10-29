@@ -902,5 +902,8 @@
   "diagnosticsHealthyTitle": "All clear",
   "diagnosticsHealthyHint": "No alerts or pending queues right now.",
   "diagnosticsAttention": "{count} item(s) need attention",
-  "diagnosticsAttentionHint": "Review the sections marked below."
+  "diagnosticsAttentionHint": "Review the sections marked below.",
+  "routeErrorTitle": "Page not found",
+  "routeErrorBody": "This route does not exist or is no longer available. Go back home to continue.",
+  "routeErrorHome": "Back to home"
 }

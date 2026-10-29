@@ -11,6 +11,19 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Added
 
+**Production hardening**
+
+- `0069_scale_hardening.sql`: `pg_trgm` + a GIN index for plate search, hot-path
+  composite indexes (sessions per lot/entry, passes per lot/end, active
+  reservations, notifications per lot/user/date) and guarded invariants
+  (`end_date >= start_date`, non-negative pass and charged amounts). SQL suite
+  covers the indexes and the three constraints.
+- Friendly `RouteErrorPage` for unknown or broken deep links, with a one-tap
+  return home (router `errorBuilder` + test).
+- `/about` shows the build name and number (`FLUTTER_BUILD_NAME`/`NUMBER`).
+- `docs/production-readiness.md`: SLO targets, infrastructure, schema guards,
+  security, resilience, observability, release checklist and known limits.
+
 **UI/UX pass across every module**
 
 - Create/edit dialogs (user, vehicle, tariff, reservation, monthly pass, site,

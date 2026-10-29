@@ -5101,6 +5101,24 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Revisa las secciones marcadas abajo.'**
   String get diagnosticsAttentionHint;
+
+  /// No description provided for @routeErrorTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Página no encontrada'**
+  String get routeErrorTitle;
+
+  /// No description provided for @routeErrorBody.
+  ///
+  /// In es, this message translates to:
+  /// **'La ruta no existe o ya no está disponible. Vuelve al inicio para continuar.'**
+  String get routeErrorBody;
+
+  /// No description provided for @routeErrorHome.
+  ///
+  /// In es, this message translates to:
+  /// **'Volver al inicio'**
+  String get routeErrorHome;
 }
 
 class _AppLocalizationsDelegate

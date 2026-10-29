@@ -2065,4 +2065,55 @@ end $$;
 reset role;
 update public.parking_settings set currency = 'COP' where lot_id = 1;
 
+-- Scale hardening (0069): search indexes exist and invariants hold.
+do $$
+begin
+    if to_regclass('public.ix_vehicles_plate_trgm') is null then
+        raise exception 'missing vehicles trigram index';
+    end if;
+    if to_regclass('public.ix_sessions_lot_entry') is null
+       or to_regclass('public.ix_passes_lot_end') is null
+       or to_regclass('public.ix_reservations_lot_until') is null
+       or to_regclass('public.ix_notifications_lot_user_created') is null then
+        raise exception 'missing hot-path index';
+    end if;
+    if not exists (
+        select 1 from pg_extension where extname = 'pg_trgm'
+    ) then
+        raise exception 'pg_trgm is not installed';
+    end if;
+end $$;
+
+do $$
+declare
+    vehicle integer := (select id from public.vehicles order by id limit 1);
+begin
+    begin
+        insert into public.monthly_passes (
+            vehicle_id, start_date, end_date, amount
+        ) values (vehicle, '2026-02-01', '2026-01-01', 1000);
+        raise exception 'a pass with end < start was accepted';
+    exception when check_violation then
+        null;
+    end;
+
+    begin
+        insert into public.monthly_passes (
+            vehicle_id, start_date, end_date, amount
+        ) values (vehicle, '2026-01-01', '2026-02-01', -1);
+        raise exception 'a negative pass amount was accepted';
+    exception when check_violation then
+        null;
+    end;
+
+    begin
+        update public.parking_sessions set amount_charged = -1 where id = (
+            select id from public.parking_sessions order by id limit 1
+        );
+        raise exception 'a negative charge was accepted';
+    exception when check_violation then
+        null;
+    end;
+end $$;
+
 rollback;

@@ -56,6 +56,7 @@ import 'deferred/tariffs_entry.dart' deferred as tariffs;
 import 'deferred/users_entry.dart' deferred as users;
 import 'deferred/vehicles_entry.dart' deferred as vehicles;
 import 'route_access.dart';
+import 'route_error_page.dart';
 
 /// Builds the app router. Redirects re-run on every [AuthCubit] change via
 /// [refresh] (a `GoRouterRefreshStream` owned and disposed by the caller).
@@ -68,6 +69,7 @@ GoRouter buildRouter(AuthCubit auth, Listenable refresh) => GoRouter(
   initialLocation: homePath,
   refreshListenable: refresh,
   redirect: (_, state) => authRedirect(auth.state, state.uri.path),
+  errorBuilder: (context, state) => RouteErrorPage(error: state.error),
   routes: [
     GoRoute(path: loginPath, builder: (context, state) => const LoginPage()),
     GoRoute(

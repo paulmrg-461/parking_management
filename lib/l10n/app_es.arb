@@ -975,5 +975,8 @@
   "diagnosticsHealthyHint": "No hay alertas ni colas pendientes en este momento.",
   "diagnosticsAttention": "{count} punto(s) requieren atención",
   "@diagnosticsAttention": {"placeholders": {"count": {"type": "int"}}},
-  "diagnosticsAttentionHint": "Revisa las secciones marcadas abajo."
+  "diagnosticsAttentionHint": "Revisa las secciones marcadas abajo.",
+  "routeErrorTitle": "Página no encontrada",
+  "routeErrorBody": "La ruta no existe o ya no está disponible. Vuelve al inicio para continuar.",
+  "routeErrorHome": "Volver al inicio"
 }

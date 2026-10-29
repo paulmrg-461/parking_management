@@ -58,6 +58,19 @@ void main() {
       expect(find.text('Ingresar'), findsOneWidget);
     });
 
+    testWidgets('Failure: an unknown route shows the friendly error page', (
+      tester,
+    ) async {
+      await pumpApp(tester, role: UserRole.admin);
+
+      await goTo(tester, '/does-not-exist');
+
+      expect(find.text('Página no encontrada'), findsWidgets);
+      await tester.tap(find.text('Volver al inicio'));
+      await tester.pumpAndSettle();
+      expect(find.text('Hola, Juan'), findsOneWidget);
+    });
+
     testWidgets('Success: admin can open /users', (tester) async {
       await pumpApp(tester, role: UserRole.admin);
 
