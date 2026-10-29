@@ -2709,4 +2709,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get checkOutGoToCheckIn => 'Register check-in';
+
+  @override
+  String get checkInVehicleSection => 'Vehicle';
+
+  @override
+  String get checkInVehicleHint => 'Plate, category and vehicle details';
+
+  @override
+  String get checkInEvidenceSection => 'Evidence';
+
+  @override
+  String get checkInEvidenceHint =>
+      'Photos or video of the vehicle\'s condition';
 }

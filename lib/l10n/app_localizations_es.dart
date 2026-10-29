@@ -2724,4 +2724,16 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get checkOutGoToCheckIn => 'Registrar entrada';
+
+  @override
+  String get checkInVehicleSection => 'Vehículo';
+
+  @override
+  String get checkInVehicleHint => 'Placa, categoría y datos del vehículo';
+
+  @override
+  String get checkInEvidenceSection => 'Evidencia';
+
+  @override
+  String get checkInEvidenceHint => 'Fotos o video del estado del vehículo';
 }

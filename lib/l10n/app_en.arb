@@ -870,5 +870,9 @@
   "parkedCount": "{count} parked",
   "checkOutEmptyTitle": "Lot is empty",
   "checkOutEmptyHint": "Register a check-in to see it here and charge it on exit.",
-  "checkOutGoToCheckIn": "Register check-in"
+  "checkOutGoToCheckIn": "Register check-in",
+  "checkInVehicleSection": "Vehicle",
+  "checkInVehicleHint": "Plate, category and vehicle details",
+  "checkInEvidenceSection": "Evidence",
+  "checkInEvidenceHint": "Photos or video of the vehicle's condition"
 }

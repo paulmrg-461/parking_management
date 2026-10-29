@@ -4909,6 +4909,30 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Registrar entrada'**
   String get checkOutGoToCheckIn;
+
+  /// No description provided for @checkInVehicleSection.
+  ///
+  /// In es, this message translates to:
+  /// **'Vehículo'**
+  String get checkInVehicleSection;
+
+  /// No description provided for @checkInVehicleHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Placa, categoría y datos del vehículo'**
+  String get checkInVehicleHint;
+
+  /// No description provided for @checkInEvidenceSection.
+  ///
+  /// In es, this message translates to:
+  /// **'Evidencia'**
+  String get checkInEvidenceSection;
+
+  /// No description provided for @checkInEvidenceHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Fotos o video del estado del vehículo'**
+  String get checkInEvidenceHint;
 }
 
 class _AppLocalizationsDelegate

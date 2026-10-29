@@ -59,6 +59,12 @@ class _SettingsPageState extends State<SettingsPage> {
   late final TextEditingController _motoOutOfService;
   late final TextEditingController _legalPolicy;
   String _currency = 'COP';
+  final _identityKey = GlobalKey();
+  final _spacesKey = GlobalKey();
+  final _evidenceKey = GlobalKey();
+  final _messagingKey = GlobalKey();
+  final _preferencesKey = GlobalKey();
+  final _legalKey = GlobalKey();
   var _seeded = false;
   bool _whatsappAuto = false;
   List<String>? _baseline;
@@ -256,8 +262,13 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         children: [
           _logoSection(context, settings),
+          if (MediaQuery.sizeOf(context).width >= 720) ...[
+            _sectionIndex(context),
+            const SizedBox(height: Space.md),
+          ],
           const SizedBox(height: Space.lg),
           SectionHeader(
+            key: _identityKey,
             icon: Icons.badge_outlined,
             title: l10n.settingsSectionIdentity,
           ),
@@ -317,6 +328,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const SizedBox(height: Space.lg),
           SectionHeader(
+            key: _spacesKey,
             icon: Icons.grid_view_rounded,
             title: l10n.settingsSectionSpaces,
           ),
@@ -406,6 +418,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const SizedBox(height: Space.lg),
           SectionHeader(
+            key: _evidenceKey,
             icon: Icons.photo_camera_outlined,
             title: l10n.settingsSectionEvidence,
           ),
@@ -429,6 +442,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const SizedBox(height: Space.lg),
           SectionHeader(
+            key: _messagingKey,
             icon: Icons.chat_outlined,
             title: l10n.settingsSectionMessaging,
           ),
@@ -442,6 +456,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const SizedBox(height: Space.lg),
           SectionHeader(
+            key: _preferencesKey,
             icon: Icons.tune,
             title: l10n.settingsSectionPreferences,
           ),
@@ -466,6 +481,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const SizedBox(height: Space.lg),
           SectionHeader(
+            key: _legalKey,
             icon: Icons.gavel_outlined,
             title: l10n.settingsSectionLegal,
           ),
@@ -579,6 +595,48 @@ class _SettingsPageState extends State<SettingsPage> {
             child: Text(l10n.actionClose),
           ),
         ],
+      ),
+    );
+  }
+
+  /// On wide screens the form is long: a chip index jumps to each block.
+  Widget _sectionIndex(BuildContext context) {
+    final l10n = context.l10n;
+    final entries = [
+      (Icons.badge_outlined, l10n.settingsSectionIdentity, _identityKey),
+      (Icons.grid_view_rounded, l10n.settingsSectionSpaces, _spacesKey),
+      (Icons.photo_camera_outlined, l10n.settingsSectionEvidence, _evidenceKey),
+      (Icons.chat_outlined, l10n.settingsSectionMessaging, _messagingKey),
+      (Icons.tune, l10n.settingsSectionPreferences, _preferencesKey),
+      (Icons.gavel_outlined, l10n.settingsSectionLegal, _legalKey),
+    ];
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (final (icon, label, key) in entries) ...[
+            ActionChip(
+              avatar: Icon(icon, size: 18),
+              label: Text(label),
+              onPressed: () => _jumpTo(key),
+            ),
+            const SizedBox(width: Space.sm),
+          ],
+        ],
+      ),
+    );
+  }
+
+  void _jumpTo(GlobalKey key) {
+    final target = key.currentContext;
+    if (target == null) {
+      return;
+    }
+    unawaited(
+      Scrollable.ensureVisible(
+        target,
+        duration: Motion.short,
+        curve: Curves.easeOutCubic,
       ),
     );
   }

@@ -27,6 +27,8 @@ import '../../../core/widgets/plate_input_field.dart';
 import '../../../core/widgets/plate_keypad.dart';
 import '../../../core/receipt/evidence_link.dart';
 import '../../../core/widgets/receipt_card.dart';
+import '../../../core/widgets/section_header.dart';
+import '../../../core/widgets/status_chip.dart';
 import '../../../core/widgets/skeleton.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/widgets/sync_badge.dart';
@@ -729,6 +731,14 @@ class _CheckInPageState extends State<CheckInPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        SectionHeader(
+          icon: Icons.directions_car_outlined,
+          title: l10n.checkInVehicleSection,
+          subtitle: l10n.checkInVehicleHint,
+        ),
+        const SizedBox(height: Space.sm),
+        _SessionPulse(holds: _activeHolds.length),
+        const SizedBox(height: Space.sm),
         if (widget.canScan) ...[
           Tooltip(
             message: l10n.plateScanTooltip,
@@ -815,7 +825,13 @@ class _CheckInPageState extends State<CheckInPage> {
           subtitle: Text(l10n.checkInLeftKeysHint),
           secondary: const Icon(Icons.key_outlined),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: Space.md),
+        SectionHeader(
+          icon: Icons.photo_camera_outlined,
+          title: l10n.checkInEvidenceSection,
+          subtitle: l10n.checkInEvidenceHint,
+        ),
+        const SizedBox(height: Space.sm),
         PhotoStrip(
           photos: [for (final photo in _photos) photo.bytes],
           max: EvidencePolicy.maxPhotos,
@@ -839,17 +855,21 @@ class _CheckInPageState extends State<CheckInPage> {
     bool submitting,
     VehicleLookupState lookup,
   ) {
-    return FilledButton(
-      onPressed: _canSubmit(submitting, lookup)
-          ? () => _submit(context, lookup)
-          : null,
-      child: submitting
-          ? const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          : Text(context.l10n.checkInSubmit),
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: Layout.minTouch),
+      child: FilledButton.icon(
+        onPressed: _canSubmit(submitting, lookup)
+            ? () => _submit(context, lookup)
+            : null,
+        icon: submitting
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Icon(Icons.login),
+        label: Text(context.l10n.checkInSubmit),
+      ),
     );
   }
 
@@ -976,6 +996,42 @@ class _CheckInPageState extends State<CheckInPage> {
           textCapitalization: TextCapitalization.words,
         ),
       ],
+    );
+  }
+}
+
+/// Live context above the form: how many vehicles are inside and how many
+/// reservations are waiting, without leaving the check-in flow.
+class _SessionPulse extends StatelessWidget {
+  const _SessionPulse({required this.holds});
+
+  final int holds;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return BlocBuilder<CheckInCubit, CheckInState>(
+      buildWhen: (previous, current) =>
+          previous.sessions.length != current.sessions.length,
+      builder: (context, state) => Wrap(
+        spacing: Space.sm,
+        runSpacing: Space.xs,
+        children: [
+          StatusChip(
+            label: l10n.parkedCount(state.sessions.length),
+            tone: state.sessions.isEmpty
+                ? StatusTone.neutral
+                : StatusTone.success,
+            icon: Icons.local_parking_outlined,
+          ),
+          if (holds > 0)
+            StatusChip(
+              label: l10n.reservationsCount(holds),
+              tone: StatusTone.pending,
+              icon: Icons.event_available_outlined,
+            ),
+        ],
+      ),
     );
   }
 }

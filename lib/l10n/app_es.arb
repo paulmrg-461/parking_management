@@ -941,5 +941,9 @@
   "checkOutEmptyTitle": "Parqueadero vacío",
   "checkOutEmptyHint": "Registra una entrada para verla aquí y cobrarla al salir.",
   "checkOutGoToCheckIn": "Registrar entrada",
-  "@parkedCount": {"placeholders": {"count": {"type": "int"}}}
+  "@parkedCount": {"placeholders": {"count": {"type": "int"}}},
+  "checkInVehicleSection": "Vehículo",
+  "checkInVehicleHint": "Placa, categoría y datos del vehículo",
+  "checkInEvidenceSection": "Evidencia",
+  "checkInEvidenceHint": "Fotos o video del estado del vehículo"
 }

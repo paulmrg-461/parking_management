@@ -13,6 +13,11 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 **UI/UX pass across every module**
 
+- Check-in: the form is split into "Vehículo" and "Evidencia" sections with
+  hints, a live pulse chip (`N dentro` / active holds) above the plate field,
+  and the submit button gains an icon and a 48 dp target.
+- Settings: wide screens get a section chip index (identity, spaces, evidence,
+  messaging, preferences, legal) that scrolls to each block.
 - Check-out: the plate search and QR button sit in a filter card with the
   "N inside" count, open sessions render as cards with a long-stay avatar and
   the empty lot explains the next step with a check-in CTA.
