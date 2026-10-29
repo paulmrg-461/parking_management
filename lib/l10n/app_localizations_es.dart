@@ -2813,4 +2813,19 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get shiftClosedHint => 'Resumen del último turno cerrado.';
+
+  @override
+  String get diagnosticsHealthyTitle => 'Todo en orden';
+
+  @override
+  String get diagnosticsHealthyHint =>
+      'No hay alertas ni colas pendientes en este momento.';
+
+  @override
+  String diagnosticsAttention(int count) {
+    return '$count punto(s) requieren atención';
+  }
+
+  @override
+  String get diagnosticsAttentionHint => 'Revisa las secciones marcadas abajo.';
 }

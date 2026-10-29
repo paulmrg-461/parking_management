@@ -13,6 +13,8 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 **UI/UX pass across every module**
 
+- Diagnostics opens with a health banner: a calm "Todo en orden" block or the
+  number of items needing attention, above the summary metrics.
 - Shift: the opening form leads with a tonal lock, title and hint, the amount
   field shows the currency symbol and the button keeps a 48 dp target; the
   closed-shift card shows balanced/warning icon and chip plus expected/counted

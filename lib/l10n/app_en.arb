@@ -898,5 +898,9 @@
   "aboutLogoLabel": "DevPaul logo",
   "aboutOpenError": "Could not open the link",
   "shiftOpeningHint": "Count the cash the drawer starts with.",
-  "shiftClosedHint": "Summary of the last closed shift."
+  "shiftClosedHint": "Summary of the last closed shift.",
+  "diagnosticsHealthyTitle": "All clear",
+  "diagnosticsHealthyHint": "No alerts or pending queues right now.",
+  "diagnosticsAttention": "{count} item(s) need attention",
+  "diagnosticsAttentionHint": "Review the sections marked below."
 }

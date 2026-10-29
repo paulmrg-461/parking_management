@@ -2798,4 +2798,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get shiftClosedHint => 'Summary of the last closed shift.';
+
+  @override
+  String get diagnosticsHealthyTitle => 'All clear';
+
+  @override
+  String get diagnosticsHealthyHint => 'No alerts or pending queues right now.';
+
+  @override
+  String diagnosticsAttention(int count) {
+    return '$count item(s) need attention';
+  }
+
+  @override
+  String get diagnosticsAttentionHint => 'Review the sections marked below.';
 }

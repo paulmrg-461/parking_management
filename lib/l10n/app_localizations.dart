@@ -5077,6 +5077,30 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Resumen del último turno cerrado.'**
   String get shiftClosedHint;
+
+  /// No description provided for @diagnosticsHealthyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Todo en orden'**
+  String get diagnosticsHealthyTitle;
+
+  /// No description provided for @diagnosticsHealthyHint.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay alertas ni colas pendientes en este momento.'**
+  String get diagnosticsHealthyHint;
+
+  /// No description provided for @diagnosticsAttention.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} punto(s) requieren atención'**
+  String diagnosticsAttention(int count);
+
+  /// No description provided for @diagnosticsAttentionHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisa las secciones marcadas abajo.'**
+  String get diagnosticsAttentionHint;
 }
 
 class _AppLocalizationsDelegate

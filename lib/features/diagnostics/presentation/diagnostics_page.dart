@@ -92,6 +92,8 @@ class _Body extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(Space.md),
       children: [
+        _HealthBanner(alerts: alerts),
+        const SizedBox(height: Space.md),
         IntrinsicHeight(
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -242,6 +244,65 @@ class _Body extends StatelessWidget {
         else
           for (final report in errors) _ErrorTile(report: report),
       ],
+    );
+  }
+}
+
+/// At-a-glance health: a calm success block when nothing needs attention, an
+/// alert block with the count when something does.
+class _HealthBanner extends StatelessWidget {
+  const _HealthBanner({required this.alerts});
+
+  final int alerts;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final ok = alerts == 0;
+    final background = ok ? scheme.primaryContainer : scheme.errorContainer;
+    final foreground = ok ? scheme.onPrimaryContainer : scheme.onErrorContainer;
+    return Container(
+      padding: const EdgeInsets.all(Space.md),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(Radii.md),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            ok ? Icons.health_and_safety_outlined : Icons.report_problem_outlined,
+            color: foreground,
+          ),
+          const SizedBox(width: Space.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  ok
+                      ? l10n.diagnosticsHealthyTitle
+                      : l10n.diagnosticsAttention(alerts),
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: foreground,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  ok
+                      ? l10n.diagnosticsHealthyHint
+                      : l10n.diagnosticsAttentionHint,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: foreground.withValues(alpha: 0.85),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

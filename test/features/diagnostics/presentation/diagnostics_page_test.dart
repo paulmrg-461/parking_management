@@ -53,6 +53,29 @@ void main() {
     expect(find.textContaining('evidence'), findsOneWidget);
   });
 
+  testWidgets('Success: a clean panel shows the healthy banner', (
+    tester,
+  ) async {
+    await pumpPage(tester);
+
+    expect(find.text('Todo en orden'), findsOneWidget);
+    expect(
+      find.text('No hay alertas ni colas pendientes en este momento.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('Failure: stale work switches the banner to attention', (
+    tester,
+  ) async {
+    await pumpPage(tester, staleSessions: 2, deadPush: 1);
+
+    expect(
+      find.textContaining('requieren atención'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('Success: a client error opens its detail', (tester) async {
     await pumpPage(tester, errors: [sampleError()]);
 

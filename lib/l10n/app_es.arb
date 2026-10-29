@@ -970,5 +970,10 @@
   "aboutOpenError": "No se pudo abrir el enlace",
   "@aboutVersion": {"placeholders": {"version": {"type": "String"}}},
   "shiftOpeningHint": "Cuenta el efectivo con el que inicia la caja.",
-  "shiftClosedHint": "Resumen del último turno cerrado."
+  "shiftClosedHint": "Resumen del último turno cerrado.",
+  "diagnosticsHealthyTitle": "Todo en orden",
+  "diagnosticsHealthyHint": "No hay alertas ni colas pendientes en este momento.",
+  "diagnosticsAttention": "{count} punto(s) requieren atención",
+  "@diagnosticsAttention": {"placeholders": {"count": {"type": "int"}}},
+  "diagnosticsAttentionHint": "Revisa las secciones marcadas abajo."
 }
