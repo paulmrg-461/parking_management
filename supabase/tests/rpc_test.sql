@@ -2116,4 +2116,22 @@ begin
     end;
 end $$;
 
+-- Every public table must have RLS enabled (service-role-only tables included;
+-- they simply have no policies). This catches new tables shipped without it.
+do $$
+declare
+    missing text;
+begin
+    select string_agg(c.relname, ', ' order by c.relname)
+      into missing
+      from pg_class c
+      join pg_namespace n on n.oid = c.relnamespace
+     where n.nspname = 'public'
+       and c.relkind = 'r'
+       and not c.relrowsecurity;
+    if missing is not null then
+        raise exception 'public tables without RLS: %', missing;
+    end if;
+end $$;
+
 rollback;

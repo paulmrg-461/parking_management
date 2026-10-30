@@ -47,6 +47,9 @@ operational assumption changes.
       `analyze` after creation.
 - [x] Invariants: pass `end_date >= start_date`, non-negative pass amounts and
       charged amounts.
+- [x] Every public table must have RLS: `rpc_test.sql` fails if a new table
+      ships without it, and `0070` locks the runner's `public.schema_migrations`
+      (RLS on, no grants for `anon`/`authenticated`).
 - [x] Lists paginate server-side (`session_records`, vehicles, passes,
       notifications, audit); bounded page sizes (≤ 200).
 - [ ] PITR/WAL archiving depends on the hosting choice; enable it on managed
@@ -124,8 +127,10 @@ operational assumption changes.
 - The Linux desktop target and its integration suite are not wired yet (AGENTS
   asks for them); CI currently covers web/Android plus the SQL and live-stack
   e2e suites.
-- Coverage is measured by running `flutter test --coverage`; a ratchet gate is
-  not enforced in CI yet.
+- Coverage is measured by `flutter test --coverage` and gated in CI with
+  `tool/check_coverage.dart`: global ≥ 70 %, application ≥ 90 %, domain ≥ 35 %,
+  infrastructure ≥ 25 %. The layer floors are a ratchet, not the final target
+  (AGENTS asks 90 % on domain/infrastructure mappers).
 - `idempotency_keys` is purged by cron; confirm the cron is actually running on
   the host (`select * from cron.job` when `pg_cron` is available).
 - App distribution is manual (APK/Play upload); no update channel yet.

@@ -80,6 +80,12 @@ module, dialogs, developer page, COP/USD currency, es/en language; HEAD
 - `RouteErrorPage` + `go_router` `errorBuilder` replace raw router exceptions on
   unknown/deep-link paths, with a home CTA (router test).
 - `/about` shows `FLUTTER_BUILD_NAME (FLUTTER_BUILD_NUMBER)`.
+- RLS guard: `rpc_test.sql` requires RLS on every `public` table; `0070` locks
+  `public.schema_migrations` (RLS on, no anon/authenticated grants).
+- Coverage ratchet: `flutter test --coverage` + `dart run
+  tool/check_coverage.dart` (global 70, application 90, domain 35,
+  infrastructure 25; generated/l10n ignored). CI pins Flutter 3.50.0-0.1.pre,
+  the local beta.
 - `docs/production-readiness.md` is the go-live checklist (SLOs, infra, schema
   guards, security, resilience, observability, release/rollback, limits);
   linked from `docs/README.md` and `AGENTS.md`.

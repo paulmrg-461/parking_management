@@ -20,6 +20,12 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   covers the indexes and the three constraints.
 - Friendly `RouteErrorPage` for unknown or broken deep links, with a one-tap
   return home (router `errorBuilder` + test).
+- RLS guard: the SQL suite fails when any `public` table lacks RLS;
+  `0070_lock_migrations_table.sql` enables it on the runner's
+  `schema_migrations` and revokes `anon`/`authenticated` access.
+- CI now runs `flutter test --coverage` + `dart run tool/check_coverage.dart`
+  (global ≥ 70 %, application ≥ 90 %, domain/infrastructure ratcheted) and pins
+  the same Flutter beta as local (3.50.0-0.1.pre).
 - `/about` shows the build name and number (`FLUTTER_BUILD_NAME`/`NUMBER`).
 - `docs/production-readiness.md`: SLO targets, infrastructure, schema guards,
   security, resilience, observability, release checklist and known limits.

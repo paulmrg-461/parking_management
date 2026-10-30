@@ -15,11 +15,13 @@ jobs:
           # pubspec requires a prerelease Dart SDK (^3.14.0-95.1.beta).
           channel: beta
           # Pin the exact beta so a new beta can't silently break the build.
-          flutter-version: 3.49.0-0.1.pre
+          flutter-version: 3.50.0-0.1.pre
           cache: true
       - run: flutter pub get
       - run: flutter analyze
-      - run: flutter test
+      - run: flutter test --coverage
+      # Ratchet: keeps global/layer coverage from regressing (tool/check_coverage.dart).
+      - run: dart run tool/check_coverage.dart
       # Guards F-WEB: no dart:io / mobile-only plugin may leak into the web
       # build (platform adapters are picked via conditional imports).
       - name: Build web (release)
@@ -116,7 +118,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: beta
-          flutter-version: 3.49.0-0.1.pre
+          flutter-version: 3.50.0-0.1.pre
           cache: true
       - run: flutter pub get
 
