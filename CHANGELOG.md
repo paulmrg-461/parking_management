@@ -23,6 +23,9 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - RLS guard: the SQL suite fails when any `public` table lacks RLS;
   `0070_lock_migrations_table.sql` enables it on the runner's
   `schema_migrations` and revokes `anon`/`authenticated` access.
+- Branded first paint: the Android cold-start window uses the brand background
+  with the app mark centred, and the web build shows a dark splash with the
+  icon until Flutter's first frame (removed automatically).
 - `0071_retention_schedule.sql` completes the `pg_cron` schedule (audit 365 d,
   WhatsApp 90 d); the host cron fallback already called both functions.
 - `BACKUP_KEEP=N` prunes old archives while keeping the newest N.

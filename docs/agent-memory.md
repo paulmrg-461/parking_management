@@ -702,8 +702,11 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   `adb devices` first, then reconnect by IP:port, re-apply the reverse and
   reinstall.
 - Chrome dev app is running with `APP_URL=http://192.168.0.17:8080`; the public
-  bundle is served by Docker on `:8080` (restart `parking-evidence-web` after a
-  public build).
+  bundle is served by Docker (restart `parking-evidence-web` after a public
+  build). **Port 8080 on `127.0.0.1` belongs to another local project**
+  (`xuper_flutter/tools/local_proxy.js`), so the container binds
+  `192.168.0.17:8080:80`: use the LAN URL for evidence/policies, not
+  `http://localhost:8080`. Recreate it with that bind after a Docker restart.
 
 ## Android over adb
 

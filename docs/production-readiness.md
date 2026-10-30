@@ -74,6 +74,8 @@ operational assumption changes.
       dropped).
 - [x] Admin-only discounts with a required reason; cash actions disabled
       offline and never queued.
+- [x] Cold start is branded (Android launch background + web splash removed on
+      the first Flutter frame), so the operator never sees a white screen.
 - [x] Public static host (`parking-evidence-web`) sends `X-Content-Type-Options`,
       `Referrer-Policy`, `X-Frame-Options`, `Permissions-Policy` and gzip; the
       evidence links are plate-keyed and expire.

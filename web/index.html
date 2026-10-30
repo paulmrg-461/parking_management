@@ -20,6 +20,7 @@
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="Parking lot operations: check-in, billing, monthly passes and cash shifts.">
   <meta name="theme-color" content="#0B0D10">
+  <meta name="color-scheme" content="dark light">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -32,8 +33,37 @@
 
   <title>Parking Management</title>
   <link rel="manifest" href="manifest.json">
+
+  <style>
+    html, body { height: 100%; margin: 0; background: #0B0D10; }
+    #splash {
+      position: fixed; inset: 0; z-index: 1;
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 16px;
+      background: #0B0D10; transition: opacity .3s ease-out;
+    }
+    #splash img { width: 120px; height: 120px; border-radius: 24px; }
+    #splash p {
+      margin: 0; color: #E5E7EB; font-size: 14px; letter-spacing: .4px;
+      font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    }
+    #splash.splash-hidden { opacity: 0; pointer-events: none; }
+  </style>
 </head>
 <body>
+  <!-- Branded first paint: Flutter removes it on its first frame. -->
+  <div id="splash">
+    <img src="icons/Icon-192.png" alt="">
+    <p>Parking Management</p>
+  </div>
+  <script>
+    window.addEventListener('flutter-first-frame', function () {
+      var splash = document.getElementById('splash');
+      if (!splash) return;
+      splash.classList.add('splash-hidden');
+      setTimeout(function () { splash.remove(); }, 350);
+    });
+  </script>
   <!--
     You can customize the "flutter_bootstrap.js" script.
     This is useful to provide a custom configuration to the Flutter loader
