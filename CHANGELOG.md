@@ -57,6 +57,9 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - Dialog layout guard: a 400 px regression test pumps the vehicle, tariff,
   user, site, reservation, monthly-pass and capacity dialogs and fails on any
   layout exception (the class of bug behind the squeezed payment methods).
+- Dev networking: `tool/run-android.sh` defaults to LAN mode (no `adb reverse`
+  dependency), `tool/android-doctor.sh` prints host/device/port diagnostics and
+  `tool/run-evidence-web.sh` recreates the public host after a restart.
 - Expired sessions now explain themselves: a 401 emits
   `AuthUnauthenticated(expired: true)` and the login screen shows a live-region
   "session expired" banner instead of a silent return.

@@ -696,9 +696,18 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   cannot be registered there until categories/tariffs are created).
 - The apps use `localhost:8017`; if the phone shows "cannot reach the server",
   check `adb reverse --list` first (see below), not `ufw`.
-- **2026-10-30: the phone dropped off adb again** (`No route to host` on the
-  last port); the APK built but was not installed. Reconnect wireless adb,
-  `adb reverse`, reinstall and start the activity.
+- **2026-10-30 (resolved): the phone was not "broken Wi-Fi"**. Its DHCP lease
+  moved from `192.168.0.2` to `192.168.0.8` and wireless debugging changed
+  port, which silently killed the `adb reverse` tunnel the old APK depended on.
+  Verified with ping/nc from the phone: Wi-Fi and `192.168.0.17:8017` work.
+  The APK is now built with `SUPABASE_URL=http://192.168.0.17:8017` (LAN), so
+  it no longer needs adb after install. `tool/run-android.sh` defaults to LAN;
+  `ANDROID_MODE=localhost` keeps the reverse mode. `tool/android-doctor.sh`
+  prints device/host/port state. Reconnect adb only to reinstall.
+- **Evidence host**: `parking-evidence-web` is not a compose service; after a
+  Docker/host restart recreate it with `sh tool/run-evidence-web.sh` (binds the
+  LAN IP, since 127.0.0.1:8080 belongs to another project, `restart:
+  unless-stopped`).
 - **2026-10-29: the phone is back over wireless adb** (the port changes on
   every reconnect; last seen `192.168.0.2:46697`). `adb reverse tcp:8017
   tcp:8017` was re-applied and the current APK installed. If it drops again,

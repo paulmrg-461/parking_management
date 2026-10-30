@@ -118,15 +118,16 @@ flutter run -d emulator-5554 \
 **Physical Android device over adb (USB or wireless):**
 
 ```bash
-sh tool/run-android.sh        # reverses API_GW_HTTP_PORT and runs Flutter
+sh tool/run-android.sh        # LAN mode: http://<laptop-ip>:<port>
+sh tool/android-doctor.sh     # read-only connectivity diagnostics
 ```
 
-No LAN IP or firewall rule is involved; the app uses `http://localhost:<port>`
-through the reverse tunnel. Wireless adb reconnects drop the tunnel: rerun the
-script (or `adb reverse tcp:$PORT tcp:$PORT`). If you prefer the LAN, pass
-`http://<laptop-ip>:$PORT` and add it to `API_EXTERNAL_URL`/`SITE_URL` in
-`.env` for Studio redirects. Android release builds require HTTPS (see
-[`setup-cloud.md`](setup-cloud.md)).
+LAN mode is the default: the phone talks to the gateway over Wi-Fi, so it keeps
+working when wireless adb drops, the phone renews its DHCP lease or the
+debugging port changes (rerun `adb connect` only to reinstall). Use
+`ANDROID_MODE=localhost sh tool/run-android.sh` for the old `adb reverse`
+tunnel, which lives and dies with the adb connection. Android release builds
+require HTTPS (see [`setup-cloud.md`](setup-cloud.md)).
 
 Optional dart-defines: `APP_NAME`, `FCM_ENABLED` + `FIREBASE_*`,
 `FCM_VAPID_KEY`, `WEB_PUSH_VAPID_PUBLIC_KEY`.
