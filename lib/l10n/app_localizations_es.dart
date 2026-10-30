@@ -2838,4 +2838,8 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get routeErrorHome => 'Volver al inicio';
+
+  @override
+  String get loginSessionExpired =>
+      'Tu sesión expiró. Ingresa de nuevo para continuar.';
 }

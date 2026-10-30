@@ -905,5 +905,6 @@
   "diagnosticsAttentionHint": "Review the sections marked below.",
   "routeErrorTitle": "Page not found",
   "routeErrorBody": "This route does not exist or is no longer available. Go back home to continue.",
-  "routeErrorHome": "Back to home"
+  "routeErrorHome": "Back to home",
+  "loginSessionExpired": "Your session expired. Sign in again to continue."
 }

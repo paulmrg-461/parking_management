@@ -5119,6 +5119,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Volver al inicio'**
   String get routeErrorHome;
+
+  /// No description provided for @loginSessionExpired.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu sesión expiró. Ingresa de nuevo para continuar.'**
+  String get loginSessionExpired;
 }
 
 class _AppLocalizationsDelegate

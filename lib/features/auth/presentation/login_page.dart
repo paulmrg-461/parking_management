@@ -154,6 +154,18 @@ class _LoginPageState extends State<LoginPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            BlocBuilder<AuthCubit, AuthState>(
+              builder: (context, state) {
+                final expired =
+                    state is AuthUnauthenticated && state.expired;
+                return expired
+                    ? const Padding(
+                        padding: EdgeInsets.only(bottom: Space.md),
+                        child: _SessionExpiredBanner(),
+                      )
+                    : const SizedBox.shrink();
+              },
+            ),
             SectionHeader(
               icon: Icons.shield_outlined,
               title: l10n.loginOperatorAccess,
@@ -432,6 +444,45 @@ class _Logo extends StatelessWidget {
             ),
           ),
         },
+      ),
+    );
+  }
+}
+
+/// Shown when the token was rejected mid-session (401), so the operator knows
+/// why the app returned to the login screen.
+class _SessionExpiredBanner extends StatelessWidget {
+  const _SessionExpiredBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Semantics(
+      liveRegion: true,
+      container: true,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(Space.sm),
+        decoration: BoxDecoration(
+          color: scheme.tertiaryContainer,
+          borderRadius: BorderRadius.circular(Radii.md),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.lock_clock, color: scheme.onTertiaryContainer),
+            const SizedBox(width: Space.sm),
+            Expanded(
+              child: Text(
+                context.l10n.loginSessionExpired,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: scheme.onTertiaryContainer,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

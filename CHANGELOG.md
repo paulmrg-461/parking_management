@@ -57,6 +57,9 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - Dialog layout guard: a 400 px regression test pumps the vehicle, tariff,
   user, site, reservation, monthly-pass and capacity dialogs and fails on any
   layout exception (the class of bug behind the squeezed payment methods).
+- Expired sessions now explain themselves: a 401 emits
+  `AuthUnauthenticated(expired: true)` and the login screen shows a live-region
+  "session expired" banner instead of a silent return.
 - Settlement dialog: the four payment methods are wrapping `ChoiceChip`s, not a
   segmented control — a segmented row squeezed and overflowed on phones with
   rotated labels (fixed after a device screenshot).

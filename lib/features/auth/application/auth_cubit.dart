@@ -32,7 +32,13 @@ class AuthAuthenticated extends AuthState {
 }
 
 class AuthUnauthenticated extends AuthState {
-  const AuthUnauthenticated();
+  const AuthUnauthenticated({this.expired = false});
+
+  /// True when the backend rejected a request with 401 (not a user logout).
+  final bool expired;
+
+  @override
+  List<Object?> get props => [expired];
 }
 
 class AuthFailure extends AuthState {
@@ -111,8 +117,10 @@ class AuthCubit extends ResilientCubit<AuthState> {
   /// Called by the network layer on a 401 for an authenticated request.
   /// Ignored unless a user is signed in (avoids loops on the login screen).
   Future<void> sessionExpired() async {
-    if (state is AuthAuthenticated) {
-      await logout();
+    if (state is! AuthAuthenticated) {
+      return;
     }
+    await _repository.logout();
+    emit(const AuthUnauthenticated(expired: true));
   }
 }

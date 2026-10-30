@@ -70,6 +70,7 @@ void main() {
 
         await cubit.logout();
         expect(cubit.state, isA<AuthUnauthenticated>());
+        expect((cubit.state as AuthUnauthenticated).expired, isFalse);
       },
     );
     test('sessionExpired logs out an authenticated user', () async {
@@ -90,6 +91,7 @@ void main() {
       await cubit.sessionExpired();
 
       expect(cubit.state, isA<AuthUnauthenticated>());
+      expect((cubit.state as AuthUnauthenticated).expired, isTrue);
       expect(repository.sessionToRestore, isNull);
     });
 

@@ -6,6 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/features/auth/application/auth_cubit.dart';
+import 'package:parking_management/features/auth/domain/entities/auth_session.dart';
+import 'package:parking_management/features/auth/domain/entities/user.dart';
 import 'package:parking_management/features/auth/presentation/login_page.dart';
 import 'package:parking_management/features/settings/application/branding_cubit.dart';
 
@@ -106,6 +108,33 @@ void main() {
     final error = find.text('Usuario o PIN incorrectos');
     expect(error, findsOneWidget);
     expect(tester.getSemantics(error), isSemantics(isLiveRegion: true));
+  });
+
+  testWidgets('Security: an expired token explains why the login is back', (
+    tester,
+  ) async {
+    final repository = FakeAuthRepository(
+      sessionToRestore: const AuthSession(
+        user: User(
+          id: 1,
+          username: 'juan',
+          displayName: 'Juan',
+          role: UserRole.admin,
+        ),
+        token: 'token',
+      ),
+    );
+    final cubit = AuthCubit(repository);
+    await cubit.restore();
+    await cubit.sessionExpired();
+    addTearDown(cubit.close);
+
+    await tester.pumpWidget(_wrap(cubit));
+
+    expect(
+      find.text('Tu sesión expiró. Ingresa de nuevo para continuar.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('Success: the PIN is hidden until the eye reveals it', (

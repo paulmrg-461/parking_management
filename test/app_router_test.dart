@@ -56,6 +56,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Ingresar'), findsOneWidget);
+      expect(
+        find.text('Tu sesión expiró. Ingresa de nuevo para continuar.'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('Failure: an unknown route shows the friendly error page', (

@@ -978,5 +978,6 @@
   "diagnosticsAttentionHint": "Revisa las secciones marcadas abajo.",
   "routeErrorTitle": "Página no encontrada",
   "routeErrorBody": "La ruta no existe o ya no está disponible. Vuelve al inicio para continuar.",
-  "routeErrorHome": "Volver al inicio"
+  "routeErrorHome": "Volver al inicio",
+  "loginSessionExpired": "Tu sesión expiró. Ingresa de nuevo para continuar."
 }
