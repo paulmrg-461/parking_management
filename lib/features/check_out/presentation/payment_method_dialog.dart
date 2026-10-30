@@ -171,19 +171,21 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
               style: Theme.of(context).textTheme.labelLarge,
             ),
             const SizedBox(height: Space.xs),
-            SegmentedButton<PaymentMethod>(
-              showSelectedIcon: false,
-              segments: [
+            // Four methods do not fit in a segmented control on a phone: the
+            // labels squeeze and overflow. Chips wrap to two rows instead.
+            Wrap(
+              spacing: Space.sm,
+              runSpacing: Space.sm,
+              children: [
                 for (final method in PaymentMethod.values)
-                  ButtonSegment(
-                    value: method,
-                    icon: Icon(method.icon, size: 18),
+                  ChoiceChip(
+                    selected: _selected == method,
+                    showCheckmark: false,
+                    avatar: Icon(method.icon, size: 18),
                     label: Text(method.label(l10n)),
+                    onSelected: (_) => setState(() => _selected = method),
                   ),
               ],
-              selected: {_selected},
-              onSelectionChanged: (selection) =>
-                  setState(() => _selected = selection.first),
             ),
             if (_selected == PaymentMethod.card) ...[
               const SizedBox(height: Space.sm),

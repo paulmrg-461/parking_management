@@ -346,12 +346,26 @@ void main() {
     await tester.pumpAndSettle();
   });
 
-  PaymentMethod selectedMethod(WidgetTester tester) => tester
-      .widget<SegmentedButton<PaymentMethod>>(
-        find.byType(SegmentedButton<PaymentMethod>),
-      )
-      .selected
-      .single;
+  PaymentMethod selectedMethod(WidgetTester tester) {
+    const labels = {
+      PaymentMethod.cash: 'Efectivo',
+      PaymentMethod.card: 'Tarjeta',
+      PaymentMethod.transfer: 'Transferencia',
+      PaymentMethod.monthlyPass: 'Mensualidad',
+    };
+    for (final entry in labels.entries) {
+      final chip = tester.widget<ChoiceChip>(
+        find.ancestor(
+          of: find.text(entry.value),
+          matching: find.byType(ChoiceChip),
+        ),
+      );
+      if (chip.selected) {
+        return entry.key;
+      }
+    }
+    fail('no payment method is selected');
+  }
 
   testWidgets('Success: the last payment method is preselected', (
     tester,

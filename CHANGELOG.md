@@ -54,6 +54,9 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   metric cards before the difference row.
 - Reports: the range presets, date picker and all-sites toggle live in one
   filter card with the selected period as summary (matching the other lists).
+- Settlement dialog: the four payment methods are wrapping `ChoiceChip`s, not a
+  segmented control — a segmented row squeezed and overflowed on phones with
+  rotated labels (fixed after a device screenshot).
 - Settlement dialog: payment methods are a segmented choice, cash sits in a
   tonal panel with a large change figure, errors use an inline banner, the
   currency symbol/format come from `Money` (no hardcoded `$`, USD decimals

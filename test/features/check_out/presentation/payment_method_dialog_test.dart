@@ -14,9 +14,10 @@ Future<CheckoutChoice? Function()> pumpDialog(
   WidgetTester tester, {
   CheckOutPreview? preview = _preview,
   PaymentMethod initialMethod = PaymentMethod.cash,
+  Size size = const Size(800, 1400),
 }) async {
   CheckoutChoice? result;
-  tester.view.physicalSize = const Size(800, 1400);
+  tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
@@ -83,6 +84,18 @@ void main() {
     await tester.pump();
 
     expect(find.text('US\$5.00'), findsWidgets);
+  });
+
+  testWidgets('A11y: the four payment methods fit a phone dialog', (
+    tester,
+  ) async {
+    await pumpDialog(tester, size: const Size(400, 800));
+
+    expect(tester.takeException(), isNull);
+    for (final label in ['Efectivo', 'Tarjeta', 'Transferencia', 'Mensualidad']) {
+      expect(find.text(label), findsOneWidget);
+    }
+    await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
   });
 
   testWidgets('Failure: cash below the total blocks the charge', (
