@@ -54,6 +54,9 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   metric cards before the difference row.
 - Reports: the range presets, date picker and all-sites toggle live in one
   filter card with the selected period as summary (matching the other lists).
+- Dialog layout guard: a 400 px regression test pumps the vehicle, tariff,
+  user, site, reservation, monthly-pass and capacity dialogs and fails on any
+  layout exception (the class of bug behind the squeezed payment methods).
 - Settlement dialog: the four payment methods are wrapping `ChoiceChip`s, not a
   segmented control — a segmented row squeezed and overflowed on phones with
   rotated labels (fixed after a device screenshot).
