@@ -28,6 +28,8 @@ if [ -z "${SERIAL:-}" ]; then
   exit 0
 fi
 echo "serial=$SERIAL"
+echo "device ip: $(adb -s "$SERIAL" shell "ip -4 addr show wlan0 2>/dev/null | grep -o 'inet [0-9.]*' | head -1" 2>/dev/null | tr -d '\r')"
+adb -s "$SERIAL" shell "dumpsys wifi | grep -m1 -i 'Wi-Fi is'" 2>/dev/null | tr -d '\r' || true
 adb -s "$SERIAL" reverse --list 2>/dev/null || true
 adb -s "$SERIAL" shell "ping -c 1 -W 1 $HOST_IP >/dev/null 2>&1" \
   && echo "device -> host ping: ok" || echo "device -> host ping: FAIL"
