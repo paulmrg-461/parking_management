@@ -26,8 +26,9 @@ operational assumption changes.
       (2 vCPU/4 GB minimum, 4/8/80–160 recommended, disk formula for evidence).
 - [x] Postgres pooler enabled for many app clients; PostgREST and Realtime
       behind the gateway.
-- [x] Nightly `pg_dump` + Storage/evidence copy; `restore-drill.sh` runs
-      against a scratch database in CI.
+- [x] Nightly `pg_dump` + Storage/evidence copy; the dump is validated with
+      `pg_restore --list`, `SHA256SUMS` is written next to the archive and
+      `restore-drill.sh` runs against a scratch database in CI.
 - [x] Host cron (or `pg_cron` when available) runs the retention jobs:
       idempotency keys (15 min), notifications (daily), reservations (hourly),
       evidence archive (daily).
@@ -71,6 +72,9 @@ operational assumption changes.
       dropped).
 - [x] Admin-only discounts with a required reason; cash actions disabled
       offline and never queued.
+- [x] Public static host (`parking-evidence-web`) sends `X-Content-Type-Options`,
+      `Referrer-Policy`, `X-Frame-Options`, `Permissions-Policy` and gzip; the
+      evidence links are plate-keyed and expire.
 - [ ] Put a WAF/rate limit in front of GoTrue and PostgREST if the instance is
       public (host-level; `docs/deployment-requirements.md`).
 

@@ -13,6 +13,9 @@ mkdir -p "$OUT"
 echo "dumping database $DB_NAME..."
 docker compose exec -T db pg_dump -U postgres -d "$DB_NAME" -Fc > "$OUT/parking.dump"
 test -s "$OUT/parking.dump" || { echo "empty database dump" >&2; exit 1; }
+# Validate the archive before declaring the backup usable.
+docker compose exec -T db pg_restore --list < "$OUT/parking.dump" >/dev/null \
+  || { echo "database dump failed pg_restore --list" >&2; exit 1; }
 
 echo "archiving storage..."
 tar -czf "$OUT/storage.tgz" -C supabase/volumes storage 2>/dev/null || true
@@ -20,12 +23,16 @@ if [ -f "$OUT/storage.tgz" ]; then
   test -s "$OUT/storage.tgz" || { echo "empty storage archive" >&2; exit 1; }
 fi
 
+(cd "$OUT" && sha256sum parking.dump storage.tgz 2>/dev/null > SHA256SUMS) \
+  || echo "WARN: could not write SHA256SUMS" >&2
+
 cat > "$OUT/manifest.txt" <<MANIFEST
 created_at=$STAMP
 database=$DB_NAME
 database_dump=parking.dump
 storage_archive=storage.tgz
 notes=Keep .env separately; it is not part of this backup.
+checksums=SHA256SUMS (verify with: sha256sum -c SHA256SUMS)
 MANIFEST
 
 echo "backup written to $OUT"

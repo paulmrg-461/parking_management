@@ -82,6 +82,10 @@ module, dialogs, developer page, COP/USD currency, es/en language; HEAD
 - `/about` shows `FLUTTER_BUILD_NAME (FLUTTER_BUILD_NUMBER)`.
 - RLS guard: `rpc_test.sql` requires RLS on every `public` table; `0070` locks
   `public.schema_migrations` (RLS on, no anon/authenticated grants).
+- Ops hardening: `supabase/backup.sh` validates the dump with `pg_restore
+  --list` and writes `SHA256SUMS`; `tool/evidence-web.nginx.conf` sends
+  nosniff/referrer/frame/Permissions-Policy headers plus gzip (headers are
+  repeated in the asset location because nginx drops inherited add_header).
 - Coverage ratchet: `flutter test --coverage` + `dart run
   tool/check_coverage.dart` (global 70, application 90, domain 35,
   infrastructure 25; generated/l10n ignored). CI pins Flutter 3.50.0-0.1.pre,
