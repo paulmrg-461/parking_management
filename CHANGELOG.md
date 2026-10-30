@@ -23,6 +23,11 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - RLS guard: the SQL suite fails when any `public` table lacks RLS;
   `0070_lock_migrations_table.sql` enables it on the runner's
   `schema_migrations` and revokes `anon`/`authenticated` access.
+- `0071_retention_schedule.sql` completes the `pg_cron` schedule (audit 365 d,
+  WhatsApp 90 d); the host cron fallback already called both functions.
+- `BACKUP_KEEP=N` prunes old archives while keeping the newest N.
+- CI now compiles the Android debug APK (with placeholder defines) in addition
+  to the release web bundle.
 - Backups fail if `pg_restore --list` rejects the dump, and each backup ships
   `SHA256SUMS` for integrity checks.
 - The public static host sends baseline security headers and gzip for

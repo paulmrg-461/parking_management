@@ -82,6 +82,9 @@ module, dialogs, developer page, COP/USD currency, es/en language; HEAD
 - `/about` shows `FLUTTER_BUILD_NAME (FLUTTER_BUILD_NUMBER)`.
 - RLS guard: `rpc_test.sql` requires RLS on every `public` table; `0070` locks
   `public.schema_migrations` (RLS on, no anon/authenticated grants).
+- Ops hardening (2): `0071` schedules audit/WhatsApp retention in pg_cron (the
+  host cron already called them); `BACKUP_KEEP=N` prunes old archives; CI now
+  builds the Android debug APK as well as web.
 - Ops hardening: `supabase/backup.sh` validates the dump with `pg_restore
   --list` and writes `SHA256SUMS`; `tool/evidence-web.nginx.conf` sends
   nosniff/referrer/frame/Permissions-Policy headers plus gzip (headers are

@@ -26,6 +26,13 @@ jobs:
       # build (platform adapters are picked via conditional imports).
       - name: Build web (release)
         run: flutter build web --release
+      # The Android artifact is what ships to the cabins; a Gradle/plugin break
+      # must fail CI even when web still compiles.
+      - name: Build Android (debug)
+        run: |
+          flutter build apk --debug \
+            --dart-define=SUPABASE_URL=https://example.supabase.co \
+            --dart-define=SUPABASE_ANON_KEY=ci-placeholder
 
   supabase-config:
     runs-on: ubuntu-latest

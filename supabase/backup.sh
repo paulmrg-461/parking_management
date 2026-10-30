@@ -35,4 +35,19 @@ notes=Keep .env separately; it is not part of this backup.
 checksums=SHA256SUMS (verify with: sha256sum -c SHA256SUMS)
 MANIFEST
 
+# Optional retention: BACKUP_KEEP=14 keeps the newest 14 archives.
+KEEP=${BACKUP_KEEP:-0}
+case "$KEEP" in
+  ''|*[!0-9]*) echo "WARN: BACKUP_KEEP must be a number, skipping pruning" >&2 ;;
+  *)
+    if [ "$KEEP" -gt 0 ]; then
+      ls -1dt backups/*/ 2>/dev/null | tail -n +$((KEEP + 1)) | while read -r old; do
+        case "$old" in
+          backups/*) echo "pruning $old"; rm -rf "$old" ;;
+        esac
+      done
+    fi
+    ;;
+esac
+
 echo "backup written to $OUT"

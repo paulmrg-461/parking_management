@@ -26,11 +26,13 @@ operational assumption changes.
       (2 vCPU/4 GB minimum, 4/8/80–160 recommended, disk formula for evidence).
 - [x] Postgres pooler enabled for many app clients; PostgREST and Realtime
       behind the gateway.
-- [x] Nightly `pg_dump` + Storage/evidence copy; the dump is validated with
+- [x] `BACKUP_KEEP=N` prunes older archives (0 = keep all); the dump is
+      validated with
       `pg_restore --list`, `SHA256SUMS` is written next to the archive and
       `restore-drill.sh` runs against a scratch database in CI.
 - [x] Host cron (or `pg_cron` when available) runs the retention jobs:
       idempotency keys (15 min), notifications (daily), reservations (hourly),
+      audit log (365 days) and WhatsApp history (90 days, sent/failed only);
       evidence archive (daily).
 
 ## 3. Data and schema
@@ -87,6 +89,8 @@ operational assumption changes.
       the drain, 403 dead-letters only that entry; `AuthCubit` flushes on login.
 - [x] `ResilientCubit` everywhere; submissions always leave
       `SubmissionInProgress`; expected `Failure`s are not reported as crashes.
+- [x] CI compiles the Android debug APK as well as the release web bundle, so
+      a Gradle/plugin break cannot ship unnoticed.
 - [x] Friendly route fallback (`RouteErrorPage`) for unknown/deep-link paths.
 - [x] Server unreachable: localized error + retry on every list; offline banner
       in the shell; realtime falls back to refresh on focus.
