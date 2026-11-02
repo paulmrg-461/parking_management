@@ -9,6 +9,7 @@ import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/core/sync/pending_mutation.dart';
 import 'package:parking_management/features/settings/domain/entities/parking_settings.dart';
 import 'package:parking_management/features/settings/infrastructure/parking_settings_local_data_source.dart';
+import 'package:parking_management/features/settings/infrastructure/parking_settings_mutation_replayer.dart';
 import 'package:parking_management/features/settings/infrastructure/parking_settings_remote_data_source.dart';
 import 'package:parking_management/features/settings/infrastructure/parking_settings_repository_impl.dart';
 
@@ -29,6 +30,7 @@ class _FakeRemote implements ParkingSettingsRemoteDataSource {
   final bool failWithNetwork;
   ParkingSettings settings = _remoteSettings;
   Map<String, dynamic>? lastPatch;
+  int? lastPatchLot;
   Uint8List? uploaded;
 
   void _ensureOnline() {
@@ -44,9 +46,13 @@ class _FakeRemote implements ParkingSettingsRemoteDataSource {
   }
 
   @override
-  Future<ParkingSettings> patch(Map<String, dynamic> fields) async {
+  Future<ParkingSettings> patch(
+    Map<String, dynamic> fields, {
+    int? lotId,
+  }) async {
     _ensureOnline();
     lastPatch = fields;
+    lastPatchLot = lotId;
     settings = settings.copyWith(
       name: fields['name'] as String? ?? settings.name,
       address: fields['address'] as String? ?? settings.address,
@@ -106,6 +112,7 @@ void main() {
         remote,
         HiveParkingSettingsLocalDataSource(LotSession()),
         outbox,
+        LotSession(),
       );
 
   test('Success: load fetches remote settings and caches them', () async {
@@ -120,7 +127,10 @@ void main() {
   test('Success: save online hits the backend and updates the cache', () async {
     final remote = _FakeRemote();
     final repo = repository(remote);
-    const edited = ParkingSettings(name: 'Parqueadero Sur', address: 'Cll 1 # 2-3');
+    const edited = ParkingSettings(
+      name: 'Parqueadero Sur',
+      address: 'Cll 1 # 2-3',
+    );
 
     final saved = await repo.save(edited);
 
@@ -138,12 +148,14 @@ void main() {
         _FakeRemote(),
         local,
         outbox,
+        LotSession(),
       ).load();
 
       final offline = ParkingSettingsRepositoryImpl(
         _FakeRemote(failWithNetwork: true),
         local,
         outbox,
+        LotSession(),
       );
       final fromCache = await offline.load();
 
@@ -165,11 +177,13 @@ void main() {
         _FakeRemote(),
         local,
         outbox,
+        LotSession(),
       ).load();
       final offline = ParkingSettingsRepositoryImpl(
         _FakeRemote(failWithNetwork: true),
         local,
         outbox,
+        LotSession(),
       );
 
       final result = await offline.save(
@@ -200,6 +214,7 @@ void main() {
         _FakeRemote(),
         local,
         outbox,
+        LotSession(),
       );
       await online.load();
       await online.uploadLogo(Uint8List.fromList(_logo));
@@ -209,6 +224,7 @@ void main() {
         _FakeRemote(failWithNetwork: true),
         local,
         outbox,
+        LotSession(),
       );
 
       await expectLater(
@@ -261,6 +277,7 @@ void main() {
       _FakeRemote(),
       HiveParkingSettingsLocalDataSource(LotSession()),
       outbox,
+      LotSession(),
     );
 
     final saved = await repo.save(
@@ -273,4 +290,67 @@ void main() {
     expect(saved.evidenceRetentionDays, 90);
     expect((await repo.loadCached())?.evidenceRetentionDays, 90);
   });
+
+  group('offline edits replay into the lot they were made for', () {
+    test(
+      'Success: an offline save records the active lot in the payload',
+      () async {
+        final session = LotSession()..select(3);
+        final repo = ParkingSettingsRepositoryImpl(
+          _FakeRemote(failWithNetwork: true),
+          HiveParkingSettingsLocalDataSource(session),
+          outbox,
+          session,
+        );
+
+        await repo.save(const ParkingSettings(name: 'Lot Three'));
+
+        expect(outbox.enqueued.single.decodePayload()['lot_id'], 3);
+      },
+    );
+
+    test(
+      'Security: a replay after a lot switch patches the original lot only',
+      () async {
+        final session = LotSession()..select(2);
+        final local = HiveParkingSettingsLocalDataSource(session);
+        await local.upsert(const ParkingSettings(name: 'Lot Two'));
+        final remote = _FakeRemote();
+
+        await ParkingSettingsMutationReplayer(
+          remote,
+          local,
+        ).replay(_settingsMutation('{"name":"Lot One edited","lot_id":1}'));
+
+        expect(remote.lastPatchLot, 1);
+        expect(remote.lastPatch, isNot(contains('lot_id')));
+        expect((await local.read())?.name, 'Lot Two');
+        session.select(1);
+        expect((await local.read())?.name, 'Lot One edited');
+      },
+    );
+
+    test(
+      'Failure: a legacy payload without lot_id falls back to the active lot',
+      () async {
+        final remote = _FakeRemote();
+
+        await ParkingSettingsMutationReplayer(
+          remote,
+          HiveParkingSettingsLocalDataSource(LotSession()..select(2)),
+        ).replay(_settingsMutation('{"name":"Legacy"}'));
+
+        expect(remote.lastPatchLot, isNull);
+        expect(remote.lastPatch?['name'], 'Legacy');
+      },
+    );
+  });
 }
+
+PendingMutation _settingsMutation(String payload) => PendingMutation(
+  entityType: MutationEntity.settings,
+  operation: MutationOperation.update,
+  entityId: null,
+  payloadJson: payload,
+  enqueuedAt: DateTime.utc(2026, 1, 1),
+);

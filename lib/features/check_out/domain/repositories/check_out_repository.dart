@@ -17,7 +17,8 @@ abstract class CheckOutRepository {
 
   /// Closes [sessionId] using the backend clock. Offline, the attempt time
   /// is queued as `client_exit_time` and replayed by
-  /// `CheckOutMutationReplayer`.
+  /// `CheckOutMutationReplayer`. [plate] and [entryTime] (from the open
+  /// session) only fill the pending receipt returned while offline.
   Future<CheckOutReceipt> checkOut(
     int sessionId, {
     String paymentMethod = 'cash',
@@ -27,6 +28,8 @@ abstract class CheckOutRepository {
     String? lostTicketReason,
     String? cardType,
     int? cashReceived,
+    String? plate,
+    DateTime? entryTime,
   });
 
   /// Fare the customer would pay right now (no side effects).

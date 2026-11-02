@@ -92,7 +92,12 @@ void main() {
     await pumpDialog(tester, size: const Size(400, 800));
 
     expect(tester.takeException(), isNull);
-    for (final label in ['Efectivo', 'Tarjeta', 'Transferencia', 'Mensualidad']) {
+    for (final label in [
+      'Efectivo',
+      'Tarjeta',
+      'Transferencia',
+      'Mensualidad',
+    ]) {
       expect(find.text(label), findsOneWidget);
     }
     await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
@@ -113,18 +118,12 @@ void main() {
     await tester.tap(find.text('Confirmar'));
     await tester.pumpAndSettle();
 
-    expect(
-      find.text('El efectivo recibido no cubre el total'),
-      findsOneWidget,
-    );
+    expect(find.text('El efectivo recibido no cubre el total'), findsOneWidget);
     expect(result(), isNull);
   });
 
   testWidgets('Success: card asks debit or credit', (tester) async {
-    final result = await pumpDialog(
-      tester,
-      initialMethod: PaymentMethod.card,
-    );
+    final result = await pumpDialog(tester, initialMethod: PaymentMethod.card);
 
     expect(find.text('Tipo de tarjeta'), findsOneWidget);
     expect(find.text('Débito'), findsOneWidget);
@@ -155,5 +154,75 @@ void main() {
     await tester.pumpAndSettle();
     expect((result())?.cashReceived, isNull);
     expect((result())?.cardType, CardType.debit);
+  });
+
+  group('lost ticket', () {
+    const lostPreview = CheckOutPreview(
+      sessionId: 1,
+      amount: 6000,
+      lostTicketAmount: 30000,
+    );
+
+    Future<void> checkLostTicket(WidgetTester tester) async {
+      await tester.tap(find.text('Ticket perdido'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('Success: the amount due becomes the lost-ticket amount', (
+      tester,
+    ) async {
+      await pumpDialog(tester, preview: lostPreview);
+      await checkLostTicket(tester);
+
+      await tester.enterText(
+        find.byKey(const Key('checkout_cash_received')),
+        '20000',
+      );
+      await tester.pump();
+
+      // 20.000 covers the regular 6.000 but not the 30.000 lost-ticket fee.
+      expect(find.text('Falta'), findsOneWidget);
+      expect(find.text(r'$10.000'), findsOneWidget);
+    });
+
+    testWidgets('Failure: an older server (no lost amount) keeps the fare', (
+      tester,
+    ) async {
+      await pumpDialog(
+        tester,
+        preview: const CheckOutPreview(sessionId: 1, amount: 6000),
+      );
+      await checkLostTicket(tester);
+
+      await tester.enterText(
+        find.byKey(const Key('checkout_cash_received')),
+        '10000',
+      );
+      await tester.pump();
+
+      expect(find.text('Cambio'), findsOneWidget);
+      expect(find.text(r'$4.000'), findsOneWidget);
+    });
+
+    testWidgets(
+      'Security: a lost ticket can never be charged to a monthly pass',
+      (tester) async {
+        final result = await pumpDialog(
+          tester,
+          preview: lostPreview,
+          initialMethod: PaymentMethod.monthlyPass,
+        );
+        await checkLostTicket(tester);
+
+        await tester.tap(find.text('Mensualidad'));
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextFormField).first, 'perdido');
+        await tester.tap(find.text('Confirmar'));
+        await tester.pumpAndSettle();
+
+        expect(result()?.lostTicket, isTrue);
+        expect(result()?.method, isNot(PaymentMethod.monthlyPass));
+      },
+    );
   });
 }

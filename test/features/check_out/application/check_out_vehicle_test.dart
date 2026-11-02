@@ -38,7 +38,6 @@ class _FakeRepository implements CheckOutRepository {
   Future<CheckOutPreview> preview(int sessionId) async =>
       CheckOutPreview(sessionId: sessionId, amount: 5000);
 
-
   @override
   Future<CheckOutReceipt> checkOut(
     int sessionId, {
@@ -49,6 +48,8 @@ class _FakeRepository implements CheckOutRepository {
     String? lostTicketReason,
     String? cardType,
     int? cashReceived,
+    String? plate,
+    DateTime? entryTime,
   }) async {
     checkedOut.add(sessionId);
     return CheckOutReceipt(

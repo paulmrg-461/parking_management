@@ -227,6 +227,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorDuplicateUsername => 'That username already exists';
 
   @override
+  String get errorLostTicketPassMethod =>
+      'A lost ticket cannot be paid with a monthly pass; choose another payment method';
+
+  @override
+  String get errorStaleExitTime =>
+      'This exit was recorded offline more than 12 hours ago and cannot be synced; record it again';
+
+  @override
+  String get errorEvidenceNotFound =>
+      'The evidence photos were not found; take them again';
+
+  @override
+  String get errorEvidenceAlreadyUsed =>
+      'These evidence photos were already used by another entry; take them again';
+
+  @override
   String get errorSessionAlreadyClosed => 'Session already closed';
 
   @override

@@ -16,14 +16,12 @@ import 'package:parking_management/features/reservations/domain/entities/reserva
 import 'package:parking_management/features/spots/domain/entities/parking_spot.dart';
 import 'package:parking_management/features/reservations/domain/repositories/reservation_repository.dart';
 import 'package:parking_management/features/settings/application/branding_cubit.dart';
-import 'package:parking_management/features/vehicles/domain/entities/vehicle.dart';
 
 import '../../../helpers/app_harness.dart';
 import '../../../helpers/fake_auth_repository.dart';
 import '../../../helpers/fake_check_out_repository.dart';
 import '../../../helpers/fake_reservation_repository.dart';
 import '../../../helpers/fake_settings_repository.dart';
-import '../../../helpers/fake_vehicle_repository.dart';
 import '../../../helpers/test_app.dart';
 
 Future<FakeCheckOutRepository> _pump(
@@ -47,7 +45,12 @@ Future<FakeCheckOutRepository> _pump(
           capacity: capacity,
           sessions: [
             for (var i = 1; i <= 4; i++)
-              OpenSession(id: i, vehicleId: i, entryTime: DateTime(2026)),
+              OpenSession(
+                id: i,
+                vehicleId: i,
+                entryTime: DateTime(2026),
+                plate: const {1: 'ABC123', 2: 'XYZ999'}[i] ?? '',
+              ),
           ],
           listError: error,
           today: today,
@@ -63,13 +66,7 @@ Future<FakeCheckOutRepository> _pump(
       GoRoute(
         path: '/',
         builder: (_, _) => BlocProvider(
-          create: (_) => DashboardCubit(
-            sessions,
-            FakeVehicleRepository(const [
-              Vehicle(id: 1, plate: 'ABC123', categoryId: 1),
-              Vehicle(id: 2, plate: 'XYZ999', categoryId: 1),
-            ]),
-          ),
+          create: (_) => DashboardCubit(sessions),
           child: HomePage(reservations: reservations),
         ),
         routes: [

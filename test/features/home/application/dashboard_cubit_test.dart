@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/features/check_out/domain/entities/open_session.dart';
@@ -5,19 +7,19 @@ import 'package:parking_management/features/check_out/domain/entities/today_summ
 import 'package:parking_management/features/check_out/domain/entities/capacity_snapshot.dart';
 import 'package:parking_management/features/check_out/domain/entities/slot_board.dart';
 import 'package:parking_management/features/home/application/dashboard_cubit.dart';
-import 'package:parking_management/features/vehicles/domain/entities/vehicle.dart';
 
 import '../../../helpers/fake_check_out_repository.dart';
-import '../../../helpers/fake_vehicle_repository.dart';
 
 List<OpenSession> _sessions(int count) => [
   for (var i = 1; i <= count; i++)
-    OpenSession(id: i, vehicleId: i, entryTime: DateTime(2026)),
+    OpenSession(id: i, vehicleId: i, entryTime: DateTime(2026), plate: 'PLT$i'),
 ];
 
 void main() {
   test('Success: occupancy is the server total of open sessions', () async {
-    final cubit = DashboardCubit(FakeCheckOutRepository(sessions: _sessions(7)));
+    final cubit = DashboardCubit(
+      FakeCheckOutRepository(sessions: _sessions(7)),
+    );
 
     await cubit.load();
 
@@ -85,42 +87,44 @@ void main() {
     expect(state.today, TodaySummary.empty);
   });
 
-  test('Success: the capacity snapshot and inside list feed the home', () async {
-    final repository = FakeCheckOutRepository(sessions: _sessions(3))
-      ..capacityToReturn = const CapacitySnapshot(
-        carOpen: 2,
-        carCapacity: 20,
-        motoOpen: 1,
-        motoCapacity: 10,
-        keysOpen: 1,
-        keyCapacity: 5,
-      );
-    final vehicles = FakeVehicleRepository(const [
-      Vehicle(id: 1, plate: 'ABC123', categoryId: 1),
-      Vehicle(id: 2, plate: 'XYZ999', categoryId: 1),
-    ]);
-    final cubit = DashboardCubit(repository, vehicles);
+  test(
+    'Success: the capacity snapshot and inside list feed the home',
+    () async {
+      final repository = FakeCheckOutRepository(sessions: _sessions(3))
+        ..capacityToReturn = const CapacitySnapshot(
+          carOpen: 2,
+          carCapacity: 20,
+          motoOpen: 1,
+          motoCapacity: 10,
+          keysOpen: 1,
+          keyCapacity: 5,
+        );
+      final cubit = DashboardCubit(repository);
 
-    await cubit.load();
+      await cubit.load();
 
-    final state = cubit.state as DashboardLoaded;
-    expect(state.capacity.carCapacity, 20);
-    expect(state.capacity.motosFull, isFalse);
-    expect(state.sessions, hasLength(3));
-    expect(state.plateOf(state.sessions.first), 'ABC123');
-  });
+      final state = cubit.state as DashboardLoaded;
+      expect(state.capacity.carCapacity, 20);
+      expect(state.capacity.motosFull, isFalse);
+      expect(state.sessions, hasLength(3));
+      expect(state.plateOf(state.sessions.first), 'PLT1');
+    },
+  );
 
-  test('Failure: a broken capacity snapshot keeps the rest of the home', () async {
-    final repository = FakeCheckOutRepository(sessions: _sessions(2))
-      ..capacityError = const NetworkFailure('offline');
-    final cubit = DashboardCubit(repository);
+  test(
+    'Failure: a broken capacity snapshot keeps the rest of the home',
+    () async {
+      final repository = FakeCheckOutRepository(sessions: _sessions(2))
+        ..capacityError = const NetworkFailure('offline');
+      final cubit = DashboardCubit(repository);
 
-    await cubit.load();
+      await cubit.load();
 
-    final state = cubit.state as DashboardLoaded;
-    expect(state.openSessions, 2);
-    expect(state.capacity, CapacitySnapshot.empty);
-  });
+      final state = cubit.state as DashboardLoaded;
+      expect(state.openSessions, 2);
+      expect(state.capacity, CapacitySnapshot.empty);
+    },
+  );
 
   test('Success: the slot board lands in the loaded state', () async {
     final repository = FakeCheckOutRepository(sessions: _sessions(1))
@@ -128,15 +132,9 @@ void main() {
         carCapacity: 4,
         motoCapacity: 2,
         sessions: [
-          SlotSession(
-            sessionId: 9,
-            plate: 'BRD001',
-            entryTime: DateTime(2026),
-          ),
+          SlotSession(sessionId: 9, plate: 'BRD001', entryTime: DateTime(2026)),
         ],
-        holds: [
-          SlotHold(plate: 'HOLD01', until: DateTime(2026, 1, 2)),
-        ],
+        holds: [SlotHold(plate: 'HOLD01', until: DateTime(2026, 1, 2))],
       );
     final cubit = DashboardCubit(repository);
 
@@ -146,5 +144,54 @@ void main() {
     expect(state.slotBoard.carCapacity, 4);
     expect(state.slotBoard.sessions.single.plate, 'BRD001');
     expect(state.slotBoard.holds.single.plate, 'HOLD01');
+  });
+
+  group('lot switches', () {
+    test('Success: a slower load for the previous lot never overwrites the new one', () async {
+      var lot = 1;
+      final repository = FakeCheckOutRepository(sessions: _sessions(7));
+      final cubit = DashboardCubit(repository, () => lot);
+      final gate = Completer<void>();
+      repository.occupancyGate = gate.future;
+
+      final stale = cubit.load();
+      await Future<void>.delayed(Duration.zero);
+      lot = 2;
+      repository
+        ..occupancyGate = null
+        ..sessions = _sessions(2);
+      await cubit.load();
+      gate.complete();
+      await stale;
+
+      expect((cubit.state as DashboardLoaded).openSessions, 2);
+    });
+
+    test(
+      'Failure: a failed load after a lot switch reports the failure',
+      () async {
+        var lot = 1;
+        final repository = FakeCheckOutRepository(sessions: _sessions(7));
+        final cubit = DashboardCubit(repository, () => lot);
+        await cubit.load();
+
+        lot = 2;
+        repository.listError = const NetworkFailure('offline');
+        await cubit.load();
+
+        expect(cubit.state, isA<DashboardFailure>());
+      },
+    );
+
+    test('Security: the inside list plates come from the sessions, no vehicle download', () async {
+      final cubit = DashboardCubit(
+        FakeCheckOutRepository(sessions: _sessions(3)),
+      );
+
+      await cubit.load();
+
+      final state = cubit.state as DashboardLoaded;
+      expect(state.sessions.map(state.plateOf), ['PLT1', 'PLT2', 'PLT3']);
+    });
   });
 }

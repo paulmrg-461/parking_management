@@ -5,8 +5,9 @@ import '../../core/config/app_config.dart';
 import '../../core/storage/key_value_store.dart';
 import '../../core/lot/lot_context.dart';
 import '../../core/storage/secure_supabase_storage.dart';
-import '../../features/auth/domain/entities/auth_session.dart';
+import '../../features/auth/application/auth_cubit.dart';
 import '../../features/auth/infrastructure/auth_local_data_source.dart';
+import 'auth_state_sync.dart';
 import 'modules/audit_module.dart';
 import 'modules/auth_module.dart';
 import 'modules/categories_module.dart';
@@ -57,7 +58,8 @@ Future<void> configureDependencies() async {
 }
 
 /// Boots GoTrue and keeps the cached bearer token fresh: Supabase rotates
-/// access tokens in the background, so the Hive snapshot is rewritten.
+/// access tokens in the background, so the Hive snapshot is rewritten; a
+/// GoTrue sign-out of a live session surfaces as an expired session.
 Future<void> _initSupabase(AppConfig config) async {
   final supabase = await Supabase.initialize(
     url: config.supabaseUrl,
@@ -85,20 +87,11 @@ Future<void> _initSupabase(AppConfig config) async {
   if (supabase.client.auth.currentSession == null) {
     await serviceLocator<AuthLocalDataSource>().clearSession();
   }
-  supabase.client.auth.onAuthStateChange.listen((state) async {
-    final session = state.session;
-    if (session == null) {
-      return;
-    }
-    final local = serviceLocator<AuthLocalDataSource>();
-    final current = await local.readSession();
-    if (current == null) {
-      return;
-    }
-    await local.saveSession(
-      AuthSession(user: current.user, token: session.accessToken),
-    );
-  });
+  final authSync = AuthStateSync(
+    serviceLocator<AuthLocalDataSource>(),
+    () => serviceLocator<AuthCubit>().sessionExpired(),
+  );
+  supabase.client.auth.onAuthStateChange.listen(authSync.handle);
 }
 
 /// Registers every module into [sl] without touching storage (testable).

@@ -410,9 +410,7 @@ class _CheckOutPageState extends State<CheckOutPage> {
     discountAmount: receipt.discountAmount,
     discountReason: receipt.discountReason,
     pendingSync: receipt.pendingSync,
-    evidenceUrl: receipt.pendingSync
-        ? null
-        : publicEvidenceUrl(receipt.id),
+    evidenceUrl: receipt.pendingSync ? null : publicEvidenceUrl(receipt.id),
   );
 }
 
@@ -558,73 +556,70 @@ class _SessionTile extends StatelessWidget {
                 ),
               ),
         title: Text(plate),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(l10n.sessionEntry(Formatters.dateTime(session.entryTime))),
-          const SizedBox(height: 2),
-          // Wrap so the elapsed time and chips never overflow when the
-          // trailing actions (Cobrar + reprint) narrow the row on phones.
-          Wrap(
-            spacing: 8,
-            runSpacing: 4,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.timer_outlined,
-                    size: 14,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                  const SizedBox(width: 4),
-                  Flexible(
-                    child: Text(
-                      elapsedLabel(l10n, session.entryTime),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(l10n.sessionEntry(Formatters.dateTime(session.entryTime))),
+            const SizedBox(height: 2),
+            // Wrap so the elapsed time and chips never overflow when the
+            // trailing actions (Cobrar + reprint) narrow the row on phones.
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.timer_outlined,
+                      size: 14,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        elapsedLabel(l10n, session.entryTime),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                if (longStay)
+                  StatusChip(
+                    label: l10n.checkOutLongStay,
+                    tone: StatusTone.warning,
+                    icon: Icons.warning_amber_outlined,
                   ),
-                ],
-              ),
-              if (longStay)
-                StatusChip(
-                  label: l10n.checkOutLongStay,
-                  tone: StatusTone.warning,
-                  icon: Icons.warning_amber_outlined,
-                ),
-              if (session.hasPass)
-                StatusChip(
-                  label: l10n.paymentMonthlyPass,
-                  tone: StatusTone.success,
-                  icon: Icons.card_membership,
-                ),
-              if (session.leftKeys)
-                StatusChip(
-                  label: l10n.checkInLeftKeysShort,
-                  tone: StatusTone.neutral,
-                  icon: Icons.key_outlined,
-                ),
-            ],
-          ),
-        ],
-      ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (canReprint)
-            IconButton(
-              tooltip: l10n.checkOutReprintTicket,
-              visualDensity: VisualDensity.compact,
-              icon: const Icon(Icons.receipt_long_outlined),
-              onPressed: () => _reprintTicket(context),
+                if (session.hasPass)
+                  StatusChip(
+                    label: l10n.paymentMonthlyPass,
+                    tone: StatusTone.success,
+                    icon: Icons.card_membership,
+                  ),
+                if (session.leftKeys)
+                  StatusChip(
+                    label: l10n.checkInLeftKeysShort,
+                    tone: StatusTone.neutral,
+                    icon: Icons.key_outlined,
+                  ),
+              ],
             ),
-          FilledButton(
-            onPressed: onCharge,
-            child: Text(l10n.checkOutCharge),
-          ),
-        ],
+          ],
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (canReprint)
+              IconButton(
+                tooltip: l10n.checkOutReprintTicket,
+                visualDensity: VisualDensity.compact,
+                icon: const Icon(Icons.receipt_long_outlined),
+                onPressed: () => _reprintTicket(context),
+              ),
+            FilledButton(onPressed: onCharge, child: Text(l10n.checkOutCharge)),
+          ],
         ),
       ),
     );

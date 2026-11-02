@@ -186,10 +186,10 @@ void main() {
       },
     );
 
-    test('Failure: dead-letters after 5 retryable failures', () async {
+    test('Failure: dead-letters after 5 unknown failures', () async {
       final vehicles = _FakeReplayer(
         MutationEntity.vehicle,
-        List.filled(5, const ServerFailure()),
+        List.filled(5, const StorageFailure()),
       );
       final h = _Harness(replayers: [vehicles]);
       await h.outbox.enqueue(_vehicleUpdate(1));
@@ -206,6 +206,72 @@ void main() {
     });
 
     test(
+      'Failure: ServerFailure never dead-letters, it keeps backing off',
+      () async {
+        final vehicles = _FakeReplayer(
+          MutationEntity.vehicle,
+          List.filled(7, const ServerFailure()),
+        );
+        final h = _Harness(replayers: [vehicles]);
+        await h.outbox.enqueue(_vehicleUpdate(1));
+
+        for (var i = 0; i < 7; i++) {
+          await h.service.flush();
+          h.now = h.now.add(SyncService.maxBackoff);
+        }
+
+        expect(vehicles.replayed, hasLength(7));
+        expect(await h.outbox.listDeadLetters(), isEmpty);
+        final pending = (await h.outbox.listPending()).single.value;
+        expect(pending.attempts, 7);
+        expect(h.service.nextRetryIn, isNotNull);
+        await h.service.dispose();
+      },
+    );
+
+    test('Failure: NetworkFailure arms a 15s → 30s → 60s retry without burning attempts', () async {
+      final vehicles = _FakeReplayer(
+        MutationEntity.vehicle,
+        List.filled(4, const NetworkFailure('flaky')),
+      );
+      final h = _Harness(replayers: [vehicles]);
+      await h.outbox.enqueue(_vehicleUpdate(1));
+
+      final delays = <Duration?>[];
+      for (var i = 0; i < 4; i++) {
+        await h.service.flush();
+        delays.add(h.service.nextRetryIn);
+      }
+
+      expect(delays, const [
+        Duration(seconds: 15),
+        Duration(seconds: 30),
+        Duration(seconds: 60),
+        Duration(seconds: 60),
+      ]);
+      expect((await h.outbox.listPending()).single.value.attempts, 0);
+      await h.service.dispose();
+    });
+
+    test(
+      'Success: a clean drain after a stall resets the network backoff',
+      () async {
+        final vehicles = _FakeReplayer(MutationEntity.vehicle, [
+          const NetworkFailure('flaky'),
+        ]);
+        final h = _Harness(replayers: [vehicles]);
+        await h.outbox.enqueue(_vehicleUpdate(1));
+
+        await h.service.flush();
+        await h.service.flush();
+
+        expect(h.outbox.all, isEmpty);
+        expect(h.service.nextRetryIn, isNull);
+        await h.service.dispose();
+      },
+    );
+
+    test(
       'Failure: AuthenticationFailure stops the drain without burning attempts',
       () async {
         final vehicles = _FakeReplayer(MutationEntity.vehicle, [
@@ -217,6 +283,7 @@ void main() {
         await h.service.flush();
 
         expect((await h.outbox.listPending()).single.value.attempts, 0);
+        expect(await h.outbox.listDeadLetters(), isEmpty);
       },
     );
 

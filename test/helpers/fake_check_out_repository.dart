@@ -29,6 +29,9 @@ class FakeCheckOutRepository implements CheckOutRepository {
   int occupancyCalls = 0;
   int listCalls = 0;
 
+  /// When set, `occupancy()` waits for it (to interleave concurrent loads).
+  Future<void>? occupancyGate;
+
   @override
   Future<TodaySummary> todaySummary() async {
     final error = todayError;
@@ -58,12 +61,15 @@ class FakeCheckOutRepository implements CheckOutRepository {
   @override
   Future<OccupancySnapshot> occupancy() async {
     occupancyCalls++;
+    final gate = occupancyGate;
+    final total = sessions.length;
+    await gate;
     final error = listError;
     if (error != null) {
       throw error;
     }
     return OccupancySnapshot(
-      totalOpen: sessions.length,
+      totalOpen: total,
       totalCapacity: capacity,
       byCategory: categories,
     );
@@ -90,7 +96,6 @@ class FakeCheckOutRepository implements CheckOutRepository {
   Future<CheckOutPreview> preview(int sessionId) async =>
       CheckOutPreview(sessionId: sessionId, amount: 5000);
 
-
   @override
   Future<CheckOutReceipt> checkOut(
     int sessionId, {
@@ -101,5 +106,7 @@ class FakeCheckOutRepository implements CheckOutRepository {
     String? lostTicketReason,
     String? cardType,
     int? cashReceived,
+    String? plate,
+    DateTime? entryTime,
   }) => throw UnimplementedError();
 }

@@ -482,6 +482,30 @@ abstract class AppLocalizations {
   /// **'Ese nombre de usuario ya existe'**
   String get errorDuplicateUsername;
 
+  /// No description provided for @errorLostTicketPassMethod.
+  ///
+  /// In es, this message translates to:
+  /// **'Un tiquete perdido no se puede cobrar con mensualidad; elige otro medio de pago'**
+  String get errorLostTicketPassMethod;
+
+  /// No description provided for @errorStaleExitTime.
+  ///
+  /// In es, this message translates to:
+  /// **'Esta salida se registró sin conexión hace más de 12 horas y no se puede sincronizar; regístrala de nuevo'**
+  String get errorStaleExitTime;
+
+  /// No description provided for @errorEvidenceNotFound.
+  ///
+  /// In es, this message translates to:
+  /// **'No se encontraron las fotos de evidencia; tómalas de nuevo'**
+  String get errorEvidenceNotFound;
+
+  /// No description provided for @errorEvidenceAlreadyUsed.
+  ///
+  /// In es, this message translates to:
+  /// **'Estas fotos de evidencia ya se usaron en otra entrada; tómalas de nuevo'**
+  String get errorEvidenceAlreadyUsed;
+
   /// No description provided for @errorSessionAlreadyClosed.
   ///
   /// In es, this message translates to:

@@ -39,7 +39,10 @@ void main() {
       es.failure(const AuthenticationFailure('Invalid credentials')),
       'Usuario o PIN incorrectos',
     );
-    expect(es.failure(const AuthenticationFailure('Forbidden')), es.errorForbidden);
+    expect(
+      es.failure(const AuthenticationFailure('Forbidden')),
+      es.errorForbidden,
+    );
   });
 
   test('Rate limited: shows the minutes to wait', () {
@@ -47,6 +50,52 @@ void main() {
       'Too many',
       retryAfter: Duration(seconds: 90),
     );
-    expect(es.failure(failure), 'Demasiados intentos. Intenta de nuevo en 2 min');
+    expect(
+      es.failure(failure),
+      'Demasiados intentos. Intenta de nuevo en 2 min',
+    );
+  });
+
+  group('billing and evidence integrity codes', () {
+    late AppLocalizations en;
+
+    setUpAll(() async {
+      en = await AppLocalizations.delegate.load(const Locale('en'));
+    });
+
+    const codes = [
+      'LostTicketPassMethodError',
+      'StaleExitTimeError',
+      'EvidenceNotFoundError',
+      'EvidenceAlreadyUsedError',
+    ];
+
+    test('Success: each code has its own Spanish and English text', () {
+      for (final code in codes) {
+        final failure = ValidationFailure(code, code);
+        expect(es.failure(failure), isNot(code), reason: code);
+        expect(en.failure(failure), isNot(code), reason: code);
+      }
+      expect(
+        codes.map((c) => es.failure(ValidationFailure(c, c))).toSet(),
+        hasLength(4),
+      );
+    });
+
+    test('Failure: the raw P0001 message maps to the localized code', () {
+      expect(
+        es.failure(
+          const ValidationFailure('StaleExitTimeError', 'StaleExitTimeError'),
+        ),
+        es.errorStaleExitTime,
+      );
+    });
+
+    test('Security: a rejected pass method on a lost ticket is explained', () {
+      expect(
+        en.failure(const ValidationFailure('x', 'LostTicketPassMethodError')),
+        en.errorLostTicketPassMethod,
+      );
+    });
   });
 }

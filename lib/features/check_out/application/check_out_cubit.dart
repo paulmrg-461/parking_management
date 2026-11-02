@@ -5,8 +5,6 @@ import 'package:equatable/equatable.dart';
 import '../../../core/error/failure.dart';
 import '../../../core/pagination/paged_result.dart';
 import '../../../core/state/submission.dart';
-import '../../vehicles/domain/entities/vehicle.dart';
-import '../../vehicles/domain/repositories/vehicle_repository.dart';
 import '../domain/entities/check_out_preview.dart';
 import '../domain/entities/check_out_receipt.dart';
 import '../domain/entities/open_session.dart';
@@ -31,18 +29,23 @@ final class CheckOutLoading extends CheckOutState {
 
 /// Loaded sessions plus everything the page renders, precomputed here:
 /// [plates] (vehicleId → plate, O(1) per row) and [visible] (search result).
+/// Plates come with each [OpenSession] (`open_sessions_view.plate`), so no
+/// vehicles list is downloaded.
 final class CheckOutLoaded extends CheckOutState {
-  const CheckOutLoaded({
+  CheckOutLoaded({
     required this.sessions,
-    required this.plates,
     this.query = '',
     List<OpenSession>? visible,
     this.total,
     this.loadingMore = false,
     this.submission = const SubmissionIdle(),
-  }) : visible = visible ?? sessions;
+  }) : visible = visible ?? sessions,
+       plates = _indexPlates(sessions);
 
   final List<OpenSession> sessions;
+
+  /// vehicleId → plate for every loaded session that has one. Kept for the
+  /// page; prefer [plateOf] (or `session.plate`) in new code.
   final Map<int, String> plates;
   final String query;
   final List<OpenSession> visible;
@@ -53,7 +56,12 @@ final class CheckOutLoaded extends CheckOutState {
   bool get hasMore => total != null && total! > sessions.length;
 
   String plateOf(OpenSession session) =>
-      plates[session.vehicleId] ?? 'Vehicle #${session.vehicleId}';
+      session.plate.isEmpty ? 'Vehicle #${session.vehicleId}' : session.plate;
+
+  static Map<int, String> _indexPlates(List<OpenSession> sessions) => {
+    for (final session in sessions)
+      if (session.plate.isNotEmpty) session.vehicleId: session.plate,
+  };
 
   CheckOutLoaded copyWith({
     List<OpenSession>? sessions,
@@ -66,7 +74,6 @@ final class CheckOutLoaded extends CheckOutState {
     final nextQuery = query ?? this.query;
     return CheckOutLoaded(
       sessions: nextSessions,
-      plates: plates,
       query: nextQuery,
       visible: _filter(nextSessions, nextQuery),
       total: total ?? this.total,
@@ -89,7 +96,6 @@ final class CheckOutLoaded extends CheckOutState {
   @override
   List<Object?> get props => [
     sessions,
-    plates,
     query,
     visible,
     total,
@@ -110,21 +116,19 @@ final class CheckOutFailure extends CheckOutState {
   List<Object?> get props => [message, failure?.code];
 }
 
-/// Check-out flow: paginated open sessions with plates resolved once,
+/// Check-out flow: paginated open sessions (each with its plate),
 /// debounced plate search, and closing a session without ever dropping the
 /// list (the outcome is reported through [CheckOutLoaded.submission]).
 class CheckOutCubit extends ResilientCubit<CheckOutState> {
   CheckOutCubit(
     this._checkOutVehicle,
-    this._repository,
-    this._vehicles, {
+    this._repository, {
     this.searchDebounce = const Duration(milliseconds: 300),
     this.pageSize = defaultPageSize,
   }) : super(const CheckOutInitial());
 
   final CheckOutVehicle _checkOutVehicle;
   final CheckOutRepository _repository;
-  final VehicleRepository _vehicles;
   final Duration searchDebounce;
   final int pageSize;
   Timer? _searchTimer;
@@ -137,19 +141,11 @@ class CheckOutCubit extends ResilientCubit<CheckOutState> {
   Future<void> loadOpenSessions() async {
     _searchToken++;
     emit(const CheckOutLoading());
-    final plates = _plates();
     try {
       final page = await _firstPage();
       _loadedCount = page.items.length;
-      emit(
-        CheckOutLoaded(
-          sessions: page.items,
-          plates: await plates,
-          total: page.total,
-        ),
-      );
+      emit(CheckOutLoaded(sessions: page.items, total: page.total));
     } on Failure catch (failure) {
-      plates.ignore();
       emit(CheckOutFailure.of(failure));
     }
   }
@@ -235,6 +231,7 @@ class CheckOutCubit extends ResilientCubit<CheckOutState> {
       return;
     }
     emit(current.copyWith(submission: const SubmissionInProgress()));
+    final session = _sessionById(current, sessionId);
     try {
       final receipt = await _checkOutVehicle(
         sessionId,
@@ -245,6 +242,8 @@ class CheckOutCubit extends ResilientCubit<CheckOutState> {
         lostTicketReason: lostTicketReason,
         cardType: cardType,
         cashReceived: cashReceived,
+        plate: session?.plate,
+        entryTime: session?.entryTime,
       );
       emit(
         _latest(current).copyWith(
@@ -318,19 +317,14 @@ class CheckOutCubit extends ResilientCubit<CheckOutState> {
   Future<PagedResult<OpenSession>> _firstPage({String? plate}) =>
       _repository.listOpenSessions(offset: 0, limit: pageSize, plate: plate);
 
-  /// Plates are best-effort: a failure falls back to "Vehicle #id" rows.
-  Future<Map<int, String>> _plates() async {
-    try {
-      return _indexPlates(await _vehicles.list());
-    } on Failure {
-      return const {};
+  OpenSession? _sessionById(CheckOutLoaded state, int sessionId) {
+    for (final session in state.sessions) {
+      if (session.id == sessionId) {
+        return session;
+      }
     }
+    return null;
   }
-
-  Map<int, String> _indexPlates(List<Vehicle> vehicles) => {
-    for (final vehicle in vehicles)
-      if (vehicle.id != null) vehicle.id!: vehicle.plate,
-  };
 
   /// Refetches the first page; offline (queued check-out) the closed session
   /// is simply removed from what is on screen.

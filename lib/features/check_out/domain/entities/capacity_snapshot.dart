@@ -53,7 +53,8 @@ class CapacitySnapshot extends Equatable {
   int get carTarget => carTargetCapacity > 0 ? carTargetCapacity : carCapacity;
 
   /// Configured moto target (see [carTarget]).
-  int get motoTarget => motoTargetCapacity > 0 ? motoTargetCapacity : motoCapacity;
+  int get motoTarget =>
+      motoTargetCapacity > 0 ? motoTargetCapacity : motoCapacity;
 
   /// Usable car spots: configured capacity minus the ones out of service.
   /// `0` capacity means "no limit", so this stays `0` too.

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import '../../../core/error/failure.dart';
+import '../../../core/lot/lot_session.dart';
 import '../../../core/sync/pending_mutation.dart';
 import '../../../core/sync/sync_outbox.dart';
 import '../domain/entities/parking_settings.dart';
@@ -10,11 +11,17 @@ import 'parking_settings_local_data_source.dart';
 import 'parking_settings_remote_data_source.dart';
 
 class ParkingSettingsRepositoryImpl implements ParkingSettingsRepository {
-  ParkingSettingsRepositoryImpl(this._remote, this._local, this._outbox);
+  ParkingSettingsRepositoryImpl(
+    this._remote,
+    this._local,
+    this._outbox,
+    this._lots,
+  );
 
   final ParkingSettingsRemoteDataSource _remote;
   final ParkingSettingsLocalDataSource _local;
   final SyncOutbox _outbox;
+  final LotSession _lots;
 
   @override
   Future<ParkingSettings> load() async {
@@ -44,7 +51,11 @@ class ParkingSettingsRepositoryImpl implements ParkingSettingsRepository {
           entityType: MutationEntity.settings,
           operation: MutationOperation.update,
           entityId: null,
-          payloadJson: jsonEncode(settings.toPayload()),
+          // The replay must hit this lot even if the operator switches sites.
+          payloadJson: jsonEncode({
+            ...settings.toPayload(),
+            'lot_id': ?_lots.activeLotId,
+          }),
           enqueuedAt: DateTime.now(),
         ),
       );

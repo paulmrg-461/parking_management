@@ -24,14 +24,12 @@ import 'package:parking_management/features/check_out/presentation/check_out_pag
 import 'package:parking_management/features/auth/application/auth_cubit.dart';
 import 'package:parking_management/features/auth/domain/entities/user.dart';
 import 'package:parking_management/features/home/application/dashboard_cubit.dart';
-import 'package:parking_management/features/vehicles/domain/entities/vehicle.dart';
 
 import '../../../helpers/app_harness.dart';
 import '../../../helpers/fake_auth_repository.dart';
 import '../../../helpers/fake_check_out_repository.dart';
 import '../../../helpers/fake_key_value_store.dart';
 import '../../../helpers/fake_notification_repository.dart';
-import '../../../helpers/fake_vehicle_repository.dart';
 import '../../../helpers/test_app.dart';
 
 class _FakeCheckOutRepository implements CheckOutRepository {
@@ -77,11 +75,17 @@ class _FakeCheckOutRepository implements CheckOutRepository {
         id: 1,
         vehicleId: 1,
         entryTime: DateTime(2026, 1, 1),
+        plate: 'ABC123',
         hasPass: firstHasPass,
         photoCount: 2,
         leftKeys: true,
       ),
-      OpenSession(id: 2, vehicleId: 2, entryTime: DateTime(2026, 1, 1)),
+      OpenSession(
+        id: 2,
+        vehicleId: 2,
+        entryTime: DateTime(2026, 1, 1),
+        plate: 'XYZ999',
+      ),
     ];
     final query = plate?.trim().toUpperCase() ?? '';
     final items = query.isEmpty
@@ -107,7 +111,6 @@ class _FakeCheckOutRepository implements CheckOutRepository {
         );
   }
 
-
   @override
   Future<CheckOutReceipt> checkOut(
     int sessionId, {
@@ -118,6 +121,8 @@ class _FakeCheckOutRepository implements CheckOutRepository {
     String? lostTicketReason,
     String? cardType,
     int? cashReceived,
+    String? plate,
+    DateTime? entryTime,
   }) async {
     final error = checkOutError;
     if (error != null) throw error;
@@ -157,12 +162,10 @@ void main() {
     notifications = FakeNotificationRepository();
     notificationsCubit = NotificationsCubit(notifications);
     addTearDown(notificationsCubit.close);
-    final vehicles = FakeVehicleRepository(const [
-      Vehicle(id: 1, plate: 'ABC123', categoryId: 1),
-      Vehicle(id: 2, plate: 'XYZ999', categoryId: 1),
-    ]);
     final auth = AuthCubit(
-      FakeAuthRepository(sessionToRestore: role == null ? null : sessionFor(role)),
+      FakeAuthRepository(
+        sessionToRestore: role == null ? null : sessionFor(role),
+      ),
     );
     if (role != null) {
       await auth.restore();
@@ -177,16 +180,13 @@ void main() {
               create: (_) => CheckOutCubit(
                 CheckOutVehicle(repository),
                 repository,
-                vehicles,
                 searchDebounce: Duration.zero,
               ),
             ),
             BlocProvider<DashboardCubit>(
               create: (_) => DashboardCubit(occupancy),
             ),
-            BlocProvider<NotificationsCubit>.value(
-              value: notificationsCubit,
-            ),
+            BlocProvider<NotificationsCubit>.value(value: notificationsCubit),
           ],
           child: CheckOutPage(
             initialQuery: initialQuery,

@@ -11,7 +11,9 @@ import 'package:parking_management/core/config/app_config.dart';
 import 'package:parking_management/core/sync/file_pending_photo_storage.dart';
 import 'package:parking_management/core/sync/hive_pending_photo_storage.dart';
 import 'package:parking_management/core/sync/pending_mutation.dart';
+import 'package:parking_management/core/sync/notifying_sync_outbox.dart';
 import 'package:parking_management/core/sync/pending_photo_storage.dart';
+import 'package:parking_management/core/sync/sync_outbox.dart';
 import 'package:parking_management/core/sync/sync_service.dart';
 import 'package:parking_management/features/check_in/application/check_in_cubit.dart';
 import 'package:parking_management/features/check_out/application/check_out_cubit.dart';
@@ -59,12 +61,18 @@ void main() {
     },
   );
 
+  test('Success: the shared outbox kicks a drain on every enqueue', () {
+    _register(sl);
+
+    expect(sl<SyncOutbox>(), isA<NotifyingSyncOutbox>());
+  });
+
   test('Success: every queued entity type has a registered replayer', () {
     _register(sl);
 
-    final entities = buildMutationReplayers(
-      sl,
-    ).map((replayer) => replayer.entity).toSet();
+    final entities = buildMutationReplayers(sl)
+        .map((replayer) => replayer.entity)
+        .toSet();
 
     // SyncService throws StateError on replay for a missing entry, so the
     // replayer set must cover every queued entity exactly.
@@ -87,5 +95,4 @@ void main() {
     expect(sl<PlateScanner>().isSupported, isFalse);
     expect(sl<PendingPhotoStorage>(), isA<HivePendingPhotoStorage>());
   });
-
 }

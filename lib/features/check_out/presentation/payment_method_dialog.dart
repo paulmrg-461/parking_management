@@ -87,9 +87,13 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
     super.dispose();
   }
 
-  /// Total still due after the admin discount.
+  /// Total still due after the admin discount. A lost ticket charges the
+  /// server's `lost_ticket_amount` (older servers: the regular fare).
   int? get _due {
-    final amount = widget.preview?.amount;
+    final preview = widget.preview;
+    final amount = _lostTicket
+        ? preview?.lostTicketAmount ?? preview?.amount
+        : preview?.amount;
     if (amount == null) {
       return null;
     }
@@ -97,6 +101,15 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
         ? Money.parse(_discountController.text.trim()) ?? 0
         : 0;
     return (amount - discount).clamp(0, amount);
+  }
+
+  /// A lost ticket is always charged: a monthly pass cannot cover it
+  /// (`LostTicketPassMethodError`), so the method falls back to cash.
+  void _setLostTicket(bool? value) {
+    _lostTicket = value ?? false;
+    if (_lostTicket && _selected == PaymentMethod.monthlyPass) {
+      _selected = PaymentMethod.cash;
+    }
   }
 
   int? get _cashReceived {
@@ -152,184 +165,183 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
       content: SizedBox(
         width: 460,
         child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(l10n.checkOutConfirm(widget.plate)),
-            const SizedBox(height: 8),
-            if (widget.preview case final preview?)
-              FareBreakdownView(preview: preview)
-            else
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(l10n.checkOutConfirm(widget.plate)),
+              const SizedBox(height: 8),
+              if (widget.preview case final preview?)
+                FareBreakdownView(preview: preview)
+              else
+                Text(
+                  l10n.slotEstimateUnavailable,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              const SizedBox(height: 8),
               Text(
-                l10n.slotEstimateUnavailable,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            const SizedBox(height: 8),
-            Text(
-              l10n.paymentMethodTitle,
-              style: Theme.of(context).textTheme.labelLarge,
-            ),
-            const SizedBox(height: Space.xs),
-            // Four methods do not fit in a segmented control on a phone: the
-            // labels squeeze and overflow. Chips wrap to two rows instead.
-            Wrap(
-              spacing: Space.sm,
-              runSpacing: Space.sm,
-              children: [
-                for (final method in PaymentMethod.values)
-                  ChoiceChip(
-                    selected: _selected == method,
-                    showCheckmark: false,
-                    avatar: Icon(method.icon, size: 18),
-                    label: Text(method.label(l10n)),
-                    onSelected: (_) => setState(() => _selected = method),
-                  ),
-              ],
-            ),
-            if (_selected == PaymentMethod.card) ...[
-              const SizedBox(height: Space.sm),
-              Text(
-                l10n.checkoutCardType,
+                l10n.paymentMethodTitle,
                 style: Theme.of(context).textTheme.labelLarge,
               ),
               const SizedBox(height: Space.xs),
-              SegmentedButton<CardType>(
-                showSelectedIcon: false,
-                segments: [
-                  for (final kind in CardType.values)
-                    ButtonSegment(
-                      value: kind,
-                      icon: Icon(kind.icon),
-                      label: Text(kind.label(l10n)),
+              // Four methods do not fit in a segmented control on a phone: the
+              // labels squeeze and overflow. Chips wrap to two rows instead.
+              Wrap(
+                spacing: Space.sm,
+                runSpacing: Space.sm,
+                children: [
+                  for (final method in PaymentMethod.values)
+                    ChoiceChip(
+                      selected: _selected == method,
+                      showCheckmark: false,
+                      avatar: Icon(method.icon, size: 18),
+                      label: Text(method.label(l10n)),
+                      // The server rejects a lost ticket paid by pass.
+                      onSelected:
+                          _lostTicket && method == PaymentMethod.monthlyPass
+                          ? null
+                          : (_) => setState(() => _selected = method),
                     ),
                 ],
-                selected: {_cardType},
-                onSelectionChanged: (selection) =>
-                    setState(() => _cardType = selection.first),
               ),
-            ],
-            if (_selected == PaymentMethod.cash && _due != null) ...[
-              const SizedBox(height: Space.sm),
-              Container(
-                padding: const EdgeInsets.all(Space.sm),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(Radii.md),
+              if (_selected == PaymentMethod.card) ...[
+                const SizedBox(height: Space.sm),
+                Text(
+                  l10n.checkoutCardType,
+                  style: Theme.of(context).textTheme.labelLarge,
                 ),
-                child: Column(
-                  children: [
-                    TextField(
-                      key: const Key('checkout_cash_received'),
-                      controller: _cashController,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: moneyInputFormatters(),
-                      decoration: InputDecoration(
-                        labelText: l10n.checkoutCashReceived,
-                        prefixText: '${Money.currency.symbol} ',
-                        filled: true,
-                        fillColor: Theme.of(context).colorScheme.surface,
+                const SizedBox(height: Space.xs),
+                SegmentedButton<CardType>(
+                  showSelectedIcon: false,
+                  segments: [
+                    for (final kind in CardType.values)
+                      ButtonSegment(
+                        value: kind,
+                        icon: Icon(kind.icon),
+                        label: Text(kind.label(l10n)),
                       ),
-                      onChanged: (_) => setState(() => _error = null),
-                    ),
-                    if (_cashReceived case final received?)
-                      Padding(
-                        padding: const EdgeInsets.only(top: Space.sm),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                received >= _due!
-                                    ? l10n.checkoutCashChange
-                                    : l10n.checkoutCashShort,
-                                style: Theme.of(context).textTheme.bodyMedium,
+                  ],
+                  selected: {_cardType},
+                  onSelectionChanged: (selection) =>
+                      setState(() => _cardType = selection.first),
+                ),
+              ],
+              if (_selected == PaymentMethod.cash && _due != null) ...[
+                const SizedBox(height: Space.sm),
+                Container(
+                  padding: const EdgeInsets.all(Space.sm),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(Radii.md),
+                  ),
+                  child: Column(
+                    children: [
+                      TextField(
+                        key: const Key('checkout_cash_received'),
+                        controller: _cashController,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: moneyInputFormatters(),
+                        decoration: InputDecoration(
+                          labelText: l10n.checkoutCashReceived,
+                          prefixText: '${Money.currency.symbol} ',
+                          filled: true,
+                          fillColor: Theme.of(context).colorScheme.surface,
+                        ),
+                        onChanged: (_) => setState(() => _error = null),
+                      ),
+                      if (_cashReceived case final received?)
+                        Padding(
+                          padding: const EdgeInsets.only(top: Space.sm),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  received >= _due!
+                                      ? l10n.checkoutCashChange
+                                      : l10n.checkoutCashShort,
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                ),
                               ),
-                            ),
-                            Text(
-                              Money.format((received - _due!).abs()),
-                              style: Theme.of(context).textTheme.titleLarge
-                                  ?.copyWith(
-                                    color: received >= _due!
-                                        ? StatusColors.of(context).success
-                                        : Theme.of(context).colorScheme.error,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                            ),
-                          ],
+                              Text(
+                                Money.format((received - _due!).abs()),
+                                style: Theme.of(context).textTheme.titleLarge
+                                    ?.copyWith(
+                                      color: received >= _due!
+                                          ? StatusColors.of(context).success
+                                          : Theme.of(context).colorScheme.error,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: 8),
+              CheckboxListTile(
+                value: _lostTicket,
+                contentPadding: EdgeInsets.zero,
+                controlAffinity: ListTileControlAffinity.leading,
+                onChanged: (value) => setState(() => _setLostTicket(value)),
+                title: Text(l10n.lostTicket),
+                subtitle: Text(l10n.lostTicketHint),
+              ),
+              if (_lostTicket)
+                TextFormField(
+                  controller: _lostReasonController,
+                  decoration: InputDecoration(labelText: l10n.lostTicketReason),
+                ),
+              if (widget.canDiscount) ...[
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _discountController,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: moneyInputFormatters(),
+                  decoration: InputDecoration(labelText: l10n.discountAmount),
+                ),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _reasonController,
+                  decoration: InputDecoration(labelText: l10n.discountReason),
+                ),
+              ],
+              if (_error != null) ...[
+                const SizedBox(height: Space.sm),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(Space.sm),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.errorContainer,
+                    borderRadius: BorderRadius.circular(Radii.sm),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        size: 18,
+                        color: Theme.of(context).colorScheme.onErrorContainer,
+                      ),
+                      const SizedBox(width: Space.xs),
+                      Expanded(
+                        child: Text(
+                          _error!,
+                          style: TextStyle(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onErrorContainer,
+                          ),
                         ),
                       ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
+              ],
             ],
-            const SizedBox(height: 8),
-            CheckboxListTile(
-              value: _lostTicket,
-              contentPadding: EdgeInsets.zero,
-              controlAffinity: ListTileControlAffinity.leading,
-              onChanged: (value) =>
-                  setState(() => _lostTicket = value ?? false),
-              title: Text(l10n.lostTicket),
-              subtitle: Text(l10n.lostTicketHint),
-            ),
-            if (_lostTicket)
-              TextFormField(
-                controller: _lostReasonController,
-                decoration: InputDecoration(
-                  labelText: l10n.lostTicketReason,
-                ),
-              ),
-            if (widget.canDiscount) ...[
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _discountController,
-                keyboardType: TextInputType.number,
-                inputFormatters: moneyInputFormatters(),
-                decoration: InputDecoration(
-                  labelText: l10n.discountAmount,
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _reasonController,
-                decoration: InputDecoration(
-                  labelText: l10n.discountReason,
-                ),
-              ),
-            ],
-            if (_error != null) ...[
-              const SizedBox(height: Space.sm),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(Space.sm),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.errorContainer,
-                  borderRadius: BorderRadius.circular(Radii.sm),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.error_outline,
-                      size: 18,
-                      color: Theme.of(context).colorScheme.onErrorContainer,
-                    ),
-                    const SizedBox(width: Space.xs),
-                    Expanded(
-                      child: Text(
-                        _error!,
-                        style: TextStyle(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onErrorContainer,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ],
-        ),
+          ),
         ),
       ),
       actions: [
