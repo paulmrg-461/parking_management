@@ -11,7 +11,11 @@ import '../../../core/theme/tokens.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_state.dart';
+import '../../../core/widgets/filter_bar.dart';
 import '../../../core/widgets/list_page_scaffold.dart';
+import '../../../core/widgets/metric_card.dart';
+import '../../../core/widgets/plate_text.dart';
+import '../../../core/widgets/search_field.dart';
 import '../../../core/widgets/skeleton.dart';
 import '../../../core/widgets/staggered_list_item.dart';
 import '../../../core/widgets/status_chip.dart';
@@ -60,6 +64,7 @@ class _ReservationsPageState extends State<ReservationsPage> {
             ),
             final ReservationsLoaded loaded => _List(
               loaded: loaded,
+              onAdd: _add,
               onCheckIn: widget.onCheckIn ?? _checkInWithPlate,
             ),
           },
@@ -112,31 +117,151 @@ void _checkInWithPlate(BuildContext context, String plate) => context.push(
   '/check-in?plate=${Uri.encodeQueryComponent(plate)}',
 );
 
-class _List extends StatelessWidget {
-  const _List({required this.loaded, required this.onCheckIn});
+class _List extends StatefulWidget {
+  const _List({
+    required this.loaded,
+    required this.onAdd,
+    required this.onCheckIn,
+  });
 
   final ReservationsLoaded loaded;
+  final VoidCallback onAdd;
   final void Function(BuildContext context, String plate) onCheckIn;
 
   @override
+  State<_List> createState() => _ListState();
+}
+
+class _ListState extends State<_List> {
+  String _query = '';
+  bool _onlyExpiring = false;
+
+  List<Reservation> get _all => sortedByExpiry(widget.loaded.reservations);
+
+  List<Reservation> _visible(List<Reservation> all) {
+    final needle = _query.trim().toLowerCase();
+    final now = DateTime.now();
+    return [
+      for (final reservation in all)
+        if ((needle.isEmpty ||
+                reservation.plate.toLowerCase().contains(needle)) &&
+            (!_onlyExpiring || reservation.expiresSoon(now: now)))
+          reservation,
+    ];
+  }
+
+  bool get _filtered => _query.trim().isNotEmpty || _onlyExpiring;
+
+  void _clear() => setState(() {
+    _query = '';
+    _onlyExpiring = false;
+  });
+
+  @override
   Widget build(BuildContext context) {
-    if (loaded.reservations.isEmpty) {
+    final l10n = context.l10n;
+    final all = _all;
+    if (all.isEmpty) {
       return EmptyState(
-        message: context.l10n.reservationsEmpty,
         icon: Icons.event_available_outlined,
+        title: l10n.reservationsEmpty,
+        message: l10n.reservationsEmptyHint,
+        action: FilledButton.icon(
+          onPressed: widget.onAdd,
+          icon: const Icon(Icons.add),
+          label: Text(l10n.reservationAdd),
+        ),
       );
     }
-    final reservations = sortedByExpiry(loaded.reservations);
-    return ListView.builder(
-      itemCount: reservations.length,
-      itemBuilder: (context, index) => StaggeredListItem(
-        key: ValueKey(reservations[index].id),
-        index: index,
-        child: _ReservationTile(
-          reservation: reservations[index],
-          onCheckIn: onCheckIn,
+    final now = DateTime.now();
+    final expiring = all.where((item) => item.expiresSoon(now: now)).length;
+    final visible = _visible(all);
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(Space.md),
+          child: Column(
+            children: [
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: MetricCard(
+                        icon: Icons.event_available_outlined,
+                        label: l10n.reservationsActive,
+                        value: '${all.length}',
+                      ),
+                    ),
+                    const SizedBox(width: Space.sm),
+                    Expanded(
+                      child: MetricCard(
+                        icon: Icons.schedule,
+                        label: l10n.reservationsExpiring,
+                        value: '$expiring',
+                        tone: expiring > 0
+                            ? MetricTone.warning
+                            : MetricTone.neutral,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: Space.md),
+              FilterBar(
+                summary: l10n.reservationsCount(visible.length),
+                onClear: _filtered ? _clear : null,
+                clearLabel: l10n.actionClearFilters,
+                children: [
+                  SizedBox(
+                    width: 240,
+                    child: SearchField(
+                      label: l10n.reservationsSearchLabel,
+                      hint: l10n.reservationsSearchHint,
+                      onChanged: (value) => setState(() => _query = value),
+                    ),
+                  ),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: Layout.minTouch),
+                    child: FilterChip(
+                      selected: _onlyExpiring,
+                      showCheckmark: false,
+                      avatar: const Icon(Icons.schedule, size: 18),
+                      label: Text(l10n.reservationsOnlyExpiring),
+                      onSelected: (value) =>
+                          setState(() => _onlyExpiring = value),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
-      ),
+        Expanded(
+          child: visible.isEmpty
+              ? EmptyState(
+                  icon: Icons.filter_alt_off_outlined,
+                  message: l10n.reservationsFilteredEmpty,
+                  action: FilledButton.tonalIcon(
+                    onPressed: _clear,
+                    icon: const Icon(Icons.filter_alt_off_outlined),
+                    label: Text(l10n.actionClearFilters),
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.only(bottom: Space.xl),
+                  itemCount: visible.length,
+                  itemBuilder: (context, index) => StaggeredListItem(
+                    key: ValueKey(visible[index].id),
+                    index: index,
+                    child: _ReservationTile(
+                      reservation: visible[index],
+                      onCheckIn: widget.onCheckIn,
+                    ),
+                  ),
+                ),
+        ),
+      ],
     );
   }
 }
@@ -150,53 +275,96 @@ class _ReservationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final now = DateTime.now();
+    final soon = reservation.expiresSoon(now: now);
+    final notes = reservation.notes;
     return Card(
       margin: const EdgeInsets.fromLTRB(Space.md, Space.xs, Space.md, Space.xs),
-      child: ListTile(
-        title: Text(reservation.plate),
-        subtitle: Column(
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(Space.md, Space.sm, Space.sm, Space.sm),
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              [
-                if (reservation.categoryName.isNotEmpty)
-                  reservation.categoryName,
-                l10n.reservationUntil(
-                  Formatters.dateTime(reservation.reservedUntil.toLocal()),
-                ),
-                if (reservation.notes != null && reservation.notes!.isNotEmpty)
-                  reservation.notes!,
-              ].join(' · '),
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: soon ? scheme.tertiaryContainer : scheme.primaryContainer,
+                borderRadius: BorderRadius.circular(Radii.sm),
+              ),
+              child: Icon(
+                soon ? Icons.schedule : Icons.event_available_outlined,
+                color: soon
+                    ? scheme.onTertiaryContainer
+                    : scheme.onPrimaryContainer,
+              ),
             ),
-            if (reservation.expiresSoon(now: now))
-              Padding(
-                padding: const EdgeInsets.only(top: Space.xs),
-                child: StatusChip(
-                  label: l10n.reservationExpiresIn(
-                    Formatters.duration(
-                      l10n,
-                      reservation.reservedUntil.difference(now),
+            const SizedBox(width: Space.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(child: PlateText(reservation.plate)),
+                      if (reservation.categoryName.isNotEmpty)
+                        StatusChip(
+                          label: reservation.categoryName,
+                          tone: StatusTone.neutral,
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: Space.xs),
+                  Text(
+                    l10n.reservationUntil(
+                      Formatters.dateTime(reservation.reservedUntil.toLocal()),
+                    ),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
                     ),
                   ),
-                  tone: StatusTone.warning,
-                  icon: Icons.schedule,
-                ),
+                  if (notes != null && notes.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      notes,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ],
+                  if (soon) ...[
+                    const SizedBox(height: Space.xs),
+                    StatusChip(
+                      label: l10n.reservationExpiresIn(
+                        Formatters.duration(
+                          l10n,
+                          reservation.reservedUntil.difference(now),
+                        ),
+                      ),
+                      tone: StatusTone.warning,
+                      icon: Icons.schedule,
+                    ),
+                  ],
+                ],
               ),
-          ],
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              tooltip: l10n.reservationCheckIn,
-              icon: const Icon(Icons.login),
-              onPressed: () => onCheckIn(context, reservation.plate),
             ),
-            IconButton(
-              tooltip: l10n.reservationCancel,
-              icon: const Icon(Icons.close),
-              onPressed: () => _cancel(context),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  tooltip: l10n.reservationCheckIn,
+                  icon: const Icon(Icons.login),
+                  onPressed: () => onCheckIn(context, reservation.plate),
+                ),
+                IconButton(
+                  tooltip: l10n.reservationCancel,
+                  icon: const Icon(Icons.close),
+                  onPressed: () => _cancel(context),
+                ),
+              ],
             ),
           ],
         ),

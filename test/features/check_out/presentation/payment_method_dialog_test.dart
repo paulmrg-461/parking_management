@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:parking_management/core/money/currency.dart';
+import 'package:parking_management/core/money/money.dart';
 import 'package:parking_management/core/receipt/payment_method.dart';
 import 'package:parking_management/features/check_out/domain/entities/check_out_preview.dart';
 import 'package:parking_management/features/check_out/presentation/payment_method_dialog.dart';
@@ -12,9 +14,10 @@ Future<CheckoutChoice? Function()> pumpDialog(
   WidgetTester tester, {
   CheckOutPreview? preview = _preview,
   PaymentMethod initialMethod = PaymentMethod.cash,
+  Size size = const Size(800, 1400),
 }) async {
   CheckoutChoice? result;
-  tester.view.physicalSize = const Size(800, 1400);
+  tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
@@ -62,6 +65,37 @@ void main() {
 
     expect((result())?.cashReceived, 30000);
     expect((result())?.method, PaymentMethod.cash);
+  });
+
+  testWidgets('Security: a USD site prefixes and formats the cash change', (
+    tester,
+  ) async {
+    Money.configure(Currency.usd);
+    addTearDown(() => Money.configure(Currency.cop));
+    await pumpDialog(
+      tester,
+      preview: const CheckOutPreview(sessionId: 1, amount: 500),
+    );
+
+    await tester.enterText(
+      find.byKey(const Key('checkout_cash_received')),
+      '10.00',
+    );
+    await tester.pump();
+
+    expect(find.text('US\$5.00'), findsWidgets);
+  });
+
+  testWidgets('A11y: the four payment methods fit a phone dialog', (
+    tester,
+  ) async {
+    await pumpDialog(tester, size: const Size(400, 800));
+
+    expect(tester.takeException(), isNull);
+    for (final label in ['Efectivo', 'Tarjeta', 'Transferencia', 'Mensualidad']) {
+      expect(find.text(label), findsOneWidget);
+    }
+    await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
   });
 
   testWidgets('Failure: cash below the total blocks the charge', (

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/tokens.dart';
+import '../../../core/widgets/dialog_header.dart';
 import '../../../core/widgets/plate_input_field.dart';
 import '../../categories/domain/entities/category.dart';
 
@@ -102,7 +103,7 @@ class _ReservationDialogState extends State<ReservationDialog> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return AlertDialog(
-      title: Text(l10n.reservationAdd),
+      title: DialogHeader(icon: Icons.event_available_outlined, title: l10n.reservationAdd),
       content: Form(
         key: _formKey,
         child: SingleChildScrollView(

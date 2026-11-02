@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:parking_management/core/money/currency.dart';
+import 'package:parking_management/core/money/money.dart';
 import 'package:parking_management/features/records/presentation/records_csv.dart';
 import 'package:parking_management/features/records/presentation/records_pdf.dart';
 import 'package:parking_management/l10n/app_localizations.dart';
@@ -19,6 +21,17 @@ void main() {
     expect(lines[1], contains('ABC123'));
     expect(lines[1], contains('5000'));
     expect(lines[2], contains('open'));
+  });
+
+  test('Success: a USD site exports amounts in major units', () {
+    Money.configure(Currency.usd);
+    addTearDown(() => Money.configure(Currency.cop));
+
+    final csv = recordsCsv([
+      sampleRecord(id: 1, plate: 'ABC123', amountCharged: 5050),
+    ]);
+
+    expect(csv, contains(',50.50,'));
   });
 
   test('Security: CSV quotes values with commas or quotes', () {

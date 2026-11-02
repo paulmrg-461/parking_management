@@ -5,6 +5,7 @@ import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/features/categories/domain/entities/category.dart';
 import 'package:parking_management/features/vehicles/application/vehicles_cubit.dart';
 import 'package:parking_management/features/vehicles/domain/entities/vehicle.dart';
+import 'package:parking_management/core/widgets/filter_bar.dart';
 import 'package:parking_management/features/vehicles/presentation/vehicles_page.dart';
 
 import '../../../helpers/fake_category_repository.dart';
@@ -127,6 +128,15 @@ void main() {
     await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
     await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
     await expectLater(tester, meetsGuideline(textContrastGuideline));
+  });
+
+  testWidgets('Success: the list runs inside a filter bar with a count', (
+    tester,
+  ) async {
+    await pumpPage(tester);
+
+    expect(find.byType(FilterBar), findsOneWidget);
+    expect(find.textContaining('vehículos'), findsOneWidget);
   });
 
   testWidgets('Success: typing a plate searches the list', (tester) async {

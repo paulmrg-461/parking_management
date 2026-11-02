@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:parking_management/app/app.dart';
 import 'package:parking_management/app/di/injection.dart';
 import 'package:parking_management/core/network/connectivity_cubit.dart';
+import 'package:parking_management/core/l10n/locale_cubit.dart';
 import 'package:parking_management/core/storage/key_value_store.dart';
 import 'package:parking_management/core/qr/qr_decoder.dart';
 import 'package:parking_management/core/sync/sync_status_cubit.dart';
@@ -68,6 +69,8 @@ Future<AuthCubit> pumpApp(
   BrandingCubit? branding,
   FakeNotificationRepository? notifications,
   FakeCheckOutRepository? dashboardRepository,
+  LocaleCubit? localeCubit,
+  ThemeCubit? themeCubit,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -106,8 +109,10 @@ Future<AuthCubit> pumpApp(
     );
   addTearDown(serviceLocator.reset);
   final syncOutbox = outbox ?? FakeSyncOutbox();
-  final themeCubit = ThemeCubit(FakeKeyValueStore());
-  addTearDown(themeCubit.close);
+  final theme = themeCubit ?? ThemeCubit(FakeKeyValueStore());
+  if (themeCubit == null) {
+    addTearDown(theme.close);
+  }
   final auth = AuthCubit(repository);
   await auth.restore();
   final syncStatus = SyncStatusCubit(syncOutbox, syncOutbox.remove);
@@ -120,7 +125,8 @@ Future<AuthCubit> pumpApp(
           branding ?? BrandingCubit(FakeParkingSettingsRepository()),
       connectivityCubit: connectivity,
       lotsCubit: serviceLocator<LotsCubit>(),
-      themeCubit: themeCubit,
+      themeCubit: theme,
+      localeCubit: localeCubit,
     ),
   );
   await tester.pumpAndSettle();

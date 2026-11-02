@@ -8,7 +8,9 @@ import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/status_colors.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/confirm_dialog.dart';
+import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_state.dart';
+import '../../../core/widgets/skeleton.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../../check_out/domain/entities/slot_board.dart';
 import '../../home/application/dashboard_cubit.dart';
@@ -67,15 +69,10 @@ class _SpotsPageState extends State<SpotsPage> {
         ],
       ),
       body: !widget.isAdmin
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(Space.lg),
-                child: Text(
-                  l10n.spotsAdminOnly,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyLarge,
-                ),
-              ),
+          ? EmptyState(
+              icon: Icons.lock_outline,
+              title: l10n.spotsTitle,
+              message: l10n.spotsAdminOnly,
             )
           : BlocConsumer<SpotsCubit, SpotsState>(
               listenWhen: (previous, current) =>
@@ -89,9 +86,8 @@ class _SpotsPageState extends State<SpotsPage> {
                 }
               },
               builder: (context, state) => switch (state.status) {
-                SpotsStatus.initial || SpotsStatus.loading => const Center(
-                  child: CircularProgressIndicator(),
-                ),
+                SpotsStatus.initial ||
+                SpotsStatus.loading => const SkeletonCardList(itemCount: 3),
                 SpotsStatus.failure => ErrorState(
                   message: context.l10n.failure(state.error!),
                   onRetry: context.read<SpotsCubit>().load,
@@ -206,11 +202,13 @@ class _MapEditor extends StatelessWidget {
         const _Legend(),
         Expanded(
           child: spots.isEmpty
-              ? Center(
-                  child: Text(
-                    l10n.spotsEmpty,
-                    style: theme.textTheme.bodyLarge,
-                    textAlign: TextAlign.center,
+              ? EmptyState(
+                  icon: Icons.grid_on_outlined,
+                  message: l10n.spotsEmpty,
+                  action: FilledButton.icon(
+                    onPressed: () => _addSpot(context, state),
+                    icon: const Icon(Icons.add),
+                    label: Text(l10n.spotsAdd),
                   ),
                 )
               : SingleChildScrollView(

@@ -116,6 +116,60 @@ void main() {
     expect(first, lessThan(second));
   });
 
+  testWidgets('Success: the empty state explains holds and offers to add one', (
+    tester,
+  ) async {
+    await pumpPage(tester);
+
+    expect(find.text('No hay reservas activas'), findsOneWidget);
+    expect(
+      find.text(
+        'Reserva el cupo de un cliente para asegurar su entrada.',
+      ),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('Nueva reserva'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsOneWidget);
+  });
+
+  testWidgets('Success: the search and expiring filters narrow the list', (
+    tester,
+  ) async {
+    await pumpPage(
+      tester,
+      reservations: [
+        sampleReservation(
+          id: 1,
+          plate: 'SOON01',
+          reservedUntil: DateTime.now().add(const Duration(minutes: 20)),
+        ),
+        sampleReservation(
+          id: 2,
+          plate: 'LATE01',
+          reservedUntil: DateTime.now().add(const Duration(hours: 8)),
+        ),
+      ],
+    );
+
+    expect(find.text('2 reservas'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField).first, 'late');
+    await tester.pumpAndSettle();
+    expect(find.text('SOON01'), findsNothing);
+    expect(find.text('LATE01'), findsOneWidget);
+
+    await tester.tap(find.text('Solo por vencer'));
+    await tester.pumpAndSettle();
+    expect(find.text('Ninguna reserva coincide con el filtro'), findsOneWidget);
+
+    await tester.tap(find.text('Limpiar filtros').first);
+    await tester.pumpAndSettle();
+    expect(find.text('SOON01'), findsOneWidget);
+    expect(find.text('2 reservas'), findsOneWidget);
+  });
+
   testWidgets('Success: a reservation opens check-in with its plate', (
     tester,
   ) async {

@@ -18,6 +18,9 @@ class CenteredScrollable extends StatelessWidget {
           minHeight: constraints.hasBoundedHeight
               ? (constraints.maxHeight - Space.xxl).clamp(0, double.infinity)
               : 0,
+          // The scroll child shrinks to its widest line by default, which
+          // shifts the block left on wide pages; fill the viewport instead.
+          minWidth: constraints.hasBoundedWidth ? constraints.maxWidth : 0,
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

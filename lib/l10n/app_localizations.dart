@@ -1439,7 +1439,7 @@ abstract class AppLocalizations {
   /// No description provided for @shiftOpeningFloat.
   ///
   /// In es, this message translates to:
-  /// **'Base inicial (COP)'**
+  /// **'Base inicial'**
   String get shiftOpeningFloat;
 
   /// No description provided for @shiftOpen.
@@ -2162,6 +2162,60 @@ abstract class AppLocalizations {
   /// **'Evidencia'**
   String get settingsSectionEvidence;
 
+  /// No description provided for @settingsSectionPreferences.
+  ///
+  /// In es, this message translates to:
+  /// **'Preferencias'**
+  String get settingsSectionPreferences;
+
+  /// No description provided for @settingsCurrency.
+  ///
+  /// In es, this message translates to:
+  /// **'Moneda'**
+  String get settingsCurrency;
+
+  /// No description provided for @settingsCurrencyHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Los montos se guardan en la unidad menor de la moneda (COP pesos, USD centavos). Al cambiarla, revisa las tarifas y precios.'**
+  String get settingsCurrencyHint;
+
+  /// No description provided for @currencyCop.
+  ///
+  /// In es, this message translates to:
+  /// **'Peso colombiano (COP)'**
+  String get currencyCop;
+
+  /// No description provided for @currencyUsd.
+  ///
+  /// In es, this message translates to:
+  /// **'Dólar estadounidense (USD)'**
+  String get currencyUsd;
+
+  /// No description provided for @languageTooltip.
+  ///
+  /// In es, this message translates to:
+  /// **'Idioma'**
+  String get languageTooltip;
+
+  /// No description provided for @languageSystem.
+  ///
+  /// In es, this message translates to:
+  /// **'Sistema'**
+  String get languageSystem;
+
+  /// No description provided for @languageSpanish.
+  ///
+  /// In es, this message translates to:
+  /// **'Español'**
+  String get languageSpanish;
+
+  /// No description provided for @languageEnglish.
+  ///
+  /// In es, this message translates to:
+  /// **'English'**
+  String get languageEnglish;
+
   /// No description provided for @settingsSectionLegal.
   ///
   /// In es, this message translates to:
@@ -2825,7 +2879,7 @@ abstract class AppLocalizations {
   /// No description provided for @fieldAmount.
   ///
   /// In es, this message translates to:
-  /// **'Valor (COP)'**
+  /// **'Valor'**
   String get fieldAmount;
 
   /// No description provided for @fieldType.
@@ -3431,7 +3485,7 @@ abstract class AppLocalizations {
   /// No description provided for @discountAmount.
   ///
   /// In es, this message translates to:
-  /// **'Descuento (COP)'**
+  /// **'Descuento'**
   String get discountAmount;
 
   /// No description provided for @discountReason.
@@ -4417,6 +4471,660 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Sin ingresos en este rango'**
   String get reportsNoRevenue;
+
+  /// No description provided for @errorTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Algo salió mal'**
+  String get errorTitle;
+
+  /// No description provided for @actionClearFilters.
+  ///
+  /// In es, this message translates to:
+  /// **'Limpiar filtros'**
+  String get actionClearFilters;
+
+  /// No description provided for @notificationsToday.
+  ///
+  /// In es, this message translates to:
+  /// **'Hoy'**
+  String get notificationsToday;
+
+  /// No description provided for @notificationsYesterday.
+  ///
+  /// In es, this message translates to:
+  /// **'Ayer'**
+  String get notificationsYesterday;
+
+  /// No description provided for @notificationsEarlier.
+  ///
+  /// In es, this message translates to:
+  /// **'Anteriores'**
+  String get notificationsEarlier;
+
+  /// No description provided for @notificationsEmptyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Bandeja vacía'**
+  String get notificationsEmptyTitle;
+
+  /// No description provided for @notificationsEmptyHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Los avisos de entradas, salidas, turnos y mensualidades aparecerán aquí.'**
+  String get notificationsEmptyHint;
+
+  /// No description provided for @notificationsOpenRecords.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver registros'**
+  String get notificationsOpenRecords;
+
+  /// No description provided for @notificationsUnreadOnly.
+  ///
+  /// In es, this message translates to:
+  /// **'No leídas'**
+  String get notificationsUnreadOnly;
+
+  /// No description provided for @notificationsAll.
+  ///
+  /// In es, this message translates to:
+  /// **'Todas'**
+  String get notificationsAll;
+
+  /// No description provided for @notificationsFilterLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Filtrar notificaciones'**
+  String get notificationsFilterLabel;
+
+  /// No description provided for @auditActionInsert.
+  ///
+  /// In es, this message translates to:
+  /// **'Crear'**
+  String get auditActionInsert;
+
+  /// No description provided for @auditActionUpdate.
+  ///
+  /// In es, this message translates to:
+  /// **'Editar'**
+  String get auditActionUpdate;
+
+  /// No description provided for @auditActionDelete.
+  ///
+  /// In es, this message translates to:
+  /// **'Eliminar'**
+  String get auditActionDelete;
+
+  /// No description provided for @auditEmptyFiltered.
+  ///
+  /// In es, this message translates to:
+  /// **'Ningún cambio coincide con los filtros'**
+  String get auditEmptyFiltered;
+
+  /// No description provided for @usersSearchHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscar por nombre o usuario'**
+  String get usersSearchHint;
+
+  /// No description provided for @usersEmptyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin usuarios'**
+  String get usersEmptyTitle;
+
+  /// No description provided for @usersEmptyHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Agrega el primer operador para empezar a registrar movimientos.'**
+  String get usersEmptyHint;
+
+  /// No description provided for @usersAddFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Agregar usuario'**
+  String get usersAddFirst;
+
+  /// No description provided for @recordsSummarySessions.
+  ///
+  /// In es, this message translates to:
+  /// **'Sesiones'**
+  String get recordsSummarySessions;
+
+  /// No description provided for @recordsSummaryCharged.
+  ///
+  /// In es, this message translates to:
+  /// **'Cobrado'**
+  String get recordsSummaryCharged;
+
+  /// No description provided for @recordsEmptyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin movimientos'**
+  String get recordsEmptyTitle;
+
+  /// No description provided for @homeQuickActions.
+  ///
+  /// In es, this message translates to:
+  /// **'Accesos rápidos'**
+  String get homeQuickActions;
+
+  /// No description provided for @homeSummaryHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Estado del parqueadero en tiempo real'**
+  String get homeSummaryHint;
+
+  /// No description provided for @shiftSummaryTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Resumen del turno'**
+  String get shiftSummaryTitle;
+
+  /// No description provided for @spotsLegend.
+  ///
+  /// In es, this message translates to:
+  /// **'Convenciones'**
+  String get spotsLegend;
+
+  /// No description provided for @spotsLegendFree.
+  ///
+  /// In es, this message translates to:
+  /// **'Libre'**
+  String get spotsLegendFree;
+
+  /// No description provided for @spotsLegendOccupied.
+  ///
+  /// In es, this message translates to:
+  /// **'Ocupado'**
+  String get spotsLegendOccupied;
+
+  /// No description provided for @spotsLegendHold.
+  ///
+  /// In es, this message translates to:
+  /// **'Reserva'**
+  String get spotsLegendHold;
+
+  /// No description provided for @spotsLegendMaintenance.
+  ///
+  /// In es, this message translates to:
+  /// **'Mantenimiento'**
+  String get spotsLegendMaintenance;
+
+  /// No description provided for @diagnosticsSummary.
+  ///
+  /// In es, this message translates to:
+  /// **'Resumen operativo'**
+  String get diagnosticsSummary;
+
+  /// No description provided for @notificationsUnreadEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'No tienes notificaciones sin leer'**
+  String get notificationsUnreadEmpty;
+
+  /// No description provided for @auditCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} cambios'**
+  String auditCount(int count);
+
+  /// No description provided for @auditEmptyHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Los cambios en datos maestros se registran automáticamente.'**
+  String get auditEmptyHint;
+
+  /// No description provided for @auditEmptyFilteredHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Prueba con otro rango de fechas, tabla o actor.'**
+  String get auditEmptyFilteredHint;
+
+  /// No description provided for @auditBefore.
+  ///
+  /// In es, this message translates to:
+  /// **'Antes'**
+  String get auditBefore;
+
+  /// No description provided for @auditAfter.
+  ///
+  /// In es, this message translates to:
+  /// **'Después'**
+  String get auditAfter;
+
+  /// No description provided for @auditField.
+  ///
+  /// In es, this message translates to:
+  /// **'Campo'**
+  String get auditField;
+
+  /// No description provided for @usersSearchLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscar usuario'**
+  String get usersSearchLabel;
+
+  /// No description provided for @loginOperatorAccess.
+  ///
+  /// In es, this message translates to:
+  /// **'Acceso de operador'**
+  String get loginOperatorAccess;
+
+  /// No description provided for @loginHelper.
+  ///
+  /// In es, this message translates to:
+  /// **'Usa el usuario y el PIN de 6 dígitos asignados por el administrador.'**
+  String get loginHelper;
+
+  /// No description provided for @loginSecure.
+  ///
+  /// In es, this message translates to:
+  /// **'Conexión protegida'**
+  String get loginSecure;
+
+  /// No description provided for @loginShowPin.
+  ///
+  /// In es, this message translates to:
+  /// **'Mostrar PIN'**
+  String get loginShowPin;
+
+  /// No description provided for @loginHidePin.
+  ///
+  /// In es, this message translates to:
+  /// **'Ocultar PIN'**
+  String get loginHidePin;
+
+  /// No description provided for @loginFeatureCheckIn.
+  ///
+  /// In es, this message translates to:
+  /// **'Entradas y salidas en segundos'**
+  String get loginFeatureCheckIn;
+
+  /// No description provided for @loginFeatureCash.
+  ///
+  /// In es, this message translates to:
+  /// **'Caja y turnos cuadrados'**
+  String get loginFeatureCash;
+
+  /// No description provided for @loginFeatureReports.
+  ///
+  /// In es, this message translates to:
+  /// **'Reportes en tiempo real'**
+  String get loginFeatureReports;
+
+  /// No description provided for @reservationsActive.
+  ///
+  /// In es, this message translates to:
+  /// **'Reservas activas'**
+  String get reservationsActive;
+
+  /// No description provided for @reservationsExpiring.
+  ///
+  /// In es, this message translates to:
+  /// **'Por vencer'**
+  String get reservationsExpiring;
+
+  /// No description provided for @reservationsEmptyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin reservas'**
+  String get reservationsEmptyTitle;
+
+  /// No description provided for @reservationsEmptyHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Reserva el cupo de un cliente para asegurar su entrada.'**
+  String get reservationsEmptyHint;
+
+  /// No description provided for @reservationsSearchLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscar reserva'**
+  String get reservationsSearchLabel;
+
+  /// No description provided for @reservationsSearchHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Placa'**
+  String get reservationsSearchHint;
+
+  /// No description provided for @reservationsOnlyExpiring.
+  ///
+  /// In es, this message translates to:
+  /// **'Solo por vencer'**
+  String get reservationsOnlyExpiring;
+
+  /// No description provided for @reservationsCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} reservas'**
+  String reservationsCount(int count);
+
+  /// No description provided for @reservationsFilteredEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Ninguna reserva coincide con el filtro'**
+  String get reservationsFilteredEmpty;
+
+  /// No description provided for @monthlyPassesEmptyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin mensualidades'**
+  String get monthlyPassesEmptyTitle;
+
+  /// No description provided for @monthlyPassesEmptyHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Crea una mensualidad para cobrar por adelantado y agilizar la salida.'**
+  String get monthlyPassesEmptyHint;
+
+  /// No description provided for @monthlyPassesActive.
+  ///
+  /// In es, this message translates to:
+  /// **'Vigentes'**
+  String get monthlyPassesActive;
+
+  /// No description provided for @monthlyPassesCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} mensualidades'**
+  String monthlyPassesCount(int count);
+
+  /// No description provided for @monthlyPassesOnlyActive.
+  ///
+  /// In es, this message translates to:
+  /// **'Solo vigentes'**
+  String get monthlyPassesOnlyActive;
+
+  /// No description provided for @monthlyPassesFilteredEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Ninguna mensualidad coincide con el filtro'**
+  String get monthlyPassesFilteredEmpty;
+
+  /// No description provided for @monthlyPassesList.
+  ///
+  /// In es, this message translates to:
+  /// **'Mensualidades registradas'**
+  String get monthlyPassesList;
+
+  /// No description provided for @categoriesEmptyHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Crea las categorías del parqueadero (moto, carro, camioneta…) para asignar tarifas y cupos.'**
+  String get categoriesEmptyHint;
+
+  /// No description provided for @tariffsEmptyHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Agrega tarifas por hora, día, noche o mensualidad para cada categoría.'**
+  String get tariffsEmptyHint;
+
+  /// No description provided for @diagnosticsPendingQueue.
+  ///
+  /// In es, this message translates to:
+  /// **'Cola pendiente'**
+  String get diagnosticsPendingQueue;
+
+  /// No description provided for @diagnosticsAlerts.
+  ///
+  /// In es, this message translates to:
+  /// **'Alertas'**
+  String get diagnosticsAlerts;
+
+  /// No description provided for @diagnosticsOpenNow.
+  ///
+  /// In es, this message translates to:
+  /// **'Dentro ahora'**
+  String get diagnosticsOpenNow;
+
+  /// No description provided for @vehiclesCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} vehículos'**
+  String vehiclesCount(int count);
+
+  /// No description provided for @parkedCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} dentro'**
+  String parkedCount(int count);
+
+  /// No description provided for @checkOutEmptyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Parqueadero vacío'**
+  String get checkOutEmptyTitle;
+
+  /// No description provided for @checkOutEmptyHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Registra una entrada para verla aquí y cobrarla al salir.'**
+  String get checkOutEmptyHint;
+
+  /// No description provided for @checkOutGoToCheckIn.
+  ///
+  /// In es, this message translates to:
+  /// **'Registrar entrada'**
+  String get checkOutGoToCheckIn;
+
+  /// No description provided for @checkInVehicleSection.
+  ///
+  /// In es, this message translates to:
+  /// **'Vehículo'**
+  String get checkInVehicleSection;
+
+  /// No description provided for @checkInVehicleHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Placa, categoría y datos del vehículo'**
+  String get checkInVehicleHint;
+
+  /// No description provided for @checkInEvidenceSection.
+  ///
+  /// In es, this message translates to:
+  /// **'Evidencia'**
+  String get checkInEvidenceSection;
+
+  /// No description provided for @checkInEvidenceHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Fotos o video del estado del vehículo'**
+  String get checkInEvidenceHint;
+
+  /// No description provided for @notifTypeCheckIn.
+  ///
+  /// In es, this message translates to:
+  /// **'Entrada'**
+  String get notifTypeCheckIn;
+
+  /// No description provided for @notifTypeCheckOut.
+  ///
+  /// In es, this message translates to:
+  /// **'Salida'**
+  String get notifTypeCheckOut;
+
+  /// No description provided for @notifTypePassExpiring.
+  ///
+  /// In es, this message translates to:
+  /// **'Mensualidad por vencer'**
+  String get notifTypePassExpiring;
+
+  /// No description provided for @notifTypePassRenewed.
+  ///
+  /// In es, this message translates to:
+  /// **'Mensualidad renovada'**
+  String get notifTypePassRenewed;
+
+  /// No description provided for @notifTypeOverstay.
+  ///
+  /// In es, this message translates to:
+  /// **'Estadía larga'**
+  String get notifTypeOverstay;
+
+  /// No description provided for @notifTypeShiftClosed.
+  ///
+  /// In es, this message translates to:
+  /// **'Cierre de turno'**
+  String get notifTypeShiftClosed;
+
+  /// No description provided for @notifTypeGeneric.
+  ///
+  /// In es, this message translates to:
+  /// **'Aviso'**
+  String get notifTypeGeneric;
+
+  /// No description provided for @aboutDeveloper.
+  ///
+  /// In es, this message translates to:
+  /// **'Acerca del desarrollador'**
+  String get aboutDeveloper;
+
+  /// No description provided for @aboutRole.
+  ///
+  /// In es, this message translates to:
+  /// **'Desarrollo de software'**
+  String get aboutRole;
+
+  /// No description provided for @aboutIntro.
+  ///
+  /// In es, this message translates to:
+  /// **'Hola, soy Paul Realpe (DevPaul). Diseño y construyo aplicaciones móviles y web con Flutter, cuidando la experiencia de uso y los detalles.'**
+  String get aboutIntro;
+
+  /// No description provided for @aboutFindMe.
+  ///
+  /// In es, this message translates to:
+  /// **'Encuéntrame'**
+  String get aboutFindMe;
+
+  /// No description provided for @aboutWebsite.
+  ///
+  /// In es, this message translates to:
+  /// **'Sitio web'**
+  String get aboutWebsite;
+
+  /// No description provided for @aboutGitHub.
+  ///
+  /// In es, this message translates to:
+  /// **'GitHub'**
+  String get aboutGitHub;
+
+  /// No description provided for @aboutLinkedIn.
+  ///
+  /// In es, this message translates to:
+  /// **'LinkedIn'**
+  String get aboutLinkedIn;
+
+  /// No description provided for @aboutInstagram.
+  ///
+  /// In es, this message translates to:
+  /// **'Instagram'**
+  String get aboutInstagram;
+
+  /// No description provided for @aboutAppTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Sobre la app'**
+  String get aboutAppTitle;
+
+  /// No description provided for @aboutAppBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Sistema de gestión de parqueadero: entradas y salidas, cobro por tiempo, turnos de caja, mensualidades, reservas y reportes en tiempo real.'**
+  String get aboutAppBody;
+
+  /// No description provided for @aboutVersion.
+  ///
+  /// In es, this message translates to:
+  /// **'Versión {version}'**
+  String aboutVersion(String version);
+
+  /// No description provided for @aboutMadeBy.
+  ///
+  /// In es, this message translates to:
+  /// **'Hecho por DevPaul'**
+  String get aboutMadeBy;
+
+  /// No description provided for @aboutRights.
+  ///
+  /// In es, this message translates to:
+  /// **'© 2026 DevPaul. Todos los derechos reservados.'**
+  String get aboutRights;
+
+  /// No description provided for @aboutLogoLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Logotipo de DevPaul'**
+  String get aboutLogoLabel;
+
+  /// No description provided for @aboutOpenError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo abrir el enlace'**
+  String get aboutOpenError;
+
+  /// No description provided for @shiftOpeningHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuenta el efectivo con el que inicia la caja.'**
+  String get shiftOpeningHint;
+
+  /// No description provided for @shiftClosedHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Resumen del último turno cerrado.'**
+  String get shiftClosedHint;
+
+  /// No description provided for @diagnosticsHealthyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Todo en orden'**
+  String get diagnosticsHealthyTitle;
+
+  /// No description provided for @diagnosticsHealthyHint.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay alertas ni colas pendientes en este momento.'**
+  String get diagnosticsHealthyHint;
+
+  /// No description provided for @diagnosticsAttention.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} punto(s) requieren atención'**
+  String diagnosticsAttention(int count);
+
+  /// No description provided for @diagnosticsAttentionHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisa las secciones marcadas abajo.'**
+  String get diagnosticsAttentionHint;
+
+  /// No description provided for @routeErrorTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Página no encontrada'**
+  String get routeErrorTitle;
+
+  /// No description provided for @routeErrorBody.
+  ///
+  /// In es, this message translates to:
+  /// **'La ruta no existe o ya no está disponible. Vuelve al inicio para continuar.'**
+  String get routeErrorBody;
+
+  /// No description provided for @routeErrorHome.
+  ///
+  /// In es, this message translates to:
+  /// **'Volver al inicio'**
+  String get routeErrorHome;
+
+  /// No description provided for @loginSessionExpired.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu sesión expiró. Ingresa de nuevo para continuar.'**
+  String get loginSessionExpired;
 }
 
 class _AppLocalizationsDelegate

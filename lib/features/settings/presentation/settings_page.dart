@@ -13,6 +13,7 @@ import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/list_page_scaffold.dart';
+import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/utils/policy_template.dart';
 import '../../../core/widgets/submission_listener.dart';
@@ -57,6 +58,13 @@ class _SettingsPageState extends State<SettingsPage> {
   late final TextEditingController _carOutOfService;
   late final TextEditingController _motoOutOfService;
   late final TextEditingController _legalPolicy;
+  String _currency = 'COP';
+  final _identityKey = GlobalKey();
+  final _spacesKey = GlobalKey();
+  final _evidenceKey = GlobalKey();
+  final _messagingKey = GlobalKey();
+  final _preferencesKey = GlobalKey();
+  final _legalKey = GlobalKey();
   var _seeded = false;
   bool _whatsappAuto = false;
   List<String>? _baseline;
@@ -186,6 +194,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _carOutOfService.text,
     _motoOutOfService.text,
     _legalPolicy.text,
+    _currency,
     '$_whatsappAuto',
   ];
 
@@ -229,6 +238,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _carOutOfService.text = settings.carOutOfService.toString();
     _motoOutOfService.text = settings.motoOutOfService.toString();
     _legalPolicy.text = settings.legalPolicy;
+    _currency = settings.currency;
     _whatsappAuto = settings.whatsappAuto;
     _baseline = _snapshot();
   }
@@ -251,9 +261,14 @@ class _SettingsPageState extends State<SettingsPage> {
           Space.xxl,
         ),
         children: [
-          _logoSection(context),
+          _logoSection(context, settings),
+          if (MediaQuery.sizeOf(context).width >= 720) ...[
+            _sectionIndex(context),
+            const SizedBox(height: Space.md),
+          ],
           const SizedBox(height: Space.lg),
-          _SectionHeader(
+          SectionHeader(
+            key: _identityKey,
             icon: Icons.badge_outlined,
             title: l10n.settingsSectionIdentity,
           ),
@@ -312,7 +327,8 @@ class _SettingsPageState extends State<SettingsPage> {
             decoration: InputDecoration(labelText: l10n.settingsWhatsapp),
           ),
           const SizedBox(height: Space.lg),
-          _SectionHeader(
+          SectionHeader(
+            key: _spacesKey,
             icon: Icons.grid_view_rounded,
             title: l10n.settingsSectionSpaces,
           ),
@@ -401,7 +417,8 @@ class _SettingsPageState extends State<SettingsPage> {
             label: Text(l10n.spotsTitle),
           ),
           const SizedBox(height: Space.lg),
-          _SectionHeader(
+          SectionHeader(
+            key: _evidenceKey,
             icon: Icons.photo_camera_outlined,
             title: l10n.settingsSectionEvidence,
           ),
@@ -424,7 +441,8 @@ class _SettingsPageState extends State<SettingsPage> {
             },
           ),
           const SizedBox(height: Space.lg),
-          _SectionHeader(
+          SectionHeader(
+            key: _messagingKey,
             icon: Icons.chat_outlined,
             title: l10n.settingsSectionMessaging,
           ),
@@ -437,7 +455,33 @@ class _SettingsPageState extends State<SettingsPage> {
             subtitle: Text(l10n.settingsWhatsappAutoHint),
           ),
           const SizedBox(height: Space.lg),
-          _SectionHeader(
+          SectionHeader(
+            key: _preferencesKey,
+            icon: Icons.tune,
+            title: l10n.settingsSectionPreferences,
+          ),
+          const SizedBox(height: Space.sm),
+          DropdownButtonFormField<String>(
+            key: const Key('settings_currency'),
+            initialValue: _currency,
+            decoration: InputDecoration(
+              labelText: l10n.settingsCurrency,
+              helperText: l10n.settingsCurrencyHint,
+              helperMaxLines: 3,
+            ),
+            items: [
+              DropdownMenuItem(value: 'COP', child: Text(l10n.currencyCop)),
+              DropdownMenuItem(value: 'USD', child: Text(l10n.currencyUsd)),
+            ],
+            onChanged: (value) {
+              if (value != null) {
+                setState(() => _currency = value);
+              }
+            },
+          ),
+          const SizedBox(height: Space.lg),
+          SectionHeader(
+            key: _legalKey,
             icon: Icons.gavel_outlined,
             title: l10n.settingsSectionLegal,
           ),
@@ -555,39 +599,117 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _logoSection(BuildContext context) {
+  /// On wide screens the form is long: a chip index jumps to each block.
+  Widget _sectionIndex(BuildContext context) {
     final l10n = context.l10n;
+    final entries = [
+      (Icons.badge_outlined, l10n.settingsSectionIdentity, _identityKey),
+      (Icons.grid_view_rounded, l10n.settingsSectionSpaces, _spacesKey),
+      (Icons.photo_camera_outlined, l10n.settingsSectionEvidence, _evidenceKey),
+      (Icons.chat_outlined, l10n.settingsSectionMessaging, _messagingKey),
+      (Icons.tune, l10n.settingsSectionPreferences, _preferencesKey),
+      (Icons.gavel_outlined, l10n.settingsSectionLegal, _legalKey),
+    ];
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (final (icon, label, key) in entries) ...[
+            ActionChip(
+              avatar: Icon(icon, size: 18),
+              label: Text(label),
+              onPressed: () => _jumpTo(key),
+            ),
+            const SizedBox(width: Space.sm),
+          ],
+        ],
+      ),
+    );
+  }
+
+  void _jumpTo(GlobalKey key) {
+    final target = key.currentContext;
+    if (target == null) {
+      return;
+    }
+    unawaited(
+      Scrollable.ensureVisible(
+        target,
+        duration: Motion.short,
+        curve: Curves.easeOutCubic,
+      ),
+    );
+  }
+
+  Widget _logoSection(BuildContext context, ParkingSettings settings) {
+    final l10n = context.l10n;
+    final scheme = Theme.of(context).colorScheme;
     return BlocBuilder<BrandingCubit, BrandingState>(
       builder: (context, branding) {
         final bytes = branding.logoOrNull;
-        return Row(
-          children: [
-            if (bytes != null)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(Space.xs),
-                child: Image.memory(
-                  bytes,
+        return Card(
+          margin: const EdgeInsets.only(bottom: Space.lg),
+          clipBehavior: Clip.antiAlias,
+          child: Padding(
+            padding: const EdgeInsets.all(Space.md),
+            child: Row(
+              children: [
+                Container(
                   width: 64,
                   height: 64,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) =>
-                      const Icon(Icons.broken_image_outlined, size: 64),
+                  padding: const EdgeInsets.all(Space.sm),
+                  decoration: BoxDecoration(
+                    color: scheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(Radii.md),
+                  ),
+                  child: bytes == null
+                      ? Icon(
+                          Icons.local_parking_rounded,
+                          size: 36,
+                          color: scheme.onPrimaryContainer,
+                        )
+                      : ClipRRect(
+                          borderRadius: BorderRadius.circular(Radii.sm),
+                          child: Image.memory(
+                            bytes,
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, _, _) => Icon(
+                              Icons.broken_image_outlined,
+                              color: scheme.onPrimaryContainer,
+                            ),
+                          ),
+                        ),
                 ),
-              )
-            else
-              const Icon(Icons.local_parking_rounded, size: 64),
-            const SizedBox(width: Space.md),
-            Expanded(
-              child: Text(
-                l10n.settingsLogoSection,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
+                const SizedBox(width: Space.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        settings.name.isEmpty ? l10n.appTitle : settings.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        l10n.settingsLogoSection,
+                        style: Theme.of(context).textTheme.bodySmall
+                            ?.copyWith(color: scheme.onSurfaceVariant),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: Space.sm),
+                FilledButton.tonalIcon(
+                  onPressed: _uploadLogo,
+                  icon: const Icon(Icons.image_outlined),
+                  label: Text(l10n.settingsLogoPick),
+                ),
+              ],
             ),
-            FilledButton.tonal(
-              onPressed: _uploadLogo,
-              child: Text(l10n.settingsLogoPick),
-            ),
-          ],
+          ),
         );
       },
     );
@@ -614,6 +736,7 @@ class _SettingsPageState extends State<SettingsPage> {
         carOutOfService: int.tryParse(_carOutOfService.text.trim()) ?? 0,
         motoOutOfService: int.tryParse(_motoOutOfService.text.trim()) ?? 0,
         legalPolicy: _legalPolicy.text.trim(),
+        currency: _currency,
       ),
     );
   }
@@ -662,31 +785,6 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 }
 
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.icon, required this.title});
-
-  final IconData icon;
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Row(
-      children: [
-        Icon(icon, size: 18, color: theme.colorScheme.primary),
-        const SizedBox(width: Space.xs),
-        Text(
-          title,
-          style: theme.textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// Out-of-service is a per-bay state once the site has a map.
 class _MapMaintenanceNote extends StatelessWidget {
   const _MapMaintenanceNote({required this.label, required this.bays});
 

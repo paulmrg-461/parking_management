@@ -293,4 +293,43 @@ void main() {
     );
     expect(field.controller?.text, 'POLITICAS {{parking}}');
   });
+
+  testWidgets('Success: the wide form offers a section index', (tester) async {
+    final repository = FakeParkingSettingsRepository(_configured);
+    await pumpPage(tester, repository: repository);
+
+    expect(find.text('Identidad'), findsNWidgets(2));
+    expect(find.text('Espacios y mapa'), findsNWidgets(2));
+
+    await tester.tap(find.text('Espacios y mapa').first);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('settings_car_capacity')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('Success: the site currency is changed and saved', (
+    tester,
+  ) async {
+    final repository = FakeParkingSettingsRepository(_configured);
+    await pumpPage(tester, repository: repository);
+
+    final field = find.byKey(const Key('settings_currency'));
+    await tester.scrollUntilVisible(
+      field,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(field);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Dólar estadounidense (USD)').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('settings_save')));
+    await tester.pumpAndSettle();
+
+    expect(repository.settings.currency, 'USD');
+  });
 }

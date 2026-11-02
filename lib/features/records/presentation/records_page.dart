@@ -12,12 +12,14 @@ import '../../../core/receipt/pdf_share.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_state.dart';
+import '../../../core/widgets/filter_bar.dart';
 import '../../../core/widgets/money_text.dart';
 import '../../../core/widgets/plate_text.dart';
 import '../../../core/widgets/search_field.dart';
 import '../../../core/widgets/skeleton.dart';
 import '../../../core/widgets/status_chip.dart';
 import '../../../core/widgets/submission_feedback.dart';
+import '../../../core/widgets/sync_badge.dart';
 import '../application/records_cubit.dart';
 import '../domain/entities/session_record.dart';
 import 'records_csv.dart';
@@ -142,68 +144,93 @@ class _RecordsPageState extends State<RecordsPage> {
                 child: CircularProgressIndicator(strokeWidth: 2),
               ),
             )
-          else ...[
-            IconButton(
+          else
+            PopupMenuButton<String>(
               tooltip: l10n.recordsExportCsv,
-              icon: const Icon(Icons.table_view_outlined),
-              onPressed: () => _copyCsv(context),
+              icon: const Icon(Icons.ios_share),
+              onSelected: (value) => value == 'pdf'
+                  ? _exportPdf(context)
+                  : _copyCsv(context),
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                  value: 'pdf',
+                  child: Text(l10n.recordsExportPdf),
+                ),
+                PopupMenuItem(
+                  value: 'csv',
+                  child: Text(l10n.recordsExportCsv),
+                ),
+              ],
             ),
-            IconButton(
-              tooltip: l10n.recordsExportPdf,
-              icon: const Icon(Icons.picture_as_pdf_outlined),
-              onPressed: () => _exportPdf(context),
-            ),
-          ],
           IconButton(
             tooltip: l10n.homeRefreshTooltip,
             icon: const Icon(Icons.refresh),
             onPressed: () => context.read<RecordsCubit>().load(),
           ),
+          const SyncBadge(),
         ],
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(Space.md),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SearchField(
-                  label: l10n.plateLabel,
-                  hint: l10n.plateHint,
-                  onChanged: context.read<RecordsCubit>().search,
-                  onSubmitted: (value) =>
-                      unawaited(context.read<RecordsCubit>().load(query: value)),
+      body: BlocConsumer<RecordsCubit, RecordsState>(
+        listenWhen: (previous, current) =>
+            previous.failure != current.failure &&
+            current.failure != null &&
+            current.status == RecordsStatus.loaded,
+        listener: (context, state) {
+          showErrorSnack(context, context.l10n.failure(state.failure!));
+        },
+        builder: (context, state) {
+          final cubit = context.read<RecordsCubit>();
+          final filtered =
+              state.query.trim().isNotEmpty ||
+              state.from != null ||
+              state.to != null;
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(Space.md),
+                child: FilterBar(
+                  summary: state.status == RecordsStatus.loaded
+                      ? l10n.recordsCount(state.total)
+                      : null,
+                  onClear: filtered
+                      ? () {
+                          cubit.setRange(null, null);
+                          unawaited(cubit.load(query: ''));
+                        }
+                      : null,
+                  clearLabel: l10n.actionClearFilters,
+                  children: [
+                    SizedBox(
+                      width: 260,
+                      child: SearchField(
+                        label: l10n.plateLabel,
+                        hint: l10n.plateHint,
+                        onChanged: cubit.search,
+                        onSubmitted: (value) =>
+                            unawaited(cubit.load(query: value)),
+                      ),
+                    ),
+                    _RangeFilter(onPick: () => _pickRange(context)),
+                  ],
                 ),
-                const SizedBox(height: Space.sm),
-                _RangeFilter(onPick: () => _pickRange(context)),
-              ],
-            ),
-          ),
-          Expanded(
-            child: BlocConsumer<RecordsCubit, RecordsState>(
-              listenWhen: (previous, current) =>
-                  previous.failure != current.failure &&
-                  current.failure != null &&
-                  current.status == RecordsStatus.loaded,
-              listener: (context, state) {
-                showErrorSnack(context, context.l10n.failure(state.failure!));
-              },
-              builder: (context, state) => switch (state.status) {
-                RecordsStatus.initial || RecordsStatus.loading =>
-                  const _RecordsSkeleton(),
-                RecordsStatus.failure => ErrorState(
-                  message: context.l10n.failure(state.failure!),
-                  onRetry: () => context.read<RecordsCubit>().load(),
-                ),
-                RecordsStatus.loaded => _RecordsList(
-                  state: state,
-                  onOpen: (plate) => _openHistory(context, plate),
-                ),
-              },
-            ),
-          ),
-        ],
+              ),
+              Expanded(
+                child: switch (state.status) {
+                  RecordsStatus.initial || RecordsStatus.loading =>
+                    const _RecordsSkeleton(),
+                  RecordsStatus.failure => ErrorState(
+                    message: context.l10n.failure(state.failure!),
+                    onRetry: () => cubit.load(),
+                  ),
+                  RecordsStatus.loaded => _RecordsList(
+                    state: state,
+                    onOpen: (plate) => _openHistory(context, plate),
+                  ),
+                },
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -307,6 +334,7 @@ class _RecordsList extends StatelessWidget {
     final l10n = context.l10n;
     if (state.records.isEmpty) {
       return EmptyState(
+        title: l10n.recordsEmptyTitle,
         message: state.query.trim().isEmpty
             ? l10n.recordsEmptyAll
             : l10n.recordsEmpty(state.query),
@@ -315,32 +343,10 @@ class _RecordsList extends StatelessWidget {
     }
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(Space.md, 0, Space.md, Space.lg),
-      itemCount: state.records.length + (state.hasMore ? 2 : 1),
+      itemCount: state.records.length + (state.hasMore ? 1 : 0),
       separatorBuilder: (_, _) => const SizedBox(height: Space.sm),
       itemBuilder: (context, index) {
-        if (index == 0) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: Space.xs),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    l10n.recordsCount(state.total),
-                    style: Theme.of(context).textTheme.titleSmall,
-                  ),
-                ),
-                if (state.query.trim().isNotEmpty)
-                  TextButton(
-                    onPressed: () => context.read<RecordsCubit>().load(
-                      query: '',
-                    ),
-                    child: Text(l10n.recordsClearFilter),
-                  ),
-              ],
-            ),
-          );
-        }
-        if (index > state.records.length) {
+        if (index == state.records.length) {
           return Center(
             child: TextButton(
               onPressed: () => context.read<RecordsCubit>().loadMore(),
@@ -348,7 +354,7 @@ class _RecordsList extends StatelessWidget {
             ),
           );
         }
-        final record = state.records[index - 1];
+        final record = state.records[index];
         return _RecordTile(record: record, onTap: () => onOpen(record.plate));
       },
     );

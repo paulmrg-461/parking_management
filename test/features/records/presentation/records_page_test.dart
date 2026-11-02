@@ -72,7 +72,7 @@ void main() {
     // The hint shows the sample plate; no record row remains.
     expect(find.text('\$2.500'), findsNothing);
 
-    await tester.tap(find.text('Ver todos'));
+    await tester.tap(find.text('Limpiar filtros'));
     await tester.pumpAndSettle();
     expect(find.text('2 registros'), findsOneWidget);
   });
@@ -141,7 +141,9 @@ void main() {
       FakeRecordRepository([sampleRecord(id: 1, plate: 'ABC123')]),
     );
 
-    await tester.tap(find.byTooltip('Copiar CSV'));
+    await tester.tap(find.byIcon(Icons.ios_share));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Copiar CSV'));
     await tester.pumpAndSettle();
 
     expect(find.text('CSV copiado al portapapeles'), findsOneWidget);
@@ -152,7 +154,9 @@ void main() {
   ) async {
     await pumpPage(tester, FakeRecordRepository());
 
-    await tester.tap(find.byTooltip('Copiar CSV'));
+    await tester.tap(find.byIcon(Icons.ios_share));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Copiar CSV'));
     await tester.pumpAndSettle();
 
     expect(find.text('No hay registros para exportar'), findsOneWidget);

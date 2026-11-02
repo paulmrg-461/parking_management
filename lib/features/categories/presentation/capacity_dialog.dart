@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/l10n/l10n.dart';
+import '../../../core/widgets/dialog_header.dart';
 import '../domain/entities/category.dart';
 
 /// Edits a category's capacity (0 = unlimited).
@@ -48,7 +49,10 @@ class _CapacityDialogState extends State<CapacityDialog> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return AlertDialog(
-      title: Text(l10n.categoryCapacityTitle(widget.category.name)),
+      title: DialogHeader(
+        icon: Icons.groups_outlined,
+        title: l10n.categoryCapacityTitle(widget.category.name),
+      ),
       content: Form(
         key: _formKey,
         child: TextFormField(

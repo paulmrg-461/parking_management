@@ -11,6 +11,7 @@ import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_state.dart';
 import '../../../core/widgets/plate_text.dart';
+import '../../../core/widgets/skeleton.dart';
 import '../../../core/widgets/status_chip.dart';
 import '../application/evidence_cubit.dart';
 import '../domain/entities/public_evidence.dart';
@@ -83,9 +84,8 @@ class _PublicEvidencePageState extends State<PublicEvidencePage> {
             );
           }
           return switch (state.status) {
-          EvidenceStatus.initial || EvidenceStatus.loading => const Center(
-            child: CircularProgressIndicator(),
-          ),
+          EvidenceStatus.initial ||
+          EvidenceStatus.loading => const SkeletonCardList(itemCount: 3),
           EvidenceStatus.failure => Padding(
             padding: const EdgeInsets.all(Space.lg),
             child: Column(
@@ -124,57 +124,89 @@ class _PlateGate extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final theme = Theme.of(context);
-    return ListView(
-      padding: const EdgeInsets.all(Space.lg),
-      children: [
-        Icon(
-          Icons.lock_outline,
-          size: Space.xxl,
-          color: theme.colorScheme.primary,
-        ),
-        const SizedBox(height: Space.md),
-        Text(
-          l10n.evidenceGateTitle,
-          textAlign: TextAlign.center,
-          style: theme.textTheme.titleMedium,
-        ),
-        const SizedBox(height: Space.xs),
-        Text(
-          l10n.evidenceGateHint,
-          textAlign: TextAlign.center,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-        const SizedBox(height: Space.lg),
-        if (sessionInvalid)
-          Text(
-            l10n.evidenceInvalid,
-            textAlign: TextAlign.center,
-            style: TextStyle(color: theme.colorScheme.error),
-          )
-        else ...[
-          TextField(
-            key: const Key('evidence_plate'),
-            controller: controller,
-            autofocus: true,
-            textCapitalization: TextCapitalization.characters,
-            textInputAction: TextInputAction.go,
-            onSubmitted: (_) => onUnlock(),
-            decoration: InputDecoration(
-              labelText: l10n.plateLabel,
-              prefixIcon: const Icon(Icons.badge_outlined),
+    final scheme = theme.colorScheme;
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(Space.lg),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 440),
+          child: Card(
+            clipBehavior: Clip.antiAlias,
+            child: Padding(
+              padding: const EdgeInsets.all(Space.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        color: scheme.primaryContainer,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.lock_outline,
+                        size: Space.xl,
+                        color: scheme.onPrimaryContainer,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: Space.md),
+                  Text(
+                    l10n.evidenceGateTitle,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: Space.xs),
+                  Text(
+                    l10n.evidenceGateHint,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: Space.lg),
+                  if (sessionInvalid)
+                    Text(
+                      l10n.evidenceInvalid,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: scheme.error),
+                    )
+                  else ...[
+                    TextField(
+                      key: const Key('evidence_plate'),
+                      controller: controller,
+                      autofocus: true,
+                      textCapitalization: TextCapitalization.characters,
+                      textInputAction: TextInputAction.go,
+                      onSubmitted: (_) => onUnlock(),
+                      decoration: InputDecoration(
+                        labelText: l10n.plateLabel,
+                        prefixIcon: const Icon(Icons.badge_outlined),
+                      ),
+                    ),
+                    const SizedBox(height: Space.md),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        minHeight: Layout.minTouch,
+                      ),
+                      child: FilledButton.icon(
+                        key: const Key('evidence_unlock'),
+                        onPressed: onUnlock,
+                        icon: const Icon(Icons.lock_open),
+                        label: Text(l10n.evidenceUnlock),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ),
-          const SizedBox(height: Space.md),
-          FilledButton.icon(
-            key: const Key('evidence_unlock'),
-            onPressed: onUnlock,
-            icon: const Icon(Icons.lock_open),
-            label: Text(l10n.evidenceUnlock),
-          ),
-        ],
-      ],
+        ),
+      ),
     );
   }
 }

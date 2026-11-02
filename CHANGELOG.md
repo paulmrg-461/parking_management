@@ -11,6 +11,175 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Added
 
+**Production hardening**
+
+- `0069_scale_hardening.sql`: `pg_trgm` + a GIN index for plate search, hot-path
+  composite indexes (sessions per lot/entry, passes per lot/end, active
+  reservations, notifications per lot/user/date) and guarded invariants
+  (`end_date >= start_date`, non-negative pass and charged amounts). SQL suite
+  covers the indexes and the three constraints.
+- Friendly `RouteErrorPage` for unknown or broken deep links, with a one-tap
+  return home (router `errorBuilder` + test).
+- RLS guard: the SQL suite fails when any `public` table lacks RLS;
+  `0070_lock_migrations_table.sql` enables it on the runner's
+  `schema_migrations` and revokes `anon`/`authenticated` access.
+- Branded first paint: the Android cold-start window uses the brand background
+  with the app mark centred, and the web build shows a dark splash with the
+  icon until Flutter's first frame (removed automatically).
+- `0071_retention_schedule.sql` completes the `pg_cron` schedule (audit 365 d,
+  WhatsApp 90 d); the host cron fallback already called both functions.
+- `BACKUP_KEEP=N` prunes old archives while keeping the newest N.
+- CI now compiles the Android debug APK (with placeholder defines) in addition
+  to the release web bundle.
+- Backups fail if `pg_restore --list` rejects the dump, and each backup ships
+  `SHA256SUMS` for integrity checks.
+- The public static host sends baseline security headers and gzip for
+  JS/wasm/JSON/SVG.
+- CI now runs `flutter test --coverage` + `dart run tool/check_coverage.dart`
+  (global ≥ 70 %, application ≥ 90 %, domain/infrastructure ratcheted) and pins
+  the same Flutter beta as local (3.50.0-0.1.pre).
+- `/about` shows the build name and number (`FLUTTER_BUILD_NAME`/`NUMBER`).
+- `docs/production-readiness.md`: SLO targets, infrastructure, schema guards,
+  security, resilience, observability, release checklist and known limits.
+
+**UI/UX pass across every module**
+
+- Create/edit dialogs (user, vehicle, tariff, reservation, monthly pass, site,
+  category capacity) share a `DialogHeader` with a tonal icon, title and hint.
+- Diagnostics opens with a health banner: a calm "Todo en orden" block or the
+  number of items needing attention, above the summary metrics.
+- Shift: the opening form leads with a tonal lock, title and hint, the amount
+  field shows the currency symbol and the button keeps a 48 dp target; the
+  closed-shift card shows balanced/warning icon and chip plus expected/counted
+  metric cards before the difference row.
+- Reports: the range presets, date picker and all-sites toggle live in one
+  filter card with the selected period as summary (matching the other lists).
+- Dialog layout guard: a 400 px regression test pumps the vehicle, tariff,
+  user, site, reservation, monthly-pass and capacity dialogs and fails on any
+  layout exception (the class of bug behind the squeezed payment methods).
+- Dev networking: `tool/run-android.sh` defaults to LAN mode (no `adb reverse`
+  dependency), `tool/android-doctor.sh` prints host/device/port diagnostics and
+  `tool/run-evidence-web.sh` recreates the public host after a restart.
+- Expired sessions now explain themselves: a 401 emits
+  `AuthUnauthenticated(expired: true)` and the login screen shows a live-region
+  "session expired" banner instead of a silent return.
+- Settlement dialog: the four payment methods are wrapping `ChoiceChip`s, not a
+  segmented control — a segmented row squeezed and overflowed on phones with
+  rotated labels (fixed after a device screenshot).
+- Settlement dialog: payment methods are a segmented choice, cash sits in a
+  tonal panel with a large change figure, errors use an inline banner, the
+  currency symbol/format come from `Money` (no hardcoded `$`, USD decimals
+  parse correctly) and the confirm action has an icon.
+- Notifications gain a type filter (all, check-in, check-out, passes, overstay,
+  shift) in the app bar, with a clear-filters empty state.
+- About the developer (`/about`, public): DevPaul identity with the capybara
+  logo, role, bio, website/GitHub/LinkedIn/Instagram links, the app summary
+  with its version, and the "Hecho por DevPaul" / "© 2026 DevPaul. All rights
+  reserved." notices (hero chip, app card and page footer). Linked from the
+  drawer, the desktop sidebar and the login footer.
+- Empty/error blocks are truly centered on wide pages: `CenteredScrollable`
+  now fills the available width instead of shrink-wrapping to the widest line
+  (monthly passes, reservations, history and every other empty state).
+- Notifications label each row with its type (check-in, check-out, pass,
+  overstay, shift) next to the timestamp.
+- Shift history rows are cards with a balanced/warning avatar and separate
+  sales/difference lines (difference highlighted when it does not balance).
+- Public pages: `/policies` opens with a branded identity card and renders the
+  contract as numbered clauses; the `/evidence` gate is a centered card with a
+  tonal lock and a 48 dp unlock button. Both use card skeletons while loading.
+- Vehicle history renders movements on a timeline rail (dot per visit, open
+  stays highlighted).
+- Check-in: the form is split into "Vehículo" and "Evidencia" sections with
+  hints, a live pulse chip (`N dentro` / active holds) above the plate field,
+  and the submit button gains an icon and a 48 dp target.
+- Settings: wide screens get a section chip index (identity, spaces, evidence,
+  messaging, preferences, legal) that scrolls to each block.
+- Check-out: the plate search and QR button sit in a filter card with the
+  "N inside" count, open sessions render as cards with a long-stay avatar and
+  the empty lot explains the next step with a check-in CTA.
+- Settings opens with a branded header card (tonal logo, site name and logo
+  action); chip labels truncate instead of overflowing on narrow rows.
+- Reports: total revenue opens as a primary metric card with the period and
+  previous-period delta; pass revenue, discounts, WhatsApp counters and
+  occupancy are metric cards too, and every block uses the shared section
+  header.
+- Diagnostics: top metrics for open sessions, pending queue and alerts, section
+  headers with divided rows, warning chips and tonal avatars on WhatsApp/error
+  rows.
+- Categories, tariffs, vehicles and sites render as cards with tonal avatars;
+  vehicles add a filter bar with the result count.
+- Contact is a branded card plus tappable rows with tonal icon avatars; the open
+  shift card shows its status chip.
+- Mobile app bar keeps only the notification bell and sync badge. Language,
+  appearance and sign-out moved to the drawer (with the current value as
+  subtitle and a bottom sheet to switch), and the drawer header gained an
+  explicit close button. On desktop the same preferences sit in the sidebar
+  footer next to the account card.
+- The scan-to-check-out shortcut is now hidden on every management route
+  (vehicles, tariffs, categories, diagnostics, audit, sites, reservations,
+  passes, users, reports, settings); it stays on the operator screens.
+- Side navigation: branded logo tile and role dot, hairline under the header,
+  rounded nav pills with a primary accent bar for the active page, denser
+  nested management rows under a guide line, a count badge and rotating
+  chevron on the management accordion, active-site card with icon tile and a
+  user card with gradient avatar, online dot and compact logout; the collapsed
+  rail keeps tonal icon squares, tooltips and the avatar. Tokens and
+  `ColorScheme` only.
+- Sign-in screen: on wide screens it splits into a tonal brand panel (identity,
+  tagline and the three operator jobs) and a bordered form card; phones keep
+  one column with the compact brand header. The PIN can be revealed with an
+  explicit toggle, errors render as an inline high-contrast banner (live
+  region), the button keeps a 48 dp target and device language/appearance pick
+  from the corner before signing in. The debug banner is gone.
+- Capacity reservations: summary metrics (active / expiring soon), a filter
+  card with plate search and "expiring only", cards that show the hold window,
+  category chip, notes and warning countdown, and an empty state that explains
+  holds and creates the first one.
+- Monthly passes: summary metrics (active passes and pending payments with the
+  amount due), filter card with plate search and "active only", section
+  headers for pending payments and registered passes, a typed empty state and
+  no-match state with a clear action.
+- Categories and tariffs empty states explain what is missing and offer the
+  matching create action.
+**UI/UX pass across every module**
+
+- Shared UI kit (`core/widgets`): `SectionHeader`, `MetricCard`, `FilterBar`,
+  `SkeletonCardList`/`SkeletonTable`, and upgraded `EmptyState`/`ErrorState`
+  with a title, tonal icon, explicit call to action and localized retry.
+  Documented in [`docs/ui-kit.md`](docs/ui-kit.md).
+- Notifications: grouped by day (today / yesterday / earlier), unread filter
+  with a count, tonal type icons, unread emphasis and an empty state that leads
+  to the records page.
+- Audit: filter card with the entry count and date chip, localized action chips
+  (create/update/delete), row dialog that compares **before → after** per field
+  and a clear-filters empty state.
+- Users: search by name or username, role segments, initials avatars, role
+  chips and a first-user CTA.
+- Records: search and range filters inside one card with the result summary,
+  exports behind a single menu and a title on the empty state.
+- Home: quick actions as 48 dp tiles, section headers with hints for quick
+  actions and the live summary.
+- Vehicle history: visit/spend as `MetricCard`s and a section header for the
+  movement list. Shifts and spots use card skeletons and empty states; settings
+  reuses the shared section header.
+- Currency labels stop hardcoding COP: "Valor", "Descuento" and "Base inicial"
+  follow the site currency (the symbol comes from `Money`).
+
+**Multi-currency (COP/USD) and Spanish/English**
+
+- `parking_settings.currency` (`0068`, `COP` default, `USD` allowed) is exposed
+  by `public_lot_profile`. Amounts remain integers in the currency minor unit
+  (COP pesos, USD cents); `core/money` formats `$5.000` / `US$50.00`, parses
+  operator input with either separator and writes CSV in major units. The
+  currency is ambient (`Money.configure` from `BrandingCubit`), so screens,
+  PDFs, printed receipts, fare breakdowns, cash counting and the shift drawer
+  adapt with no per-widget plumbing. Ajustes has a currency selector and
+  money inputs accept decimals for USD.
+- The interface is translatable between Spanish and English with a device-level
+  preference (`LocaleCubit`, Hive `preferences/locale`): system, Español or
+  English from the translate button in the home app bar. Tests without the
+  cubit keep the Spanish `defaultLocale`.
+
 **Operator UI/UX (space board and settlement)**
 
 - Home **space board** (`slot_board()` + `SlotBoardCard`): virtual capacity
