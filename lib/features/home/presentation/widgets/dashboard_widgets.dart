@@ -11,6 +11,7 @@ import '../../../../core/utils/elapsed.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/app_icon_button.dart';
 import '../../../../core/widgets/money_text.dart';
+import '../../../../core/widgets/plate_text.dart';
 import '../../../../core/widgets/status_chip.dart';
 import '../../../auth/application/auth_cubit.dart';
 import '../../../auth/domain/entities/user.dart';
@@ -182,23 +183,30 @@ class _OccupancySummary extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      total > 0 ? '$open / $total' : '$open',
-                      style: textTheme.displaySmall?.copyWith(
-                        fontWeight: FontWeight.w600,
+                // Large text settings shrink the big figure instead of
+                // overflowing next to the radial gauge.
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        total > 0 ? '$open / $total' : '$open',
+                        style: textTheme.displaySmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                    if (full) ...[
-                      const SizedBox(width: Space.sm),
-                      StatusChip(
-                        label: l10n.homeFull,
-                        tone: StatusTone.warning,
-                      ),
+                      if (full) ...[
+                        const SizedBox(width: Space.sm),
+                        StatusChip(
+                          label: l10n.homeFull,
+                          tone: StatusTone.warning,
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
                 if (total > 0) ...[
                   const SizedBox(height: Space.sm),
@@ -523,8 +531,9 @@ class InsideCard extends StatelessWidget {
                     if (i > 0) const Divider(height: 1),
                     InkWell(
                       borderRadius: BorderRadius.circular(Radii.sm),
+                      // Straight to the charge dialog, like the slot board.
                       onTap: () => context.go(
-                        '/check-out?plate=${Uri.encodeQueryComponent(state.plateOf(state.sessions[i]))}',
+                        '/check-out?scan=${Uri.encodeQueryComponent(state.plateOf(state.sessions[i]))}',
                       ),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 10),
@@ -546,8 +555,9 @@ class InsideCard extends StatelessWidget {
                                 state.plateOf(state.sessions[i]),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: theme.textTheme.titleSmall?.copyWith(
-                                  fontFamily: 'monospace',
+                                style: PlateText.styleFor(
+                                  context,
+                                  PlateSize.medium,
                                 ),
                               ),
                             ),

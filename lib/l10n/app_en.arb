@@ -910,5 +910,11 @@
   "routeErrorTitle": "Page not found",
   "routeErrorBody": "This route does not exist or is no longer available. Go back home to continue.",
   "routeErrorHome": "Back to home",
-  "loginSessionExpired": "Your session expired. Sign in again to continue."
+  "loginSessionExpired": "Your session expired. Sign in again to continue.",
+  "checkoutChargeAmount": "Charge {amount}",
+  "@checkoutChargeAmount": {"placeholders": {"amount": {"type": "String"}}},
+  "checkoutCashExact": "Exact",
+  "cashCountQuantity": "Quantity of {denomination}",
+  "@cashCountQuantity": {"placeholders": {"denomination": {"type": "String"}}},
+  "plateScanAction": "Scan plate"
 }

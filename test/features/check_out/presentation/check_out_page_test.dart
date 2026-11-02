@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/app/di/injection.dart';
 import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/core/pagination/paged_result.dart';
+import 'package:parking_management/core/widgets/app_icon_button.dart';
 import 'package:parking_management/core/widgets/filter_bar.dart';
 import 'package:parking_management/core/widgets/qr_code.dart';
 import 'package:parking_management/core/receipt/payment_method.dart';
@@ -32,7 +35,13 @@ import '../../../helpers/fake_key_value_store.dart';
 import '../../../helpers/fake_notification_repository.dart';
 import '../../../helpers/test_app.dart';
 
+final _confirm = find.byKey(const Key('checkout_confirm'));
+
 class _FakeCheckOutRepository implements CheckOutRepository {
+  /// Holds the preview open so the page stays in its busy state.
+  Completer<void>? previewGate;
+  int previewCalls = 0;
+
   Failure? checkOutError;
   Failure? previewError;
   int listCalls = 0;
@@ -99,6 +108,8 @@ class _FakeCheckOutRepository implements CheckOutRepository {
 
   @override
   Future<CheckOutPreview> preview(int sessionId) async {
+    previewCalls++;
+    await previewGate?.future;
     final error = previewError;
     if (error != null) {
       throw error;
@@ -233,10 +244,10 @@ void main() {
 
     await tester.tap(find.widgetWithText(FilledButton, 'Cobrar').first);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Confirmar'));
+    await tester.tap(_confirm);
     await tester.pumpAndSettle();
 
-    expect(find.text('Generar recibo'), findsOneWidget);
+    expect(find.text('Ver recibo'), findsOneWidget);
     expect(occupancy.occupancyCalls, 1);
   });
 
@@ -250,7 +261,7 @@ void main() {
 
       await tester.tap(find.widgetWithText(FilledButton, 'Cobrar').first);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Confirmar'));
+      await tester.tap(_confirm);
       await tester.pumpAndSettle();
 
       expect(find.text('Session already closed'), findsOneWidget);
@@ -274,7 +285,7 @@ void main() {
       find.widgetWithText(TextFormField, 'Motivo (ticket perdido)'),
       'cliente sin ticket',
     );
-    await tester.tap(find.text('Confirmar'));
+    await tester.tap(_confirm);
     await tester.pumpAndSettle();
 
     expect(repository.lastLostTicket, isTrue);
@@ -292,7 +303,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Ticket perdido'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Confirmar'));
+    await tester.tap(_confirm);
     await tester.pumpAndSettle();
 
     expect(find.text('Indica el motivo del ticket perdido'), findsOneWidget);
@@ -307,10 +318,10 @@ void main() {
 
       await tester.tap(find.widgetWithText(FilledButton, 'Cobrar').first);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Confirmar'));
+      await tester.tap(_confirm);
       await tester.pumpAndSettle();
 
-      expect(find.text('Generar recibo'), findsOneWidget);
+      expect(find.text('Ver recibo'), findsOneWidget);
       expect(occupancy.occupancyCalls, 1);
     },
   );
@@ -324,9 +335,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Total a cobrar'), findsOneWidget);
-    expect(find.textContaining('5.000'), findsOneWidget);
+    expect(find.text(r'$5.000'), findsOneWidget);
 
-    await tester.tap(find.text('Confirmar'));
+    await tester.tap(_confirm);
     await tester.pumpAndSettle();
   });
 
@@ -342,7 +353,7 @@ void main() {
     expect(find.text('No se pudo calcular la tarifa'), findsOneWidget);
     expect(find.text('Efectivo'), findsOneWidget);
 
-    await tester.tap(find.text('Confirmar'));
+    await tester.tap(_confirm);
     await tester.pumpAndSettle();
   });
 
@@ -381,7 +392,7 @@ void main() {
 
     expect(selectedMethod(tester), PaymentMethod.card);
 
-    await tester.tap(find.text('Confirmar'));
+    await tester.tap(_confirm);
     await tester.pumpAndSettle();
   });
 
@@ -397,7 +408,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Transferencia'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Confirmar'));
+    await tester.tap(_confirm);
     await tester.pumpAndSettle();
 
     expect(store.values['preferences/last_payment_method'], 'transfer');
@@ -417,7 +428,7 @@ void main() {
 
     expect(selectedMethod(tester), PaymentMethod.cash);
 
-    await tester.tap(find.text('Confirmar'));
+    await tester.tap(_confirm);
     await tester.pumpAndSettle();
   });
 
@@ -433,7 +444,7 @@ void main() {
     expect(selectedMethod(tester), PaymentMethod.monthlyPass);
     expect(find.textContaining('sin cobro'), findsOneWidget);
 
-    await tester.tap(find.text('Confirmar'));
+    await tester.tap(_confirm);
     await tester.pumpAndSettle();
   });
 
@@ -447,7 +458,7 @@ void main() {
 
     await tester.tap(find.widgetWithText(FilledButton, 'Cobrar'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Confirmar'));
+    await tester.tap(_confirm);
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Nuevo cobro'));
@@ -698,9 +709,88 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Crédito'));
     await tester.pump();
-    await tester.tap(find.text('Confirmar'));
+    await tester.tap(_confirm);
     await tester.pumpAndSettle();
 
     expect(repository.lastCardType, 'credit');
+  });
+
+  group('charge flow feedback', () {
+    testWidgets('Success: the opening row shows progress and is disabled', (
+      tester,
+    ) async {
+      await pumpPage(tester);
+      repository.previewGate = Completer<void>();
+
+      await tester.tap(find.byKey(const ValueKey('check_out_charge_1')));
+      await tester.pump();
+
+      final busy = find.byKey(const ValueKey('check_out_charge_1'));
+      expect(
+        find.descendant(
+          of: busy,
+          matching: find.byType(CircularProgressIndicator),
+        ),
+        findsOneWidget,
+      );
+      expect(tester.widget<FilledButton>(busy).onPressed, isNull);
+      // The other row keeps its label.
+      expect(find.widgetWithText(FilledButton, 'Cobrar'), findsOneWidget);
+
+      repository.previewGate!.complete();
+      await tester.pumpAndSettle();
+      expect(find.text('Efectivo'), findsOneWidget);
+      await tester.tap(find.text('Cancelar'));
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(FilledButton, 'Cobrar'), findsNWidgets(2));
+    });
+
+    testWidgets('Failure: a second tap while opening does not stack dialogs', (
+      tester,
+    ) async {
+      await pumpPage(tester);
+      repository.previewGate = Completer<void>();
+
+      await tester.tap(find.byKey(const ValueKey('check_out_charge_1')));
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('check_out_charge_2')));
+      await tester.enterText(find.byType(TextField).first, 'xyz999');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump();
+      repository.previewGate!.complete();
+      await tester.pumpAndSettle();
+
+      expect(repository.previewCalls, 1);
+      expect(find.byType(AlertDialog), findsOneWidget);
+      await tester.tap(find.text('Cancelar'));
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('Success: tapping anywhere on the row opens the charge', (
+      tester,
+    ) async {
+      await pumpPage(tester);
+
+      await tester.tap(find.text('XYZ999'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('XYZ999'), findsWidgets);
+      expect(find.text('Efectivo'), findsOneWidget);
+      await tester.tap(find.text('Cancelar'));
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('A11y: the reprint action is a labelled 48 dp target', (
+      tester,
+    ) async {
+      await pumpPage(tester, role: UserRole.admin);
+
+      expect(find.byType(AppIconButton), findsNWidgets(2));
+      final size = tester.getSize(
+        find.byTooltip('Reimprimir recibo de entrada').first,
+      );
+      expect(size.width, greaterThanOrEqualTo(48));
+      expect(size.height, greaterThanOrEqualTo(48));
+    });
   });
 }

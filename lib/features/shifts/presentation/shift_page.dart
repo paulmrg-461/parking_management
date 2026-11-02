@@ -790,6 +790,8 @@ class _AdjustShiftDialogState extends State<_AdjustShiftDialog> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return AlertDialog(
+      // Scrolls above the keyboard on short phones.
+      scrollable: true,
       title: Text(l10n.shiftAdjust),
       content: Form(
         key: _formKey,
@@ -821,6 +823,7 @@ class _AdjustShiftDialogState extends State<_AdjustShiftDialog> {
             const SizedBox(height: Space.md),
             TextFormField(
               controller: _reason,
+              textCapitalization: TextCapitalization.sentences,
               decoration: InputDecoration(labelText: l10n.shiftReason),
               validator: (value) =>
                   (value ?? '').trim().isEmpty ? l10n.fieldRequired : null,
@@ -929,8 +932,9 @@ class _MetricRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
         children: [
-          Text(label, style: style),
-          const Spacer(),
+          // Long labels wrap instead of overflowing on 360-400 dp phones.
+          Expanded(child: Text(label, style: style)),
+          const SizedBox(width: Space.sm),
           if (money)
             MoneyText(amount, style: style)
           else
@@ -986,6 +990,8 @@ class _CashMovementDialogState extends State<_CashMovementDialog> {
     final l10n = context.l10n;
     final withdrawal = widget.type == 'withdrawal';
     return AlertDialog(
+      // Scrolls above the keyboard on short phones.
+      scrollable: true,
       title: Text(withdrawal ? l10n.shiftWithdraw : l10n.shiftDeposit),
       content: Form(
         key: _formKey,
@@ -1008,6 +1014,7 @@ class _CashMovementDialogState extends State<_CashMovementDialog> {
             const SizedBox(height: Space.md),
             TextFormField(
               controller: _reason,
+              textCapitalization: TextCapitalization.sentences,
               decoration: InputDecoration(labelText: l10n.shiftReason),
               validator: (value) =>
                   (value ?? '').trim().isEmpty ? l10n.fieldRequired : null,
@@ -1079,6 +1086,8 @@ class _CloseShiftDialogState extends State<_CloseShiftDialog> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return AlertDialog(
+      // Scrolls above the keyboard on short phones.
+      scrollable: true,
       title: Text(l10n.shiftClose),
       content: Form(
         key: _formKey,
@@ -1112,6 +1121,7 @@ class _CloseShiftDialogState extends State<_CloseShiftDialog> {
             TextFormField(
               controller: _notes,
               maxLines: 2,
+              textCapitalization: TextCapitalization.sentences,
               decoration: InputDecoration(labelText: l10n.shiftNotes),
             ),
           ],

@@ -8,6 +8,7 @@ import 'package:parking_management/features/auth/domain/entities/user.dart';
 import 'package:parking_management/features/check_out/domain/entities/capacity_snapshot.dart';
 import 'package:parking_management/features/check_out/domain/entities/today_summary.dart';
 import 'package:parking_management/features/check_out/domain/entities/open_session.dart';
+import 'package:parking_management/core/widgets/plate_text.dart';
 import 'package:parking_management/features/check_out/domain/entities/slot_board.dart';
 import 'package:parking_management/features/home/application/dashboard_cubit.dart';
 import 'package:parking_management/features/home/presentation/home_page.dart';
@@ -72,11 +73,11 @@ Future<FakeCheckOutRepository> _pump(
         routes: [
           GoRoute(
             path: 'check-in',
-            builder: (_, _) => const Scaffold(body: Text('check-in page')),
+            builder: (_, state) => _RoutePage('check-in page', state.uri),
           ),
           GoRoute(
             path: 'check-out',
-            builder: (_, _) => const Scaffold(body: Text('check-out page')),
+            builder: (_, state) => _RoutePage('check-out page', state.uri),
           ),
           GoRoute(
             path: 'reservations',
@@ -95,6 +96,27 @@ Future<FakeCheckOutRepository> _pump(
   await tester.pumpAndSettle();
   return sessions;
 }
+
+/// Stub destination that also shows the deep link it was opened with.
+class _RoutePage extends StatelessWidget {
+  const _RoutePage(this.name, this.uri);
+
+  final String name;
+  final Uri uri;
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    body: Column(
+      children: [
+        Text(name),
+        Text(uri.query, key: const Key('route_query')),
+      ],
+    ),
+  );
+}
+
+String _routeQuery(WidgetTester tester) =>
+    tester.widget<Text>(find.byKey(const Key('route_query'))).data ?? '';
 
 void main() {
   testWidgets('Success: operator dashboard shows occupancy and actions', (
@@ -434,14 +456,17 @@ void main() {
     expect(cell.height, greaterThanOrEqualTo(48));
   });
 
-  testWidgets('Security: a free cell opens nothing', (tester) async {
+  testWidgets('Success: a free cell starts a check-in, never a charge', (
+    tester,
+  ) async {
     await _pump(tester, capacity: 8, board: const SlotBoard(carCapacity: 4));
 
     await tester.tap(find.byTooltip('Libre Carros y camionetas 1'));
     await tester.pumpAndSettle();
 
     expect(find.text('Total a cobrar'), findsNothing);
-    expect(find.text('check-out page'), findsNothing);
+    expect(find.text('check-in page'), findsOneWidget);
+    expect(_routeQuery(tester), isEmpty);
   });
 
   testWidgets('Success: out-of-service spots are painted and never offered', (
@@ -605,5 +630,88 @@ void main() {
 
     expect(find.text('Espacio A1'), findsOneWidget);
     expect(find.text('Total a cobrar'), findsOneWidget);
+  });
+
+  testWidgets('Success: a free mapped bay opens check-in with that bay', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      capacity: 8,
+      board: const SlotBoard(
+        spots: [
+          ParkingSpot(id: 1, code: 'A1', group: SlotGroup.car, row: 0, col: 0),
+          ParkingSpot(id: 2, code: 'A2', group: SlotGroup.car, row: 0, col: 1),
+        ],
+      ),
+    );
+
+    await tester.tap(find.byTooltip('Libre A2'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('check-in page'), findsOneWidget);
+    expect(_routeQuery(tester), 'spot=2');
+  });
+
+  testWidgets('A11y: free cells are announced as buttons', (tester) async {
+    final semantics = tester.ensureSemantics();
+    await _pump(tester, capacity: 8, board: const SlotBoard(carCapacity: 4));
+
+    expect(
+      tester.getSemantics(find.byTooltip('Libre Carros y camionetas 1')),
+      containsSemantics(label: 'Libre Carros y camionetas 1', isButton: true),
+    );
+    semantics.dispose();
+  });
+
+  testWidgets('A11y: large text is clamped and scaled inside a cell', (
+    tester,
+  ) async {
+    tester.platformDispatcher.textScaleFactorTestValue = 1.6;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    await _pump(
+      tester,
+      capacity: 8,
+      size: const Size(800, 3200),
+      board: SlotBoard(
+        carCapacity: 4,
+        sessions: [
+          SlotSession(
+            sessionId: 9,
+            plate: 'BRD001',
+            entryTime: DateTime(2026, 1, 1),
+          ),
+        ],
+      ),
+    );
+
+    expect(tester.takeException(), isNull);
+    final plate = find.text('BRD001');
+    final scaler = MediaQuery.textScalerOf(tester.element(plate));
+    expect(scaler.scale(10), closeTo(13, 0.01));
+  });
+
+  testWidgets('Success: an inside row opens its charge directly', (
+    tester,
+  ) async {
+    await _pump(tester, capacity: 8);
+
+    await tester.tap(find.text('ABC123'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('check-out page'), findsOneWidget);
+    expect(_routeQuery(tester), 'scan=ABC123');
+  });
+
+  testWidgets('A11y: inside plates use the shared plate style', (tester) async {
+    await _pump(tester, capacity: 8);
+
+    final text = tester.widget<Text>(find.text('ABC123'));
+    final expected = PlateText.styleFor(
+      tester.element(find.text('ABC123')),
+      PlateSize.medium,
+    );
+    expect(text.style?.fontFamily, expected.fontFamily);
+    expect(text.style?.fontFeatures, expected.fontFeatures);
   });
 }

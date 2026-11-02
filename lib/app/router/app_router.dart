@@ -161,6 +161,7 @@ GoRoute _homeRoute(AuthCubit auth) => GoRoute(
           capture: serviceLocator<PlateImageCapture>(),
           canScan: serviceLocator<PlateScanner>().isSupported,
           initialPlate: state.uri.queryParameters['plate'],
+          initialSpotId: int.tryParse(state.uri.queryParameters['spot'] ?? ''),
           reservations: serviceLocator<ReservationRepository>(),
           vehicles: serviceLocator<VehicleRepository>(),
         ),

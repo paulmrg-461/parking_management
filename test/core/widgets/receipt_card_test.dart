@@ -299,4 +299,69 @@ void main() {
     expect(printed, isTrue);
     expect(find.byType(ReceiptCard), findsNothing);
   });
+
+  group('summary with a printer', () {
+    Future<void> openSummary(
+      WidgetTester tester, {
+      required Future<void> Function() onPrint,
+      VoidCallback? onNext,
+    }) async {
+      await tester.pumpWidget(
+        testApp(
+          Scaffold(
+            body: Builder(
+              builder: (context) => FilledButton(
+                onPressed: () => showReceiptSummary(
+                  context,
+                  _checkOutData(),
+                  onPrint: onPrint,
+                  nextActionLabel: onNext == null ? null : 'Nuevo cobro',
+                  onNextAction: onNext,
+                ),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('Success: Imprimir is primary and closes the summary first', (
+      tester,
+    ) async {
+      var printed = 0;
+      await openSummary(tester, onPrint: () async => printed++, onNext: () {});
+
+      expect(find.widgetWithText(FilledButton, 'Imprimir'), findsOneWidget);
+      expect(find.widgetWithText(TextButton, 'Ver recibo'), findsOneWidget);
+      expect(find.text('Generar recibo'), findsNothing);
+      expect(find.text('Nuevo cobro'), findsOneWidget);
+
+      await tester.tap(find.text('Imprimir'));
+      await tester.pumpAndSettle();
+
+      expect(printed, 1);
+      expect(find.byType(ReceiptSummaryDialog), findsNothing);
+    });
+
+    testWidgets('Success: Ver recibo opens the full receipt', (tester) async {
+      await openSummary(tester, onPrint: () async {});
+
+      await tester.tap(find.text('Ver recibo'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('SALIDA REGISTRADA'), findsOneWidget);
+    });
+
+    testWidgets('A11y: the summary actions meet the tap target guideline', (
+      tester,
+    ) async {
+      await openSummary(tester, onPrint: () async {}, onNext: () {});
+
+      await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+    });
+  });
 }

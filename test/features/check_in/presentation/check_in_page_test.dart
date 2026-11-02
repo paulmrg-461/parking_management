@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/pagination/paged_result.dart';
 import 'package:parking_management/features/categories/domain/entities/category.dart';
 import 'package:parking_management/features/check_out/domain/entities/capacity_snapshot.dart';
+import 'package:parking_management/core/theme/tokens.dart';
 import 'package:parking_management/features/check_out/domain/entities/slot_board.dart';
 import 'package:parking_management/features/spots/domain/entities/parking_spot.dart';
 import 'package:parking_management/features/check_out/domain/entities/occupancy_snapshot.dart';
@@ -133,11 +134,17 @@ class _FakeVehicleRepository implements VehicleRepository {
 }
 
 class _FakeCategoryRepository implements CategoryRepository {
-  @override
-  Future<List<Category>> list() async => const [
+  _FakeCategoryRepository({this.categories = _twoCategories});
+
+  static const _twoCategories = [
     Category(id: 1, name: 'Car'),
     Category(id: 2, name: 'Motorcycle'),
   ];
+
+  final List<Category> categories;
+
+  @override
+  Future<List<Category>> list() async => categories;
 
   @override
   Future<Category> create(String name) => throw UnimplementedError();
@@ -217,10 +224,13 @@ void main() {
     List<String> knownPlates = const [],
     bool withVehicles = true,
     Future<XFile?> Function()? recordVideo,
+    int? initialSpotId,
+    List<Category>? categories,
+    Size size = const Size(800, 1600),
   }) async {
     // Tall viewport: the form, the keys switch and the sessions accordion must
     // fit without fighting the CustomScrollView while tapping.
-    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     checkIns = _FakeCheckInRepository();
@@ -240,7 +250,9 @@ void main() {
             BlocProvider<VehicleLookupCubit>(
               create: (_) => VehicleLookupCubit(
                 _FakeVehicleRepository(),
-                _FakeCategoryRepository(),
+                categories == null
+                    ? _FakeCategoryRepository()
+                    : _FakeCategoryRepository(categories: categories),
               ),
             ),
             BlocProvider<PlateScanningCubit>(
@@ -252,6 +264,7 @@ void main() {
             capture: _FakeCapture(returnsPhoto: photos),
             canScan: canScan,
             initialPlate: initialPlate,
+            initialSpotId: initialSpotId,
             onMarkExit: onMarkExit,
             reservations: reservations,
             recordVideo: recordVideo,
@@ -287,8 +300,10 @@ void main() {
   bool submitEnabled(WidgetTester tester) =>
       tester.widget<FilledButton>(submitButton()).onPressed != null;
 
-  Finder categoryField() =>
-      find.widgetWithText(DropdownButtonFormField<int>, 'Categoría');
+  /// With five or fewer categories the form shows one chip per category.
+  Finder categoryChip(int id) => find.byKey(ValueKey('check_in_category_$id'));
+
+  Finder categoryField() => categoryChip(1);
 
   Future<void> scrollTo(WidgetTester tester, Finder finder) =>
       tester.scrollUntilVisible(
@@ -297,9 +312,7 @@ void main() {
         scrollable: find.byType(Scrollable).first,
       );
 
-  testWidgets('Success: a full category is disabled in the dropdown', (
-    tester,
-  ) async {
+  testWidgets('Success: a full category chip is disabled', (tester) async {
     await pumpPage(
       tester,
       occupancyCategories: const [
@@ -315,8 +328,6 @@ void main() {
 
     await enterPlate(tester, 'NEW999');
     await scrollTo(tester, categoryField());
-    await tester.tap(categoryField());
-    await tester.pumpAndSettle();
 
     expect(find.text('Car · La categoría está llena'), findsOneWidget);
     expect(find.text('Motorcycle'), findsOneWidget);
@@ -324,8 +335,11 @@ void main() {
     await tester.tap(find.text('Car · La categoría está llena'));
     await tester.pumpAndSettle();
 
-    // A disabled item does not select anything, so the menu stays open.
-    expect(find.text('Car · La categoría está llena'), findsOneWidget);
+    // A disabled chip does not select anything.
+    final chip = tester.widget<ChoiceChip>(categoryChip(1));
+    expect(chip.onSelected, isNull);
+    expect(chip.selected, isFalse);
+    expect(submitEnabled(tester), isFalse);
   });
 
   testWidgets('Success: renders the open sessions list and the check-in form', (
@@ -400,10 +414,7 @@ void main() {
     await tester.tap(find.text('Repetir entrada ABC123'));
     await tester.pumpAndSettle();
 
-    expect(
-      tester.widget<TextField>(plateField()).controller!.text,
-      'ABC123',
-    );
+    expect(tester.widget<TextField>(plateField()).controller!.text, 'ABC123');
   });
 
   testWidgets(
@@ -416,8 +427,8 @@ void main() {
       await tester.pumpAndSettle();
 
       // One snapshot on open (for the capacity-aware category dropdown) plus
-    // one refresh after the successful entry.
-    expect(occupancy.occupancyCalls, 2);
+      // one refresh after the successful entry.
+      expect(occupancy.occupancyCalls, 2);
     },
   );
 
@@ -435,8 +446,8 @@ void main() {
 
       expect(find.text('Session already open for this plate'), findsOneWidget);
       // Only the snapshot taken when the page opened; a rejected entry never
-    // refreshes occupancy.
-    expect(occupancy.occupancyCalls, 1);
+      // refreshes occupancy.
+      expect(occupancy.occupancyCalls, 1);
     },
   );
 
@@ -478,7 +489,7 @@ void main() {
       await pumpPage(tester);
       await enterPlate(tester, 'XYZ999');
 
-      await tester.tap(categoryField());
+      await tester.ensureVisible(categoryChip(2));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Motorcycle').last);
       await tester.pumpAndSettle();
@@ -629,10 +640,7 @@ void main() {
     await tester.enterText(plateField(), 'A' * 25);
     await tester.pump();
 
-    expect(
-      tester.widget<TextField>(plateField()).controller!.text,
-      'A' * 20,
-    );
+    expect(tester.widget<TextField>(plateField()).controller!.text, 'A' * 20);
   });
 
   testWidgets('Success: a plate already inside is flagged before submitting', (
@@ -697,7 +705,9 @@ void main() {
 
     // A fresh entry starts unchecked.
     expect(
-      tester.widget<SwitchListTile>(find.byKey(const Key('check_in_left_keys'))).value,
+      tester
+          .widget<SwitchListTile>(find.byKey(const Key('check_in_left_keys')))
+          .value,
       isFalse,
     );
   });
@@ -728,8 +738,6 @@ void main() {
 
     await enterPlate(tester, 'NEW999');
     await scrollTo(tester, categoryField());
-    await tester.tap(categoryField());
-    await tester.pumpAndSettle();
 
     expect(find.text('Car · La categoría está llena'), findsOneWidget);
     expect(find.text('Motorcycle'), findsOneWidget);
@@ -740,17 +748,11 @@ void main() {
   ) async {
     await pumpPage(
       tester,
-      space: const CapacitySnapshot(
-        carOpen: 1,
-        carCapacity: 4,
-        carReserved: 1,
-      ),
+      space: const CapacitySnapshot(carOpen: 1, carCapacity: 4, carReserved: 1),
     );
 
     await enterPlate(tester, 'NEW999');
     await scrollTo(tester, categoryField());
-    await tester.tap(categoryField());
-    await tester.pumpAndSettle();
 
     expect(find.text('Car · quedan 2'), findsOneWidget);
     // Motorcycles have no configured limit, so the option stays plain.
@@ -806,8 +808,7 @@ void main() {
   testWidgets('Security: suggestions stay off without a repository', (
     tester,
   ) async {
-    await pumpPage(tester, knownPlates: const ['ABC123'],
-        withVehicles: false);
+    await pumpPage(tester, knownPlates: const ['ABC123'], withVehicles: false);
 
     await enterPlate(tester, 'ABC');
 
@@ -824,8 +825,6 @@ void main() {
 
     await enterPlate(tester, 'NEW998');
     await scrollTo(tester, categoryField());
-    await tester.tap(categoryField());
-    await tester.pumpAndSettle();
 
     expect(find.text('Car · quedan 2'), findsOneWidget);
   });
@@ -857,13 +856,23 @@ void main() {
         spots: [
           ParkingSpot(id: 1, code: 'A1', group: SlotGroup.car, row: 0, col: 0),
           ParkingSpot(id: 2, code: 'A2', group: SlotGroup.car, row: 0, col: 1),
-          ParkingSpot(id: 3, code: 'A3', group: SlotGroup.car, row: 1, col: 0, active: false),
+          ParkingSpot(
+            id: 3,
+            code: 'A3',
+            group: SlotGroup.car,
+            row: 1,
+            col: 0,
+            active: false,
+          ),
         ],
       ),
     );
 
     await enterPlate(tester, 'ABC123');
-    expect(find.widgetWithText(ChoiceChip, 'Automático (primer libre)'), findsOneWidget);
+    expect(
+      find.widgetWithText(ChoiceChip, 'Automático (primer libre)'),
+      findsOneWidget,
+    );
     expect(find.text('A1'), findsOneWidget);
     expect(find.text('A2'), findsOneWidget);
     // Out of service is drawn but cannot be picked.
@@ -940,5 +949,191 @@ void main() {
 
     expect(find.text('Video listo'), findsNothing);
     expect(find.byKey(const Key('check_in_record_video')), findsOneWidget);
+  });
+
+  group('UX batch', () {
+    testWidgets('Success: the submit sits in a sticky bottom bar', (
+      tester,
+    ) async {
+      await pumpPage(tester, size: const Size(400, 700));
+
+      final scaffold = tester.widget<Scaffold>(find.byType(Scaffold).first);
+      expect(scaffold.bottomNavigationBar, isNotNull);
+      // Visible without scrolling, pinned to the bottom of a short phone.
+      final bottom = tester.getBottomLeft(submitButton()).dy;
+      expect(bottom, greaterThan(700 - Layout.minTouch - Space.md * 2));
+      expect(bottom, lessThanOrEqualTo(700));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('Failure: the sticky submit stays disabled without a plate '
+        'category for a new vehicle', (tester) async {
+      await pumpPage(tester, size: const Size(400, 700));
+
+      await enterPlate(tester, 'NEW777');
+
+      expect(submitEnabled(tester), isFalse);
+      await tester.tap(find.text('Car'));
+      await tester.pump();
+      expect(submitEnabled(tester), isTrue);
+    });
+
+    testWidgets('Success: a plate inside offers Cobrar and blocks the entry', (
+      tester,
+    ) async {
+      String? charged;
+      await pumpPage(tester, onMarkExit: (_, plate) => charged = plate);
+
+      await enterPlate(tester, 'open01');
+
+      expect(submitEnabled(tester), isFalse);
+      await tester.tap(find.byKey(const Key('check_in_charge_inside')));
+      await tester.pumpAndSettle();
+      expect(charged, 'OPEN01');
+    });
+
+    testWidgets('A11y: the already-inside warning is a live region', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await pumpPage(tester);
+
+      await enterPlate(tester, 'open01');
+
+      final warning = find.ancestor(
+        of: find.textContaining('ya figura dentro'),
+        matching: find.byWidgetPredicate(
+          (widget) =>
+              widget is Semantics && (widget.properties.liveRegion ?? false),
+        ),
+      );
+      expect(warning, findsOneWidget);
+      handle.dispose();
+    });
+
+    testWidgets('Success: few categories render as chips with availability', (
+      tester,
+    ) async {
+      await pumpPage(
+        tester,
+        space: const CapacitySnapshot(carOpen: 1, carCapacity: 4),
+      );
+
+      await enterPlate(tester, 'NEW999');
+
+      expect(find.byType(DropdownButtonFormField<int>), findsNothing);
+      expect(find.widgetWithText(ChoiceChip, 'Car · quedan 3'), findsOneWidget);
+      await tester.tap(find.text('Motorcycle'));
+      await tester.pump();
+      expect(tester.widget<ChoiceChip>(categoryChip(2)).selected, isTrue);
+    });
+
+    testWidgets('Failure: more than five categories fall back to a dropdown', (
+      tester,
+    ) async {
+      await pumpPage(
+        tester,
+        categories: [
+          for (var id = 1; id <= 6; id++) Category(id: id, name: 'Cat $id'),
+        ],
+      );
+
+      await enterPlate(tester, 'NEW999');
+
+      expect(categoryChip(1), findsNothing);
+      expect(
+        find.widgetWithText(DropdownButtonFormField<int>, 'Categoría'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('Success: the scan action is a labelled tonal button', (
+      tester,
+    ) async {
+      await pumpPage(tester);
+
+      final scan = find.byKey(const Key('check_in_scan_plate'));
+      expect(
+        find.descendant(of: scan, matching: find.text('Escanear placa')),
+        findsOneWidget,
+      );
+      expect(
+        tester.getSize(scan).height,
+        greaterThanOrEqualTo(Layout.minTouch),
+      );
+    });
+
+    testWidgets('Success: a spot from the board is preselected', (
+      tester,
+    ) async {
+      await pumpPage(
+        tester,
+        initialSpotId: 2,
+        board: const SlotBoard(
+          spots: [
+            ParkingSpot(
+              id: 1,
+              code: 'A1',
+              group: SlotGroup.car,
+              row: 0,
+              col: 0,
+            ),
+            ParkingSpot(
+              id: 2,
+              code: 'A2',
+              group: SlotGroup.car,
+              row: 0,
+              col: 1,
+            ),
+          ],
+        ),
+      );
+
+      await enterPlate(tester, 'ABC123');
+      expect(find.text('Espacio A2'), findsOneWidget);
+      await tapSubmit(tester);
+
+      expect(checkIns.lastSpotId, 2);
+    });
+
+    testWidgets('Security: a requested spot that is taken is not forced', (
+      tester,
+    ) async {
+      await pumpPage(
+        tester,
+        initialSpotId: 1,
+        board: SlotBoard(
+          spots: const [
+            ParkingSpot(
+              id: 1,
+              code: 'A1',
+              group: SlotGroup.car,
+              row: 0,
+              col: 0,
+            ),
+            ParkingSpot(
+              id: 2,
+              code: 'A2',
+              group: SlotGroup.car,
+              row: 0,
+              col: 1,
+            ),
+          ],
+          sessions: [
+            SlotSession(
+              sessionId: 9,
+              plate: 'OTHER1',
+              entryTime: DateTime(2026, 1, 1),
+              spotId: 1,
+            ),
+          ],
+        ),
+      );
+
+      await enterPlate(tester, 'ABC123');
+      await tapSubmit(tester);
+
+      expect(checkIns.lastSpotId, isNull);
+    });
   });
 }

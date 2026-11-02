@@ -2842,4 +2842,20 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get loginSessionExpired =>
       'Your session expired. Sign in again to continue.';
+
+  @override
+  String checkoutChargeAmount(String amount) {
+    return 'Charge $amount';
+  }
+
+  @override
+  String get checkoutCashExact => 'Exact';
+
+  @override
+  String cashCountQuantity(String denomination) {
+    return 'Quantity of $denomination';
+  }
+
+  @override
+  String get plateScanAction => 'Scan plate';
 }

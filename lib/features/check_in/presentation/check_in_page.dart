@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart' hide Category;
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
@@ -15,6 +15,7 @@ import '../../../core/realtime/local_activity.dart';
 import '../../../core/state/submission.dart';
 import '../../../core/utils/elapsed.dart';
 import '../../../core/utils/vehicle_groups.dart';
+import '../../categories/domain/entities/category.dart';
 import '../../check_out/domain/entities/slot_board.dart';
 import '../../spots/domain/entities/parking_spot.dart';
 import '../../spots/presentation/widgets/spot_picker.dart';
@@ -61,6 +62,7 @@ class CheckInPage extends StatefulWidget {
     required this.capture,
     this.canScan = true,
     this.initialPlate,
+    this.initialSpotId,
     this.onMarkExit,
     this.reservations,
     this.recordVideo,
@@ -77,6 +79,10 @@ class CheckInPage extends StatefulWidget {
   /// Plate to prefill (e.g. from a reservation): the vehicle lookup runs as
   /// soon as the page opens, saving a retype.
   final String? initialPlate;
+
+  /// Bay tapped on the home slot board (`/check-in?spot=<id>`): preselected
+  /// once the vehicle's group shows it as free.
+  final int? initialSpotId;
 
   /// Opens check-out for an open session (injectable for widget tests).
   final void Function(BuildContext context, String plate)? onMarkExit;
@@ -114,6 +120,10 @@ class _CheckInPageState extends State<CheckInPage> {
   Timer? _debounce;
   int? _categoryId;
   int? _spotId;
+
+  /// Bay requested by the deep link; re-applied when the category changes
+  /// and consumed by a successful check-in.
+  int? _requestedSpotId;
   XFile? _video;
   String? _lastPlate;
   bool _sessionsOpen = true;
@@ -128,6 +138,8 @@ class _CheckInPageState extends State<CheckInPage> {
   @override
   void initState() {
     super.initState();
+    _requestedSpotId = widget.initialSpotId;
+    _spotId = _requestedSpotId;
     unawaited(context.read<CheckInCubit>().loadOpenSessions());
     unawaited(_loadHolds());
     unawaited(_loadKnownPlates());
@@ -145,6 +157,15 @@ class _CheckInPageState extends State<CheckInPage> {
       _restoreLastPlate();
       _prefillPlate();
     });
+  }
+
+  @override
+  void didUpdateWidget(CheckInPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final spot = widget.initialSpotId;
+    if (spot != null && spot != oldWidget.initialSpotId) {
+      setState(() => _requestedSpotId = _spotId = spot);
+    }
   }
 
   @override
@@ -431,8 +452,13 @@ class _CheckInPageState extends State<CheckInPage> {
     return text.isEmpty ? null : text;
   }
 
-  bool _canSubmit(bool submitting, VehicleLookupState lookup) {
-    if (submitting || lookup is VehicleLookupLoading) {
+  /// Blocked while the plate is already inside: that car must be charged
+  /// first (the server would reject a second open session anyway).
+  bool _canSubmit(CheckInState state, VehicleLookupState lookup) {
+    if (state.submission.isInProgress || lookup is VehicleLookupLoading) {
+      return false;
+    }
+    if (_openSessionIn(state.sessions, _plateController.text) != null) {
       return false;
     }
     return lookup is! VehicleLookupNotFound || _categoryId != null;
@@ -447,6 +473,7 @@ class _CheckInPageState extends State<CheckInPage> {
       _photos.clear();
       _categoryId = null;
       _spotId = null;
+      _requestedSpotId = null;
       _video = null;
       _leftKeys = false;
     });
@@ -467,10 +494,7 @@ class _CheckInPageState extends State<CheckInPage> {
         unawaited(context.read<DashboardCubit>().load());
         final message = result.spotCode == null
             ? context.l10n.checkInSuccess(result.plate)
-            : context.l10n.checkInSuccessSpot(
-                result.plate,
-                result.spotCode!,
-              );
+            : context.l10n.checkInSuccessSpot(result.plate, result.spotCode!);
         SemanticsService.announce(message, Directionality.of(context));
         showInfoSnack(context, message);
         unawaited(_showReceipt(context, result));
@@ -524,6 +548,7 @@ class _CheckInPageState extends State<CheckInPage> {
         title: Text(l10n.checkInTitle),
         actions: const [NotificationBell(), SyncBadge()],
       ),
+      bottomNavigationBar: _buildSubmitBar(context),
       body: PlateScanListener(
         onDetected: _onPlateDetected,
         onUnreadable: _onPlateUnreadable,
@@ -562,7 +587,7 @@ class _CheckInPageState extends State<CheckInPage> {
       listenWhen: (previous, current) => current is VehicleLookupNotFound,
       listener: (context, _) => setState(() {
         _categoryId = null;
-        _spotId = null;
+        _spotId = _requestedSpotId;
       }),
       builder: (context, lookup) => _buildFormFields(context, lookup),
     );
@@ -570,21 +595,15 @@ class _CheckInPageState extends State<CheckInPage> {
 
   /// Open session for the typed plate, if the local list knows it.
   ParkingSession? _openSessionFor(String plate) {
-    final normalized = plate.replaceAll(RegExp(r'\s'), '').toUpperCase();
-    if (normalized.isEmpty) {
-      return null;
-    }
     try {
-      final state = context.watch<CheckInCubit>().state;
-      for (final session in state.sessions) {
-        if (session.plate.toUpperCase() == normalized) {
-          return session;
-        }
-      }
+      return _openSessionIn(
+        context.watch<CheckInCubit>().state.sessions,
+        plate,
+      );
     } on ProviderNotFoundException {
       // Isolated tests may not provide the sessions cubit.
+      return null;
     }
-    return null;
   }
 
   /// Capacity group of the vehicle being checked in (cars, motorcycles or the
@@ -594,10 +613,11 @@ class _CheckInPageState extends State<CheckInPage> {
       VehicleLookupFound(:final categoryName) => categoryName,
       VehicleLookupNotFound(:final categories) => switch (_categoryId) {
         final int id => switch (categories) {
-          final list => list
-              .where((category) => category.id == id)
-              .map((category) => category.name)
-              .firstOrNull,
+          final list =>
+            list
+                .where((category) => category.id == id)
+                .map((category) => category.name)
+                .firstOrNull,
         },
         _ => null,
       },
@@ -656,9 +676,7 @@ class _CheckInPageState extends State<CheckInPage> {
     if (!map.configured) {
       return const SizedBox.shrink();
     }
-    final occupied = {
-      for (final session in map.sessions) ?session.spotId,
-    };
+    final occupied = {for (final session in map.sessions) ?session.spotId};
     final free = [
       for (final spot in map.spots)
         if (spot.active && !occupied.contains(spot.id)) spot,
@@ -742,10 +760,11 @@ class _CheckInPageState extends State<CheckInPage> {
         if (widget.canScan) ...[
           Tooltip(
             message: l10n.plateScanTooltip,
-            child: FilledButton.icon(
+            child: FilledButton.tonalIcon(
+              key: const Key('check_in_scan_plate'),
               onPressed: _scanPlate,
               icon: const Icon(Icons.camera_alt),
-              label: Text(l10n.plateLabel),
+              label: Text(l10n.plateScanAction),
             ),
           ),
           const SizedBox(height: 8),
@@ -779,27 +798,7 @@ class _CheckInPageState extends State<CheckInPage> {
               ],
             ),
           ),
-        if (openSession != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.info_outline,
-                  size: 18,
-                  color: Theme.of(context).colorScheme.error,
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    l10n.checkInAlreadyInside(openSession.plate),
-                    style: Theme.of(context).textTheme.bodySmall
-                        ?.copyWith(color: Theme.of(context).colorScheme.error),
-                  ),
-                ),
-              ],
-            ),
-          ),
+        if (openSession != null) _buildAlreadyInside(context, openSession),
         if (_lastPlate != null && _plateController.text.trim().isEmpty)
           Align(
             alignment: Alignment.centerLeft,
@@ -838,27 +837,72 @@ class _CheckInPageState extends State<CheckInPage> {
           onAdd: _addPhoto,
           onRemove: _removePhoto,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: Space.md),
         _buildVideoEvidence(context),
-        const SizedBox(height: 16),
-        BlocSelector<CheckInCubit, CheckInState, bool>(
-          selector: (state) => state.submission.isInProgress,
-          builder: (context, submitting) =>
-              _buildSubmit(context, submitting, lookup),
-        ),
       ],
+    );
+  }
+
+  /// The car is already parked: say so (announced as it appears) and offer
+  /// to charge it right here instead of a duplicate entry.
+  Widget _buildAlreadyInside(BuildContext context, ParkingSession session) {
+    final theme = Theme.of(context);
+    final error = theme.colorScheme.error;
+    return Semantics(
+      liveRegion: true,
+      container: true,
+      child: Padding(
+        padding: const EdgeInsets.only(top: Space.sm),
+        child: Row(
+          children: [
+            Icon(Icons.info_outline, size: 18, color: error),
+            const SizedBox(width: Space.sm),
+            Expanded(
+              child: Text(
+                context.l10n.checkInAlreadyInside(session.plate),
+                style: theme.textTheme.bodySmall?.copyWith(color: error),
+              ),
+            ),
+            TextButton(
+              key: const Key('check_in_charge_inside'),
+              onPressed: () =>
+                  (widget.onMarkExit ?? _markExit)(context, session.plate),
+              child: Text(context.l10n.checkOutCharge),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Sticky action bar: the submit stays reachable however long the form is.
+  Widget _buildSubmitBar(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(Space.md),
+        child: BlocBuilder<VehicleLookupCubit, VehicleLookupState>(
+          builder: (context, lookup) => BlocBuilder<CheckInCubit, CheckInState>(
+            buildWhen: (previous, current) =>
+                previous.submission.isInProgress !=
+                    current.submission.isInProgress ||
+                previous.sessions != current.sessions,
+            builder: (context, state) => _buildSubmit(context, state, lookup),
+          ),
+        ),
+      ),
     );
   }
 
   Widget _buildSubmit(
     BuildContext context,
-    bool submitting,
+    CheckInState state,
     VehicleLookupState lookup,
   ) {
+    final submitting = state.submission.isInProgress;
     return ConstrainedBox(
       constraints: const BoxConstraints(minHeight: Layout.minTouch),
       child: FilledButton.icon(
-        onPressed: _canSubmit(submitting, lookup)
+        onPressed: _canSubmit(state, lookup)
             ? () => _submit(context, lookup)
             : null,
         icon: submitting
@@ -933,6 +977,64 @@ class _CheckInPageState extends State<CheckInPage> {
     }
   }
 
+  /// Up to this many categories are shown as one-tap chips; more fall back
+  /// to the dropdown so the form does not grow a wall of chips.
+  static const _maxCategoryChips = 5;
+
+  void _selectCategory(int? id) => setState(() {
+    _categoryId = id;
+    _spotId = _requestedSpotId;
+  });
+
+  String _categoryLabel(Category category, Set<int> full) {
+    final l10n = context.l10n;
+    if (full.contains(category.id)) {
+      return '${category.name} · ${l10n.errorCategoryFull}';
+    }
+    return [category.name, ?_availability(category.name)].join(' · ');
+  }
+
+  Widget _buildCategoryChips(
+    BuildContext context,
+    VehicleLookupNotFound lookup,
+    Set<int> full,
+  ) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(l10n.fieldCategory, style: theme.textTheme.labelLarge),
+        const SizedBox(height: Space.xs),
+        Wrap(
+          spacing: Space.sm,
+          runSpacing: Space.sm,
+          children: [
+            for (final category in lookup.categories)
+              if (category.id case final id?)
+                ChoiceChip(
+                  key: ValueKey('check_in_category_$id'),
+                  selected: _categoryId == id,
+                  showCheckmark: false,
+                  label: Text(_categoryLabel(category, full)),
+                  // A full category cannot take another car.
+                  onSelected: full.contains(id)
+                      ? null
+                      : (_) => _selectCategory(id),
+                ),
+          ],
+        ),
+        const SizedBox(height: Space.xs),
+        Text(
+          full.isEmpty ? l10n.categoryRequiredHelper : l10n.categoryFullHint,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildRegistration(VehicleLookupNotFound lookup) {
     final l10n = context.l10n;
     final full = _fullCategories(context);
@@ -952,6 +1054,8 @@ class _CheckInPageState extends State<CheckInPage> {
             l10n.categoriesEmpty,
             style: TextStyle(color: Theme.of(context).colorScheme.error),
           )
+        else if (lookup.categories.length <= _maxCategoryChips)
+          _buildCategoryChips(context, lookup, full)
         else
           DropdownButtonFormField<int>(
             key: ObjectKey(lookup),
@@ -968,20 +1072,10 @@ class _CheckInPageState extends State<CheckInPage> {
                   DropdownMenuItem(
                     value: category.id,
                     enabled: !full.contains(category.id),
-                    child: Text(
-                      full.contains(category.id)
-                          ? '${category.name} · ${l10n.errorCategoryFull}'
-                          : [
-                              category.name,
-                              ?_availability(category.name),
-                            ].join(' · '),
-                    ),
+                    child: Text(_categoryLabel(category, full)),
                   ),
             ],
-            onChanged: (value) => setState(() {
-              _categoryId = value;
-              _spotId = null;
-            }),
+            onChanged: _selectCategory,
           ),
         const SizedBox(height: 16),
         TextField(
@@ -1107,6 +1201,20 @@ class _SessionsHeader extends StatelessWidget {
       ],
     );
   }
+}
+
+/// The open session for [plate] among [sessions] (spaces and case ignored).
+ParkingSession? _openSessionIn(List<ParkingSession> sessions, String plate) {
+  final normalized = plate.replaceAll(RegExp(r'\s'), '').toUpperCase();
+  if (normalized.isEmpty) {
+    return null;
+  }
+  for (final session in sessions) {
+    if (session.plate.toUpperCase() == normalized) {
+      return session;
+    }
+  }
+  return null;
 }
 
 /// Lazily built list of open sessions; rebuilds only when the list (or its

@@ -5149,6 +5149,30 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Tu sesión expiró. Ingresa de nuevo para continuar.'**
   String get loginSessionExpired;
+
+  /// No description provided for @checkoutChargeAmount.
+  ///
+  /// In es, this message translates to:
+  /// **'Cobrar {amount}'**
+  String checkoutChargeAmount(String amount);
+
+  /// No description provided for @checkoutCashExact.
+  ///
+  /// In es, this message translates to:
+  /// **'Exacto'**
+  String get checkoutCashExact;
+
+  /// No description provided for @cashCountQuantity.
+  ///
+  /// In es, this message translates to:
+  /// **'Cantidad de {denomination}'**
+  String cashCountQuantity(String denomination);
+
+  /// No description provided for @plateScanAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Escanear placa'**
+  String get plateScanAction;
 }
 
 class _AppLocalizationsDelegate

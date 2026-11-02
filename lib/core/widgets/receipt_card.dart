@@ -45,7 +45,7 @@ Future<void> showReceiptSummary(
 }
 
 /// Compact post-action summary (check-in or check-out): formatted dates,
-/// duration, a pretty amount and a "Generar recibo" button.
+/// duration, a pretty amount, and print / view-receipt actions.
 class ReceiptSummaryDialog extends StatelessWidget {
   const ReceiptSummaryDialog({
     super.key,
@@ -178,29 +178,7 @@ class ReceiptSummaryDialog extends StatelessWidget {
                 alignment: WrapAlignment.end,
                 spacing: Space.sm,
                 runSpacing: Space.xs,
-                children: [
-                  if (nextActionLabel != null && onNextAction != null)
-                    TextButton.icon(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                        onNextAction!();
-                      },
-                      icon: const Icon(Icons.play_arrow),
-                      label: Text(nextActionLabel!),
-                    ),
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: Text(l10n.receiptClose),
-                  ),
-                  FilledButton.icon(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      showReceipt(context, data, onPrint: onPrint);
-                    },
-                    icon: const Icon(Icons.receipt_long),
-                    label: Text(l10n.receiptGenerate),
-                  ),
-                ],
+                children: _actions(context),
               ),
             ],
           ),
@@ -208,6 +186,58 @@ class ReceiptSummaryDialog extends StatelessWidget {
       ),
     );
   }
+
+  /// With a printer the primary action prints the ticket and the full
+  /// receipt becomes a secondary "Ver recibo"; otherwise generating the
+  /// receipt stays the primary action.
+  List<Widget> _actions(BuildContext context) {
+    final l10n = context.l10n;
+    final printTicket = onPrint;
+    return [
+      if (nextActionLabel != null && onNextAction != null)
+        FilledButton.tonalIcon(
+          onPressed: () {
+            Navigator.of(context).pop();
+            onNextAction!();
+          },
+          icon: const Icon(Icons.play_arrow),
+          label: Text(nextActionLabel!),
+        ),
+      TextButton(
+        onPressed: () => Navigator.of(context).pop(),
+        child: Text(l10n.receiptClose),
+      ),
+      if (printTicket == null)
+        FilledButton.icon(
+          onPressed: () => _openReceipt(context),
+          icon: const Icon(Icons.receipt_long),
+          label: Text(l10n.receiptGenerate),
+        )
+      else ...[
+        TextButton.icon(
+          onPressed: () => _openReceipt(context),
+          icon: const Icon(Icons.receipt_long),
+          label: Text(l10n.receiptView),
+        ),
+        FilledButton.icon(
+          onPressed: () => _closeThenPrint(context, printTicket),
+          icon: const Icon(Icons.print),
+          label: Text(l10n.printReceipt),
+        ),
+      ],
+    ];
+  }
+
+  void _openReceipt(BuildContext context) {
+    Navigator.of(context).pop();
+    showReceipt(context, data, onPrint: onPrint);
+  }
+}
+
+/// Closes the dialog first: the print sheet must not stack behind it.
+void _closeThenPrint(BuildContext context, Future<void> Function() onPrint) {
+  Navigator.of(context).pop();
+  WidgetsBinding.instance.addPostFrameCallback((_) => onPrint());
 }
 
 class _ReceiptDialog extends StatelessWidget {
@@ -243,14 +273,7 @@ class _ReceiptDialog extends StatelessWidget {
                   const SizedBox(height: Space.lg),
                   if (onPrint != null) ...[
                     OutlinedButton.icon(
-                      onPressed: () {
-                        // Close the receipt first: the print sheet must not
-                        // stack behind this dialog.
-                        Navigator.of(context).pop();
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          onPrint!();
-                        });
-                      },
+                      onPressed: () => _closeThenPrint(context, onPrint!),
                       icon: const Icon(Icons.print),
                       label: Text(l10n.printReceipt),
                     ),

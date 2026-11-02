@@ -983,5 +983,11 @@
   "routeErrorTitle": "Página no encontrada",
   "routeErrorBody": "La ruta no existe o ya no está disponible. Vuelve al inicio para continuar.",
   "routeErrorHome": "Volver al inicio",
-  "loginSessionExpired": "Tu sesión expiró. Ingresa de nuevo para continuar."
+  "loginSessionExpired": "Tu sesión expiró. Ingresa de nuevo para continuar.",
+  "checkoutChargeAmount": "Cobrar {amount}",
+  "@checkoutChargeAmount": {"placeholders": {"amount": {"type": "String"}}},
+  "checkoutCashExact": "Exacto",
+  "cashCountQuantity": "Cantidad de {denomination}",
+  "@cashCountQuantity": {"placeholders": {"denomination": {"type": "String"}}},
+  "plateScanAction": "Escanear placa"
 }
