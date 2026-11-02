@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/status_colors.dart';
 import '../../../core/theme/tokens.dart';
-import '../../../core/utils/cop_formatter.dart';
+import '../../../core/money/money.dart';
+import '../../../core/money/money_input.dart';
 import '../../../core/receipt/payment_method.dart';
 import '../domain/entities/check_out_preview.dart';
 import 'widgets/fare_breakdown_view.dart';
@@ -94,19 +94,19 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
       return null;
     }
     final discount = widget.canDiscount
-        ? int.tryParse(_discountController.text.trim()) ?? 0
+        ? Money.parse(_discountController.text.trim()) ?? 0
         : 0;
     return (amount - discount).clamp(0, amount);
   }
 
   int? get _cashReceived {
-    final value = int.tryParse(_cashController.text.trim());
+    final value = Money.parse(_cashController.text.trim());
     return value == null || value <= 0 ? null : value;
   }
 
   void _confirm() {
     final discount = widget.canDiscount
-        ? int.tryParse(_discountController.text.trim()) ?? 0
+        ? Money.parse(_discountController.text.trim()) ?? 0
         : 0;
     final reason = _reasonController.text.trim();
     final lostReason = _lostReasonController.text.trim();
@@ -149,7 +149,9 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
     final l10n = context.l10n;
     return AlertDialog(
       title: Text(l10n.checkOutSettlement),
-      content: SingleChildScrollView(
+      content: SizedBox(
+        width: 460,
+        child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -168,18 +170,23 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
               l10n.paymentMethodTitle,
               style: Theme.of(context).textTheme.labelLarge,
             ),
-            for (final method in PaymentMethod.values)
-              RadioListTile<PaymentMethod>(
-                value: method,
-                groupValue: _selected,
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() => _selected = value);
-                  }
-                },
-                title: Text(method.label(l10n)),
-                secondary: Icon(method.icon),
-              ),
+            const SizedBox(height: Space.xs),
+            // Four methods do not fit in a segmented control on a phone: the
+            // labels squeeze and overflow. Chips wrap to two rows instead.
+            Wrap(
+              spacing: Space.sm,
+              runSpacing: Space.sm,
+              children: [
+                for (final method in PaymentMethod.values)
+                  ChoiceChip(
+                    selected: _selected == method,
+                    showCheckmark: false,
+                    avatar: Icon(method.icon, size: 18),
+                    label: Text(method.label(l10n)),
+                    onSelected: (_) => setState(() => _selected = method),
+                  ),
+              ],
+            ),
             if (_selected == PaymentMethod.card) ...[
               const SizedBox(height: Space.sm),
               Text(
@@ -204,42 +211,56 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
             ],
             if (_selected == PaymentMethod.cash && _due != null) ...[
               const SizedBox(height: Space.sm),
-              TextField(
-                key: const Key('checkout_cash_received'),
-                controller: _cashController,
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                decoration: InputDecoration(
-                  labelText: l10n.checkoutCashReceived,
-                  prefixText: '\$ ',
+              Container(
+                padding: const EdgeInsets.all(Space.sm),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(Radii.md),
                 ),
-                onChanged: (_) => setState(() => _error = null),
+                child: Column(
+                  children: [
+                    TextField(
+                      key: const Key('checkout_cash_received'),
+                      controller: _cashController,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: moneyInputFormatters(),
+                      decoration: InputDecoration(
+                        labelText: l10n.checkoutCashReceived,
+                        prefixText: '${Money.currency.symbol} ',
+                        filled: true,
+                        fillColor: Theme.of(context).colorScheme.surface,
+                      ),
+                      onChanged: (_) => setState(() => _error = null),
+                    ),
+                    if (_cashReceived case final received?)
+                      Padding(
+                        padding: const EdgeInsets.only(top: Space.sm),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                received >= _due!
+                                    ? l10n.checkoutCashChange
+                                    : l10n.checkoutCashShort,
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                            ),
+                            Text(
+                              Money.format((received - _due!).abs()),
+                              style: Theme.of(context).textTheme.titleLarge
+                                  ?.copyWith(
+                                    color: received >= _due!
+                                        ? StatusColors.of(context).success
+                                        : Theme.of(context).colorScheme.error,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
               ),
-              if (_cashReceived case final received?)
-                Padding(
-                  padding: const EdgeInsets.only(top: Space.xs),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          received >= _due!
-                              ? l10n.checkoutCashChange
-                              : l10n.checkoutCashShort,
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                      ),
-                      Text(
-                        CopFormatter.format((received - _due!).abs()),
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: received >= _due!
-                              ? StatusColors.of(context).success
-                              : Theme.of(context).colorScheme.error,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
             ],
             const SizedBox(height: 8),
             CheckboxListTile(
@@ -263,7 +284,7 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
               TextFormField(
                 controller: _discountController,
                 keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                inputFormatters: moneyInputFormatters(),
                 decoration: InputDecoration(
                   labelText: l10n.discountAmount,
                 ),
@@ -277,13 +298,38 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
               ),
             ],
             if (_error != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                _error!,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              const SizedBox(height: Space.sm),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(Space.sm),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.errorContainer,
+                  borderRadius: BorderRadius.circular(Radii.sm),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      size: 18,
+                      color: Theme.of(context).colorScheme.onErrorContainer,
+                    ),
+                    const SizedBox(width: Space.xs),
+                    Expanded(
+                      child: Text(
+                        _error!,
+                        style: TextStyle(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onErrorContainer,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ],
+        ),
         ),
       ),
       actions: [
@@ -291,9 +337,10 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
           onPressed: () => Navigator.of(context).pop(),
           child: Text(l10n.actionCancel),
         ),
-        FilledButton(
+        FilledButton.icon(
           onPressed: _confirm,
-          child: Text(l10n.actionConfirm),
+          icon: const Icon(Icons.check),
+          label: Text(l10n.actionConfirm),
         ),
       ],
     );

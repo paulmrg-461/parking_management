@@ -16,7 +16,10 @@ import '../../../core/widgets/app_icon_button.dart';
 import '../../../core/widgets/async_view.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/filter_bar.dart';
 import '../../../core/widgets/list_page_scaffold.dart';
+import '../../../core/widgets/metric_card.dart';
+import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/search_field.dart';
 import '../../../app/di/injection.dart';
 import '../../../core/utils/whatsapp_launcher.dart';
@@ -47,6 +50,7 @@ class MonthlyPassesPage extends StatefulWidget {
 
 class _MonthlyPassesPageState extends State<MonthlyPassesPage> {
   String _query = '';
+  bool _onlyActive = false;
 
   @override
   void initState() {
@@ -77,9 +81,53 @@ class _MonthlyPassesPageState extends State<MonthlyPassesPage> {
               children: [
                 Padding(
                   padding: const EdgeInsets.all(Space.md),
-                  child: SearchField(
-                    label: context.l10n.searchPlate,
-                    onChanged: (value) => setState(() => _query = value),
+                  child: Column(
+                    children: [
+                      _Summary(loaded: loaded),
+                      const SizedBox(height: Space.md),
+                      FilterBar(
+                        summary: context.l10n.monthlyPassesCount(
+                          [
+                            for (final pass in loaded.monthlyPasses)
+                              if (_matches(loaded.plateOf(pass)) &&
+                                  (!_onlyActive || _isActive(pass)))
+                                pass,
+                          ].length,
+                        ),
+                        onClear: _query.trim().isEmpty && !_onlyActive
+                            ? null
+                            : _clearFilters,
+                        clearLabel: context.l10n.actionClearFilters,
+                        children: [
+                          SizedBox(
+                            width: 240,
+                            child: SearchField(
+                              label: context.l10n.searchPlate,
+                              onChanged: (value) =>
+                                  setState(() => _query = value),
+                            ),
+                          ),
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(
+                              minHeight: Layout.minTouch,
+                            ),
+                            child: FilterChip(
+                              selected: _onlyActive,
+                              showCheckmark: false,
+                              avatar: const Icon(
+                                Icons.verified_outlined,
+                                size: 18,
+                              ),
+                              label: Text(
+                                context.l10n.monthlyPassesOnlyActive,
+                              ),
+                              onSelected: (value) =>
+                                  setState(() => _onlyActive = value),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
                 Expanded(child: _buildList(context, loaded)),
@@ -95,6 +143,15 @@ class _MonthlyPassesPageState extends State<MonthlyPassesPage> {
       _query.trim().isEmpty ||
       plate.toLowerCase().contains(_query.trim().toLowerCase());
 
+  bool _isActive(MonthlyPass pass) =>
+      pass.active && monthlyPassStatus(pass, DateTime.now()) ==
+          MonthlyPassStatus.active;
+
+  void _clearFilters() => setState(() {
+    _query = '';
+    _onlyActive = false;
+  });
+
   Widget _buildList(BuildContext context, MonthlyPassesLoaded loaded) {
     final l10n = context.l10n;
     final payments = [
@@ -103,39 +160,66 @@ class _MonthlyPassesPageState extends State<MonthlyPassesPage> {
     ];
     final passes = [
       for (final pass in loaded.monthlyPasses)
-        if (_matches(loaded.plateOf(pass))) pass,
+        if (_matches(loaded.plateOf(pass)) &&
+            (!_onlyActive || _isActive(pass)))
+          pass,
     ];
+    final filtered = _query.trim().isNotEmpty || _onlyActive;
     if (payments.isEmpty && passes.isEmpty) {
       return EmptyState(
-        message: l10n.monthlyPassesNoMatch(_query.trim()),
-        icon: Icons.search_off,
+        icon: filtered ? Icons.filter_alt_off_outlined : Icons.search_off,
+        title: filtered ? l10n.monthlyPassesFilteredEmpty : null,
+        message: filtered && _query.trim().isNotEmpty
+            ? l10n.monthlyPassesNoMatch(_query.trim())
+            : l10n.monthlyPassesFilteredEmpty,
+        action: filtered
+            ? FilledButton.tonalIcon(
+                onPressed: _clearFilters,
+                icon: const Icon(Icons.filter_alt_off_outlined),
+                label: Text(l10n.actionClearFilters),
+              )
+            : null,
       );
     }
     return ListView(
       padding: const EdgeInsets.only(bottom: Space.xxl * 2),
       children: [
         if (payments.isNotEmpty) ...[
-          Padding(
+          SectionHeader(
+            icon: Icons.payments_outlined,
+            title: l10n.monthlyPassPendingTitle,
             padding: const EdgeInsets.fromLTRB(
               Space.md,
               Space.sm,
               Space.md,
               Space.sm,
             ),
-            child: Text(
-              l10n.monthlyPassPendingTitle,
-              style: Theme.of(context).textTheme.titleMedium,
+            action: Text(
+              '${payments.length}',
+              style: Theme.of(context).textTheme.labelMedium,
             ),
           ),
           for (final payment in payments) _PendingPaymentTile(payment: payment),
           const Divider(),
         ],
-        for (final pass in passes)
-          _MonthlyPassTile(
-            monthlyPass: pass,
-            plate: loaded.plateOf(pass),
-            phone: loaded.phoneOf(pass),
+        if (passes.isNotEmpty) ...[
+          SectionHeader(
+            icon: Icons.card_membership,
+            title: l10n.monthlyPassesList,
+            padding: const EdgeInsets.fromLTRB(
+              Space.md,
+              Space.sm,
+              Space.md,
+              Space.sm,
+            ),
           ),
+          for (final pass in passes)
+            _MonthlyPassTile(
+              monthlyPass: pass,
+              plate: loaded.plateOf(pass),
+              phone: loaded.phoneOf(pass),
+            ),
+        ],
       ],
     );
   }
@@ -151,7 +235,8 @@ class _MonthlyPassesPageState extends State<MonthlyPassesPage> {
     ),
     MonthlyPassesLoaded(:final monthlyPasses) when monthlyPasses.isEmpty =>
       AsyncEmpty(
-        context.l10n.monthlyPassesEmpty,
+        context.l10n.monthlyPassesEmptyHint,
+        title: context.l10n.monthlyPassesEmpty,
         icon: Icons.card_membership_outlined,
         action: FilledButton.icon(
           onPressed: () => _showCreateDialog(context),
@@ -207,6 +292,54 @@ class _MonthlyPassesPageState extends State<MonthlyPassesPage> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _Summary extends StatelessWidget {
+  const _Summary({required this.loaded});
+
+  final MonthlyPassesLoaded loaded;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final now = DateTime.now();
+    final active = loaded.monthlyPasses
+        .where(
+          (pass) =>
+              pass.active &&
+              monthlyPassStatus(pass, now) == MonthlyPassStatus.active,
+        )
+        .length;
+    final pending = loaded.pendingPayments.length;
+    final due = loaded.pendingPayments.fold<int>(
+      0,
+      (sum, payment) => sum + payment.amount,
+    );
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: MetricCard(
+              icon: Icons.verified_outlined,
+              label: l10n.monthlyPassesActive,
+              value: '$active',
+            ),
+          ),
+          const SizedBox(width: Space.sm),
+          Expanded(
+            child: MetricCard(
+              icon: Icons.payments_outlined,
+              label: l10n.monthlyPassPendingTitle,
+              value: '$pending',
+              caption: pending == 0 ? null : Formatters.money(due),
+              tone: pending == 0 ? MetricTone.neutral : MetricTone.warning,
+            ),
+          ),
+        ],
       ),
     );
   }

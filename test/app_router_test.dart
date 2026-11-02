@@ -16,13 +16,33 @@ void main() {
       await pumpApp(tester, role: UserRole.admin);
 
       expect(find.text('Hola, Juan'), findsOneWidget);
-      expect(find.byTooltip('Cerrar sesión'), findsOneWidget);
+      await tester.tap(find.text('Menú'));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('Cerrar sesión'),
+        200,
+        scrollable: find.descendant(
+          of: find.byType(Drawer),
+          matching: find.byType(Scrollable),
+        ),
+      );
+      expect(find.text('Cerrar sesión'), findsOneWidget);
     });
 
     testWidgets('Success: logout lands on /login (no infinite spinner)', (tester) async {
       await pumpApp(tester, role: UserRole.operator);
 
-      await tester.tap(find.byTooltip('Cerrar sesión'));
+      await tester.tap(find.text('Menú'));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('Cerrar sesión'),
+        200,
+        scrollable: find.descendant(
+          of: find.byType(Drawer),
+          matching: find.byType(Scrollable),
+        ),
+      );
+      await tester.tap(find.text('Cerrar sesión'));
       await tester.pumpAndSettle();
 
       expect(find.text('Ingresar'), findsOneWidget);
@@ -36,6 +56,23 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Ingresar'), findsOneWidget);
+      expect(
+        find.text('Tu sesión expiró. Ingresa de nuevo para continuar.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('Failure: an unknown route shows the friendly error page', (
+      tester,
+    ) async {
+      await pumpApp(tester, role: UserRole.admin);
+
+      await goTo(tester, '/does-not-exist');
+
+      expect(find.text('Página no encontrada'), findsWidgets);
+      await tester.tap(find.text('Volver al inicio'));
+      await tester.pumpAndSettle();
+      expect(find.text('Hola, Juan'), findsOneWidget);
     });
 
     testWidgets('Success: admin can open /users', (tester) async {

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/tokens.dart';
+import '../../../core/widgets/dialog_header.dart';
 import '../../auth/domain/entities/user.dart';
 import '../../lots/domain/entities/parking_lot.dart';
 import '../domain/commands/create_user_command.dart';
@@ -76,7 +77,7 @@ class _CreateUserDialogState extends State<CreateUserDialog> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return AlertDialog(
-      title: Text(l10n.userNew),
+      title: DialogHeader(icon: Icons.person_add_alt_1, title: l10n.userNew),
       content: Form(
         key: _formKey,
         child: SingleChildScrollView(

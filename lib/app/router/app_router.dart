@@ -21,6 +21,7 @@ import '../../features/check_in/application/vehicle_lookup_cubit.dart';
 import '../../features/check_in/presentation/check_in_page.dart';
 import '../../features/check_out/application/check_out_cubit.dart';
 import '../../features/check_out/presentation/check_out_page.dart';
+import '../../features/about/presentation/about_developer_page.dart';
 import '../../features/evidence/application/evidence_cubit.dart';
 import '../../features/evidence/presentation/public_evidence_page.dart';
 import '../../features/policies/application/policies_cubit.dart';
@@ -55,6 +56,7 @@ import 'deferred/tariffs_entry.dart' deferred as tariffs;
 import 'deferred/users_entry.dart' deferred as users;
 import 'deferred/vehicles_entry.dart' deferred as vehicles;
 import 'route_access.dart';
+import 'route_error_page.dart';
 
 /// Builds the app router. Redirects re-run on every [AuthCubit] change via
 /// [refresh] (a `GoRouterRefreshStream` owned and disposed by the caller).
@@ -67,8 +69,13 @@ GoRouter buildRouter(AuthCubit auth, Listenable refresh) => GoRouter(
   initialLocation: homePath,
   refreshListenable: refresh,
   redirect: (_, state) => authRedirect(auth.state, state.uri.path),
+  errorBuilder: (context, state) => RouteErrorPage(error: state.error),
   routes: [
     GoRoute(path: loginPath, builder: (context, state) => const LoginPage()),
+    GoRoute(
+      path: aboutPath,
+      builder: (context, state) => const AboutDeveloperPage(),
+    ),
     GoRoute(
       path: policiesPath,
       builder: (context, state) => BlocProvider<PoliciesCubit>(

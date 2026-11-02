@@ -80,33 +80,66 @@ class ContactPage extends StatelessWidget {
     bool configured,
   ) {
     final l10n = context.l10n;
+    final scheme = Theme.of(context).colorScheme;
     final bytes = branding.logoOrNull;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: Space.lg),
-      child: Row(
-        children: [
-          if (bytes != null)
-            ClipRRect(
-              borderRadius: BorderRadius.circular(Space.xs),
-              child: Image.memory(
-                bytes,
-                width: 72,
-                height: 72,
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) =>
-                    const Icon(Icons.local_parking_rounded, size: 72),
+    return Card(
+      margin: const EdgeInsets.only(bottom: Space.md),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.all(Space.md),
+        child: Row(
+          children: [
+            Container(
+              width: 72,
+              height: 72,
+              padding: const EdgeInsets.all(Space.sm),
+              decoration: BoxDecoration(
+                color: scheme.primaryContainer,
+                borderRadius: BorderRadius.circular(Radii.md),
               ),
-            )
-          else
-            const Icon(Icons.local_parking_rounded, size: 72),
-          const SizedBox(width: Space.md),
-          Expanded(
-            child: Text(
-              configured ? settings.name : l10n.appTitle,
-              style: Theme.of(context).textTheme.titleLarge,
+              child: bytes != null
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(Radii.sm),
+                      child: Image.memory(
+                        bytes,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, _, _) => Icon(
+                          Icons.local_parking_rounded,
+                          color: scheme.onPrimaryContainer,
+                        ),
+                      ),
+                    )
+                  : Icon(
+                      Icons.local_parking_rounded,
+                      size: 40,
+                      color: scheme.onPrimaryContainer,
+                    ),
             ),
-          ),
-        ],
+            const SizedBox(width: Space.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    configured ? settings.name : l10n.appTitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    l10n.contactTitle,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -117,12 +150,30 @@ class ContactPage extends StatelessWidget {
     String label,
     String value, {
     VoidCallback? onTap,
-  }) => ListTile(
-    contentPadding: EdgeInsets.zero,
-    leading: Icon(icon),
-    title: Text(label),
-    subtitle: Text(value),
-    onTap: onTap,
+  }) => Card(
+    margin: const EdgeInsets.fromLTRB(0, 0, 0, Space.sm),
+    clipBehavior: Clip.antiAlias,
+    child: ListTile(
+      onTap: onTap,
+      leading: CircleAvatar(
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+        child: Icon(
+          icon,
+          size: 20,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+      ),
+      title: Text(
+        label,
+        style: Theme.of(
+          context,
+        ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600),
+      ),
+      subtitle: Text(value),
+      trailing: onTap == null
+          ? null
+          : const Icon(Icons.open_in_new, size: 18),
+    ),
   );
 
   Future<void> _dial(BuildContext context, String phone) async {

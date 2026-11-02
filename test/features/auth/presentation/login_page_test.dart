@@ -6,6 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/features/auth/application/auth_cubit.dart';
+import 'package:parking_management/features/auth/domain/entities/auth_session.dart';
+import 'package:parking_management/features/auth/domain/entities/user.dart';
 import 'package:parking_management/features/auth/presentation/login_page.dart';
 import 'package:parking_management/features/settings/application/branding_cubit.dart';
 
@@ -44,6 +46,11 @@ void main() {
     expect(find.byType(TextField), findsNWidgets(2));
     expect(find.text('Ingresar'), findsOneWidget);
     expect(find.text('Usuario'), findsOneWidget);
+    expect(find.text('Hecho por DevPaul'), findsOneWidget);
+    expect(
+      find.text('© 2026 DevPaul. Todos los derechos reservados.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('Success: submits credentials and calls login', (tester) async {
@@ -101,6 +108,67 @@ void main() {
     final error = find.text('Usuario o PIN incorrectos');
     expect(error, findsOneWidget);
     expect(tester.getSemantics(error), isSemantics(isLiveRegion: true));
+  });
+
+  testWidgets('Security: an expired token explains why the login is back', (
+    tester,
+  ) async {
+    final repository = FakeAuthRepository(
+      sessionToRestore: const AuthSession(
+        user: User(
+          id: 1,
+          username: 'juan',
+          displayName: 'Juan',
+          role: UserRole.admin,
+        ),
+        token: 'token',
+      ),
+    );
+    final cubit = AuthCubit(repository);
+    await cubit.restore();
+    await cubit.sessionExpired();
+    addTearDown(cubit.close);
+
+    await tester.pumpWidget(_wrap(cubit));
+
+    expect(
+      find.text('Tu sesión expiró. Ingresa de nuevo para continuar.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('Success: the PIN is hidden until the eye reveals it', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_wrap(AuthCubit(FakeAuthRepository())));
+
+    TextField pinField() =>
+        tester.widget<TextField>(find.byType(TextField).at(1));
+
+    expect(pinField().obscureText, isTrue);
+
+    await tester.tap(find.byTooltip('Mostrar PIN'));
+    await tester.pumpAndSettle();
+    expect(pinField().obscureText, isFalse);
+
+    await tester.tap(find.byTooltip('Ocultar PIN'));
+    await tester.pumpAndSettle();
+    expect(pinField().obscureText, isTrue);
+  });
+
+  testWidgets('Success: wide screens add the brand panel and its features', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1400, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(_wrap(AuthCubit(FakeAuthRepository())));
+
+    expect(find.text('Acceso de operador'), findsOneWidget);
+    expect(find.text('Entradas y salidas en segundos'), findsOneWidget);
+    expect(find.text('Caja y turnos cuadrados'), findsOneWidget);
+    expect(find.text('Reportes en tiempo real'), findsOneWidget);
+    expect(find.text('Conexión protegida'), findsOneWidget);
   });
 
   testWidgets('A11y: button shows a spinner and is disabled while signing in', (

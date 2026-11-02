@@ -82,8 +82,14 @@ class _TariffsPageState extends State<TariffsPage> {
       context.read<TariffsCubit>().load,
     ),
     TariffsLoaded(:final tariffs) when tariffs.isEmpty => AsyncEmpty(
-      context.l10n.tariffsEmpty,
+      context.l10n.tariffsEmptyHint,
+      title: context.l10n.tariffsEmpty,
       icon: Icons.payments_outlined,
+      action: FilledButton.icon(
+        onPressed: () => _showCreateDialog(context),
+        icon: const Icon(Icons.add),
+        label: Text(context.l10n.tariffNew),
+      ),
     ),
     final TariffsLoaded loaded => AsyncReady(loaded),
   };
@@ -120,25 +126,48 @@ class _TariffTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return ListTile(
-      title: Text('$categoryName · ${tariff.type.label(l10n)}'),
-      subtitle: Text('${Formatters.money(tariff.amount)}$_window'),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Semantics(
-            label: l10n.tariffActiveLabel,
-            child: Switch(
-              value: tariff.active,
-              onChanged: tariff.id == null ? null : (_) => _toggle(context),
+    final scheme = Theme.of(context).colorScheme;
+    final nightly = tariff.type == TariffType.nightly;
+    return Card(
+      margin: const EdgeInsets.fromLTRB(Space.md, Space.xs, Space.md, Space.xs),
+      clipBehavior: Clip.antiAlias,
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: nightly
+              ? scheme.tertiaryContainer
+              : scheme.primaryContainer,
+          child: Icon(
+            nightly ? Icons.nights_stay_outlined : Icons.wb_sunny_outlined,
+            size: 20,
+            color: nightly
+                ? scheme.onTertiaryContainer
+                : scheme.onPrimaryContainer,
+          ),
+        ),
+        title: Text(
+          '$categoryName · ${tariff.type.label(l10n)}',
+          style: Theme.of(
+            context,
+          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+        ),
+        subtitle: Text('${Formatters.money(tariff.amount)}$_window'),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Semantics(
+              label: l10n.tariffActiveLabel,
+              child: Switch(
+                value: tariff.active,
+                onChanged: tariff.id == null ? null : (_) => _toggle(context),
+              ),
             ),
-          ),
-          AppIconButton(
-            icon: Icons.delete_outline,
-            tooltip: l10n.tariffDeleteTooltip,
-            onPressed: tariff.id == null ? null : () => _delete(context),
-          ),
-        ],
+            AppIconButton(
+              icon: Icons.delete_outline,
+              tooltip: l10n.tariffDeleteTooltip,
+              onPressed: tariff.id == null ? null : () => _delete(context),
+            ),
+          ],
+        ),
       ),
     );
   }

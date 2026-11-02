@@ -755,7 +755,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get shiftNoOpen => 'No hay turno abierto';
 
   @override
-  String get shiftOpeningFloat => 'Base inicial (COP)';
+  String get shiftOpeningFloat => 'Base inicial';
 
   @override
   String get shiftOpen => 'Abrir turno';
@@ -1156,6 +1156,34 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsSectionEvidence => 'Evidencia';
 
   @override
+  String get settingsSectionPreferences => 'Preferencias';
+
+  @override
+  String get settingsCurrency => 'Moneda';
+
+  @override
+  String get settingsCurrencyHint =>
+      'Los montos se guardan en la unidad menor de la moneda (COP pesos, USD centavos). Al cambiarla, revisa las tarifas y precios.';
+
+  @override
+  String get currencyCop => 'Peso colombiano (COP)';
+
+  @override
+  String get currencyUsd => 'Dólar estadounidense (USD)';
+
+  @override
+  String get languageTooltip => 'Idioma';
+
+  @override
+  String get languageSystem => 'Sistema';
+
+  @override
+  String get languageSpanish => 'Español';
+
+  @override
+  String get languageEnglish => 'English';
+
+  @override
   String get settingsSectionLegal => 'Políticas y contrato';
 
   @override
@@ -1518,7 +1546,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get fieldVehicle => 'Vehículo';
 
   @override
-  String get fieldAmount => 'Valor (COP)';
+  String get fieldAmount => 'Valor';
 
   @override
   String get fieldType => 'Tipo';
@@ -1877,7 +1905,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get lostTicketReasonRequired => 'Indica el motivo del ticket perdido';
 
   @override
-  String get discountAmount => 'Descuento (COP)';
+  String get discountAmount => 'Descuento';
 
   @override
   String get discountReason => 'Motivo del descuento';
@@ -2455,4 +2483,363 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get reportsNoRevenue => 'Sin ingresos en este rango';
+
+  @override
+  String get errorTitle => 'Algo salió mal';
+
+  @override
+  String get actionClearFilters => 'Limpiar filtros';
+
+  @override
+  String get notificationsToday => 'Hoy';
+
+  @override
+  String get notificationsYesterday => 'Ayer';
+
+  @override
+  String get notificationsEarlier => 'Anteriores';
+
+  @override
+  String get notificationsEmptyTitle => 'Bandeja vacía';
+
+  @override
+  String get notificationsEmptyHint =>
+      'Los avisos de entradas, salidas, turnos y mensualidades aparecerán aquí.';
+
+  @override
+  String get notificationsOpenRecords => 'Ver registros';
+
+  @override
+  String get notificationsUnreadOnly => 'No leídas';
+
+  @override
+  String get notificationsAll => 'Todas';
+
+  @override
+  String get notificationsFilterLabel => 'Filtrar notificaciones';
+
+  @override
+  String get auditActionInsert => 'Crear';
+
+  @override
+  String get auditActionUpdate => 'Editar';
+
+  @override
+  String get auditActionDelete => 'Eliminar';
+
+  @override
+  String get auditEmptyFiltered => 'Ningún cambio coincide con los filtros';
+
+  @override
+  String get usersSearchHint => 'Buscar por nombre o usuario';
+
+  @override
+  String get usersEmptyTitle => 'Sin usuarios';
+
+  @override
+  String get usersEmptyHint =>
+      'Agrega el primer operador para empezar a registrar movimientos.';
+
+  @override
+  String get usersAddFirst => 'Agregar usuario';
+
+  @override
+  String get recordsSummarySessions => 'Sesiones';
+
+  @override
+  String get recordsSummaryCharged => 'Cobrado';
+
+  @override
+  String get recordsEmptyTitle => 'Sin movimientos';
+
+  @override
+  String get homeQuickActions => 'Accesos rápidos';
+
+  @override
+  String get homeSummaryHint => 'Estado del parqueadero en tiempo real';
+
+  @override
+  String get shiftSummaryTitle => 'Resumen del turno';
+
+  @override
+  String get spotsLegend => 'Convenciones';
+
+  @override
+  String get spotsLegendFree => 'Libre';
+
+  @override
+  String get spotsLegendOccupied => 'Ocupado';
+
+  @override
+  String get spotsLegendHold => 'Reserva';
+
+  @override
+  String get spotsLegendMaintenance => 'Mantenimiento';
+
+  @override
+  String get diagnosticsSummary => 'Resumen operativo';
+
+  @override
+  String get notificationsUnreadEmpty => 'No tienes notificaciones sin leer';
+
+  @override
+  String auditCount(int count) {
+    return '$count cambios';
+  }
+
+  @override
+  String get auditEmptyHint =>
+      'Los cambios en datos maestros se registran automáticamente.';
+
+  @override
+  String get auditEmptyFilteredHint =>
+      'Prueba con otro rango de fechas, tabla o actor.';
+
+  @override
+  String get auditBefore => 'Antes';
+
+  @override
+  String get auditAfter => 'Después';
+
+  @override
+  String get auditField => 'Campo';
+
+  @override
+  String get usersSearchLabel => 'Buscar usuario';
+
+  @override
+  String get loginOperatorAccess => 'Acceso de operador';
+
+  @override
+  String get loginHelper =>
+      'Usa el usuario y el PIN de 6 dígitos asignados por el administrador.';
+
+  @override
+  String get loginSecure => 'Conexión protegida';
+
+  @override
+  String get loginShowPin => 'Mostrar PIN';
+
+  @override
+  String get loginHidePin => 'Ocultar PIN';
+
+  @override
+  String get loginFeatureCheckIn => 'Entradas y salidas en segundos';
+
+  @override
+  String get loginFeatureCash => 'Caja y turnos cuadrados';
+
+  @override
+  String get loginFeatureReports => 'Reportes en tiempo real';
+
+  @override
+  String get reservationsActive => 'Reservas activas';
+
+  @override
+  String get reservationsExpiring => 'Por vencer';
+
+  @override
+  String get reservationsEmptyTitle => 'Sin reservas';
+
+  @override
+  String get reservationsEmptyHint =>
+      'Reserva el cupo de un cliente para asegurar su entrada.';
+
+  @override
+  String get reservationsSearchLabel => 'Buscar reserva';
+
+  @override
+  String get reservationsSearchHint => 'Placa';
+
+  @override
+  String get reservationsOnlyExpiring => 'Solo por vencer';
+
+  @override
+  String reservationsCount(int count) {
+    return '$count reservas';
+  }
+
+  @override
+  String get reservationsFilteredEmpty =>
+      'Ninguna reserva coincide con el filtro';
+
+  @override
+  String get monthlyPassesEmptyTitle => 'Sin mensualidades';
+
+  @override
+  String get monthlyPassesEmptyHint =>
+      'Crea una mensualidad para cobrar por adelantado y agilizar la salida.';
+
+  @override
+  String get monthlyPassesActive => 'Vigentes';
+
+  @override
+  String monthlyPassesCount(int count) {
+    return '$count mensualidades';
+  }
+
+  @override
+  String get monthlyPassesOnlyActive => 'Solo vigentes';
+
+  @override
+  String get monthlyPassesFilteredEmpty =>
+      'Ninguna mensualidad coincide con el filtro';
+
+  @override
+  String get monthlyPassesList => 'Mensualidades registradas';
+
+  @override
+  String get categoriesEmptyHint =>
+      'Crea las categorías del parqueadero (moto, carro, camioneta…) para asignar tarifas y cupos.';
+
+  @override
+  String get tariffsEmptyHint =>
+      'Agrega tarifas por hora, día, noche o mensualidad para cada categoría.';
+
+  @override
+  String get diagnosticsPendingQueue => 'Cola pendiente';
+
+  @override
+  String get diagnosticsAlerts => 'Alertas';
+
+  @override
+  String get diagnosticsOpenNow => 'Dentro ahora';
+
+  @override
+  String vehiclesCount(int count) {
+    return '$count vehículos';
+  }
+
+  @override
+  String parkedCount(int count) {
+    return '$count dentro';
+  }
+
+  @override
+  String get checkOutEmptyTitle => 'Parqueadero vacío';
+
+  @override
+  String get checkOutEmptyHint =>
+      'Registra una entrada para verla aquí y cobrarla al salir.';
+
+  @override
+  String get checkOutGoToCheckIn => 'Registrar entrada';
+
+  @override
+  String get checkInVehicleSection => 'Vehículo';
+
+  @override
+  String get checkInVehicleHint => 'Placa, categoría y datos del vehículo';
+
+  @override
+  String get checkInEvidenceSection => 'Evidencia';
+
+  @override
+  String get checkInEvidenceHint => 'Fotos o video del estado del vehículo';
+
+  @override
+  String get notifTypeCheckIn => 'Entrada';
+
+  @override
+  String get notifTypeCheckOut => 'Salida';
+
+  @override
+  String get notifTypePassExpiring => 'Mensualidad por vencer';
+
+  @override
+  String get notifTypePassRenewed => 'Mensualidad renovada';
+
+  @override
+  String get notifTypeOverstay => 'Estadía larga';
+
+  @override
+  String get notifTypeShiftClosed => 'Cierre de turno';
+
+  @override
+  String get notifTypeGeneric => 'Aviso';
+
+  @override
+  String get aboutDeveloper => 'Acerca del desarrollador';
+
+  @override
+  String get aboutRole => 'Desarrollo de software';
+
+  @override
+  String get aboutIntro =>
+      'Hola, soy Paul Realpe (DevPaul). Diseño y construyo aplicaciones móviles y web con Flutter, cuidando la experiencia de uso y los detalles.';
+
+  @override
+  String get aboutFindMe => 'Encuéntrame';
+
+  @override
+  String get aboutWebsite => 'Sitio web';
+
+  @override
+  String get aboutGitHub => 'GitHub';
+
+  @override
+  String get aboutLinkedIn => 'LinkedIn';
+
+  @override
+  String get aboutInstagram => 'Instagram';
+
+  @override
+  String get aboutAppTitle => 'Sobre la app';
+
+  @override
+  String get aboutAppBody =>
+      'Sistema de gestión de parqueadero: entradas y salidas, cobro por tiempo, turnos de caja, mensualidades, reservas y reportes en tiempo real.';
+
+  @override
+  String aboutVersion(String version) {
+    return 'Versión $version';
+  }
+
+  @override
+  String get aboutMadeBy => 'Hecho por DevPaul';
+
+  @override
+  String get aboutRights => '© 2026 DevPaul. Todos los derechos reservados.';
+
+  @override
+  String get aboutLogoLabel => 'Logotipo de DevPaul';
+
+  @override
+  String get aboutOpenError => 'No se pudo abrir el enlace';
+
+  @override
+  String get shiftOpeningHint =>
+      'Cuenta el efectivo con el que inicia la caja.';
+
+  @override
+  String get shiftClosedHint => 'Resumen del último turno cerrado.';
+
+  @override
+  String get diagnosticsHealthyTitle => 'Todo en orden';
+
+  @override
+  String get diagnosticsHealthyHint =>
+      'No hay alertas ni colas pendientes en este momento.';
+
+  @override
+  String diagnosticsAttention(int count) {
+    return '$count punto(s) requieren atención';
+  }
+
+  @override
+  String get diagnosticsAttentionHint => 'Revisa las secciones marcadas abajo.';
+
+  @override
+  String get routeErrorTitle => 'Página no encontrada';
+
+  @override
+  String get routeErrorBody =>
+      'La ruta no existe o ya no está disponible. Vuelve al inicio para continuar.';
+
+  @override
+  String get routeErrorHome => 'Volver al inicio';
+
+  @override
+  String get loginSessionExpired =>
+      'Tu sesión expiró. Ingresa de nuevo para continuar.';
 }

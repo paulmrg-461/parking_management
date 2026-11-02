@@ -53,6 +53,8 @@ void main() {
     expect(find.text('Tv 7 #51N-24'), findsWidgets);
     expect(find.textContaining('POLÍTICAS DE Parqueadero DevPaul'), findsOneWidget);
     expect(find.textContaining('Atendemos 24 horas'), findsOneWidget);
+    // The policy body is split into numbered clauses.
+    expect(find.text('1'), findsOneWidget);
   });
 
   testWidgets('Failure: an unknown lot shows the error with retry', (

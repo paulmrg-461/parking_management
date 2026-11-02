@@ -7,6 +7,8 @@ import 'package:parking_management/core/storage/key_value_store.dart';
 import 'package:parking_management/core/theme/tokens.dart';
 import 'package:parking_management/core/network/connectivity_cubit.dart';
 import 'package:parking_management/core/network/connectivity_service.dart';
+import 'package:parking_management/core/l10n/locale_cubit.dart';
+import 'package:parking_management/core/theme/theme_cubit.dart';
 import 'package:parking_management/core/sync/pending_mutation.dart';
 import 'package:parking_management/core/widgets/sync_badge.dart';
 import 'package:parking_management/features/auth/domain/entities/user.dart';
@@ -17,6 +19,7 @@ import 'package:parking_management/core/realtime/local_activity.dart';
 import '../../helpers/app_harness.dart';
 import '../../helpers/fake_check_out_repository.dart';
 import '../../helpers/fake_notification_repository.dart';
+import '../../helpers/fake_key_value_store.dart';
 import '../../helpers/fake_sync_outbox.dart';
 
 void main() {
@@ -317,6 +320,82 @@ void main() {
     expect(find.byIcon(Icons.sync), findsOneWidget);
   });
 
+  testWidgets('Success: the sidebar opens the developer page', (tester) async {
+    await pumpApp(tester, role: UserRole.admin, size: const Size(1200, 900));
+
+    await tester.tap(find.byTooltip('Acerca del desarrollador'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.widgetWithText(AppBar, 'Acerca del desarrollador'),
+      findsOneWidget,
+    );
+    expect(find.text('Hecho por DevPaul'), findsWidgets);
+  });
+
+  testWidgets('Success: the drawer opens the developer page on phones', (
+    tester,
+  ) async {
+    final locale = LocaleCubit(FakeKeyValueStore());
+    addTearDown(locale.close);
+    await locale.select(const Locale('es'));
+    await pumpApp(tester, role: UserRole.operator, localeCubit: locale);
+
+    await tester.tap(find.text('Menú'));
+    await tester.pumpAndSettle();
+    final drawer = find.byType(Drawer);
+    final about = find.descendant(
+      of: drawer,
+      matching: find.text('Acerca del desarrollador'),
+    );
+    await tester.scrollUntilVisible(
+      about,
+      200,
+      scrollable: find.descendant(
+        of: drawer,
+        matching: find.byType(Scrollable),
+      ),
+    );
+    await tester.tap(about);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.widgetWithText(AppBar, 'Acerca del desarrollador'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('Success: phones keep preferences and logout in the drawer', (
+    tester,
+  ) async {
+    final locale = LocaleCubit(FakeKeyValueStore());
+    final theme = ThemeCubit(FakeKeyValueStore());
+    addTearDown(locale.close);
+    addTearDown(theme.close);
+    await locale.select(const Locale('es'));
+    await pumpApp(
+      tester,
+      role: UserRole.operator,
+      localeCubit: locale,
+      themeCubit: theme,
+    );
+
+    expect(find.byTooltip('Idioma'), findsNothing);
+    expect(find.byTooltip('Apariencia'), findsNothing);
+    expect(find.byTooltip('Cerrar sesión'), findsNothing);
+
+    await tester.tap(find.text('Menú'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Idioma'), findsOneWidget);
+    expect(find.text('Apariencia'), findsOneWidget);
+    expect(find.text('Cerrar sesión'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.close));
+    await tester.pumpAndSettle();
+    expect(find.byType(Drawer), findsNothing);
+  });
+
   testWidgets('Failure: offline shows the OfflineBanner above the content', (
     tester,
   ) async {
@@ -335,6 +414,27 @@ void main() {
     expect(find.byTooltip('Escanear QR y registrar salida'), findsOneWidget);
     expect(find.byIcon(Icons.qr_code_scanner), findsOneWidget);
     expect(find.byIcon(Icons.chat), findsNothing);
+  });
+
+  testWidgets('Security: the QR shortcut is hidden on management routes', (
+    tester,
+  ) async {
+    await pumpApp(tester, role: UserRole.admin, size: const Size(1200, 1100));
+    final sidebar = find.byType(AppSidebar);
+
+    expect(find.byIcon(Icons.qr_code_scanner), findsOneWidget);
+
+    await tester.tap(
+      find.descendant(of: sidebar, matching: find.text('Usuarios')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byIcon(Icons.qr_code_scanner), findsNothing);
+
+    await tester.tap(
+      find.descendant(of: sidebar, matching: find.text('Inicio')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byIcon(Icons.qr_code_scanner), findsOneWidget);
   });
 
   testWidgets('Success: online hides the OfflineBanner', (tester) async {
@@ -463,6 +563,29 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(dashboard.occupancyCalls, greaterThan(before));
+  });
+
+  testWidgets('Success: the language button switches the app to English', (
+    tester,
+  ) async {
+    final locale = LocaleCubit(FakeKeyValueStore());
+    addTearDown(locale.close);
+    await locale.select(const Locale('es'));
+    await pumpApp(tester, role: UserRole.operator, localeCubit: locale);
+
+    await tester.tap(find.text('Menú'));
+    await tester.pumpAndSettle();
+    // Preferences live in the drawer on phones, not in the app bar.
+    expect(find.text('Idioma'), findsOneWidget);
+    expect(find.text('Cerrar sesión'), findsOneWidget);
+    await tester.tap(find.text('Idioma'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('English'));
+    await tester.pumpAndSettle();
+
+    expect(locale.state?.languageCode, 'en');
+    expect(find.text('Idioma'), findsNothing);
+    expect(find.text('Language'), findsOneWidget);
   });
 }
 

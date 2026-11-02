@@ -4,20 +4,32 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-10-28, branch `feature/supabase` (cash/card settlement,
-mobile drawer, receipt print fix; HEAD `7a8df53`).
+Last updated: 2026-10-29, branch `feature/supabase` (UI/UX pass across every
+module, dialogs, developer page, COP/USD currency, es/en language; HEAD
+`d51f015`).
 
 ## Where we are
 
 - Stack: Flutter (android + web) + self-hosted Supabase only. No FastAPI,
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
-- `supabase/migrations/0001..0067` are the schema owner (applied by
+- `supabase/migrations/0001..0068` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 785 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 839 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
   item is the manual smoke for `add-parking-settings` (task 10.4).
+
+## Owner preferences (durable)
+
+- The owner writes in **Spanish** and expects Spanish replies; code, comments,
+  tests, docs and OpenSpec artifacts stay **English** (see `AGENTS.md`).
+- Visual work is iterative: they ask for "más bonito" and expect the shared
+  design system (tokens, `MetricCard`, `SectionHeader`, `FilterBar`, empty/error
+  states) to be used, never one-off styling. Keep `docs/ui-kit.md` truthful.
+- Every batch: `flutter test` + `flutter analyze` + SQL suite, rebuild web and
+  APK, restart the Chrome dev app, commit and push (never leave it unpushed).
+  Report the phone/adb state honestly when the device is offline.
 
 ## What shipped recently
 
@@ -34,6 +46,160 @@ mobile drawer, receipt print fix; HEAD `7a8df53`).
    `0024` (`current_lot_id`, lot CRUD, re-scoped policies/RPCs/reports,
    `report_revenue_all`), `0025` (offline replay lot capture via
    `resolve_lot`), `0026` (`list_lot_members`).
+
+## UI kit pass (2026-10-28)
+
+- New shared widgets, documented in [`docs/ui-kit.md`](ui-kit.md): `SectionHeader`
+  (icon chip + title/subtitle + trailing action), `MetricCard` (label, tabular
+  value, caption, tonal icon, 48 dp when tappable), `FilterBar` (search/filters
+  card with summary + clear action), `SkeletonCardList`/`SkeletonTable` next to
+  `SkeletonList`, and stronger `EmptyState`/`ErrorState` (title + tinted icon +
+  explicit CTA/retry). `AsyncEmpty` now forwards an optional `title`.
+- Rules: no private `_SectionHeader` clones; list screens put search+filters in
+  `FilterBar` and keep the count in its `summary`; pages use a skeleton that
+  matches the geometry (rows, cards or table); empty states always offer the
+  next step; errors only show localized messages with retry.
+- Module changes: notifications grouped by day with an unread filter + CTA;
+  audit has a filter card, action chips and a before → after field dialog; users
+  gain search, initials avatars and role chips; records moved exports to one
+  menu and filters into a card; home has quick-action tiles; vehicle history
+  uses metric cards; shifts/spots/check-in use card skeletons and empty states;
+  settings reuses `SectionHeader`.
+- Currency labels no longer hardcode COP (`Valor`, `Descuento`, `Base inicial`);
+  the symbol comes from `Money`.
+- Gotcha: a lazily built `ListView` only builds visible children, so tests that
+  assert the last row must use a tall viewport or scroll before asserting.
+
+### Production hardening (2026-10-29)
+
+- `0069_scale_hardening.sql`: `pg_trgm` GIN on `vehicles.plate` (records/history
+  use `ILIKE '%term%'`), lot/entry, pass/lot/end, active-reservation and
+  notification/lot/user/date indexes, plus guarded checks for pass windows,
+  pass amounts and `amount_charged`. `rpc_test.sql` asserts the indexes and the
+  three constraints; the local DB was migrated and the indexes verified.
+- `RouteErrorPage` + `go_router` `errorBuilder` replace raw router exceptions on
+  unknown/deep-link paths, with a home CTA (router test).
+- `/about` shows `FLUTTER_BUILD_NAME (FLUTTER_BUILD_NUMBER)`.
+- RLS guard: `rpc_test.sql` requires RLS on every `public` table; `0070` locks
+  `public.schema_migrations` (RLS on, no anon/authenticated grants).
+- Ops hardening (2): `0071` schedules audit/WhatsApp retention in pg_cron (the
+  host cron already called them); `BACKUP_KEEP=N` prunes old archives; CI now
+  builds the Android debug APK as well as web.
+- Ops hardening: `supabase/backup.sh` validates the dump with `pg_restore
+  --list` and writes `SHA256SUMS`; `tool/evidence-web.nginx.conf` sends
+  nosniff/referrer/frame/Permissions-Policy headers plus gzip (headers are
+  repeated in the asset location because nginx drops inherited add_header).
+- Coverage ratchet: `flutter test --coverage` + `dart run
+  tool/check_coverage.dart` (global 70, application 90, domain 35,
+  infrastructure 25; generated/l10n ignored). CI pins Flutter 3.50.0-0.1.pre,
+  the local beta.
+- `docs/production-readiness.md` is the go-live checklist (SLOs, infra, schema
+  guards, security, resilience, observability, release/rollback, limits);
+  linked from `docs/README.md` and `AGENTS.md`.
+
+### UI batches (2026-10-29)
+
+- Settlement: segmented payment methods, tonal cash panel (`Money.format` +
+  currency symbol), inline error banner and `Money.parse` for discounts.
+  Notifications add an app-bar type filter (`monthly_pass` covers expiring and
+  renewed).
+- Reports: presets + date picker + "all sites" chip in one `FilterBar` with the
+  period as summary. Its test scrolls in 40 px `jumpTo` steps: the lazy list
+  disposes rows and overshooting makes `scrollUntilVisible` throw "No element".
+- Shift: opening form header with hint and currency prefix; closed card with a
+  balanced/warning chip and expected/counted `MetricCard`s. A 4-across home KPI
+  grid was tried and reverted (cards overflow their internal rows at the 1080
+  content cap).
+- Diagnostics: health banner above the metrics (`alerts == 0` → success, else
+  "N puntos requieren atención"). It uses `health_and_safety_outlined` /
+  `report_problem_outlined` because the a11y test counts
+  `warning_amber_outlined`.
+- `DialogHeader` (tonal icon + title + optional hint) titles the user, vehicle,
+  tariff, reservation, pass, site and capacity dialogs.
+- Public developer page at `/about` (`route_access.aboutPath`, allowed in
+  `authRedirect`): DevPaul identity, links and authorship/rights notices; logo
+  at `assets/branding/devpaul.png` (512 px, registered in pubspec). Entry
+  points: drawer, desktop sidebar info button (`aboutDeveloper` tooltip) and
+  login footer; links use the injectable `AboutLinkLauncher` seam.
+- Test count: 835.
+- **Centering fix (2026-10-28)**: `CenteredScrollable` now enforces
+  `minWidth` equal to the viewport, otherwise its scroll child shrank to the
+  widest line and the empty/error block drifted left on wide pages (the
+  monthly-pass/reservation screenshots). Covered by the UI-kit test that
+  asserts icon/message/action share the viewport center. Test count 823.
+- **Notifications/shift history (2026-10-28)**: notification metadata appends a
+  localized type label (`notifType*` keys); shift history cards use a
+  balanced/warning avatar and a two-line subtitle. Test count stays 822.
+- **Public pages/history (2026-10-28)**: `/policies` has a brand hero plus
+  numbered clauses (split the rendered policy by lines; first line is the
+  heading), `/evidence` gates the plate in a centered card, both load with
+  `SkeletonCardList`; vehicle history joins session cards with a timeline rail
+  (open dot uses `tertiary`, closed `primary`).
+- **Check-in/settings (2026-10-28)**: the check-in form is sectioned
+  (vehicle/evidence) and starts with a pulse chip (`parkedCount` + active
+  reservations); the submit button is an icon button with a 48 dp target.
+  Settings adds a horizontal chip index on ≥ 720 px that uses
+  `Scrollable.ensureVisible` with per-section `GlobalKey`s. Test count 822.
+- **Core flows polish (2026-10-28)**: check-out wraps search + QR in a
+  `FilterBar` with the inside count and renders sessions as cards (the leading
+  avatar is hidden below 600 px because it squeezed the status chips);
+  `StatusChip` truncates its label so chips never overflow; the empty lot has a
+  title/hint/check-in CTA; settings opens with a branded header card. Test
+  count 821.
+- **Dashboard/list polish round 2 (2026-10-28)**: reports and diagnostics use
+  `MetricCard` summaries and `SectionHeader` blocks (diagnostics labels were
+  split into summary vs section so tests can tell them apart);
+  categories/tariffs/vehicles/sites are cards with tonal avatars (vehicles add
+  a `FilterBar` count); contact is a card; the open shift shows a status chip.
+  Lazy `ListView`s mean bottom sections need a scroll/tall viewport in tests.
+- **Preferences placement (2026-10-28)**: the phone app bar only carries the
+  notification bell and `SyncBadge`. Language/appearance/sign-out live at the
+  end of the drawer list (`_DrawerPreferences`, bottom-sheet pickers, current
+  value as subtitle) and the drawer header has a close (X) button; on desktop
+  they sit in the sidebar footer via `_Preferences`. `pumpApp` now accepts a
+  `themeCubit` so tests can assert those rows; without the cubits the rows are
+  hidden, so isolated pages stay testable.
+- **Scan shortcut (2026-10-28)**: the shell FAB is hidden whenever
+  `isManagementLocation(location)` (any `managementDestinations` entry) so
+  admin/reference screens stay clean; it remains on home, check-in/out,
+  records, notifications, contact and vehicle history.
+- **Sidebar (2026-10-28)**: tonal logo mark + role dot, gradient surface,
+  rounded nav pills with accent bar, management accordion with count badge and
+  indented guide line, site card and user card with online dot. Keys/tooltips
+  and the persisted `sidebar_collapsed`/`sidebar_management_open` preferences
+  are unchanged (shell tests depend on them).
+- **Login and sparse screens (2026-10-28)**: the sign-in page splits into a
+  brand panel + form card from `Layout.railBreakpoint` (and ≥ 560 px tall),
+  keeps the PIN obscured with an eye toggle, renders failures as an inline
+  error banner (live region) and shows language/theme only when those cubits
+  are provided (tests omit them). Reservations and monthly passes now open with
+  metric cards, a `FilterBar` (search + state chip), section headers and an
+  empty state with the create/clear CTA; categories and tariffs do the same.
+  `debugShowCheckedModeBanner` is off, so dev builds no longer show the banner.
+
+## Currency and language (2026-10-28)
+
+- **Currency** (`0068`): `parking_settings.currency` (`COP` default, `USD`,
+  check constraint); `public_lot_profile` exposes it. Amounts stay integers in
+  the currency **minor unit** (COP pesos, USD cents) — never floats, never a
+  second column. `Money` (`core/money`) is ambient: `BrandingCubit` calls
+  `Money.configure(Currency.fromCode(settings.currency))` on cache and fresh
+  loads, and Ajustes reloads branding after saving, so every screen, PDF,
+  thermal receipt and CSV picks it up without threading a currency. Use
+  `Money.format` / `Money.parse` / `Money.input` / `Money.major`; `CopFormatter`
+  and `Formatters.money` delegate to it (legacy call sites are fine).
+  Money inputs use `moneyInputFormatters()` (digits plus `.`/`,`) and validate
+  with `Money.parse`. `Money.major` is what CSV exports write (`50.50`), while
+  screens/receipts use the symbol (`US$50.50`). Cash denominations come from
+  `Currency.denominations` (COP notes/coins vs USD 100 → 0.01).
+- **Language** (`LocaleCubit`, Hive `preferences/locale`): `null` follows the
+  system, otherwise `es`/`en`. It is a **device** preference, not per lot; the
+  translate button in the home app bar opens system/Español/English. Tests that
+  omit the cubit keep receiving `defaultLocale` (Spanish) from `ParkingApp`.
+  Test bindings default to the system locale (`en`): assert Spanish strings only
+  after pinning the cubit.
+- Records exports: `recordsCsv` writes major units; the PDF and receipts are
+  symbol-aware through `Money`.
 
 ## Operator UI + realtime (2026-10-28)
 
@@ -156,9 +322,11 @@ mobile drawer, receipt print fix; HEAD `7a8df53`).
 
 `docs/README.md` indexes the set: `project-overview.md` (executive summary),
 `environment-guide.en.md` / `environment-guide.md` (onboarding, EN/ES),
-`setup-local.md`, `setup-cloud.md`, `architecture.md`, `infrastructure.md`,
-`database.md`; root `QUICKSTART.md` (commands) and `CHANGELOG.md` (changes +
-migration history). Diagrams are Mermaid in
+`setup-local.md`, `setup-cloud.md`, `deployment-requirements.md` (hardware
+minimum/recommended, evidence-based disk math, OS/network/TLS/security, cloud
+sizing and go-live checklist — English), `architecture.md`,
+`infrastructure.md`, `database.md`; root `QUICKSTART.md` (commands) and
+`CHANGELOG.md` (changes + migration history). Diagrams are Mermaid in
 Markdown; update the diagram with the code change (new table → `database.md`,
 new service/port → `infrastructure.md`, new flow → `architecture.md`).
 
@@ -511,11 +679,11 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   `SUPABASE_PUBLIC_URL` from `.env`.
 - Port 8000 is no longer bound in this environment.
 
-## Dev environment running (2026-10-28)
+## Dev environment running (2026-10-29)
 
 - Backend: `docker compose up -d` from the repo root; all services healthy,
   gateway/Studio on <http://localhost:8017> (`API_GW_HTTP_PORT` in `.env`);
-  migrations `0001`-`0059` applied.
+  migrations `0001`-`0068` applied.
 - Flutter web: `flutter run -d chrome --dart-define=SUPABASE_URL=http://localhost:8017
   --dart-define=SUPABASE_ANON_KEY=<ANON_KEY>` (log: `/tmp/opencode/flutter-web.log`).
 - Android (Samsung S901E over wireless adb): `sh tool/run-android.sh` — it
@@ -528,6 +696,29 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   cannot be registered there until categories/tariffs are created).
 - The apps use `localhost:8017`; if the phone shows "cannot reach the server",
   check `adb reverse --list` first (see below), not `ufw`.
+- **2026-10-30 (resolved): the phone was not "broken Wi-Fi"**. Its DHCP lease
+  moved from `192.168.0.2` to `192.168.0.8` and wireless debugging changed
+  port, which silently killed the `adb reverse` tunnel the old APK depended on.
+  Verified with ping/nc from the phone: Wi-Fi and `192.168.0.17:8017` work.
+  The APK is now built with `SUPABASE_URL=http://192.168.0.17:8017` (LAN), so
+  it no longer needs adb after install. `tool/run-android.sh` defaults to LAN;
+  `ANDROID_MODE=localhost` keeps the reverse mode. `tool/android-doctor.sh`
+  prints device/host/port state. Reconnect adb only to reinstall.
+- **Evidence host**: `parking-evidence-web` is not a compose service; after a
+  Docker/host restart recreate it with `sh tool/run-evidence-web.sh` (binds the
+  LAN IP, since 127.0.0.1:8080 belongs to another project, `restart:
+  unless-stopped`).
+- **2026-10-29: the phone is back over wireless adb** (the port changes on
+  every reconnect; last seen `192.168.0.2:46697`). `adb reverse tcp:8017
+  tcp:8017` was re-applied and the current APK installed. If it drops again,
+  `adb devices` first, then reconnect by IP:port, re-apply the reverse and
+  reinstall.
+- Chrome dev app is running with `APP_URL=http://192.168.0.17:8080`; the public
+  bundle is served by Docker (restart `parking-evidence-web` after a public
+  build). **Port 8080 on `127.0.0.1` belongs to another local project**
+  (`xuper_flutter/tools/local_proxy.js`), so the container binds
+  `192.168.0.17:8080:80`: use the LAN URL for evidence/policies, not
+  `http://localhost:8080`. Recreate it with that bind after a Docker restart.
 
 ## Android over adb
 
@@ -707,7 +898,7 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 ## Latest verification (2026-10-28)
 
-- `flutter test`: 785 passed (+1 live-stack integration skipped); `flutter
+- `flutter test`: 839 passed (+1 live-stack integration skipped); `flutter
   analyze` 152 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
 - `supabase/tests/run.sh` passed (migrations `0001`–`0067`); `e2e.sh` passed
@@ -724,316 +915,17 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 - Hardware run found and fixed two boot bugs: Hive now initializes before the
   Supabase session cleanup, and evidence uploads are insert-only (see above).
 
-## Secrets runbook (latest)
+## Deployment requirements (2026-10-28)
 
-- `supabase/rotate-pin.sh <user> <pin>`: GoTrue admin API with the service key
-  (works with no signed-in admin); no audit row — log it manually.
-- `supabase/check-secrets.sh`: `.env` mode/placeholders/tracked/`DISABLE_SIGNUP`/
-  `PASSWORD_MIN_LENGTH`, exits 1 on failures.
-- `docs/runbook-secrets.md`: inventory, quarterly review, PIN/JWT/DB/provider
-  rotation (JWT rotation logs everyone out and needs client rebuilds; DB needs
-  `ALTER USER` for postgres, supabase_admin, supabase_auth_admin,
-  supabase_storage_admin, authenticator) and leak response.
-
-## Restore drill (latest)
-
-- `supabase/restore-drill.sh [backups/<stamp>]`: creates a scratch DB, restores
-  with `pg_restore -U supabase_admin --no-owner` (as `postgres` every ACL fails
-  — this was a real bug in `restore.sh`, now fixed), compares
-  schema_migrations, core RPCs, RLS policy count, `authenticated` grants, row
-  counts and the storage tar, then drops the scratch DB.
-- `docs/runbook-restore.md`: monthly drill, production restore, new-host
-  recovery (keep JWT keys or devices must log in again), rollback and cadence.
-- CI's `supabase-e2e` job runs backup + drill, so the dump is exercised on
-  every push.
-
-## Product polish (latest)
-
-- Vehicle history: sessions carry `lotId`/`lotName`; the page shows a site chip
-  per session and filters locally by site (no extra RPC).
-- Home: `dashboard_today()` (active lot, business-timezone midnight) feeds a
-  `TodayCard` (revenue/cash/pass/entries/exits). A failing summary degrades to
-  zeros instead of hiding occupancy.
-
-## Audit export (latest)
-
-- `0037`: `list_audit_log(limit, start, end, table, actor)` (actor = username,
-  case-insensitive) dropped/recreated — PostgREST needs the migration applied.
-- `/audit` exports the visible page as PDF (`buildAuditPdf`) or CSV
-  (`auditCsv`, copied to the clipboard); actor dropdown derives from the
-  loaded page.
-
-## Admin diagnostics (latest)
-
-- `0036`: `diagnostics_snapshot()` (admin) returns counters + storage usage;
-  `list_client_error_reports(limit, days)` lists the reported errors.
-- Flutter `/diagnostics` (admin nav) renders both; the SQL suite bootstraps
-  `schema_migrations` and `storage.objects.metadata` so the snapshot works in
-  tests.
-- `supabase/diagnostics.sh` remains the shell equivalent; keep counters in sync.
-
-## Evidence retention (latest)
-
-- `0033`: `parking_settings.evidence_retention_days` (0 = keep, ≤3650) + UI
-  field in settings.
-- `evidence-archive` Edge Function (service-role only, `days=`/`dry_run=`
-  params) deletes the Storage object then the row; cron script
-  `supabase/evidence-archive.sh` runs daily after the backup.
-- `0034`/`0035`: Storage cannot forward `x-lot-id`, so `can_read_evidence(path)`
-  (security definer) checks membership instead of `current_lot_id()`. The
-  first version returned 500 on downloads — keep the helper.
-- Storage answers DELETE on a missing object with 400 + `NoSuchKey`; treat it as
-  already deleted.
-
-## Multi-lot contract (latest)
-
-- `0032`: `x-lot-id` is mandatory; missing/forged → `LotRequiredError`. The
-  Flutter `AuthCubit` awaits `onSessionReady` (lots loaded → header set) before
-  exposing the authenticated state. `notify_overstays` no longer uses
-  `current_lot_id()` (per-lot threshold/timezone, all sites), so cron is safe.
-- OpenSpec change archived: `openspec/changes/archive/2026-10-23-add-multi-parking-lot`,
-  capability `openspec/specs/parking-lots`.
-- E2E suites send the header; `supabase/tests/rpc_test.sql` sets lot 1 at the
-  top and switches per block.
-
-## E2E (latest)
-
-- `supabase/tests/e2e.sh`: curl-level flow (login → check-in → check-out →
-  report → history) with `E2E…` plates; used by the `supabase-e2e` CI job and
-  for post-deploy smoke tests.
-- `test/integration/supabase_flow_test.dart`: same flow through the pure-Dart
-  `supabase` client (dev_dependency). Skipped unless `SUPABASE_URL` and
-  `SUPABASE_ANON_KEY` are set; the CI job exports them from `.env`.
-- Both fail on: session not open, wrong lot, ticket without `TCK-`, report total
-  below the charge, empty history.
-
-## Admin audit (latest)
-
-- `0031`: `audit_log` + `record_audit()` trigger (categories, tariffs, vehicles,
-  monthly passes, settings, lots, lot_members). Updates store only the changed
-  columns; `pin_hash` is stripped; `lot_id` comes from the row.
-- `admin-users` writes explicit audit rows (service-role writes have no
-  `auth.uid()`), including `pin_reset: true` without the PIN itself.
-- Read model `list_audit_log(limit, start, end, table)` (platform admins) backs
-  the Flutter `/audit` screen; `purge_audit_log(365)` runs in the cron.
-
-## Observability (latest)
-
-- `0030`: `client_error_reports` + `report_client_error` (bounded payload,
-  actor from auth.uid(), admin read) + `purge_client_error_reports(30)` in the
-  cron.
-- Flutter: `ErrorReporter` (throttled/deduped, disabled in debug) with a
-  Supabase sink, installed in `main.dart` for `FlutterError.onError` and
-  `PlatformDispatcher.onError`.
-- Functions: JSON log line per request; `docker compose logs functions`.
-- Ops: `healthcheck.sh` (exit 1 on failure, `HEALTHCHECK_WEBHOOK` alerts) and
-  `diagnostics.sh` (stuck sessions/shifts, backlog, client errors, sizes).
-
-## Supabase Cloud (hosted) gotcha
-
-- A fresh Cloud project reaches Auth (`/auth/v1/health` 200) but has **no
-  parking schema**: queries return `PGRST205 Could not find the table` and
-  login returns `invalid_credentials` (no kiosk user). Apply
-  `supabase/migrations` with `sh supabase/apply-cloud.sh <session-db-url>` and
-  create the admin with `sh supabase/create-cloud-operator.sh <url>
-  <secret-key> admin <pin> admin`.
-- The publishable key (`sb_publishable_...`) works as `apikey`; `/rest/v1/`
-  answering "Secret API key required" with it is normal (admin-only root).
-- Never put `sb_secret_...`/service_role or third-party keys (Groq, etc.) in
-  the client or in `--dart-define`; only the publishable key ships.
-
-## Local gateway port
-
-- The local gateway port is `.env` `API_GW_HTTP_PORT` (currently **8017**),
-  mirrored in `SUPABASE_PUBLIC_URL`, `API_EXTERNAL_URL` and `SITE_URL`. After
-  changing it: `docker compose up -d --force-recreate api-gw auth`.
-- `tool/run-android.sh` reads that port (or `SUPABASE_PORT`) and reverses it;
-  Flutter gets `SUPABASE_URL=http://localhost:<port>`. e2e/healthcheck read
-  `SUPABASE_PUBLIC_URL` from `.env`.
-- Port 8000 is no longer bound in this environment.
-
-## Dev environment running (2026-10-28)
-
-- Backend: `docker compose up -d` from the repo root; all services healthy,
-  gateway/Studio on <http://localhost:8017> (`API_GW_HTTP_PORT` in `.env`);
-  migrations `0001`-`0059` applied.
-- Flutter web: `flutter run -d chrome --dart-define=SUPABASE_URL=http://localhost:8017
-  --dart-define=SUPABASE_ANON_KEY=<ANON_KEY>` (log: `/tmp/opencode/flutter-web.log`).
-- Android (Samsung S901E over wireless adb): `sh tool/run-android.sh` — it
-  re-applies `adb reverse` and runs with `SUPABASE_URL=http://localhost:8017`.
-  Install-only alternative: `flutter build apk --debug --dart-define=...` then
-  `adb install -r ... && adb shell am start -n
-  pro.devpaul.parking_management/.MainActivity`.
-- Login: `admin` / `123456`. Dev data: lot 1 "Parqueadero" (categories + data)
-  and lot 2 "Sede Norte" (member `norte2`, **no categories**: a new vehicle
-  cannot be registered there until categories/tariffs are created).
-- The apps use `localhost:8017`; if the phone shows "cannot reach the server",
-  check `adb reverse --list` first (see below), not `ufw`.
-
-## Android over adb
-
-- `tool/run-android.sh [serial]` re-applies `adb reverse tcp:8017 tcp:8017` and
-  runs Flutter with `SUPABASE_URL=http://localhost:8017`. **Wireless adb
-  reconnects on a new port and drops every reverse mapping** — the app then
-  cannot reach the backend until the reverse is re-applied. No `ufw` rule is
-  involved on that path; only a LAN URL needs `ufw allow 8017/tcp`.
-- `adb shell curl -s -o /dev/null -w '%{http_code}' http://localhost:8017/rest/v1/`
-  must answer `401` (reachable); `000` means the tunnel is missing.
-- The wireless serial changes on every reconnect (`192.168.0.2:<port>`): read it
-  from `adb devices` instead of hardcoding it. `adb exec-out screencap` returns
-  a black PNG on this device (locked screen), so verify the app with
-  `dumpsys window | grep mCurrentFocus` + the REST probe, not screenshots.
-
-## Boot order (fresh installs)
-
-- `configureDependencies()` initializes `KeyValueStore` (Hive) **before**
-  `_initSupabase`: the boot clears a stale cached session through Hive, which
-  needs `Hive.init(path)` on mobile (web needs no path, so the bug only showed
-  on a fresh Android install).
-- Android over adb: `adb reverse tcp:8017 tcp:8017` + `SUPABASE_URL=
-  http://localhost:8017`; no firewall/Wi-Fi involved. Both are documented in
-  QUICKSTART and the environment guides.
-
-## Space capacities and keys (0047)
-
-- `parking_settings`: `car_capacity` (cars + pickups share the pool),
-  `moto_capacity`, `key_capacity`; `0` = no limit. Trucks/buses are excluded by
-  design. Editable in Ajustes.
-- `parking_sessions.left_keys` (default false) travels through the check-in
-  form, `check_in(p_left_keys)`, the queued payload (`left_keys`) and the
-  replayer; `open_sessions_view` exposes it.
-- `enforce_category_capacity()` keeps the per-category cap and adds group caps
-  (category name sets are the contract for groups) and the keys cap, all under
-  advisory locks per lot/group. Errors: `ParkingFullError`, `KeysFullError`.
-- The check-in RPC signature gained a trailing `p_left_keys` default; the old
-  8-argument overload must stay dropped (two overloads make calls ambiguous).
-- `0049` makes active reservations count against the category and group
-  capacities (walk-ins cannot take a held spot); the capacity trigger and
-  `create_reservation` share the advisory locks and the same group name sets.
-- `0054`/`0055` add out-of-service spaces: `parking_settings.car_out_of_service`
-  / `moto_out_of_service` stay inside the configured capacity but are removed
-  from the usable pool by `usable_capacity()` (`0` capacity = no limit, and it
-  ignores the counter). The trigger, `create_reservation`, `capacity_snapshot`
-  (`*_available`) and `slot_board` all use it; the board paints striped
-  "Mantenimiento" cells that are not interactive.
-- SQL test timezone gotcha: `supabase/tests/rpc_test.sql` sets
-  `timezone = 'America/Bogota'` so `current_date` matches the business day.
-  Without it the suite fails between 00:00 and 05:00 UTC (evening in Bogota).
-- `0053` makes `fare_breakdown` the only money math (`calculate_fare` wraps it,
-  `check_out_preview` returns its components). Never re-implement the fare in
-  Dart: the settlement dialog and the board sheet render the server breakdown.
-- `0052` adds `slot_board()` (capacities + sessions + holds, lot-scoped) and the
-  home `SlotBoardCard`. Cells are **virtual capacity** cells, not bay numbers:
-  sessions first, then holds, then free. Occupied cells carry plate + elapsed;
-  reserved cells carry the hold expiry. A board failure falls back to an empty
-  board so the dashboard keeps working. The detail sheet refreshes the clock
-  every second and the preview every 60 s.
-- `0057` fixes the notifications RLS policy: Realtime has no `x-lot-id`, so the
-  old `current_lot_id()` raised `LotRequiredError` and the channel silently
-  dropped events. Policies evaluated by Realtime/Storage must use membership
-  helpers (`can_read_lot`, `can_read_evidence`), never the active-lot helper.
-  Verified with `websockets` against `/realtime/v1/websocket`
-  (`phx_join` → `postgres_changes` after a check-in).
-- `0056` notifies **every active lot member** (including the actor) on
-  check-in/check-out with `data.action`, `session_id`, `plate`, `actor_name`,
-  `actor_role` and (exits) `amount_charged`; Realtime delivers it to each
-  member. The shell composes the snackbar with l10n from the payload (not the
-  Spanish server body) and skips it when `LocalActivity.owns(action, sessionId)`
-  (the acting device remembers its write for 30 s). Operators now receive their
-  own rows; the RLS test asserts they never read another user's.
-- Cash closing shows the expected cash and a live difference, and a
-  denomination counter (`CashCountSheet`, COP notes/coins) fills the counted
-  amount; both the close and the admin adjust dialogs use it.
-- Touch cabins get an on-screen alphanumeric keypad (`PlateKeypad`, opened
-  from the plate field and the check-out search); it edits the shared
-  controller, so validation/lookup/debounce run as if typed.
-- Check-in loads one page of known vehicles (`listPage(limit: 200)`) and shows
-  up to four prefix matches as `ActionChip`s once two characters are typed;
-  the repository is injectable, and a failure just hides the suggestions.
-- Hold release on the board: `SlotHold` has no id (the payload stays lean), so
-  the admin action resolves the reservation through
-  `ReservationRepository.listActive()` by plate and expiry (±60 s), then
-  cancels it and reloads the dashboard. The repository is injected through
-  `HomePage.reservations` (router uses `isRegistered` so router tests still
-  work).
-- Out-of-service invariants: never offer a spot that is out of service, and
-  never treat "all spots out of service" as unlimited. The settings form
-  rejects an out-of-service count above the configured capacity.
-- UI/UX invariants: state is never colour-only (each cell has a label and a
-  group icon), cells stay ≥ 44×48 dp, and the occupancy KPI paints its
-  percentage as text next to the radial gauge.
-- `0051` adds `reservations_active`/`reservations_expiring` (2 h) to
-  `capacity_snapshot`; the capacity card shows "N reservas activas"/"N por
-  vencer" and admins get a shortcut to `/reservations`.
-- Check-in loads the active holds (injected `ReservationRepository`) and shows
-  a banner for the typed plate with a cancellable hold; holds reload after a
-  check-in or cancellation.
-- `0050` adds `car_reserved`/`moto_reserved` to `capacity_snapshot()`; the
-  capacity card renders them under the bar ("N reservados").
-- `0048 capacity_snapshot()` returns `car_open/car_capacity`,
-  `moto_open/moto_capacity`, `keys_open/key_capacity` for the home. The
-  `CapacitySnapshot` entity + `CheckOutRepository.capacitySnapshot()` feed
-  `DashboardLoaded.capacity`; `DashboardCubit` also loads the first 5 open
-  sessions and resolves their plates through an optional `VehicleRepository`.
-- Home layout: actions first; `_SummaryGrid` puts occupancy/capacity and
-  today/shift in two equal-height columns from 720 px (one column on phones);
-  management shortcuts are a two-column tile grid; cards share `_KpiIcon`.
-- Home widgets: `CapacityCard` (bars, `0` = "no limit") and `InsideCard`
-  (plates + elapsed + pass/photo hints; "See all" → `/check-out`, row tap →
-  `/check-out?plate=`). `OccupancyCard` now counts only configured group
-  spaces; from `Layout.homeSplit` (1000) the inside list moves to a 340 px
-  side panel. Check-in disables a category when its whole group is full
-  (`core/utils/vehicle_groups.dart`, same names as the SQL trigger).
-
-## Receipt QR / check-out scanning
-
-- `QrCode` generates the matrix for the *inner* square (size − 2×12) and paints
-  it unscaled inside that padding; sizing it outside the padded canvas clipped
-  the last modules. `test/core/widgets/qr_code_test.dart` renders the widget to
-  a PNG and decodes it with the camera decoder, so a clipped QR fails CI.
-- The QR payload is the **plate** (`Barcode.qrCode()` in `core/widgets/qr_code.dart`),
-  printed on the **entry** receipt (screen, PDF via `pw.BarcodeWidget`, thermal
-  via `GS ( k`) and captioned with `ReceiptLabels.scanHint`. Check-out receipts
-  carry no QR: the car is already gone.
-- `scanQrWithCamera` (`core/qr/qr_scan_page.dart`, `mobile_scanner`) is the
-  phone path: a live preview with torch, one result pops the page (haptic).
-  Web has no live scanner; the check-out page and the shell FAB fall back to
-  `PlateImageCapture` + `QrDecoder` (file/photo).
-- `QrDecoder` (`core/qr/qr_decoder.dart`, zxing2 + image, pure Dart) decodes the
-  web capture; `plateFromQrPayload` accepts a bare plate or `?plate=`/`?p=` and
-  rejects anything else (a random QR cannot start a check-out).
-- Check-out: `resolvePlate` asks the server for the exact plate (limit 2, only a
-  single match opens); `_startCheckout` moved from the tile to the page so the
-  scan and a USB reader's `Enter` (`SearchField.onSubmitted`) reuse it.
-- Check-in success opens `showReceipt` with the QR + Imprimir (no summary step)
-  and restores plate focus when the dialog closes.
-- Check-in category options append the group's remaining spaces
-  (`categorySpotsLeft`, held spots subtracted, `categoryNoSpots` when zero);
-  groups without a configured capacity stay plain.
-- Check-in's "vehicles inside" is a local accordion (`_sessionsOpen`) with a
-  count badge; rows expose the ticket (receipt + print) and "Mark exit"
-  (`/check-out?scan=<plate>`; `onMarkExit` is injectable for tests).
-- Open sessions now carry `photo_count` (the view already exposed it) so the
-  check-out list can reprint an entry ticket: admins get a receipt icon per row
-  that opens the QR ticket with Imprimir. Operators do not (security test).
-  The row subtitle is a `Wrap` with the elapsed label ellipsized: the extra
-  action narrowed the row enough to overflow at 400 px (regression test at that
-  width).
-- The shell FAB is the QR scanner (`_ScanQrFab`, hidden without capture/decoder):
-  it navigates to `/check-out?scan=<plate>`, which resolves and opens the
-  payment dialog. The old WhatsApp FAB (and its test) is gone; WhatsApp lives in
-  `/contact`.
-- The camera button only renders when the route injects `capture` + `qrDecoder`;
-  the search field still works with a keyboard-wedge reader alone.
-
-## Branding assets
-
-- `assets/branding/logo.png` is the app mark; `tool/generate_branding.py`
-  regenerates it plus the Android mipmaps, web icons/favicon and maskable
-  variants (deterministic, Pillow). The login header uses the per-lot logo when
-  `BrandingCubit.logoOrNull` has bytes, else this asset, else the parking icon.
-- `web/manifest.json`/`index.html` use the asphalt background (`#0B0D10`);
-  keep them in sync if the mark changes.
+- `docs/deployment-requirements.md` is the canonical English list: shapes (edge
+  VM / cloud VM / managed Supabase), 2 vCPU/4 GB/40 GB minimum and
+  4/8/80–160 recommended (8/16/320+ multi-site), disk formula
+  `vehicles/day × (photos + video% × video MB) × retention ÷ 1024`, Ubuntu
+  24.04 + Docker 24/Compose v2, only 443 public (8000/5432/6543 loopback),
+  WebSocket + ≥60 MB body limit, bandwidth ≥5 Mbps upload for video, offsite
+  encrypted backups + restore drill, and the go-live checklist.
+- Idle full stack ≈1.2 GB RAM (docker stats); plan 2–3× headroom. Studio/meta
+  can be disabled in production; amd64 images only.
 
 ## Backlog / next moves
 

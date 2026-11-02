@@ -216,6 +216,47 @@ void main() {
     expect(find.text('XYZ999'), findsOneWidget);
   });
 
+  testWidgets('Success: the active filter hides expired passes', (
+    tester,
+  ) async {
+    final now = DateTime.now();
+    await pumpPage(
+      tester,
+      vehicles: const [
+        Vehicle(id: 1, plate: 'ABC123', categoryId: 1),
+        Vehicle(id: 2, plate: 'XYZ999', categoryId: 1),
+      ],
+      passes: [
+        samplePass,
+        MonthlyPass(
+          id: 2,
+          vehicleId: 2,
+          startDate: now.subtract(const Duration(days: 2)),
+          endDate: now.add(const Duration(days: 20)),
+          amount: 100000,
+        ),
+      ],
+    );
+
+    expect(find.text('ABC123'), findsOneWidget);
+    expect(find.text('XYZ999'), findsOneWidget);
+
+    await tester.tap(find.text('Solo vigentes'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('ABC123'), findsNothing);
+    expect(find.text('XYZ999'), findsOneWidget);
+    expect(find.text('1 mensualidades'), findsOneWidget);
+  });
+
+  testWidgets('Success: pending payments are summarized', (tester) async {
+    await pumpPage(tester, pending: [samplePayment]);
+
+    expect(find.text('Pagos pendientes'), findsWidgets);
+    expect(find.text('1'), findsWidgets);
+    expect(find.text('\$100.000'), findsWidgets);
+  });
+
   testWidgets('Failure: a search with no matches explains itself', (
     tester,
   ) async {
@@ -267,6 +308,12 @@ void main() {
     await pumpPage(tester, passes: []);
 
     expect(find.text('Aún no hay mensualidades'), findsOneWidget);
+    expect(
+      find.text(
+        'Crea una mensualidad para cobrar por adelantado y agilizar la salida.',
+      ),
+      findsOneWidget,
+    );
     await tester.tap(find.text('Agregar mensualidad'));
     await tester.pumpAndSettle();
     expect(find.byType(AlertDialog), findsOneWidget);

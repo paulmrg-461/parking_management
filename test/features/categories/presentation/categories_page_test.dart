@@ -34,6 +34,7 @@ void main() {
 
     expect(find.text('Categorías'), findsOneWidget);
     expect(find.text('carro'), findsOneWidget);
+    expect(find.byType(Card), findsWidgets);
   });
 
   testWidgets('Success: delete asks for confirmation before deleting', (

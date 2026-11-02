@@ -132,3 +132,8 @@ List<AppDestination> destinationsFor(UserRole role, {bool management = true}) =>
       ...primaryDestinations,
       if (management) ...managementDestinations,
     ].where((d) => canAccess(role, d.path)).toList();
+
+/// Management sections are admin/reference-data screens; the scan-to-check-out
+/// shortcut is an operator action and only adds noise there.
+bool isManagementLocation(String location) =>
+    managementDestinations.any((destination) => destination.matches(location));

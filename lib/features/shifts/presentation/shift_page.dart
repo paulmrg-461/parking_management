@@ -5,6 +5,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/l10n/failure_messages.dart';
 import '../../../core/l10n/l10n.dart';
+import '../../../core/money/money.dart';
+import '../../../core/money/money_input.dart';
 import '../../../core/receipt/pdf_share.dart';
 import '../../../core/network/connectivity_cubit.dart';
 import '../../../core/state/submission.dart';
@@ -12,7 +14,12 @@ import '../../../core/theme/status_colors.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/confirm_dialog.dart';
+import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/metric_card.dart';
 import '../../../core/widgets/error_state.dart';
+import '../../../core/widgets/section_header.dart';
+import '../../../core/widgets/skeleton.dart';
+import '../../../core/widgets/status_chip.dart';
 import '../../../core/widgets/money_text.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../../lots/application/lots_cubit.dart';
@@ -112,9 +119,8 @@ class _ShiftPageState extends State<ShiftPage> {
         ),
         body: BlocBuilder<ShiftCubit, ShiftState>(
           builder: (context, state) => switch (state.status) {
-            ShiftStatus.initial || ShiftStatus.loading => const Center(
-              child: CircularProgressIndicator(),
-            ),
+            ShiftStatus.initial ||
+            ShiftStatus.loading => const SkeletonCardList(itemCount: 3),
             ShiftStatus.failure => ErrorState(
               message: state.error == null
                   ? l10n.errorUnknown
@@ -166,34 +172,36 @@ class _Content extends StatelessWidget {
         ],
         if (isAdmin) ...[
           const SizedBox(height: Space.xl),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  l10n.shiftHistory,
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-              ),
-              if (state.historyFrom != null || state.historyTo != null)
-                TextButton(
-                  onPressed: () => context.read<ShiftCubit>().load(
-                    admin: true,
-                    clearHistoryRange: true,
+          SectionHeader(
+            icon: Icons.receipt_long_outlined,
+            title: l10n.shiftHistory,
+            action: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (state.historyFrom != null || state.historyTo != null)
+                  TextButton(
+                    onPressed: () => context.read<ShiftCubit>().load(
+                      admin: true,
+                      clearHistoryRange: true,
+                    ),
+                    child: Text(l10n.shiftHistoryClearFilter),
                   ),
-                  child: Text(l10n.shiftHistoryClearFilter),
+                IconButton(
+                  tooltip: l10n.shiftHistoryFilter,
+                  onPressed: () => _pickHistoryRange(context, state),
+                  icon: const Icon(Icons.date_range),
                 ),
-              IconButton(
-                tooltip: l10n.shiftHistoryFilter,
-                onPressed: () => _pickHistoryRange(context, state),
-                icon: const Icon(Icons.date_range),
-              ),
-            ],
+              ],
+            ),
           ),
           const SizedBox(height: Space.sm),
           if (state.history.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: Space.md),
-              child: Text(l10n.shiftHistoryEmpty),
+            SizedBox(
+              height: 220,
+              child: EmptyState(
+                icon: Icons.point_of_sale_outlined,
+                message: l10n.shiftHistoryEmpty,
+              ),
             )
           else
             for (final shift in state.history) _HistoryTile(shift: shift),
@@ -292,7 +300,7 @@ class _OpenShiftFormState extends State<_OpenShiftForm> {
     if (!_formKey.currentState!.validate()) {
       return;
     }
-    context.read<ShiftCubit>().open(int.parse(_controller.text.trim()));
+    context.read<ShiftCubit>().open(Money.parse(_controller.text.trim()) ?? 0);
   }
 
   @override
@@ -306,30 +314,70 @@ class _OpenShiftFormState extends State<_OpenShiftForm> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                l10n.shiftNoOpen,
-                style: Theme.of(context).textTheme.titleMedium,
+              Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(Radii.sm),
+                    ),
+                    child: Icon(
+                      Icons.lock_outline,
+                      size: 20,
+                      color: Theme.of(context).colorScheme.onPrimaryContainer,
+                    ),
+                  ),
+                  const SizedBox(width: Space.sm),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.shiftNoOpen,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        Text(
+                          l10n.shiftOpeningHint,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: Space.md),
               TextFormField(
                 controller: _controller,
                 keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                inputFormatters: moneyInputFormatters(),
                 decoration: InputDecoration(
                   labelText: l10n.shiftOpeningFloat,
+                  prefixText: '${Money.currency.symbol} ',
                 ),
                 validator: (value) {
-                  final amount = int.tryParse((value ?? '').trim());
+                  final amount = Money.parse(value);
                   return amount == null || amount < 0
                       ? l10n.invalidAmount
                       : null;
                 },
               ),
               const SizedBox(height: Space.md),
-              FilledButton.icon(
-                onPressed: widget.online ? _open : null,
-                icon: const Icon(Icons.lock_open),
-                label: Text(l10n.shiftOpen),
+              ConstrainedBox(
+                constraints: const BoxConstraints(
+                  minHeight: Layout.minTouch,
+                ),
+                child: FilledButton.icon(
+                  onPressed: widget.online ? _open : null,
+                  icon: const Icon(Icons.lock_open),
+                  label: Text(l10n.shiftOpen),
+                ),
               ),
             ],
           ),
@@ -349,16 +397,48 @@ class _OpenShiftCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final textTheme = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(Space.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(l10n.shiftOpenTitle, style: textTheme.titleMedium),
-            Text(
-              l10n.shiftOpenedAt(Formatters.dateTimeFull(shift.openedAt)),
-              style: textTheme.bodySmall,
+            Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: scheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(Radii.sm),
+                  ),
+                  child: Icon(
+                    Icons.point_of_sale,
+                    size: 20,
+                    color: scheme.onPrimaryContainer,
+                  ),
+                ),
+                const SizedBox(width: Space.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(l10n.shiftOpenTitle, style: textTheme.titleMedium),
+                      Text(
+                        l10n.shiftOpenedAt(
+                          Formatters.dateTimeFull(shift.openedAt),
+                        ),
+                        style: textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                ),
+                StatusChip(
+                  label: l10n.statusOpen,
+                  tone: StatusTone.success,
+                ),
+              ],
             ),
             const SizedBox(height: Space.md),
             _MetricRow(label: l10n.shiftOpeningFloat, amount: shift.openingFloat),
@@ -467,25 +547,86 @@ class _ClosedShiftCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final difference = shift.difference ?? 0;
-    final color = difference == 0
-        ? Theme.of(context).colorScheme.primary
-        : Theme.of(context).colorScheme.error;
+    final balanced = difference == 0;
+    final scheme = Theme.of(context).colorScheme;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(Space.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              l10n.shiftClosedTitle,
-              style: Theme.of(context).textTheme.titleMedium,
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: balanced
+                        ? scheme.primaryContainer
+                        : scheme.errorContainer,
+                    borderRadius: BorderRadius.circular(Radii.sm),
+                  ),
+                  child: Icon(
+                    balanced ? Icons.lock_outline : Icons.warning_amber_outlined,
+                    size: 20,
+                    color: balanced
+                        ? scheme.onPrimaryContainer
+                        : scheme.onErrorContainer,
+                  ),
+                ),
+                const SizedBox(width: Space.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l10n.shiftClosedTitle,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      Text(
+                        l10n.shiftClosedHint,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                StatusChip(
+                  label: balanced
+                      ? l10n.shiftReconciliation
+                      : l10n.shiftDifference,
+                  tone: balanced ? StatusTone.success : StatusTone.warning,
+                ),
+              ],
+            ),
+            const SizedBox(height: Space.md),
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: MetricCard(
+                      icon: Icons.payments_outlined,
+                      label: l10n.shiftExpectedCash,
+                      value: Formatters.money(shift.expectedCash),
+                    ),
+                  ),
+                  const SizedBox(width: Space.sm),
+                  Expanded(
+                    child: MetricCard(
+                      icon: Icons.point_of_sale,
+                      label: l10n.shiftCountedCash,
+                      value: Formatters.money(shift.countedCash ?? 0),
+                      tone: balanced
+                          ? MetricTone.neutral
+                          : MetricTone.warning,
+                    ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: Space.sm),
-            _MetricRow(label: l10n.shiftExpectedCash, amount: shift.expectedCash),
-            _MetricRow(
-              label: l10n.shiftCountedCash,
-              amount: shift.countedCash ?? 0,
-            ),
             Row(
               children: [
                 Text(l10n.shiftDifference),
@@ -493,7 +634,7 @@ class _ClosedShiftCard extends StatelessWidget {
                 MoneyText(
                   difference,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: color,
+                    color: balanced ? scheme.primary : scheme.error,
                   ),
                 ),
               ],
@@ -524,21 +665,57 @@ class _HistoryTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final scheme = Theme.of(context).colorScheme;
     final difference = shift.difference ?? 0;
+    final balanced = difference == 0;
     return Card(
       margin: const EdgeInsets.only(bottom: Space.sm),
+      clipBehavior: Clip.antiAlias,
       child: ListTile(
         onTap: shift.isOpen ? null : () => _adjust(context),
-        title: Text(Formatters.dateTime(shift.openedAt)),
-        subtitle: Text(
-          '${context.l10n.shiftSales}: ${Formatters.money(shift.revenue)} · '
-          '${context.l10n.shiftDifference}: ${Formatters.money(difference)}',
+        leading: CircleAvatar(
+          backgroundColor: shift.isOpen
+              ? scheme.primaryContainer
+              : balanced
+              ? scheme.surfaceContainerHighest
+              : scheme.errorContainer,
+          child: Icon(
+            shift.isOpen
+                ? Icons.lock_open
+                : balanced
+                ? Icons.check
+                : Icons.warning_amber_outlined,
+            size: 20,
+            color: shift.isOpen
+                ? scheme.onPrimaryContainer
+                : balanced
+                ? scheme.onSurfaceVariant
+                : scheme.onErrorContainer,
+          ),
         ),
+        title: Text(
+          Formatters.dateTime(shift.openedAt),
+          style: Theme.of(
+            context,
+          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('${l10n.shiftSales}: ${Formatters.money(shift.revenue)}'),
+            Text(
+              '${l10n.shiftDifference}: ${Formatters.money(difference)}',
+              style: TextStyle(
+                color: balanced ? null : scheme.error,
+                fontWeight: balanced ? null : FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        isThreeLine: true,
         trailing: shift.isOpen
-            ? Icon(
-                Icons.lock_open,
-                color: Theme.of(context).colorScheme.primary,
-              )
+            ? Icon(Icons.lock_open, color: scheme.primary)
             : PopupMenuButton<String>(
                 tooltip: context.l10n.shiftHistoryFilter,
                 onSelected: (action) => action == 'export'
@@ -594,7 +771,7 @@ class _AdjustShiftDialogState extends State<_AdjustShiftDialog> {
     if (total == null || !mounted) {
       return;
     }
-    setState(() => _counted.text = '$total');
+    setState(() => _counted.text = Money.input(total));
   }
 
   @override
@@ -610,7 +787,7 @@ class _AdjustShiftDialogState extends State<_AdjustShiftDialog> {
     }
     Navigator.of(context).pop(
       _CloseResult(
-        int.parse(_counted.text.trim()),
+        Money.parse(_counted.text.trim()) ?? 0,
         _reason.text.trim(),
       ),
     );
@@ -632,7 +809,7 @@ class _AdjustShiftDialogState extends State<_AdjustShiftDialog> {
               controller: _counted,
               autofocus: true,
               keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              inputFormatters: moneyInputFormatters(),
               decoration: InputDecoration(
                 labelText: l10n.shiftCountedCash,
                 suffixIcon: IconButton(
@@ -643,7 +820,7 @@ class _AdjustShiftDialogState extends State<_AdjustShiftDialog> {
               ),
               onChanged: (_) => setState(() {}),
               validator: (value) {
-                final amount = int.tryParse((value ?? '').trim());
+                final amount = Money.parse(value);
                 return amount == null || amount < 0
                     ? l10n.invalidAmount
                     : null;
@@ -709,7 +886,7 @@ class _DifferenceRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final value = int.tryParse(counted.trim());
+    final value = Money.parse(counted.trim());
     if (value == null) {
       return const SizedBox.shrink();
     }
@@ -809,7 +986,10 @@ class _CashMovementDialogState extends State<_CashMovementDialog> {
       return;
     }
     Navigator.of(context).pop(
-      _MovementResult(int.parse(_amount.text.trim()), _reason.text.trim()),
+      _MovementResult(
+        Money.parse(_amount.text.trim()) ?? 0,
+        _reason.text.trim(),
+      ),
     );
   }
 
@@ -828,10 +1008,10 @@ class _CashMovementDialogState extends State<_CashMovementDialog> {
               controller: _amount,
               autofocus: true,
               keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              inputFormatters: moneyInputFormatters(),
               decoration: InputDecoration(labelText: l10n.fieldAmount),
               validator: (value) {
-                final amount = int.tryParse((value ?? '').trim());
+                final amount = Money.parse(value);
                 return amount == null || amount <= 0
                     ? l10n.invalidAmount
                     : null;

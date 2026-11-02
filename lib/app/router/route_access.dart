@@ -4,6 +4,7 @@ import '../../features/auth/domain/entities/user.dart';
 
 const loginPath = '/login';
 const homePath = '/';
+const aboutPath = '/about';
 
 /// Operators get an ALLOWLIST (secure by default: any new route is
 /// admin-only until added here). Check-in reads categories/vehicles through
@@ -27,7 +28,7 @@ bool canAccess(UserRole role, String location) =>
 String? authRedirect(AuthState auth, String location) {
   final path = _normalize(location);
   // The evidence page is public: the receipt QR carries the key (the plate).
-  if (path == evidencePath || path == policiesPath) {
+  if (path == evidencePath || path == policiesPath || path == aboutPath) {
     return null;
   }
   final atLogin = path == loginPath;

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/tokens.dart';
+import '../../../core/widgets/dialog_header.dart';
 
 class CreateLotDraft {
   const CreateLotDraft({
@@ -56,7 +57,7 @@ class _CreateLotDialogState extends State<CreateLotDialog> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return AlertDialog(
-      title: Text(l10n.lotAdd),
+      title: DialogHeader(icon: Icons.storefront_outlined, title: l10n.lotAdd),
       content: Form(
         key: _formKey,
         child: Column(

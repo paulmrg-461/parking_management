@@ -749,7 +749,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shiftNoOpen => 'No open shift';
 
   @override
-  String get shiftOpeningFloat => 'Opening float (COP)';
+  String get shiftOpeningFloat => 'Opening float';
 
   @override
   String get shiftOpen => 'Open shift';
@@ -1149,6 +1149,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsSectionEvidence => 'Evidence';
 
   @override
+  String get settingsSectionPreferences => 'Preferences';
+
+  @override
+  String get settingsCurrency => 'Currency';
+
+  @override
+  String get settingsCurrencyHint =>
+      'Amounts are stored in the currency minor unit (COP pesos, USD cents). Review tariffs and prices after changing it.';
+
+  @override
+  String get currencyCop => 'Colombian peso (COP)';
+
+  @override
+  String get currencyUsd => 'US dollar (USD)';
+
+  @override
+  String get languageTooltip => 'Language';
+
+  @override
+  String get languageSystem => 'System';
+
+  @override
+  String get languageSpanish => 'Español';
+
+  @override
+  String get languageEnglish => 'English';
+
+  @override
   String get settingsSectionLegal => 'Policies and contract';
 
   @override
@@ -1507,7 +1535,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fieldVehicle => 'Vehicle';
 
   @override
-  String get fieldAmount => 'Amount (COP)';
+  String get fieldAmount => 'Amount';
 
   @override
   String get fieldType => 'Type';
@@ -1867,7 +1895,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get lostTicketReasonRequired => 'Enter the lost ticket reason';
 
   @override
-  String get discountAmount => 'Discount (COP)';
+  String get discountAmount => 'Discount';
 
   @override
   String get discountReason => 'Discount reason';
@@ -2442,4 +2470,360 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reportsNoRevenue => 'No revenue for this range';
+
+  @override
+  String get errorTitle => 'Something went wrong';
+
+  @override
+  String get actionClearFilters => 'Clear filters';
+
+  @override
+  String get notificationsToday => 'Today';
+
+  @override
+  String get notificationsYesterday => 'Yesterday';
+
+  @override
+  String get notificationsEarlier => 'Earlier';
+
+  @override
+  String get notificationsEmptyTitle => 'Inbox empty';
+
+  @override
+  String get notificationsEmptyHint =>
+      'Check-in, check-out, shift and pass alerts will appear here.';
+
+  @override
+  String get notificationsOpenRecords => 'View records';
+
+  @override
+  String get notificationsUnreadOnly => 'Unread';
+
+  @override
+  String get notificationsAll => 'All';
+
+  @override
+  String get notificationsFilterLabel => 'Filter notifications';
+
+  @override
+  String get auditActionInsert => 'Create';
+
+  @override
+  String get auditActionUpdate => 'Update';
+
+  @override
+  String get auditActionDelete => 'Delete';
+
+  @override
+  String get auditEmptyFiltered => 'No changes match the filters';
+
+  @override
+  String get usersSearchHint => 'Search by name or username';
+
+  @override
+  String get usersEmptyTitle => 'No users yet';
+
+  @override
+  String get usersEmptyHint =>
+      'Add the first operator to start recording movements.';
+
+  @override
+  String get usersAddFirst => 'Add user';
+
+  @override
+  String get recordsSummarySessions => 'Sessions';
+
+  @override
+  String get recordsSummaryCharged => 'Charged';
+
+  @override
+  String get recordsEmptyTitle => 'No movements';
+
+  @override
+  String get homeQuickActions => 'Quick actions';
+
+  @override
+  String get homeSummaryHint => 'Parking status in real time';
+
+  @override
+  String get shiftSummaryTitle => 'Shift summary';
+
+  @override
+  String get spotsLegend => 'Legend';
+
+  @override
+  String get spotsLegendFree => 'Free';
+
+  @override
+  String get spotsLegendOccupied => 'Occupied';
+
+  @override
+  String get spotsLegendHold => 'Hold';
+
+  @override
+  String get spotsLegendMaintenance => 'Maintenance';
+
+  @override
+  String get diagnosticsSummary => 'Operational summary';
+
+  @override
+  String get notificationsUnreadEmpty => 'You have no unread notifications';
+
+  @override
+  String auditCount(int count) {
+    return '$count changes';
+  }
+
+  @override
+  String get auditEmptyHint =>
+      'Changes to master data are recorded automatically.';
+
+  @override
+  String get auditEmptyFilteredHint =>
+      'Try another date range, table or actor.';
+
+  @override
+  String get auditBefore => 'Before';
+
+  @override
+  String get auditAfter => 'After';
+
+  @override
+  String get auditField => 'Field';
+
+  @override
+  String get usersSearchLabel => 'Search users';
+
+  @override
+  String get loginOperatorAccess => 'Operator access';
+
+  @override
+  String get loginHelper =>
+      'Use the username and 6-digit PIN assigned by your administrator.';
+
+  @override
+  String get loginSecure => 'Protected connection';
+
+  @override
+  String get loginShowPin => 'Show PIN';
+
+  @override
+  String get loginHidePin => 'Hide PIN';
+
+  @override
+  String get loginFeatureCheckIn => 'Check-in and check-out in seconds';
+
+  @override
+  String get loginFeatureCash => 'Balanced cash and shifts';
+
+  @override
+  String get loginFeatureReports => 'Real-time reports';
+
+  @override
+  String get reservationsActive => 'Active holds';
+
+  @override
+  String get reservationsExpiring => 'Expiring soon';
+
+  @override
+  String get reservationsEmptyTitle => 'No holds';
+
+  @override
+  String get reservationsEmptyHint =>
+      'Hold a spot for a customer so their entry is guaranteed.';
+
+  @override
+  String get reservationsSearchLabel => 'Search holds';
+
+  @override
+  String get reservationsSearchHint => 'Plate';
+
+  @override
+  String get reservationsOnlyExpiring => 'Expiring only';
+
+  @override
+  String reservationsCount(int count) {
+    return '$count holds';
+  }
+
+  @override
+  String get reservationsFilteredEmpty => 'No holds match the filter';
+
+  @override
+  String get monthlyPassesEmptyTitle => 'No passes yet';
+
+  @override
+  String get monthlyPassesEmptyHint =>
+      'Create a pass to charge ahead and speed up check-out.';
+
+  @override
+  String get monthlyPassesActive => 'Active';
+
+  @override
+  String monthlyPassesCount(int count) {
+    return '$count passes';
+  }
+
+  @override
+  String get monthlyPassesOnlyActive => 'Active only';
+
+  @override
+  String get monthlyPassesFilteredEmpty => 'No passes match the filter';
+
+  @override
+  String get monthlyPassesList => 'Registered passes';
+
+  @override
+  String get categoriesEmptyHint =>
+      'Create the lot categories (motorcycle, car, pickup…) to assign tariffs and spaces.';
+
+  @override
+  String get tariffsEmptyHint =>
+      'Add hourly, daily, night or monthly prices for each category.';
+
+  @override
+  String get diagnosticsPendingQueue => 'Pending queue';
+
+  @override
+  String get diagnosticsAlerts => 'Alerts';
+
+  @override
+  String get diagnosticsOpenNow => 'Parked now';
+
+  @override
+  String vehiclesCount(int count) {
+    return '$count vehicles';
+  }
+
+  @override
+  String parkedCount(int count) {
+    return '$count parked';
+  }
+
+  @override
+  String get checkOutEmptyTitle => 'Lot is empty';
+
+  @override
+  String get checkOutEmptyHint =>
+      'Register a check-in to see it here and charge it on exit.';
+
+  @override
+  String get checkOutGoToCheckIn => 'Register check-in';
+
+  @override
+  String get checkInVehicleSection => 'Vehicle';
+
+  @override
+  String get checkInVehicleHint => 'Plate, category and vehicle details';
+
+  @override
+  String get checkInEvidenceSection => 'Evidence';
+
+  @override
+  String get checkInEvidenceHint =>
+      'Photos or video of the vehicle\'s condition';
+
+  @override
+  String get notifTypeCheckIn => 'Check-in';
+
+  @override
+  String get notifTypeCheckOut => 'Check-out';
+
+  @override
+  String get notifTypePassExpiring => 'Pass expiring';
+
+  @override
+  String get notifTypePassRenewed => 'Pass renewed';
+
+  @override
+  String get notifTypeOverstay => 'Overstay';
+
+  @override
+  String get notifTypeShiftClosed => 'Shift closed';
+
+  @override
+  String get notifTypeGeneric => 'Notice';
+
+  @override
+  String get aboutDeveloper => 'About the developer';
+
+  @override
+  String get aboutRole => 'Software development';
+
+  @override
+  String get aboutIntro =>
+      'Hi, I am Paul Realpe (DevPaul). I design and build mobile and web apps with Flutter, caring about the experience and the details.';
+
+  @override
+  String get aboutFindMe => 'Find me';
+
+  @override
+  String get aboutWebsite => 'Website';
+
+  @override
+  String get aboutGitHub => 'GitHub';
+
+  @override
+  String get aboutLinkedIn => 'LinkedIn';
+
+  @override
+  String get aboutInstagram => 'Instagram';
+
+  @override
+  String get aboutAppTitle => 'About the app';
+
+  @override
+  String get aboutAppBody =>
+      'Parking management system: check-in and check-out, time-based billing, cash shifts, monthly passes, reservations and real-time reports.';
+
+  @override
+  String aboutVersion(String version) {
+    return 'Version $version';
+  }
+
+  @override
+  String get aboutMadeBy => 'Made by DevPaul';
+
+  @override
+  String get aboutRights => '© 2026 DevPaul. All rights reserved.';
+
+  @override
+  String get aboutLogoLabel => 'DevPaul logo';
+
+  @override
+  String get aboutOpenError => 'Could not open the link';
+
+  @override
+  String get shiftOpeningHint => 'Count the cash the drawer starts with.';
+
+  @override
+  String get shiftClosedHint => 'Summary of the last closed shift.';
+
+  @override
+  String get diagnosticsHealthyTitle => 'All clear';
+
+  @override
+  String get diagnosticsHealthyHint => 'No alerts or pending queues right now.';
+
+  @override
+  String diagnosticsAttention(int count) {
+    return '$count item(s) need attention';
+  }
+
+  @override
+  String get diagnosticsAttentionHint => 'Review the sections marked below.';
+
+  @override
+  String get routeErrorTitle => 'Page not found';
+
+  @override
+  String get routeErrorBody =>
+      'This route does not exist or is no longer available. Go back home to continue.';
+
+  @override
+  String get routeErrorHome => 'Back to home';
+
+  @override
+  String get loginSessionExpired =>
+      'Your session expired. Sign in again to continue.';
 }
