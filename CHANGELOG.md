@@ -7,6 +7,48 @@ and the project aims at [Semantic Versioning](https://semver.org) once it
 publishes its first release. **The project is pre-1.0: there are no tagged
 releases yet; everything below is unreleased work on `feature/supabase`.**
 
+## [Unreleased] — 2026-11 (SQL integrity fixes `0072`/`0073`)
+
+### Fixed
+
+- **Billing (`0072_billing_integrity.sql`)**: `fare_breakdown` rounds the stay
+  up to whole hours **once** (`ceil(total_secs / 3600)`) and spreads them over
+  the day/night buckets of each calendar day by largest remainder
+  (`allocate_billable_hours`, ties to the earliest bucket); the daily cap still
+  applies per day. 23:59→00:01, 23:30→00:30 and 17:58→18:03 (night start) now
+  bill one hour. Output shape unchanged.
+- Tariffs must belong to their category's lot (composite FK
+  `tariffs(category_id, lot_id) → categories(id, lot_id)`); `fare_breakdown`
+  only reads tariffs of the category's lot.
+- `has_pass` in `check_out`, `check_out_preview`, `slot_board` and
+  `open_sessions_view` only counts passes of the session's lot.
+- Lost ticket: the fee comes from the session lot's settings (was lot 1);
+  `gross = greatest(fare, lost_ticket_fee | daily tariff | 0)`; a
+  `monthly_pass` method is rejected with `LostTicketPassMethodError`.
+  `check_out_preview` adds `lost_ticket_amount` (minor units).
+- Offline exits older than 12 h raise `StaleExitTimeError`; the server close
+  time is stored in the new `parking_sessions.closed_recorded_at`.
+- **Shifts (`0072`/`0073`)**: `check_out`, `add_cash_movement` and
+  `register_pass_payment` attach only to the actor's **open** shift and lock it
+  `FOR SHARE`, so `close_shift` (`FOR UPDATE`) waits and counts them. Replays
+  after a close go to the current open shift, else to no shift.
+  `shift_totals` authorizes lot admins (`is_lot_admin`), fixing `list_shifts`
+  for them.
+- **Capacity (`0073`)**: `create_reservation` takes check-in's advisory locks
+  in the same order (group via `category_group(name)`, then category),
+  avoiding oversell and ABBA deadlocks.
+- **Passes (`0073`)**: `renew_monthly_passes` uses each lot's business date,
+  renews only passes whose `end_date` is before local today (a pass stays
+  valid on its last day) and keeps calendar-month periods
+  (`pass_period_months`); other periods keep their day count.
+- **Evidence (`0073`)**: `check_in` requires every photo/video path to be an
+  `evidence` object owned by the caller and not already referenced
+  (`EvidenceNotFoundError` / `EvidenceAlreadyUsedError`);
+  `evidence_photos(file_path)` is now unique.
+- **Notifications (`0073`)**: `close_shift` and `notify_session_event` format
+  amounts in the lot currency (`format_money`: `$5.000` COP, `US$1,234.50`
+  USD), matching `Money.format`.
+
 ## [Unreleased] — 2026-10
 
 ### Added

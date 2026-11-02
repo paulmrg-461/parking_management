@@ -48,10 +48,10 @@ erDiagram
 | `lot_members` | Role per `(user, lot)`; drives the switcher and lot-admin checks. | — |
 | `users` | Profile mirror of `auth.users` (username, display name, platform role, active). | no |
 | `categories` | Vehicle category per site (`unique (lot_id, name)`) with optional capacity (0 = unlimited). | yes |
-| `tariffs` | Hourly/daily/nightly/monthly amounts per category, with the night window. | yes |
+| `tariffs` | Hourly/daily/nightly/monthly amounts per category, with the night window; `(category_id, lot_id)` must match the category's lot (composite FK). | yes |
 | `vehicles` | Global plate registry (category, color, brand, notes, blacklist, customer phone). A plate can park anywhere. | no |
-| `parking_sessions` | A stay: entry/exit, amount, payment method, discount audit, lost ticket, shift, lot, ticket number. | yes |
-| `evidence_photos` | Check-in photos (storage path per session). | via session |
+| `parking_sessions` | A stay: entry/exit, amount, payment method, discount audit, lost ticket, shift, lot, ticket number; `closed_recorded_at` is the server time of the check-out (the exit time may be an offline client time). | yes |
+| `evidence_photos` | Check-in photos/videos (storage path per session, unique `file_path`). | via session |
 | `shifts` | Operator cash shift per site: opening float, counted cash, expected, difference. | yes |
 | `cash_movements` | Withdrawals/deposits/adjustments inside a shift. | via shift |
 | `shift_adjustments` | Audit of admin corrections to a closed shift. | via shift |
@@ -68,7 +68,7 @@ erDiagram
 | `idempotency_keys` | Replay cache for write RPCs keyed by `Idempotency-Key`. | — |
 | `schema_migrations` | Applied migration files. | — |
 
-Conventions: money is `integer` COP (no decimals); timestamps are
+Conventions: money is `integer` minor units of the lot currency (COP pesos, USD cents); timestamps are
 `timestamptz` with the display timezone from `parking_settings.business_timezone`;
 statuses are `text` with a `check` constraint; `lot_id` is `not null` everywhere
 except `notifications` (global alerts).
@@ -84,7 +84,7 @@ the lot's members), `create_reservation` (holds consume group
 capacity), `check_out` (notifies the lot's members; `p_card_type` required for cards,
 stored in `parking_sessions.card_type`; `p_cash_received` stored with the change
 in `cash_received`/`cash_change`), `check_out_preview` (amount +
-billing breakdown),
+billing breakdown + `lost_ticket_amount`),
 `open_sessions_view` (`has_pass`, `left_keys`), `evidence_photos.kind`
 (`photo`/`video`) with `duration_seconds`, `capacity_snapshot`
 (`car_open/capacity/available/out_of_service/reserved`, motos, keys,
@@ -93,6 +93,8 @@ active/expiring holds),
 visual board), `usable_capacity` (capacity - out of service, `0` = no limit),
 `calculate_fare` (wrapper) and `fare_breakdown` (single source of truth for the
 money: day/night hours, rates, daily cap, elapsed time),
+`lost_ticket_amount` (internal; `greatest(fare, lot lost_ticket_fee | daily
+tariff | 0)`),
 `vehicle_history`, `update_vehicle_flags` (notes, blacklist, owner phone).
 `can_read_lot(lot_id)` backs the notifications RLS for Realtime (no lot header
 there).
@@ -240,3 +242,65 @@ select public.expire_reservations(24);
 select public.purge_stale_notifications(90);
 select public.purge_expired_idempotency();
 ```
+
+## 7. Billing, shift and evidence rules (`0072`/`0073`)
+
+**Fare.** `fare_breakdown` bills `ceil(stay_seconds / 3600)` hours once for the
+whole stay. The stay is split into two buckets per calendar day (day / night
+window, lot business timezone) and the hours are distributed by largest
+remainder of each bucket's seconds (`allocate_billable_hours`; ties go to the
+earliest bucket). Each day is charged `day_hours × hourly + night_hours ×
+nightly`, capped by the daily tariff. Only tariffs with `t.lot_id` equal to the
+category's lot are read. Output keys are unchanged.
+
+**Monthly pass.** A stay is free only with an active pass of the **session's
+lot** covering the lot's business date (`check_out`, `check_out_preview`,
+`slot_board`, `open_sessions_view`).
+
+**Lost ticket.** `gross = greatest(fare, lost_ticket_fee of the session lot |
+active daily tariff | 0)`; the pass is ignored and `p_payment_method =
+'monthly_pass'` raises `LostTicketPassMethodError` (the client lets the
+operator pick cash/card/transfer and retries). `check_out_preview` returns:
+
+```json
+{
+  "session_id": 1, "amount": 6000, "has_pass": false,
+  "entry_time": "…", "previewed_at": "…",
+  "hourly_rate": 3000, "nightly_rate": null, "daily_rate": null,
+  "day_hours": 2, "night_hours": 0, "days": 1,
+  "daily_cap_applied": false, "elapsed_seconds": 5400,
+  "lost_ticket_amount": 9000
+}
+```
+
+**Exit time.** `p_client_exit_time` must be within 12 h of the server clock
+(`StaleExitTimeError`) and not later than now + 5 min nor before entry
+(`InvalidExitTimeError`). `closed_recorded_at` stores the server time.
+
+**Shifts.** Sales, cash movements and cash pass payments attach only to the
+actor's open shift (`closed_at is null`), locked `FOR SHARE`; `close_shift`
+locks it `FOR UPDATE`, so its totals include every committed writer. A
+check-out replayed after its shift closed goes to the actor's current open
+shift, or to no shift. `shift_totals` allows the shift owner or an admin of the
+shift's lot (`is_lot_admin`).
+
+**Capacity locks.** `check_in`, `enforce_category_capacity` and
+`create_reservation` take `group:<lot>:<category_group(name)>` before
+`category:<id>`.
+
+**Pass renewal.** `renew_monthly_passes` renews active auto-renew passes whose
+`end_date` is before the lot's local today and deactivates only those. A
+calendar-month period (`start + n months - 1 day = end`) renews as
+`end + 1 … end + 1 + n months - 1 day`; any other period keeps its day count.
+The amount is copied.
+
+**Evidence.** Every `p_photos[].path` / `p_videos[].path` given to `check_in`
+must be an object in the `evidence` bucket with `owner = auth.uid()` and must
+not back another `evidence_photos` row (`EvidenceNotFoundError`,
+`EvidenceAlreadyUsedError`). Deterministic names
+`<clientRef>/<i><ext>` and `<clientRef>/video<ext>` satisfy the bucket policy.
+Upload the files **before** calling (or replaying) `check_in`.
+
+**Currency in notifications.** `format_money(amount, currency)` mirrors
+`Money.format`: COP `$5.000` (no decimals), USD `US$1,234.50` (minor units
+/ 100), negative `-$1.000`.

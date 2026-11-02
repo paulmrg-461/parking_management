@@ -94,9 +94,10 @@ begin
 end $$;
 
 insert into public.vehicles (plate, category_id) values ('REN001', 2);
+-- Renewal runs the day after the last valid day (lot business date).
 insert into public.monthly_passes (
     vehicle_id, start_date, end_date, amount, active, auto_renew
-) select id, current_date - 29, current_date, 80000, true, true
+) select id, current_date - 30, current_date - 1, 80000, true, true
   from public.vehicles where plate = 'REN001';
 
 select public.renew_monthly_passes();
@@ -1827,6 +1828,9 @@ begin
 end $$;
 
 -- Optional walk-around video: stored as evidence media and painted on the board.
+-- check_in only accepts paths the operator actually uploaded.
+insert into storage.objects (bucket_id, name, owner)
+values ('evidence', 'video/ev.mp4', '00000000-0000-0000-0000-000000000002');
 set local request.headers = '{"x-lot-id":"1"}';
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
 do $$
@@ -2114,6 +2118,533 @@ begin
     exception when check_violation then
         null;
     end;
+end $$;
+
+-- ===========================================================================
+-- Audit fixes 0072/0073 (2026-11).
+-- ===========================================================================
+reset role;
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+insert into auth.users (id, email, raw_app_meta_data) values
+    ('00000000-0000-0000-0000-000000000003', 'shiftop@parking.local',
+     '{"role": "operator"}'::jsonb),
+    ('00000000-0000-0000-0000-000000000004', 'lotadmin2@parking.local',
+     '{"role": "operator"}'::jsonb);
+
+select public.set_lot_member(
+    (select id from public.users where username = 'shiftop' limit 1),
+    2, 'operator');
+select public.set_lot_member(
+    (select id from public.users where username = 'lotadmin2' limit 1),
+    2, 'admin');
+
+-- Fix 1: billable hours are rounded up once for the whole stay.
+insert into public.categories (name, capacity, lot_id) values
+    ('fx1plain', 0, 1),
+    ('fx1night', 0, 1);
+insert into public.tariffs (category_id, type, amount, active, lot_id)
+select id, 'hourly', 3000, true, 1 from public.categories where name = 'fx1plain'
+union all
+select id, 'daily', 10000, true, 1 from public.categories where name = 'fx1plain';
+insert into public.tariffs (
+    category_id, type, amount, active, lot_id, start_time, end_time
+)
+select id, 'hourly', 3000, true, 1, null, null from public.categories where name = 'fx1night'
+union all
+select id, 'nightly', 2000, true, 1, '18:00', '06:00' from public.categories where name = 'fx1night';
+
+do $$
+declare
+    plain_cat integer := (select id from public.categories where name = 'fx1plain');
+    night_cat integer := (select id from public.categories where name = 'fx1night');
+    fare jsonb;
+begin
+
+    -- Success: 2 minutes across midnight is one hour, not two.
+    fare := public.fare_breakdown(plain_cat,
+        timestamptz '2026-03-10 23:59:00-05', timestamptz '2026-03-11 00:01:00-05');
+    if (fare ->> 'amount')::integer <> 3000
+       or (fare ->> 'day_hours')::integer <> 1
+       or (fare ->> 'days')::integer <> 2 then
+        raise exception 'fix1: 23:59->00:01 must bill one hour: %', fare;
+    end if;
+
+    fare := public.fare_breakdown(plain_cat,
+        timestamptz '2026-03-10 23:30:00-05', timestamptz '2026-03-11 00:30:00-05');
+    if (fare ->> 'amount')::integer <> 3000 or (fare ->> 'day_hours')::integer <> 1 then
+        raise exception 'fix1: 23:30->00:30 must bill one hour: %', fare;
+    end if;
+
+    -- Success: crossing the night window start bills one hour, to the
+    -- bucket with the largest share (3 of 5 minutes are night).
+    fare := public.fare_breakdown(night_cat,
+        timestamptz '2026-03-10 17:58:00-05', timestamptz '2026-03-10 18:03:00-05');
+    if (fare ->> 'day_hours')::integer + (fare ->> 'night_hours')::integer <> 1
+       or (fare ->> 'night_hours')::integer <> 1
+       or (fare ->> 'amount')::integer <> 2000 then
+        raise exception 'fix1: 17:58->18:03 must bill one hour: %', fare;
+    end if;
+
+    -- Exact hours stay exact; the cap still applies per calendar day.
+    fare := public.fare_breakdown(plain_cat,
+        timestamptz '2026-03-10 10:00:00-05', timestamptz '2026-03-10 12:00:00-05');
+    if (fare ->> 'amount')::integer <> 6000 then
+        raise exception 'fix1: two exact hours must bill 6000: %', fare;
+    end if;
+    fare := public.fare_breakdown(plain_cat,
+        timestamptz '2026-03-10 08:00:00-05', timestamptz '2026-03-11 10:00:00-05');
+    if (fare ->> 'day_hours')::integer <> 26
+       or (fare ->> 'amount')::integer <> 20000
+       or not (fare ->> 'daily_cap_applied')::boolean then
+        raise exception 'fix1: per-day cap lost: %', fare;
+    end if;
+
+    -- Allocation helper: deterministic and conserves the hours.
+    if public.allocate_billable_hours(array[120, 180]::numeric[], 1) <> array[0, 1] then
+        raise exception 'fix1: largest remainder picked the wrong bucket';
+    end if;
+    if public.allocate_billable_hours(array[60, 60]::numeric[], 1) <> array[1, 0] then
+        raise exception 'fix1: ties must go to the earliest bucket';
+    end if;
+    if public.allocate_billable_hours(array[]::numeric[], 0) <> array[]::integer[] then
+        raise exception 'fix1: empty allocation must be empty';
+    end if;
+end $$;
+
+-- Fix 3: a tariff cannot point at another lot's category, and fare_breakdown
+-- ignores rows that bypassed the constraint.
+do $$
+declare
+    plain_cat integer := (select id from public.categories where name = 'fx1plain' and lot_id = 1);
+    fare jsonb;
+begin
+    begin
+        insert into public.tariffs (category_id, type, amount, active, lot_id)
+        values (plain_cat, 'hourly', 1, true, 2);
+        raise exception 'fix3: cross-lot tariff was accepted';
+    exception when foreign_key_violation then
+        null;
+    end;
+
+    set local session_replication_role = replica;
+    insert into public.tariffs (category_id, type, amount, active, lot_id)
+    values (plain_cat, 'daily', 1, true, 2);
+    set local session_replication_role = origin;
+
+    fare := public.fare_breakdown(plain_cat,
+        timestamptz '2026-03-10 10:00:00-05', timestamptz '2026-03-10 12:00:00-05');
+    if (fare ->> 'daily_rate')::integer is distinct from 10000
+       or (fare ->> 'amount')::integer is distinct from 6000 then
+        raise exception 'fix3: fare used a foreign-lot tariff: %', fare;
+    end if;
+    delete from public.tariffs where category_id = plain_cat and lot_id = 2;
+end $$;
+
+-- Fix 2: a pass of another lot does not make a stay free.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+declare
+    plain_cat integer := (select id from public.categories where name = 'fx1plain' and lot_id = 1);
+    session_id integer;
+    preview jsonb;
+    board jsonb;
+    receipt jsonb;
+begin
+    session_id := (public.check_in(
+        'PASSX1', plain_cat, null, null, '[]'::jsonb, null,
+        now() - interval '30 minutes'
+    ) ->> 'id')::integer;
+    insert into public.monthly_passes (vehicle_id, start_date, end_date, amount, lot_id)
+    select id, current_date - 1, current_date + 30, 50000, 2
+      from public.vehicles where plate = 'PASSX1';
+
+    preview := public.check_out_preview(session_id);
+    if (preview ->> 'has_pass')::boolean
+       or (preview ->> 'amount')::integer is distinct from 3000 then
+        raise exception 'fix2: preview honored a foreign-lot pass: %', preview;
+    end if;
+    board := public.slot_board();
+    if exists (
+        select 1 from jsonb_array_elements(board -> 'sessions') item
+         where item ->> 'plate' = 'PASSX1' and (item ->> 'has_pass')::boolean
+    ) then
+        raise exception 'fix2: slot board honored a foreign-lot pass';
+    end if;
+    if exists (
+        select 1 from public.open_sessions_view
+         where plate = 'PASSX1' and has_pass
+    ) then
+        raise exception 'fix2: open sessions view honored a foreign-lot pass';
+    end if;
+    receipt := public.check_out(session_id, null, null, 'cash');
+    if receipt ->> 'payment_method' is distinct from 'cash'
+       or (receipt ->> 'amount_charged')::integer is distinct from 3000 then
+        raise exception 'fix2: check_out honored a foreign-lot pass: %', receipt;
+    end if;
+
+    -- Success: a pass of the same lot still applies.
+    session_id := (public.check_in(
+        'PASSX1', plain_cat, null, null, '[]'::jsonb, null,
+        now() - interval '30 minutes'
+    ) ->> 'id')::integer;
+    insert into public.monthly_passes (vehicle_id, start_date, end_date, amount, lot_id)
+    select id, current_date - 1, current_date + 30, 50000, 1
+      from public.vehicles where plate = 'PASSX1';
+    receipt := public.check_out(session_id, null, null, 'cash');
+    if receipt ->> 'payment_method' is distinct from 'monthly_pass' then
+        raise exception 'fix2: same-lot pass was ignored: %', receipt;
+    end if;
+end $$;
+
+-- Fix 4: create_reservation locks the group key before the category key,
+-- exactly like check_in -> enforce_category_capacity.
+do $$
+declare
+    src text := pg_get_functiondef('public.create_reservation(text,integer,timestamptz,text)'::regprocedure);
+begin
+    if position('''group:''' in src) = 0
+       or position('''category:''' in src) = 0
+       or position('''group:''' in src) > position('''category:''' in src)
+       or src not like '%category_group(category_name)%' then
+        raise exception 'fix4: reservation lock keys/order differ from check_in';
+    end if;
+end $$;
+
+-- Fix 5: renewal uses the lot's business date and calendar months.
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    vehicle integer;
+    behind_today date := (now() at time zone 'Pacific/Pago_Pago')::date;
+    today_pass integer;
+    ended_pass integer;
+    month_pass integer;
+    child public.monthly_passes%rowtype;
+begin
+    update public.parking_settings set business_timezone = 'Pacific/Pago_Pago' where lot_id = 2;
+    insert into public.vehicles (plate, category_id) values ('RENTZ1', 2) returning id into vehicle;
+
+    -- Pago Pago (UTC-11) is never ahead of Bogota: a pass ending on the
+    -- Bogota date has not ended there yet.
+    insert into public.monthly_passes (vehicle_id, start_date, end_date, amount, auto_renew, lot_id)
+    values (vehicle, current_date - 10, current_date, 1000, true, 2)
+    returning id into today_pass;
+    insert into public.monthly_passes (vehicle_id, start_date, end_date, amount, auto_renew, lot_id)
+    values (vehicle, behind_today - 10, behind_today - 1, 1000, true, 2)
+    returning id into ended_pass;
+    insert into public.monthly_passes (vehicle_id, start_date, end_date, amount, auto_renew, lot_id)
+    values (vehicle, date '2025-11-01', date '2025-11-30', 80000, true, 1)
+    returning id into month_pass;
+
+    perform public.renew_monthly_passes();
+
+    if exists (select 1 from public.monthly_passes where renewed_from_id = today_pass)
+       or not (select active from public.monthly_passes where id = today_pass) then
+        raise exception 'fix5: a pass was renewed/deactivated on its last valid day';
+    end if;
+    if not exists (select 1 from public.monthly_passes where renewed_from_id = ended_pass)
+       or (select active from public.monthly_passes where id = ended_pass) then
+        raise exception 'fix5: an ended pass was not renewed';
+    end if;
+
+    select * into child from public.monthly_passes where renewed_from_id = month_pass;
+    if child.start_date is distinct from date '2025-12-01'
+       or child.end_date is distinct from date '2025-12-31'
+       or child.amount is distinct from 80000 then
+        raise exception 'fix5: renewal drifted from calendar months: % - %',
+            child.start_date, child.end_date;
+    end if;
+    if public.pass_period_months(date '2026-01-31', date '2026-02-27') is distinct from 1
+       or public.pass_period_months(date '2026-01-01', date '2026-01-20') is not null then
+        raise exception 'fix5: pass_period_months is wrong';
+    end if;
+
+    update public.parking_settings set business_timezone = 'America/Bogota' where lot_id = 2;
+end $$;
+
+-- Fix 6: sales only attach to the actor's open shift; the writers lock it.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000003';
+do $$
+declare
+    plain_cat integer := (select id from public.categories where name = 'fx1plain' and lot_id = 1);
+    first_session integer;
+    second_session integer;
+    first_shift bigint;
+    second_shift bigint;
+begin
+    first_shift := (public.open_shift(0) ->> 'id')::bigint;
+    first_session := (public.check_in('SHFT01', plain_cat, null, null, '[]'::jsonb, null,
+        now() - interval '2 hours') ->> 'id')::integer;
+    second_session := (public.check_in('SHFT02', plain_cat, null, null, '[]'::jsonb, null,
+        now() - interval '2 hours') ->> 'id')::integer;
+    perform public.close_shift(0, null);
+
+    -- Failure path: an exit after the close never lands in the closed shift
+    -- (now() equals closed_at inside this transaction, the old window matched).
+    perform public.check_out(first_session, now(), null, 'cash');
+    if (select shift_id from public.parking_sessions where id = first_session) is not null then
+        raise exception 'fix6: a sale was attached to a closed shift';
+    end if;
+
+    -- Success: the replay goes to the current open shift.
+    second_shift := (public.open_shift(0) ->> 'id')::bigint;
+    perform public.check_out(second_session, now() - interval '1 minute', null, 'cash');
+    if (select shift_id from public.parking_sessions where id = second_session)
+       is distinct from second_shift then
+        raise exception 'fix6: the replay did not reach the open shift';
+    end if;
+    perform public.close_shift(6000, null);
+
+    -- Security/race guard: every shift writer locks the shift row.
+    if pg_get_functiondef('public.add_cash_movement(text,integer,text)'::regprocedure) not ilike '%for share%'
+       or pg_get_functiondef('public.register_pass_payment(bigint,text)'::regprocedure) not ilike '%for share%'
+       or pg_get_functiondef('public.check_out(integer,timestamptz,text,text,integer,text,boolean,text,integer,text,integer)'::regprocedure) not ilike '%for share%' then
+        raise exception 'fix6: a shift writer does not lock the shift';
+    end if;
+    if first_shift is not distinct from second_shift then
+        raise exception 'fix6: shifts were not distinct';
+    end if;
+end $$;
+
+-- Fixes 7 and 8: lost ticket from the session lot; offline exit freshness.
+set local request.headers = '{"x-lot-id":"2"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+declare
+    lost_cat integer;
+    short_stay integer;
+    long_stay integer;
+    pass_stay integer;
+    stale_stay integer;
+    preview jsonb;
+    receipt jsonb;
+begin
+    insert into public.categories (name, capacity, lot_id)
+    values ('fx7lost', 0, 2) returning id into lost_cat;
+    insert into public.tariffs (category_id, type, amount, active, lot_id)
+    values (lost_cat, 'hourly', 3000, true, 2);
+    update public.parking_settings set lost_ticket_fee = null where lot_id = 1;
+    update public.parking_settings set lost_ticket_fee = 9000 where lot_id = 2;
+
+    short_stay := (public.check_in('LOST71', lost_cat, null, null, '[]'::jsonb, null,
+        now() - interval '90 minutes') ->> 'id')::integer;
+    long_stay := (public.check_in('LOST72', lost_cat, null, null, '[]'::jsonb, null,
+        now() - interval '10 hours') ->> 'id')::integer;
+    pass_stay := (public.check_in('LOST73', lost_cat, null, null, '[]'::jsonb, null,
+        now() - interval '1 hour') ->> 'id')::integer;
+    stale_stay := (public.check_in('LOST74', lost_cat, null, null, '[]'::jsonb, null,
+        now() - interval '20 hours') ->> 'id')::integer;
+
+    -- The preview tells the client what a lost ticket would cost.
+    preview := public.check_out_preview(short_stay);
+    if (preview ->> 'lost_ticket_amount')::integer is distinct from 9000
+       or (preview ->> 'amount')::integer is distinct from 6000
+       or not preview ? 'session_id' or not preview ? 'daily_rate' then
+        raise exception 'fix7: preview lost_ticket_amount/shape is wrong: %', preview;
+    end if;
+
+    -- Success: the session lot's fee wins over a cheaper fare.
+    receipt := public.check_out(short_stay, null, null, 'cash', 0, null, true, 'perdido');
+    if (receipt ->> 'amount_charged')::integer is distinct from 9000 then
+        raise exception 'fix7: lost ticket ignored the lot fee: %', receipt;
+    end if;
+    -- A higher regular fare is never undercut by the fee.
+    receipt := public.check_out(long_stay, null, null, 'cash', 0, null, true, 'perdido');
+    if (receipt ->> 'amount_charged')::integer is distinct from 30000 then
+        raise exception 'fix7: lost ticket undercut the fare: %', receipt;
+    end if;
+
+    -- Failure: a lost ticket cannot be settled as a monthly pass.
+    begin
+        perform public.check_out(pass_stay, null, null, 'monthly_pass', 0, null, true, 'perdido');
+        raise exception 'fix7: monthly_pass accepted for a lost ticket';
+    exception when others then
+        if sqlerrm not like '%LostTicketPassMethodError%' then
+            raise;
+        end if;
+    end;
+
+    -- Fix 8 failure: an offline exit older than 12 h is refused.
+    begin
+        perform public.check_out(stale_stay, now() - interval '13 hours', null, 'cash');
+        raise exception 'fix8: a stale offline exit was accepted';
+    exception when others then
+        if sqlerrm not like '%StaleExitTimeError%' then
+            raise;
+        end if;
+    end;
+    -- Success: within 12 h it is kept, and the server time is recorded.
+    perform public.check_out(stale_stay, now() - interval '11 hours', null, 'cash');
+    if not exists (
+        select 1 from public.parking_sessions
+         where id = stale_stay
+           and exit_time = now() - interval '11 hours'
+           and closed_recorded_at = now()
+    ) then
+        raise exception 'fix8: exit/server close times were not recorded';
+    end if;
+
+    update public.parking_settings set lost_ticket_fee = null where lot_id = 2;
+end $$;
+
+-- Fix 9: a lot admin (not a platform admin) can list the lot's shifts.
+set local request.headers = '{"x-lot-id":"2"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000003';
+select public.open_shift(0);
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000004';
+do $$
+declare
+    other_shift bigint := (
+        select s.id from public.shifts s
+          join public.users u on u.id = s.operator_id
+         where s.lot_id = 2 and u.username = 'shiftop'
+         limit 1
+    );
+    lot1_shift bigint := (select id from public.shifts where lot_id = 1 order by id limit 1);
+begin
+    if public.current_app_role() = 'admin' then
+        raise exception 'fix9: fixture user must not be a platform admin';
+    end if;
+    if other_shift is null
+       or jsonb_array_length(public.list_shifts(50)) < 1
+       or (public.shift_totals(other_shift) ->> 'id')::bigint is distinct from other_shift then
+        raise exception 'fix9: lot admin could not read the lot shifts';
+    end if;
+    -- Security: the shift of another lot stays out of reach.
+    begin
+        perform public.shift_totals(lot1_shift);
+        raise exception 'fix9: a lot admin read another lot shift';
+    exception when others then
+        if sqlerrm not like '%LotRequiredError%' then
+            raise;
+        end if;
+    end;
+end $$;
+-- Security: a plain member (operator) still cannot read someone else's shift.
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    perform public.shift_totals((
+        select s.id from public.shifts s
+          join public.users u on u.id = s.operator_id
+         where s.lot_id = 2 and u.username = 'shiftop'
+         limit 1
+    ));
+    raise exception 'fix9: an operator read another operator shift';
+exception when others then
+    if sqlerrm not like '%AdminRequiredError%' then
+        raise;
+    end if;
+end $$;
+
+-- Fixes 10 and 11: evidence paths must be the caller's uploaded objects.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+insert into storage.objects (bucket_id, name, owner) values
+    ('evidence', 'ref-ev1/0.jpg', '00000000-0000-0000-0000-000000000002'),
+    ('evidence', 'ref-ev1/video.mp4', '00000000-0000-0000-0000-000000000002'),
+    ('evidence', 'ref-ev2/0.jpg', '00000000-0000-0000-0000-000000000001'),
+    ('branding', 'ref-ev3/0.jpg', '00000000-0000-0000-0000-000000000002');
+do $$
+declare
+    plain_cat integer := (select id from public.categories where name = 'fx1plain' and lot_id = 1);
+    entry jsonb;
+    path text;
+begin
+    -- Success: deterministic '<clientRef>/<i><ext>' and '<clientRef>/video<ext>'.
+    entry := public.check_in('EVID01', plain_cat, null, null,
+        '[{"path":"ref-ev1/0.jpg"}]'::jsonb, null, null, null, false, null,
+        '[{"path":"ref-ev1/video.mp4","duration_seconds":5}]'::jsonb);
+    if (entry ->> 'photo_count')::integer <> 1 or (entry ->> 'video_count')::integer <> 1 then
+        raise exception 'fix10: valid evidence was rejected: %', entry;
+    end if;
+
+    -- Failure: missing object, another user's object, wrong bucket.
+    foreach path in array array['ref-missing/0.jpg', 'ref-ev2/0.jpg', 'ref-ev3/0.jpg'] loop
+        begin
+            perform public.check_in('EVID02', plain_cat, null, null,
+                jsonb_build_array(jsonb_build_object('path', path)));
+            raise exception 'fix10: foreign/missing evidence % was accepted', path;
+        exception when others then
+            if sqlerrm not like '%EvidenceNotFoundError%' then
+                raise;
+            end if;
+        end;
+    end loop;
+
+    -- Security: an already referenced object cannot back a second session.
+    begin
+        perform public.check_in('EVID03', plain_cat, null, null,
+            '[{"path":"ref-ev1/0.jpg"}]'::jsonb);
+        raise exception 'fix10: reused evidence was accepted';
+    exception when others then
+        if sqlerrm not like '%EvidenceAlreadyUsedError%' then
+            raise;
+        end if;
+    end;
+
+    if not exists (
+        select 1 from pg_indexes
+         where schemaname = 'public' and tablename = 'evidence_photos'
+           and indexname = 'uq_evidence_photos_file_path'
+           and indexdef like 'CREATE UNIQUE INDEX%(file_path)%'
+    ) then
+        raise exception 'fix11: evidence_photos(file_path) unique index missing';
+    end if;
+    begin
+        insert into public.evidence_photos (session_id, file_path)
+        values ((entry ->> 'id')::integer, 'ref-ev1/0.jpg');
+        raise exception 'fix11: duplicate evidence path was stored';
+    exception when unique_violation then
+        null;
+    end;
+end $$;
+
+-- Fix 12: notification amounts follow the lot currency.
+do $$
+declare
+    plain_cat integer := (select id from public.categories where name = 'fx1plain' and lot_id = 1);
+    session_id integer;
+    body text;
+begin
+    if public.format_money(5000, 'COP') <> '$5.000'
+       or public.format_money(1234567, 'COP') <> '$1.234.567'
+       or public.format_money(-1500, 'COP') <> '-$1.500'
+       or public.format_money(0, 'COP') <> '$0'
+       or public.format_money(123450, 'USD') <> 'US$1,234.50'
+       or public.format_money(5, 'USD') <> 'US$0.05'
+       or public.format_money(-250, 'USD') <> '-US$2.50' then
+        raise exception 'fix12: format_money does not match Money.format';
+    end if;
+
+    update public.parking_settings set currency = 'USD' where lot_id = 1;
+    session_id := (public.check_in('CURR01', plain_cat, null, null, '[]'::jsonb, null,
+        now() - interval '30 minutes') ->> 'id')::integer;
+    perform public.check_out(session_id, null, null, 'cash');
+    select n.body into body from public.notifications n
+     where n.type = 'check_out' and (n.data ->> 'session_id')::integer = session_id
+     limit 1;
+    if coalesce(body, '') not like '%Cobro: US$30.00' then
+        raise exception 'fix12: check-out notification ignored the currency: %', body;
+    end if;
+    update public.parking_settings set currency = 'COP' where lot_id = 1;
+end $$;
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+select public.open_shift(1000);
+select public.close_shift(0, null);
+do $$
+begin
+    if not exists (
+        select 1 from public.notifications
+         where type = 'shift_closed' and body = 'Diferencia de caja: -$1.000'
+    ) then
+        raise exception 'fix12: shift close notification is not COP-formatted';
+    end if;
 end $$;
 
 -- Every public table must have RLS enabled (service-role-only tables included;
