@@ -4,7 +4,8 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-10-29, branch `feature/supabase` (UI/UX pass across every
+Last updated: 2026-11-02 (audit fixes 0072/0073, sync resilience, operator UX batch;
+release APK needs `android/app/proguard-rules.pro` for ML Kit). Previously 2026-10-29, branch `feature/supabase` (UI/UX pass across every
 module, dialogs, developer page, COP/USD currency, es/en language; HEAD
 `d51f015`).
 
@@ -14,7 +15,7 @@ module, dialogs, developer page, COP/USD currency, es/en language; HEAD
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0068` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 839 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 930 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open

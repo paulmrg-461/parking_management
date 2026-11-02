@@ -7,6 +7,32 @@ and the project aims at [Semantic Versioning](https://semver.org) once it
 publishes its first release. **The project is pre-1.0: there are no tagged
 releases yet; everything below is unreleased work on `feature/supabase`.**
 
+## [Unreleased] — 2026-11 (app reliability and operator UX)
+
+### Fixed
+- Shift close reads counted cash in the site currency (USD no longer stored as cents).
+- Outbox retries after network/server failures (15s→30s→60s) instead of
+  stalling or dead-lettering; drains right after enqueue.
+- PostgREST 5xx, serialization/deadlock/timeout and `PGRST303` are retryable
+  or auth failures; a GoTrue sign-out surfaces the expired-session banner.
+- Offline settings edits replay into the lot they were made for; dashboard and
+  branding drop stale results after a lot switch.
+- Receipts carry cash received/change/card type; open sessions carry plate,
+  photo count and left keys (no full vehicles download).
+- Pass/reservation success survives a failed list refresh; queued check-out
+  receipts show the real plate and entry time; evidence names are deterministic.
+- Lost ticket charges `lost_ticket_amount` and disables the monthly-pass method.
+- Android release build: R8 keep rules for the optional ML Kit scripts.
+
+### Changed (UX)
+- Charge rows show a busy spinner, ignore double taps and are fully tappable.
+- Payment dialog: live total after discount, per-field errors, "Cobrar $X"
+  button, "Exacto" and banknote shortcuts for cash received.
+- Check-in: sticky submit bar, category chips (≤5), "Escanear placa", charge
+  shortcut when the plate is already inside; free bays open check-in for that bay.
+- Receipt summary prints in one tap; keyboard-safe cash count sheet and shift
+  dialogs; 48dp icon targets; slot cells scale with text size.
+
 ## [Unreleased] — 2026-11 (SQL integrity fixes `0072`/`0073`)
 
 ### Fixed
