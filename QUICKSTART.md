@@ -7,8 +7,19 @@ One page, commands only. Full walkthrough:
 ## 1. Prerequisites
 
 - Docker Engine + Compose v2, `git`, `curl`, `python3`.
-- Flutter **beta** (`^3.14.0-95.1.beta`; CI pins `3.49.0-0.1.pre`).
+- Flutter **beta** (`^3.14.0-95.1.beta`; CI and local use `3.50.0-0.1.pre`).
 - Android SDK / device only for the mobile app.
+
+## 1.5 One command for the whole demo
+
+```bash
+sh tool/dev-up.sh
+```
+
+Starts Docker + migrations, the public web host, the Chrome dev app and (when a
+phone is connected over adb) installs and opens the LAN APK. `ANDROID=0`
+skips the phone; `ANDROID_BUILD=1` rebuilds the APK first. Login:
+`admin` / `123456`.
 
 ## 2. Start the stack
 

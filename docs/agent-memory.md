@@ -713,6 +713,11 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   it no longer needs adb after install. `tool/run-android.sh` defaults to LAN;
   `ANDROID_MODE=localhost` keeps the reverse mode. `tool/android-doctor.sh`
   prints device/host/port state. Reconnect adb only to reinstall.
+- **One-command demo (2026-11-03)**: `sh tool/dev-up.sh` starts compose +
+  migrations, recreates the public host, starts Chrome dev (unless already
+  running) and installs/launches the LAN APK on the first adb device.
+  `ANDROID=0` skips the phone; `ANDROID_BUILD=1` rebuilds first. It prints the
+  LAN web/API URLs and the login.
 - **Evidence host**: `parking-evidence-web` is not a compose service; after a
   Docker/host restart recreate it with `sh tool/run-evidence-web.sh` (binds the
   LAN IP, since 127.0.0.1:8080 belongs to another project, `restart:

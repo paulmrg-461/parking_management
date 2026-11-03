@@ -51,7 +51,7 @@ sudo usermod -aG docker "$USER"   # log out and back in
 ### Flutter and Android
 
 - Flutter on the **beta** channel (`pubspec.yaml` requires
-  `^3.14.0-95.1.beta`; CI pins `3.49.0-0.1.pre`, 3.50 beta works locally).
+  `^3.14.0-95.1.beta`; CI pins `3.50.0-0.1.pre`, 3.50 beta works locally).
 - Android SDK + an emulator (or a USB-debugging phone) only for the mobile app.
   Not needed for web.
 

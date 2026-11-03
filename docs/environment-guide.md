@@ -52,7 +52,7 @@ sudo usermod -aG docker "$USER"   # cierra sesión y vuelve a entrar
 ### Flutter y Android
 
 - Flutter en canal **beta** (el `pubspec.yaml` pide `^3.14.0-95.1.beta`; CI fija
-  `3.49.0-0.1.pre`, localmente funciona 3.50 beta).
+  `3.50.0-0.1.pre`, localmente funciona 3.50 beta).
 - Android SDK + un emulador (o un teléfono con depuración USB) solo si quieres
   la app móvil. Para web no hace falta Android.
 

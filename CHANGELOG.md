@@ -26,6 +26,8 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Hardened
 
+- `tool/dev-up.sh` brings the whole demo up with one command (stack, migrations,
+  public host, Chrome dev, LAN APK on the connected phone).
 - `0074_statement_timeouts.sql`: PostgREST roles get `statement_timeout`
   (15 s authenticated, 5 s anon) and `idle_in_transaction_session_timeout`
   (30 s / 15 s), so a runaway request cannot pin a connection. The SQL suite
