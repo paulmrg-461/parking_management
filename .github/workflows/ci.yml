@@ -33,6 +33,12 @@ jobs:
           flutter build apk --debug \
             --dart-define=SUPABASE_URL=https://example.supabase.co \
             --dart-define=SUPABASE_ANON_KEY=ci-placeholder
+      # Release mode runs tree-shaking/R8 and can fail where debug does not.
+      - name: Build Android (release)
+        run: |
+          flutter build apk --release \
+            --dart-define=SUPABASE_URL=https://example.supabase.co \
+            --dart-define=SUPABASE_ANON_KEY=ci-placeholder
 
   supabase-config:
     runs-on: ubuntu-latest

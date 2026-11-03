@@ -2665,4 +2665,24 @@ begin
     end if;
 end $$;
 
+-- 0074: request timeouts are installed for the PostgREST roles. The settings
+-- live in rolconfig (applied on login); SET ROLE does not re-apply them.
+do $$
+declare
+    cfg text[];
+begin
+    select rolconfig into cfg from pg_roles where rolname = 'authenticated';
+    if not ('statement_timeout=15000' = any(cfg)) then
+        raise exception 'authenticated statement_timeout missing: %', cfg;
+    end if;
+    if not ('idle_in_transaction_session_timeout=30000' = any(cfg)) then
+        raise exception 'authenticated idle timeout missing: %', cfg;
+    end if;
+
+    select rolconfig into cfg from pg_roles where rolname = 'anon';
+    if not ('statement_timeout=5000' = any(cfg)) then
+        raise exception 'anon statement_timeout missing: %', cfg;
+    end if;
+end $$;
+
 rollback;

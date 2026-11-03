@@ -24,6 +24,15 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - Lost ticket charges `lost_ticket_amount` and disables the monthly-pass method.
 - Android release build: R8 keep rules for the optional ML Kit scripts.
 
+### Hardened
+
+- `0074_statement_timeouts.sql`: PostgREST roles get `statement_timeout`
+  (15 s authenticated, 5 s anon) and `idle_in_transaction_session_timeout`
+  (30 s / 15 s), so a runaway request cannot pin a connection. The SQL suite
+  asserts the role settings.
+- CI also builds a **release** APK (tree-shaking/R8) after the debug build, so
+  release-only failures are caught before shipping.
+
 ### Changed (UX)
 - Charge rows show a busy spinner, ignore double taps and are fully tappable.
 - Payment dialog: live total after discount, per-field errors, "Cobrar $X"

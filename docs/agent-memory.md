@@ -4,10 +4,8 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-11-02 (audit fixes 0072/0073, sync resilience, operator UX batch;
-release APK needs `android/app/proguard-rules.pro` for ML Kit). Previously 2026-10-29, branch `feature/supabase` (UI/UX pass across every
-module, dialogs, developer page, COP/USD currency, es/en language; HEAD
-`d51f015`).
+Last updated: 2026-11-03 (statement timeouts, CI release APK, audit fixes
+0072/0073, sync resilience, operator UX). Branch `feature/supabase`.
 
 ## Where we are
 
@@ -47,6 +45,16 @@ module, dialogs, developer page, COP/USD currency, es/en language; HEAD
    `0024` (`current_lot_id`, lot CRUD, re-scoped policies/RPCs/reports,
    `report_revenue_all`), `0025` (offline replay lot capture via
    `resolve_lot`), `0026` (`list_lot_members`).
+
+## Production guards (2026-11-03)
+
+- `0074_statement_timeouts.sql` bounds PostgREST requests: authenticated
+  15 s / idle 30 s, anon 5 s / idle 15 s. Role settings live in `rolconfig`
+  and apply at login; `SET ROLE` does **not** re-apply them (assert via
+  `pg_roles.rolconfig`, not `current_setting`).
+- CI builds the **release** APK too (R8/tree-shaking); a local release build
+  passes (`app-release.apk`). R8 rules live in `android/app/proguard-rules.pro`.
+- Test count at this point: 930.
 
 ## UI kit pass (2026-10-28)
 
@@ -899,7 +907,7 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 ## Latest verification (2026-10-28)
 
-- `flutter test`: 839 passed (+1 live-stack integration skipped); `flutter
+- `flutter test`: 930 passed (+1 live-stack integration skipped); `flutter
   analyze` 152 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
 - `supabase/tests/run.sh` passed (migrations `0001`–`0067`); `e2e.sh` passed
