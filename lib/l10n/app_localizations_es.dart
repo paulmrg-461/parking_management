@@ -2874,4 +2874,21 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get plateScanAction => 'Escanear placa';
+
+  @override
+  String get vehicleEditTitle => 'Editar vehículo';
+
+  @override
+  String vehicleEditTooltip(String plate) {
+    return 'Editar vehículo $plate';
+  }
+
+  @override
+  String vehicleUpdated(String plate) {
+    return 'Vehículo $plate actualizado';
+  }
+
+  @override
+  String get vehicleEditHint =>
+      'La placa no cambia; puedes ajustar categoría, marca y color.';
 }

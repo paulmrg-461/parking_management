@@ -24,6 +24,13 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - Lost ticket charges `lost_ticket_amount` and disables the monthly-pass method.
 - Android release build: R8 keep rules for the optional ML Kit scripts.
 
+### Added
+
+- Vehicles: admins can **edit** a vehicle's category, brand and color from the
+  list (plate stays immutable as the ticket/history key). The repository update
+  path existed but was unusable because `0075_vehicle_update_grant.sql` was
+  missing; the grant is added and RLS still restricts writes to admins.
+
 ### Hardened
 
 - `tool/dev-up.sh` brings the whole demo up with one command (stack, migrations,

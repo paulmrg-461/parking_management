@@ -2685,4 +2685,34 @@ begin
     end if;
 end $$;
 
+-- 0075: admins may edit a vehicle; operators are still blocked by RLS.
+set local request.headers = '{"x-lot-id":"1"}';
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    changed integer;
+begin
+    update public.vehicles set color = 'Azul'
+     where plate = 'LOST01';
+    get diagnostics changed = row_count;
+    if changed <> 1 then
+        raise exception 'admin vehicle update changed % rows', changed;
+    end if;
+end $$;
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+declare
+    changed integer;
+begin
+    update public.vehicles set color = 'Rojo'
+     where plate = 'LOST01';
+    get diagnostics changed = row_count;
+    if changed <> 0 then
+        raise exception 'operator updated % vehicle rows', changed;
+    end if;
+end $$;
+reset role;
+
 rollback;

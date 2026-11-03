@@ -2858,4 +2858,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get plateScanAction => 'Scan plate';
+
+  @override
+  String get vehicleEditTitle => 'Edit vehicle';
+
+  @override
+  String vehicleEditTooltip(String plate) {
+    return 'Edit vehicle $plate';
+  }
+
+  @override
+  String vehicleUpdated(String plate) {
+    return 'Vehicle $plate updated';
+  }
+
+  @override
+  String get vehicleEditHint =>
+      'The plate stays; adjust category, brand and color.';
 }

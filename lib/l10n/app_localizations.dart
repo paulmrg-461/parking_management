@@ -5173,6 +5173,30 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Escanear placa'**
   String get plateScanAction;
+
+  /// No description provided for @vehicleEditTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Editar vehículo'**
+  String get vehicleEditTitle;
+
+  /// No description provided for @vehicleEditTooltip.
+  ///
+  /// In es, this message translates to:
+  /// **'Editar vehículo {plate}'**
+  String vehicleEditTooltip(String plate);
+
+  /// No description provided for @vehicleUpdated.
+  ///
+  /// In es, this message translates to:
+  /// **'Vehículo {plate} actualizado'**
+  String vehicleUpdated(String plate);
+
+  /// No description provided for @vehicleEditHint.
+  ///
+  /// In es, this message translates to:
+  /// **'La placa no cambia; puedes ajustar categoría, marca y color.'**
+  String get vehicleEditHint;
 }
 
 class _AppLocalizationsDelegate

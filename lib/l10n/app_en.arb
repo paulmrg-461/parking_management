@@ -916,5 +916,9 @@
   "checkoutCashExact": "Exact",
   "cashCountQuantity": "Quantity of {denomination}",
   "@cashCountQuantity": {"placeholders": {"denomination": {"type": "String"}}},
-  "plateScanAction": "Scan plate"
+  "plateScanAction": "Scan plate",
+  "vehicleEditTitle": "Edit vehicle",
+  "vehicleEditTooltip": "Edit vehicle {plate}",
+  "vehicleUpdated": "Vehicle {plate} updated",
+  "vehicleEditHint": "The plate stays; adjust category, brand and color."
 }

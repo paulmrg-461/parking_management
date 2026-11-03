@@ -989,5 +989,11 @@
   "checkoutCashExact": "Exacto",
   "cashCountQuantity": "Cantidad de {denomination}",
   "@cashCountQuantity": {"placeholders": {"denomination": {"type": "String"}}},
-  "plateScanAction": "Escanear placa"
+  "plateScanAction": "Escanear placa",
+  "vehicleEditTitle": "Editar vehículo",
+  "vehicleEditTooltip": "Editar vehículo {plate}",
+  "vehicleUpdated": "Vehículo {plate} actualizado",
+  "@vehicleEditTooltip": {"placeholders": {"plate": {"type": "String"}}},
+  "@vehicleUpdated": {"placeholders": {"plate": {"type": "String"}}},
+  "vehicleEditHint": "La placa no cambia; puedes ajustar categoría, marca y color."
 }
