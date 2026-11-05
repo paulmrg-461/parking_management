@@ -60,12 +60,22 @@ void main() {
       find.byKey(const Key('vehicle_edit_brand')),
       'Mazda 3',
     );
+    await tester.enterText(
+      find.byKey(const Key('vehicle_edit_owner_name')),
+      'Paul Realpe',
+    );
+    await tester.enterText(
+      find.byKey(const Key('vehicle_edit_owner_phone')),
+      '+57 300 111 2233',
+    );
     await tester.tap(find.text('Guardar'));
     await tester.pumpAndSettle();
 
     expect(vehicles.updated?.brand, 'Mazda 3');
+    expect(vehicles.updated?.ownerName, 'Paul Realpe');
+    expect(vehicles.updated?.ownerPhone, '+57 300 111 2233');
     expect(find.text('Vehículo ABC123 actualizado'), findsOneWidget);
-    expect(find.text('carro · Mazda 3'), findsOneWidget);
+    expect(find.text('carro · Mazda 3 · Paul Realpe'), findsOneWidget);
   });
 
   testWidgets('Success: a confirmed delete removes the vehicle', (
@@ -128,6 +138,35 @@ void main() {
     await tester.pumpAndSettle();
     expect(vehicles.created?.plate, 'XYZ999');
     expect(vehicles.created?.categoryId, 1);
+  });
+
+  testWidgets('Success: owner details are optional when creating', (
+    tester,
+  ) async {
+    await pumpPage(tester);
+
+    await tester.tap(find.byTooltip('Agregar vehículo'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.byType(TextField),
+      ).first,
+      'xyz 999',
+    );
+    await tester.enterText(
+      find.byKey(const Key('vehicle_create_owner_name')),
+      'Paul Realpe',
+    );
+    await tester.enterText(
+      find.byKey(const Key('vehicle_create_owner_phone')),
+      '+57 300 111 2233',
+    );
+    await tester.tap(find.text('Crear'));
+    await tester.pumpAndSettle();
+
+    expect(vehicles.created?.ownerName, 'Paul Realpe');
+    expect(vehicles.created?.ownerPhone, '+57 300 111 2233');
   });
 
   testWidgets(

@@ -52,7 +52,7 @@ void main() {
 
     final drawer = find.byType(Drawer);
     expect(drawer, findsOneWidget);
-    for (final label in ['Avisos', 'Contacto', 'Vehículos']) {
+    for (final label in ['Avisos', 'Contacto', 'Vehículos', 'Emergencia']) {
       expect(
         find.descendant(of: drawer, matching: find.text(label)),
         findsOneWidget,
@@ -64,6 +64,41 @@ void main() {
         findsNothing,
       );
     }
+  });
+
+  testWidgets('Success: the drawer emergency entry opens the call panel', (
+    tester,
+  ) async {
+    await pumpApp(tester, role: UserRole.operator);
+
+    await tester.tap(find.text('Menú'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(Drawer),
+        matching: find.text('Emergencia'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(Drawer), findsNothing);
+    expect(find.text('Llamar al 123'), findsOneWidget);
+  });
+
+  testWidgets('Success: the desktop sidebar keeps emergency in the footer', (
+    tester,
+  ) async {
+    await pumpApp(tester, role: UserRole.operator, size: const Size(1200, 900));
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AppSidebar),
+        matching: find.text('Emergencia'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Llamar al 123'), findsOneWidget);
   });
 
   testWidgets('Security: operators only get allowed drawer sections', (
@@ -473,16 +508,20 @@ void main() {
 
     expect(find.byIcon(Icons.qr_code_scanner), findsOneWidget);
 
-    await tester.tap(
-      find.descendant(of: sidebar, matching: find.text('Usuarios')),
+    final users = find.descendant(of: sidebar, matching: find.text('Usuarios'));
+    await tester.scrollUntilVisible(
+      users,
+      200,
+      scrollable: find
+          .descendant(of: sidebar, matching: find.byType(Scrollable))
+          .first,
     );
+    await tester.pumpAndSettle();
+    await tester.tap(users);
     await tester.pumpAndSettle();
     expect(find.byIcon(Icons.qr_code_scanner), findsNothing);
 
-    await tester.tap(
-      find.descendant(of: sidebar, matching: find.text('Inicio')),
-    );
-    await tester.pumpAndSettle();
+    await goTo(tester, '/');
     expect(find.byIcon(Icons.qr_code_scanner), findsOneWidget);
   });
 

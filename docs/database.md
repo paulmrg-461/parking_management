@@ -58,7 +58,7 @@ erDiagram
 | `monthly_passes` | Pass period/amount, auto-renew flag, renewal link. | yes |
 | `monthly_pass_payments` | Exactly one charge per pass (`pending`/`paid`/`waived`), collected into a shift. | yes |
 | `category_reservations` | Capacity hold for a plate (`active`/`used`/`cancelled`/`expired`). | yes |
-| `parking_settings` (`car_capacity`, `moto_capacity`, `key_capacity`) | Per-site branding (name, address, schedule, contacts, logo version/path) + `business_timezone`, `overstay_hours`, `lost_ticket_fee`, `evidence_retention_days`. | yes |
+| `parking_settings` (`car_capacity`, `moto_capacity`, `key_capacity`) | Per-site branding (name, address, schedule, contacts, police quadrant, logo version/path) + `business_timezone`, `overstay_hours`, `lost_ticket_fee`, `evidence_retention_days`. | yes |
 | `notifications` | Per-user inbox rows (type, title, body, data, read/pushed state, dedupe key). | optional |
 | `device_tokens` | FCM tokens per user/device. | no |
 | `web_push_subscriptions` | Browser push endpoints (endpoint + p256dh + auth). | no |
@@ -95,7 +95,7 @@ visual board), `usable_capacity` (capacity - out of service, `0` = no limit),
 money: day/night hours, rates, daily cap, elapsed time),
 `lost_ticket_amount` (internal; `greatest(fare, lot lost_ticket_fee | daily
 tariff | 0)`),
-`vehicle_history`, `update_vehicle_flags` (notes, blacklist, owner phone).
+`vehicle_history`, `update_vehicle_flags` (notes, blacklist, owner name + phone).
 `can_read_lot(lot_id)` backs the notifications RLS for Realtime (no lot header
 there).
 

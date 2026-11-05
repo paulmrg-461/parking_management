@@ -4,20 +4,35 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-11-03 (statement timeouts, CI release APK, audit fixes
-0072/0073, sync resilience, operator UX). Branch `feature/supabase`.
+Last updated: 2026-11-05 (owner contact data, emergency action, monthly-pass
+tariff, device preferences, QR contact/summary). Branch `feature/supabase`.
 
 ## Where we are
 
 - Stack: Flutter (android + web) + self-hosted Supabase only. No FastAPI,
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
-- `supabase/migrations/0001..0068` are the schema owner (applied by
+- `supabase/migrations/0001..0079` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 972 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 993 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
   item is the manual smoke for `add-parking-settings` (task 10.4).
+
+## Live deployment (2026-11-05)
+
+- Web dev + public host `http://192.168.0.17:8080`, API `:8017`, APK installed
+  and open on `192.168.0.2:34591` (the wireless serial changes on reconnect;
+  read it from `adb devices`). Login `admin` / `123456`.
+- Lot 1 has `police_phone` empty on purpose: the emergency panel falls back to
+  **123** until the quadrant is configured in Ajustes → Emergencias.
+- Live smoke against PostgREST passed: `vehicles.owner_name` is selectable,
+  `update_vehicle_flags`/`vehicle_history` return `owner_name`, and
+  `parking_settings.police_phone` can be PATCHed and cleared. The smoke left
+  the column empty.
+- Screenshots work with `adb exec-out screencap -p` while the phone is
+  unlocked; a black PNG means the screen was locked. Verified the red
+  emergency appbar button and the emergency panel this way.
 
 ## Owner preferences (durable)
 
@@ -45,6 +60,46 @@ Last updated: 2026-11-03 (statement timeouts, CI release APK, audit fixes
    `0024` (`current_lot_id`, lot CRUD, re-scoped policies/RPCs/reports,
    `report_revenue_all`), `0025` (offline replay lot capture via
    `resolve_lot`), `0026` (`list_lot_members`).
+
+## Emergency action (2026-11-05)
+
+- `parking_settings.police_phone` (`0079`, 3..15 digits or empty) is edited in
+  **Ajustes → Emergencias**. `EmergencyAction` sits in every app bar
+  (`ListPageScaffold` covers the admin lists) and in the sidebar footer; the
+  phone drawer has a highlighted `EmergencyDrawerTile`.
+- The panel shows the site name/address (to report), the quadrant number and a
+  56 dp call button. Empty setting falls back to **123**; admins see
+  "Configurar en Ajustes", operators a note to ask the admin.
+- `test/features/emergency/presentation/emergency_dialog_test.dart` covers the
+  configured number, the 123 fallback and the settings shortcut; the settings,
+  shell, SQL and repository tests cover the rest. Test count: 993, schema
+  `0001..0079`.
+
+## Owner contact data (2026-11-05)
+
+- `vehicles.owner_name` (`varchar(120)`, trimmed 2..120) joins the existing
+  `owner_phone`. Both are optional and admin-editable from the vehicle list
+  (edit dialog) and the vehicle history ("Datos del propietario" dialog).
+- `update_vehicle_flags` gained `p_owner_name default null` (new 5-arg
+  signature; old callers still work) and returns `owner_name`; the
+  `vehicle_history` JSON exposes it too. `null` keeps the value and an empty
+  string clears it, same as notes/phone.
+- App write path: `UpdateVehicleCommand.ownerName/ownerPhone`; `null` keeps the
+  stored value and an empty string clears it. Direct PATCH (0075 grant) sends
+  JSON `null` to clear. Covered by repository, DTO, dialog, history and SQL
+  tests. Test count: 993, schema `0001..0079`.
+
+## Monthly pass tariff (2026-11-05)
+
+- `MonthlyPassesCubit` now takes an optional `TariffRepository` (DI passes the
+  real one), loads tariffs with the vehicles and exposes
+  `monthlyTariffByCategory`/`monthlyTariffFor`. The pass dialog prefills the
+  amount from the active `monthly` tariff of the selected vehicle's category,
+  re-prefills when the vehicle changes and offers "Usar tarifa mensual (…)"
+  (editing keeps the saved amount until the button is used).
+- No schema change: the pass still stores its own amount; the tariff is the
+  source for the form, not a live dependency.
+- Test count: 975.
 
 ## Preference persistence (2026-11-05)
 
@@ -842,11 +897,10 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   Docker/host restart recreate it with `sh tool/run-evidence-web.sh` (binds the
   LAN IP, since 127.0.0.1:8080 belongs to another project, `restart:
   unless-stopped`).
-- **2026-10-29: the phone is back over wireless adb** (the port changes on
-  every reconnect; last seen `192.168.0.2:46697`). `adb reverse tcp:8017
-  tcp:8017` was re-applied and the current APK installed. If it drops again,
-  `adb devices` first, then reconnect by IP:port, re-apply the reverse and
-  reinstall.
+- **Phone over wireless adb** (the port changes on every reconnect; last
+  seen 2026-11-05 at `192.168.0.2:34591`). The LAN APK does not need `adb
+  reverse`; reinstall with `sh tool/dev-up.sh` / `ANDROID_BUILD=1`. If it drops
+  again, `adb devices` first, then reconnect by IP:port.
 - Chrome dev app is running with `APP_URL=http://192.168.0.17:8080`; the public
   bundle is served by Docker (restart `parking-evidence-web` after a public
   build). **Port 8080 on `127.0.0.1` belongs to another local project**
@@ -864,9 +918,9 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 - `adb shell curl -s -o /dev/null -w '%{http_code}' http://localhost:8017/rest/v1/`
   must answer `401` (reachable); `000` means the tunnel is missing.
 - The wireless serial changes on every reconnect (`192.168.0.2:<port>`): read it
-  from `adb devices` instead of hardcoding it. `adb exec-out screencap` returns
-  a black PNG on this device (locked screen), so verify the app with
-  `dumpsys window | grep mCurrentFocus` + the REST probe, not screenshots.
+  from `adb devices` instead of hardcoding it. `adb exec-out screencap -p`
+  works while the phone is unlocked; a black PNG means the screen is locked.
+  Also verify with `dumpsys window | grep mFocusedApp` + the REST probe.
 
 ## Boot order (fresh installs)
 
@@ -1032,7 +1086,7 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 ## Latest verification (2026-10-28)
 
-- `flutter test`: 972 passed (+1 live-stack integration skipped); `flutter
+- `flutter test`: 993 passed (+1 live-stack integration skipped); `flutter
   analyze` 152 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
 - `supabase/tests/run.sh` passed (migrations `0001`–`0067`); `e2e.sh` passed

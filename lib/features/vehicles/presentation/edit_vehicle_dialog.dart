@@ -30,13 +30,35 @@ class _EditVehicleDialogState extends State<EditVehicleDialog> {
   final _formKey = GlobalKey<FormState>();
   late final _brand = TextEditingController(text: widget.existing.brand ?? '');
   late final _color = TextEditingController(text: widget.existing.color ?? '');
+  late final _ownerName = TextEditingController(
+    text: widget.existing.ownerName ?? '',
+  );
+  late final _ownerPhone = TextEditingController(
+    text: widget.existing.ownerPhone ?? '',
+  );
   late int? _categoryId = widget.existing.categoryId;
 
   @override
   void dispose() {
     _brand.dispose();
     _color.dispose();
+    _ownerName.dispose();
+    _ownerPhone.dispose();
     super.dispose();
+  }
+
+  String? _validateOwnerName(AppLocalizations l10n, String? value) {
+    final name = (value ?? '').trim();
+    return name.isEmpty || name.length >= 2
+        ? null
+        : l10n.errorInvalidOwnerName;
+  }
+
+  String? _validatePhone(AppLocalizations l10n, String? value) {
+    final digits = (value ?? '').replaceAll(RegExp(r'\D'), '');
+    return digits.isEmpty || (digits.length >= 7 && digits.length <= 15)
+        ? null
+        : l10n.errorInvalidPhone;
   }
 
   void _save() {
@@ -49,6 +71,8 @@ class _EditVehicleDialogState extends State<EditVehicleDialog> {
         categoryId: _categoryId,
         brand: _brand.text.trim(),
         color: _color.text.trim(),
+        ownerName: _ownerName.text.trim(),
+        ownerPhone: _ownerPhone.text.trim(),
       ),
     );
     Navigator.of(context).pop();
@@ -113,6 +137,28 @@ class _EditVehicleDialogState extends State<EditVehicleDialog> {
                 controller: _color,
                 textCapitalization: TextCapitalization.words,
                 decoration: InputDecoration(labelText: l10n.colorOptional),
+              ),
+              const SizedBox(height: Space.md),
+              TextFormField(
+                key: const Key('vehicle_edit_owner_name'),
+                controller: _ownerName,
+                textCapitalization: TextCapitalization.words,
+                maxLength: 120,
+                decoration: InputDecoration(
+                  labelText: l10n.vehicleOwnerNameOptional,
+                  hintText: l10n.vehicleOwnerNameHint,
+                ),
+                validator: (value) => _validateOwnerName(l10n, value),
+              ),
+              TextFormField(
+                key: const Key('vehicle_edit_owner_phone'),
+                controller: _ownerPhone,
+                keyboardType: TextInputType.phone,
+                decoration: InputDecoration(
+                  labelText: l10n.vehiclePhone,
+                  hintText: l10n.vehiclePhoneHint,
+                ),
+                validator: (value) => _validatePhone(l10n, value),
               ),
             ],
           ),

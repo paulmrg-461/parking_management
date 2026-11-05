@@ -16,6 +16,7 @@ import '../../../core/widgets/metric_card.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/widgets/sync_badge.dart';
+import '../../emergency/presentation/emergency_action.dart';
 import '../application/reports_cubit.dart';
 import 'report_csv.dart';
 import 'report_pdf.dart';
@@ -177,6 +178,7 @@ class _ReportsPageState extends State<ReportsPage> {
             tooltip: l10n.reportsExportCsv,
             onPressed: () => _copyCsv(context),
           ),
+          const EmergencyAction(),
           const SyncBadge(),
         ],
       ),

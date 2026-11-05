@@ -314,13 +314,14 @@ class VehicleAdapter extends TypeAdapter<Vehicle> {
       color: fields[3] as String?,
       brand: fields[4] as String?,
       ownerPhone: fields[5] as String?,
+      ownerName: fields[6] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Vehicle obj) {
     writer
-      ..writeByte(6)
+      ..writeByte(7)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -332,7 +333,9 @@ class VehicleAdapter extends TypeAdapter<Vehicle> {
       ..writeByte(4)
       ..write(obj.brand)
       ..writeByte(5)
-      ..write(obj.ownerPhone);
+      ..write(obj.ownerPhone)
+      ..writeByte(6)
+      ..write(obj.ownerName);
   }
 
   @override
@@ -429,13 +432,14 @@ class ParkingSettingsAdapter extends TypeAdapter<ParkingSettings> {
       legalPolicy: fields[14] == null ? '' : fields[14] as String,
       currency: fields[15] == null ? 'COP' : fields[15] as String,
       minAppVersion: fields[16] == null ? '' : fields[16] as String,
+      policePhone: fields[17] == null ? '' : fields[17] as String,
     );
   }
 
   @override
   void write(BinaryWriter writer, ParkingSettings obj) {
     writer
-      ..writeByte(17)
+      ..writeByte(18)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
@@ -469,7 +473,9 @@ class ParkingSettingsAdapter extends TypeAdapter<ParkingSettings> {
       ..writeByte(15)
       ..write(obj.currency)
       ..writeByte(16)
-      ..write(obj.minAppVersion);
+      ..write(obj.minAppVersion)
+      ..writeByte(17)
+      ..write(obj.policePhone);
   }
 
   @override

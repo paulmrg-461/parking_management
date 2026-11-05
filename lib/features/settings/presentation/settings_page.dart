@@ -51,6 +51,7 @@ class _SettingsPageState extends State<SettingsPage> {
   late final TextEditingController _phone;
   late final TextEditingController _website;
   late final TextEditingController _whatsapp;
+  late final TextEditingController _policePhone;
   late final TextEditingController _evidenceRetention;
   late final TextEditingController _carCapacity;
   late final TextEditingController _motoCapacity;
@@ -61,6 +62,7 @@ class _SettingsPageState extends State<SettingsPage> {
   late final TextEditingController _minVersion;
   String _currency = 'COP';
   final _identityKey = GlobalKey();
+  final _emergencyKey = GlobalKey();
   final _spacesKey = GlobalKey();
   final _evidenceKey = GlobalKey();
   final _messagingKey = GlobalKey();
@@ -83,6 +85,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _phone = TextEditingController();
     _website = TextEditingController();
     _whatsapp = TextEditingController();
+    _policePhone = TextEditingController();
     _evidenceRetention = TextEditingController();
     _carCapacity = TextEditingController();
     _motoCapacity = TextEditingController();
@@ -103,6 +106,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _phone.dispose();
     _website.dispose();
     _whatsapp.dispose();
+    _policePhone.dispose();
     _evidenceRetention.dispose();
     _carCapacity.dispose();
     _motoCapacity.dispose();
@@ -190,6 +194,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _phone.text,
     _website.text,
     _whatsapp.text,
+    _policePhone.text,
     _evidenceRetention.text,
     _carCapacity.text,
     _motoCapacity.text,
@@ -235,6 +240,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _phone.text = settings.phone;
     _website.text = settings.website;
     _whatsapp.text = settings.whatsapp;
+    _policePhone.text = settings.policePhone;
     _evidenceRetention.text = settings.evidenceRetentionDays.toString();
     _carCapacity.text = settings.carCapacity.toString();
     _motoCapacity.text = settings.motoCapacity.toString();
@@ -330,6 +336,26 @@ class _SettingsPageState extends State<SettingsPage> {
             maxLength: 32,
             keyboardType: TextInputType.phone,
             decoration: InputDecoration(labelText: l10n.settingsWhatsapp),
+          ),
+          const SizedBox(height: Space.lg),
+          SectionHeader(
+            key: _emergencyKey,
+            icon: Icons.local_police_outlined,
+            title: l10n.settingsSectionEmergency,
+          ),
+          const SizedBox(height: Space.sm),
+          TextFormField(
+            key: const Key('settings_police_phone'),
+            controller: _policePhone,
+            maxLength: 32,
+            keyboardType: TextInputType.phone,
+            decoration: InputDecoration(
+              labelText: l10n.settingsPolicePhone,
+              helperText: l10n.settingsPolicePhoneHint,
+              helperMaxLines: 3,
+              prefixIcon: const Icon(Icons.call_outlined),
+            ),
+            validator: _emergencyPhone,
           ),
           const SizedBox(height: Space.lg),
           SectionHeader(
@@ -621,6 +647,11 @@ class _SettingsPageState extends State<SettingsPage> {
     final l10n = context.l10n;
     final entries = [
       (Icons.badge_outlined, l10n.settingsSectionIdentity, _identityKey),
+      (
+        Icons.local_police_outlined,
+        l10n.settingsSectionEmergency,
+        _emergencyKey,
+      ),
       (Icons.grid_view_rounded, l10n.settingsSectionSpaces, _spacesKey),
       (Icons.photo_camera_outlined, l10n.settingsSectionEvidence, _evidenceKey),
       (Icons.chat_outlined, l10n.settingsSectionMessaging, _messagingKey),
@@ -744,6 +775,7 @@ class _SettingsPageState extends State<SettingsPage> {
         phone: _phone.text.trim(),
         website: _website.text.trim(),
         whatsapp: _whatsapp.text.trim(),
+        policePhone: _policePhone.text.trim(),
         evidenceRetentionDays:
             int.tryParse(_evidenceRetention.text.trim()) ?? 0,
         whatsappAuto: _whatsappAuto,
@@ -771,6 +803,17 @@ class _SettingsPageState extends State<SettingsPage> {
       return context.l10n.settingsOutOfServiceTooMany;
     }
     return null;
+  }
+
+  String? _emergencyPhone(String? value) {
+    final text = (value ?? '').trim();
+    if (text.isEmpty) {
+      return null;
+    }
+    final digits = text.replaceAll(RegExp(r'\D'), '');
+    return digits.length >= 3 && digits.length <= 15
+        ? null
+        : context.l10n.errorInvalidEmergencyPhone;
   }
 
   String? _version(String? value) {

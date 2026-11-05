@@ -28,6 +28,7 @@ import '../../../core/widgets/status_chip.dart';
 import '../../../core/widgets/skeleton.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/widgets/sync_badge.dart';
+import '../../emergency/presentation/emergency_action.dart';
 import '../../auth/application/auth_cubit.dart';
 import '../../auth/domain/entities/user.dart';
 import '../../plate_scanning/domain/repositories/plate_image_capture.dart';
@@ -181,7 +182,7 @@ class _CheckOutPageState extends State<CheckOutPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(context.l10n.checkOutTitle),
-        actions: const [NotificationBell(), SyncBadge()],
+        actions: const [NotificationBell(), EmergencyAction(), SyncBadge()],
       ),
       body: BlocListener<CheckOutCubit, CheckOutState>(
         listenWhen: (previous, current) =>

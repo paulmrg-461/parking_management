@@ -60,6 +60,7 @@ class _FakeRemote implements ParkingSettingsRemoteDataSource {
       phone: fields['phone'] as String? ?? settings.phone,
       website: fields['website'] as String? ?? settings.website,
       whatsapp: fields['whatsapp'] as String? ?? settings.whatsapp,
+      policePhone: fields['police_phone'] as String? ?? settings.policePhone,
       evidenceRetentionDays:
           fields['evidence_retention_days'] as int? ??
           settings.evidenceRetentionDays,
@@ -138,6 +139,18 @@ void main() {
     expect(remote.lastPatch?['name'], 'Parqueadero Sur');
     expect((await repo.loadCached())?.name, 'Parqueadero Sur');
     expect(outbox.enqueued, isEmpty);
+  });
+
+  test('Success: the police quadrant is part of the saved payload', () async {
+    final remote = _FakeRemote();
+    final repo = repository(remote);
+
+    final saved = await repo.save(
+      const ParkingSettings(name: 'Parqueadero Sur', policePhone: '+57 300 111 2233'),
+    );
+
+    expect(remote.lastPatch?['police_phone'], '+57 300 111 2233');
+    expect(saved.policePhone, '+57 300 111 2233');
   });
 
   test(

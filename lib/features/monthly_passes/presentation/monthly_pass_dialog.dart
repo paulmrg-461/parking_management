@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/money/money.dart';
 import '../../../core/money/money_input.dart';
+import '../../../core/utils/formatters.dart';
 import '../../../core/receipt/payment_method.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/dialog_header.dart';
@@ -36,10 +37,14 @@ class MonthlyPassDialog extends StatefulWidget {
     super.key,
     required this.onSave,
     this.vehicles = const [],
+    this.monthlyTariffs = const {},
     this.existing,
   });
 
   final List<Vehicle> vehicles;
+
+  /// Active monthly tariff per category, used to prefill the amount.
+  final Map<int, int> monthlyTariffs;
   final MonthlyPass? existing;
   final void Function(MonthlyPassDraft draft) onSave;
 
@@ -60,6 +65,39 @@ class _MonthlyPassDialogState extends State<MonthlyPassDialog> {
       widget.existing?.autoRenewPaymentMethod ?? 'cash';
 
   bool get _editing => widget.existing != null;
+
+  Vehicle? get _selectedVehicle {
+    final id = _editing ? widget.existing!.vehicleId : _vehicleId;
+    for (final vehicle in widget.vehicles) {
+      if (vehicle.id == id) {
+        return vehicle;
+      }
+    }
+    return null;
+  }
+
+  int? get _tariffAmount {
+    final categoryId = _selectedVehicle?.categoryId;
+    return categoryId == null ? null : widget.monthlyTariffs[categoryId];
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    if (!_editing) {
+      _prefillFromTariff();
+    }
+  }
+
+  void _prefillFromTariff({bool force = false}) {
+    final amount = _tariffAmount;
+    if (amount == null) {
+      return;
+    }
+    if (force || _amountController.text.trim().isEmpty) {
+      _amountController.text = Money.input(amount);
+    }
+  }
 
   @override
   void dispose() {
@@ -135,12 +173,27 @@ class _MonthlyPassDialogState extends State<MonthlyPassDialog> {
               ),
               const SizedBox(height: Space.md),
               TextFormField(
+                key: const Key('monthly_pass_amount'),
                 controller: _amountController,
                 keyboardType: TextInputType.number,
                 inputFormatters: moneyInputFormatters(),
                 decoration: InputDecoration(labelText: l10n.fieldAmount),
                 validator: _amount,
               ),
+              if (_tariffAmount case final amount?)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    key: const Key('monthly_pass_use_tariff'),
+                    onPressed: () => setState(
+                      () => _amountController.text = Money.input(amount),
+                    ),
+                    icon: const Icon(Icons.payments_outlined, size: 18),
+                    label: Text(
+                      l10n.monthlyPassUseTariff(Formatters.money(amount)),
+                    ),
+                  ),
+                ),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 value: _autoRenew,
@@ -195,7 +248,10 @@ class _MonthlyPassDialogState extends State<MonthlyPassDialog> {
         if (vehicle.id != null)
           DropdownMenuItem(value: vehicle.id, child: Text(vehicle.plate)),
     ],
-    onChanged: (value) => setState(() => _vehicleId = value),
+    onChanged: (value) => setState(() {
+      _vehicleId = value;
+      _prefillFromTariff(force: true);
+    }),
     decoration: InputDecoration(labelText: l10n.fieldVehicle),
     validator: _required,
   );

@@ -33,6 +33,7 @@ import '../../../core/widgets/status_chip.dart';
 import '../../../core/widgets/skeleton.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/widgets/sync_badge.dart';
+import '../../emergency/presentation/emergency_action.dart';
 import '../../../app/di/injection.dart';
 import '../../home/application/dashboard_cubit.dart';
 import '../../plate_scanning/application/plate_scanning_cubit.dart';
@@ -546,7 +547,7 @@ class _CheckInPageState extends State<CheckInPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.checkInTitle),
-        actions: const [NotificationBell(), SyncBadge()],
+        actions: const [NotificationBell(), EmergencyAction(), SyncBadge()],
       ),
       bottomNavigationBar: _buildSubmitBar(context),
       body: PlateScanListener(

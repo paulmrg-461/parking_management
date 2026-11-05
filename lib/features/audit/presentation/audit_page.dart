@@ -11,6 +11,7 @@ import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../emergency/presentation/emergency_action.dart';
 import '../../../core/widgets/error_state.dart';
 import '../../../core/widgets/filter_bar.dart';
 import '../../../core/widgets/skeleton.dart';
@@ -131,6 +132,7 @@ class _AuditPageState extends State<AuditPage> {
               icon: const Icon(Icons.date_range),
             ),
           ),
+          const EmergencyAction(),
         ],
       ),
       body: BlocBuilder<AuditCubit, AuditState>(

@@ -18,6 +18,7 @@ import '../../../core/widgets/metric_card.dart';
 import '../../../core/widgets/error_state.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/skeleton.dart';
+import '../../emergency/presentation/emergency_action.dart';
 import '../../../core/widgets/status_chip.dart';
 import '../../../core/widgets/money_text.dart';
 import '../../../core/widgets/submission_feedback.dart';
@@ -114,6 +115,7 @@ class _ShiftPageState extends State<ShiftPage> {
                   context.read<ShiftCubit>().load(admin: widget.isAdmin),
               icon: const Icon(Icons.refresh),
             ),
+            const EmergencyAction(),
           ],
         ),
         body: BlocBuilder<ShiftCubit, ShiftState>(

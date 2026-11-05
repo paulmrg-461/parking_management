@@ -62,6 +62,8 @@ class _FakeRemote implements VehicleRemoteDataSource {
       categoryId: payload['category_id'] as int? ?? 1,
       color: payload['color'] as String?,
       brand: payload['brand'] as String?,
+      ownerName: payload['owner_name'] as String?,
+      ownerPhone: payload['owner_phone'] as String?,
     );
   }
 
@@ -148,6 +150,59 @@ void main() {
     expect(outbox.enqueued.single.entityType, MutationEntity.vehicle);
     expect(outbox.enqueued.single.operation, MutationOperation.update);
     expect(outbox.enqueued.single.entityId, 1);
+  });
+
+  test('Success: owner details update optimistically while offline', () async {
+    final local = HiveVehicleLocalDataSource();
+    await VehicleRepositoryImpl(_FakeRemote(), local, outbox).list();
+
+    final offline = VehicleRepositoryImpl(
+      _FakeRemote(failWithNetwork: true),
+      local,
+      outbox,
+    );
+
+    final result = await offline.update(
+      const UpdateVehicleCommand(
+        id: 1,
+        ownerName: 'Paul Realpe',
+        ownerPhone: '+57 300 111 2233',
+      ),
+    );
+
+    expect(result.ownerName, 'Paul Realpe');
+    expect(result.ownerPhone, '+57 300 111 2233');
+    expect((await local.readAll()).single.ownerName, 'Paul Realpe');
+  });
+
+  test('Security: an empty owner value clears it while offline', () async {
+    final local = HiveVehicleLocalDataSource();
+    final remote = _FakeRemote(
+      vehicles: const [
+        Vehicle(
+          id: 1,
+          plate: 'ABC123',
+          categoryId: 1,
+          ownerName: 'Paul Realpe',
+          ownerPhone: '+57 300 111 2233',
+        ),
+      ],
+    );
+    await VehicleRepositoryImpl(remote, local, outbox).list();
+
+    final offline = VehicleRepositoryImpl(
+      _FakeRemote(failWithNetwork: true),
+      local,
+      outbox,
+    );
+
+    final result = await offline.update(
+      const UpdateVehicleCommand(id: 1, ownerName: '', ownerPhone: ''),
+    );
+
+    expect(result.ownerName, isNull);
+    expect(result.ownerPhone, isNull);
+    expect((await local.readAll()).single.ownerName, isNull);
   });
 
   test('delete removes the local cache entry and queues the mutation on network failure', () async {

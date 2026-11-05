@@ -65,6 +65,8 @@ class FakeVehicleRepository implements VehicleRepository {
       id: vehicles.length + 100,
       plate: command.plate,
       categoryId: command.categoryId,
+      ownerName: command.ownerName,
+      ownerPhone: command.ownerPhone,
     );
     vehicles.add(vehicle);
     return vehicle;
@@ -82,6 +84,16 @@ class FakeVehicleRepository implements VehicleRepository {
       categoryId: command.categoryId ?? existing.categoryId,
       color: command.color ?? existing.color,
       brand: command.brand ?? existing.brand,
+      ownerName: command.ownerName == null
+          ? existing.ownerName
+          : (command.ownerName!.trim().isEmpty
+                ? null
+                : command.ownerName!.trim()),
+      ownerPhone: command.ownerPhone == null
+          ? existing.ownerPhone
+          : (command.ownerPhone!.trim().isEmpty
+                ? null
+                : command.ownerPhone!.trim()),
     );
     vehicles[index] = merged;
     return merged;

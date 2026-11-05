@@ -20,6 +20,7 @@ import '../../../core/widgets/skeleton.dart';
 import '../../../core/widgets/status_chip.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/widgets/sync_badge.dart';
+import '../../emergency/presentation/emergency_action.dart';
 import '../application/records_cubit.dart';
 import '../domain/entities/session_record.dart';
 import 'records_csv.dart';
@@ -167,6 +168,7 @@ class _RecordsPageState extends State<RecordsPage> {
             icon: const Icon(Icons.refresh),
             onPressed: () => context.read<RecordsCubit>().load(),
           ),
+          const EmergencyAction(),
           const SyncBadge(),
         ],
       ),

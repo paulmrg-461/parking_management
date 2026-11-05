@@ -24,6 +24,8 @@ import '../../features/notifications/domain/entities/app_notification.dart';
 import '../../features/notifications/application/notifications_cubit.dart';
 import '../../features/shifts/application/shift_cubit.dart';
 import '../../features/plate_scanning/domain/repositories/plate_image_capture.dart';
+import '../../features/emergency/presentation/emergency_action.dart';
+import '../../features/emergency/presentation/emergency_dialog.dart';
 import '../../features/settings/application/branding_cubit.dart';
 import 'app_destinations.dart';
 import 'app_sidebar.dart';
@@ -215,6 +217,11 @@ class _NarrowShellState extends State<_NarrowShell> {
 
   void _openDrawer() => _scaffoldKey.currentState?.openDrawer();
 
+  void _showEmergency() {
+    _scaffoldKey.currentState?.closeDrawer();
+    showEmergencyDialog(context);
+  }
+
   void _navigate(String path) {
     _scaffoldKey.currentState?.closeDrawer();
     context.go(path);
@@ -233,6 +240,7 @@ class _NarrowShellState extends State<_NarrowShell> {
         location: widget.location,
         destinations: destinations,
         onNavigate: _navigate,
+        onEmergency: _showEmergency,
         onLogout: () {
           _scaffoldKey.currentState?.closeDrawer();
           context.read<AuthCubit>().logout();
@@ -280,6 +288,7 @@ class _AppMenuDrawer extends StatelessWidget {
     required this.location,
     required this.destinations,
     required this.onNavigate,
+    required this.onEmergency,
     required this.onLogout,
   });
 
@@ -287,6 +296,7 @@ class _AppMenuDrawer extends StatelessWidget {
   final String location;
   final List<AppDestination> destinations;
   final ValueChanged<String> onNavigate;
+  final VoidCallback onEmergency;
   final VoidCallback onLogout;
 
   @override
@@ -355,6 +365,7 @@ class _AppMenuDrawer extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.symmetric(vertical: Space.sm),
                 children: [
+                  EmergencyDrawerTile(onTap: onEmergency),
                   for (final destination in destinations)
                     ListTile(
                       leading: Icon(destination.icon),

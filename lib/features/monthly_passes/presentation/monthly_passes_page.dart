@@ -218,6 +218,7 @@ class _MonthlyPassesPageState extends State<MonthlyPassesPage> {
               monthlyPass: pass,
               plate: loaded.plateOf(pass),
               phone: loaded.phoneOf(pass),
+              ownerName: loaded.ownerNameOf(pass),
             ),
         ],
       ],
@@ -281,6 +282,9 @@ class _MonthlyPassesPageState extends State<MonthlyPassesPage> {
         context: context,
         builder: (_) => MonthlyPassDialog(
           vehicles: vehicles,
+          monthlyTariffs: state is MonthlyPassesLoaded
+              ? state.monthlyTariffByCategory
+              : const {},
           onSave: (draft) => cubit.create(
             CreateMonthlyPassCommand(
               vehicleId: draft.vehicleId!,
@@ -350,11 +354,25 @@ class _MonthlyPassTile extends StatelessWidget {
     required this.monthlyPass,
     required this.plate,
     this.phone,
+    this.ownerName,
   });
 
   final MonthlyPass monthlyPass;
   final String plate;
   final String? phone;
+  final String? ownerName;
+
+  List<Vehicle> _vehicles(BuildContext context) {
+    final state = context.read<MonthlyPassesCubit>().state;
+    return state is MonthlyPassesLoaded ? state.vehicles : const [];
+  }
+
+  Map<int, int> _tariffs(BuildContext context) {
+    final state = context.read<MonthlyPassesCubit>().state;
+    return state is MonthlyPassesLoaded
+        ? state.monthlyTariffByCategory
+        : const {};
+  }
 
   Future<void> _notify(BuildContext context) async {
     if (whatsappAutoEnabled(context)) {
@@ -434,6 +452,11 @@ class _MonthlyPassTile extends StatelessWidget {
             '$period · ${Formatters.money(monthlyPass.amount)}'
             '${monthlyPass.autoRenew ? ' · ${l10n.monthlyPassAutoRenew}' : ''}',
           ),
+          if (ownerName != null && ownerName!.isNotEmpty)
+            Text(
+              '${l10n.vehicleOwner}: $ownerName',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
           if (monthlyPass.active && monthlyPass.needsRenewal())
             Align(
               alignment: Alignment.centerLeft,
@@ -520,6 +543,8 @@ class _MonthlyPassTile extends StatelessWidget {
         context: context,
         builder: (_) => MonthlyPassDialog(
           existing: monthlyPass,
+          vehicles: _vehicles(context),
+          monthlyTariffs: _tariffs(context),
           onSave: (draft) => cubit.update(
             UpdateMonthlyPassCommand(
               id: monthlyPass.id!,

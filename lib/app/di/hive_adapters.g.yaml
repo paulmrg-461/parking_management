@@ -83,7 +83,7 @@ types:
         index: 3
   Vehicle:
     typeId: 7
-    nextIndex: 6
+    nextIndex: 7
     fields:
       id:
         index: 0
@@ -97,6 +97,8 @@ types:
         index: 4
       ownerPhone:
         index: 5
+      ownerName:
+        index: 6
   MonthlyPass:
     typeId: 8
     nextIndex: 8
@@ -119,7 +121,7 @@ types:
         index: 7
   ParkingSettings:
     typeId: 9
-    nextIndex: 17
+    nextIndex: 18
     fields:
       name:
         index: 0
@@ -155,3 +157,5 @@ types:
         index: 15
       minAppVersion:
         index: 16
+      policePhone:
+        index: 17
