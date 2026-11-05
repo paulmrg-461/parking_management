@@ -790,8 +790,9 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 - **Gateway root / Studio (2026-11-05)**: opening `http://<lan-ip>:8017/` used
   to proxy Supabase Studio through the global basic-auth filter, so browsers
   asked for a username/password ("connection not private" is just HTTP on the
-  LAN). The root route now returns a short text (`direct_response`) with basic
-  auth disabled, and Studio is published only on `127.0.0.1:3000`. API routes
+  LAN). The root route now redirects (307, `port_redirect: 8080`) to the app on
+  the same host, with basic auth disabled; Studio is published only on
+  `127.0.0.1:3000`. API routes
   (`/auth`, `/rest`, `/storage`, `/realtime`, `/functions`) are unchanged.
 - **One-command demo (2026-11-03)**: `sh tool/dev-up.sh` starts compose +
   migrations, recreates the public host, starts Chrome dev (unless already

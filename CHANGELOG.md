@@ -11,9 +11,10 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Fixed
 - Opening the API gateway root (`http://<lan-ip>:8017/`) no longer triggers a
-  Supabase Studio basic-auth prompt: it returns a short text answer, and Studio
-  is published only on `127.0.0.1:3000`. API routes are unchanged. (HTTP on the
-  LAN still shows "not private"; production uses HTTPS.)
+  Supabase Studio basic-auth prompt: it redirects (307) to the app on port 8080
+  of the same host, and Studio is published only on `127.0.0.1:3000`. API
+  routes are unchanged. (HTTP on the LAN still shows "not private"; production
+  uses HTTPS.)
 - Shift close reads counted cash in the site currency (USD no longer stored as cents).
 - Outbox retries after network/server failures (15s→30s→60s) instead of
   stalling or dead-lettering; drains right after enqueue.
