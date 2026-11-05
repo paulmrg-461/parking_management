@@ -13,7 +13,7 @@ Last updated: 2026-11-03 (statement timeouts, CI release APK, audit fixes
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0068` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 971 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 972 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -45,6 +45,18 @@ Last updated: 2026-11-03 (statement timeouts, CI release APK, audit fixes
    `0024` (`current_lot_id`, lot CRUD, re-scoped policies/RPCs/reports,
    `report_revenue_all`), `0025` (offline replay lot capture via
    `resolve_lot`), `0026` (`list_lot_members`).
+
+## Preference persistence (2026-11-05)
+
+- Auto-lock/language/theme/sidebar are **device-local** in Hive
+  (`preferences/*`), not in Postgres. `KeyValueStore.get` is synchronous and
+  only reads **already-open** boxes; the store opened `preferences` lazily on
+  the first `put`, so a cold start silently reset everything to defaults
+  (auto-lock back to 5). `HiveKeyValueStore.init()` now opens the box before
+  any cubit restores. Covered by a real-Hive restart test.
+- Reinstalling the app or clearing data still resets these preferences (they
+  are not synced across devices; that is intentional).
+- Test count: 972.
 
 ## Settings/about navigation (2026-11-05)
 
@@ -1020,7 +1032,7 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 ## Latest verification (2026-10-28)
 
-- `flutter test`: 971 passed (+1 live-stack integration skipped); `flutter
+- `flutter test`: 972 passed (+1 live-stack integration skipped); `flutter
   analyze` 152 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
 - `supabase/tests/run.sh` passed (migrations `0001`–`0067`); `e2e.sh` passed

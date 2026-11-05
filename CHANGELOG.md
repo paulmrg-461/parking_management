@@ -10,6 +10,10 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 ## [Unreleased] — 2026-11 (app reliability and operator UX)
 
 ### Fixed
+- Device preferences (auto-lock, language, appearance, sidebar state) were lost
+  on a cold start: `HiveKeyValueStore.get` is synchronous and only reads open
+  boxes, and the `preferences` box was opened only on the first `put`. `init()`
+  now opens it, so auto-lock stays at the chosen value across app restarts.
 - Opening the API gateway root (`http://<lan-ip>:8017/`) no longer triggers a
   Supabase Studio basic-auth prompt: it redirects (307) to the app on port 8080
   of the same host, and Studio is published only on `127.0.0.1:3000`. API
