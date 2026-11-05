@@ -23,7 +23,7 @@ Functions solo cubren usuarios admin y envíos.
 | Storage | Fotos de evidencias y logo | Docker |
 | Realtime | Notificaciones in-app en vivo | Docker |
 | Edge Functions | `admin-users`, `push-dispatch`, `evidence-archive`, `whatsapp-dispatch` | Docker |
-| Studio | Panel web de la base de datos | Docker, misma URL |
+| Studio | Panel web de la base de datos | Docker, `http://localhost:3000` (solo loopback) |
 | Envoy | Puerta de entrada única (`:8000`) | Docker |
 | App Flutter | Android + Web (mismo código) | Tu equipo / emulador / navegador |
 

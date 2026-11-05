@@ -40,7 +40,7 @@ flowchart LR
 | Layer | Responsibility |
 |---|---|
 | Flutter app | UI, state (Cubits), offline cache and outbox. Talks only to the gateway. |
-| Envoy | Single entry point: routes `/auth/v1`, `/rest/v1`, `/storage/v1`, `/realtime/v1`, `/functions/v1` and Studio. |
+| Envoy | Single entry point: routes `/auth/v1`, `/rest/v1`, `/storage/v1`, `/realtime/v1` and `/functions/v1`; Studio stays loopback-only on `:3000`. |
 | GoTrue | Authentication. Usernames map to `<user>@parking.local`, the PIN is the password. |
 | PostgREST | REST over tables (RLS-scoped) and `rpc/*` (business operations). |
 | Storage | Private `evidence` bucket, public `branding` bucket. |

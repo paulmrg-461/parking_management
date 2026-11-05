@@ -764,7 +764,8 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 ## Dev environment running (2026-10-29)
 
 - Backend: `docker compose up -d` from the repo root; all services healthy,
-  gateway/Studio on <http://localhost:8017> (`API_GW_HTTP_PORT` in `.env`);
+  gateway on <http://localhost:8017> (`API_GW_HTTP_PORT` in `.env`) and Studio
+  loopback-only on <http://localhost:3000>;
   migrations `0001`-`0068` applied.
 - Flutter web: `flutter run -d chrome --dart-define=SUPABASE_URL=http://localhost:8017
   --dart-define=SUPABASE_ANON_KEY=<ANON_KEY>` (log: `/tmp/opencode/flutter-web.log`).
@@ -786,6 +787,12 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   it no longer needs adb after install. `tool/run-android.sh` defaults to LAN;
   `ANDROID_MODE=localhost` keeps the reverse mode. `tool/android-doctor.sh`
   prints device/host/port state. Reconnect adb only to reinstall.
+- **Gateway root / Studio (2026-11-05)**: opening `http://<lan-ip>:8017/` used
+  to proxy Supabase Studio through the global basic-auth filter, so browsers
+  asked for a username/password ("connection not private" is just HTTP on the
+  LAN). The root route now returns a short text (`direct_response`) with basic
+  auth disabled, and Studio is published only on `127.0.0.1:3000`. API routes
+  (`/auth`, `/rest`, `/storage`, `/realtime`, `/functions`) are unchanged.
 - **One-command demo (2026-11-03)**: `sh tool/dev-up.sh` starts compose +
   migrations, recreates the public host, starts Chrome dev (unless already
   running) and installs/launches the LAN APK on the first adb device.
