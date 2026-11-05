@@ -50,6 +50,10 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Hardened
 
+- Ops: optional `BACKUP_REMOTE` offsite copy with `rclone` (job fails if the
+  copy fails), backup-age and disk warnings in `healthcheck.sh`, and systemd
+  units/timers for healthcheck, cron and nightly backups
+  (`docs/operations-systemd.md`).
 - Supabase traffic now goes through `ResilientHttpClient`: a 20 s timeout per
   request (storage uploads exempt), automatic retries for idempotent
   GET/HEAD on timeouts, connection errors and 502/503/504, and **no transport

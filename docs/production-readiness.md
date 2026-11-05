@@ -26,6 +26,8 @@ operational assumption changes.
       (2 vCPU/4 GB minimum, 4/8/80–160 recommended, disk formula for evidence).
 - [x] Postgres pooler enabled for many app clients; PostgREST and Realtime
       behind the gateway.
+- [x] Host timers (healthcheck 5 min, cron 1 min, backup 03:15) ship in
+      `tool/systemd/` with [`operations-systemd.md`](operations-systemd.md).
 - [x] `BACKUP_KEEP=N` prunes older archives (0 = keep all); the dump is
       validated with
       `pg_restore --list`, `SHA256SUMS` is written next to the archive and

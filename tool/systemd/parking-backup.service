@@ -1,0 +1,12 @@
+[Unit]
+Description=Parking management database + storage backup
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/parking
+EnvironmentFile=-/opt/parking/.env
+# Optional: BACKUP_REMOTE=rclone-remote:parking/backups and BACKUP_KEEP=14
+Environment=BACKUP_KEEP=14
+ExecStart=/bin/sh /opt/parking/supabase/backup.sh
