@@ -2830,4 +2830,28 @@ begin
 end $$;
 reset role;
 
+-- Police quadrant (0079): the emergency action reads it from the settings row
+-- and the database rejects numbers that could never be dialed.
+update public.parking_settings
+   set police_phone = '+57 300 111 2233'
+ where id = 1;
+
+do $$
+begin
+    if (select police_phone from public.parking_settings where id = 1)
+        is distinct from '+57 300 111 2233' then
+        raise exception 'police phone was not stored';
+    end if;
+    begin
+        update public.parking_settings set police_phone = '12' where id = 1;
+        raise exception 'an invalid police phone was accepted';
+    exception when check_violation then
+        null;
+    end;
+    update public.parking_settings set police_phone = '' where id = 1;
+    if (select police_phone from public.parking_settings where id = 1) is distinct from '' then
+        raise exception 'empty police phone did not clear the field';
+    end if;
+end $$;
+
 rollback;

@@ -9,6 +9,7 @@ import '../../../core/theme/status_colors.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../emergency/presentation/emergency_action.dart';
 import '../../../core/widgets/error_state.dart';
 import '../../../core/widgets/skeleton.dart';
 import '../../../core/widgets/submission_feedback.dart';
@@ -66,6 +67,7 @@ class _SpotsPageState extends State<SpotsPage> {
             icon: const Icon(Icons.refresh),
             onPressed: context.read<SpotsCubit>().load,
           ),
+          const EmergencyAction(),
         ],
       ),
       body: !widget.isAdmin

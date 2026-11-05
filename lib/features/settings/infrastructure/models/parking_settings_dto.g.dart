@@ -26,6 +26,7 @@ ParkingSettingsDto _$ParkingSettingsDtoFromJson(Map<String, dynamic> json) =>
       legalPolicy: json['legal_policy'] as String? ?? '',
       currency: json['currency'] as String? ?? 'COP',
       minAppVersion: json['min_app_version'] as String? ?? '',
+      policePhone: json['police_phone'] as String? ?? '',
     );
 
 Map<String, dynamic> _$ParkingSettingsDtoToJson(ParkingSettingsDto instance) =>
@@ -47,4 +48,5 @@ Map<String, dynamic> _$ParkingSettingsDtoToJson(ParkingSettingsDto instance) =>
       'legal_policy': instance.legalPolicy,
       'currency': instance.currency,
       'min_app_version': instance.minAppVersion,
+      'police_phone': instance.policePhone,
     };

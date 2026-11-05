@@ -35,6 +35,13 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Added
 
+- **Emergency action**: a red police icon in every app bar (and an entry in the
+  desktop sidebar footer and the phone drawer) opens a one-tap panel with the
+  site location, the nearest police quadrant and a large **Call now** button.
+  The quadrant number is configured in **Ajustes → Emergencias**
+  (`parking_settings.police_phone` in `0079`, 3–15 digits). Until it is set,
+  the panel falls back to the national emergency line **123** and admins get a
+  shortcut to settings; operators see a note to ask the administrator.
 - Vehicles now keep **optional owner details**: a full name (`owner_name`) and
   the existing phone. Admins can set/edit them from the vehicle list or the
   vehicle history, and both are optional (a plate without them works as

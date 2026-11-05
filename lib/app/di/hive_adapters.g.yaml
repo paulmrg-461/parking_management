@@ -121,7 +121,7 @@ types:
         index: 7
   ParkingSettings:
     typeId: 9
-    nextIndex: 17
+    nextIndex: 18
     fields:
       name:
         index: 0
@@ -157,3 +157,5 @@ types:
         index: 15
       minAppVersion:
         index: 16
+      policePhone:
+        index: 17

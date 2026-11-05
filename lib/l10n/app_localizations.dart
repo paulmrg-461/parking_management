@@ -2234,6 +2234,30 @@ abstract class AppLocalizations {
   /// **'Evidencia'**
   String get settingsSectionEvidence;
 
+  /// No description provided for @settingsSectionEmergency.
+  ///
+  /// In es, this message translates to:
+  /// **'Emergencias'**
+  String get settingsSectionEmergency;
+
+  /// No description provided for @settingsPolicePhone.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuadrante de policía más cercano'**
+  String get settingsPolicePhone;
+
+  /// No description provided for @settingsPolicePhoneHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Se usa en el botón de emergencia. Si lo dejas vacío, se llamará al 123.'**
+  String get settingsPolicePhoneHint;
+
+  /// No description provided for @errorInvalidEmergencyPhone.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe un número válido (3 a 15 dígitos)'**
+  String get errorInvalidEmergencyPhone;
+
   /// No description provided for @settingsSectionPreferences.
   ///
   /// In es, this message translates to:
@@ -5623,6 +5647,78 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Usar tarifa mensual ({amount})'**
   String monthlyPassUseTariff(String amount);
+
+  /// No description provided for @emergencyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Emergencia'**
+  String get emergencyTitle;
+
+  /// No description provided for @emergencyBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Reporta la emergencia al cuadrante de policía más cercano.'**
+  String get emergencyBody;
+
+  /// No description provided for @emergencyDrawerHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Llamar al cuadrante de policía'**
+  String get emergencyDrawerHint;
+
+  /// No description provided for @emergencyNumberLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuadrante de policía más cercano'**
+  String get emergencyNumberLabel;
+
+  /// No description provided for @emergencyDefaultLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Línea de emergencia'**
+  String get emergencyDefaultLabel;
+
+  /// No description provided for @emergencyDefaultHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no hay un número del cuadrante configurado.'**
+  String get emergencyDefaultHint;
+
+  /// No description provided for @emergencyCallNow.
+  ///
+  /// In es, this message translates to:
+  /// **'Llamar ahora'**
+  String get emergencyCallNow;
+
+  /// No description provided for @emergencyCallDefault.
+  ///
+  /// In es, this message translates to:
+  /// **'Llamar al {phone}'**
+  String emergencyCallDefault(String phone);
+
+  /// No description provided for @emergencyGoToSettings.
+  ///
+  /// In es, this message translates to:
+  /// **'Configurar en Ajustes'**
+  String get emergencyGoToSettings;
+
+  /// No description provided for @emergencyAskAdmin.
+  ///
+  /// In es, this message translates to:
+  /// **'Pide al administrador que configure el número del cuadrante en Ajustes.'**
+  String get emergencyAskAdmin;
+
+  /// No description provided for @emergencyCallFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo abrir el marcador.'**
+  String get emergencyCallFailed;
+
+  /// No description provided for @emergencyLocation.
+  ///
+  /// In es, this message translates to:
+  /// **'Ubicación: {location}'**
+  String emergencyLocation(String location);
 }
 
 class _AppLocalizationsDelegate

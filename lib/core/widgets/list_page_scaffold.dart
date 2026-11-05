@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'sync_badge.dart';
+import '../../features/emergency/presentation/emergency_action.dart';
 
 /// Template for admin CRUD lists: title, SyncBadge, an "add" FAB with an
 /// accessible tooltip, and pull-to-refresh around [body].
@@ -29,7 +30,10 @@ class ListPageScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(title), actions: [...actions, const SyncBadge()]),
+    appBar: AppBar(
+      title: Text(title),
+      actions: [...actions, const EmergencyAction(), const SyncBadge()],
+    ),
     floatingActionButton: onAdd == null
         ? null
         : FloatingActionButton(

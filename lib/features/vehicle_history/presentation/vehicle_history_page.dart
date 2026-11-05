@@ -24,6 +24,7 @@ import '../../../core/widgets/receipt_card.dart';
 import '../../../core/widgets/metric_card.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/status_chip.dart';
+import '../../emergency/presentation/emergency_action.dart';
 import '../../receipt_printing/presentation/receipt_print_sheet.dart';
 import '../application/vehicle_history_cubit.dart';
 import '../domain/entities/vehicle_history.dart';
@@ -89,7 +90,10 @@ class _VehicleHistoryPageState extends State<VehicleHistoryPage> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.vehicleHistoryTitle)),
+      appBar: AppBar(
+        title: Text(l10n.vehicleHistoryTitle),
+        actions: const [EmergencyAction()],
+      ),
       body: Column(
         children: [
           Padding(

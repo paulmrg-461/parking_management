@@ -18,6 +18,7 @@ import '../../notifications/presentation/notification_bell.dart';
 import '../../settings/application/branding_cubit.dart';
 import '../application/dashboard_cubit.dart';
 import 'widgets/dashboard_widgets.dart';
+import '../../emergency/presentation/emergency_action.dart';
 import 'widgets/slot_board_card.dart';
 
 /// Dashboard at `/`: greeting, current occupancy and the two primary
@@ -56,6 +57,7 @@ class _HomePageState extends State<HomePage> {
         ),
         actions: const [
           NotificationBell(),
+          EmergencyAction(),
           SyncBadge(),
         ],
       ),

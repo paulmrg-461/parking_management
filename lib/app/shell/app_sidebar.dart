@@ -11,6 +11,7 @@ import '../../core/theme/tokens.dart';
 import '../../features/auth/application/auth_cubit.dart';
 import '../../features/auth/domain/entities/auth_session.dart';
 import '../../features/auth/domain/entities/user.dart';
+import '../../features/emergency/presentation/emergency_dialog.dart';
 import '../../features/lots/application/lots_cubit.dart';
 import '../../features/lots/presentation/lot_switcher.dart';
 import '../../features/settings/application/branding_cubit.dart';
@@ -427,11 +428,21 @@ class _FooterLinks extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final scheme = Theme.of(context).colorScheme;
     if (collapsed) {
       return Padding(
         padding: const EdgeInsets.only(bottom: Space.sm),
         child: Column(
           children: [
+            IconButton(
+              tooltip: l10n.emergencyTitle,
+              onPressed: () => showEmergencyDialog(context),
+              style: IconButton.styleFrom(
+                foregroundColor: scheme.onErrorContainer,
+                backgroundColor: scheme.errorContainer,
+              ),
+              icon: const Icon(Icons.local_police_outlined),
+            ),
             IconButton(
               tooltip: l10n.preferencesTitle,
               onPressed: () => context.go(preferencesPath),
@@ -448,6 +459,15 @@ class _FooterLinks extends StatelessWidget {
     }
     return Column(
       children: [
+        _FooterLink(
+          icon: Icons.local_police_outlined,
+          label: l10n.emergencyTitle,
+          color: scheme.onErrorContainer,
+          background: scheme.errorContainer,
+          trailing: Icon(Icons.call, size: 18, color: scheme.onErrorContainer),
+          onTap: () => showEmergencyDialog(context),
+        ),
+        const SizedBox(height: Space.xs),
         _FooterLink(
           icon: Icons.settings_outlined,
           label: l10n.preferencesTitle,
@@ -469,17 +489,23 @@ class _FooterLink extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onTap,
+    this.color,
+    this.background,
+    this.trailing,
   });
 
   final IconData icon;
   final String label;
   final VoidCallback onTap;
+  final Color? color;
+  final Color? background;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Material(
-      color: Colors.transparent,
+      color: background ?? Colors.transparent,
       borderRadius: BorderRadius.circular(Radii.md),
       child: InkWell(
         borderRadius: BorderRadius.circular(Radii.md),
@@ -490,19 +516,23 @@ class _FooterLink extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: Space.sm),
             child: Row(
               children: [
-                Icon(icon, size: 20, color: scheme.onSurfaceVariant),
+                Icon(icon, size: 20, color: color ?? scheme.onSurfaceVariant),
                 const SizedBox(width: Space.sm),
                 Expanded(
                   child: Text(
                     label,
-                    style: Theme.of(context).textTheme.labelLarge,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: color,
+                      fontWeight: color == null ? null : FontWeight.w700,
+                    ),
                   ),
                 ),
-                Icon(
-                  Icons.chevron_right,
-                  size: 18,
-                  color: scheme.onSurfaceVariant,
-                ),
+                trailing ??
+                    Icon(
+                      Icons.chevron_right,
+                      size: 18,
+                      color: color ?? scheme.onSurfaceVariant,
+                    ),
               ],
             ),
           ),

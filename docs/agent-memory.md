@@ -11,9 +11,9 @@ Last updated: 2026-11-05 (owner contact data, CI release APK, audit fixes
 
 - Stack: Flutter (android + web) + self-hosted Supabase only. No FastAPI,
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
-- `supabase/migrations/0001..0078` are the schema owner (applied by
+- `supabase/migrations/0001..0079` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 984 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 993 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -45,6 +45,20 @@ Last updated: 2026-11-05 (owner contact data, CI release APK, audit fixes
    `0024` (`current_lot_id`, lot CRUD, re-scoped policies/RPCs/reports,
    `report_revenue_all`), `0025` (offline replay lot capture via
    `resolve_lot`), `0026` (`list_lot_members`).
+
+## Emergency action (2026-11-05)
+
+- `parking_settings.police_phone` (`0079`, 3..15 digits or empty) is edited in
+  **Ajustes → Emergencias**. `EmergencyAction` sits in every app bar
+  (`ListPageScaffold` covers the admin lists) and in the sidebar footer; the
+  phone drawer has a highlighted `EmergencyDrawerTile`.
+- The panel shows the site name/address (to report), the quadrant number and a
+  56 dp call button. Empty setting falls back to **123**; admins see
+  "Configurar en Ajustes", operators a note to ask the admin.
+- `test/features/emergency/presentation/emergency_dialog_test.dart` covers the
+  configured number, the 123 fallback and the settings shortcut; the settings,
+  shell, SQL and repository tests cover the rest. Test count: 993, schema
+  `0001..0079`.
 
 ## Owner contact data (2026-11-05)
 
@@ -1058,7 +1072,7 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 ## Latest verification (2026-10-28)
 
-- `flutter test`: 984 passed (+1 live-stack integration skipped); `flutter
+- `flutter test`: 993 passed (+1 live-stack integration skipped); `flutter
   analyze` 152 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
 - `supabase/tests/run.sh` passed (migrations `0001`–`0067`); `e2e.sh` passed
