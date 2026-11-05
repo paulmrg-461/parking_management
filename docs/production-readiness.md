@@ -140,8 +140,8 @@ operational assumption changes.
   asks for them); CI currently covers web/Android plus the SQL and live-stack
   e2e suites.
 - Coverage is measured by `flutter test --coverage` and gated in CI with
-  `tool/check_coverage.dart`: global ≥ 70 %, application ≥ 90 %, domain ≥ 35 %,
-  infrastructure ≥ 25 %. The layer floors are a ratchet, not the final target
+  `tool/check_coverage.dart`: global ≥ 78 %, application ≥ 90 %, domain ≥ 47 %,
+  infrastructure ≥ 38 %. The layer floors are a ratchet, not the final target
   (AGENTS asks 90 % on domain/infrastructure mappers).
 - `idempotency_keys` is purged by cron; confirm the cron is actually running on
   the host (`select * from cron.job` when `pg_cron` is available).

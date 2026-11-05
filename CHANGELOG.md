@@ -26,6 +26,11 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Added
 
+- Contract tests for the client/server JSON shapes (vehicle, user, category,
+  monthly pass, parking session, lot member) and domain parsers (public lot
+  profile, pass payments, today summary, session records, lots). Coverage
+  floors raised: global 78 %, domain 47 %, infrastructure 38 % (application
+  stays 90 %).
 - Help center (`/help`, operators included): searchable, localized how-tos for
   opening a shift, charging, reprinting, reconciliation, cash movements,
   check-in evidence, reservations, passes, offline work, auto-lock and update
