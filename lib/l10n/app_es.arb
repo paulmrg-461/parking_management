@@ -1062,5 +1062,7 @@
   "preferencesHint": "Idioma, apariencia y bloqueo automático.",
   "aboutTitle": "Acerca de",
   "aboutDevelopers": "Desarrolladores",
-  "aboutJimmyRole": "Desarrollador"
+  "aboutJimmyRole": "Desarrollador",
+  "monthlyPassUseTariff": "Usar tarifa mensual ({amount})",
+  "@monthlyPassUseTariff": {"placeholders": {"amount": {"type": "String"}}}
 }

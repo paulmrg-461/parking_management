@@ -982,5 +982,6 @@
   "preferencesHint": "Language, appearance and auto-lock.",
   "aboutTitle": "About",
   "aboutDevelopers": "Developers",
-  "aboutJimmyRole": "Developer"
+  "aboutJimmyRole": "Developer",
+  "monthlyPassUseTariff": "Use monthly tariff ({amount})"
 }

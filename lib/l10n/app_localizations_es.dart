@@ -3100,4 +3100,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get aboutJimmyRole => 'Desarrollador';
+
+  @override
+  String monthlyPassUseTariff(String amount) {
+    return 'Usar tarifa mensual ($amount)';
+  }
 }

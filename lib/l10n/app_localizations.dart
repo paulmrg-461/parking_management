@@ -5569,6 +5569,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Desarrollador'**
   String get aboutJimmyRole;
+
+  /// No description provided for @monthlyPassUseTariff.
+  ///
+  /// In es, this message translates to:
+  /// **'Usar tarifa mensual ({amount})'**
+  String monthlyPassUseTariff(String amount);
 }
 
 class _AppLocalizationsDelegate

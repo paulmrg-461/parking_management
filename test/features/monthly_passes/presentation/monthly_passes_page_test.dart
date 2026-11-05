@@ -10,11 +10,13 @@ import 'package:parking_management/features/settings/application/branding_cubit.
 import 'package:parking_management/features/settings/domain/entities/parking_settings.dart';
 import 'package:parking_management/features/monthly_passes/domain/entities/monthly_pass.dart';
 import 'package:parking_management/features/monthly_passes/domain/entities/monthly_pass_payment.dart';
+import 'package:parking_management/features/tariffs/domain/entities/tariff.dart';
 import 'package:parking_management/features/vehicles/domain/entities/vehicle.dart';
 
 import '../../../helpers/fake_customer_message_repository.dart';
 import '../../../helpers/fake_monthly_pass_repository.dart';
 import '../../../helpers/fake_settings_repository.dart';
+import '../../../helpers/fake_tariff_repository.dart';
 import '../../../helpers/fake_vehicle_repository.dart';
 import '../../../helpers/test_app.dart';
 
@@ -29,6 +31,7 @@ void main() {
     List<Vehicle>? vehicles,
     List<MonthlyPass>? passes,
     List<MonthlyPassPayment>? pending,
+    List<Tariff>? tariffs,
   }) async {
     repository = FakeMonthlyPassRepository()..listError = listError;
     if (passes != null) {
@@ -62,6 +65,9 @@ void main() {
                         ),
                       ],
                 ),
+                tariffs == null
+                    ? null
+                    : (FakeTariffRepository()..tariffs = tariffs),
               ),
             ),
             BlocProvider<BrandingCubit>.value(value: branding),
@@ -214,6 +220,30 @@ void main() {
 
     expect(find.text('ABC123'), findsNothing);
     expect(find.text('XYZ999'), findsOneWidget);
+  });
+
+  testWidgets('Success: the monthly tariff prefills the new pass amount', (
+    tester,
+  ) async {
+    await pumpPage(
+      tester,
+      tariffs: const [
+        Tariff(
+          id: 9,
+          categoryId: 1,
+          type: TariffType.monthly,
+          amount: 120000,
+        ),
+      ],
+    );
+
+    await tester.tap(find.byTooltip('Agregar mensualidad'));
+    await tester.pumpAndSettle();
+
+    final amount = tester.widget<TextFormField>(
+      find.byKey(const Key('monthly_pass_amount')),
+    );
+    expect(amount.controller?.text, '120000');
   });
 
   testWidgets('Success: the active filter hides expired passes', (

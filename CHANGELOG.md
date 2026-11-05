@@ -35,6 +35,10 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Added
 
+- Monthly passes now take the amount from the **tariffs list**: the dialog
+  prefills the active `monthly` tariff of the selected vehicle's category,
+  follows the vehicle change, and offers "Usar tarifa mensual (…)" when editing.
+  `MonthlyPassesCubit` loads tariffs alongside vehicles; no manual retyping.
 - About copy now presents Paul as a **Systems Engineer with 7+ years in web and
   mobile development**, explicitly including backend/database/infrastructure,
   instead of "Flutter apps only"; English and Spanish updated.

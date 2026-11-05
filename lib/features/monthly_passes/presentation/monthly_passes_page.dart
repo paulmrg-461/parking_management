@@ -281,6 +281,9 @@ class _MonthlyPassesPageState extends State<MonthlyPassesPage> {
         context: context,
         builder: (_) => MonthlyPassDialog(
           vehicles: vehicles,
+          monthlyTariffs: state is MonthlyPassesLoaded
+              ? state.monthlyTariffByCategory
+              : const {},
           onSave: (draft) => cubit.create(
             CreateMonthlyPassCommand(
               vehicleId: draft.vehicleId!,
@@ -355,6 +358,18 @@ class _MonthlyPassTile extends StatelessWidget {
   final MonthlyPass monthlyPass;
   final String plate;
   final String? phone;
+
+  List<Vehicle> _vehicles(BuildContext context) {
+    final state = context.read<MonthlyPassesCubit>().state;
+    return state is MonthlyPassesLoaded ? state.vehicles : const [];
+  }
+
+  Map<int, int> _tariffs(BuildContext context) {
+    final state = context.read<MonthlyPassesCubit>().state;
+    return state is MonthlyPassesLoaded
+        ? state.monthlyTariffByCategory
+        : const {};
+  }
 
   Future<void> _notify(BuildContext context) async {
     if (whatsappAutoEnabled(context)) {
@@ -520,6 +535,8 @@ class _MonthlyPassTile extends StatelessWidget {
         context: context,
         builder: (_) => MonthlyPassDialog(
           existing: monthlyPass,
+          vehicles: _vehicles(context),
+          monthlyTariffs: _tariffs(context),
           onSave: (draft) => cubit.update(
             UpdateMonthlyPassCommand(
               id: monthlyPass.id!,

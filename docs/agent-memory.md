@@ -13,7 +13,7 @@ Last updated: 2026-11-03 (statement timeouts, CI release APK, audit fixes
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0068` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 972 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 975 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -45,6 +45,18 @@ Last updated: 2026-11-03 (statement timeouts, CI release APK, audit fixes
    `0024` (`current_lot_id`, lot CRUD, re-scoped policies/RPCs/reports,
    `report_revenue_all`), `0025` (offline replay lot capture via
    `resolve_lot`), `0026` (`list_lot_members`).
+
+## Monthly pass tariff (2026-11-05)
+
+- `MonthlyPassesCubit` now takes an optional `TariffRepository` (DI passes the
+  real one), loads tariffs with the vehicles and exposes
+  `monthlyTariffByCategory`/`monthlyTariffFor`. The pass dialog prefills the
+  amount from the active `monthly` tariff of the selected vehicle's category,
+  re-prefills when the vehicle changes and offers "Usar tarifa mensual (…)"
+  (editing keeps the saved amount until the button is used).
+- No schema change: the pass still stores its own amount; the tariff is the
+  source for the form, not a live dependency.
+- Test count: 975.
 
 ## Preference persistence (2026-11-05)
 
@@ -1032,7 +1044,7 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 ## Latest verification (2026-10-28)
 
-- `flutter test`: 972 passed (+1 live-stack integration skipped); `flutter
+- `flutter test`: 975 passed (+1 live-stack integration skipped); `flutter
   analyze` 152 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
 - `supabase/tests/run.sh` passed (migrations `0001`–`0067`); `e2e.sh` passed
