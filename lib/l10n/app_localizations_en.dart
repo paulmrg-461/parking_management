@@ -3031,4 +3031,16 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get helpUpdateBody =>
       'If a version notice appears, install the latest APK from your administrator; basic work keeps running until then.';
+
+  @override
+  String get diagnosticsClientNetwork => 'Client network';
+
+  @override
+  String get diagnosticsTimeouts => 'Timed-out requests';
+
+  @override
+  String get diagnosticsRetries => 'Automatic retries';
+
+  @override
+  String get diagnosticsFailedRequests => 'Failed requests';
 }

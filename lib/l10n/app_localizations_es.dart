@@ -3047,4 +3047,16 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get helpUpdateBody =>
       'Si aparece un aviso de versión, instala el APK más reciente que te entregue el administrador; la app seguirá funcionando para lo básico hasta entonces.';
+
+  @override
+  String get diagnosticsClientNetwork => 'Red del cliente';
+
+  @override
+  String get diagnosticsTimeouts => 'Tiempos de espera agotados';
+
+  @override
+  String get diagnosticsRetries => 'Reintentos automáticos';
+
+  @override
+  String get diagnosticsFailedRequests => 'Solicitudes fallidas';
 }

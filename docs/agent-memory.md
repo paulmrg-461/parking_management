@@ -13,7 +13,7 @@ Last updated: 2026-11-03 (statement timeouts, CI release APK, audit fixes
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0068` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 950 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 954 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -45,6 +45,18 @@ Last updated: 2026-11-03 (statement timeouts, CI release APK, audit fixes
    `0024` (`current_lot_id`, lot CRUD, re-scoped policies/RPCs/reports,
    `report_revenue_all`), `0025` (offline replay lot capture via
    `resolve_lot`), `0026` (`list_lot_members`).
+
+## Network resilience (2026-11-05)
+
+- `ResilientHttpClient` wraps Supabase's `httpClient`: 20 s per-request timeout
+  (storage uploads exempt), GET/HEAD retries on timeouts, `ClientException` and
+  502/503/504 with linear backoff (2 retries). Writes are **never** retried in
+  the transport; idempotency belongs to RPCs/outbox.
+- Counters (`NetworkMetrics`: timeouts/retries/failed, process-local) appear in
+  `/diagnostics` → "Client network". `setUp(NetworkMetrics.reset)` in tests.
+- Sentry is **not** wired yet: it needs a DSN/hosting decision; the existing
+  `ErrorReporter` + diagnostics counters are the current observability path.
+- Test count: 954.
 
 ## Help and version guard (2026-11-05)
 
@@ -950,7 +962,7 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 ## Latest verification (2026-10-28)
 
-- `flutter test`: 950 passed (+1 live-stack integration skipped); `flutter
+- `flutter test`: 954 passed (+1 live-stack integration skipped); `flutter
   analyze` 152 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
 - `supabase/tests/run.sh` passed (migrations `0001`–`0067`); `e2e.sh` passed

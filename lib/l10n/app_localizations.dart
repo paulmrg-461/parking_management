@@ -5467,6 +5467,30 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Si aparece un aviso de versión, instala el APK más reciente que te entregue el administrador; la app seguirá funcionando para lo básico hasta entonces.'**
   String get helpUpdateBody;
+
+  /// No description provided for @diagnosticsClientNetwork.
+  ///
+  /// In es, this message translates to:
+  /// **'Red del cliente'**
+  String get diagnosticsClientNetwork;
+
+  /// No description provided for @diagnosticsTimeouts.
+  ///
+  /// In es, this message translates to:
+  /// **'Tiempos de espera agotados'**
+  String get diagnosticsTimeouts;
+
+  /// No description provided for @diagnosticsRetries.
+  ///
+  /// In es, this message translates to:
+  /// **'Reintentos automáticos'**
+  String get diagnosticsRetries;
+
+  /// No description provided for @diagnosticsFailedRequests.
+  ///
+  /// In es, this message translates to:
+  /// **'Solicitudes fallidas'**
+  String get diagnosticsFailedRequests;
 }
 
 class _AppLocalizationsDelegate

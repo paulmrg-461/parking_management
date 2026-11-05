@@ -1,9 +1,11 @@
 import 'package:get_it/get_it.dart';
+import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/config/app_config.dart';
 import '../../core/storage/key_value_store.dart';
 import '../../core/lot/lot_context.dart';
+import '../../core/network/resilient_http_client.dart';
 import '../../core/storage/secure_supabase_storage.dart';
 import '../../features/auth/application/auth_cubit.dart';
 import '../../features/auth/infrastructure/auth_local_data_source.dart';
@@ -64,6 +66,7 @@ Future<void> _initSupabase(AppConfig config) async {
   final supabase = await Supabase.initialize(
     url: config.supabaseUrl,
     anonKey: config.supabaseAnonKey,
+    httpClient: ResilientHttpClient(http.Client()),
     authOptions: FlutterAuthClientOptions(
       localStorage: SecureSupabaseStorage(),
     ),

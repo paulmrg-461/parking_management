@@ -965,5 +965,9 @@
   "helpAutoLockTitle": "Auto-lock",
   "helpAutoLockBody": "If the app is idle it asks for the PIN. Change the timeout in Menu → Auto-lock (or the sidebar).",
   "helpUpdateTitle": "Update notice",
-  "helpUpdateBody": "If a version notice appears, install the latest APK from your administrator; basic work keeps running until then."
+  "helpUpdateBody": "If a version notice appears, install the latest APK from your administrator; basic work keeps running until then.",
+  "diagnosticsClientNetwork": "Client network",
+  "diagnosticsTimeouts": "Timed-out requests",
+  "diagnosticsRetries": "Automatic retries",
+  "diagnosticsFailedRequests": "Failed requests"
 }

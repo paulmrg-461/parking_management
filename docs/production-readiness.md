@@ -93,6 +93,8 @@ operational assumption changes.
       `SubmissionInProgress`; expected `Failure`s are not reported as crashes.
 - [x] CI compiles the Android debug APK as well as the release web bundle, so
       a Gradle/plugin break cannot ship unnoticed.
+- [x] HTTP timeouts and idempotent-read retries (`ResilientHttpClient`), with
+      process-local counters in `/diagnostics`.
 - [x] Friendly route fallback (`RouteErrorPage`) for unknown/deep-link paths.
 - [x] Server unreachable: localized error + retry on every list; offline banner
       in the shell; realtime falls back to refresh on focus.

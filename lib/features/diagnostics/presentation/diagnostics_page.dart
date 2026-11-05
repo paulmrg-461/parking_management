@@ -7,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/l10n/failure_messages.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/tokens.dart';
+import '../../../core/network/network_metrics.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/error_state.dart';
 import '../../../core/widgets/metric_card.dart';
@@ -235,6 +236,26 @@ class _Body extends StatelessWidget {
               ? Icons.check_circle_outline
               : Icons.bug_report_outlined,
           rows: const [],
+        ),
+        _Section(
+          title: l10n.diagnosticsClientNetwork,
+          icon: Icons.wifi_tethering,
+          rows: [
+            _Metric(
+              l10n.diagnosticsTimeouts,
+              '${NetworkMetrics.timeouts}',
+              warning: NetworkMetrics.timeouts > 0,
+            ),
+            _Metric(
+              l10n.diagnosticsRetries,
+              '${NetworkMetrics.retries}',
+            ),
+            _Metric(
+              l10n.diagnosticsFailedRequests,
+              '${NetworkMetrics.failed}',
+              warning: NetworkMetrics.failed > 0,
+            ),
+          ],
         ),
         if (errors.isEmpty)
           Padding(

@@ -1044,5 +1044,9 @@
   "helpAutoLockBody": "Si la app queda inactiva pide el PIN. Cambia el tiempo en Menú → Bloqueo automático (o en el sidebar).",
   "helpUpdateTitle": "Aviso de actualización",
   "helpUpdateBody": "Si aparece un aviso de versión, instala el APK más reciente que te entregue el administrador; la app seguirá funcionando para lo básico hasta entonces.",
-  "@helpResults": {"placeholders": {"count": {"type": "int"}}}
+  "@helpResults": {"placeholders": {"count": {"type": "int"}}},
+  "diagnosticsClientNetwork": "Red del cliente",
+  "diagnosticsTimeouts": "Tiempos de espera agotados",
+  "diagnosticsRetries": "Reintentos automáticos",
+  "diagnosticsFailedRequests": "Solicitudes fallidas"
 }

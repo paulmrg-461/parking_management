@@ -45,6 +45,12 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Hardened
 
+- Supabase traffic now goes through `ResilientHttpClient`: a 20 s timeout per
+  request (storage uploads exempt), automatic retries for idempotent
+  GET/HEAD on timeouts, connection errors and 502/503/504, and **no transport
+  retries for writes** (the RPC/outbox layer owns idempotency). Timeouts,
+  retries and failed requests are counted and shown in `/diagnostics` under
+  "Client network".
 - `tool/dev-up.sh` brings the whole demo up with one command (stack, migrations,
   public host, Chrome dev, LAN APK on the connected phone).
 - `0074_statement_timeouts.sql`: PostgREST roles get `statement_timeout`
