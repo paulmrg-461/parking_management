@@ -11,7 +11,8 @@ import 'models/parking_settings_dto.dart';
 abstract class ParkingSettingsRemoteDataSource {
   Future<ParkingSettings> fetch();
 
-  Future<ParkingSettings> patch(Map<String, dynamic> fields);
+  /// Updates the settings row of [lotId] (the active lot when `null`).
+  Future<ParkingSettings> patch(Map<String, dynamic> fields, {int? lotId});
 
   Future<ParkingSettings> uploadLogo(Uint8List bytes);
 
@@ -47,16 +48,19 @@ class SupabaseParkingSettingsRemoteDataSource
   }
 
   @override
-  Future<ParkingSettings> patch(Map<String, dynamic> fields) async {
+  Future<ParkingSettings> patch(
+    Map<String, dynamic> fields, {
+    int? lotId,
+  }) async {
     try {
-      final lotId = _lots.activeLotId;
-      if (lotId == null) {
-        throw StateError('Select a parking lot first');
-      }
+      final lot = lotId ?? _lotId;
+      // The header must match the filter: RLS reads `current_lot_id()` from
+      // it, so a replay for another site would otherwise update 0 rows.
       final row = await _client
           .from(_table)
           .update(fields)
-          .eq('lot_id', lotId)
+          .eq('lot_id', lot)
+          .setHeader('x-lot-id', '$lot')
           .select()
           .single();
       return ParkingSettingsDto.fromJson(row).toDomain();
@@ -77,21 +81,22 @@ class SupabaseParkingSettingsRemoteDataSource
   Future<ParkingSettings> uploadLogo(Uint8List bytes) async {
     try {
       final path = logoPathForLot(_lotId);
-      await _client.storage.from(_bucket).uploadBinary(
-        path,
-        bytes,
-        fileOptions: FileOptions(
-          contentType: _contentType(bytes),
-          upsert: true,
-        ),
-      );
+      await _client.storage
+          .from(_bucket)
+          .uploadBinary(
+            path,
+            bytes,
+            fileOptions: FileOptions(
+              contentType: _contentType(bytes),
+              upsert: true,
+            ),
+          );
       final row = await _client.rpc(
         'set_branding_logo',
         params: {'p_path': path},
       );
-      return ParkingSettingsDto.fromJson(
-        Map<String, dynamic>.from(row as Map),
-      ).toDomain();
+      return ParkingSettingsDto.fromJson(Map<String, dynamic>.from(row as Map))
+          .toDomain();
     } catch (error) {
       throw mapSupabaseError(error);
     }
@@ -110,9 +115,9 @@ class SupabaseParkingSettingsRemoteDataSource
   @override
   Future<Uint8List> fetchLogo() async {
     try {
-      return await _client.storage.from(_bucket).download(
-        logoPathForLot(_lotId),
-      );
+      return await _client.storage
+          .from(_bucket)
+          .download(logoPathForLot(_lotId));
     } catch (_) {
       // Missing/offline logo is not fatal: the repository falls back to null.
       throw const NetworkFailure('Logo unavailable');

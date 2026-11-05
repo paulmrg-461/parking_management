@@ -1,0 +1,12 @@
+[Unit]
+Description=Parking management stack healthcheck
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/parking
+EnvironmentFile=-/opt/parking/.env
+# Set the alert webhook here (Slack/Teams compatible) or in the unit override.
+Environment=HEALTHCHECK_WEBHOOK=
+ExecStart=/bin/sh /opt/parking/supabase/healthcheck.sh

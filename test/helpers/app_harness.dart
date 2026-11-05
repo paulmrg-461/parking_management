@@ -8,6 +8,7 @@ import 'package:parking_management/app/app.dart';
 import 'package:parking_management/app/di/injection.dart';
 import 'package:parking_management/core/network/connectivity_cubit.dart';
 import 'package:parking_management/core/l10n/locale_cubit.dart';
+import 'package:parking_management/core/security/auto_lock_cubit.dart';
 import 'package:parking_management/core/storage/key_value_store.dart';
 import 'package:parking_management/core/qr/qr_decoder.dart';
 import 'package:parking_management/core/sync/sync_status_cubit.dart';
@@ -71,6 +72,7 @@ Future<AuthCubit> pumpApp(
   FakeCheckOutRepository? dashboardRepository,
   LocaleCubit? localeCubit,
   ThemeCubit? themeCubit,
+  AutoLockCubit? autoLockCubit,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -127,6 +129,7 @@ Future<AuthCubit> pumpApp(
       lotsCubit: serviceLocator<LotsCubit>(),
       themeCubit: theme,
       localeCubit: localeCubit,
+      autoLockCubit: autoLockCubit,
     ),
   );
   await tester.pumpAndSettle();

@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
+
 import '../error/failure.dart';
 import '../network/connectivity_service.dart';
 import 'client_ref.dart';
@@ -13,13 +15,17 @@ import 'sync_outbox.dart';
 ///
 /// Policy per entry:
 /// - success → removed
-/// - [ServerFailure] (5xx/429/timeout) or unknown [Failure] → retried with
-///   exponential backoff (2^n s, capped at [maxBackoff]); dead-lettered after
-///   [maxAttempts]
+/// - [ServerFailure] (5xx/429/timeout/transient SQL) → retried with
+///   exponential backoff (2^n s, capped at [maxBackoff]); never dead-lettered
+///   (the server is down, the mutation is fine)
+/// - unknown [Failure] → same backoff, dead-lettered after [maxAttempts]
 /// - [ValidationFailure] (409/422/403/…) or unexpected error → dead-lettered
 ///   at once (a 403 must never stall the rest of the queue)
-/// - [NetworkFailure] / [AuthenticationFailure] → drain stops, entry untouched;
-///   the next connectivity event, login or manual retry flushes again
+/// - [NetworkFailure] → drain stops, entry untouched, and a retry timer is
+///   armed ([stallBackoffFor]: 15s → 30s → 60s) because a flaky link may not
+///   emit a connectivity event
+/// - [AuthenticationFailure] → drain stops, entry untouched; the next login
+///   or manual retry flushes again
 ///
 /// A dead letter never blocks the queue: the loop continues with the next
 /// entry. Concurrent [flush] calls share a single in-flight drain.
@@ -34,6 +40,8 @@ class SyncService {
 
   static const maxAttempts = 5;
   static const maxBackoff = Duration(minutes: 5);
+  static const stallBase = Duration(seconds: 15);
+  static const maxStallBackoff = Duration(seconds: 60);
   static const _idempotent = {MutationEntity.checkIn, MutationEntity.checkOut};
 
   final SyncOutbox _outbox;
@@ -43,6 +51,13 @@ class SyncService {
   StreamSubscription<bool>? _subscription;
   Timer? _retryTimer;
   Future<void>? _inFlight;
+  Duration? _retryDelay;
+  int _stalls = 0;
+  bool _stalled = false;
+
+  /// Delay of the armed retry timer, `null` when none is armed.
+  @visibleForTesting
+  Duration? get nextRetryIn => _retryDelay;
 
   /// Flushes now and whenever the device comes back online.
   void start() {
@@ -54,8 +69,13 @@ class SyncService {
     _kick();
   }
 
+  /// Fire-and-forget flush right after a mutation is queued, so a write that
+  /// failed on a flaky link is retried without waiting for an event.
+  void onEnqueued() => _kick();
+
   Future<void> dispose() async {
     _retryTimer?.cancel();
+    _retryDelay = null;
     await _subscription?.cancel();
     _subscription = null;
   }
@@ -83,10 +103,18 @@ class SyncService {
     return Duration(seconds: min(seconds, maxBackoff.inSeconds));
   }
 
+  /// [stallBase] doubled per consecutive network stall, capped at
+  /// [maxStallBackoff].
+  static Duration stallBackoffFor(int stalls) {
+    final seconds = stallBase.inSeconds * pow(2, min(stalls, 8)).toInt();
+    return Duration(seconds: min(seconds, maxStallBackoff.inSeconds));
+  }
+
   Future<void> _drain() async {
     if (!await _connectivity.isOnline()) {
       return;
     }
+    _stalled = false;
     for (final entry in await _outbox.listPending()) {
       if (_isDue(entry.value) && !await _attempt(await _withKey(entry))) {
         break;
@@ -125,8 +153,11 @@ class SyncService {
   Future<bool> _onFailure(OutboxEntry entry, Failure failure) async {
     switch (failure) {
       case ServerFailure():
-        await _retryLater(entry, failure.message);
-      case NetworkFailure() || AuthenticationFailure():
+        await _backOff(entry, failure.message);
+      case NetworkFailure():
+        _stalled = true;
+        return false;
+      case AuthenticationFailure():
         return false;
       case ValidationFailure():
         await _park(entry, failure.message);
@@ -137,11 +168,14 @@ class SyncService {
   }
 
   Future<void> _retryLater(OutboxEntry entry, String message) async {
-    final attempts = entry.value.attempts + 1;
-    if (attempts >= maxAttempts) {
+    if (entry.value.attempts + 1 >= maxAttempts) {
       return _park(entry, message);
     }
-    final next = _clock().add(backoffFor(attempts));
+    await _backOff(entry, message);
+  }
+
+  Future<void> _backOff(OutboxEntry entry, String message) async {
+    final next = _clock().add(backoffFor(entry.value.attempts + 1));
     await _outbox.replace(
       entry.key,
       entry.value.recordFailure(message, nextAttemptAt: next),
@@ -171,12 +205,34 @@ class SyncService {
 
   Future<void> _scheduleRetry() async {
     _retryTimer?.cancel();
+    final delay = _shorter(_stallDelay(), await _dueDelay());
+    _retryDelay = delay;
+    if (delay != null) {
+      _retryTimer = Timer(delay, _kick);
+    }
+  }
+
+  /// Consecutive network stalls grow the delay; a clean drain resets it.
+  Duration? _stallDelay() {
+    if (!_stalled) {
+      _stalls = 0;
+      return null;
+    }
+    return stallBackoffFor(_stalls++);
+  }
+
+  Future<Duration?> _dueDelay() async {
     final due = (await _outbox.listPending())
         .map((entry) => entry.value.nextAttemptAt)
         .whereType<DateTime>()
         .fold<DateTime?>(null, (a, b) => a == null || b.isBefore(a) ? b : a);
-    if (due != null) {
-      _retryTimer = Timer(due.difference(_clock()), _kick);
+    return due?.difference(_clock());
+  }
+
+  static Duration? _shorter(Duration? a, Duration? b) {
+    if (a == null || b == null) {
+      return a ?? b;
     }
+    return a < b ? a : b;
   }
 }

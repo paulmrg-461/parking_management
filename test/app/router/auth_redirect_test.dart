@@ -61,6 +61,13 @@ void main() {
       expect(authRedirect(_as(UserRole.operator), '/policies'), isNull);
     });
 
+    test('Success: operators can open the help center and settings', () {
+      expect(authRedirect(_as(UserRole.operator), '/help'), isNull);
+      expect(canAccess(UserRole.operator, '/help'), isTrue);
+      expect(authRedirect(_as(UserRole.operator), '/preferences'), isNull);
+      expect(canAccess(UserRole.operator, '/preferences'), isTrue);
+    });
+
     test('Security: the developer page is public', () {
       expect(authRedirect(const AuthUnauthenticated(), '/about'), isNull);
       expect(authRedirect(_as(UserRole.operator), '/about'), isNull);

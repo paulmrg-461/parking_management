@@ -14,9 +14,7 @@ void main() {
 
   setUp(() {
     repository = FakeReservationRepository([sampleReservation()]);
-    categories = FakeCategoryRepository(const [
-      Category(id: 2, name: 'car'),
-    ]);
+    categories = FakeCategoryRepository(const [Category(id: 2, name: 'car')]);
     cubit = ReservationsCubit(repository, categories);
   });
 
@@ -47,25 +45,29 @@ void main() {
     expect(state.lastAction, ReservationsAction.created);
   });
 
-  test('Failure: a full category is reported without dropping the list',
-      () async {
-    await cubit.load();
-    repository.writeError = const ValidationFailure(
-      'CategoryFullError',
-      'CategoryFullError',
-    );
+  test(
+    'Failure: a full category is reported without dropping the list',
+    () async {
+      await cubit.load();
+      repository.writeError = const ValidationFailure(
+        'CategoryFullError',
+        'CategoryFullError',
+      );
 
-    await cubit.create(
-      plate: 'XYZ999',
-      categoryId: 2,
-      until: DateTime.now().add(const Duration(hours: 1)),
-    );
+      await cubit.create(
+        plate: 'XYZ999',
+        categoryId: 2,
+        until: DateTime.now().add(const Duration(hours: 1)),
+      );
 
-    final state = cubit.state as ReservationsLoaded;
-    expect(state.reservations.single.plate, 'ABC123');
-    expect((state.submission as SubmissionFailed).failure?.code,
-        'CategoryFullError');
-  });
+      final state = cubit.state as ReservationsLoaded;
+      expect(state.reservations.single.plate, 'ABC123');
+      expect(
+        (state.submission as SubmissionFailed).failure?.code,
+        'CategoryFullError',
+      );
+    },
+  );
 
   test('Failure: an invalid plate never reaches the repository', () async {
     await cubit.load();
@@ -85,5 +87,54 @@ void main() {
 
     expect(repository.cancelledId, isNull);
     expect(cubit.state, isA<ReservationsInitial>());
+  });
+
+  group('committed mutation, failed refresh', () {
+    ReservationsLoaded loaded() => cubit.state as ReservationsLoaded;
+
+    test(
+      'Failure: a refresh failure after create still reports success',
+      () async {
+        await cubit.load();
+        repository.listError = const NetworkFailure('offline');
+
+        await cubit.create(
+          plate: 'XYZ999',
+          categoryId: 2,
+          until: DateTime.now().add(const Duration(hours: 1)),
+        );
+
+        expect(loaded().submission, isA<SubmissionSucceeded<Object?>>());
+        expect(loaded().lastAction, ReservationsAction.created);
+        expect(loaded().reservations.single.plate, 'ABC123');
+      },
+    );
+
+    test(
+      'Success: cancel reports success even when the refresh fails',
+      () async {
+        await cubit.load();
+        repository.listError = const NetworkFailure('offline');
+
+        await cubit.cancel(1);
+
+        expect(repository.cancelledId, 1);
+        expect(loaded().submission, isA<SubmissionSucceeded<Object?>>());
+        expect(loaded().lastAction, ReservationsAction.cancelled);
+      },
+    );
+
+    test(
+      'Security: a rejected cancel is a failure and keeps the list',
+      () async {
+        await cubit.load();
+        repository.writeError = const ValidationFailure('Forbidden');
+
+        await cubit.cancel(1);
+
+        expect(loaded().submission, isA<SubmissionFailed>());
+        expect(loaded().reservations, hasLength(1));
+      },
+    );
   });
 }

@@ -54,7 +54,8 @@ final class BrandingLoaded extends BrandingState {
 
 /// Root-level branding state: seeded from Hive at startup, refreshed from
 /// the backend when online. Never fails: a broken refresh keeps whatever is
-/// already on screen. An all-defaults record behaves like "unconfigured"
+/// already on screen for the active lot (a lot with nothing cached resets to
+/// the unconfigured state and the default currency). An all-defaults record behaves like "unconfigured"
 /// so first runs keep rendering the localized fallback.
 class BrandingCubit extends ResilientCubit<BrandingState> {
   BrandingCubit(this._repository) : super(const BrandingInitial());
@@ -63,22 +64,34 @@ class BrandingCubit extends ResilientCubit<BrandingState> {
 
   Future<void> load() async {
     final cached = await _repository.loadCached();
-    if (cached != null && cached != ParkingSettings.defaults()) {
-      Money.configure(Currency.fromCode(cached.currency));
-      emit(
-        BrandingLoaded(cached, logo: await _repository.loadLogo(cached.logoVersion)),
-      );
+    if (_isConfigured(cached)) {
+      await _show(cached!);
+    } else {
+      _reset();
     }
     try {
       final fresh = await _repository.load();
-      if (fresh != ParkingSettings.defaults()) {
-        Money.configure(Currency.fromCode(fresh.currency));
-        emit(
-          BrandingLoaded(fresh, logo: await _repository.loadLogo(fresh.logoVersion)),
-        );
+      if (_isConfigured(fresh)) {
+        await _show(fresh);
       }
     } on Failure {
-      // Keep whatever is on screen (seed or the initial state).
+      // Keep whatever is on screen (this lot's seed or the reset state).
     }
+  }
+
+  bool _isConfigured(ParkingSettings? settings) =>
+      settings != null && settings != ParkingSettings.defaults();
+
+  Future<void> _show(ParkingSettings settings) async {
+    Money.configure(Currency.fromCode(settings.currency));
+    final logo = await _repository.loadLogo(settings.logoVersion);
+    emit(BrandingLoaded(settings, logo: logo));
+  }
+
+  /// Nothing is known for the active lot (first run or a lot switch): never
+  /// keep the previous lot's name, logo or currency on screen.
+  void _reset() {
+    Money.configure(Currency.cop);
+    emit(const BrandingInitial());
   }
 }

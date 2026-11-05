@@ -26,20 +26,23 @@ void main() {
 
   tearDown(() => cubit.close());
 
-  test('Success: load seeds branding from the cache before any refresh', () async {
-    repository
-      ..cached = const ParkingSettings(name: 'Parqueadero Central')
-      ..logoBytes = Uint8List.fromList(const [1, 2]);
-    final emissions = <BrandingState>[];
-    final subscription = cubit.stream.listen(emissions.add);
+  test(
+    'Success: load seeds branding from the cache before any refresh',
+    () async {
+      repository
+        ..cached = const ParkingSettings(name: 'Parqueadero Central')
+        ..logoBytes = Uint8List.fromList(const [1, 2]);
+      final emissions = <BrandingState>[];
+      final subscription = cubit.stream.listen(emissions.add);
 
-    await cubit.load();
-    await subscription.cancel();
+      await cubit.load();
+      await subscription.cancel();
 
-    expect(emissions.first, isA<BrandingLoaded>());
-    expect(emissions.first.settingsOrNull?.name, 'Parqueadero Central');
-    expect(emissions.first.logoOrNull, isNotNull);
-  });
+      expect(emissions.first, isA<BrandingLoaded>());
+      expect(emissions.first.settingsOrNull?.name, 'Parqueadero Central');
+      expect(emissions.first.logoOrNull, isNotNull);
+    },
+  );
 
   test('Success: loading settings configures the ambient currency', () async {
     addTearDown(() => Money.configure(Currency.cop));
@@ -81,12 +84,15 @@ void main() {
     expect(loaded.logo, Uint8List.fromList(const [9, 9]));
   });
 
-  test('Success: an unconfigured record keeps the localized fallback', () async {
-    await cubit.load();
+  test(
+    'Success: an unconfigured record keeps the localized fallback',
+    () async {
+      await cubit.load();
 
-    expect(cubit.state, isA<BrandingInitial>());
-    expect(cubit.state.settingsOrNull, isNull);
-  });
+      expect(cubit.state, isA<BrandingInitial>());
+      expect(cubit.state.settingsOrNull, isNull);
+    },
+  );
 
   test('Failure: an offline first run keeps the initial state', () async {
     repository.loadError = const NetworkFailure('offline');
@@ -108,5 +114,57 @@ void main() {
     await cubit.load();
 
     expect(cubit.state.settingsOrNull?.name, 'Sede Sur');
+  });
+
+  group('lot switch', () {
+    tearDown(() => Money.configure(Currency.cop));
+
+    test(
+      'Failure: switching to an uncached lot while offline resets to COP',
+      () async {
+        repository
+          ..cached = _configured.copyWith(currency: 'USD')
+          ..settings = _configured.copyWith(currency: 'USD');
+        await cubit.load();
+        expect(Money.currency, Currency.usd);
+
+        repository
+          ..cached = null
+          ..loadError = const NetworkFailure('offline');
+        await cubit.load();
+
+        expect(cubit.state, const BrandingInitial());
+        expect(Money.currency, Currency.cop);
+      },
+    );
+
+    test(
+      'Security: an unconfigured lot never keeps the previous lot branding',
+      () async {
+        repository
+          ..cached = _configured.copyWith(currency: 'USD')
+          ..settings = _configured.copyWith(currency: 'USD');
+        await cubit.load();
+
+        repository
+          ..cached = null
+          ..settings = ParkingSettings.defaults();
+        await cubit.load();
+
+        expect(cubit.state.settingsOrNull, isNull);
+        expect(Money.currency, Currency.cop);
+      },
+    );
+
+    test('Success: switching to a configured lot shows its branding', () async {
+      repository
+        ..cached = null
+        ..settings = _configured.copyWith(name: 'Lot Two', currency: 'USD');
+
+      await cubit.load();
+
+      expect(cubit.state.settingsOrNull?.name, 'Lot Two');
+      expect(Money.currency, Currency.usd);
+    });
   });
 }

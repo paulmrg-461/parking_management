@@ -22,10 +22,7 @@ void main() {
     addTearDown(cubit.close);
     await tester.pumpWidget(
       testApp(
-        BlocProvider.value(
-          value: cubit,
-          child: const VehicleHistoryPage(),
-        ),
+        BlocProvider.value(value: cubit, child: const VehicleHistoryPage()),
       ),
     );
 
@@ -53,10 +50,7 @@ void main() {
     addTearDown(cubit.close);
     await tester.pumpWidget(
       testApp(
-        BlocProvider.value(
-          value: cubit,
-          child: const VehicleHistoryPage(),
-        ),
+        BlocProvider.value(value: cubit, child: const VehicleHistoryPage()),
       ),
     );
 
@@ -99,9 +93,7 @@ void main() {
     expect(find.text('rayon puerta'), findsOneWidget);
   });
 
-  testWidgets('Security: only admins see the blacklist action', (
-    tester,
-  ) async {
+  testWidgets('Security: only admins see the blacklist action', (tester) async {
     final repository = FakeVehicleHistoryRepository(history: sampleHistory());
     final cubit = VehicleHistoryCubit(repository);
     addTearDown(cubit.close);
@@ -209,7 +201,7 @@ void main() {
     await tester.tap(reprint);
     await tester.pumpAndSettle();
 
-    expect(find.text('Generar recibo'), findsOneWidget);
+    expect(find.text('Ver recibo'), findsOneWidget);
     // The summary rebuilds the same numbers as the original receipt.
     expect(
       find.descendant(
@@ -331,5 +323,68 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(charged, 'ABC123');
+  });
+
+  Future<void> pumpOpenWithPhone(WidgetTester tester, {Size? size}) async {
+    if (size != null) {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+    }
+    final cubit = VehicleHistoryCubit(
+      FakeVehicleHistoryRepository(
+        history: VehicleHistory(
+          plate: 'ABC123',
+          vehicleId: 1,
+          categoryName: 'car',
+          visits: 1,
+          totalSpent: 0,
+          openSessions: 1,
+          ownerPhone: '+57 300 111 2233',
+          sessions: [
+            VehicleHistorySession(
+              id: 9,
+              entryTime: DateTime.utc(2026, 10, 24, 8),
+              status: 'open',
+            ),
+          ],
+        ),
+      ),
+    );
+    addTearDown(cubit.close);
+    await tester.pumpWidget(
+      testApp(
+        BlocProvider.value(
+          value: cubit,
+          child: VehicleHistoryPage(
+            initialPlate: 'ABC123',
+            onCharge: (_, _) {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('A11y: session actions are 48 dp labelled targets', (
+    tester,
+  ) async {
+    await pumpOpenWithPhone(tester);
+
+    for (final tooltip in ['Cobrar en caja', 'Avisar que está listo']) {
+      final size = tester.getSize(find.byTooltip(tooltip));
+      expect(size.width, greaterThanOrEqualTo(48), reason: tooltip);
+      expect(size.height, greaterThanOrEqualTo(48), reason: tooltip);
+    }
+    await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+  });
+
+  testWidgets('Failure: the larger actions still fit a 360 dp phone', (
+    tester,
+  ) async {
+    await pumpOpenWithPhone(tester, size: const Size(360, 800));
+
+    expect(tester.takeException(), isNull);
+    expect(find.byTooltip('Cobrar en caja'), findsOneWidget);
   });
 }

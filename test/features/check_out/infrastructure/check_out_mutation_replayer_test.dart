@@ -47,7 +47,6 @@ class _FakeRemote implements CheckOutRemoteDataSource {
   Future<CheckOutPreview> preview(int sessionId) async =>
       CheckOutPreview(sessionId: sessionId, amount: 5000);
 
-
   @override
   Future<CheckOutReceipt> checkOut(
     int sessionId, {

@@ -32,6 +32,9 @@ void main() {
     expect(Money.parse('50'), 5000);
     expect(Money.input(5050), '50.50');
     expect(Money.major(5050), '50.50');
+    // Public pages format with the summary currency, not the ambient one.
+    expect(Money.formatAs('usd', 5050), r'US$50.50');
+    expect(Money.formatAs('EUR', 5000), r'$5.000');
   });
 
   test('Failure: empty or symbol-only input has no amount', () {

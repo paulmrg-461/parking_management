@@ -7,6 +7,148 @@ and the project aims at [Semantic Versioning](https://semver.org) once it
 publishes its first release. **The project is pre-1.0: there are no tagged
 releases yet; everything below is unreleased work on `feature/supabase`.**
 
+## [Unreleased] — 2026-11 (app reliability and operator UX)
+
+### Fixed
+- Device preferences (auto-lock, language, appearance, sidebar state) were lost
+  on a cold start: `HiveKeyValueStore.get` is synchronous and only reads open
+  boxes, and the `preferences` box was opened only on the first `put`. `init()`
+  now opens it, so auto-lock stays at the chosen value across app restarts.
+- Opening the API gateway root (`http://<lan-ip>:8017/`) no longer triggers a
+  Supabase Studio basic-auth prompt: it redirects (307) to the app on port 8080
+  of the same host, and Studio is published only on `127.0.0.1:3000`. API
+  routes are unchanged. (HTTP on the LAN still shows "not private"; production
+  uses HTTPS.)
+- Shift close reads counted cash in the site currency (USD no longer stored as cents).
+- Outbox retries after network/server failures (15s→30s→60s) instead of
+  stalling or dead-lettering; drains right after enqueue.
+- PostgREST 5xx, serialization/deadlock/timeout and `PGRST303` are retryable
+  or auth failures; a GoTrue sign-out surfaces the expired-session banner.
+- Offline settings edits replay into the lot they were made for; dashboard and
+  branding drop stale results after a lot switch.
+- Receipts carry cash received/change/card type; open sessions carry plate,
+  photo count and left keys (no full vehicles download).
+- Pass/reservation success survives a failed list refresh; queued check-out
+  receipts show the real plate and entry time; evidence names are deterministic.
+- Lost ticket charges `lost_ticket_amount` and disables the monthly-pass method.
+- Android release build: R8 keep rules for the optional ML Kit scripts.
+
+### Added
+
+- About copy now presents Paul as a **Systems Engineer with 7+ years in web and
+  mobile development**, explicitly including backend/database/infrastructure,
+  instead of "Flutter apps only"; English and Spanish updated.
+- Navigation cleanup: the sidebar's preference icon row is gone. The footer now
+  has **Ajustes** (language, appearance, auto-lock, help) and **Acerca de**
+  entries; the mobile drawer mirrors them. `PreferencesPage` lives at
+  `/preferences` and is available to operators. About now lists both
+  developers (Paul Realpe/DevPaul and Jimmy Realpe) with their sites.
+- The public evidence page now carries the site's identity and contact: name,
+  logo (public branding bucket URL), address/schedule, a **Call** button and a
+  direct **WhatsApp** button with a message prefilled with the plate. Data comes
+  in the `public-evidence` response (`lot` object), so the customer needs a
+  single request and no login.
+- Public evidence QR now shows the parked time and the price: `0077` adds
+  `public_session_summary(session, plate)` (plate-keyed, anon callable) with
+  duration, currency, current fare/charged amount and pass coverage; the
+  `public-evidence` function returns it and the public page renders two metric
+  cards ("Tiempo en el parqueadero" / "Valor estimado" or "Total cobrado").
+  `Money.formatAs` formats with the summary currency without changing the
+  ambient site currency.
+- Contract tests for the client/server JSON shapes (vehicle, user, category,
+  monthly pass, parking session, lot member) and domain parsers (public lot
+  profile, pass payments, today summary, session records, lots). Coverage
+  floors raised: global 78 %, domain 47 %, infrastructure 38 % (application
+  stays 90 %).
+- Help center (`/help`, operators included): searchable, localized how-tos for
+  opening a shift, charging, reprinting, reconciliation, cash movements,
+  check-in evidence, reservations, passes, offline work, auto-lock and update
+  notices. Reached from the drawer and the desktop sidebar.
+- Minimum app version (`0076_min_app_version.sql`): each site can set
+  `min_app_version` (validated `major.minor[.patch]`, exposed by
+  `public_lot_profile`). Older builds see a persistent, localized update banner
+  above the content instead of failing with contract mismatches.
+- Idle lock: after a configurable period without pointer/keyboard activity the
+  app hides behind a PIN screen (GoTrue re-login, 5 attempts then sign-out).
+  The timeout is a device preference (off/1/5/15/30 min, default 5) chosen from
+  the drawer or the desktop sidebar; the session and outbox are preserved.
+- Vehicles: admins can **edit** a vehicle's category, brand and color from the
+  list (plate stays immutable as the ticket/history key). The repository update
+  path existed but was unusable because `0075_vehicle_update_grant.sql` was
+  missing; the grant is added and RLS still restricts writes to admins.
+
+### Hardened
+
+- Ops: optional `BACKUP_REMOTE` offsite copy with `rclone` (job fails if the
+  copy fails), backup-age and disk warnings in `healthcheck.sh`, and systemd
+  units/timers for healthcheck, cron and nightly backups
+  (`docs/operations-systemd.md`).
+- Supabase traffic now goes through `ResilientHttpClient`: a 20 s timeout per
+  request (storage uploads exempt), automatic retries for idempotent
+  GET/HEAD on timeouts, connection errors and 502/503/504, and **no transport
+  retries for writes** (the RPC/outbox layer owns idempotency). Timeouts,
+  retries and failed requests are counted and shown in `/diagnostics` under
+  "Client network".
+- `tool/dev-up.sh` brings the whole demo up with one command (stack, migrations,
+  public host, Chrome dev, LAN APK on the connected phone).
+- `0074_statement_timeouts.sql`: PostgREST roles get `statement_timeout`
+  (15 s authenticated, 5 s anon) and `idle_in_transaction_session_timeout`
+  (30 s / 15 s), so a runaway request cannot pin a connection. The SQL suite
+  asserts the role settings.
+- CI also builds a **release** APK (tree-shaking/R8) after the debug build, so
+  release-only failures are caught before shipping.
+
+### Changed (UX)
+- Charge rows show a busy spinner, ignore double taps and are fully tappable.
+- Payment dialog: live total after discount, per-field errors, "Cobrar $X"
+  button, "Exacto" and banknote shortcuts for cash received.
+- Check-in: sticky submit bar, category chips (≤5), "Escanear placa", charge
+  shortcut when the plate is already inside; free bays open check-in for that bay.
+- Receipt summary prints in one tap; keyboard-safe cash count sheet and shift
+  dialogs; 48dp icon targets; slot cells scale with text size.
+
+## [Unreleased] — 2026-11 (SQL integrity fixes `0072`/`0073`)
+
+### Fixed
+
+- **Billing (`0072_billing_integrity.sql`)**: `fare_breakdown` rounds the stay
+  up to whole hours **once** (`ceil(total_secs / 3600)`) and spreads them over
+  the day/night buckets of each calendar day by largest remainder
+  (`allocate_billable_hours`, ties to the earliest bucket); the daily cap still
+  applies per day. 23:59→00:01, 23:30→00:30 and 17:58→18:03 (night start) now
+  bill one hour. Output shape unchanged.
+- Tariffs must belong to their category's lot (composite FK
+  `tariffs(category_id, lot_id) → categories(id, lot_id)`); `fare_breakdown`
+  only reads tariffs of the category's lot.
+- `has_pass` in `check_out`, `check_out_preview`, `slot_board` and
+  `open_sessions_view` only counts passes of the session's lot.
+- Lost ticket: the fee comes from the session lot's settings (was lot 1);
+  `gross = greatest(fare, lost_ticket_fee | daily tariff | 0)`; a
+  `monthly_pass` method is rejected with `LostTicketPassMethodError`.
+  `check_out_preview` adds `lost_ticket_amount` (minor units).
+- Offline exits older than 12 h raise `StaleExitTimeError`; the server close
+  time is stored in the new `parking_sessions.closed_recorded_at`.
+- **Shifts (`0072`/`0073`)**: `check_out`, `add_cash_movement` and
+  `register_pass_payment` attach only to the actor's **open** shift and lock it
+  `FOR SHARE`, so `close_shift` (`FOR UPDATE`) waits and counts them. Replays
+  after a close go to the current open shift, else to no shift.
+  `shift_totals` authorizes lot admins (`is_lot_admin`), fixing `list_shifts`
+  for them.
+- **Capacity (`0073`)**: `create_reservation` takes check-in's advisory locks
+  in the same order (group via `category_group(name)`, then category),
+  avoiding oversell and ABBA deadlocks.
+- **Passes (`0073`)**: `renew_monthly_passes` uses each lot's business date,
+  renews only passes whose `end_date` is before local today (a pass stays
+  valid on its last day) and keeps calendar-month periods
+  (`pass_period_months`); other periods keep their day count.
+- **Evidence (`0073`)**: `check_in` requires every photo/video path to be an
+  `evidence` object owned by the caller and not already referenced
+  (`EvidenceNotFoundError` / `EvidenceAlreadyUsedError`);
+  `evidence_photos(file_path)` is now unique.
+- **Notifications (`0073`)**: `close_shift` and `notify_session_event` format
+  amounts in the lot currency (`format_money`: `$5.000` COP, `US$1,234.50`
+  USD), matching `Money.format`.
+
 ## [Unreleased] — 2026-10
 
 ### Added

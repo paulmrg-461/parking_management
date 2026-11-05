@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../core/l10n/l10n.dart';
 import '../core/l10n/locale_cubit.dart';
+import '../core/security/auto_lock_cubit.dart';
 import '../core/network/connectivity_cubit.dart';
 import '../core/sync/sync_status_cubit.dart';
 import '../core/theme/app_theme.dart';
@@ -15,6 +16,7 @@ import '../features/auth/application/auth_cubit.dart';
 import '../features/lots/application/lots_cubit.dart';
 import '../features/settings/application/branding_cubit.dart';
 import 'router/app_router.dart';
+import 'lock/app_lock_gate.dart';
 import 'router/go_router_refresh_stream.dart';
 
 /// Root widget. Owns the router and its auth refresh listenable so both are
@@ -29,6 +31,7 @@ class ParkingApp extends StatefulWidget {
     this.lotsCubit,
     this.themeCubit,
     this.localeCubit,
+    this.autoLockCubit,
   });
 
   final AuthCubit authCubit;
@@ -43,6 +46,9 @@ class ParkingApp extends StatefulWidget {
 
   /// Device language preference; optional so tests stay on Spanish.
   final LocaleCubit? localeCubit;
+
+  /// Idle-lock policy; optional so widget tests never get covered by it.
+  final AutoLockCubit? autoLockCubit;
 
   /// Drives the offline banner; optional so tests can omit it.
   final ConnectivityCubit? connectivityCubit;
@@ -91,6 +97,8 @@ class _ParkingAppState extends State<ParkingApp> {
           BlocProvider<ThemeCubit>.value(value: theme),
         if (widget.localeCubit case final locale?)
           BlocProvider<LocaleCubit>.value(value: locale),
+        if (widget.autoLockCubit case final lock?)
+          BlocProvider<AutoLockCubit>.value(value: lock),
       ],
       child: SearchShortcuts(child: _withTheme(widget.themeCubit)),
     );
@@ -123,6 +131,12 @@ class _ParkingAppState extends State<ParkingApp> {
     darkTheme: AppTheme.dark(),
     themeMode: mode,
     locale: locale,
+    builder: widget.autoLockCubit == null
+        ? null
+        : (context, child) => AppLockGate(
+            cubit: widget.autoLockCubit!,
+            child: child ?? const SizedBox.shrink(),
+          ),
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
     routerConfig: _router,

@@ -13,6 +13,7 @@ import '../../../../core/utils/elapsed.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/error_state.dart';
+import '../../../../core/widgets/plate_text.dart';
 import '../../../../core/widgets/confirm_dialog.dart';
 import '../../../../core/widgets/status_chip.dart';
 import '../../../../core/widgets/submission_feedback.dart';
@@ -477,11 +478,11 @@ class _SpotMap extends StatelessWidget {
     if (spots.isEmpty) {
       return const SizedBox.shrink();
     }
-    final rows = spots.map((spot) => spot.row).reduce((a, b) => a > b ? a : b) + 1;
-    final cols = spots.map((spot) => spot.col).reduce((a, b) => a > b ? a : b) + 1;
-    final byCell = {
-      for (final spot in spots) '${spot.row}:${spot.col}': spot,
-    };
+    final rows =
+        spots.map((spot) => spot.row).reduce((a, b) => a > b ? a : b) + 1;
+    final cols =
+        spots.map((spot) => spot.col).reduce((a, b) => a > b ? a : b) + 1;
+    final byCell = {for (final spot in spots) '${spot.row}:${spot.col}': spot};
     return Padding(
       padding: const EdgeInsets.only(top: Space.sm),
       child: LayoutBuilder(
@@ -596,7 +597,8 @@ class _SpotCell extends StatelessWidget {
         : '${l10n.slotFree} ${spot.code}';
     return Semantics(
       label: semantics,
-      button: occupied,
+      // Free bays act too: they open check-in with the bay preselected.
+      button: active,
       excludeSemantics: true,
       child: Tooltip(
         message: semantics,
@@ -607,6 +609,8 @@ class _SpotCell extends StatelessWidget {
             borderRadius: BorderRadius.circular(Radii.sm),
             onTap: occupied
                 ? () => _showSession(context, session!, spotCode: spot.code)
+                : active
+                ? () => context.go('/check-in?spot=${spot.id}')
                 : null,
             child: content,
           ),
@@ -640,8 +644,7 @@ class _HoldsStrip extends StatelessWidget {
               ),
               onPressed: () => _showHold(context, hold, reservations),
             ),
-          if (board.holds.isEmpty)
-            Text(l10n.slotBoardNoHolds),
+          if (board.holds.isEmpty) Text(l10n.slotBoardNoHolds),
         ],
       ),
     );
@@ -678,6 +681,22 @@ class _SlotCell extends StatelessWidget {
   final int? index;
   final bool maintenance;
   final ReservationRepository? reservations;
+
+  static const _maxCellTextScale = 1.3;
+
+  /// Plates use the shared plate style at label size; status words stay
+  /// plain so the two never look alike.
+  TextStyle? _primaryStyle(BuildContext context, {required bool plate}) {
+    final theme = Theme.of(context);
+    final small = theme.textTheme.labelSmall;
+    final base = plate
+        ? PlateText.styleFor(
+            context,
+            PlateSize.medium,
+          ).copyWith(fontSize: small?.fontSize, letterSpacing: 0.5)
+        : small?.copyWith(fontWeight: FontWeight.w500);
+    return base?.copyWith(color: theme.colorScheme.onSurface);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -726,42 +745,43 @@ class _SlotCell extends StatelessWidget {
       padding: const EdgeInsets.all(2),
       child: CustomPaint(
         painter: maintenance ? _StripesPainter(scheme.outline) : null,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              maintenance ? Icons.build_circle_outlined : _groupIcon(group),
-              size: 18,
-              color: occupied ? scheme.onSurfaceVariant : tint,
-            ),
-            const SizedBox(height: 2),
-            Text(
-              detail ?? label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 10,
-                height: 1.1,
-                fontFamily: detail == null ? null : 'monospace',
-                fontWeight: detail == null ? FontWeight.w500 : FontWeight.w700,
-                color: scheme.onSurface,
+        // Large text settings grow the labels up to 1.3x, then the cell
+        // content scales down to fit instead of overflowing the fixed tile.
+        child: MediaQuery.withClampedTextScaling(
+          maxScaleFactor: _maxCellTextScale,
+          child: Center(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    maintenance
+                        ? Icons.build_circle_outlined
+                        : _groupIcon(group),
+                    size: 18,
+                    color: occupied ? scheme.onSurfaceVariant : tint,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    detail ?? label,
+                    maxLines: 1,
+                    textAlign: TextAlign.center,
+                    style: _primaryStyle(context, plate: detail != null),
+                  ),
+                  Text(
+                    detail == null
+                        ? (maintenance ? l10n.slotMaintenanceShort : '')
+                        : caption,
+                    maxLines: 1,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.labelSmall
+                        ?.copyWith(color: scheme.onSurfaceVariant),
+                  ),
+                ],
               ),
             ),
-            Text(
-              detail == null
-                  ? (maintenance ? l10n.slotMaintenanceShort : '')
-                  : caption,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 8,
-                height: 1.1,
-                color: scheme.onSurfaceVariant,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -778,7 +798,8 @@ class _SlotCell extends StatelessWidget {
     };
     final cell = Semantics(
       label: semantics,
-      button: occupied || held,
+      // Every cell acts: a free one starts a check-in.
+      button: !maintenance,
       excludeSemantics: true,
       child: Tooltip(
         message: semantics,
@@ -791,7 +812,9 @@ class _SlotCell extends StatelessWidget {
                 ? () => _showSession(context, session!)
                 : held
                 ? () => _showHold(context, hold!, reservations)
-                : null,
+                : maintenance
+                ? null
+                : () => context.go('/check-in'),
             child: content,
           ),
         ),
@@ -811,11 +834,8 @@ Future<void> _showSession(
     context: context,
     showDragHandle: true,
     isScrollControlled: true,
-    builder: (_) => _SessionSheet(
-      session: session,
-      cubit: cubit,
-      spotCode: spotCode,
-    ),
+    builder: (_) =>
+        _SessionSheet(session: session, cubit: cubit, spotCode: spotCode),
   );
 }
 
@@ -968,14 +988,8 @@ class _SheetTitle extends StatelessWidget {
   final String text;
 
   @override
-  Widget build(BuildContext context) => Semantics(
-    header: true,
-    child: Text(
-      text,
-      style: Theme.of(context).textTheme.headlineSmall
-          ?.copyWith(fontFamily: 'monospace'),
-    ),
-  );
+  Widget build(BuildContext context) =>
+      Semantics(header: true, child: PlateText(text, size: PlateSize.large));
 }
 
 /// Session details with a one-second clock (elapsed time) and a fare preview

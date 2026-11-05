@@ -85,6 +85,21 @@ if [ "${idempotency:-0}" -gt 100000 ] 2>/dev/null; then
   warn "$idempotency idempotency keys stored (purge job not running?)"
 fi
 
+echo "== backups and disk"
+latest=$(ls -1dt backups/*/ 2>/dev/null | head -1 || true)
+if [ -z "$latest" ]; then
+  warn "no local backup found under backups/ (run supabase/backup.sh)"
+else
+  age_h=$(( ( $(date +%s) - $(stat -c %Y "$latest" 2>/dev/null || echo 0) ) / 3600 ))
+  if [ "$age_h" -gt 26 ]; then
+    warn "latest backup is ${age_h}h old (expected < 26h): $latest"
+  fi
+fi
+disk=$(df -P . 2>/dev/null | awk 'NR == 2 { gsub("%", "", $5); print $5 }')
+if [ -n "${disk:-}" ] && [ "$disk" -ge 90 ] 2>/dev/null; then
+  warn "disk usage is ${disk}% (clean old backups/evidence or grow the volume)"
+fi
+
 echo "== summary"
 echo "failures: $failures, warnings: $warnings"
 

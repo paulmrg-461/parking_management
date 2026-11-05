@@ -16,7 +16,7 @@ flowchart TB
   subgraph vm["VM (Ubuntu 24.04)"]
     proxy["Caddy / Nginx<br/>:80 :443 (TLS)"]
     gw["Envoy gateway<br/>127.0.0.1:8000"]
-    studio["Studio (only via proxy + basic auth)"]
+    studio["Studio (loopback / SSH tunnel only)"]
     auth[GoTrue]
     rest[PostgREST]
     storage[Storage API]
@@ -132,7 +132,8 @@ Caddy is the least-effort option (automatic Let's Encrypt certificates):
 parking.example.com {
     encode zstd gzip
 
-    # Studio lives behind the same host: keep it private.
+    # Studio is bound to 127.0.0.1:3000 in compose: reach it through an SSH
+    # tunnel instead of publishing it.
     @studio path /project* /api/mcp* /mcp*
     basic_auth @studio {
         admin <bcrypt-hash>       # caddy hash-password

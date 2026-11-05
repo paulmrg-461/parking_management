@@ -113,4 +113,58 @@ void main() {
 
     expect(loaded().submission, const SubmissionIdle());
   });
+
+  group('committed mutation, failed refresh', () {
+    test('Failure: a refresh failure after create still reports success and keeps the list', () async {
+      await cubit.load();
+      repository.listError = const NetworkFailure('offline');
+
+      await cubit.create(
+        CreateMonthlyPassCommand(
+          vehicleId: 1,
+          startDate: DateTime(2026, 2),
+          endDate: DateTime(2026, 2, 28),
+          amount: 90000,
+        ),
+      );
+
+      expect(loaded().submission, isA<SubmissionSucceeded<Object?>>());
+      expect(loaded().lastAction, MonthlyPassAction.created);
+      expect(loaded().monthlyPasses, [_pass]);
+    });
+
+    test(
+      'Success: success is emitted before the lists are refreshed',
+      () async {
+        await cubit.load();
+        final states = <MonthlyPassesState>[];
+        final sub = cubit.stream.listen(states.add);
+
+        await cubit.delete(1);
+        await sub.cancel();
+
+        final loadedStates = states.whereType<MonthlyPassesLoaded>().toList();
+        final firstSuccess = loadedStates.indexWhere(
+          (s) => s.submission is SubmissionSucceeded,
+        );
+        expect(firstSuccess, greaterThan(0));
+        expect(
+          loadedStates.last.submission,
+          isA<SubmissionSucceeded<Object?>>(),
+        );
+      },
+    );
+
+    test(
+      'Security: a rejected mutation is a failure, never a success',
+      () async {
+        await cubit.load();
+        repository.writeError = const ValidationFailure('Forbidden');
+
+        await cubit.delete(1);
+
+        expect(loaded().submission, isA<SubmissionFailed>());
+      },
+    );
+  });
 }

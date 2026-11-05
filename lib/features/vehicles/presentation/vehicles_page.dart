@@ -23,6 +23,7 @@ import '../../categories/domain/entities/category.dart';
 import '../application/vehicles_cubit.dart';
 import '../domain/entities/vehicle.dart';
 import 'create_vehicle_dialog.dart';
+import 'edit_vehicle_dialog.dart';
 
 class VehiclesPage extends StatefulWidget {
   const VehiclesPage({super.key, this.onCheckIn});
@@ -50,7 +51,7 @@ class _VehiclesPageState extends State<VehiclesPage> {
       onRefresh: context.read<VehiclesCubit>().load,
       body: SubmissionListener<VehiclesCubit, VehiclesState>(
         submissionOf: _submissionOf,
-        onSuccess: _onCreated,
+        onSuccess: _onSuccess,
         child: Column(
           children: [
             Padding(
@@ -124,15 +125,20 @@ class _VehiclesPageState extends State<VehiclesPage> {
   static Submission? _submissionOf(VehiclesState state) =>
       state is VehiclesLoaded ? state.submission : null;
 
-  void _onCreated(BuildContext context, Object? result) {
+  void _onSuccess(BuildContext context, Object? result) {
     if (result is! Vehicle) {
       return;
     }
     final l10n = context.l10n;
-    final message = l10n.vehicleCreated(result.plate);
+    final state = context.read<VehiclesCubit>().state;
+    final action = state is VehiclesLoaded ? state.lastAction : null;
+    if (action == VehiclesAction.updated) {
+      showInfoSnack(context, l10n.vehicleUpdated(result.plate));
+      return;
+    }
     showActionSnack(
       context,
-      message: message,
+      message: l10n.vehicleCreated(result.plate),
       actionLabel: l10n.vehicleCheckInAction,
       onAction: () => (widget.onCheckIn ?? _checkInWithPlate)(
         context,
@@ -208,13 +214,34 @@ class _VehicleTile extends StatelessWidget {
     ?vehicle.color,
   ].where((part) => part.isNotEmpty).join(' · ');
 
+  void _edit(BuildContext context) {
+    if (vehicle.id == null) {
+      return;
+    }
+    final cubit = context.read<VehiclesCubit>();
+    final state = cubit.state;
+    final categories = state is VehiclesLoaded
+        ? state.categories
+        : const <Category>[];
+    showDialog<void>(
+      context: context,
+      builder: (_) => EditVehicleDialog(
+        existing: vehicle,
+        categories: categories,
+        onSave: cubit.update,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final scheme = Theme.of(context).colorScheme;
     return Card(
       margin: const EdgeInsets.fromLTRB(Space.md, Space.xs, Space.md, Space.xs),
       clipBehavior: Clip.antiAlias,
       child: ListTile(
+        onTap: () => _edit(context),
         leading: CircleAvatar(
           backgroundColor: scheme.surfaceContainerHighest,
           child: Icon(
@@ -225,10 +252,22 @@ class _VehicleTile extends StatelessWidget {
         ),
         title: PlateText(vehicle.plate),
         subtitle: Text(_subtitle),
-        trailing: AppIconButton(
-          icon: Icons.delete_outline,
-          tooltip: context.l10n.vehicleDeleteTooltip(vehicle.plate),
-          onPressed: vehicle.id == null ? null : () => _confirmDelete(context),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppIconButton(
+              icon: Icons.edit_outlined,
+              tooltip: l10n.vehicleEditTooltip(vehicle.plate),
+              onPressed: vehicle.id == null ? null : () => _edit(context),
+            ),
+            AppIconButton(
+              icon: Icons.delete_outline,
+              tooltip: l10n.vehicleDeleteTooltip(vehicle.plate),
+              onPressed: vehicle.id == null
+                  ? null
+                  : () => _confirmDelete(context),
+            ),
+          ],
         ),
       ),
     );

@@ -6,7 +6,8 @@ import '../../../core/lot/lot_session.dart';
 import '../domain/entities/parking_settings.dart';
 
 abstract class ParkingSettingsLocalDataSource {
-  Future<void> upsert(ParkingSettings settings);
+  /// Caches [settings] for [lotId] (the active lot when `null`).
+  Future<void> upsert(ParkingSettings settings, {int? lotId});
 
   Future<ParkingSettings?> read();
 
@@ -26,7 +27,7 @@ class HiveParkingSettingsLocalDataSource
 
   /// One cached record per lot: switching sites must never render the other
   /// site's branding offline.
-  String get _key => 'current_${_lots.activeLotId ?? 1}';
+  String _key([int? lotId]) => 'current_${lotId ?? _lots.activeLotId ?? 1}';
 
   String _logoKey(int version) => '${_lots.activeLotId ?? 1}_$version';
 
@@ -38,11 +39,11 @@ class HiveParkingSettingsLocalDataSource
   Future<Box<Uint8List>> _logoBox() => Hive.openBox<Uint8List>(_logoBoxName);
 
   @override
-  Future<void> upsert(ParkingSettings settings) async =>
-      (await _box()).put(_key, settings);
+  Future<void> upsert(ParkingSettings settings, {int? lotId}) async =>
+      (await _box()).put(_key(lotId), settings);
 
   @override
-  Future<ParkingSettings?> read() async => (await _box()).get(_key);
+  Future<ParkingSettings?> read() async => (await _box()).get(_key());
 
   /// Keyed by `logo_version`, so a stale byte set can never be mistaken
   /// for the current logo.

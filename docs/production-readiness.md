@@ -26,6 +26,8 @@ operational assumption changes.
       (2 vCPU/4 GB minimum, 4/8/80–160 recommended, disk formula for evidence).
 - [x] Postgres pooler enabled for many app clients; PostgREST and Realtime
       behind the gateway.
+- [x] Host timers (healthcheck 5 min, cron 1 min, backup 03:15) ship in
+      `tool/systemd/` with [`operations-systemd.md`](operations-systemd.md).
 - [x] `BACKUP_KEEP=N` prunes older archives (0 = keep all); the dump is
       validated with
       `pg_restore --list`, `SHA256SUMS` is written next to the archive and
@@ -93,6 +95,8 @@ operational assumption changes.
       `SubmissionInProgress`; expected `Failure`s are not reported as crashes.
 - [x] CI compiles the Android debug APK as well as the release web bundle, so
       a Gradle/plugin break cannot ship unnoticed.
+- [x] HTTP timeouts and idempotent-read retries (`ResilientHttpClient`), with
+      process-local counters in `/diagnostics`.
 - [x] Friendly route fallback (`RouteErrorPage`) for unknown/deep-link paths.
 - [x] Server unreachable: localized error + retry on every list; offline banner
       in the shell; realtime falls back to refresh on focus.
@@ -138,8 +142,8 @@ operational assumption changes.
   asks for them); CI currently covers web/Android plus the SQL and live-stack
   e2e suites.
 - Coverage is measured by `flutter test --coverage` and gated in CI with
-  `tool/check_coverage.dart`: global ≥ 70 %, application ≥ 90 %, domain ≥ 35 %,
-  infrastructure ≥ 25 %. The layer floors are a ratchet, not the final target
+  `tool/check_coverage.dart`: global ≥ 78 %, application ≥ 90 %, domain ≥ 47 %,
+  infrastructure ≥ 38 %. The layer floors are a ratchet, not the final target
   (AGENTS asks 90 % on domain/infrastructure mappers).
 - `idempotency_keys` is purged by cron; confirm the cron is actually running on
   the host (`select * from cron.job` when `pg_cron` is available).

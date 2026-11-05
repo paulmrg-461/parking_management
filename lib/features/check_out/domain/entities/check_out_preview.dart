@@ -16,6 +16,7 @@ class CheckOutPreview extends Equatable {
     this.nightlyRate,
     this.dailyRate,
     this.dailyCapApplied = false,
+    this.lostTicketAmount,
   });
 
   final int sessionId;
@@ -39,6 +40,11 @@ class CheckOutPreview extends Equatable {
   /// At least one day was billed at the daily cap instead of per hour.
   final bool dailyCapApplied;
 
+  /// What a lost ticket would charge right now (minor units): the larger of
+  /// the regular fare and the lot's lost-ticket fee / daily tariff. `null`
+  /// on servers that predate `lost_ticket_amount`.
+  final int? lostTicketAmount;
+
   Duration get elapsed => Duration(seconds: elapsedSeconds);
 
   factory CheckOutPreview.fromJson(Map<String, dynamic> json) =>
@@ -54,6 +60,7 @@ class CheckOutPreview extends Equatable {
         nightlyRate: (json['nightly_rate'] as num?)?.toInt(),
         dailyRate: (json['daily_rate'] as num?)?.toInt(),
         dailyCapApplied: json['daily_cap_applied'] == true,
+        lostTicketAmount: (json['lost_ticket_amount'] as num?)?.toInt(),
       );
 
   @override
@@ -69,5 +76,6 @@ class CheckOutPreview extends Equatable {
     nightlyRate,
     dailyRate,
     dailyCapApplied,
+    lostTicketAmount,
   ];
 }

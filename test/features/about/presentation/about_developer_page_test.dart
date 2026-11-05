@@ -9,7 +9,7 @@ void main() {
   ) async {
     await tester.pumpWidget(testApp(const AboutDeveloperPage()));
 
-    expect(find.text('DevPaul'), findsOneWidget);
+    expect(find.text('DevPaul'), findsWidgets);
     expect(find.textContaining('Paul Realpe'), findsWidgets);
     // Hero chip + app card footer + page footer.
     expect(find.text('Hecho por DevPaul'), findsNWidgets(3));
@@ -18,6 +18,12 @@ void main() {
       findsOneWidget,
     );
     expect(find.bySemanticsLabel('Logotipo de DevPaul'), findsOneWidget);
+    expect(find.text('Desarrolladores'), findsOneWidget);
+    expect(find.text('Paul Realpe'), findsWidgets);
+    expect(find.text('Jimmy Realpe'), findsOneWidget);
+    expect(find.textContaining('7 años'), findsOneWidget);
+    expect(find.textContaining('backend'), findsOneWidget);
+    expect(find.text('DevPaul'), findsWidgets);
   });
 
   testWidgets('Success: a link opens the developer profile', (tester) async {
@@ -33,10 +39,33 @@ void main() {
       ),
     );
 
+    await tester.ensureVisible(find.text('Sitio web'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Sitio web'));
     await tester.pumpAndSettle();
 
     expect(opened, Uri.parse('https://devpaul.pro'));
+  });
+
+  testWidgets('Success: the team card opens Jimmy profile', (tester) async {
+    Uri? opened;
+    await tester.pumpWidget(
+      testApp(
+        AboutDeveloperPage(
+          launch: (uri) async {
+            opened = uri;
+            return true;
+          },
+        ),
+      ),
+    );
+
+    await tester.ensureVisible(find.text('Jimmy Realpe'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Jimmy Realpe'));
+    await tester.pumpAndSettle();
+
+    expect(opened, Uri.parse('https://jimmy-realpe.web.app'));
   });
 
   testWidgets('Failure: a link that cannot open reports it', (tester) async {

@@ -51,6 +51,23 @@ void main() {
     expect(find.text('carro · Mazda'), findsOneWidget);
   });
 
+  testWidgets('Success: an admin edits the vehicle details', (tester) async {
+    await pumpPage(tester);
+
+    await tester.tap(find.byTooltip('Editar vehículo ABC123'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('vehicle_edit_brand')),
+      'Mazda 3',
+    );
+    await tester.tap(find.text('Guardar'));
+    await tester.pumpAndSettle();
+
+    expect(vehicles.updated?.brand, 'Mazda 3');
+    expect(find.text('Vehículo ABC123 actualizado'), findsOneWidget);
+    expect(find.text('carro · Mazda 3'), findsOneWidget);
+  });
+
   testWidgets('Success: a confirmed delete removes the vehicle', (
     tester,
   ) async {

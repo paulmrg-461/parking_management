@@ -60,4 +60,32 @@ void main() {
     expect(preview.dayHours, 0);
     expect(preview.hourlyRate, isNull);
   });
+
+  group('lost ticket amount', () {
+    test('Success: lost_ticket_amount is parsed in minor units', () {
+      final preview = CheckOutPreview.fromJson(const {
+        'session_id': 1,
+        'amount': 6000,
+        'lost_ticket_amount': 30000,
+      });
+
+      expect(preview.lostTicketAmount, 30000);
+    });
+
+    test('Failure: an older server without the key yields null', () {
+      final preview = CheckOutPreview.fromJson(const {
+        'session_id': 1,
+        'amount': 6000,
+      });
+
+      expect(preview.lostTicketAmount, isNull);
+    });
+
+    test('Security: previews differing only in lost ticket amount differ', () {
+      const a = CheckOutPreview(sessionId: 1, amount: 0, lostTicketAmount: 1);
+      const b = CheckOutPreview(sessionId: 1, amount: 0, lostTicketAmount: 2);
+
+      expect(a, isNot(b));
+    });
+  });
 }

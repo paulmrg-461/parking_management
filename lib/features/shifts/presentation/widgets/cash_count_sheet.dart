@@ -69,11 +69,13 @@ class _CashCountSheetState extends State<CashCountSheet> {
     final total = _total;
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(
+        // Lifts the sheet above the keyboard so the last rows and the
+        // confirm button stay reachable while typing.
+        padding: EdgeInsets.fromLTRB(
           Space.md,
           Space.xs,
           Space.md,
-          Space.md,
+          Space.md + MediaQuery.viewInsetsOf(context).bottom,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -107,6 +109,7 @@ class _CashCountSheetState extends State<CashCountSheet> {
                       _DenominationRow(
                         denomination: denomination,
                         controller: _quantities[denomination]!,
+                        isLast: denomination == _denominations.last,
                         onChanged: (_) => setState(() {}),
                       ),
                   ],
@@ -120,9 +123,7 @@ class _CashCountSheetState extends State<CashCountSheet> {
                 onPressed: total <= 0
                     ? null
                     : () => Navigator.of(context).pop(total),
-                child: Text(
-                  l10n.cashCountUse(CopFormatter.format(total)),
-                ),
+                child: Text(l10n.cashCountUse(CopFormatter.format(total))),
               ),
             ),
           ],
@@ -137,11 +138,15 @@ class _DenominationRow extends StatelessWidget {
     required this.denomination,
     required this.controller,
     required this.onChanged,
+    this.isLast = false,
   });
 
   final int denomination;
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
+
+  /// The last field closes the keyboard; the others move to the next one.
+  final bool isLast;
 
   @override
   Widget build(BuildContext context) {
@@ -160,26 +165,35 @@ class _DenominationRow extends StatelessWidget {
           ),
           SizedBox(
             width: 96,
-            child: TextField(
-              key: Key('cash_qty_$denomination'),
-              controller: controller,
-              keyboardType: TextInputType.number,
-              textAlign: TextAlign.center,
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                LengthLimitingTextInputFormatter(4),
-              ],
-              decoration: const InputDecoration(
-                isDense: true,
-                border: OutlineInputBorder(),
+            // The row shows the denomination beside the field; screen readers
+            // need it on the field itself.
+            child: Semantics(
+              label: context.l10n.cashCountQuantity(
+                CopFormatter.format(denomination),
               ),
-              onChanged: onChanged,
+              child: TextField(
+                key: Key('cash_qty_$denomination'),
+                controller: controller,
+                keyboardType: TextInputType.number,
+                textInputAction: isLast
+                    ? TextInputAction.done
+                    : TextInputAction.next,
+                textAlign: TextAlign.center,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(4),
+                ],
+                decoration: const InputDecoration(border: OutlineInputBorder()),
+                onChanged: onChanged,
+              ),
             ),
           ),
           SizedBox(
             width: 96,
             child: Text(
-              CopFormatter.format(denomination * (int.tryParse(controller.text) ?? 0)),
+              CopFormatter.format(
+                denomination * (int.tryParse(controller.text) ?? 0),
+              ),
               textAlign: TextAlign.end,
               style: theme.textTheme.bodySmall?.copyWith(
                 fontFeatures: const [FontFeature.tabularFigures()],

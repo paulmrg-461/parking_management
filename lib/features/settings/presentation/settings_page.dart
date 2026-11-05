@@ -58,6 +58,7 @@ class _SettingsPageState extends State<SettingsPage> {
   late final TextEditingController _carOutOfService;
   late final TextEditingController _motoOutOfService;
   late final TextEditingController _legalPolicy;
+  late final TextEditingController _minVersion;
   String _currency = 'COP';
   final _identityKey = GlobalKey();
   final _spacesKey = GlobalKey();
@@ -89,6 +90,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _carOutOfService = TextEditingController();
     _motoOutOfService = TextEditingController();
     _legalPolicy = TextEditingController();
+    _minVersion = TextEditingController();
     unawaited(context.read<SettingsCubit>().load());
     unawaited(_loadSpotCounts());
   }
@@ -108,6 +110,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _carOutOfService.dispose();
     _motoOutOfService.dispose();
     _legalPolicy.dispose();
+    _minVersion.dispose();
     super.dispose();
   }
 
@@ -195,6 +198,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _motoOutOfService.text,
     _legalPolicy.text,
     _currency,
+    _minVersion.text,
     '$_whatsappAuto',
   ];
 
@@ -238,6 +242,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _carOutOfService.text = settings.carOutOfService.toString();
     _motoOutOfService.text = settings.motoOutOfService.toString();
     _legalPolicy.text = settings.legalPolicy;
+    _minVersion.text = settings.minAppVersion;
     _currency = settings.currency;
     _whatsappAuto = settings.whatsappAuto;
     _baseline = _snapshot();
@@ -478,6 +483,18 @@ class _SettingsPageState extends State<SettingsPage> {
                 setState(() => _currency = value);
               }
             },
+          ),
+          const SizedBox(height: Space.md),
+          TextFormField(
+            key: const Key('settings_min_app_version'),
+            controller: _minVersion,
+            keyboardType: TextInputType.text,
+            decoration: InputDecoration(
+              labelText: l10n.settingsMinVersion,
+              helperText: l10n.settingsMinVersionHint,
+              helperMaxLines: 3,
+            ),
+            validator: _version,
           ),
           const SizedBox(height: Space.lg),
           SectionHeader(
@@ -737,6 +754,7 @@ class _SettingsPageState extends State<SettingsPage> {
         motoOutOfService: int.tryParse(_motoOutOfService.text.trim()) ?? 0,
         legalPolicy: _legalPolicy.text.trim(),
         currency: _currency,
+        minAppVersion: _minVersion.text.trim(),
       ),
     );
   }
@@ -753,6 +771,16 @@ class _SettingsPageState extends State<SettingsPage> {
       return context.l10n.settingsOutOfServiceTooMany;
     }
     return null;
+  }
+
+  String? _version(String? value) {
+    final text = (value ?? '').trim();
+    if (text.isEmpty) {
+      return null;
+    }
+    return RegExp(r'^\d+\.\d+(\.\d+)?$').hasMatch(text)
+        ? null
+        : context.l10n.settingsMinVersionInvalid;
   }
 
   String? _capacity(String? value) {

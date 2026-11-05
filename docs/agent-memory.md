@@ -4,9 +4,8 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-10-29, branch `feature/supabase` (UI/UX pass across every
-module, dialogs, developer page, COP/USD currency, es/en language; HEAD
-`d51f015`).
+Last updated: 2026-11-03 (statement timeouts, CI release APK, audit fixes
+0072/0073, sync resilience, operator UX). Branch `feature/supabase`.
 
 ## Where we are
 
@@ -14,7 +13,7 @@ module, dialogs, developer page, COP/USD currency, es/en language; HEAD
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0068` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 839 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 972 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -46,6 +45,128 @@ module, dialogs, developer page, COP/USD currency, es/en language; HEAD
    `0024` (`current_lot_id`, lot CRUD, re-scoped policies/RPCs/reports,
    `report_revenue_all`), `0025` (offline replay lot capture via
    `resolve_lot`), `0026` (`list_lot_members`).
+
+## Preference persistence (2026-11-05)
+
+- Auto-lock/language/theme/sidebar are **device-local** in Hive
+  (`preferences/*`), not in Postgres. `KeyValueStore.get` is synchronous and
+  only reads **already-open** boxes; the store opened `preferences` lazily on
+  the first `put`, so a cold start silently reset everything to defaults
+  (auto-lock back to 5). `HiveKeyValueStore.init()` now opens the box before
+  any cubit restores. Covered by a real-Hive restart test.
+- Reinstalling the app or clearing data still resets these preferences (they
+  are not synced across devices; that is intentional).
+- Test count: 972.
+
+## Settings/about navigation (2026-11-05)
+
+- Replaced the sidebar's five preference icons with two footer links:
+  **Ajustes** (`/preferences`, operator route) and **Acerca de** (`/about`).
+  The drawer mirrors them plus Ayuda (also reachable from Ajustes) and logout.
+- `PreferencesPage` holds language, appearance and auto-lock with their pickers;
+  it uses `context.push` for Help/About. Tests pin `testApp` to Spanish, so
+  changing the language cubit there does not relabel the page.
+- About copy: Paul is a **Systems Engineer** with 7+ years in web/mobile plus
+  backend/database/infrastructure (not "Flutter only"); the developers card
+  lists Paul and Jimmy.
+- About shows a **Desarrolladores** card with Paul Realpe (DevPaul) and
+  **Jimmy Realpe** (`jimmy-realpe.web.app`), both using the injectable launcher.
+- Test count: 971.
+
+## Public QR contact (2026-11-05)
+
+- `public-evidence` now returns `lot` (id, name, phone, whatsapp, address,
+  schedule, `logo_url`). The logo is a **public** branding bucket URL built from
+  the request host (`/storage/v1/object/public/branding/<logo_path>`), so the
+  customer can load it without auth. Missing logo falls back to the parking icon.
+- The public page header shows logo + name + address/schedule, plus Call
+  (`tel:`) and WhatsApp (`wa.me` with the plate prefilled) buttons. The plate is
+  still the access key; contact data only appears after unlocking.
+- Live check: session 55/MJS368 returned the lot and a 200 logo URL.
+- Test count: 968.
+
+## Public QR summary (2026-11-05)
+
+- `0077_public_session_summary.sql` adds
+  `public_session_summary(p_session_id, p_plate)`: plate-keyed, `security
+  definer`, granted to **anon**; returns duration, currency, current fare (or
+  `amount_charged` when closed), `has_pass` and the fare breakdown. Wrong plate
+  or unknown session returns null.
+- `public-evidence` calls the RPC with the service key and includes `summary`
+  (failure never hides evidence). The public page shows two `MetricCard`s with
+  `Formatters.duration` and `Money.formatAs(currency, amount)`; open sessions
+  add "Puede cambiar hasta la salida".
+- SQL tests cover authenticated and anon execution plus the wrong-plate case.
+  A live call on session 55 (MJS368) returned duration 2349 s, COP 5000.
+- Test count: 967.
+
+## Quality ratchet (2026-11-05)
+
+- Contract tests for DTOs/domain parsers (`test/core/contracts`) plus the
+  coverage floors in `tool/check_coverage.dart`: global 78 %, application 90 %,
+  domain 47 %, infrastructure 38 % (measured 78.5 / 90.7 / 49.0 / 40.0). Raise
+  them when a layer improves; generated `.g.dart` and `l10n` stay ignored.
+- Test count: 966.
+
+## Network resilience (2026-11-05)
+
+- `ResilientHttpClient` wraps Supabase's `httpClient`: 20 s per-request timeout
+  (storage uploads exempt), GET/HEAD retries on timeouts, `ClientException` and
+  502/503/504 with linear backoff (2 retries). Writes are **never** retried in
+  the transport; idempotency belongs to RPCs/outbox.
+- Counters (`NetworkMetrics`: timeouts/retries/failed, process-local) appear in
+  `/diagnostics` → "Client network". `setUp(NetworkMetrics.reset)` in tests.
+- Sentry is **not** wired yet: it needs a DSN/hosting decision; the existing
+  `ErrorReporter` + diagnostics counters are the current observability path.
+- Test count: 954.
+
+## Help and version guard (2026-11-05)
+
+- `/help` (operator route) is a searchable help center built from localized
+  entries; search matches title **or body** (so short words like "arqueo" match
+  several articles), and a non-empty query auto-expands the matching tiles.
+  Entry points: drawer and sidebar.
+- `0076_min_app_version.sql` adds `parking_settings.min_app_version`
+  (`''` or `major.minor[.patch]`, check constraint) and exposes it from
+  `public_lot_profile`. `core/version/app_version.dart` compares numerically;
+  an empty/invalid minimum never blocks. `VersionBanner` in the shell shows the
+  localized warning when the build is older. Settings has the admin field.
+- Test count: 950.
+
+## Idle lock (2026-11-05)
+
+- `AutoLockCubit` (device preference `preferences/auto_lock_minutes`, default 5,
+  options 0/1/5/15/30) + `AppLockGate` wired through `MaterialApp.builder`.
+  Pointer and hardware-key activity reset the clock; a 15 s timer and app
+  resume call `check()`. The overlay only shows while signed in, and stays up
+  through `AuthLoading`/`AuthFailure` during a PIN attempt.
+- `LockScreen` re-authenticates with `AuthCubit.login(username, pin)` (no PIN
+  stored locally); 5 wrong attempts sign out. Sign-out from the overlay
+  releases it via the gate's auth listener.
+- Timeout is chosen from the drawer (`Auto-lock` row) or the desktop sidebar
+  (lock icon, bottom sheet); `AutoLockCubit.restore()` runs in the gate.
+- Tests: cubit clock/activity/disabled/persistence and gate unlock/wrong-PIN/
+  sign-out. Test count 939.
+
+## Vehicle editor (2026-11-03)
+
+- The vehicles list now exposes `EditVehicleDialog` (category/brand/color; plate
+  read-only) for admins. `VehiclesCubit` reports `lastAction` (created/updated)
+  so the page shows "actualizado" instead of the create/check-in prompt.
+- `0075_vehicle_update_grant.sql` adds the missing `UPDATE` grant on
+  `public.vehicles`; the `vehicles_admin_write` policy already limited writes to
+  admins (SQL test proves admins update 1 row, operators 0).
+- Test count: 931.
+
+## Production guards (2026-11-03)
+
+- `0074_statement_timeouts.sql` bounds PostgREST requests: authenticated
+  15 s / idle 30 s, anon 5 s / idle 15 s. Role settings live in `rolconfig`
+  and apply at login; `SET ROLE` does **not** re-apply them (assert via
+  `pg_roles.rolconfig`, not `current_setting`).
+- CI builds the **release** APK too (R8/tree-shaking); a local release build
+  passes (`app-release.apk`). R8 rules live in `android/app/proguard-rules.pro`.
+- Test count at this point: 930.
 
 ## UI kit pass (2026-10-28)
 
@@ -682,7 +803,8 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 ## Dev environment running (2026-10-29)
 
 - Backend: `docker compose up -d` from the repo root; all services healthy,
-  gateway/Studio on <http://localhost:8017> (`API_GW_HTTP_PORT` in `.env`);
+  gateway on <http://localhost:8017> (`API_GW_HTTP_PORT` in `.env`) and Studio
+  loopback-only on <http://localhost:3000>;
   migrations `0001`-`0068` applied.
 - Flutter web: `flutter run -d chrome --dart-define=SUPABASE_URL=http://localhost:8017
   --dart-define=SUPABASE_ANON_KEY=<ANON_KEY>` (log: `/tmp/opencode/flutter-web.log`).
@@ -704,6 +826,18 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
   it no longer needs adb after install. `tool/run-android.sh` defaults to LAN;
   `ANDROID_MODE=localhost` keeps the reverse mode. `tool/android-doctor.sh`
   prints device/host/port state. Reconnect adb only to reinstall.
+- **Gateway root / Studio (2026-11-05)**: opening `http://<lan-ip>:8017/` used
+  to proxy Supabase Studio through the global basic-auth filter, so browsers
+  asked for a username/password ("connection not private" is just HTTP on the
+  LAN). The root route now redirects (307, `port_redirect: 8080`) to the app on
+  the same host, with basic auth disabled; Studio is published only on
+  `127.0.0.1:3000`. API routes
+  (`/auth`, `/rest`, `/storage`, `/realtime`, `/functions`) are unchanged.
+- **One-command demo (2026-11-03)**: `sh tool/dev-up.sh` starts compose +
+  migrations, recreates the public host, starts Chrome dev (unless already
+  running) and installs/launches the LAN APK on the first adb device.
+  `ANDROID=0` skips the phone; `ANDROID_BUILD=1` rebuilds first. It prints the
+  LAN web/API URLs and the login.
 - **Evidence host**: `parking-evidence-web` is not a compose service; after a
   Docker/host restart recreate it with `sh tool/run-evidence-web.sh` (binds the
   LAN IP, since 127.0.0.1:8080 belongs to another project, `restart:
@@ -898,7 +1032,7 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 ## Latest verification (2026-10-28)
 
-- `flutter test`: 839 passed (+1 live-stack integration skipped); `flutter
+- `flutter test`: 972 passed (+1 live-stack integration skipped); `flutter
   analyze` 152 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
 - `supabase/tests/run.sh` passed (migrations `0001`–`0067`); `e2e.sh` passed

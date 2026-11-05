@@ -60,6 +60,8 @@ class CheckOutRepositoryImpl implements CheckOutRepository {
     String? lostTicketReason,
     String? cardType,
     int? cashReceived,
+    String? plate,
+    DateTime? entryTime,
   }) async {
     // Same key for the online attempt and any queued replay: a response lost
     // after the server committed must not become a dead letter on retry.
@@ -89,6 +91,8 @@ class CheckOutRepositoryImpl implements CheckOutRepository {
         lostTicketReason: lostTicketReason,
         cardType: cardType,
         cashReceived: cashReceived,
+        plate: plate,
+        entryTime: entryTime,
       );
     }
   }
@@ -107,6 +111,8 @@ class CheckOutRepositoryImpl implements CheckOutRepository {
     required String? lostTicketReason,
     required String? cardType,
     required int? cashReceived,
+    required String? plate,
+    required DateTime? entryTime,
   }) async {
     await _outbox.enqueue(
       PendingMutation(
@@ -130,17 +136,19 @@ class CheckOutRepositoryImpl implements CheckOutRepository {
         enqueuedAt: exitTime,
       ),
     );
-    // `plate`/`entryTime` are not known offline (this call only has
-    // `sessionId`); `CheckOutPage` never renders them when `pendingSync` is
-    // true, so a placeholder here is safe.
+    // The amount stays unknown (billing is backend-only), but the plate and
+    // entry time come from the open session so the summary/print is not
+    // blank; legacy callers without them fall back to placeholders.
     return CheckOutReceipt(
       id: sessionId,
-      plate: '',
-      entryTime: exitTime,
+      plate: plate ?? '',
+      entryTime: entryTime ?? exitTime,
       exitTime: exitTime,
       amountCharged: null,
       ticketNumber: null,
       paymentMethod: paymentMethod,
+      cardType: cardType,
+      cashReceived: cashReceived,
       discountAmount: discountAmount,
       discountReason: discountReason,
       lostTicket: lostTicket,

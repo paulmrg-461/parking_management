@@ -8,8 +8,6 @@ import '../../check_out/domain/entities/open_session.dart';
 import '../../check_out/domain/entities/slot_board.dart';
 import '../../check_out/domain/entities/today_summary.dart';
 import '../../check_out/domain/repositories/check_out_repository.dart';
-import '../../vehicles/domain/entities/vehicle.dart';
-import '../../vehicles/domain/repositories/vehicle_repository.dart';
 import '../../../core/state/resilient_cubit.dart';
 
 sealed class DashboardState extends Equatable {
@@ -31,7 +29,6 @@ final class DashboardLoaded extends DashboardState {
     this.today = TodaySummary.empty,
     this.capacity = CapacitySnapshot.empty,
     this.sessions = const [],
-    this.plates = const {},
     this.slotBoard = SlotBoard.empty,
   });
 
@@ -44,9 +41,8 @@ final class DashboardLoaded extends DashboardState {
   /// Space configuration (cars/pickups, motorcycles, keys) vs. what is inside.
   final CapacitySnapshot capacity;
 
-  /// First open sessions for the home list, with their plates.
+  /// First open sessions for the home list (each carries its plate).
   final List<OpenSession> sessions;
-  final Map<int, String> plates;
 
   /// Visual board (spaces, cars inside, holds).
   final SlotBoard slotBoard;
@@ -54,20 +50,18 @@ final class DashboardLoaded extends DashboardState {
   bool get isFull => totalCapacity > 0 && openSessions >= totalCapacity;
 
   String plateOf(OpenSession session) =>
-      plates[session.vehicleId] ?? 'Vehicle #${session.vehicleId}';
+      session.plate.isEmpty ? 'Vehicle #${session.vehicleId}' : session.plate;
 
   @override
-  List<Object?> get props =>
-      [
-        openSessions,
-        totalCapacity,
-        categories,
-        today,
-        capacity,
-        sessions,
-        plates,
-        slotBoard,
-      ];
+  List<Object?> get props => [
+    openSessions,
+    totalCapacity,
+    categories,
+    today,
+    capacity,
+    sessions,
+    slotBoard,
+  ];
 }
 
 final class DashboardFailure extends DashboardState {
@@ -81,71 +75,71 @@ final class DashboardFailure extends DashboardState {
 
 /// Operator/admin home summary: current occupancy. Asks for a single row
 /// and reads the count from `X-Total-Count`, so it stays cheap.
+///
+/// Lot-aware: every [load] takes a sequence token so a slower load started
+/// for the previous lot is dropped, and a failure right after a lot switch
+/// reports the failure instead of keeping the other lot's numbers.
 class DashboardCubit extends ResilientCubit<DashboardState> {
-  DashboardCubit(this._sessions, [this._vehicles])
+  DashboardCubit(this._sessions, [this._activeLot])
     : super(const DashboardLoading());
 
   final CheckOutRepository _sessions;
 
-  /// Optional: resolves the plates of the "inside" list.
-  final VehicleRepository? _vehicles;
+  /// Optional: the active lot id, to tell a refresh from a lot switch.
+  final int? Function()? _activeLot;
+  int _loadSeq = 0;
+  int? _loadedLot;
 
   Future<void> load() async {
-    if (state is! DashboardLoaded) {
+    final token = ++_loadSeq;
+    final lot = _activeLot?.call();
+    final sameLot = state is DashboardLoaded && lot == _loadedLot;
+    if (!sameLot) {
       emit(const DashboardLoading());
     }
     try {
-      final snapshot = await _sessions.occupancy();
-      // The summary is a nice-to-have: a failure keeps zeros, not an error.
-      final today = await _sessions
-          .todaySummary()
-          .catchError((Object _) => TodaySummary.empty);
-      final capacity = await _sessions
-          .capacitySnapshot()
-          .catchError((Object _) => CapacitySnapshot.empty);
-      final slotBoard = await _sessions
-          .slotBoard()
-          .catchError((Object _) => SlotBoard.empty);
-      final inside = await _inside();
-      _emit(
-        DashboardLoaded(
-          openSessions: snapshot.totalOpen,
-          totalCapacity: snapshot.totalCapacity,
-          categories: snapshot.byCategory,
-          today: today,
-          capacity: capacity,
-          sessions: inside.sessions,
-          plates: inside.plates,
-          slotBoard: slotBoard,
-        ),
-      );
+      final loaded = await _fetch();
+      if (token == _loadSeq) {
+        _loadedLot = lot;
+        _emit(loaded);
+      }
     } on Failure catch (failure) {
-      if (state is! DashboardLoaded) {
+      if (token == _loadSeq && !sameLot) {
         _emit(DashboardFailure(failure));
       }
     }
   }
 
-  /// First page of cars inside + the plate map; a failure keeps the home
-  /// useful with the counters only.
-  Future<({List<OpenSession> sessions, Map<int, String> plates})> _inside() async {
+  Future<DashboardLoaded> _fetch() async {
+    final snapshot = await _sessions.occupancy();
+    // The extras are nice-to-have: a failure keeps zeros, not an error.
+    final today = await _sessions.todaySummary().catchError(
+      (Object _) => TodaySummary.empty,
+    );
+    final capacity = await _sessions.capacitySnapshot().catchError(
+      (Object _) => CapacitySnapshot.empty,
+    );
+    final slotBoard = await _sessions.slotBoard().catchError(
+      (Object _) => SlotBoard.empty,
+    );
+    return DashboardLoaded(
+      openSessions: snapshot.totalOpen,
+      totalCapacity: snapshot.totalCapacity,
+      categories: snapshot.byCategory,
+      today: today,
+      capacity: capacity,
+      sessions: await _inside(),
+      slotBoard: slotBoard,
+    );
+  }
+
+  /// First page of cars inside (plates come with each session); a failure
+  /// keeps the home useful with the counters only.
+  Future<List<OpenSession>> _inside() async {
     try {
-      final page = await _sessions.listOpenSessions(offset: 0, limit: 5);
-      final vehicles = _vehicles;
-      if (vehicles == null || page.items.isEmpty) {
-        return (sessions: page.items, plates: const <int, String>{});
-      }
-      final vehiclePage = await vehicles.listPage(offset: 0, limit: 100);
-      final plates = <int, String>{
-        for (final Vehicle vehicle in vehiclePage.items)
-          if (vehicle.id != null) vehicle.id!: vehicle.plate,
-      };
-      return (sessions: page.items, plates: plates);
+      return (await _sessions.listOpenSessions(offset: 0, limit: 5)).items;
     } catch (_) {
-      return (
-        sessions: const <OpenSession>[],
-        plates: const <int, String>{},
-      );
+      return const <OpenSession>[];
     }
   }
 

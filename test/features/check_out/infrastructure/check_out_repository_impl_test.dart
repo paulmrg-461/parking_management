@@ -52,7 +52,6 @@ class _FakeRemote implements CheckOutRemoteDataSource {
   Future<CheckOutPreview> preview(int sessionId) async =>
       CheckOutPreview(sessionId: sessionId, amount: 5000);
 
-
   @override
   Future<CheckOutReceipt> checkOut(
     int sessionId, {
@@ -90,24 +89,31 @@ void main() {
     ticketNumber: 'TCK-000001',
   );
 
-  test('Success: checkOut sends an Idempotency-Key but no clientExitTime', () async {
-    final remote = _FakeRemote(receiptToReturn: receipt);
-    final repository = CheckOutRepositoryImpl(remote, FakeSyncOutbox(), LotSession());
+  test(
+    'Success: checkOut sends an Idempotency-Key but no clientExitTime',
+    () async {
+      final remote = _FakeRemote(receiptToReturn: receipt);
+      final repository = CheckOutRepositoryImpl(
+        remote,
+        FakeSyncOutbox(),
+        LotSession(),
+      );
 
-    final result = await repository.checkOut(
-      1,
-      paymentMethod: 'card',
-      discountAmount: 1000,
-      discountReason: 'cortesia',
-    );
+      final result = await repository.checkOut(
+        1,
+        paymentMethod: 'card',
+        discountAmount: 1000,
+        discountReason: 'cortesia',
+      );
 
-    expect(result, receipt);
-    expect(remote.clientExitTimeUsed, isNull);
-    expect(remote.idempotencyKeyUsed, isNotEmpty);
-    expect(remote.paymentMethodUsed, 'card');
-    expect(remote.discountAmountUsed, 1000);
-    expect(remote.discountReasonUsed, 'cortesia');
-  });
+      expect(result, receipt);
+      expect(remote.clientExitTimeUsed, isNull);
+      expect(remote.idempotencyKeyUsed, isNotEmpty);
+      expect(remote.paymentMethodUsed, 'card');
+      expect(remote.discountAmountUsed, 1000);
+      expect(remote.discountReasonUsed, 'cortesia');
+    },
+  );
 
   test('Failure: NetworkFailure queues a checkOut/close mutation and returns a pending receipt instead of rethrowing', () async {
     final remote = _FakeRemote(error: const NetworkFailure('offline'));
@@ -194,4 +200,66 @@ void main() {
       expect(outbox.enqueued, isEmpty);
     },
   );
+
+  group('queued receipt', () {
+    test('Success: an offline check-out receipt carries the real plate and entry time', () async {
+      final repository = CheckOutRepositoryImpl(
+        _FakeRemote(error: const NetworkFailure('offline')),
+        FakeSyncOutbox(),
+        LotSession(),
+      );
+      final entry = DateTime(2026, 1, 1, 8, 30);
+
+      final result = await repository.checkOut(
+        1,
+        plate: 'ABC123',
+        entryTime: entry,
+        paymentMethod: 'cash',
+        cashReceived: 10000,
+      );
+
+      expect(result.pendingSync, isTrue);
+      expect(result.plate, 'ABC123');
+      expect(result.entryTime, entry);
+      expect(result.cashReceived, 10000);
+    });
+
+    test(
+      'Failure: a caller without the session keeps the safe placeholders',
+      () async {
+        final repository = CheckOutRepositoryImpl(
+          _FakeRemote(error: const NetworkFailure('offline')),
+          FakeSyncOutbox(),
+          LotSession(),
+        );
+
+        final result = await repository.checkOut(1);
+
+        expect(result.plate, isEmpty);
+        expect(result.entryTime, result.exitTime);
+      },
+    );
+
+    test(
+      'Security: plate/entry time never leak into the queued payload',
+      () async {
+        final outbox = FakeSyncOutbox();
+        final repository = CheckOutRepositoryImpl(
+          _FakeRemote(error: const NetworkFailure('offline')),
+          outbox,
+          LotSession(),
+        );
+
+        await repository.checkOut(
+          1,
+          plate: 'ABC123',
+          entryTime: DateTime(2026),
+        );
+
+        final payload = outbox.enqueued.single.decodePayload();
+        expect(payload, isNot(contains('plate')));
+        expect(payload, isNot(contains('entry_time')));
+      },
+    );
+  });
 }

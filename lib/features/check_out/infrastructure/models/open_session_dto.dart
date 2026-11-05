@@ -10,6 +10,7 @@ class OpenSessionDto {
     required this.id,
     required this.vehicleId,
     required this.entryTime,
+    this.plate = '',
     this.hasPass = false,
     this.photoCount = 0,
     this.leftKeys = false,
@@ -26,6 +27,9 @@ class OpenSessionDto {
   @JsonKey(name: 'entry_time')
   final DateTime entryTime;
 
+  @JsonKey(defaultValue: '')
+  final String plate;
+
   @JsonKey(name: 'has_pass', defaultValue: false)
   final bool hasPass;
 
@@ -41,6 +45,9 @@ class OpenSessionDto {
     id: id,
     vehicleId: vehicleId,
     entryTime: entryTime,
+    plate: plate,
     hasPass: hasPass,
+    photoCount: photoCount,
+    leftKeys: leftKeys,
   );
 }
