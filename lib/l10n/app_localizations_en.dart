@@ -3043,4 +3043,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get diagnosticsFailedRequests => 'Failed requests';
+
+  @override
+  String get evidenceDuration => 'Time parked';
+
+  @override
+  String get evidenceEstimatedAmount => 'Estimated amount';
+
+  @override
+  String get evidenceChargedAmount => 'Amount charged';
+
+  @override
+  String get evidencePassCovered => 'Covered by monthly pass';
+
+  @override
+  String get evidencePriceMayChange => 'May change until check-out';
 }

@@ -2755,4 +2755,51 @@ reset role;
 
 update public.parking_settings set min_app_version = '' where lot_id = 1;
 
+-- 0077: the public QR summary exposes only duration/fare for plate+session.
+set local request.headers = '{"x-lot-id":"1"}';
+set local role authenticated;
+do $$
+declare
+    sid bigint;
+    summary jsonb;
+begin
+    select s.id into sid
+      from public.parking_sessions s
+      join public.vehicles v on v.id = s.vehicle_id
+     where v.plate = 'LOST01'
+     order by s.id desc
+     limit 1;
+    if sid is null then
+        raise exception '0077 test needs a session';
+    end if;
+
+    summary := public.public_session_summary(sid, 'LOST01');
+    if summary is null then
+        raise exception 'public summary is null for a valid plate';
+    end if;
+    if (summary ->> 'duration_seconds')::int < 0 then
+        raise exception 'summary has a negative duration: %', summary;
+    end if;
+    if (summary ->> 'amount') is null then
+        raise exception 'summary has no amount: %', summary;
+    end if;
+    if summary ->> 'currency' not in ('COP', 'USD') then
+        raise exception 'summary currency is invalid: %', summary;
+    end if;
+    if public.public_session_summary(sid, 'NOPE99') is not null then
+        raise exception 'summary accepted a wrong plate';
+    end if;
+end $$;
+reset role;
+
+set local role anon;
+do $$
+begin
+    -- Anon can execute the function (security definer); an unknown id is null.
+    if public.public_session_summary(2147483647, 'LOST01') is not null then
+        raise exception 'anon summary returned a row for an unknown session';
+    end if;
+end $$;
+reset role;
+
 rollback;

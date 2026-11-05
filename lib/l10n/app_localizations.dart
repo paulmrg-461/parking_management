@@ -5491,6 +5491,36 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Solicitudes fallidas'**
   String get diagnosticsFailedRequests;
+
+  /// No description provided for @evidenceDuration.
+  ///
+  /// In es, this message translates to:
+  /// **'Tiempo en el parqueadero'**
+  String get evidenceDuration;
+
+  /// No description provided for @evidenceEstimatedAmount.
+  ///
+  /// In es, this message translates to:
+  /// **'Valor estimado'**
+  String get evidenceEstimatedAmount;
+
+  /// No description provided for @evidenceChargedAmount.
+  ///
+  /// In es, this message translates to:
+  /// **'Total cobrado'**
+  String get evidenceChargedAmount;
+
+  /// No description provided for @evidencePassCovered.
+  ///
+  /// In es, this message translates to:
+  /// **'Cubierto por mensualidad'**
+  String get evidencePassCovered;
+
+  /// No description provided for @evidencePriceMayChange.
+  ///
+  /// In es, this message translates to:
+  /// **'Puede cambiar hasta la salida'**
+  String get evidencePriceMayChange;
 }
 
 class _AppLocalizationsDelegate

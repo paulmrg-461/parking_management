@@ -64,6 +64,34 @@ void main() {
     expect(find.byKey(const Key('evidence_policies')), findsOneWidget);
   });
 
+  testWidgets('Success: shows the parked time and the estimated amount', (
+    tester,
+  ) async {
+    await pumpPage(
+      tester,
+      FakeEvidenceRepository(
+        evidence: PublicEvidence(
+          plate: 'ABC123',
+          entryTime: DateTime(2026, 10, 28, 8),
+          lotId: 1,
+          summary: const PublicSessionSummary(
+            sessionId: 43,
+            status: 'open',
+            durationSeconds: 7500,
+            currency: 'COP',
+            amount: 150000,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Tiempo en el parqueadero'), findsOneWidget);
+    expect(find.text('2 h 5 min'), findsOneWidget);
+    expect(find.text('Valor estimado'), findsOneWidget);
+    expect(find.text('\$150.000'), findsOneWidget);
+    expect(find.text('Puede cambiar hasta la salida'), findsOneWidget);
+  });
+
   testWidgets('Failure: a wrong or incomplete link explains the key', (
     tester,
   ) async {

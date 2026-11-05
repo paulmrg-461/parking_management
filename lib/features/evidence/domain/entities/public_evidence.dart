@@ -25,6 +25,48 @@ class EvidenceMedia extends Equatable {
   List<Object?> get props => [url, takenAt, durationSeconds];
 }
 
+/// Duration and fare shown next to the evidence on the public QR page.
+class PublicSessionSummary extends Equatable {
+  const PublicSessionSummary({
+    required this.sessionId,
+    required this.status,
+    required this.durationSeconds,
+    required this.currency,
+    required this.amount,
+    this.hasPass = false,
+  });
+
+  final int sessionId;
+  final String status;
+  final int durationSeconds;
+  final String currency;
+  final int amount;
+  final bool hasPass;
+
+  Duration get duration => Duration(seconds: durationSeconds);
+  bool get isOpen => status == 'open';
+
+  factory PublicSessionSummary.fromJson(Map<String, dynamic> json) =>
+      PublicSessionSummary(
+        sessionId: (json['session_id'] as num?)?.toInt() ?? 0,
+        status: json['status'] as String? ?? 'open',
+        durationSeconds: (json['duration_seconds'] as num?)?.toInt() ?? 0,
+        currency: json['currency'] as String? ?? 'COP',
+        amount: (json['amount'] as num?)?.toInt() ?? 0,
+        hasPass: json['has_pass'] as bool? ?? false,
+      );
+
+  @override
+  List<Object?> get props => [
+    sessionId,
+    status,
+    durationSeconds,
+    currency,
+    amount,
+    hasPass,
+  ];
+}
+
 /// Public (plate-keyed) view of a session's evidence.
 class PublicEvidence extends Equatable {
   const PublicEvidence({
@@ -35,6 +77,7 @@ class PublicEvidence extends Equatable {
     this.status = 'open',
     this.photos = const [],
     this.videos = const [],
+    this.summary,
   });
 
   final String plate;
@@ -46,6 +89,9 @@ class PublicEvidence extends Equatable {
   final String status;
   final List<EvidenceMedia> photos;
   final List<EvidenceMedia> videos;
+
+  /// Duration/fare for the customer; null on older backends.
+  final PublicSessionSummary? summary;
 
   bool get isEmpty => photos.isEmpty && videos.isEmpty;
 
@@ -65,6 +111,11 @@ class PublicEvidence extends Equatable {
       for (final item in (json['videos'] as List<dynamic>? ?? const []))
         EvidenceMedia.fromJson(Map<String, dynamic>.from(item as Map)),
     ],
+    summary: json['summary'] is Map<String, dynamic>
+        ? PublicSessionSummary.fromJson(
+            Map<String, dynamic>.from(json['summary'] as Map),
+          )
+        : null,
   );
 
   @override
@@ -76,5 +127,6 @@ class PublicEvidence extends Equatable {
     status,
     photos,
     videos,
+    summary,
   ];
 }

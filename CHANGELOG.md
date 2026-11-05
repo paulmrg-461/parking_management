@@ -26,6 +26,13 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Added
 
+- Public evidence QR now shows the parked time and the price: `0077` adds
+  `public_session_summary(session, plate)` (plate-keyed, anon callable) with
+  duration, currency, current fare/charged amount and pass coverage; the
+  `public-evidence` function returns it and the public page renders two metric
+  cards ("Tiempo en el parqueadero" / "Valor estimado" or "Total cobrado").
+  `Money.formatAs` formats with the summary currency without changing the
+  ambient site currency.
 - Contract tests for the client/server JSON shapes (vehicle, user, category,
   monthly pass, parking session, lot member) and domain parsers (public lot
   profile, pass payments, today summary, session records, lots). Coverage

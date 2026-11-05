@@ -969,5 +969,10 @@
   "diagnosticsClientNetwork": "Client network",
   "diagnosticsTimeouts": "Timed-out requests",
   "diagnosticsRetries": "Automatic retries",
-  "diagnosticsFailedRequests": "Failed requests"
+  "diagnosticsFailedRequests": "Failed requests",
+  "evidenceDuration": "Time parked",
+  "evidenceEstimatedAmount": "Estimated amount",
+  "evidenceChargedAmount": "Amount charged",
+  "evidencePassCovered": "Covered by monthly pass",
+  "evidencePriceMayChange": "May change until check-out"
 }

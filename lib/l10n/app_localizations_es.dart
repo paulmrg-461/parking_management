@@ -3059,4 +3059,19 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get diagnosticsFailedRequests => 'Solicitudes fallidas';
+
+  @override
+  String get evidenceDuration => 'Tiempo en el parqueadero';
+
+  @override
+  String get evidenceEstimatedAmount => 'Valor estimado';
+
+  @override
+  String get evidenceChargedAmount => 'Total cobrado';
+
+  @override
+  String get evidencePassCovered => 'Cubierto por mensualidad';
+
+  @override
+  String get evidencePriceMayChange => 'Puede cambiar hasta la salida';
 }

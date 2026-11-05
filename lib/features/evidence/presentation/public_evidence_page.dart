@@ -6,9 +6,11 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/l10n/l10n.dart';
+import '../../../core/money/money.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/metric_card.dart';
 import '../../../core/widgets/error_state.dart';
 import '../../../core/widgets/plate_text.dart';
 import '../../../core/widgets/skeleton.dart';
@@ -267,6 +269,43 @@ class _EvidenceBody extends StatelessWidget {
             ),
           ),
         ),
+        if (evidence.summary case final summary?) ...[
+          const SizedBox(height: Space.md),
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: MetricCard(
+                    icon: Icons.timer_outlined,
+                    label: l10n.evidenceDuration,
+                    value: Formatters.duration(l10n, summary.duration),
+                  ),
+                ),
+                const SizedBox(width: Space.sm),
+                Expanded(
+                  child: MetricCard(
+                    icon: summary.hasPass
+                        ? Icons.card_membership
+                        : Icons.payments_outlined,
+                    label: summary.hasPass
+                        ? l10n.evidencePassCovered
+                        : summary.isOpen
+                        ? l10n.evidenceEstimatedAmount
+                        : l10n.evidenceChargedAmount,
+                    value: Money.formatAs(summary.currency, summary.amount),
+                    caption: summary.isOpen && !summary.hasPass
+                        ? l10n.evidencePriceMayChange
+                        : null,
+                    tone: summary.hasPass
+                        ? MetricTone.success
+                        : MetricTone.primary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
         const SizedBox(height: Space.md),
         if (evidence.isEmpty)
           EmptyState(

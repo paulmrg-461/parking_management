@@ -13,7 +13,7 @@ Last updated: 2026-11-03 (statement timeouts, CI release APK, audit fixes
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0068` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 966 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 967 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -45,6 +45,21 @@ Last updated: 2026-11-03 (statement timeouts, CI release APK, audit fixes
    `0024` (`current_lot_id`, lot CRUD, re-scoped policies/RPCs/reports,
    `report_revenue_all`), `0025` (offline replay lot capture via
    `resolve_lot`), `0026` (`list_lot_members`).
+
+## Public QR summary (2026-11-05)
+
+- `0077_public_session_summary.sql` adds
+  `public_session_summary(p_session_id, p_plate)`: plate-keyed, `security
+  definer`, granted to **anon**; returns duration, currency, current fare (or
+  `amount_charged` when closed), `has_pass` and the fare breakdown. Wrong plate
+  or unknown session returns null.
+- `public-evidence` calls the RPC with the service key and includes `summary`
+  (failure never hides evidence). The public page shows two `MetricCard`s with
+  `Formatters.duration` and `Money.formatAs(currency, amount)`; open sessions
+  add "Puede cambiar hasta la salida".
+- SQL tests cover authenticated and anon execution plus the wrong-plate case.
+  A live call on session 55 (MJS368) returned duration 2349 s, COP 5000.
+- Test count: 967.
 
 ## Quality ratchet (2026-11-05)
 
@@ -970,7 +985,7 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 ## Latest verification (2026-10-28)
 
-- `flutter test`: 966 passed (+1 live-stack integration skipped); `flutter
+- `flutter test`: 967 passed (+1 live-stack integration skipped); `flutter
   analyze` 152 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
 - `supabase/tests/run.sh` passed (migrations `0001`–`0067`); `e2e.sh` passed

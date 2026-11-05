@@ -1048,5 +1048,10 @@
   "diagnosticsClientNetwork": "Red del cliente",
   "diagnosticsTimeouts": "Tiempos de espera agotados",
   "diagnosticsRetries": "Reintentos automáticos",
-  "diagnosticsFailedRequests": "Solicitudes fallidas"
+  "diagnosticsFailedRequests": "Solicitudes fallidas",
+  "evidenceDuration": "Tiempo en el parqueadero",
+  "evidenceEstimatedAmount": "Valor estimado",
+  "evidenceChargedAmount": "Total cobrado",
+  "evidencePassCovered": "Cubierto por mensualidad",
+  "evidencePriceMayChange": "Puede cambiar hasta la salida"
 }
