@@ -92,6 +92,34 @@ void main() {
     expect(find.text('Puede cambiar hasta la salida'), findsOneWidget);
   });
 
+  testWidgets('Success: shows the lot identity, phone and WhatsApp action', (
+    tester,
+  ) async {
+    await pumpPage(
+      tester,
+      FakeEvidenceRepository(
+        evidence: PublicEvidence(
+          plate: 'ABC123',
+          entryTime: DateTime(2026, 10, 28, 8),
+          lotId: 1,
+          lot: const PublicLotContact(
+            id: 1,
+            name: 'Parqueadero Central',
+            phone: '+57 300 111 2233',
+            whatsapp: '+57 300 111 2233',
+            address: 'Cra 7 #12-34',
+            schedule: '24 horas',
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Parqueadero Central'), findsOneWidget);
+    expect(find.textContaining('Cra 7'), findsOneWidget);
+    expect(find.text('Llamar al parqueadero'), findsOneWidget);
+    expect(find.text('Escribir por WhatsApp'), findsOneWidget);
+  });
+
   testWidgets('Failure: a wrong or incomplete link explains the key', (
     tester,
   ) async {

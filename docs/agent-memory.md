@@ -13,7 +13,7 @@ Last updated: 2026-11-03 (statement timeouts, CI release APK, audit fixes
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0068` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 967 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 968 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -45,6 +45,18 @@ Last updated: 2026-11-03 (statement timeouts, CI release APK, audit fixes
    `0024` (`current_lot_id`, lot CRUD, re-scoped policies/RPCs/reports,
    `report_revenue_all`), `0025` (offline replay lot capture via
    `resolve_lot`), `0026` (`list_lot_members`).
+
+## Public QR contact (2026-11-05)
+
+- `public-evidence` now returns `lot` (id, name, phone, whatsapp, address,
+  schedule, `logo_url`). The logo is a **public** branding bucket URL built from
+  the request host (`/storage/v1/object/public/branding/<logo_path>`), so the
+  customer can load it without auth. Missing logo falls back to the parking icon.
+- The public page header shows logo + name + address/schedule, plus Call
+  (`tel:`) and WhatsApp (`wa.me` with the plate prefilled) buttons. The plate is
+  still the access key; contact data only appears after unlocking.
+- Live check: session 55/MJS368 returned the lot and a 200 logo URL.
+- Test count: 968.
 
 ## Public QR summary (2026-11-05)
 
@@ -993,7 +1005,7 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 ## Latest verification (2026-10-28)
 
-- `flutter test`: 967 passed (+1 live-stack integration skipped); `flutter
+- `flutter test`: 968 passed (+1 live-stack integration skipped); `flutter
   analyze` 152 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
 - `supabase/tests/run.sh` passed (migrations `0001`–`0067`); `e2e.sh` passed

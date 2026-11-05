@@ -974,5 +974,8 @@
   "evidenceEstimatedAmount": "Estimated amount",
   "evidenceChargedAmount": "Amount charged",
   "evidencePassCovered": "Covered by monthly pass",
-  "evidencePriceMayChange": "May change until check-out"
+  "evidencePriceMayChange": "May change until check-out",
+  "evidenceCall": "Call the lot",
+  "evidenceWhatsApp": "Message on WhatsApp",
+  "evidenceWhatsAppMessage": "Hi, I am writing about vehicle {plate}."
 }

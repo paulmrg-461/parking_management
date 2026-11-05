@@ -1053,5 +1053,9 @@
   "evidenceEstimatedAmount": "Valor estimado",
   "evidenceChargedAmount": "Total cobrado",
   "evidencePassCovered": "Cubierto por mensualidad",
-  "evidencePriceMayChange": "Puede cambiar hasta la salida"
+  "evidencePriceMayChange": "Puede cambiar hasta la salida",
+  "evidenceCall": "Llamar al parqueadero",
+  "evidenceWhatsApp": "Escribir por WhatsApp",
+  "evidenceWhatsAppMessage": "Hola, escribo por el vehículo {plate}.",
+  "@evidenceWhatsAppMessage": {"placeholders": {"plate": {"type": "String"}}}
 }

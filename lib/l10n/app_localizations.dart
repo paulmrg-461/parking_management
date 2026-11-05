@@ -5521,6 +5521,24 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Puede cambiar hasta la salida'**
   String get evidencePriceMayChange;
+
+  /// No description provided for @evidenceCall.
+  ///
+  /// In es, this message translates to:
+  /// **'Llamar al parqueadero'**
+  String get evidenceCall;
+
+  /// No description provided for @evidenceWhatsApp.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribir por WhatsApp'**
+  String get evidenceWhatsApp;
+
+  /// No description provided for @evidenceWhatsAppMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'Hola, escribo por el vehículo {plate}.'**
+  String evidenceWhatsAppMessage(String plate);
 }
 
 class _AppLocalizationsDelegate

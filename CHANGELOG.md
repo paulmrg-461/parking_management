@@ -31,6 +31,11 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Added
 
+- The public evidence page now carries the site's identity and contact: name,
+  logo (public branding bucket URL), address/schedule, a **Call** button and a
+  direct **WhatsApp** button with a message prefilled with the plate. Data comes
+  in the `public-evidence` response (`lot` object), so the customer needs a
+  single request and no login.
 - Public evidence QR now shows the parked time and the price: `0077` adds
   `public_session_summary(session, plate)` (plate-keyed, anon callable) with
   duration, currency, current fare/charged amount and pass coverage; the

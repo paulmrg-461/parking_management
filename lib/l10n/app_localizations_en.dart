@@ -3058,4 +3058,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get evidencePriceMayChange => 'May change until check-out';
+
+  @override
+  String get evidenceCall => 'Call the lot';
+
+  @override
+  String get evidenceWhatsApp => 'Message on WhatsApp';
+
+  @override
+  String evidenceWhatsAppMessage(String plate) {
+    return 'Hi, I am writing about vehicle $plate.';
+  }
 }

@@ -25,6 +25,51 @@ class EvidenceMedia extends Equatable {
   List<Object?> get props => [url, takenAt, durationSeconds];
 }
 
+/// Contact/branding of the site shown on the public QR page.
+class PublicLotContact extends Equatable {
+  const PublicLotContact({
+    required this.id,
+    required this.name,
+    this.phone = '',
+    this.whatsapp = '',
+    this.address = '',
+    this.schedule = '',
+    this.logoUrl,
+  });
+
+  final int id;
+  final String name;
+  final String phone;
+  final String whatsapp;
+  final String address;
+  final String schedule;
+  final String? logoUrl;
+
+  bool get hasContact => phone.isNotEmpty || whatsapp.isNotEmpty;
+
+  factory PublicLotContact.fromJson(Map<String, dynamic> json) =>
+      PublicLotContact(
+        id: (json['id'] as num?)?.toInt() ?? 0,
+        name: json['name'] as String? ?? '',
+        phone: json['phone'] as String? ?? '',
+        whatsapp: json['whatsapp'] as String? ?? '',
+        address: json['address'] as String? ?? '',
+        schedule: json['schedule'] as String? ?? '',
+        logoUrl: json['logo_url'] as String?,
+      );
+
+  @override
+  List<Object?> get props => [
+    id,
+    name,
+    phone,
+    whatsapp,
+    address,
+    schedule,
+    logoUrl,
+  ];
+}
+
 /// Duration and fare shown next to the evidence on the public QR page.
 class PublicSessionSummary extends Equatable {
   const PublicSessionSummary({
@@ -78,6 +123,7 @@ class PublicEvidence extends Equatable {
     this.photos = const [],
     this.videos = const [],
     this.summary,
+    this.lot,
   });
 
   final String plate;
@@ -92,6 +138,9 @@ class PublicEvidence extends Equatable {
 
   /// Duration/fare for the customer; null on older backends.
   final PublicSessionSummary? summary;
+
+  /// Site name, logo and contact actions.
+  final PublicLotContact? lot;
 
   bool get isEmpty => photos.isEmpty && videos.isEmpty;
 
@@ -116,6 +165,11 @@ class PublicEvidence extends Equatable {
             Map<String, dynamic>.from(json['summary'] as Map),
           )
         : null,
+    lot: json['lot'] is Map<String, dynamic>
+        ? PublicLotContact.fromJson(
+            Map<String, dynamic>.from(json['lot'] as Map),
+          )
+        : null,
   );
 
   @override
@@ -128,5 +182,6 @@ class PublicEvidence extends Equatable {
     photos,
     videos,
     summary,
+    lot,
   ];
 }
