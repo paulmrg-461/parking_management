@@ -18,6 +18,7 @@ class FakeVehicleRepository implements VehicleRepository {
   final List<(int, int)> pageRequests = [];
   final List<int> deleted = [];
   CreateVehicleCommand? created;
+  UpdateVehicleCommand? updated;
 
   @override
   Future<List<Vehicle>> list() async =>
@@ -72,7 +73,18 @@ class FakeVehicleRepository implements VehicleRepository {
   @override
   Future<Vehicle> update(UpdateVehicleCommand command) async {
     _throwIfWriteFails();
-    return vehicles.firstWhere((v) => v.id == command.id);
+    updated = command;
+    final index = vehicles.indexWhere((v) => v.id == command.id);
+    final existing = vehicles[index];
+    final merged = Vehicle(
+      id: existing.id,
+      plate: existing.plate,
+      categoryId: command.categoryId ?? existing.categoryId,
+      color: command.color ?? existing.color,
+      brand: command.brand ?? existing.brand,
+    );
+    vehicles[index] = merged;
+    return merged;
   }
 
   @override

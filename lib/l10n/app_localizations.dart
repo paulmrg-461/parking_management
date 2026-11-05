@@ -482,6 +482,30 @@ abstract class AppLocalizations {
   /// **'Ese nombre de usuario ya existe'**
   String get errorDuplicateUsername;
 
+  /// No description provided for @errorLostTicketPassMethod.
+  ///
+  /// In es, this message translates to:
+  /// **'Un tiquete perdido no se puede cobrar con mensualidad; elige otro medio de pago'**
+  String get errorLostTicketPassMethod;
+
+  /// No description provided for @errorStaleExitTime.
+  ///
+  /// In es, this message translates to:
+  /// **'Esta salida se registró sin conexión hace más de 12 horas y no se puede sincronizar; regístrala de nuevo'**
+  String get errorStaleExitTime;
+
+  /// No description provided for @errorEvidenceNotFound.
+  ///
+  /// In es, this message translates to:
+  /// **'No se encontraron las fotos de evidencia; tómalas de nuevo'**
+  String get errorEvidenceNotFound;
+
+  /// No description provided for @errorEvidenceAlreadyUsed.
+  ///
+  /// In es, this message translates to:
+  /// **'Estas fotos de evidencia ya se usaron en otra entrada; tómalas de nuevo'**
+  String get errorEvidenceAlreadyUsed;
+
   /// No description provided for @errorSessionAlreadyClosed.
   ///
   /// In es, this message translates to:
@@ -4985,13 +5009,13 @@ abstract class AppLocalizations {
   /// No description provided for @aboutRole.
   ///
   /// In es, this message translates to:
-  /// **'Desarrollo de software'**
+  /// **'Ingeniero de Sistemas'**
   String get aboutRole;
 
   /// No description provided for @aboutIntro.
   ///
   /// In es, this message translates to:
-  /// **'Hola, soy Paul Realpe (DevPaul). Diseño y construyo aplicaciones móviles y web con Flutter, cuidando la experiencia de uso y los detalles.'**
+  /// **'Ingeniero de Sistemas con más de 7 años de experiencia en desarrollo web y móvil. Diseño y construyo la app, el backend, la base de datos y la infraestructura, cuidando la experiencia de uso y los detalles.'**
   String get aboutIntro;
 
   /// No description provided for @aboutFindMe.
@@ -5125,6 +5149,426 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Tu sesión expiró. Ingresa de nuevo para continuar.'**
   String get loginSessionExpired;
+
+  /// No description provided for @checkoutChargeAmount.
+  ///
+  /// In es, this message translates to:
+  /// **'Cobrar {amount}'**
+  String checkoutChargeAmount(String amount);
+
+  /// No description provided for @checkoutCashExact.
+  ///
+  /// In es, this message translates to:
+  /// **'Exacto'**
+  String get checkoutCashExact;
+
+  /// No description provided for @cashCountQuantity.
+  ///
+  /// In es, this message translates to:
+  /// **'Cantidad de {denomination}'**
+  String cashCountQuantity(String denomination);
+
+  /// No description provided for @plateScanAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Escanear placa'**
+  String get plateScanAction;
+
+  /// No description provided for @vehicleEditTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Editar vehículo'**
+  String get vehicleEditTitle;
+
+  /// No description provided for @vehicleEditTooltip.
+  ///
+  /// In es, this message translates to:
+  /// **'Editar vehículo {plate}'**
+  String vehicleEditTooltip(String plate);
+
+  /// No description provided for @vehicleUpdated.
+  ///
+  /// In es, this message translates to:
+  /// **'Vehículo {plate} actualizado'**
+  String vehicleUpdated(String plate);
+
+  /// No description provided for @vehicleEditHint.
+  ///
+  /// In es, this message translates to:
+  /// **'La placa no cambia; puedes ajustar categoría, marca y color.'**
+  String get vehicleEditHint;
+
+  /// No description provided for @autoLockTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Bloqueo automático'**
+  String get autoLockTitle;
+
+  /// No description provided for @autoLockHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Bloquea la app tras este tiempo sin uso y pide el PIN para volver.'**
+  String get autoLockHint;
+
+  /// No description provided for @autoLockOff.
+  ///
+  /// In es, this message translates to:
+  /// **'Desactivado'**
+  String get autoLockOff;
+
+  /// No description provided for @autoLockMinutes.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} min'**
+  String autoLockMinutes(int count);
+
+  /// No description provided for @lockTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Sesión bloqueada'**
+  String get lockTitle;
+
+  /// No description provided for @lockHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresa tu PIN para continuar.'**
+  String get lockHint;
+
+  /// No description provided for @lockUnlock.
+  ///
+  /// In es, this message translates to:
+  /// **'Desbloquear'**
+  String get lockUnlock;
+
+  /// No description provided for @lockWrongPin.
+  ///
+  /// In es, this message translates to:
+  /// **'PIN incorrecto. Inténtalo de nuevo.'**
+  String get lockWrongPin;
+
+  /// No description provided for @lockAttemptsLeft.
+  ///
+  /// In es, this message translates to:
+  /// **'Intentos restantes: {count}'**
+  String lockAttemptsLeft(int count);
+
+  /// No description provided for @lockLogout.
+  ///
+  /// In es, this message translates to:
+  /// **'Cerrar sesión'**
+  String get lockLogout;
+
+  /// No description provided for @settingsMinVersion.
+  ///
+  /// In es, this message translates to:
+  /// **'Versión mínima de la app'**
+  String get settingsMinVersion;
+
+  /// No description provided for @settingsMinVersionHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Opcional, ej. 1.4.2. Los APK más antiguos verán un aviso de actualización.'**
+  String get settingsMinVersionHint;
+
+  /// No description provided for @settingsMinVersionInvalid.
+  ///
+  /// In es, this message translates to:
+  /// **'Usa el formato 1.4.2'**
+  String get settingsMinVersionInvalid;
+
+  /// No description provided for @updateRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'Actualiza la app: este equipo tiene {current} y la sede requiere {minimum} o superior.'**
+  String updateRequired(String current, String minimum);
+
+  /// No description provided for @helpTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Ayuda'**
+  String get helpTitle;
+
+  /// No description provided for @helpIntro.
+  ///
+  /// In es, this message translates to:
+  /// **'Guías rápidas para la operación diaria.'**
+  String get helpIntro;
+
+  /// No description provided for @helpSearchLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscar en la ayuda'**
+  String get helpSearchLabel;
+
+  /// No description provided for @helpResults.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} artículos'**
+  String helpResults(int count);
+
+  /// No description provided for @helpNoResults.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay artículos que coincidan con la búsqueda.'**
+  String get helpNoResults;
+
+  /// No description provided for @helpSectionStart.
+  ///
+  /// In es, this message translates to:
+  /// **'Primeros pasos'**
+  String get helpSectionStart;
+
+  /// No description provided for @helpSectionCash.
+  ///
+  /// In es, this message translates to:
+  /// **'Cobros y caja'**
+  String get helpSectionCash;
+
+  /// No description provided for @helpSectionVehicles.
+  ///
+  /// In es, this message translates to:
+  /// **'Vehículos'**
+  String get helpSectionVehicles;
+
+  /// No description provided for @helpSectionOffline.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin conexión y seguridad'**
+  String get helpSectionOffline;
+
+  /// No description provided for @helpOpenShiftTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir turno'**
+  String get helpOpenShiftTitle;
+
+  /// No description provided for @helpOpenShiftBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Entra en Caja y pulsa Abrir turno. Cuenta el efectivo inicial; ese valor será la base del arqueo.'**
+  String get helpOpenShiftBody;
+
+  /// No description provided for @helpChargeTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Cobrar una salida'**
+  String get helpChargeTitle;
+
+  /// No description provided for @helpChargeBody.
+  ///
+  /// In es, this message translates to:
+  /// **'En Salida busca la placa o escanea el QR, revisa el desglose y pulsa Cobrar. Elige el método de pago y confirma.'**
+  String get helpChargeBody;
+
+  /// No description provided for @helpReprintTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Reimprimir un ticket'**
+  String get helpReprintTitle;
+
+  /// No description provided for @helpReprintBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Abre el historial del vehículo o la sesión abierta y usa Reimprimir ticket para generar el recibo de nuevo.'**
+  String get helpReprintBody;
+
+  /// No description provided for @helpCloseShiftTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Cerrar el turno (arqueo)'**
+  String get helpCloseShiftTitle;
+
+  /// No description provided for @helpCloseShiftBody.
+  ///
+  /// In es, this message translates to:
+  /// **'En Caja pulsa Cerrar turno, cuenta el efectivo (puedes usar el contador por denominaciones) y confirma la diferencia si existe.'**
+  String get helpCloseShiftBody;
+
+  /// No description provided for @helpMovementTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresos y retiros de efectivo'**
+  String get helpMovementTitle;
+
+  /// No description provided for @helpMovementBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Desde Caja registra un retiro o ingreso con su motivo. Queda en el historial del turno y en los reportes.'**
+  String get helpMovementBody;
+
+  /// No description provided for @helpCheckInTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Registrar una entrada'**
+  String get helpCheckInTitle;
+
+  /// No description provided for @helpCheckInBody.
+  ///
+  /// In es, this message translates to:
+  /// **'En Entrada escribe la placa, elige categoría y espacio si aplica, y adjunta fotos o video del estado del vehículo.'**
+  String get helpCheckInBody;
+
+  /// No description provided for @helpReservationTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Reservas de cupo'**
+  String get helpReservationTitle;
+
+  /// No description provided for @helpReservationBody.
+  ///
+  /// In es, this message translates to:
+  /// **'En Reservas crea una con placa, categoría y hora límite. Desde la reserva puedes registrar la entrada o cancelarla.'**
+  String get helpReservationBody;
+
+  /// No description provided for @helpPassTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Mensualidades'**
+  String get helpPassTitle;
+
+  /// No description provided for @helpPassBody.
+  ///
+  /// In es, this message translates to:
+  /// **'En Mensualidades agrega el vehículo, el periodo y el valor. Puedes cobrar renovaciones y avisar por WhatsApp.'**
+  String get helpPassBody;
+
+  /// No description provided for @helpOfflineTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Trabajar sin conexión'**
+  String get helpOfflineTitle;
+
+  /// No description provided for @helpOfflineBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Entradas, salidas y cambios de vehículos se guardan y sincronizan al volver la red. Las acciones de caja y mensualidades requieren conexión.'**
+  String get helpOfflineBody;
+
+  /// No description provided for @helpAutoLockTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Bloqueo automático'**
+  String get helpAutoLockTitle;
+
+  /// No description provided for @helpAutoLockBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Si la app queda inactiva pide el PIN. Cambia el tiempo en Menú → Bloqueo automático (o en el sidebar).'**
+  String get helpAutoLockBody;
+
+  /// No description provided for @helpUpdateTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Aviso de actualización'**
+  String get helpUpdateTitle;
+
+  /// No description provided for @helpUpdateBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Si aparece un aviso de versión, instala el APK más reciente que te entregue el administrador; la app seguirá funcionando para lo básico hasta entonces.'**
+  String get helpUpdateBody;
+
+  /// No description provided for @diagnosticsClientNetwork.
+  ///
+  /// In es, this message translates to:
+  /// **'Red del cliente'**
+  String get diagnosticsClientNetwork;
+
+  /// No description provided for @diagnosticsTimeouts.
+  ///
+  /// In es, this message translates to:
+  /// **'Tiempos de espera agotados'**
+  String get diagnosticsTimeouts;
+
+  /// No description provided for @diagnosticsRetries.
+  ///
+  /// In es, this message translates to:
+  /// **'Reintentos automáticos'**
+  String get diagnosticsRetries;
+
+  /// No description provided for @diagnosticsFailedRequests.
+  ///
+  /// In es, this message translates to:
+  /// **'Solicitudes fallidas'**
+  String get diagnosticsFailedRequests;
+
+  /// No description provided for @evidenceDuration.
+  ///
+  /// In es, this message translates to:
+  /// **'Tiempo en el parqueadero'**
+  String get evidenceDuration;
+
+  /// No description provided for @evidenceEstimatedAmount.
+  ///
+  /// In es, this message translates to:
+  /// **'Valor estimado'**
+  String get evidenceEstimatedAmount;
+
+  /// No description provided for @evidenceChargedAmount.
+  ///
+  /// In es, this message translates to:
+  /// **'Total cobrado'**
+  String get evidenceChargedAmount;
+
+  /// No description provided for @evidencePassCovered.
+  ///
+  /// In es, this message translates to:
+  /// **'Cubierto por mensualidad'**
+  String get evidencePassCovered;
+
+  /// No description provided for @evidencePriceMayChange.
+  ///
+  /// In es, this message translates to:
+  /// **'Puede cambiar hasta la salida'**
+  String get evidencePriceMayChange;
+
+  /// No description provided for @evidenceCall.
+  ///
+  /// In es, this message translates to:
+  /// **'Llamar al parqueadero'**
+  String get evidenceCall;
+
+  /// No description provided for @evidenceWhatsApp.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribir por WhatsApp'**
+  String get evidenceWhatsApp;
+
+  /// No description provided for @evidenceWhatsAppMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'Hola, escribo por el vehículo {plate}.'**
+  String evidenceWhatsAppMessage(String plate);
+
+  /// No description provided for @preferencesTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Ajustes'**
+  String get preferencesTitle;
+
+  /// No description provided for @preferencesHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Idioma, apariencia y bloqueo automático.'**
+  String get preferencesHint;
+
+  /// No description provided for @aboutTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Acerca de'**
+  String get aboutTitle;
+
+  /// No description provided for @aboutDevelopers.
+  ///
+  /// In es, this message translates to:
+  /// **'Desarrolladores'**
+  String get aboutDevelopers;
+
+  /// No description provided for @aboutJimmyRole.
+  ///
+  /// In es, this message translates to:
+  /// **'Desarrollador'**
+  String get aboutJimmyRole;
 }
 
 class _AppLocalizationsDelegate

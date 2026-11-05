@@ -5,11 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/l10n/l10n.dart';
-import '../../core/l10n/locale_cubit.dart';
 import '../../core/storage/key_value_store.dart';
-import '../../core/theme/theme_cubit.dart';
-import '../../core/widgets/language_button.dart';
-import '../../core/widgets/theme_mode_button.dart';
 import '../../core/theme/status_colors.dart';
 import '../../core/theme/tokens.dart';
 import '../../features/auth/application/auth_cubit.dart';
@@ -359,7 +355,7 @@ class _AppSidebarState extends State<AppSidebar> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _Preferences(collapsed: _collapsed),
+          _FooterLinks(collapsed: _collapsed),
           if (lots != null && lots.canSwitch && lots.active != null) ...[
             _SiteCard(
               collapsed: _collapsed,
@@ -421,43 +417,98 @@ class _AppSidebarState extends State<AppSidebar> {
   }
 }
 
-/// Language and appearance live with the account, not in the page app bar.
-class _Preferences extends StatelessWidget {
-  const _Preferences({required this.collapsed});
+/// Two footer links replace the old icon row: Ajustes (language, appearance,
+/// auto-lock, help) and Acerca de (developers).
+class _FooterLinks extends StatelessWidget {
+  const _FooterLinks({required this.collapsed});
 
   final bool collapsed;
 
   @override
   Widget build(BuildContext context) {
-    final language = _provided<LocaleCubit>(context);
-    final theme = _provided<ThemeCubit>(context);
-    final buttons = [
-      if (language) const LanguageButton(),
-      if (theme) const ThemeModeButton(),
-      IconButton.filledTonal(
-        tooltip: context.l10n.aboutDeveloper,
-        onPressed: () => context.go(aboutPath),
-        icon: const Icon(Icons.code),
-      ),
-    ];
-    return Padding(
-      padding: const EdgeInsets.only(bottom: Space.sm),
-      child: collapsed
-          ? Column(children: buttons)
-          : Row(
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: buttons,
+    final l10n = context.l10n;
+    if (collapsed) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: Space.sm),
+        child: Column(
+          children: [
+            IconButton(
+              tooltip: l10n.preferencesTitle,
+              onPressed: () => context.go(preferencesPath),
+              icon: const Icon(Icons.settings_outlined),
             ),
+            IconButton(
+              tooltip: l10n.aboutTitle,
+              onPressed: () => context.go(aboutPath),
+              icon: const Icon(Icons.info_outline),
+            ),
+          ],
+        ),
+      );
+    }
+    return Column(
+      children: [
+        _FooterLink(
+          icon: Icons.settings_outlined,
+          label: l10n.preferencesTitle,
+          onTap: () => context.go(preferencesPath),
+        ),
+        _FooterLink(
+          icon: Icons.info_outline,
+          label: l10n.aboutTitle,
+          onTap: () => context.go(aboutPath),
+        ),
+        const SizedBox(height: Space.xs),
+      ],
     );
   }
+}
 
-  static bool _provided<T>(BuildContext context) {
-    try {
-      context.read<T>();
-      return true;
-    } on ProviderNotFoundException {
-      return false;
-    }
+class _FooterLink extends StatelessWidget {
+  const _FooterLink({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(Radii.md),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(Radii.md),
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: Layout.minTouch),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: Space.sm),
+            child: Row(
+              children: [
+                Icon(icon, size: 20, color: scheme.onSurfaceVariant),
+                const SizedBox(width: Space.sm),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: Theme.of(context).textTheme.labelLarge,
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right,
+                  size: 18,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

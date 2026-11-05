@@ -8,6 +8,9 @@ import 'package:parking_management/core/theme/tokens.dart';
 import 'package:parking_management/core/network/connectivity_cubit.dart';
 import 'package:parking_management/core/network/connectivity_service.dart';
 import 'package:parking_management/core/l10n/locale_cubit.dart';
+import 'package:parking_management/features/settings/application/branding_cubit.dart';
+import 'package:parking_management/features/settings/domain/entities/parking_settings.dart';
+import 'package:parking_management/core/security/auto_lock_cubit.dart';
 import 'package:parking_management/core/theme/theme_cubit.dart';
 import 'package:parking_management/core/sync/pending_mutation.dart';
 import 'package:parking_management/core/widgets/sync_badge.dart';
@@ -20,6 +23,7 @@ import '../../helpers/app_harness.dart';
 import '../../helpers/fake_check_out_repository.dart';
 import '../../helpers/fake_notification_repository.dart';
 import '../../helpers/fake_key_value_store.dart';
+import '../../helpers/fake_settings_repository.dart';
 import '../../helpers/fake_sync_outbox.dart';
 
 void main() {
@@ -33,7 +37,7 @@ void main() {
     for (final label in ['Inicio', 'Entrada', 'Salida', 'Registros', 'Menú']) {
       expect(find.widgetWithText(NavigationBar, label), findsOneWidget);
     }
-    for (final label in ['Avisos', 'Contacto', 'Vehículos', 'Ajustes']) {
+    for (final label in ['Avisos', 'Contacto', 'Vehículos']) {
       expect(find.widgetWithText(NavigationBar, label), findsNothing);
     }
   });
@@ -79,9 +83,10 @@ void main() {
       find.descendant(of: drawer, matching: find.text('Vehículos')),
       findsNothing,
     );
+    // Ajustes/Acerca de are device/account entries available to every role.
     expect(
       find.descendant(of: drawer, matching: find.text('Ajustes')),
-      findsNothing,
+      findsOneWidget,
     );
   });
 
@@ -320,16 +325,45 @@ void main() {
     expect(find.byIcon(Icons.sync), findsOneWidget);
   });
 
+  testWidgets('Success: the sidebar sets the idle-lock timeout', (tester) async {
+    final lock = AutoLockCubit(FakeKeyValueStore());
+    addTearDown(lock.close);
+    await pumpApp(
+      tester,
+      role: UserRole.admin,
+      size: const Size(1200, 900),
+      autoLockCubit: lock,
+    );
+
+    await tester.tap(find.text('Ajustes'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Bloqueo automático'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('1 min'));
+    await tester.pumpAndSettle();
+
+    expect(lock.minutes, 1);
+  });
+
+  testWidgets('Success: the sidebar opens the help center', (tester) async {
+    await pumpApp(tester, role: UserRole.operator, size: const Size(1200, 900));
+
+    await tester.tap(find.text('Ajustes'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Ayuda'));
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(AppBar, 'Ayuda'), findsOneWidget);
+    expect(find.text('Primeros pasos'), findsOneWidget);
+  });
+
   testWidgets('Success: the sidebar opens the developer page', (tester) async {
     await pumpApp(tester, role: UserRole.admin, size: const Size(1200, 900));
 
-    await tester.tap(find.byTooltip('Acerca del desarrollador'));
+    await tester.tap(find.text('Acerca de'));
     await tester.pumpAndSettle();
 
-    expect(
-      find.widgetWithText(AppBar, 'Acerca del desarrollador'),
-      findsOneWidget,
-    );
+    expect(find.widgetWithText(AppBar, 'Acerca de'), findsOneWidget);
     expect(find.text('Hecho por DevPaul'), findsWidgets);
   });
 
@@ -346,7 +380,7 @@ void main() {
     final drawer = find.byType(Drawer);
     final about = find.descendant(
       of: drawer,
-      matching: find.text('Acerca del desarrollador'),
+      matching: find.text('Acerca de'),
     );
     await tester.scrollUntilVisible(
       about,
@@ -359,10 +393,7 @@ void main() {
     await tester.tap(about);
     await tester.pumpAndSettle();
 
-    expect(
-      find.widgetWithText(AppBar, 'Acerca del desarrollador'),
-      findsOneWidget,
-    );
+    expect(find.widgetWithText(AppBar, 'Acerca de'), findsOneWidget);
   });
 
   testWidgets('Success: phones keep preferences and logout in the drawer', (
@@ -387,13 +418,31 @@ void main() {
     await tester.tap(find.text('Menú'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Idioma'), findsOneWidget);
-    expect(find.text('Apariencia'), findsOneWidget);
+    expect(find.text('Ajustes'), findsOneWidget);
+    expect(find.text('Acerca de'), findsOneWidget);
     expect(find.text('Cerrar sesión'), findsOneWidget);
 
-    await tester.tap(find.byIcon(Icons.close));
+    await tester.tap(find.text('Ajustes'));
     await tester.pumpAndSettle();
-    expect(find.byType(Drawer), findsNothing);
+    expect(find.widgetWithText(AppBar, 'Ajustes'), findsOneWidget);
+    expect(find.text('Idioma'), findsOneWidget);
+    expect(find.text('Apariencia'), findsOneWidget);
+  });
+
+  testWidgets('Security: an old build sees the minimum-version banner', (
+    tester,
+  ) async {
+    final branding = BrandingCubit(
+      FakeParkingSettingsRepository(
+        const ParkingSettings(minAppVersion: '99.0.0'),
+      ),
+    );
+    await branding.load();
+    addTearDown(branding.close);
+
+    await pumpApp(tester, role: UserRole.admin, branding: branding);
+
+    expect(find.textContaining('Actualiza la app'), findsOneWidget);
   });
 
   testWidgets('Failure: offline shows the OfflineBanner above the content', (
@@ -575,9 +624,10 @@ void main() {
 
     await tester.tap(find.text('Menú'));
     await tester.pumpAndSettle();
-    // Preferences live in the drawer on phones, not in the app bar.
-    expect(find.text('Idioma'), findsOneWidget);
-    expect(find.text('Cerrar sesión'), findsOneWidget);
+    // Preferences live behind Ajustes on phones, not in the app bar.
+    await tester.tap(find.text('Ajustes'));
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(AppBar, 'Ajustes'), findsOneWidget);
     await tester.tap(find.text('Idioma'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('English'));

@@ -82,10 +82,7 @@ class FareBreakdownView extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: Text(
-                l10n.fareTotal,
-                style: theme.textTheme.titleSmall,
-              ),
+              child: Text(l10n.fareTotal, style: theme.textTheme.titleSmall),
             ),
             Text(
               CopFormatter.format(preview.amount),

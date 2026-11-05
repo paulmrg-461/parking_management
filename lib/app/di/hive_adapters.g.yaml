@@ -119,7 +119,7 @@ types:
         index: 7
   ParkingSettings:
     typeId: 9
-    nextIndex: 16
+    nextIndex: 17
     fields:
       name:
         index: 0
@@ -153,3 +153,5 @@ types:
         index: 14
       currency:
         index: 15
+      minAppVersion:
+        index: 16

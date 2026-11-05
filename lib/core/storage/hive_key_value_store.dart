@@ -29,6 +29,10 @@ class HiveKeyValueStore implements KeyValueStore {
       return;
     }
     Hive.init(await _resolvePath());
+    // `get()` is synchronous and only reads already-open boxes. Open the
+    // preference box here so theme/locale/auto-lock survive a process restart
+    // (previously it only opened lazily on the first `put`).
+    await Hive.openBox<Object?>('preferences');
     _initialized = true;
   }
 

@@ -675,17 +675,16 @@ resources:
 
                       - match:
                           prefix: /
-                        route:
-                          cluster: studio
-                          timeout: 30s
-                        request_headers_to_remove:
-                          - authorization
-                        request_headers_to_add:
-                          - header:
-                              key: X-Forwarded-Prefix
-                              value: /
-                            append_action: ADD_IF_ABSENT
+                        redirect:
+                          # The gateway is the API, not the app: send humans to
+                          # the web build on the same host (port 8080).
+                          port_redirect: 8080
+                          response_code: TEMPORARY_REDIRECT
                         typed_per_filter_config:
+                          envoy.filters.http.basic_auth:
+                            '@type': >-
+                              type.googleapis.com/envoy.config.route.v3.FilterConfig
+                            disabled: true
                           envoy.filters.http.rbac:
                             '@type': >-
                               type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBACPerRoute

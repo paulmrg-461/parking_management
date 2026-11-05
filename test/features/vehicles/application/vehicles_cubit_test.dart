@@ -65,12 +65,13 @@ void main() {
     expect((submission as SubmissionSucceeded).result, isA<Vehicle>());
   });
 
-  test('Success: updating keeps the submission idle (no snack)', () async {
+  test('Success: updating reports success with the updated action', () async {
     await cubit.load();
 
     await cubit.update(const UpdateVehicleCommand(id: 1, brand: 'Mazda'));
 
-    expect(loaded().submission, const SubmissionIdle());
+    expect(loaded().submission, isA<SubmissionSucceeded<Object?>>());
+    expect(loaded().lastAction, VehiclesAction.updated);
   });
 
   test(

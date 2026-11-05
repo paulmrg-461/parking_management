@@ -15,6 +15,7 @@ Start here, then open the page you need.
 | [`database.md`](database.md) | Tables, relationships (ER diagram), RPC catalog, RLS model and migration rules. |
 | [`ui-kit.md`](ui-kit.md) | **Design system**: four screen states, shared widgets, tokens, accessibility and per-module conventions. |
 | [`production-readiness.md`](production-readiness.md) | **Go-live checklist**: SLOs, infrastructure, data/schema guards, security, resilience, observability and the release checklist. |
+| [`operations-systemd.md`](operations-systemd.md) | Host timers for the healthcheck, notifications cron and nightly backups (retention/offsite). |
 | [`runbook-restore.md`](runbook-restore.md) | Backup contents, monthly restore drill, production restore and verification checklist. |
 | [`runbook-secrets.md`](runbook-secrets.md) | Secret inventory, quarterly review, PIN/JWT/DB rotation procedures and leak response. |
 | [`agent-memory.md`](agent-memory.md) | Current state, invariants and gotchas for whoever (human or agent) picks the work up next. |

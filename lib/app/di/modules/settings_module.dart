@@ -27,6 +27,7 @@ void registerSettingsModule(GetIt sl) {
         sl<ParkingSettingsRemoteDataSource>(),
         sl<ParkingSettingsLocalDataSource>(),
         sl<SyncOutbox>(),
+        sl<LotSession>(),
       ),
     )
     ..registerFactory<SettingsCubit>(

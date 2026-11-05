@@ -23,6 +23,8 @@ import '../../features/check_out/application/check_out_cubit.dart';
 import '../../features/check_out/presentation/check_out_page.dart';
 import '../../features/about/presentation/about_developer_page.dart';
 import '../../features/evidence/application/evidence_cubit.dart';
+import '../../features/help/presentation/help_page.dart';
+import '../../features/preferences/presentation/preferences_page.dart';
 import '../../features/evidence/presentation/public_evidence_page.dart';
 import '../../features/policies/application/policies_cubit.dart';
 import '../../features/policies/presentation/policies_page.dart';
@@ -161,6 +163,7 @@ GoRoute _homeRoute(AuthCubit auth) => GoRoute(
           capture: serviceLocator<PlateImageCapture>(),
           canScan: serviceLocator<PlateScanner>().isSupported,
           initialPlate: state.uri.queryParameters['plate'],
+          initialSpotId: int.tryParse(state.uri.queryParameters['spot'] ?? ''),
           reservations: serviceLocator<ReservationRepository>(),
           vehicles: serviceLocator<VehicleRepository>(),
         ),
@@ -205,6 +208,14 @@ GoRoute _homeRoute(AuthCubit auth) => GoRoute(
         create: (_) => serviceLocator<ReservationsCubit>(),
         child: const ReservationsPage(),
       ),
+    ),
+    GoRoute(
+      path: 'help',
+      builder: (context, state) => const HelpPage(),
+    ),
+    GoRoute(
+      path: 'preferences',
+      builder: (context, state) => const PreferencesPage(),
     ),
     GoRoute(
       path: 'notifications',

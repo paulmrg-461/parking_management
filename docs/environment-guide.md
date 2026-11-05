@@ -23,7 +23,7 @@ Functions solo cubren usuarios admin y envíos.
 | Storage | Fotos de evidencias y logo | Docker |
 | Realtime | Notificaciones in-app en vivo | Docker |
 | Edge Functions | `admin-users`, `push-dispatch`, `evidence-archive`, `whatsapp-dispatch` | Docker |
-| Studio | Panel web de la base de datos | Docker, misma URL |
+| Studio | Panel web de la base de datos | Docker, `http://localhost:3000` (solo loopback) |
 | Envoy | Puerta de entrada única (`:8000`) | Docker |
 | App Flutter | Android + Web (mismo código) | Tu equipo / emulador / navegador |
 
@@ -52,7 +52,7 @@ sudo usermod -aG docker "$USER"   # cierra sesión y vuelve a entrar
 ### Flutter y Android
 
 - Flutter en canal **beta** (el `pubspec.yaml` pide `^3.14.0-95.1.beta`; CI fija
-  `3.49.0-0.1.pre`, localmente funciona 3.50 beta).
+  `3.50.0-0.1.pre`, localmente funciona 3.50 beta).
 - Android SDK + un emulador (o un teléfono con depuración USB) solo si quieres
   la app móvil. Para web no hace falta Android.
 
@@ -211,7 +211,7 @@ flutter build appbundle --release \
 ## 4. Verificar que todo funciona
 
 ```bash
-flutter test                 # 839 tests
+flutter test                 # 972 tests
 flutter analyze              # solo infos de deprecación del SDK beta
 sh supabase/healthcheck.sh   # servicios, endpoints y backlog (exit 1 si falla)
 sh supabase/tests/e2e.sh     # login → entrada → cobro → reporte → historial

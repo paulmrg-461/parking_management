@@ -55,7 +55,9 @@ docker compose ps          # wait until db/auth/rest/storage/realtime are health
 What comes up (details in [`infrastructure.md`](infrastructure.md)):
 
 - **Envoy gateway** on `http://localhost:8000` — the only entry point the app needs.
-- **Studio** at the same address (open it in a browser).
+- **Studio** at <http://localhost:3000> (loopback only; the gateway no longer
+  proxies it, so the API port shows a short text instead of a basic-auth
+  prompt).
 - **PostgreSQL 17** on `localhost:5432` (and the pooler on `6543`).
 - **Edge Functions** container with `admin-users` and `push-dispatch`.
 
@@ -200,7 +202,7 @@ docker compose down -v
 | Android emulator cannot reach the API | Use `10.0.2.2` instead of `localhost`. |
 | 401 from the app after login | `.env` keys changed after the app was built; rebuild with the current `ANON_KEY`. |
 | `docker compose up` fails on `.env` | `cp .env.example .env && sh supabase/generate-env.sh`. |
-| Studio loads but the app does not | Studio goes through the gateway too; the app only needs the gateway port (`API_GW_HTTP_PORT`, e.g. `:8017`). |
+| Studio loads but the app does not | Studio is local-only (`127.0.0.1:3000`); the app needs the gateway port (`API_GW_HTTP_PORT`, e.g. `:8017`). |
 | Push never arrives | In-app notifications work through Realtime; background push needs FCM/VAPID credentials. |
 | PIN rejected on create | PINs must be exactly 6 digits (`PASSWORD_MIN_LENGTH=6`). |
 

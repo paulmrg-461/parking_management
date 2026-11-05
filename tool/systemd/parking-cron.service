@@ -1,0 +1,10 @@
+[Unit]
+Description=Parking notifications, push dispatch and retention fallback
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/parking
+EnvironmentFile=-/opt/parking/.env
+ExecStart=/bin/sh /opt/parking/supabase/notifications-cron.sh

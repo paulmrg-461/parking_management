@@ -10,6 +10,9 @@ services:
 
   studio:
     container_name: supabase-studio
+    # Local admin UI only; the API gateway no longer proxies Studio.
+    ports:
+      - "127.0.0.1:3000:3000"
     image: supabase/studio:2026.10.12-sha-3699278
     restart: unless-stopped
     healthcheck:

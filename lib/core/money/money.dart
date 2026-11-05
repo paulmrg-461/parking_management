@@ -17,8 +17,12 @@ class Money {
   }
 
   /// `$5.000` (COP) / `US$50.00` (USD). Amounts are minor units.
-  static String format(int minor) {
-    final currency = _currency;
+  static String format(int minor) => formatAs(_currency.code, minor);
+
+  /// Same as [format] but for an explicit site currency (public pages that do
+  /// not load the admin settings, receipts from another lot, ...).
+  static String formatAs(String? currencyCode, int minor) {
+    final currency = Currency.fromCode(currencyCode);
     final negative = minor < 0;
     final abs = minor.abs();
     final major = currency.decimals == 0

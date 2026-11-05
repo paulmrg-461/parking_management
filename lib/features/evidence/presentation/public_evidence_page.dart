@@ -6,14 +6,19 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/l10n/l10n.dart';
+import '../../../core/money/money.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/utils/whatsapp_launcher.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/metric_card.dart';
 import '../../../core/widgets/error_state.dart';
 import '../../../core/widgets/plate_text.dart';
 import '../../../core/widgets/skeleton.dart';
 import '../../../core/widgets/status_chip.dart';
+import '../../../core/widgets/submission_feedback.dart';
 import '../application/evidence_cubit.dart';
+import '../../settings/domain/whatsapp_url.dart';
 import '../domain/entities/public_evidence.dart';
 
 /// Public, plate-keyed evidence page opened by the QR/link on the receipt.
@@ -217,6 +222,28 @@ class _EvidenceBody extends StatelessWidget {
   final PublicEvidence evidence;
   final ValueChanged<String> onOpen;
 
+  Future<void> _call(BuildContext context, String phone) async {
+    final digits = phone.replaceAll(RegExp(r'\D'), '');
+    if (digits.isEmpty) {
+      return;
+    }
+    try {
+      await launchUrl(Uri.parse('tel:$digits'));
+    } catch (_) {
+      if (context.mounted) {
+        showErrorSnack(context, context.l10n.errorUnknown);
+      }
+    }
+  }
+
+  Future<void> _whatsapp(BuildContext context, String raw) => openWhatsapp(
+    context,
+    whatsappUrl(
+      raw,
+      text: context.l10n.evidenceWhatsAppMessage(evidence.plate),
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -232,6 +259,11 @@ class _EvidenceBody extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (evidence.lot case final lot?)
+                  if (lot.name.isNotEmpty) ...[
+                    _LotHeader(lot: lot),
+                    const SizedBox(height: Space.md),
+                  ],
                 Row(
                   children: [
                     PlateText(evidence.plate),
@@ -263,10 +295,69 @@ class _EvidenceBody extends StatelessWidget {
                             '${Formatters.dateTime(evidence.exitTime!)}',
                   style: theme.textTheme.bodySmall,
                 ),
+                if (evidence.lot case final lot? when lot.hasContact) ...[
+                  const SizedBox(height: Space.md),
+                  Wrap(
+                    spacing: Space.sm,
+                    runSpacing: Space.sm,
+                    children: [
+                      if (lot.phone.isNotEmpty)
+                        OutlinedButton.icon(
+                          onPressed: () => _call(context, lot.phone),
+                          icon: const Icon(Icons.phone_outlined),
+                          label: Text(l10n.evidenceCall),
+                        ),
+                      if (lot.whatsapp.isNotEmpty)
+                        FilledButton.tonalIcon(
+                          key: const Key('evidence_whatsapp'),
+                          onPressed: () => _whatsapp(context, lot.whatsapp),
+                          icon: const Icon(Icons.chat_outlined),
+                          label: Text(l10n.evidenceWhatsApp),
+                        ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
         ),
+        if (evidence.summary case final summary?) ...[
+          const SizedBox(height: Space.md),
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: MetricCard(
+                    icon: Icons.timer_outlined,
+                    label: l10n.evidenceDuration,
+                    value: Formatters.duration(l10n, summary.duration),
+                  ),
+                ),
+                const SizedBox(width: Space.sm),
+                Expanded(
+                  child: MetricCard(
+                    icon: summary.hasPass
+                        ? Icons.card_membership
+                        : Icons.payments_outlined,
+                    label: summary.hasPass
+                        ? l10n.evidencePassCovered
+                        : summary.isOpen
+                        ? l10n.evidenceEstimatedAmount
+                        : l10n.evidenceChargedAmount,
+                    value: Money.formatAs(summary.currency, summary.amount),
+                    caption: summary.isOpen && !summary.hasPass
+                        ? l10n.evidencePriceMayChange
+                        : null,
+                    tone: summary.hasPass
+                        ? MetricTone.success
+                        : MetricTone.primary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
         const SizedBox(height: Space.md),
         if (evidence.isEmpty)
           EmptyState(
@@ -336,6 +427,80 @@ class _EvidenceBody extends StatelessWidget {
           textAlign: TextAlign.center,
           style: theme.textTheme.labelSmall?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Site identity and contact line above the session details.
+class _LotHeader extends StatelessWidget {
+  const _LotHeader({required this.lot});
+
+  final PublicLotContact lot;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final details = [
+      if (lot.address.isNotEmpty) lot.address,
+      if (lot.schedule.isNotEmpty) lot.schedule,
+    ].join(' · ');
+    return Row(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(Radii.sm),
+          child: lot.logoUrl == null
+              ? Container(
+                  width: 48,
+                  height: 48,
+                  color: scheme.primaryContainer,
+                  child: Icon(
+                    Icons.local_parking_rounded,
+                    color: scheme.onPrimaryContainer,
+                  ),
+                )
+              : Image.network(
+                  lot.logoUrl!,
+                  width: 48,
+                  height: 48,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => Container(
+                    width: 48,
+                    height: 48,
+                    color: scheme.primaryContainer,
+                    child: Icon(
+                      Icons.local_parking_rounded,
+                      color: scheme.onPrimaryContainer,
+                    ),
+                  ),
+                ),
+        ),
+        const SizedBox(width: Space.sm),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                lot.name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              if (details.isNotEmpty)
+                Text(
+                  details,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+            ],
           ),
         ),
       ],

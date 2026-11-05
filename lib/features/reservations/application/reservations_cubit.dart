@@ -53,12 +53,7 @@ final class ReservationsLoaded extends ReservationsState {
   );
 
   @override
-  List<Object?> get props => [
-    reservations,
-    categories,
-    submission,
-    lastAction,
-  ];
+  List<Object?> get props => [reservations, categories, submission, lastAction];
 }
 
 final class ReservationsFailure extends ReservationsState {
@@ -95,45 +90,55 @@ class ReservationsCubit extends ResilientCubit<ReservationsState> {
     required int categoryId,
     required DateTime until,
     String? notes,
-  }) async {
+  }) => _submit(
+    () => _repository.create(
+      plate: normalizePlate(plate),
+      categoryId: categoryId,
+      until: until,
+      notes: notes,
+    ),
+    ReservationsAction.created,
+  );
+
+  Future<void> cancel(int id) =>
+      _submit(() => _repository.cancel(id), ReservationsAction.cancelled);
+
+  /// Reports success as soon as the mutation is committed; the list refresh
+  /// is separate so its failure keeps the previous list instead of turning
+  /// a saved change into an error.
+  Future<void> _submit(
+    Future<Object?> Function() perform,
+    ReservationsAction action,
+  ) async {
     final current = state;
     if (current is! ReservationsLoaded) {
       return;
     }
     emit(current.copyWith(submission: const SubmissionInProgress()));
     try {
-      final normalized = normalizePlate(plate);
-      await _repository.create(
-        plate: normalized,
-        categoryId: categoryId,
-        until: until,
-        notes: notes,
-      );
-      emit(current.copyWith(
-        reservations: await _repository.listActive(),
-        submission: const SubmissionSucceeded<Object?>(null),
-        lastAction: ReservationsAction.created,
-      ));
+      await perform();
     } on Failure catch (failure) {
       emit(current.copyWith(submission: SubmissionFailed.of(failure)));
+      return;
     }
+    emit(
+      current.copyWith(
+        submission: const SubmissionSucceeded<Object?>(null),
+        lastAction: action,
+      ),
+    );
+    await _refresh();
   }
 
-  Future<void> cancel(int id) async {
-    final current = state;
-    if (current is! ReservationsLoaded) {
-      return;
-    }
-    emit(current.copyWith(submission: const SubmissionInProgress()));
+  Future<void> _refresh() async {
     try {
-      await _repository.cancel(id);
-      emit(current.copyWith(
-        reservations: await _repository.listActive(),
-        submission: const SubmissionSucceeded<Object?>(null),
-        lastAction: ReservationsAction.cancelled,
-      ));
-    } on Failure catch (failure) {
-      emit(current.copyWith(submission: SubmissionFailed.of(failure)));
+      final reservations = await _repository.listActive();
+      final latest = state;
+      if (latest is ReservationsLoaded) {
+        emit(latest.copyWith(reservations: reservations));
+      }
+    } on Failure {
+      // Keep the previous list; the next load refreshes it.
     }
   }
 }

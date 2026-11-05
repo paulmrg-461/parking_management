@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:parking_management/core/money/currency.dart';
+import 'package:parking_management/core/money/money.dart';
 import 'package:parking_management/features/shifts/application/shift_cubit.dart';
 import 'package:parking_management/features/shifts/presentation/shift_page.dart';
 
@@ -198,5 +200,112 @@ void main() {
     await tester.tap(find.text('Confirmar'));
     await tester.pumpAndSettle();
     expect(find.text('Turno cerrado correctamente'), findsOneWidget);
+  });
+
+  testWidgets('Failure: USD counted cash is read in dollars, not cents', (
+    tester,
+  ) async {
+    Money.configure(Currency.usd);
+    addTearDown(() => Money.configure(Currency.cop));
+    final repository = FakeShiftRepository(currentShift: sampleShift());
+    final cubit = ShiftCubit(repository);
+    addTearDown(cubit.close);
+    await tester.pumpWidget(
+      testApp(
+        BlocProvider.value(
+          value: cubit,
+          child: const ShiftPage(isAdmin: false),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Cerrar turno'));
+    await tester.pumpAndSettle();
+    // Expected cash is 15000 minor units = US$150.00.
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Efectivo contado'),
+      '150',
+    );
+    await tester.tap(find.text('Confirmar'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('El arqueo no cuadra'), findsNothing);
+    expect(repository.lastCountedCash, 15000);
+  });
+
+  group('dialogs on short phones', () {
+    Future<void> pumpOpenShift(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(400, 640);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final cubit = ShiftCubit(
+        FakeShiftRepository(currentShift: sampleShift()),
+      );
+      addTearDown(cubit.close);
+      await tester.pumpWidget(
+        testApp(
+          BlocProvider.value(
+            value: cubit,
+            child: const ShiftPage(isAdmin: false),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    TextField fieldLabelled(WidgetTester tester, String label) =>
+        tester.widget<TextField>(
+          find.descendant(
+            of: find.widgetWithText(TextFormField, label),
+            matching: find.byType(TextField),
+          ),
+        );
+
+    testWidgets('Success: the close dialog scrolls and capitalizes notes', (
+      tester,
+    ) async {
+      await pumpOpenShift(tester);
+      final close = find.widgetWithText(FilledButton, 'Cerrar turno');
+      await tester.ensureVisible(close);
+      await tester.pumpAndSettle();
+
+      await tester.tap(close);
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.widget<AlertDialog>(find.byType(AlertDialog)).scrollable,
+        isTrue,
+      );
+      expect(
+        fieldLabelled(tester, 'Notas').textCapitalization,
+        TextCapitalization.sentences,
+      );
+    });
+
+    testWidgets('A11y: the cash movement dialog survives the keyboard', (
+      tester,
+    ) async {
+      await pumpOpenShift(tester);
+      final withdraw = find.text('Retirar efectivo');
+      await tester.ensureVisible(withdraw);
+      await tester.pumpAndSettle();
+      await tester.tap(withdraw);
+      await tester.pumpAndSettle();
+
+      tester.view.viewInsets = const FakeViewPadding(bottom: 320);
+      addTearDown(tester.view.resetViewInsets);
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(
+        tester.widget<AlertDialog>(find.byType(AlertDialog)).scrollable,
+        isTrue,
+      );
+      expect(
+        fieldLabelled(tester, 'Motivo').textCapitalization,
+        TextCapitalization.sentences,
+      );
+    });
   });
 }

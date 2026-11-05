@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/l10n/failure_messages.dart';
@@ -160,52 +159,52 @@ class _Content extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.all(Space.md),
         children: [
-        if (!online) const _OfflineNotice(),
-        if (current != null)
-          _OpenShiftCard(shift: current, online: online)
-        else ...[
-          _OpenShiftForm(online: online),
-          if (state.lastClosed != null) ...[
-            const SizedBox(height: Space.lg),
-            _ClosedShiftCard(shift: state.lastClosed!),
+          if (!online) const _OfflineNotice(),
+          if (current != null)
+            _OpenShiftCard(shift: current, online: online)
+          else ...[
+            _OpenShiftForm(online: online),
+            if (state.lastClosed != null) ...[
+              const SizedBox(height: Space.lg),
+              _ClosedShiftCard(shift: state.lastClosed!),
+            ],
           ],
-        ],
-        if (isAdmin) ...[
-          const SizedBox(height: Space.xl),
-          SectionHeader(
-            icon: Icons.receipt_long_outlined,
-            title: l10n.shiftHistory,
-            action: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (state.historyFrom != null || state.historyTo != null)
-                  TextButton(
-                    onPressed: () => context.read<ShiftCubit>().load(
-                      admin: true,
-                      clearHistoryRange: true,
+          if (isAdmin) ...[
+            const SizedBox(height: Space.xl),
+            SectionHeader(
+              icon: Icons.receipt_long_outlined,
+              title: l10n.shiftHistory,
+              action: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (state.historyFrom != null || state.historyTo != null)
+                    TextButton(
+                      onPressed: () => context.read<ShiftCubit>().load(
+                        admin: true,
+                        clearHistoryRange: true,
+                      ),
+                      child: Text(l10n.shiftHistoryClearFilter),
                     ),
-                    child: Text(l10n.shiftHistoryClearFilter),
+                  IconButton(
+                    tooltip: l10n.shiftHistoryFilter,
+                    onPressed: () => _pickHistoryRange(context, state),
+                    icon: const Icon(Icons.date_range),
                   ),
-                IconButton(
-                  tooltip: l10n.shiftHistoryFilter,
-                  onPressed: () => _pickHistoryRange(context, state),
-                  icon: const Icon(Icons.date_range),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: Space.sm),
-          if (state.history.isEmpty)
-            SizedBox(
-              height: 220,
-              child: EmptyState(
-                icon: Icons.point_of_sale_outlined,
-                message: l10n.shiftHistoryEmpty,
+                ],
               ),
-            )
-          else
-            for (final shift in state.history) _HistoryTile(shift: shift),
-        ],
+            ),
+            const SizedBox(height: Space.sm),
+            if (state.history.isEmpty)
+              SizedBox(
+                height: 220,
+                child: EmptyState(
+                  icon: Icons.point_of_sale_outlined,
+                  message: l10n.shiftHistoryEmpty,
+                ),
+              )
+            else
+              for (final shift in state.history) _HistoryTile(shift: shift),
+          ],
         ],
       ),
     );
@@ -219,10 +218,7 @@ class _Content extends StatelessWidget {
       lastDate: now,
       initialDateRange: state.historyFrom == null || state.historyTo == null
           ? null
-          : DateTimeRange(
-              start: state.historyFrom!,
-              end: state.historyTo!,
-            ),
+          : DateTimeRange(start: state.historyFrom!, end: state.historyTo!),
     );
     if (picked != null && context.mounted) {
       await context.read<ShiftCubit>().load(
@@ -342,9 +338,9 @@ class _OpenShiftFormState extends State<_OpenShiftForm> {
                           l10n.shiftOpeningHint,
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurfaceVariant,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
                               ),
                         ),
                       ],
@@ -370,9 +366,7 @@ class _OpenShiftFormState extends State<_OpenShiftForm> {
               ),
               const SizedBox(height: Space.md),
               ConstrainedBox(
-                constraints: const BoxConstraints(
-                  minHeight: Layout.minTouch,
-                ),
+                constraints: const BoxConstraints(minHeight: Layout.minTouch),
                 child: FilledButton.icon(
                   onPressed: widget.online ? _open : null,
                   icon: const Icon(Icons.lock_open),
@@ -434,21 +428,21 @@ class _OpenShiftCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                StatusChip(
-                  label: l10n.statusOpen,
-                  tone: StatusTone.success,
-                ),
+                StatusChip(label: l10n.statusOpen, tone: StatusTone.success),
               ],
             ),
             const SizedBox(height: Space.md),
-            _MetricRow(label: l10n.shiftOpeningFloat, amount: shift.openingFloat),
+            _MetricRow(
+              label: l10n.shiftOpeningFloat,
+              amount: shift.openingFloat,
+            ),
             _MetricRow(label: l10n.shiftSales, amount: shift.revenue),
             _MetricRow(label: l10n.shiftCashSales, amount: shift.cashSales),
-            _MetricRow(label: l10n.shiftPassPayments, amount: shift.passPayments),
             _MetricRow(
-              label: l10n.shiftPassCash,
-              amount: shift.passCashSales,
+              label: l10n.shiftPassPayments,
+              amount: shift.passPayments,
             ),
+            _MetricRow(label: l10n.shiftPassCash, amount: shift.passCashSales),
             _MetricRow(label: l10n.shiftWithdrawals, amount: shift.withdrawals),
             _MetricRow(label: l10n.shiftDeposits, amount: shift.deposits),
             _MetricRow(label: l10n.shiftDiscounts, amount: shift.discounts),
@@ -469,12 +463,16 @@ class _OpenShiftCard extends StatelessWidget {
               runSpacing: Space.sm,
               children: [
                 OutlinedButton.icon(
-                  onPressed: online ? () => _movement(context, 'withdrawal') : null,
+                  onPressed: online
+                      ? () => _movement(context, 'withdrawal')
+                      : null,
                   icon: const Icon(Icons.remove),
                   label: Text(l10n.shiftWithdraw),
                 ),
                 OutlinedButton.icon(
-                  onPressed: online ? () => _movement(context, 'deposit') : null,
+                  onPressed: online
+                      ? () => _movement(context, 'deposit')
+                      : null,
                   icon: const Icon(Icons.add),
                   label: Text(l10n.shiftDeposit),
                 ),
@@ -567,7 +565,9 @@ class _ClosedShiftCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(Radii.sm),
                   ),
                   child: Icon(
-                    balanced ? Icons.lock_outline : Icons.warning_amber_outlined,
+                    balanced
+                        ? Icons.lock_outline
+                        : Icons.warning_amber_outlined,
                     size: 20,
                     color: balanced
                         ? scheme.onPrimaryContainer
@@ -585,9 +585,8 @@ class _ClosedShiftCard extends StatelessWidget {
                       ),
                       Text(
                         l10n.shiftClosedHint,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
+                        style: Theme.of(context).textTheme.bodySmall
+                            ?.copyWith(color: scheme.onSurfaceVariant),
                       ),
                     ],
                   ),
@@ -618,9 +617,7 @@ class _ClosedShiftCard extends StatelessWidget {
                       icon: Icons.point_of_sale,
                       label: l10n.shiftCountedCash,
                       value: Formatters.money(shift.countedCash ?? 0),
-                      tone: balanced
-                          ? MetricTone.neutral
-                          : MetricTone.warning,
+                      tone: balanced ? MetricTone.neutral : MetricTone.warning,
                     ),
                   ),
                 ],
@@ -696,9 +693,8 @@ class _HistoryTile extends StatelessWidget {
         ),
         title: Text(
           Formatters.dateTime(shift.openedAt),
-          style: Theme.of(
-            context,
-          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+          style: Theme.of(context).textTheme.titleSmall
+              ?.copyWith(fontWeight: FontWeight.w600),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -786,10 +782,7 @@ class _AdjustShiftDialogState extends State<_AdjustShiftDialog> {
       return;
     }
     Navigator.of(context).pop(
-      _CloseResult(
-        Money.parse(_counted.text.trim()) ?? 0,
-        _reason.text.trim(),
-      ),
+      _CloseResult(Money.parse(_counted.text.trim()) ?? 0, _reason.text.trim()),
     );
   }
 
@@ -797,6 +790,8 @@ class _AdjustShiftDialogState extends State<_AdjustShiftDialog> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return AlertDialog(
+      // Scrolls above the keyboard on short phones.
+      scrollable: true,
       title: Text(l10n.shiftAdjust),
       content: Form(
         key: _formKey,
@@ -821,19 +816,17 @@ class _AdjustShiftDialogState extends State<_AdjustShiftDialog> {
               onChanged: (_) => setState(() {}),
               validator: (value) {
                 final amount = Money.parse(value);
-                return amount == null || amount < 0
-                    ? l10n.invalidAmount
-                    : null;
+                return amount == null || amount < 0 ? l10n.invalidAmount : null;
               },
             ),
             _DifferenceRow(counted: _counted.text, expected: widget.expected),
             const SizedBox(height: Space.md),
             TextFormField(
               controller: _reason,
+              textCapitalization: TextCapitalization.sentences,
               decoration: InputDecoration(labelText: l10n.shiftReason),
-              validator: (value) => (value ?? '').trim().isEmpty
-                  ? l10n.fieldRequired
-                  : null,
+              validator: (value) =>
+                  (value ?? '').trim().isEmpty ? l10n.fieldRequired : null,
             ),
           ],
         ),
@@ -906,9 +899,7 @@ class _DifferenceRow extends StatelessWidget {
           Text(
             Formatters.money(difference),
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: difference == 0
-                  ? status.success
-                  : theme.colorScheme.error,
+              color: difference == 0 ? status.success : theme.colorScheme.error,
               fontWeight: FontWeight.w600,
               fontFeatures: const [FontFeature.tabularFigures()],
             ),
@@ -941,8 +932,9 @@ class _MetricRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
         children: [
-          Text(label, style: style),
-          const Spacer(),
+          // Long labels wrap instead of overflowing on 360-400 dp phones.
+          Expanded(child: Text(label, style: style)),
+          const SizedBox(width: Space.sm),
           if (money)
             MoneyText(amount, style: style)
           else
@@ -998,6 +990,8 @@ class _CashMovementDialogState extends State<_CashMovementDialog> {
     final l10n = context.l10n;
     final withdrawal = widget.type == 'withdrawal';
     return AlertDialog(
+      // Scrolls above the keyboard on short phones.
+      scrollable: true,
       title: Text(withdrawal ? l10n.shiftWithdraw : l10n.shiftDeposit),
       content: Form(
         key: _formKey,
@@ -1020,10 +1014,10 @@ class _CashMovementDialogState extends State<_CashMovementDialog> {
             const SizedBox(height: Space.md),
             TextFormField(
               controller: _reason,
+              textCapitalization: TextCapitalization.sentences,
               decoration: InputDecoration(labelText: l10n.shiftReason),
-              validator: (value) => (value ?? '').trim().isEmpty
-                  ? l10n.fieldRequired
-                  : null,
+              validator: (value) =>
+                  (value ?? '').trim().isEmpty ? l10n.fieldRequired : null,
             ),
           ],
         ),
@@ -1066,7 +1060,7 @@ class _CloseShiftDialogState extends State<_CloseShiftDialog> {
     if (total == null || !mounted) {
       return;
     }
-    setState(() => _counted.text = '$total');
+    setState(() => _counted.text = Money.input(total));
   }
 
   @override
@@ -1082,7 +1076,7 @@ class _CloseShiftDialogState extends State<_CloseShiftDialog> {
     }
     Navigator.of(context).pop(
       _CloseResult(
-        int.parse(_counted.text.trim()),
+        Money.parse(_counted.text.trim())!,
         _notes.text.trim().isEmpty ? null : _notes.text.trim(),
       ),
     );
@@ -1092,6 +1086,8 @@ class _CloseShiftDialogState extends State<_CloseShiftDialog> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return AlertDialog(
+      // Scrolls above the keyboard on short phones.
+      scrollable: true,
       title: Text(l10n.shiftClose),
       content: Form(
         key: _formKey,
@@ -1104,9 +1100,10 @@ class _CloseShiftDialogState extends State<_CloseShiftDialog> {
               controller: _counted,
               autofocus: true,
               keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              inputFormatters: moneyInputFormatters(),
               decoration: InputDecoration(
                 labelText: l10n.shiftCountedCash,
+                prefixText: '${Money.currency.symbol} ',
                 suffixIcon: IconButton(
                   tooltip: l10n.cashCountTitle,
                   icon: const Icon(Icons.calculate_outlined),
@@ -1115,10 +1112,8 @@ class _CloseShiftDialogState extends State<_CloseShiftDialog> {
               ),
               onChanged: (_) => setState(() {}),
               validator: (value) {
-                final amount = int.tryParse((value ?? '').trim());
-                return amount == null || amount < 0
-                    ? l10n.invalidAmount
-                    : null;
+                final amount = Money.parse(value);
+                return amount == null || amount < 0 ? l10n.invalidAmount : null;
               },
             ),
             _DifferenceRow(counted: _counted.text, expected: widget.expected),
@@ -1126,6 +1121,7 @@ class _CloseShiftDialogState extends State<_CloseShiftDialog> {
             TextFormField(
               controller: _notes,
               maxLines: 2,
+              textCapitalization: TextCapitalization.sentences,
               decoration: InputDecoration(labelText: l10n.shiftNotes),
             ),
           ],

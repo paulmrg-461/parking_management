@@ -11,7 +11,6 @@ import '../../../features/check_out/domain/repositories/check_out_repository.dar
 import '../../../features/check_out/infrastructure/check_out_remote_data_source.dart';
 import '../../../features/check_out/infrastructure/check_out_repository_impl.dart';
 import '../../../features/home/application/dashboard_cubit.dart';
-import '../../../features/vehicles/domain/repositories/vehicle_repository.dart';
 
 void registerCheckOutModule(GetIt sl) {
   sl
@@ -29,14 +28,13 @@ void registerCheckOutModule(GetIt sl) {
       () => CheckOutVehicle(sl<CheckOutRepository>()),
     )
     ..registerFactory<DashboardCubit>(
-      () => DashboardCubit(sl<CheckOutRepository>(), sl<VehicleRepository>()),
+      () => DashboardCubit(
+        sl<CheckOutRepository>(),
+        () => sl<LotSession>().activeLotId,
+      ),
     )
     ..registerLazySingleton<QrDecoder>(ZxingQrDecoder.new)
     ..registerFactory<CheckOutCubit>(
-      () => CheckOutCubit(
-        sl<CheckOutVehicle>(),
-        sl<CheckOutRepository>(),
-        sl<VehicleRepository>(),
-      ),
+      () => CheckOutCubit(sl<CheckOutVehicle>(), sl<CheckOutRepository>()),
     );
 }

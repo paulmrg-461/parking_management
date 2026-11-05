@@ -13,6 +13,9 @@ import '../domain/entities/vehicle.dart';
 import '../domain/repositories/vehicle_repository.dart';
 import '../../../core/state/resilient_cubit.dart';
 
+/// What the last successful write did, so the page can confirm it correctly.
+enum VehiclesAction { created, updated }
+
 sealed class VehiclesState extends Equatable {
   const VehiclesState();
 
@@ -39,6 +42,7 @@ final class VehiclesLoaded extends VehiclesState {
     this.loadingMore = false,
     this.submission = const SubmissionIdle(),
     this.query = '',
+    this.lastAction,
   });
 
   final List<Vehicle> vehicles;
@@ -51,6 +55,9 @@ final class VehiclesLoaded extends VehiclesState {
   /// Active plate search (`''` = no filter).
   final String query;
 
+  /// Last successful create/update, cleared by the next load.
+  final VehiclesAction? lastAction;
+
   bool get hasMore => total != null && total! > vehicles.length;
 
   String categoryNameOf(Vehicle vehicle) =>
@@ -62,6 +69,7 @@ final class VehiclesLoaded extends VehiclesState {
     bool? loadingMore,
     Submission? submission,
     String? query,
+    VehiclesAction? lastAction,
   }) => VehiclesLoaded(
     vehicles: vehicles ?? this.vehicles,
     categories: categories,
@@ -70,6 +78,7 @@ final class VehiclesLoaded extends VehiclesState {
     loadingMore: loadingMore ?? this.loadingMore,
     submission: submission ?? this.submission,
     query: query ?? this.query,
+    lastAction: lastAction ?? this.lastAction,
   );
 
   @override
@@ -81,6 +90,7 @@ final class VehiclesLoaded extends VehiclesState {
     loadingMore,
     submission,
     query,
+    lastAction,
   ];
 }
 
@@ -179,11 +189,17 @@ class VehiclesCubit extends ResilientCubit<VehiclesState> {
     }
   }
 
-  Future<void> create(CreateVehicleCommand command) =>
-      _submit(() => _repository.create(command), reportSuccess: true);
+  Future<void> create(CreateVehicleCommand command) => _submit(
+    () => _repository.create(command),
+    reportSuccess: true,
+    actionType: VehiclesAction.created,
+  );
 
-  Future<void> update(UpdateVehicleCommand command) =>
-      _submit(() => _repository.update(command));
+  Future<void> update(UpdateVehicleCommand command) => _submit(
+    () => _repository.update(command),
+    reportSuccess: true,
+    actionType: VehiclesAction.updated,
+  );
 
   Future<void> delete(int id) => _submit(() => _repository.delete(id));
 
@@ -192,6 +208,7 @@ class VehiclesCubit extends ResilientCubit<VehiclesState> {
   Future<void> _submit(
     Future<Object?> Function() action, {
     bool reportSuccess = false,
+    VehiclesAction? actionType,
   }) async {
     final current = state;
     if (current is! VehiclesLoaded) {
@@ -212,6 +229,7 @@ class VehiclesCubit extends ResilientCubit<VehiclesState> {
           submission: reportSuccess
               ? SubmissionSucceeded<Object?>(result)
               : const SubmissionIdle(),
+          lastAction: reportSuccess ? actionType : null,
         ),
       );
     } on Failure catch (failure) {

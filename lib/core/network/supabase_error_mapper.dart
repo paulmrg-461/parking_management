@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:http/http.dart' show ClientException;
 import 'package:supabase_flutter/supabase_flutter.dart' as sb;
 
@@ -16,14 +17,18 @@ const _domainCodes = {
   'DuplicateOpenSessionError',
   'DuplicatePlateError',
   'DuplicateUsernameError',
+  'EvidenceAlreadyUsedError',
+  'EvidenceNotFoundError',
   'InvalidBillingPeriodError',
   'InvalidEntryTimeError',
   'InvalidExitTimeError',
   'InvalidReportRangeError',
   'InvalidTokenError',
+  'LostTicketPassMethodError',
   'MissingHourlyTariffError',
   'SessionAlreadyClosedError',
   'SessionNotFoundError',
+  'StaleExitTimeError',
   'UserNotFoundError',
   'VehicleNotFoundError',
   'VehicleNotRegisteredError',
@@ -61,15 +66,62 @@ Failure mapSupabaseError(Object error) {
   return ServerFailure(error.runtimeType.toString());
 }
 
+/// Whether a GoTrue session is present. Swapped in tests; defaults to `true`
+/// when Supabase is not initialized so an RLS denial stays "forbidden".
+@visibleForTesting
+bool Function() hasAuthSession = _currentSessionExists;
+
+bool _currentSessionExists() {
+  try {
+    return sb.Supabase.instance.client.auth.currentSession != null;
+  } on Object {
+    return true;
+  }
+}
+
+/// SQLSTATEs that mean "try again later": serialization failure, deadlock,
+/// statement timeout and too many connections.
+const _transientCodes = {'40001', '40P01', '57014', '53300'};
+
 Failure _postgrest(sb.PostgrestException error) {
-  final code = error.code;
   final message = error.message;
+  if (_isInvalidToken(error)) {
+    return const AuthenticationFailure(
+      'Invalid credentials',
+      'InvalidTokenError',
+    );
+  }
   if (_domainCodes.contains(message)) {
     return ValidationFailure(message, message);
   }
-  switch (code) {
+  return _transient(error) ?? _postgrestCode(error);
+}
+
+bool _isInvalidToken(sb.PostgrestException error) =>
+    error.message == 'InvalidTokenError' || error.hint == 'InvalidTokenError';
+
+Failure? _transient(sb.PostgrestException error) {
+  if (_isHttp5xx(error.code) || _transientCodes.contains(error.code)) {
+    return ServerFailure(error.message);
+  }
+  return null;
+}
+
+/// PostgREST falls back to the HTTP status as `code` when the body is not
+/// JSON (gateway errors). SQLSTATEs are five characters, so only a
+/// three-digit code is an HTTP status.
+bool _isHttp5xx(String? code) {
+  final status = code != null && code.length == 3 ? int.tryParse(code) : null;
+  return status != null && status >= 500;
+}
+
+Failure _postgrestCode(sb.PostgrestException error) {
+  final message = error.message;
+  switch (error.code) {
     case '42501': // insufficient privilege / RLS denial
-      return const ValidationFailure('Forbidden', 'PermissionDeniedError');
+      return hasAuthSession()
+          ? const ValidationFailure('Forbidden', 'PermissionDeniedError')
+          : const AuthenticationFailure('Invalid credentials');
     case '23505': // unique_violation
       return ValidationFailure(
         message,
@@ -81,7 +133,7 @@ Failure _postgrest(sb.PostgrestException error) {
       return ValidationFailure(message, 'InvalidDataError');
     case 'PGRST116': // 0 rows for .single()
       return const ValidationFailure('Not found', 'NotFoundError');
-    case 'PGRST301': // JWT expired
+    case 'PGRST301' || 'PGRST303': // JWT expired / invalid claims
       return const AuthenticationFailure('Invalid credentials');
     case 'P0001':
       return ValidationFailure(message, message);
@@ -108,7 +160,10 @@ Failure? _status(Object? rawStatus, String message) {
     return ServerFailure(message);
   }
   if (status == 400 || status == 404 || status == 409 || status == 422) {
-    return ValidationFailure(message, _domainCodes.contains(message) ? message : null);
+    return ValidationFailure(
+      message,
+      _domainCodes.contains(message) ? message : null,
+    );
   }
   return null;
 }

@@ -33,7 +33,20 @@ database_dump=parking.dump
 storage_archive=storage.tgz
 notes=Keep .env separately; it is not part of this backup.
 checksums=SHA256SUMS (verify with: sha256sum -c SHA256SUMS)
+offsite=${BACKUP_REMOTE:-}
 MANIFEST
+
+# Optional offsite copy: BACKUP_REMOTE=rclone-remote:parking/backups
+REMOTE=${BACKUP_REMOTE:-}
+if [ -n "$REMOTE" ]; then
+  if command -v rclone >/dev/null 2>&1; then
+    echo "copying backup to $REMOTE..."
+    rclone copy "$OUT" "$REMOTE/$(basename "$OUT")" --checksum \
+      || { echo "offsite backup copy failed" >&2; exit 1; }
+  else
+    echo "WARN: BACKUP_REMOTE is set but rclone is not installed" >&2
+  fi
+fi
 
 # Optional retention: BACKUP_KEEP=14 keeps the newest 14 archives.
 KEEP=${BACKUP_KEEP:-0}

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
-
 import '../../../core/error/failure.dart';
 import '../../../core/l10n/failure_messages.dart';
 import '../../../core/l10n/l10n.dart';
@@ -10,6 +9,7 @@ import '../../../core/receipt/payment_method.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/utils/whatsapp_launcher.dart';
+import '../../../core/widgets/app_icon_button.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/error_state.dart';
 import '../../../core/widgets/submission_feedback.dart';
@@ -123,27 +123,27 @@ class _VehicleHistoryPageState extends State<VehicleHistoryPage> {
                 context.read<VehicleHistoryCubit>().clearFailure();
               },
               child: BlocBuilder<VehicleHistoryCubit, VehicleHistoryState>(
-              builder: (context, state) => switch (state.status) {
-                VehicleHistoryStatus.initial => _Hint(
-                  message: l10n.vehicleHistoryPrompt,
-                ),
-                VehicleHistoryStatus.loading => const Center(
-                  child: CircularProgressIndicator(),
-                ),
-                VehicleHistoryStatus.failure => ErrorState(
-                  message: state.failure == null
-                      ? l10n.errorUnknown
-                      : l10n.failure(state.failure!),
-                  onRetry: _search,
-                ),
-                VehicleHistoryStatus.loaded => _HistoryBody(
-                  key: ValueKey(state.history!.plate),
-                  history: state.history!,
-                  canManage: _canManage(context),
-                  onCharge: widget.onCharge ?? _chargeInCheckOut,
-                ),
-              },
-            ),
+                builder: (context, state) => switch (state.status) {
+                  VehicleHistoryStatus.initial => _Hint(
+                    message: l10n.vehicleHistoryPrompt,
+                  ),
+                  VehicleHistoryStatus.loading => const Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                  VehicleHistoryStatus.failure => ErrorState(
+                    message: state.failure == null
+                        ? l10n.errorUnknown
+                        : l10n.failure(state.failure!),
+                    onRetry: _search,
+                  ),
+                  VehicleHistoryStatus.loaded => _HistoryBody(
+                    key: ValueKey(state.history!.plate),
+                    history: state.history!,
+                    canManage: _canManage(context),
+                    onCharge: widget.onCharge ?? _chargeInCheckOut,
+                  ),
+                },
+              ),
             ),
           ),
         ],
@@ -179,9 +179,8 @@ class _Hint extends StatelessWidget {
   }
 }
 
-void _chargeInCheckOut(BuildContext context, String plate) => context.push(
-  '/check-out?plate=${Uri.encodeQueryComponent(plate)}',
-);
+void _chargeInCheckOut(BuildContext context, String plate) =>
+    context.push('/check-out?plate=${Uri.encodeQueryComponent(plate)}');
 
 class _HistoryBody extends StatefulWidget {
   const _HistoryBody({
@@ -275,12 +274,7 @@ class _HistoryBodyState extends State<_HistoryBody> {
       if (history.brand != null && history.brand!.isNotEmpty) history.brand!,
     ].join(' · ');
     return ListView(
-      padding: const EdgeInsets.fromLTRB(
-        Space.md,
-        0,
-        Space.md,
-        Space.lg,
-      ),
+      padding: const EdgeInsets.fromLTRB(Space.md, 0, Space.md, Space.lg),
       children: [
         Card(
           child: Padding(
@@ -405,8 +399,7 @@ class _HistoryBodyState extends State<_HistoryBody> {
             ],
           ),
         ),
-        if (history.lots.length > 1 &&
-            history.currentLotVisits > 0) ...[
+        if (history.lots.length > 1 && history.currentLotVisits > 0) ...[
           const SizedBox(height: Space.sm),
           Text(
             l10n.vehicleHistoryCurrentLotVisits(history.currentLotVisits),
@@ -428,10 +421,7 @@ class _HistoryBodyState extends State<_HistoryBody> {
                       child: Text(l10n.vehicleHistoryAllLots),
                     ),
                     for (final lot in history.lots)
-                      DropdownMenuItem(
-                        value: lot.id,
-                        child: Text(lot.name),
-                      ),
+                      DropdownMenuItem(value: lot.id, child: Text(lot.name)),
                   ],
                   onChanged: (value) => setState(() => _lotFilter = value),
                 ),
@@ -662,31 +652,27 @@ class _SessionTile extends StatelessWidget {
                   const SizedBox(width: Space.xs),
                 ],
                 if (!session.isOpen && session.ticketNumber != null)
-                  IconButton(
+                  AppIconButton(
                     tooltip: l10n.actionReprintTicket,
-                    visualDensity: VisualDensity.compact,
-                    icon: const Icon(Icons.receipt_long_outlined),
+                    icon: Icons.receipt_long_outlined,
                     onPressed: () => _reprint(context),
                   ),
                 if (!session.isOpen && phone != null)
-                  IconButton(
+                  AppIconButton(
                     tooltip: l10n.vehicleSendWhatsapp,
-                    visualDensity: VisualDensity.compact,
-                    icon: const Icon(Icons.chat_outlined),
+                    icon: Icons.chat_outlined,
                     onPressed: () => _sendWhatsapp(context),
                   ),
                 if (session.isOpen)
-                  IconButton(
+                  AppIconButton(
                     tooltip: l10n.vehicleChargeAction,
-                    visualDensity: VisualDensity.compact,
-                    icon: const Icon(Icons.point_of_sale_outlined),
+                    icon: Icons.point_of_sale_outlined,
                     onPressed: () => onCharge(context, plate),
                   ),
                 if (session.isOpen && phone != null)
-                  IconButton(
+                  AppIconButton(
                     tooltip: l10n.vehicleWhatsappReadyAction,
-                    visualDensity: VisualDensity.compact,
-                    icon: const Icon(Icons.notifications_active_outlined),
+                    icon: Icons.notifications_active_outlined,
                     onPressed: () => _notifyReady(context),
                   ),
                 StatusChip(
@@ -736,7 +722,6 @@ class _SessionTile extends StatelessWidget {
     );
   }
 }
-
 
 class _PhoneDialog extends StatefulWidget {
   const _PhoneDialog({required this.initial});
@@ -824,9 +809,7 @@ class _NotesDialogState extends State<_NotesDialog> {
         controller: _controller,
         autofocus: true,
         maxLines: 4,
-        decoration: InputDecoration(
-          hintText: context.l10n.vehicleNotesHint,
-        ),
+        decoration: InputDecoration(hintText: context.l10n.vehicleNotesHint),
       ),
       actions: [
         TextButton(

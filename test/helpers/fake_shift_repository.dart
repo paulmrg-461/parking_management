@@ -22,12 +22,13 @@ class FakeShiftRepository implements ShiftRepository {
     return currentShift!;
   }
 
+  /// Minor units sent by the last [close] call.
+  int? lastCountedCash;
+
   @override
-  Future<ShiftSummary> close({
-    required int countedCash,
-    String? notes,
-  }) async {
+  Future<ShiftSummary> close({required int countedCash, String? notes}) async {
     _throwIfNeeded();
+    lastCountedCash = countedCash;
     final closed = sampleShift(
       openingFloat: currentShift?.openingFloat ?? 0,
       countedCash: countedCash,

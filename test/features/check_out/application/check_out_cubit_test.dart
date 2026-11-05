@@ -12,9 +12,6 @@ import 'package:parking_management/features/check_out/domain/entities/occupancy_
 import 'package:parking_management/features/check_out/domain/entities/slot_board.dart';
 import 'package:parking_management/features/check_out/domain/entities/today_summary.dart';
 import 'package:parking_management/features/check_out/domain/repositories/check_out_repository.dart';
-import 'package:parking_management/features/vehicles/domain/entities/vehicle.dart';
-
-import '../../../helpers/fake_vehicle_repository.dart';
 
 class _FakeCheckOutRepository implements CheckOutRepository {
   List<OpenSession> sessions = [];
@@ -26,6 +23,8 @@ class _FakeCheckOutRepository implements CheckOutRepository {
   CheckOutReceipt? receipt;
   final List<int> offsets = [];
   String? lastPlate;
+  String? checkedOutPlate;
+  DateTime? checkedOutEntry;
 
   @override
   Future<TodaySummary> todaySummary() async => TodaySummary.empty;
@@ -66,7 +65,6 @@ class _FakeCheckOutRepository implements CheckOutRepository {
     return CheckOutPreview(sessionId: sessionId, amount: 5000);
   }
 
-
   @override
   Future<CheckOutReceipt> checkOut(
     int sessionId, {
@@ -77,7 +75,11 @@ class _FakeCheckOutRepository implements CheckOutRepository {
     String? lostTicketReason,
     String? cardType,
     int? cashReceived,
+    String? plate,
+    DateTime? entryTime,
   }) async {
+    checkedOutPlate = plate;
+    checkedOutEntry = entryTime;
     if (checkOutError != null) {
       throw checkOutError!;
     }
@@ -90,8 +92,14 @@ class _FakeCheckOutRepository implements CheckOutRepository {
   }
 }
 
-OpenSession _session(int id, int vehicleId) =>
-    OpenSession(id: id, vehicleId: vehicleId, entryTime: DateTime.utc(2026));
+const _platesByVehicle = {10: 'ABC123', 20: 'XYZ999'};
+
+OpenSession _session(int id, int vehicleId, {String? plate}) => OpenSession(
+  id: id,
+  vehicleId: vehicleId,
+  entryTime: DateTime.utc(2026, 1, 1, id),
+  plate: plate ?? _platesByVehicle[vehicleId] ?? '',
+);
 
 final _receipt = CheckOutReceipt(
   id: 1,
@@ -104,21 +112,15 @@ final _receipt = CheckOutReceipt(
 
 void main() {
   late _FakeCheckOutRepository repository;
-  late FakeVehicleRepository vehicles;
   late CheckOutCubit cubit;
 
   setUp(() {
     repository = _FakeCheckOutRepository()
       ..sessions = [_session(1, 10), _session(2, 20)]
       ..receipt = _receipt;
-    vehicles = FakeVehicleRepository(const [
-      Vehicle(id: 10, plate: 'ABC123', categoryId: 1),
-      Vehicle(id: 20, plate: 'XYZ999', categoryId: 1),
-    ]);
     cubit = CheckOutCubit(
       CheckOutVehicle(repository),
       repository,
-      vehicles,
       searchDebounce: Duration.zero,
     );
   });
@@ -128,7 +130,7 @@ void main() {
   CheckOutLoaded loaded() => cubit.state as CheckOutLoaded;
 
   test(
-    'Success: load precomputes vehicleId -> plate for every session',
+    'Success: plates come with each session (no vehicles download)',
     () async {
       await cubit.loadOpenSessions();
 
@@ -192,16 +194,25 @@ void main() {
   });
 
   test(
-    'Failure: unresolvable plates fall back without failing the load',
+    'Failure: a session without a plate falls back to "Vehicle #id"',
     () async {
-      vehicles.listError = const NetworkFailure('offline');
+      repository.sessions = [_session(1, 30, plate: '')];
 
       await cubit.loadOpenSessions();
 
       expect(loaded().plates, isEmpty);
-      expect(loaded().plateOf(loaded().visible.first), 'Vehicle #10');
+      expect(loaded().plateOf(loaded().visible.first), 'Vehicle #30');
     },
   );
+
+  test('Success: check-out hands the session plate and entry time to the repository', () async {
+    await cubit.loadOpenSessions();
+
+    await cubit.checkOut(2);
+
+    expect(repository.checkedOutPlate, 'XYZ999');
+    expect(repository.checkedOutEntry, DateTime.utc(2026, 1, 1, 2));
+  });
 
   test(
     'Success: loadMore appends the next page while X-Total-Count says so',
@@ -254,7 +265,6 @@ void main() {
       final paged = CheckOutCubit(
         CheckOutVehicle(repository),
         repository,
-        vehicles,
         searchDebounce: Duration.zero,
         pageSize: 2,
       );
@@ -274,19 +284,22 @@ void main() {
     },
   );
 
-  test('Failure: an unexpected error still clears the in-progress submission', () async {
-    await cubit.loadOpenSessions();
-    repository.unexpected = StateError('hive');
+  test(
+    'Failure: an unexpected error still clears the in-progress submission',
+    () async {
+      await cubit.loadOpenSessions();
+      repository.unexpected = StateError('hive');
 
-    await cubit.checkOut(1);
+      await cubit.checkOut(1);
 
-    final submission = loaded().submission;
-    expect(submission, isA<SubmissionFailed>());
-    expect(
-      (submission as SubmissionFailed).failure?.code,
-      ClientFailureCodes.unexpected,
-    );
-  });
+      final submission = loaded().submission;
+      expect(submission, isA<SubmissionFailed>());
+      expect(
+        (submission as SubmissionFailed).failure?.code,
+        ClientFailureCodes.unexpected,
+      );
+    },
+  );
 
   test('Failure: a failed preview is null, not an error state', () async {
     await cubit.loadOpenSessions();

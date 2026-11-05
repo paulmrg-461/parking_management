@@ -227,6 +227,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorDuplicateUsername => 'That username already exists';
 
   @override
+  String get errorLostTicketPassMethod =>
+      'A lost ticket cannot be paid with a monthly pass; choose another payment method';
+
+  @override
+  String get errorStaleExitTime =>
+      'This exit was recorded offline more than 12 hours ago and cannot be synced; record it again';
+
+  @override
+  String get errorEvidenceNotFound =>
+      'The evidence photos were not found; take them again';
+
+  @override
+  String get errorEvidenceAlreadyUsed =>
+      'These evidence photos were already used by another entry; take them again';
+
+  @override
   String get errorSessionAlreadyClosed => 'Session already closed';
 
   @override
@@ -2748,11 +2764,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aboutDeveloper => 'About the developer';
 
   @override
-  String get aboutRole => 'Software development';
+  String get aboutRole => 'Systems Engineer';
 
   @override
   String get aboutIntro =>
-      'Hi, I am Paul Realpe (DevPaul). I design and build mobile and web apps with Flutter, caring about the experience and the details.';
+      'Experienced Systems Engineer with 7+ years in web and mobile app development. I design and build the app, the backend, the database and the infrastructure, caring about the experience and the details.';
 
   @override
   String get aboutFindMe => 'Find me';
@@ -2826,4 +2842,246 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get loginSessionExpired =>
       'Your session expired. Sign in again to continue.';
+
+  @override
+  String checkoutChargeAmount(String amount) {
+    return 'Charge $amount';
+  }
+
+  @override
+  String get checkoutCashExact => 'Exact';
+
+  @override
+  String cashCountQuantity(String denomination) {
+    return 'Quantity of $denomination';
+  }
+
+  @override
+  String get plateScanAction => 'Scan plate';
+
+  @override
+  String get vehicleEditTitle => 'Edit vehicle';
+
+  @override
+  String vehicleEditTooltip(String plate) {
+    return 'Edit vehicle $plate';
+  }
+
+  @override
+  String vehicleUpdated(String plate) {
+    return 'Vehicle $plate updated';
+  }
+
+  @override
+  String get vehicleEditHint =>
+      'The plate stays; adjust category, brand and color.';
+
+  @override
+  String get autoLockTitle => 'Auto-lock';
+
+  @override
+  String get autoLockHint =>
+      'Locks the app after this idle time and asks for the PIN to return.';
+
+  @override
+  String get autoLockOff => 'Off';
+
+  @override
+  String autoLockMinutes(int count) {
+    return '$count min';
+  }
+
+  @override
+  String get lockTitle => 'Session locked';
+
+  @override
+  String get lockHint => 'Enter your PIN to continue.';
+
+  @override
+  String get lockUnlock => 'Unlock';
+
+  @override
+  String get lockWrongPin => 'Wrong PIN. Try again.';
+
+  @override
+  String lockAttemptsLeft(int count) {
+    return 'Attempts left: $count';
+  }
+
+  @override
+  String get lockLogout => 'Sign out';
+
+  @override
+  String get settingsMinVersion => 'Minimum app version';
+
+  @override
+  String get settingsMinVersionHint =>
+      'Optional, e.g. 1.4.2. Older APKs will see an update notice.';
+
+  @override
+  String get settingsMinVersionInvalid => 'Use the 1.4.2 format';
+
+  @override
+  String updateRequired(String current, String minimum) {
+    return 'Update the app: this device runs $current and the site requires $minimum or newer.';
+  }
+
+  @override
+  String get helpTitle => 'Help';
+
+  @override
+  String get helpIntro => 'Quick guides for daily operations.';
+
+  @override
+  String get helpSearchLabel => 'Search help';
+
+  @override
+  String helpResults(int count) {
+    return '$count articles';
+  }
+
+  @override
+  String get helpNoResults => 'No articles match your search.';
+
+  @override
+  String get helpSectionStart => 'Getting started';
+
+  @override
+  String get helpSectionCash => 'Payments and cash';
+
+  @override
+  String get helpSectionVehicles => 'Vehicles';
+
+  @override
+  String get helpSectionOffline => 'Offline and security';
+
+  @override
+  String get helpOpenShiftTitle => 'Open a shift';
+
+  @override
+  String get helpOpenShiftBody =>
+      'Go to Cash and tap Open shift. Count the opening float; it becomes the base for the reconciliation.';
+
+  @override
+  String get helpChargeTitle => 'Charge a check-out';
+
+  @override
+  String get helpChargeBody =>
+      'In Check-out search the plate or scan the QR, review the breakdown and tap Charge. Pick the method and confirm.';
+
+  @override
+  String get helpReprintTitle => 'Reprint a ticket';
+
+  @override
+  String get helpReprintBody =>
+      'Open the vehicle history or an open session and use Reprint ticket to generate the receipt again.';
+
+  @override
+  String get helpCloseShiftTitle => 'Close the shift (reconciliation)';
+
+  @override
+  String get helpCloseShiftBody =>
+      'In Cash tap Close shift, count the cash (the denomination counter helps) and confirm any difference.';
+
+  @override
+  String get helpMovementTitle => 'Cash in and out';
+
+  @override
+  String get helpMovementBody =>
+      'From Cash register a withdrawal or deposit with its reason. It appears in the shift history and reports.';
+
+  @override
+  String get helpCheckInTitle => 'Register a check-in';
+
+  @override
+  String get helpCheckInBody =>
+      'In Check-in type the plate, pick a category and bay if needed, and attach photos or a video of the vehicle condition.';
+
+  @override
+  String get helpReservationTitle => 'Capacity holds';
+
+  @override
+  String get helpReservationBody =>
+      'In Reservations create one with plate, category and deadline. From the hold you can check in the vehicle or cancel it.';
+
+  @override
+  String get helpPassTitle => 'Monthly passes';
+
+  @override
+  String get helpPassBody =>
+      'In Monthly passes add the vehicle, period and amount. You can collect renewals and notify the customer by WhatsApp.';
+
+  @override
+  String get helpOfflineTitle => 'Working offline';
+
+  @override
+  String get helpOfflineBody =>
+      'Check-ins, check-outs and vehicle edits are queued and sync when the network returns. Cash and pass actions require a connection.';
+
+  @override
+  String get helpAutoLockTitle => 'Auto-lock';
+
+  @override
+  String get helpAutoLockBody =>
+      'If the app is idle it asks for the PIN. Change the timeout in Menu → Auto-lock (or the sidebar).';
+
+  @override
+  String get helpUpdateTitle => 'Update notice';
+
+  @override
+  String get helpUpdateBody =>
+      'If a version notice appears, install the latest APK from your administrator; basic work keeps running until then.';
+
+  @override
+  String get diagnosticsClientNetwork => 'Client network';
+
+  @override
+  String get diagnosticsTimeouts => 'Timed-out requests';
+
+  @override
+  String get diagnosticsRetries => 'Automatic retries';
+
+  @override
+  String get diagnosticsFailedRequests => 'Failed requests';
+
+  @override
+  String get evidenceDuration => 'Time parked';
+
+  @override
+  String get evidenceEstimatedAmount => 'Estimated amount';
+
+  @override
+  String get evidenceChargedAmount => 'Amount charged';
+
+  @override
+  String get evidencePassCovered => 'Covered by monthly pass';
+
+  @override
+  String get evidencePriceMayChange => 'May change until check-out';
+
+  @override
+  String get evidenceCall => 'Call the lot';
+
+  @override
+  String get evidenceWhatsApp => 'Message on WhatsApp';
+
+  @override
+  String evidenceWhatsAppMessage(String plate) {
+    return 'Hi, I am writing about vehicle $plate.';
+  }
+
+  @override
+  String get preferencesTitle => 'Settings';
+
+  @override
+  String get preferencesHint => 'Language, appearance and auto-lock.';
+
+  @override
+  String get aboutTitle => 'About';
+
+  @override
+  String get aboutDevelopers => 'Developers';
+
+  @override
+  String get aboutJimmyRole => 'Developer';
 }

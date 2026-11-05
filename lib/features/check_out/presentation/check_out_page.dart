@@ -16,6 +16,7 @@ import '../../../core/qr/qr_scan_page.dart';
 import '../../../core/utils/elapsed.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/theme/tokens.dart';
+import '../../../core/widgets/app_icon_button.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/filter_bar.dart';
 import '../../../core/widgets/error_state.dart';
@@ -81,6 +82,20 @@ class _CheckOutPageState extends State<CheckOutPage> {
   final _searchController = TextEditingController();
   PaymentMethod? _rememberedMethod;
   PaymentMethod? _pendingMethod;
+
+  /// Session waiting on the server (fare preview or the check-out itself):
+  /// its charge button shows progress. Cleared while the dialog is open.
+  int? _openingSessionId;
+
+  /// A charge flow (resolve, preview, dialog, submission) is running, so
+  /// double taps or a second scan do not stack dialogs.
+  bool _inFlow = false;
+
+  void _setOpening(int? sessionId) {
+    if (mounted) {
+      setState(() => _openingSessionId = sessionId);
+    }
+  }
 
   @override
   void initState() {
@@ -227,6 +242,7 @@ class _CheckOutPageState extends State<CheckOutPage> {
                 onMethodChosen: _chooseMethod,
                 onCheckOut: _startCheckout,
                 canReprint: _canDiscount(context),
+                openingSessionId: _openingSessionId,
               ),
             ),
           ],
@@ -288,8 +304,27 @@ class _CheckOutPageState extends State<CheckOutPage> {
     OpenSession session,
     String plate,
   ) async {
+    if (_inFlow) {
+      return;
+    }
+    _inFlow = true;
+    try {
+      await _runCheckout(context, session, plate);
+    } finally {
+      _inFlow = false;
+      _setOpening(null);
+    }
+  }
+
+  Future<void> _runCheckout(
+    BuildContext context,
+    OpenSession session,
+    String plate,
+  ) async {
     final cubit = context.read<CheckOutCubit>();
+    _setOpening(session.id);
     final preview = await cubit.preview(session.id);
+    _setOpening(null);
     if (!context.mounted) {
       return;
     }
@@ -306,6 +341,7 @@ class _CheckOutPageState extends State<CheckOutPage> {
       return;
     }
     _chooseMethod(choice.method);
+    _setOpening(session.id);
     await cubit.checkOut(
       session.id,
       paymentMethod: choice.method.wire,
@@ -359,15 +395,21 @@ class _CheckOutPageState extends State<CheckOutPage> {
   /// Resolves a scanned or typed plate on the server and opens its payment
   /// dialog when exactly one open session matches (USB QR readers type the
   /// plate and send Enter).
+  /// A second scan (or Enter) while one is resolving or charging is ignored.
   Future<void> _resolveAndOpen(BuildContext context, String rawPlate) async {
-    final cubit = context.read<CheckOutCubit>();
     final plate = rawPlate.replaceAll(RegExp(r'\s'), '').toUpperCase();
-    if (plate.isEmpty) {
+    if (plate.isEmpty || _inFlow) {
       return;
     }
-    _searchController.text = plate;
-    cubit.search(plate);
-    final session = await cubit.resolvePlate(plate);
+    _inFlow = true;
+    final OpenSession? session;
+    try {
+      _searchController.text = plate;
+      final cubit = context.read<CheckOutCubit>()..search(plate);
+      session = await cubit.resolvePlate(plate);
+    } finally {
+      _inFlow = false;
+    }
     if (!context.mounted) {
       return;
     }
@@ -375,9 +417,7 @@ class _CheckOutPageState extends State<CheckOutPage> {
       showInfoSnack(context, context.l10n.checkOutQrNoSession(plate));
       return;
     }
-    final state = cubit.state;
-    final resolved = state is CheckOutLoaded ? state.plateOf(session) : plate;
-    await _startCheckout(context, session, resolved);
+    await _startCheckout(context, session, _plateOf(context, session));
   }
 
   Future<void> _showReceipt(BuildContext context, CheckOutReceipt receipt) {
@@ -410,11 +450,16 @@ class _CheckOutPageState extends State<CheckOutPage> {
     discountAmount: receipt.discountAmount,
     discountReason: receipt.discountReason,
     pendingSync: receipt.pendingSync,
-    evidenceUrl: receipt.pendingSync
-        ? null
-        : publicEvidenceUrl(receipt.id),
+    evidenceUrl: receipt.pendingSync ? null : publicEvidenceUrl(receipt.id),
   );
 }
+
+/// Plate shown for a session; the view always carries it, the fallback only
+/// covers rows synced before the plate column existed.
+String _plateOf(BuildContext context, OpenSession session) =>
+    session.plate.isEmpty
+    ? context.l10n.unknownVehicle(session.vehicleId)
+    : session.plate;
 
 /// Rebuilds only when what it renders changes (not on submission status).
 class _SessionsList extends StatelessWidget {
@@ -423,11 +468,13 @@ class _SessionsList extends StatelessWidget {
     required this.onMethodChosen,
     required this.onCheckOut,
     required this.canReprint,
+    this.openingSessionId,
   });
 
   final PaymentMethod? rememberedMethod;
   final ValueChanged<PaymentMethod> onMethodChosen;
   final bool canReprint;
+  final int? openingSessionId;
   final Future<void> Function(
     BuildContext context,
     OpenSession session,
@@ -444,7 +491,6 @@ class _SessionsList extends StatelessWidget {
           previous is! CheckOutLoaded ||
           current is! CheckOutLoaded ||
           previous.visible != current.visible ||
-          previous.plates != current.plates ||
           previous.hasMore != current.hasMore ||
           previous.loadingMore != current.loadingMore,
       builder: (context, state) => switch (state) {
@@ -497,22 +543,19 @@ class _SessionsList extends StatelessWidget {
         itemCount: state.visible.length + (showFooter ? 1 : 0),
         itemBuilder: (context, index) => index == state.visible.length
             ? _LoadMoreTile(loading: state.loadingMore)
-            : _SessionTile(
-                session: state.visible[index],
-                plate:
-                    state.plates[state.visible[index].vehicleId] ??
-                    context.l10n.unknownVehicle(state.visible[index].vehicleId),
-                canReprint: canReprint,
-                onCharge: () => onCheckOut(
-                  context,
-                  state.visible[index],
-                  state.plates[state.visible[index].vehicleId] ??
-                      context.l10n.unknownVehicle(
-                        state.visible[index].vehicleId,
-                      ),
-                ),
-              ),
+            : _tileFor(context, state.visible[index]),
       ),
+    );
+  }
+
+  Widget _tileFor(BuildContext context, OpenSession session) {
+    final plate = _plateOf(context, session);
+    return _SessionTile(
+      session: session,
+      plate: plate,
+      canReprint: canReprint,
+      busy: session.id == openingSessionId,
+      onCharge: () => onCheckOut(context, session, plate),
     );
   }
 }
@@ -523,12 +566,16 @@ class _SessionTile extends StatelessWidget {
     required this.plate,
     required this.onCharge,
     required this.canReprint,
+    this.busy = false,
   });
 
   final OpenSession session;
   final String plate;
   final VoidCallback onCharge;
   final bool canReprint;
+
+  /// Its charge flow is running: the button shows progress and is disabled.
+  final bool busy;
 
   @override
   Widget build(BuildContext context) {
@@ -540,6 +587,8 @@ class _SessionTile extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: ListTile(
         isThreeLine: true,
+        // The whole row charges: a gloved tap anywhere on it opens the flow.
+        onTap: busy ? null : onCharge,
         // Phones keep the full width for the plate, chips and actions.
         leading: MediaQuery.sizeOf(context).width < 600
             ? null
@@ -558,77 +607,85 @@ class _SessionTile extends StatelessWidget {
                 ),
               ),
         title: Text(plate),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(l10n.sessionEntry(Formatters.dateTime(session.entryTime))),
-          const SizedBox(height: 2),
-          // Wrap so the elapsed time and chips never overflow when the
-          // trailing actions (Cobrar + reprint) narrow the row on phones.
-          Wrap(
-            spacing: 8,
-            runSpacing: 4,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.timer_outlined,
-                    size: 14,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                  const SizedBox(width: 4),
-                  Flexible(
-                    child: Text(
-                      elapsedLabel(l10n, session.entryTime),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(l10n.sessionEntry(Formatters.dateTime(session.entryTime))),
+            const SizedBox(height: 2),
+            // Wrap so the elapsed time and chips never overflow when the
+            // trailing actions (Cobrar + reprint) narrow the row on phones.
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.timer_outlined,
+                      size: 14,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        elapsedLabel(l10n, session.entryTime),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                if (longStay)
+                  StatusChip(
+                    label: l10n.checkOutLongStay,
+                    tone: StatusTone.warning,
+                    icon: Icons.warning_amber_outlined,
                   ),
-                ],
-              ),
-              if (longStay)
-                StatusChip(
-                  label: l10n.checkOutLongStay,
-                  tone: StatusTone.warning,
-                  icon: Icons.warning_amber_outlined,
-                ),
-              if (session.hasPass)
-                StatusChip(
-                  label: l10n.paymentMonthlyPass,
-                  tone: StatusTone.success,
-                  icon: Icons.card_membership,
-                ),
-              if (session.leftKeys)
-                StatusChip(
-                  label: l10n.checkInLeftKeysShort,
-                  tone: StatusTone.neutral,
-                  icon: Icons.key_outlined,
-                ),
-            ],
-          ),
-        ],
-      ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (canReprint)
-            IconButton(
-              tooltip: l10n.checkOutReprintTicket,
-              visualDensity: VisualDensity.compact,
-              icon: const Icon(Icons.receipt_long_outlined),
-              onPressed: () => _reprintTicket(context),
+                if (session.hasPass)
+                  StatusChip(
+                    label: l10n.paymentMonthlyPass,
+                    tone: StatusTone.success,
+                    icon: Icons.card_membership,
+                  ),
+                if (session.leftKeys)
+                  StatusChip(
+                    label: l10n.checkInLeftKeysShort,
+                    tone: StatusTone.neutral,
+                    icon: Icons.key_outlined,
+                  ),
+              ],
             ),
-          FilledButton(
-            onPressed: onCharge,
-            child: Text(l10n.checkOutCharge),
-          ),
-        ],
+          ],
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (canReprint)
+              AppIconButton(
+                tooltip: l10n.checkOutReprintTicket,
+                icon: Icons.receipt_long_outlined,
+                onPressed: () => _reprintTicket(context),
+              ),
+            _buildChargeButton(context),
+          ],
         ),
       ),
     );
   }
+
+  Widget _buildChargeButton(BuildContext context) => FilledButton(
+    key: ValueKey('check_out_charge_${session.id}'),
+    onPressed: busy ? null : onCharge,
+    child: busy
+        ? const SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          )
+        : Text(context.l10n.checkOutCharge),
+  );
 
   /// Reprints the entry ticket (with its exit QR) for a car still inside.
   Future<void> _reprintTicket(BuildContext context) {

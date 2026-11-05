@@ -9,12 +9,14 @@ import 'package:parking_management/features/check_out/presentation/payment_metho
 import '../../../helpers/test_app.dart';
 
 const _preview = CheckOutPreview(sessionId: 1, amount: 22000);
+final _confirm = find.byKey(const Key('checkout_confirm'));
 
 Future<CheckoutChoice? Function()> pumpDialog(
   WidgetTester tester, {
   CheckOutPreview? preview = _preview,
   PaymentMethod initialMethod = PaymentMethod.cash,
   Size size = const Size(800, 1400),
+  bool canDiscount = false,
 }) async {
   CheckoutChoice? result;
   tester.view.physicalSize = size;
@@ -29,7 +31,7 @@ Future<CheckoutChoice? Function()> pumpDialog(
               result = await showCheckoutDialog(
                 context,
                 plate: 'ABC123',
-                canDiscount: false,
+                canDiscount: canDiscount,
                 preview: preview,
                 initialMethod: initialMethod,
               );
@@ -60,7 +62,7 @@ void main() {
     expect(find.text('Cambio'), findsOneWidget);
     expect(find.text(r'$8.000'), findsOneWidget);
 
-    await tester.tap(find.text('Confirmar'));
+    await tester.tap(_confirm);
     await tester.pumpAndSettle();
 
     expect((result())?.cashReceived, 30000);
@@ -92,7 +94,12 @@ void main() {
     await pumpDialog(tester, size: const Size(400, 800));
 
     expect(tester.takeException(), isNull);
-    for (final label in ['Efectivo', 'Tarjeta', 'Transferencia', 'Mensualidad']) {
+    for (final label in [
+      'Efectivo',
+      'Tarjeta',
+      'Transferencia',
+      'Mensualidad',
+    ]) {
       expect(find.text(label), findsOneWidget);
     }
     await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
@@ -110,28 +117,22 @@ void main() {
     await tester.pump();
     expect(find.text('Falta'), findsOneWidget);
 
-    await tester.tap(find.text('Confirmar'));
+    await tester.tap(_confirm);
     await tester.pumpAndSettle();
 
-    expect(
-      find.text('El efectivo recibido no cubre el total'),
-      findsOneWidget,
-    );
+    expect(find.text('El efectivo recibido no cubre el total'), findsOneWidget);
     expect(result(), isNull);
   });
 
   testWidgets('Success: card asks debit or credit', (tester) async {
-    final result = await pumpDialog(
-      tester,
-      initialMethod: PaymentMethod.card,
-    );
+    final result = await pumpDialog(tester, initialMethod: PaymentMethod.card);
 
     expect(find.text('Tipo de tarjeta'), findsOneWidget);
     expect(find.text('Débito'), findsOneWidget);
 
     await tester.tap(find.text('Crédito'));
     await tester.pump();
-    await tester.tap(find.text('Confirmar'));
+    await tester.tap(_confirm);
     await tester.pumpAndSettle();
 
     expect((result())?.cardType, CardType.credit);
@@ -151,9 +152,214 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('checkout_cash_received')), findsNothing);
 
-    await tester.tap(find.text('Confirmar'));
+    await tester.tap(_confirm);
     await tester.pumpAndSettle();
     expect((result())?.cashReceived, isNull);
     expect((result())?.cardType, CardType.debit);
+  });
+
+  group('lost ticket', () {
+    const lostPreview = CheckOutPreview(
+      sessionId: 1,
+      amount: 6000,
+      lostTicketAmount: 30000,
+    );
+
+    Future<void> checkLostTicket(WidgetTester tester) async {
+      await tester.tap(find.text('Ticket perdido'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('Success: the amount due becomes the lost-ticket amount', (
+      tester,
+    ) async {
+      await pumpDialog(tester, preview: lostPreview);
+      await checkLostTicket(tester);
+
+      await tester.enterText(
+        find.byKey(const Key('checkout_cash_received')),
+        '20000',
+      );
+      await tester.pump();
+
+      // 20.000 covers the regular 6.000 but not the 30.000 lost-ticket fee.
+      expect(find.text('Falta'), findsOneWidget);
+      expect(find.text(r'$10.000'), findsOneWidget);
+    });
+
+    testWidgets('Failure: an older server (no lost amount) keeps the fare', (
+      tester,
+    ) async {
+      await pumpDialog(
+        tester,
+        preview: const CheckOutPreview(sessionId: 1, amount: 6000),
+      );
+      await checkLostTicket(tester);
+
+      await tester.enterText(
+        find.byKey(const Key('checkout_cash_received')),
+        '10000',
+      );
+      await tester.pump();
+
+      expect(find.text('Cambio'), findsOneWidget);
+      expect(find.text(r'$4.000'), findsOneWidget);
+    });
+
+    testWidgets(
+      'Security: a lost ticket can never be charged to a monthly pass',
+      (tester) async {
+        final result = await pumpDialog(
+          tester,
+          preview: lostPreview,
+          initialMethod: PaymentMethod.monthlyPass,
+        );
+        await checkLostTicket(tester);
+
+        await tester.tap(find.text('Mensualidad'));
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextFormField).first, 'perdido');
+        await tester.tap(_confirm);
+        await tester.pumpAndSettle();
+
+        expect(result()?.lostTicket, isTrue);
+        expect(result()?.method, isNot(PaymentMethod.monthlyPass));
+      },
+    );
+  });
+
+  group('charge button and totals', () {
+    testWidgets('Success: the primary action names the amount due', (
+      tester,
+    ) async {
+      await pumpDialog(tester);
+
+      expect(find.text(r'Cobrar $22.000'), findsOneWidget);
+    });
+
+    testWidgets('Failure: without a preview the action stays generic', (
+      tester,
+    ) async {
+      await pumpDialog(tester, preview: null);
+
+      expect(find.widgetWithText(FilledButton, 'Confirmar'), findsOneWidget);
+      expect(find.textContaining(r'Cobrar $'), findsNothing);
+    });
+
+    testWidgets('Success: typing a discount refreshes the total and change', (
+      tester,
+    ) async {
+      await pumpDialog(tester, canDiscount: true);
+      expect(
+        find.byKey(const Key('checkout_due_after_discount')),
+        findsNothing,
+      );
+
+      await tester.enterText(
+        find.byKey(const Key('checkout_discount_amount')),
+        '2000',
+      );
+      await tester.pump();
+
+      expect(
+        find.byKey(const Key('checkout_due_after_discount')),
+        findsOneWidget,
+      );
+      expect(find.text(r'$20.000'), findsOneWidget);
+      expect(find.text(r'Cobrar $20.000'), findsOneWidget);
+    });
+
+    testWidgets('Failure: a discount without reason flags the reason field', (
+      tester,
+    ) async {
+      final result = await pumpDialog(tester, canDiscount: true);
+
+      await tester.enterText(
+        find.byKey(const Key('checkout_discount_amount')),
+        '2000',
+      );
+      await tester.pump();
+      await tester.tap(_confirm);
+      await tester.pumpAndSettle();
+
+      final reason = tester.widget<TextField>(
+        find.descendant(
+          of: find.byKey(const Key('checkout_discount_reason')),
+          matching: find.byType(TextField),
+        ),
+      );
+      expect(reason.decoration?.errorText, 'Indica el motivo del descuento');
+      expect(result(), isNull);
+    });
+
+    testWidgets('Failure: a cash shortfall is shown on the cash field', (
+      tester,
+    ) async {
+      await pumpDialog(tester);
+
+      await tester.enterText(
+        find.byKey(const Key('checkout_cash_received')),
+        '1000',
+      );
+      await tester.tap(_confirm);
+      await tester.pumpAndSettle();
+
+      final cash = tester.widget<TextField>(
+        find.byKey(const Key('checkout_cash_received')),
+      );
+      expect(
+        cash.decoration?.errorText,
+        'El efectivo recibido no cubre el total',
+      );
+    });
+  });
+
+  group('cash shortcuts', () {
+    testWidgets('Success: Exacto fills the amount due and confirms on done', (
+      tester,
+    ) async {
+      final result = await pumpDialog(tester);
+
+      await tester.tap(find.byKey(const Key('checkout_cash_exact')));
+      await tester.pump();
+      expect(find.text('22000'), findsOneWidget);
+
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pumpAndSettle();
+
+      expect(result()?.cashReceived, 22000);
+    });
+
+    testWidgets('Success: bill chips offer the smallest notes that cover it', (
+      tester,
+    ) async {
+      await pumpDialog(
+        tester,
+        preview: const CheckOutPreview(sessionId: 1, amount: 6000),
+      );
+
+      expect(find.widgetWithText(ActionChip, r'$10.000'), findsOneWidget);
+      expect(find.widgetWithText(ActionChip, r'$20.000'), findsOneWidget);
+      expect(find.widgetWithText(ActionChip, r'$50.000'), findsOneWidget);
+      expect(find.widgetWithText(ActionChip, r'$5.000'), findsNothing);
+
+      await tester.tap(find.widgetWithText(ActionChip, r'$10.000'));
+      await tester.pump();
+      expect(find.text('Cambio'), findsOneWidget);
+      expect(find.text(r'$4.000'), findsOneWidget);
+    });
+
+    testWidgets('A11y: the cash field is focused and chips meet 48 dp', (
+      tester,
+    ) async {
+      await pumpDialog(tester, size: const Size(400, 800));
+
+      final cash = tester.widget<TextField>(
+        find.byKey(const Key('checkout_cash_received')),
+      );
+      expect(cash.autofocus, isTrue);
+      expect(cash.textInputAction, TextInputAction.done);
+      await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+    });
   });
 }

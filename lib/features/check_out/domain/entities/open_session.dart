@@ -7,6 +7,7 @@ class OpenSession extends Equatable {
     required this.id,
     required this.vehicleId,
     required this.entryTime,
+    this.plate = '',
     this.hasPass = false,
     this.photoCount = 0,
     this.leftKeys = false,
@@ -15,6 +16,9 @@ class OpenSession extends Equatable {
   final int id;
   final int vehicleId;
   final DateTime entryTime;
+
+  /// Plate from `open_sessions_view`, so lists never need a vehicles lookup.
+  final String plate;
 
   /// The vehicle has an active monthly pass right now (`has_pass` in the
   /// view), so the check-out will not charge the stay.
@@ -31,6 +35,7 @@ class OpenSession extends Equatable {
     id,
     vehicleId,
     entryTime,
+    plate,
     hasPass,
     photoCount,
     leftKeys,

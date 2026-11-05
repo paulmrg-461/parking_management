@@ -90,7 +90,8 @@ final class MonthlyPassesLoaded extends MonthlyPassesState {
 final class MonthlyPassesFailure extends MonthlyPassesState {
   const MonthlyPassesFailure(this.message, {this.failure});
 
-  MonthlyPassesFailure.of(Failure failure) : this(failure.message, failure: failure);
+  MonthlyPassesFailure.of(Failure failure)
+    : this(failure.message, failure: failure);
 
   final String message;
   final Failure? failure;
@@ -130,8 +131,10 @@ class MonthlyPassesCubit extends ResilientCubit<MonthlyPassesState> {
     }
   }
 
-  Future<void> create(CreateMonthlyPassCommand command) =>
-      _submit(() => _repository.create(command), action: MonthlyPassAction.created);
+  Future<void> create(CreateMonthlyPassCommand command) => _submit(
+    () => _repository.create(command),
+    action: MonthlyPassAction.created,
+  );
 
   Future<void> update(UpdateMonthlyPassCommand command) =>
       _submit(() => _repository.update(command));
@@ -159,12 +162,14 @@ class MonthlyPassesCubit extends ResilientCubit<MonthlyPassesState> {
   Future<void> delete(int id) =>
       _submit(() => _repository.delete(id), action: MonthlyPassAction.deleted);
 
-  Future<void> registerPayment(int id, String method) =>
-      _submit(
-        () => _repository.registerPayment(id, method),
-        action: MonthlyPassAction.payment,
-      );
+  Future<void> registerPayment(int id, String method) => _submit(
+    () => _repository.registerPayment(id, method),
+    action: MonthlyPassAction.payment,
+  );
 
+  /// Reports the outcome as soon as the mutation is committed; the list
+  /// refresh is separate so its failure can never turn a saved change into
+  /// an error (the previous lists stay on screen).
   Future<void> _submit(
     Future<Object?> Function() perform, {
     MonthlyPassAction? action,
@@ -174,20 +179,34 @@ class MonthlyPassesCubit extends ResilientCubit<MonthlyPassesState> {
       return;
     }
     emit(current.copyWith(submission: const SubmissionInProgress()));
+    final Object? result;
     try {
-      final result = await perform();
-      emit(
-        current.copyWith(
-          monthlyPasses: await _repository.list(),
-          pendingPayments: await _repository.pendingPayments(),
-          submission: action == null
-              ? const SubmissionIdle()
-              : SubmissionSucceeded<Object?>(result),
-          lastAction: action,
-        ),
-      );
+      result = await perform();
     } on Failure catch (failure) {
       emit(current.copyWith(submission: SubmissionFailed.of(failure)));
+      return;
+    }
+    emit(
+      current.copyWith(
+        submission: action == null
+            ? const SubmissionIdle()
+            : SubmissionSucceeded<Object?>(result),
+        lastAction: action,
+      ),
+    );
+    await _refreshLists();
+  }
+
+  Future<void> _refreshLists() async {
+    try {
+      final passes = await _repository.list();
+      final pending = await _repository.pendingPayments();
+      final latest = state;
+      if (latest is MonthlyPassesLoaded) {
+        emit(latest.copyWith(monthlyPasses: passes, pendingPayments: pending));
+      }
+    } on Failure {
+      // Keep the previous lists; the next load refreshes them.
     }
   }
 

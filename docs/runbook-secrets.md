@@ -11,7 +11,7 @@ and what to do if one leaks.
 | `POSTGRES_PASSWORD` | db, auth, rest, realtime, storage, meta, functions, supavisor | Requires `ALTER USER` for each role + restart. No client rebuild. |
 | `JWT_SECRET` | GoTrue (signing), PostgREST/Storage/Realtime (verification) | Invalidates every session. `ANON_KEY`/`SERVICE_ROLE_KEY` are derived from it, so they change too. App builds need the new anon key. |
 | `ANON_KEY` / `SERVICE_ROLE_KEY` | Flutter build, storage, studio, cron, functions | Same rotation as `JWT_SECRET` (they are signed by it). The service key must stay server-side. |
-| `DASHBOARD_USERNAME` / `DASHBOARD_PASSWORD` | Studio basic auth at the proxy | Restart the proxy; nothing else changes. |
+| `DASHBOARD_USERNAME` / `DASHBOARD_PASSWORD` | Studio credentials (loopback UI) | Restart Studio; nothing else changes. |
 | Operator/admin PINs | One per user in GoTrue | Per user, no downtime. |
 | `FCM_SERVICE_ACCOUNT_JSON` | `push-dispatch` | Replace the JSON, restart `functions`. |
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | `push-dispatch`, web build | Browser subscriptions become invalid: users must re-enable notifications; rebuild the web app with the new public key. |

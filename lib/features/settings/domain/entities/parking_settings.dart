@@ -21,6 +21,7 @@ class ParkingSettings extends Equatable {
     this.motoOutOfService = 0,
     this.legalPolicy = '',
     this.currency = 'COP',
+    this.minAppVersion = '',
   });
 
   final String name;
@@ -63,6 +64,9 @@ class ParkingSettings extends Equatable {
   /// Site currency code (`COP` or `USD`); amounts are minor units of it.
   final String currency;
 
+  /// Oldest app build allowed for this site ('' = no minimum).
+  final String minAppVersion;
+
   /// The never-configured record (mirrors the backend default).
   static ParkingSettings defaults() => const ParkingSettings();
 
@@ -83,6 +87,7 @@ class ParkingSettings extends Equatable {
     int? motoOutOfService,
     String? legalPolicy,
     String? currency,
+    String? minAppVersion,
   }) => ParkingSettings(
     name: name ?? this.name,
     address: address ?? this.address,
@@ -100,6 +105,7 @@ class ParkingSettings extends Equatable {
     motoOutOfService: motoOutOfService ?? this.motoOutOfService,
     legalPolicy: legalPolicy ?? this.legalPolicy,
     currency: currency ?? this.currency,
+    minAppVersion: minAppVersion ?? this.minAppVersion,
   );
 
   /// Editable fields (metadata excluded).
@@ -119,6 +125,7 @@ class ParkingSettings extends Equatable {
     'moto_out_of_service': motoOutOfService,
     'legal_policy': legalPolicy,
     'currency': currency,
+    'min_app_version': minAppVersion,
   };
 
   @override
@@ -139,5 +146,6 @@ class ParkingSettings extends Equatable {
     motoOutOfService,
     legalPolicy,
     currency,
+    minAppVersion,
   ];
 }

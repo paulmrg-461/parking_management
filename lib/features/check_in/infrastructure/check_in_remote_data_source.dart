@@ -105,8 +105,9 @@ class SupabaseCheckInRemoteDataSource implements CheckInRemoteDataSource {
     for (var i = 0; i < photos.length; i++) {
       final photo = photos[i];
       final extension = photoExtensionOf(photo);
-      final path =
-          '$folder/${i}_${DateTime.now().microsecondsSinceEpoch}$extension';
+      // Deterministic per client_ref: a retry re-uploads the same object and
+      // gets 409 (treated as success) instead of orphaning a second copy.
+      final path = '$folder/$i$extension';
       await _uploadPhoto(
         path,
         await photo.readAsBytes(),
@@ -127,8 +128,7 @@ class SupabaseCheckInRemoteDataSource implements CheckInRemoteDataSource {
     final folder =
         existingIdempotencyKey ?? DateTime.now().microsecondsSinceEpoch;
     final extension = videoExtensionOf(video);
-    final path =
-        '$folder/video_${DateTime.now().microsecondsSinceEpoch}$extension';
+    final path = '$folder/video$extension';
     await _uploadPhoto(
       path,
       await video.readAsBytes(),

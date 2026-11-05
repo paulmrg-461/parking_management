@@ -9,6 +9,7 @@ import 'package:parking_management/features/tariffs/presentation/create_tariff_d
 import 'package:parking_management/features/users/presentation/create_user_dialog.dart';
 import 'package:parking_management/features/vehicles/domain/entities/vehicle.dart';
 import 'package:parking_management/features/vehicles/presentation/create_vehicle_dialog.dart';
+import 'package:parking_management/features/vehicles/presentation/edit_vehicle_dialog.dart';
 
 import '../../helpers/test_app.dart';
 
@@ -44,6 +45,11 @@ void main() {
         onSave: (_) {},
       ),
       'capacity': CapacityDialog(category: _category, onSave: (_) {}),
+      'edit vehicle': EditVehicleDialog(
+        existing: const Vehicle(id: 1, plate: 'ABC123', categoryId: 1),
+        categories: const [_category],
+        onSave: (_) {},
+      ),
     };
 
     for (final entry in dialogs.entries) {
