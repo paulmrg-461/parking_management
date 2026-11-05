@@ -995,5 +995,17 @@
   "vehicleUpdated": "Vehículo {plate} actualizado",
   "@vehicleEditTooltip": {"placeholders": {"plate": {"type": "String"}}},
   "@vehicleUpdated": {"placeholders": {"plate": {"type": "String"}}},
-  "vehicleEditHint": "La placa no cambia; puedes ajustar categoría, marca y color."
+  "vehicleEditHint": "La placa no cambia; puedes ajustar categoría, marca y color.",
+  "autoLockTitle": "Bloqueo automático",
+  "autoLockHint": "Bloquea la app tras este tiempo sin uso y pide el PIN para volver.",
+  "autoLockOff": "Desactivado",
+  "autoLockMinutes": "{count} min",
+  "lockTitle": "Sesión bloqueada",
+  "lockHint": "Ingresa tu PIN para continuar.",
+  "lockUnlock": "Desbloquear",
+  "lockWrongPin": "PIN incorrecto. Inténtalo de nuevo.",
+  "lockAttemptsLeft": "Intentos restantes: {count}",
+  "lockLogout": "Cerrar sesión",
+  "@autoLockMinutes": {"placeholders": {"count": {"type": "int"}}},
+  "@lockAttemptsLeft": {"placeholders": {"count": {"type": "int"}}}
 }

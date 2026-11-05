@@ -5197,6 +5197,66 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'La placa no cambia; puedes ajustar categoría, marca y color.'**
   String get vehicleEditHint;
+
+  /// No description provided for @autoLockTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Bloqueo automático'**
+  String get autoLockTitle;
+
+  /// No description provided for @autoLockHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Bloquea la app tras este tiempo sin uso y pide el PIN para volver.'**
+  String get autoLockHint;
+
+  /// No description provided for @autoLockOff.
+  ///
+  /// In es, this message translates to:
+  /// **'Desactivado'**
+  String get autoLockOff;
+
+  /// No description provided for @autoLockMinutes.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} min'**
+  String autoLockMinutes(int count);
+
+  /// No description provided for @lockTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Sesión bloqueada'**
+  String get lockTitle;
+
+  /// No description provided for @lockHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresa tu PIN para continuar.'**
+  String get lockHint;
+
+  /// No description provided for @lockUnlock.
+  ///
+  /// In es, this message translates to:
+  /// **'Desbloquear'**
+  String get lockUnlock;
+
+  /// No description provided for @lockWrongPin.
+  ///
+  /// In es, this message translates to:
+  /// **'PIN incorrecto. Inténtalo de nuevo.'**
+  String get lockWrongPin;
+
+  /// No description provided for @lockAttemptsLeft.
+  ///
+  /// In es, this message translates to:
+  /// **'Intentos restantes: {count}'**
+  String lockAttemptsLeft(int count);
+
+  /// No description provided for @lockLogout.
+  ///
+  /// In es, this message translates to:
+  /// **'Cerrar sesión'**
+  String get lockLogout;
 }
 
 class _AppLocalizationsDelegate

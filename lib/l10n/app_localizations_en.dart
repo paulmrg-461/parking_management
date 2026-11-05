@@ -2875,4 +2875,39 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get vehicleEditHint =>
       'The plate stays; adjust category, brand and color.';
+
+  @override
+  String get autoLockTitle => 'Auto-lock';
+
+  @override
+  String get autoLockHint =>
+      'Locks the app after this idle time and asks for the PIN to return.';
+
+  @override
+  String get autoLockOff => 'Off';
+
+  @override
+  String autoLockMinutes(int count) {
+    return '$count min';
+  }
+
+  @override
+  String get lockTitle => 'Session locked';
+
+  @override
+  String get lockHint => 'Enter your PIN to continue.';
+
+  @override
+  String get lockUnlock => 'Unlock';
+
+  @override
+  String get lockWrongPin => 'Wrong PIN. Try again.';
+
+  @override
+  String lockAttemptsLeft(int count) {
+    return 'Attempts left: $count';
+  }
+
+  @override
+  String get lockLogout => 'Sign out';
 }

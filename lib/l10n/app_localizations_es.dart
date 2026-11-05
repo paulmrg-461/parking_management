@@ -2891,4 +2891,39 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get vehicleEditHint =>
       'La placa no cambia; puedes ajustar categoría, marca y color.';
+
+  @override
+  String get autoLockTitle => 'Bloqueo automático';
+
+  @override
+  String get autoLockHint =>
+      'Bloquea la app tras este tiempo sin uso y pide el PIN para volver.';
+
+  @override
+  String get autoLockOff => 'Desactivado';
+
+  @override
+  String autoLockMinutes(int count) {
+    return '$count min';
+  }
+
+  @override
+  String get lockTitle => 'Sesión bloqueada';
+
+  @override
+  String get lockHint => 'Ingresa tu PIN para continuar.';
+
+  @override
+  String get lockUnlock => 'Desbloquear';
+
+  @override
+  String get lockWrongPin => 'PIN incorrecto. Inténtalo de nuevo.';
+
+  @override
+  String lockAttemptsLeft(int count) {
+    return 'Intentos restantes: $count';
+  }
+
+  @override
+  String get lockLogout => 'Cerrar sesión';
 }

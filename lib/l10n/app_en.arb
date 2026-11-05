@@ -920,5 +920,15 @@
   "vehicleEditTitle": "Edit vehicle",
   "vehicleEditTooltip": "Edit vehicle {plate}",
   "vehicleUpdated": "Vehicle {plate} updated",
-  "vehicleEditHint": "The plate stays; adjust category, brand and color."
+  "vehicleEditHint": "The plate stays; adjust category, brand and color.",
+  "autoLockTitle": "Auto-lock",
+  "autoLockHint": "Locks the app after this idle time and asks for the PIN to return.",
+  "autoLockOff": "Off",
+  "autoLockMinutes": "{count} min",
+  "lockTitle": "Session locked",
+  "lockHint": "Enter your PIN to continue.",
+  "lockUnlock": "Unlock",
+  "lockWrongPin": "Wrong PIN. Try again.",
+  "lockAttemptsLeft": "Attempts left: {count}",
+  "lockLogout": "Sign out"
 }

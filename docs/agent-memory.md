@@ -13,7 +13,7 @@ Last updated: 2026-11-03 (statement timeouts, CI release APK, audit fixes
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0068` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 931 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 939 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -45,6 +45,21 @@ Last updated: 2026-11-03 (statement timeouts, CI release APK, audit fixes
    `0024` (`current_lot_id`, lot CRUD, re-scoped policies/RPCs/reports,
    `report_revenue_all`), `0025` (offline replay lot capture via
    `resolve_lot`), `0026` (`list_lot_members`).
+
+## Idle lock (2026-11-05)
+
+- `AutoLockCubit` (device preference `preferences/auto_lock_minutes`, default 5,
+  options 0/1/5/15/30) + `AppLockGate` wired through `MaterialApp.builder`.
+  Pointer and hardware-key activity reset the clock; a 15 s timer and app
+  resume call `check()`. The overlay only shows while signed in, and stays up
+  through `AuthLoading`/`AuthFailure` during a PIN attempt.
+- `LockScreen` re-authenticates with `AuthCubit.login(username, pin)` (no PIN
+  stored locally); 5 wrong attempts sign out. Sign-out from the overlay
+  releases it via the gate's auth listener.
+- Timeout is chosen from the drawer (`Auto-lock` row) or the desktop sidebar
+  (lock icon, bottom sheet); `AutoLockCubit.restore()` runs in the gate.
+- Tests: cubit clock/activity/disabled/persistence and gate unlock/wrong-PIN/
+  sign-out. Test count 939.
 
 ## Vehicle editor (2026-11-03)
 
@@ -922,7 +937,7 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 ## Latest verification (2026-10-28)
 
-- `flutter test`: 931 passed (+1 live-stack integration skipped); `flutter
+- `flutter test`: 939 passed (+1 live-stack integration skipped); `flutter
   analyze` 152 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
 - `supabase/tests/run.sh` passed (migrations `0001`–`0067`); `e2e.sh` passed

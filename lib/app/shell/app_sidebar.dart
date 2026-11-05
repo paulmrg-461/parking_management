@@ -7,7 +7,9 @@ import 'package:go_router/go_router.dart';
 import '../../core/l10n/l10n.dart';
 import '../../core/l10n/locale_cubit.dart';
 import '../../core/storage/key_value_store.dart';
+import '../../core/security/auto_lock_cubit.dart';
 import '../../core/theme/theme_cubit.dart';
+import '../../core/widgets/auto_lock_menu.dart';
 import '../../core/widgets/language_button.dart';
 import '../../core/widgets/theme_mode_button.dart';
 import '../../core/theme/status_colors.dart';
@@ -431,6 +433,7 @@ class _Preferences extends StatelessWidget {
   Widget build(BuildContext context) {
     final language = _provided<LocaleCubit>(context);
     final theme = _provided<ThemeCubit>(context);
+    final autoLock = _autoLock(context);
     final buttons = [
       if (language) const LanguageButton(),
       if (theme) const ThemeModeButton(),
@@ -439,6 +442,12 @@ class _Preferences extends StatelessWidget {
         onPressed: () => context.go(aboutPath),
         icon: const Icon(Icons.code),
       ),
+      if (autoLock != null)
+        IconButton.filledTonal(
+          tooltip: context.l10n.autoLockTitle,
+          onPressed: () => showAutoLockSheet(context, autoLock),
+          icon: const Icon(Icons.lock_clock),
+        ),
     ];
     return Padding(
       padding: const EdgeInsets.only(bottom: Space.sm),
@@ -449,6 +458,14 @@ class _Preferences extends StatelessWidget {
               children: buttons,
             ),
     );
+  }
+
+  static AutoLockCubit? _autoLock(BuildContext context) {
+    try {
+      return context.read<AutoLockCubit>();
+    } on ProviderNotFoundException {
+      return null;
+    }
   }
 
   static bool _provided<T>(BuildContext context) {

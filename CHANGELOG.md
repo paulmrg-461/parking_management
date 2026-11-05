@@ -26,6 +26,10 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Added
 
+- Idle lock: after a configurable period without pointer/keyboard activity the
+  app hides behind a PIN screen (GoTrue re-login, 5 attempts then sign-out).
+  The timeout is a device preference (off/1/5/15/30 min, default 5) chosen from
+  the drawer or the desktop sidebar; the session and outbox are preserved.
 - Vehicles: admins can **edit** a vehicle's category, brand and color from the
   list (plate stays immutable as the ticket/history key). The repository update
   path existed but was unusable because `0075_vehicle_update_grant.sql` was

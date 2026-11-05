@@ -8,7 +8,9 @@ import 'package:go_router/go_router.dart';
 import '../../core/l10n/l10n.dart';
 import '../../core/l10n/locale_cubit.dart';
 import '../../core/realtime/local_activity.dart';
+import '../../core/security/auto_lock_cubit.dart';
 import '../../core/theme/theme_cubit.dart';
+import '../../core/widgets/auto_lock_menu.dart';
 import '../router/route_access.dart';
 import '../di/injection.dart';
 import '../../core/qr/qr_decoder.dart';
@@ -418,6 +420,7 @@ class _DrawerPreferences extends StatelessWidget {
     final theme = Theme.of(context);
     final localeCubit = _locale(context);
     final themeCubit = _theme(context);
+    final autoLockCubit = _autoLock(context);
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -456,6 +459,14 @@ class _DrawerPreferences extends StatelessWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _pickTheme(context, themeCubit),
           ),
+        if (autoLockCubit != null)
+          ListTile(
+            leading: const Icon(Icons.lock_clock),
+            title: Text(l10n.autoLockTitle),
+            subtitle: Text(autoLockLabel(l10n, autoLockCubit.minutes)),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => showAutoLockSheet(context, autoLockCubit),
+          ),
         const Divider(height: 1),
         ListTile(
           leading: const Icon(Icons.logout),
@@ -469,6 +480,14 @@ class _DrawerPreferences extends StatelessWidget {
   LocaleCubit? _locale(BuildContext context) {
     try {
       return context.watch<LocaleCubit>();
+    } on ProviderNotFoundException {
+      return null;
+    }
+  }
+
+  AutoLockCubit? _autoLock(BuildContext context) {
+    try {
+      return context.watch<AutoLockCubit>();
     } on ProviderNotFoundException {
       return null;
     }

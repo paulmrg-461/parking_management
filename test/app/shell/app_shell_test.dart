@@ -8,6 +8,7 @@ import 'package:parking_management/core/theme/tokens.dart';
 import 'package:parking_management/core/network/connectivity_cubit.dart';
 import 'package:parking_management/core/network/connectivity_service.dart';
 import 'package:parking_management/core/l10n/locale_cubit.dart';
+import 'package:parking_management/core/security/auto_lock_cubit.dart';
 import 'package:parking_management/core/theme/theme_cubit.dart';
 import 'package:parking_management/core/sync/pending_mutation.dart';
 import 'package:parking_management/core/widgets/sync_badge.dart';
@@ -318,6 +319,24 @@ void main() {
 
     expect(find.widgetWithText(AppBar, 'Usuarios'), findsOneWidget);
     expect(find.byIcon(Icons.sync), findsOneWidget);
+  });
+
+  testWidgets('Success: the sidebar sets the idle-lock timeout', (tester) async {
+    final lock = AutoLockCubit(FakeKeyValueStore());
+    addTearDown(lock.close);
+    await pumpApp(
+      tester,
+      role: UserRole.admin,
+      size: const Size(1200, 900),
+      autoLockCubit: lock,
+    );
+
+    await tester.tap(find.byTooltip('Bloqueo automático'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('1 min'));
+    await tester.pumpAndSettle();
+
+    expect(lock.minutes, 1);
   });
 
   testWidgets('Success: the sidebar opens the developer page', (tester) async {
