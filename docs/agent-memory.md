@@ -4,16 +4,16 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-11-03 (statement timeouts, CI release APK, audit fixes
+Last updated: 2026-11-05 (owner contact data, CI release APK, audit fixes
 0072/0073, sync resilience, operator UX). Branch `feature/supabase`.
 
 ## Where we are
 
 - Stack: Flutter (android + web) + self-hosted Supabase only. No FastAPI,
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
-- `supabase/migrations/0001..0068` are the schema owner (applied by
+- `supabase/migrations/0001..0078` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 975 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 984 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -45,6 +45,20 @@ Last updated: 2026-11-03 (statement timeouts, CI release APK, audit fixes
    `0024` (`current_lot_id`, lot CRUD, re-scoped policies/RPCs/reports,
    `report_revenue_all`), `0025` (offline replay lot capture via
    `resolve_lot`), `0026` (`list_lot_members`).
+
+## Owner contact data (2026-11-05)
+
+- `vehicles.owner_name` (`varchar(120)`, trimmed 2..120) joins the existing
+  `owner_phone`. Both are optional and admin-editable from the vehicle list
+  (edit dialog) and the vehicle history ("Datos del propietario" dialog).
+- `update_vehicle_flags` gained `p_owner_name default null` (new 5-arg
+  signature; old callers still work) and returns `owner_name`; the
+  `vehicle_history` JSON exposes it too. `null` keeps the value and an empty
+  string clears it, same as notes/phone.
+- App write path: `UpdateVehicleCommand.ownerName/ownerPhone`; `null` keeps the
+  stored value and an empty string clears it. Direct PATCH (0075 grant) sends
+  JSON `null` to clear. Covered by repository, DTO, dialog, history and SQL
+  tests. Test count: 984, schema `0001..0078`.
 
 ## Monthly pass tariff (2026-11-05)
 
@@ -1044,7 +1058,7 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 ## Latest verification (2026-10-28)
 
-- `flutter test`: 975 passed (+1 live-stack integration skipped); `flutter
+- `flutter test`: 984 passed (+1 live-stack integration skipped); `flutter
   analyze` 152 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
 - `supabase/tests/run.sh` passed (migrations `0001`–`0067`); `e2e.sh` passed

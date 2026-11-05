@@ -95,7 +95,7 @@ visual board), `usable_capacity` (capacity - out of service, `0` = no limit),
 money: day/night hours, rates, daily cap, elapsed time),
 `lost_ticket_amount` (internal; `greatest(fare, lot lost_ticket_fee | daily
 tariff | 0)`),
-`vehicle_history`, `update_vehicle_flags` (notes, blacklist, owner phone).
+`vehicle_history`, `update_vehicle_flags` (notes, blacklist, owner name + phone).
 `can_read_lot(lot_id)` backs the notifications RLS for Realtime (no lot header
 there).
 

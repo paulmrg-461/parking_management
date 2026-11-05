@@ -218,6 +218,7 @@ class _MonthlyPassesPageState extends State<MonthlyPassesPage> {
               monthlyPass: pass,
               plate: loaded.plateOf(pass),
               phone: loaded.phoneOf(pass),
+              ownerName: loaded.ownerNameOf(pass),
             ),
         ],
       ],
@@ -353,11 +354,13 @@ class _MonthlyPassTile extends StatelessWidget {
     required this.monthlyPass,
     required this.plate,
     this.phone,
+    this.ownerName,
   });
 
   final MonthlyPass monthlyPass;
   final String plate;
   final String? phone;
+  final String? ownerName;
 
   List<Vehicle> _vehicles(BuildContext context) {
     final state = context.read<MonthlyPassesCubit>().state;
@@ -449,6 +452,11 @@ class _MonthlyPassTile extends StatelessWidget {
             '$period · ${Formatters.money(monthlyPass.amount)}'
             '${monthlyPass.autoRenew ? ' · ${l10n.monthlyPassAutoRenew}' : ''}',
           ),
+          if (ownerName != null && ownerName!.isNotEmpty)
+            Text(
+              '${l10n.vehicleOwner}: $ownerName',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
           if (monthlyPass.active && monthlyPass.needsRenewal())
             Align(
               alignment: Alignment.centerLeft,

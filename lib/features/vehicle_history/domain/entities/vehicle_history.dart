@@ -101,6 +101,7 @@ class VehicleHistory extends Equatable {
     this.notes,
     this.currentLotVisits = 0,
     this.ownerPhone,
+    this.ownerName,
   });
 
   final String plate;
@@ -120,6 +121,9 @@ class VehicleHistory extends Equatable {
 
   /// Customer phone for WhatsApp receipts (optional).
   final String? ownerPhone;
+
+  /// Optional full name of the owner, for passes or left keys.
+  final String? ownerName;
 
   /// Distinct sites the plate has visited, for the history filter.
   List<({int id, String name})> get lots {
@@ -142,6 +146,8 @@ class VehicleHistory extends Equatable {
     bool replaceNotes = false,
     String? ownerPhone,
     bool replaceOwnerPhone = false,
+    String? ownerName,
+    bool replaceOwnerName = false,
   }) =>
       VehicleHistory(
         plate: plate,
@@ -159,6 +165,7 @@ class VehicleHistory extends Equatable {
         ownerPhone: replaceOwnerPhone
             ? ownerPhone
             : (ownerPhone ?? this.ownerPhone),
+        ownerName: replaceOwnerName ? ownerName : (ownerName ?? this.ownerName),
       );
 
   factory VehicleHistory.fromJson(Map<String, dynamic> json) => VehicleHistory(
@@ -171,6 +178,7 @@ class VehicleHistory extends Equatable {
     notes: json['notes'] as String?,
     currentLotVisits: (json['current_lot_visits'] as num?)?.toInt() ?? 0,
     ownerPhone: json['owner_phone'] as String?,
+    ownerName: json['owner_name'] as String?,
     visits: (json['visits'] as num).toInt(),
     totalSpent: (json['total_spent'] as num).toInt(),
     openSessions: (json['open_sessions'] as num).toInt(),
@@ -190,6 +198,7 @@ class VehicleHistory extends Equatable {
     'notes': notes,
     'current_lot_visits': currentLotVisits,
     'owner_phone': ownerPhone,
+    'owner_name': ownerName,
     'visits': visits,
     'total_spent': totalSpent,
     'open_sessions': openSessions,
@@ -211,5 +220,6 @@ class VehicleHistory extends Equatable {
     notes,
     currentLotVisits,
     ownerPhone,
+    ownerName,
   ];
 }

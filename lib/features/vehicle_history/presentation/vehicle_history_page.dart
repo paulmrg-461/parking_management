@@ -221,13 +221,19 @@ class _HistoryBodyState extends State<_HistoryBody> {
     }
   }
 
-  Future<void> _editPhone(BuildContext context) async {
-    final phone = await showDialog<String>(
+  Future<void> _editOwner(BuildContext context) async {
+    final result = await showDialog<({String name, String phone})>(
       context: context,
-      builder: (_) => _PhoneDialog(initial: history.ownerPhone ?? ''),
+      builder: (_) => _OwnerDialog(
+        initialName: history.ownerName ?? '',
+        initialPhone: history.ownerPhone ?? '',
+      ),
     );
-    if (phone != null && context.mounted) {
-      await context.read<VehicleHistoryCubit>().updateFlags(ownerPhone: phone);
+    if (result != null && context.mounted) {
+      await context.read<VehicleHistoryCubit>().updateFlags(
+        ownerName: result.name,
+        ownerPhone: result.phone,
+      );
     }
   }
 
@@ -305,6 +311,26 @@ class _HistoryBodyState extends State<_HistoryBody> {
                   const SizedBox(height: Space.xs),
                   Text(details, style: textTheme.bodyMedium),
                 ],
+                if (history.ownerName != null &&
+                    history.ownerName!.isNotEmpty) ...[
+                  const SizedBox(height: Space.xs),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.person_outline,
+                        size: 16,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: Space.xs),
+                      Expanded(
+                        child: Text(
+                          '${l10n.vehicleOwner}: ${history.ownerName}',
+                          style: textTheme.bodyMedium,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: Space.md),
                 IntrinsicHeight(
                   child: Row(
@@ -365,15 +391,24 @@ class _HistoryBodyState extends State<_HistoryBody> {
                 )
               else
                 ActionChip(
-                  avatar: const Icon(Icons.add_ic_call_outlined, size: 18),
-                  label: Text(l10n.vehicleAddPhone),
-                  onPressed: () => _editPhone(context),
+                  avatar: Icon(
+                    history.ownerName == null
+                        ? Icons.person_add_alt_1_outlined
+                        : Icons.add_ic_call_outlined,
+                    size: 18,
+                  ),
+                  label: Text(
+                    history.ownerName == null
+                        ? l10n.vehicleAddOwner
+                        : l10n.vehicleAddPhone,
+                  ),
+                  onPressed: () => _editOwner(context),
                 ),
-              if (history.ownerPhone != null)
+              if (history.ownerName != null || history.ownerPhone != null)
                 IconButton(
-                  tooltip: l10n.vehicleEditPhone,
+                  tooltip: l10n.vehicleEditOwner,
                   icon: const Icon(Icons.edit_outlined, size: 18),
-                  onPressed: () => _editPhone(context),
+                  onPressed: () => _editOwner(context),
                 ),
               TextButton.icon(
                 onPressed: () => _editNotes(context),
@@ -723,46 +758,84 @@ class _SessionTile extends StatelessWidget {
   }
 }
 
-class _PhoneDialog extends StatefulWidget {
-  const _PhoneDialog({required this.initial});
+class _OwnerDialog extends StatefulWidget {
+  const _OwnerDialog({required this.initialName, required this.initialPhone});
 
-  final String initial;
+  final String initialName;
+  final String initialPhone;
 
   @override
-  State<_PhoneDialog> createState() => _PhoneDialogState();
+  State<_OwnerDialog> createState() => _OwnerDialogState();
 }
 
-class _PhoneDialogState extends State<_PhoneDialog> {
+class _OwnerDialogState extends State<_OwnerDialog> {
   final _formKey = GlobalKey<FormState>();
-  late final _controller = TextEditingController(text: widget.initial);
+  late final _name = TextEditingController(text: widget.initialName);
+  late final _phone = TextEditingController(text: widget.initialPhone);
 
   @override
   void dispose() {
-    _controller.dispose();
+    _name.dispose();
+    _phone.dispose();
     super.dispose();
+  }
+
+  String? _validateName(AppLocalizations l10n, String? value) {
+    final name = (value ?? '').trim();
+    return name.isEmpty || name.length >= 2
+        ? null
+        : l10n.errorInvalidOwnerName;
+  }
+
+  String? _validatePhone(AppLocalizations l10n, String? value) {
+    final digits = (value ?? '').replaceAll(RegExp(r'\D'), '');
+    return digits.isEmpty || (digits.length >= 7 && digits.length <= 15)
+        ? null
+        : l10n.errorInvalidPhone;
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return AlertDialog(
-      title: Text(l10n.vehiclePhoneTitle),
+      title: Text(l10n.vehicleOwnerTitle),
       content: Form(
         key: _formKey,
-        child: TextFormField(
-          controller: _controller,
-          autofocus: true,
-          keyboardType: TextInputType.phone,
-          decoration: InputDecoration(
-            labelText: l10n.vehiclePhone,
-            hintText: l10n.vehiclePhoneHint,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                l10n.vehicleOwnerHint,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: Space.md),
+              TextFormField(
+                key: const Key('owner_name'),
+                controller: _name,
+                autofocus: true,
+                textCapitalization: TextCapitalization.words,
+                maxLength: 120,
+                decoration: InputDecoration(
+                  labelText: l10n.vehicleOwnerNameOptional,
+                  hintText: l10n.vehicleOwnerNameHint,
+                ),
+                validator: (value) => _validateName(l10n, value),
+              ),
+              const SizedBox(height: Space.sm),
+              TextFormField(
+                key: const Key('owner_phone'),
+                controller: _phone,
+                keyboardType: TextInputType.phone,
+                decoration: InputDecoration(
+                  labelText: l10n.vehiclePhone,
+                  hintText: l10n.vehiclePhoneHint,
+                ),
+                validator: (value) => _validatePhone(l10n, value),
+              ),
+            ],
           ),
-          validator: (value) {
-            final digits = (value ?? '').replaceAll(RegExp(r'\D'), '');
-            return digits.length >= 7 && digits.length <= 15
-                ? null
-                : l10n.errorInvalidPhone;
-          },
         ),
       ),
       actions: [
@@ -773,7 +846,10 @@ class _PhoneDialogState extends State<_PhoneDialog> {
         FilledButton(
           onPressed: () {
             if (_formKey.currentState!.validate()) {
-              Navigator.of(context).pop(_controller.text.trim());
+              Navigator.of(context).pop((
+                name: _name.text.trim(),
+                phone: _phone.text.trim(),
+              ));
             }
           },
           child: Text(l10n.actionSave),

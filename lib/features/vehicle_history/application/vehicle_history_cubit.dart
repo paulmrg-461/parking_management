@@ -35,6 +35,7 @@ class VehicleHistoryCubit extends ResilientCubit<VehicleHistoryState> {
     bool? blacklisted,
     String? notes,
     String? ownerPhone,
+    String? ownerName,
   }) async {
     final history = state.history;
     if (history == null) {
@@ -46,6 +47,7 @@ class VehicleHistoryCubit extends ResilientCubit<VehicleHistoryState> {
         blacklisted: blacklisted,
         notes: notes,
         ownerPhone: ownerPhone,
+        ownerName: ownerName,
       );
       emit(VehicleHistoryState(
         status: VehicleHistoryStatus.loaded,
@@ -55,6 +57,8 @@ class VehicleHistoryCubit extends ResilientCubit<VehicleHistoryState> {
           replaceNotes: true,
           ownerPhone: flags.ownerPhone,
           replaceOwnerPhone: true,
+          ownerName: flags.ownerName,
+          replaceOwnerName: true,
         ),
       ));
     } on Failure catch (failure) {

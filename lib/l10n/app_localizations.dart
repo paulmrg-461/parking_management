@@ -1772,6 +1772,54 @@ abstract class AppLocalizations {
   /// **'Editar teléfono'**
   String get vehicleEditPhone;
 
+  /// No description provided for @vehicleOwner.
+  ///
+  /// In es, this message translates to:
+  /// **'Propietario'**
+  String get vehicleOwner;
+
+  /// No description provided for @vehicleOwnerNameOptional.
+  ///
+  /// In es, this message translates to:
+  /// **'Nombre del propietario (opcional)'**
+  String get vehicleOwnerNameOptional;
+
+  /// No description provided for @vehicleOwnerNameHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Ej. Paul Realpe'**
+  String get vehicleOwnerNameHint;
+
+  /// No description provided for @vehicleOwnerTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Datos del propietario'**
+  String get vehicleOwnerTitle;
+
+  /// No description provided for @vehicleOwnerHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Opcional: útil para mensualidades o si dejan llaves.'**
+  String get vehicleOwnerHint;
+
+  /// No description provided for @vehicleAddOwner.
+  ///
+  /// In es, this message translates to:
+  /// **'Agregar propietario'**
+  String get vehicleAddOwner;
+
+  /// No description provided for @vehicleEditOwner.
+  ///
+  /// In es, this message translates to:
+  /// **'Editar datos del propietario'**
+  String get vehicleEditOwner;
+
+  /// No description provided for @errorInvalidOwnerName.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe el nombre completo (2 a 120 caracteres)'**
+  String get errorInvalidOwnerName;
+
   /// No description provided for @vehicleSendWhatsapp.
   ///
   /// In es, this message translates to:

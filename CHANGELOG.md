@@ -35,6 +35,13 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Added
 
+- Vehicles now keep **optional owner details**: a full name (`owner_name`) and
+  the existing phone. Admins can set/edit them from the vehicle list or the
+  vehicle history, and both are optional (a plate without them works as
+  before). `0078` adds the column + validation, returns `owner_name` from
+  `update_vehicle_flags`/`vehicle_history`, and the history offers a single
+  "Datos del propietario" dialog for name + phone (useful for monthly passes or
+  when an owner leaves the keys). The monthly-pass tile shows the owner name.
 - Monthly passes now take the amount from the **tariffs list**: the dialog
   prefills the active `monthly` tariff of the selected vehicle's category,
   follows the vehicle change, and offers "Usar tarifa mensual (…)" when editing.

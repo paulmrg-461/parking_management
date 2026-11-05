@@ -314,13 +314,14 @@ class VehicleAdapter extends TypeAdapter<Vehicle> {
       color: fields[3] as String?,
       brand: fields[4] as String?,
       ownerPhone: fields[5] as String?,
+      ownerName: fields[6] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Vehicle obj) {
     writer
-      ..writeByte(6)
+      ..writeByte(7)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -332,7 +333,9 @@ class VehicleAdapter extends TypeAdapter<Vehicle> {
       ..writeByte(4)
       ..write(obj.brand)
       ..writeByte(5)
-      ..write(obj.ownerPhone);
+      ..write(obj.ownerPhone)
+      ..writeByte(6)
+      ..write(obj.ownerName);
   }
 
   @override

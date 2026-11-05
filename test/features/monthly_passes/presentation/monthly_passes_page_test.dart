@@ -32,6 +32,7 @@ void main() {
     List<MonthlyPass>? passes,
     List<MonthlyPassPayment>? pending,
     List<Tariff>? tariffs,
+    String? ownerName,
   }) async {
     repository = FakeMonthlyPassRepository()..listError = listError;
     if (passes != null) {
@@ -62,6 +63,7 @@ void main() {
                           plate: 'ABC123',
                           categoryId: 1,
                           ownerPhone: ownerPhone,
+                          ownerName: ownerName,
                         ),
                       ],
                 ),
@@ -167,6 +169,14 @@ void main() {
     await pumpPage(tester, ownerPhone: '+57 300 111 2233');
 
     expect(find.byTooltip('Avisar por WhatsApp'), findsOneWidget);
+  });
+
+  testWidgets('Success: the pass shows the owner name when known', (
+    tester,
+  ) async {
+    await pumpPage(tester, ownerName: 'Paul Realpe');
+
+    expect(find.text('Propietario: Paul Realpe'), findsOneWidget);
   });
 
   testWidgets('Security: no phone means no WhatsApp action', (tester) async {

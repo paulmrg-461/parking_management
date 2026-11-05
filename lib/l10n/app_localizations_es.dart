@@ -934,6 +934,32 @@ class AppLocalizationsEs extends AppLocalizations {
   String get vehicleEditPhone => 'Editar teléfono';
 
   @override
+  String get vehicleOwner => 'Propietario';
+
+  @override
+  String get vehicleOwnerNameOptional => 'Nombre del propietario (opcional)';
+
+  @override
+  String get vehicleOwnerNameHint => 'Ej. Paul Realpe';
+
+  @override
+  String get vehicleOwnerTitle => 'Datos del propietario';
+
+  @override
+  String get vehicleOwnerHint =>
+      'Opcional: útil para mensualidades o si dejan llaves.';
+
+  @override
+  String get vehicleAddOwner => 'Agregar propietario';
+
+  @override
+  String get vehicleEditOwner => 'Editar datos del propietario';
+
+  @override
+  String get errorInvalidOwnerName =>
+      'Escribe el nombre completo (2 a 120 caracteres)';
+
+  @override
   String get vehicleSendWhatsapp => 'Enviar recibo por WhatsApp';
 
   @override

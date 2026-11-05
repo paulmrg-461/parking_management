@@ -8,6 +8,7 @@ class Vehicle extends Equatable {
     this.color,
     this.brand,
     this.ownerPhone,
+    this.ownerName,
   });
 
   final int? id;
@@ -19,6 +20,17 @@ class Vehicle extends Equatable {
   /// Customer phone for WhatsApp notices (set from the vehicle history).
   final String? ownerPhone;
 
+  /// Optional full name of the owner, useful for passes or left keys.
+  final String? ownerName;
+
   @override
-  List<Object?> get props => [id, plate, categoryId, color, brand, ownerPhone];
+  List<Object?> get props => [
+    id,
+    plate,
+    categoryId,
+    color,
+    brand,
+    ownerPhone,
+    ownerName,
+  ];
 }

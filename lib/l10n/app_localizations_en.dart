@@ -930,6 +930,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String get vehicleEditPhone => 'Edit phone';
 
   @override
+  String get vehicleOwner => 'Owner';
+
+  @override
+  String get vehicleOwnerNameOptional => 'Owner name (optional)';
+
+  @override
+  String get vehicleOwnerNameHint => 'e.g. Paul Realpe';
+
+  @override
+  String get vehicleOwnerTitle => 'Owner details';
+
+  @override
+  String get vehicleOwnerHint => 'Optional: useful for passes or left keys.';
+
+  @override
+  String get vehicleAddOwner => 'Add owner';
+
+  @override
+  String get vehicleEditOwner => 'Edit owner details';
+
+  @override
+  String get errorInvalidOwnerName =>
+      'Enter the full name (2 to 120 characters)';
+
+  @override
   String get vehicleSendWhatsapp => 'Send receipt via WhatsApp';
 
   @override

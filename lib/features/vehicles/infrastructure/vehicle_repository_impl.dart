@@ -135,6 +135,8 @@ class VehicleRepositoryImpl implements VehicleRepository {
       categoryId: command.categoryId ?? existing.categoryId,
       color: command.color ?? existing.color,
       brand: command.brand ?? existing.brand,
+      ownerPhone: _mergeOptional(command.ownerPhone, existing.ownerPhone),
+      ownerName: _mergeOptional(command.ownerName, existing.ownerName),
     );
     await _local.upsert(merged);
     return merged;
@@ -162,16 +164,40 @@ class VehicleRepositoryImpl implements VehicleRepository {
   String _normalize(String plate) =>
       plate.replaceAll(RegExp(r'\s+'), '').toUpperCase();
 
+  /// `null` keeps [current]; an empty string clears the optional field.
+  String? _mergeOptional(String? patch, String? current) {
+    if (patch == null) {
+      return current;
+    }
+    final value = patch.trim();
+    return value.isEmpty ? null : value;
+  }
+
+  /// Same rule as [_mergeOptional], for the JSON payload: `null` is omitted
+  /// (keep) and an empty string becomes JSON `null` (clear).
+  String? _optionalPatch(String? patch) {
+    if (patch == null) {
+      return null;
+    }
+    final value = patch.trim();
+    return value.isEmpty ? null : value;
+  }
+
   Map<String, dynamic> _toCreatePayload(CreateVehicleCommand command) => {
     'plate': command.plate,
     'category_id': command.categoryId,
     'color': command.color,
     'brand': command.brand,
+    'owner_phone': _optionalPatch(command.ownerPhone),
+    'owner_name': _optionalPatch(command.ownerName),
   };
 
   Map<String, dynamic> _toUpdatePayload(UpdateVehicleCommand command) => {
     if (command.categoryId != null) 'category_id': command.categoryId,
     if (command.color != null) 'color': command.color,
     if (command.brand != null) 'brand': command.brand,
+    if (command.ownerPhone != null)
+      'owner_phone': _optionalPatch(command.ownerPhone),
+    if (command.ownerName != null) 'owner_name': _optionalPatch(command.ownerName),
   };
 }
