@@ -18,6 +18,7 @@ import '../../core/qr/qr_scan_page.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/widgets/offline_banner.dart';
+import '../../core/widgets/version_banner.dart';
 import '../../core/widgets/submission_feedback.dart';
 import '../../features/auth/application/auth_cubit.dart';
 import '../../features/auth/domain/entities/user.dart';
@@ -80,6 +81,7 @@ class AppShell extends StatelessWidget {
       },
       child: Column(
         children: [
+          const VersionBanner(),
           const OfflineBanner(),
           Expanded(
             child: Center(
@@ -365,6 +367,12 @@ class _AppMenuDrawer extends StatelessWidget {
                       onTap: () => onNavigate(destination.path),
                     ),
                   const Divider(),
+                  ListTile(
+                    leading: const Icon(Icons.help_outline),
+                    title: Text(l10n.helpTitle),
+                    subtitle: Text(l10n.helpIntro),
+                    onTap: () => onNavigate(helpPath),
+                  ),
                   ListTile(
                     leading: const Icon(Icons.code),
                     title: Text(l10n.aboutDeveloper),

@@ -2910,4 +2910,125 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get lockLogout => 'Sign out';
+
+  @override
+  String get settingsMinVersion => 'Minimum app version';
+
+  @override
+  String get settingsMinVersionHint =>
+      'Optional, e.g. 1.4.2. Older APKs will see an update notice.';
+
+  @override
+  String get settingsMinVersionInvalid => 'Use the 1.4.2 format';
+
+  @override
+  String updateRequired(String current, String minimum) {
+    return 'Update the app: this device runs $current and the site requires $minimum or newer.';
+  }
+
+  @override
+  String get helpTitle => 'Help';
+
+  @override
+  String get helpIntro => 'Quick guides for daily operations.';
+
+  @override
+  String get helpSearchLabel => 'Search help';
+
+  @override
+  String helpResults(int count) {
+    return '$count articles';
+  }
+
+  @override
+  String get helpNoResults => 'No articles match your search.';
+
+  @override
+  String get helpSectionStart => 'Getting started';
+
+  @override
+  String get helpSectionCash => 'Payments and cash';
+
+  @override
+  String get helpSectionVehicles => 'Vehicles';
+
+  @override
+  String get helpSectionOffline => 'Offline and security';
+
+  @override
+  String get helpOpenShiftTitle => 'Open a shift';
+
+  @override
+  String get helpOpenShiftBody =>
+      'Go to Cash and tap Open shift. Count the opening float; it becomes the base for the reconciliation.';
+
+  @override
+  String get helpChargeTitle => 'Charge a check-out';
+
+  @override
+  String get helpChargeBody =>
+      'In Check-out search the plate or scan the QR, review the breakdown and tap Charge. Pick the method and confirm.';
+
+  @override
+  String get helpReprintTitle => 'Reprint a ticket';
+
+  @override
+  String get helpReprintBody =>
+      'Open the vehicle history or an open session and use Reprint ticket to generate the receipt again.';
+
+  @override
+  String get helpCloseShiftTitle => 'Close the shift (reconciliation)';
+
+  @override
+  String get helpCloseShiftBody =>
+      'In Cash tap Close shift, count the cash (the denomination counter helps) and confirm any difference.';
+
+  @override
+  String get helpMovementTitle => 'Cash in and out';
+
+  @override
+  String get helpMovementBody =>
+      'From Cash register a withdrawal or deposit with its reason. It appears in the shift history and reports.';
+
+  @override
+  String get helpCheckInTitle => 'Register a check-in';
+
+  @override
+  String get helpCheckInBody =>
+      'In Check-in type the plate, pick a category and bay if needed, and attach photos or a video of the vehicle condition.';
+
+  @override
+  String get helpReservationTitle => 'Capacity holds';
+
+  @override
+  String get helpReservationBody =>
+      'In Reservations create one with plate, category and deadline. From the hold you can check in the vehicle or cancel it.';
+
+  @override
+  String get helpPassTitle => 'Monthly passes';
+
+  @override
+  String get helpPassBody =>
+      'In Monthly passes add the vehicle, period and amount. You can collect renewals and notify the customer by WhatsApp.';
+
+  @override
+  String get helpOfflineTitle => 'Working offline';
+
+  @override
+  String get helpOfflineBody =>
+      'Check-ins, check-outs and vehicle edits are queued and sync when the network returns. Cash and pass actions require a connection.';
+
+  @override
+  String get helpAutoLockTitle => 'Auto-lock';
+
+  @override
+  String get helpAutoLockBody =>
+      'If the app is idle it asks for the PIN. Change the timeout in Menu → Auto-lock (or the sidebar).';
+
+  @override
+  String get helpUpdateTitle => 'Update notice';
+
+  @override
+  String get helpUpdateBody =>
+      'If a version notice appears, install the latest APK from your administrator; basic work keeps running until then.';
 }

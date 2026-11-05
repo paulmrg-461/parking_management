@@ -13,7 +13,7 @@ Last updated: 2026-11-03 (statement timeouts, CI release APK, audit fixes
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0068` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 939 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 950 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -45,6 +45,19 @@ Last updated: 2026-11-03 (statement timeouts, CI release APK, audit fixes
    `0024` (`current_lot_id`, lot CRUD, re-scoped policies/RPCs/reports,
    `report_revenue_all`), `0025` (offline replay lot capture via
    `resolve_lot`), `0026` (`list_lot_members`).
+
+## Help and version guard (2026-11-05)
+
+- `/help` (operator route) is a searchable help center built from localized
+  entries; search matches title **or body** (so short words like "arqueo" match
+  several articles), and a non-empty query auto-expands the matching tiles.
+  Entry points: drawer and sidebar.
+- `0076_min_app_version.sql` adds `parking_settings.min_app_version`
+  (`''` or `major.minor[.patch]`, check constraint) and exposes it from
+  `public_lot_profile`. `core/version/app_version.dart` compares numerically;
+  an empty/invalid minimum never blocks. `VersionBanner` in the shell shows the
+  localized warning when the build is older. Settings has the admin field.
+- Test count: 950.
 
 ## Idle lock (2026-11-05)
 
@@ -937,7 +950,7 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 ## Latest verification (2026-10-28)
 
-- `flutter test`: 939 passed (+1 live-stack integration skipped); `flutter
+- `flutter test`: 950 passed (+1 live-stack integration skipped); `flutter
   analyze` 152 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
 - `supabase/tests/run.sh` passed (migrations `0001`–`0067`); `e2e.sh` passed

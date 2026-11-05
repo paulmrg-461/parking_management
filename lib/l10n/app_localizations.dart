@@ -5257,6 +5257,216 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Cerrar sesión'**
   String get lockLogout;
+
+  /// No description provided for @settingsMinVersion.
+  ///
+  /// In es, this message translates to:
+  /// **'Versión mínima de la app'**
+  String get settingsMinVersion;
+
+  /// No description provided for @settingsMinVersionHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Opcional, ej. 1.4.2. Los APK más antiguos verán un aviso de actualización.'**
+  String get settingsMinVersionHint;
+
+  /// No description provided for @settingsMinVersionInvalid.
+  ///
+  /// In es, this message translates to:
+  /// **'Usa el formato 1.4.2'**
+  String get settingsMinVersionInvalid;
+
+  /// No description provided for @updateRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'Actualiza la app: este equipo tiene {current} y la sede requiere {minimum} o superior.'**
+  String updateRequired(String current, String minimum);
+
+  /// No description provided for @helpTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Ayuda'**
+  String get helpTitle;
+
+  /// No description provided for @helpIntro.
+  ///
+  /// In es, this message translates to:
+  /// **'Guías rápidas para la operación diaria.'**
+  String get helpIntro;
+
+  /// No description provided for @helpSearchLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscar en la ayuda'**
+  String get helpSearchLabel;
+
+  /// No description provided for @helpResults.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} artículos'**
+  String helpResults(int count);
+
+  /// No description provided for @helpNoResults.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay artículos que coincidan con la búsqueda.'**
+  String get helpNoResults;
+
+  /// No description provided for @helpSectionStart.
+  ///
+  /// In es, this message translates to:
+  /// **'Primeros pasos'**
+  String get helpSectionStart;
+
+  /// No description provided for @helpSectionCash.
+  ///
+  /// In es, this message translates to:
+  /// **'Cobros y caja'**
+  String get helpSectionCash;
+
+  /// No description provided for @helpSectionVehicles.
+  ///
+  /// In es, this message translates to:
+  /// **'Vehículos'**
+  String get helpSectionVehicles;
+
+  /// No description provided for @helpSectionOffline.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin conexión y seguridad'**
+  String get helpSectionOffline;
+
+  /// No description provided for @helpOpenShiftTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir turno'**
+  String get helpOpenShiftTitle;
+
+  /// No description provided for @helpOpenShiftBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Entra en Caja y pulsa Abrir turno. Cuenta el efectivo inicial; ese valor será la base del arqueo.'**
+  String get helpOpenShiftBody;
+
+  /// No description provided for @helpChargeTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Cobrar una salida'**
+  String get helpChargeTitle;
+
+  /// No description provided for @helpChargeBody.
+  ///
+  /// In es, this message translates to:
+  /// **'En Salida busca la placa o escanea el QR, revisa el desglose y pulsa Cobrar. Elige el método de pago y confirma.'**
+  String get helpChargeBody;
+
+  /// No description provided for @helpReprintTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Reimprimir un ticket'**
+  String get helpReprintTitle;
+
+  /// No description provided for @helpReprintBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Abre el historial del vehículo o la sesión abierta y usa Reimprimir ticket para generar el recibo de nuevo.'**
+  String get helpReprintBody;
+
+  /// No description provided for @helpCloseShiftTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Cerrar el turno (arqueo)'**
+  String get helpCloseShiftTitle;
+
+  /// No description provided for @helpCloseShiftBody.
+  ///
+  /// In es, this message translates to:
+  /// **'En Caja pulsa Cerrar turno, cuenta el efectivo (puedes usar el contador por denominaciones) y confirma la diferencia si existe.'**
+  String get helpCloseShiftBody;
+
+  /// No description provided for @helpMovementTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresos y retiros de efectivo'**
+  String get helpMovementTitle;
+
+  /// No description provided for @helpMovementBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Desde Caja registra un retiro o ingreso con su motivo. Queda en el historial del turno y en los reportes.'**
+  String get helpMovementBody;
+
+  /// No description provided for @helpCheckInTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Registrar una entrada'**
+  String get helpCheckInTitle;
+
+  /// No description provided for @helpCheckInBody.
+  ///
+  /// In es, this message translates to:
+  /// **'En Entrada escribe la placa, elige categoría y espacio si aplica, y adjunta fotos o video del estado del vehículo.'**
+  String get helpCheckInBody;
+
+  /// No description provided for @helpReservationTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Reservas de cupo'**
+  String get helpReservationTitle;
+
+  /// No description provided for @helpReservationBody.
+  ///
+  /// In es, this message translates to:
+  /// **'En Reservas crea una con placa, categoría y hora límite. Desde la reserva puedes registrar la entrada o cancelarla.'**
+  String get helpReservationBody;
+
+  /// No description provided for @helpPassTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Mensualidades'**
+  String get helpPassTitle;
+
+  /// No description provided for @helpPassBody.
+  ///
+  /// In es, this message translates to:
+  /// **'En Mensualidades agrega el vehículo, el periodo y el valor. Puedes cobrar renovaciones y avisar por WhatsApp.'**
+  String get helpPassBody;
+
+  /// No description provided for @helpOfflineTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Trabajar sin conexión'**
+  String get helpOfflineTitle;
+
+  /// No description provided for @helpOfflineBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Entradas, salidas y cambios de vehículos se guardan y sincronizan al volver la red. Las acciones de caja y mensualidades requieren conexión.'**
+  String get helpOfflineBody;
+
+  /// No description provided for @helpAutoLockTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Bloqueo automático'**
+  String get helpAutoLockTitle;
+
+  /// No description provided for @helpAutoLockBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Si la app queda inactiva pide el PIN. Cambia el tiempo en Menú → Bloqueo automático (o en el sidebar).'**
+  String get helpAutoLockBody;
+
+  /// No description provided for @helpUpdateTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Aviso de actualización'**
+  String get helpUpdateTitle;
+
+  /// No description provided for @helpUpdateBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Si aparece un aviso de versión, instala el APK más reciente que te entregue el administrador; la app seguirá funcionando para lo básico hasta entonces.'**
+  String get helpUpdateBody;
 }
 
 class _AppLocalizationsDelegate

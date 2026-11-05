@@ -428,13 +428,14 @@ class ParkingSettingsAdapter extends TypeAdapter<ParkingSettings> {
       motoOutOfService: fields[13] == null ? 0 : (fields[13] as num).toInt(),
       legalPolicy: fields[14] == null ? '' : fields[14] as String,
       currency: fields[15] == null ? 'COP' : fields[15] as String,
+      minAppVersion: fields[16] == null ? '' : fields[16] as String,
     );
   }
 
   @override
   void write(BinaryWriter writer, ParkingSettings obj) {
     writer
-      ..writeByte(16)
+      ..writeByte(17)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
@@ -466,7 +467,9 @@ class ParkingSettingsAdapter extends TypeAdapter<ParkingSettings> {
       ..writeByte(14)
       ..write(obj.legalPolicy)
       ..writeByte(15)
-      ..write(obj.currency);
+      ..write(obj.currency)
+      ..writeByte(16)
+      ..write(obj.minAppVersion);
   }
 
   @override

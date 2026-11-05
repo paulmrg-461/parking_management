@@ -448,6 +448,11 @@ class _Preferences extends StatelessWidget {
           onPressed: () => showAutoLockSheet(context, autoLock),
           icon: const Icon(Icons.lock_clock),
         ),
+      IconButton.filledTonal(
+        tooltip: context.l10n.helpTitle,
+        onPressed: () => context.go(helpPath),
+        icon: const Icon(Icons.help_outline),
+      ),
     ];
     return Padding(
       padding: const EdgeInsets.only(bottom: Space.sm),

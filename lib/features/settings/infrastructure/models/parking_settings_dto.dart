@@ -23,6 +23,7 @@ class ParkingSettingsDto {
     this.motoOutOfService = 0,
     this.legalPolicy = '',
     this.currency = 'COP',
+    this.minAppVersion = '',
   });
 
   factory ParkingSettingsDto.fromJson(Map<String, dynamic> json) =>
@@ -44,6 +45,7 @@ class ParkingSettingsDto {
   final int motoOutOfService;
   final String legalPolicy;
   final String currency;
+  final String minAppVersion;
 
   Map<String, dynamic> toJson() => _$ParkingSettingsDtoToJson(this);
 
@@ -64,5 +66,6 @@ class ParkingSettingsDto {
     motoOutOfService: motoOutOfService,
     legalPolicy: legalPolicy,
     currency: currency,
+    minAppVersion: minAppVersion,
   );
 }

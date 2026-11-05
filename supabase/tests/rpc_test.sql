@@ -2715,4 +2715,44 @@ begin
 end $$;
 reset role;
 
+-- 0076: minimum app version is validated and exposed by the public profile.
+set local request.headers = '{"x-lot-id":"1"}';
+reset role;
+do $$
+begin
+    if exists (
+        select 1 from public.parking_settings
+         where lot_id = 1 and min_app_version <> ''
+    ) then
+        raise exception 'min_app_version default is not empty';
+    end if;
+
+    update public.parking_settings
+       set min_app_version = '1.4.2'
+     where lot_id = 1;
+
+    begin
+        update public.parking_settings
+           set min_app_version = 'v1'
+         where lot_id = 1;
+        raise exception 'an invalid minimum version was accepted';
+    exception when check_violation then
+        null;
+    end;
+end $$;
+
+set local role anon;
+do $$
+declare
+    profile jsonb;
+begin
+    profile := public.public_lot_profile(1);
+    if profile ->> 'min_app_version' <> '1.4.2' then
+        raise exception 'public profile lost min_app_version: %', profile;
+    end if;
+end $$;
+reset role;
+
+update public.parking_settings set min_app_version = '' where lot_id = 1;
+
 rollback;

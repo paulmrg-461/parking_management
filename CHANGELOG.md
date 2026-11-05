@@ -26,6 +26,14 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Added
 
+- Help center (`/help`, operators included): searchable, localized how-tos for
+  opening a shift, charging, reprinting, reconciliation, cash movements,
+  check-in evidence, reservations, passes, offline work, auto-lock and update
+  notices. Reached from the drawer and the desktop sidebar.
+- Minimum app version (`0076_min_app_version.sql`): each site can set
+  `min_app_version` (validated `major.minor[.patch]`, exposed by
+  `public_lot_profile`). Older builds see a persistent, localized update banner
+  above the content instead of failing with contract mismatches.
 - Idle lock: after a configurable period without pointer/keyboard activity the
   app hides behind a PIN screen (GoTrue re-login, 5 attempts then sign-out).
   The timeout is a device preference (off/1/5/15/30 min, default 5) chosen from

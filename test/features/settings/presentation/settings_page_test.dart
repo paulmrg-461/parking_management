@@ -310,6 +310,45 @@ void main() {
     );
   });
 
+  testWidgets('Success: the minimum app version is saved', (tester) async {
+    final repository = FakeParkingSettingsRepository(_configured);
+    await pumpPage(tester, repository: repository);
+
+    final field = find.byKey(const Key('settings_min_app_version'));
+    await tester.scrollUntilVisible(
+      field,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(field, '1.4.2');
+    await tester.tap(find.byKey(const Key('settings_save')));
+    await tester.pumpAndSettle();
+
+    expect(repository.settings.minAppVersion, '1.4.2');
+  });
+
+  testWidgets('Failure: an invalid minimum version is rejected', (
+    tester,
+  ) async {
+    final repository = FakeParkingSettingsRepository(_configured);
+    await pumpPage(tester, repository: repository);
+
+    final field = find.byKey(const Key('settings_min_app_version'));
+    await tester.scrollUntilVisible(
+      field,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(field, 'v1');
+    await tester.tap(find.byKey(const Key('settings_save')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Usa el formato 1.4.2'), findsOneWidget);
+    expect(repository.settings.minAppVersion, isEmpty);
+  });
+
   testWidgets('Success: the site currency is changed and saved', (
     tester,
   ) async {

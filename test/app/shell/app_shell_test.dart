@@ -8,6 +8,8 @@ import 'package:parking_management/core/theme/tokens.dart';
 import 'package:parking_management/core/network/connectivity_cubit.dart';
 import 'package:parking_management/core/network/connectivity_service.dart';
 import 'package:parking_management/core/l10n/locale_cubit.dart';
+import 'package:parking_management/features/settings/application/branding_cubit.dart';
+import 'package:parking_management/features/settings/domain/entities/parking_settings.dart';
 import 'package:parking_management/core/security/auto_lock_cubit.dart';
 import 'package:parking_management/core/theme/theme_cubit.dart';
 import 'package:parking_management/core/sync/pending_mutation.dart';
@@ -21,6 +23,7 @@ import '../../helpers/app_harness.dart';
 import '../../helpers/fake_check_out_repository.dart';
 import '../../helpers/fake_notification_repository.dart';
 import '../../helpers/fake_key_value_store.dart';
+import '../../helpers/fake_settings_repository.dart';
 import '../../helpers/fake_sync_outbox.dart';
 
 void main() {
@@ -339,6 +342,16 @@ void main() {
     expect(lock.minutes, 1);
   });
 
+  testWidgets('Success: the sidebar opens the help center', (tester) async {
+    await pumpApp(tester, role: UserRole.operator, size: const Size(1200, 900));
+
+    await tester.tap(find.byTooltip('Ayuda'));
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(AppBar, 'Ayuda'), findsOneWidget);
+    expect(find.text('Primeros pasos'), findsOneWidget);
+  });
+
   testWidgets('Success: the sidebar opens the developer page', (tester) async {
     await pumpApp(tester, role: UserRole.admin, size: const Size(1200, 900));
 
@@ -413,6 +426,22 @@ void main() {
     await tester.tap(find.byIcon(Icons.close));
     await tester.pumpAndSettle();
     expect(find.byType(Drawer), findsNothing);
+  });
+
+  testWidgets('Security: an old build sees the minimum-version banner', (
+    tester,
+  ) async {
+    final branding = BrandingCubit(
+      FakeParkingSettingsRepository(
+        const ParkingSettings(minAppVersion: '99.0.0'),
+      ),
+    );
+    await branding.load();
+    addTearDown(branding.close);
+
+    await pumpApp(tester, role: UserRole.admin, branding: branding);
+
+    expect(find.textContaining('Actualiza la app'), findsOneWidget);
   });
 
   testWidgets('Failure: offline shows the OfflineBanner above the content', (

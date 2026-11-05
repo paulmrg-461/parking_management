@@ -5,6 +5,7 @@ import '../../features/auth/domain/entities/user.dart';
 const loginPath = '/login';
 const homePath = '/';
 const aboutPath = '/about';
+const helpPath = '/help';
 
 /// Operators get an ALLOWLIST (secure by default: any new route is
 /// admin-only until added here). Check-in reads categories/vehicles through
@@ -19,6 +20,7 @@ const operatorRoutes = {
   '/shift',
   '/scan',
   '/contact',
+  helpPath,
 };
 
 bool canAccess(UserRole role, String location) =>

@@ -2926,4 +2926,125 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get lockLogout => 'Cerrar sesión';
+
+  @override
+  String get settingsMinVersion => 'Versión mínima de la app';
+
+  @override
+  String get settingsMinVersionHint =>
+      'Opcional, ej. 1.4.2. Los APK más antiguos verán un aviso de actualización.';
+
+  @override
+  String get settingsMinVersionInvalid => 'Usa el formato 1.4.2';
+
+  @override
+  String updateRequired(String current, String minimum) {
+    return 'Actualiza la app: este equipo tiene $current y la sede requiere $minimum o superior.';
+  }
+
+  @override
+  String get helpTitle => 'Ayuda';
+
+  @override
+  String get helpIntro => 'Guías rápidas para la operación diaria.';
+
+  @override
+  String get helpSearchLabel => 'Buscar en la ayuda';
+
+  @override
+  String helpResults(int count) {
+    return '$count artículos';
+  }
+
+  @override
+  String get helpNoResults => 'No hay artículos que coincidan con la búsqueda.';
+
+  @override
+  String get helpSectionStart => 'Primeros pasos';
+
+  @override
+  String get helpSectionCash => 'Cobros y caja';
+
+  @override
+  String get helpSectionVehicles => 'Vehículos';
+
+  @override
+  String get helpSectionOffline => 'Sin conexión y seguridad';
+
+  @override
+  String get helpOpenShiftTitle => 'Abrir turno';
+
+  @override
+  String get helpOpenShiftBody =>
+      'Entra en Caja y pulsa Abrir turno. Cuenta el efectivo inicial; ese valor será la base del arqueo.';
+
+  @override
+  String get helpChargeTitle => 'Cobrar una salida';
+
+  @override
+  String get helpChargeBody =>
+      'En Salida busca la placa o escanea el QR, revisa el desglose y pulsa Cobrar. Elige el método de pago y confirma.';
+
+  @override
+  String get helpReprintTitle => 'Reimprimir un ticket';
+
+  @override
+  String get helpReprintBody =>
+      'Abre el historial del vehículo o la sesión abierta y usa Reimprimir ticket para generar el recibo de nuevo.';
+
+  @override
+  String get helpCloseShiftTitle => 'Cerrar el turno (arqueo)';
+
+  @override
+  String get helpCloseShiftBody =>
+      'En Caja pulsa Cerrar turno, cuenta el efectivo (puedes usar el contador por denominaciones) y confirma la diferencia si existe.';
+
+  @override
+  String get helpMovementTitle => 'Ingresos y retiros de efectivo';
+
+  @override
+  String get helpMovementBody =>
+      'Desde Caja registra un retiro o ingreso con su motivo. Queda en el historial del turno y en los reportes.';
+
+  @override
+  String get helpCheckInTitle => 'Registrar una entrada';
+
+  @override
+  String get helpCheckInBody =>
+      'En Entrada escribe la placa, elige categoría y espacio si aplica, y adjunta fotos o video del estado del vehículo.';
+
+  @override
+  String get helpReservationTitle => 'Reservas de cupo';
+
+  @override
+  String get helpReservationBody =>
+      'En Reservas crea una con placa, categoría y hora límite. Desde la reserva puedes registrar la entrada o cancelarla.';
+
+  @override
+  String get helpPassTitle => 'Mensualidades';
+
+  @override
+  String get helpPassBody =>
+      'En Mensualidades agrega el vehículo, el periodo y el valor. Puedes cobrar renovaciones y avisar por WhatsApp.';
+
+  @override
+  String get helpOfflineTitle => 'Trabajar sin conexión';
+
+  @override
+  String get helpOfflineBody =>
+      'Entradas, salidas y cambios de vehículos se guardan y sincronizan al volver la red. Las acciones de caja y mensualidades requieren conexión.';
+
+  @override
+  String get helpAutoLockTitle => 'Bloqueo automático';
+
+  @override
+  String get helpAutoLockBody =>
+      'Si la app queda inactiva pide el PIN. Cambia el tiempo en Menú → Bloqueo automático (o en el sidebar).';
+
+  @override
+  String get helpUpdateTitle => 'Aviso de actualización';
+
+  @override
+  String get helpUpdateBody =>
+      'Si aparece un aviso de versión, instala el APK más reciente que te entregue el administrador; la app seguirá funcionando para lo básico hasta entonces.';
 }
