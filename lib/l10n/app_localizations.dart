@@ -5009,13 +5009,13 @@ abstract class AppLocalizations {
   /// No description provided for @aboutRole.
   ///
   /// In es, this message translates to:
-  /// **'Desarrollo de software'**
+  /// **'Ingeniero de Sistemas'**
   String get aboutRole;
 
   /// No description provided for @aboutIntro.
   ///
   /// In es, this message translates to:
-  /// **'Hola, soy Paul Realpe (DevPaul). Diseño y construyo aplicaciones móviles y web con Flutter, cuidando la experiencia de uso y los detalles.'**
+  /// **'Ingeniero de Sistemas con más de 7 años de experiencia en desarrollo web y móvil. Diseño y construyo la app, el backend, la base de datos y la infraestructura, cuidando la experiencia de uso y los detalles.'**
   String get aboutIntro;
 
   /// No description provided for @aboutFindMe.

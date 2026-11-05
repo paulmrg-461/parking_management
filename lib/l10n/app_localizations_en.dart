@@ -2764,11 +2764,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aboutDeveloper => 'About the developer';
 
   @override
-  String get aboutRole => 'Software development';
+  String get aboutRole => 'Systems Engineer';
 
   @override
   String get aboutIntro =>
-      'Hi, I am Paul Realpe (DevPaul). I design and build mobile and web apps with Flutter, caring about the experience and the details.';
+      'Experienced Systems Engineer with 7+ years in web and mobile app development. I design and build the app, the backend, the database and the infrastructure, caring about the experience and the details.';
 
   @override
   String get aboutFindMe => 'Find me';

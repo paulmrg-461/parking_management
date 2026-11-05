@@ -21,6 +21,8 @@ void main() {
     expect(find.text('Desarrolladores'), findsOneWidget);
     expect(find.text('Paul Realpe'), findsWidgets);
     expect(find.text('Jimmy Realpe'), findsOneWidget);
+    expect(find.textContaining('7 años'), findsOneWidget);
+    expect(find.textContaining('backend'), findsOneWidget);
     expect(find.text('DevPaul'), findsWidgets);
   });
 

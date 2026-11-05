@@ -31,6 +31,9 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Added
 
+- About copy now presents Paul as a **Systems Engineer with 7+ years in web and
+  mobile development**, explicitly including backend/database/infrastructure,
+  instead of "Flutter apps only"; English and Spanish updated.
 - Navigation cleanup: the sidebar's preference icon row is gone. The footer now
   has **Ajustes** (language, appearance, auto-lock, help) and **Acerca de**
   entries; the mobile drawer mirrors them. `PreferencesPage` lives at

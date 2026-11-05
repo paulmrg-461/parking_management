@@ -54,6 +54,9 @@ Last updated: 2026-11-03 (statement timeouts, CI release APK, audit fixes
 - `PreferencesPage` holds language, appearance and auto-lock with their pickers;
   it uses `context.push` for Help/About. Tests pin `testApp` to Spanish, so
   changing the language cubit there does not relabel the page.
+- About copy: Paul is a **Systems Engineer** with 7+ years in web/mobile plus
+  backend/database/infrastructure (not "Flutter only"); the developers card
+  lists Paul and Jimmy.
 - About shows a **Desarrolladores** card with Paul Realpe (DevPaul) and
   **Jimmy Realpe** (`jimmy-realpe.web.app`), both using the injectable launcher.
 - Test count: 971.
