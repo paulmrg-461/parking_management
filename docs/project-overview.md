@@ -43,7 +43,7 @@ WhatsApp (manual or automated).
 | Secrets / PIN operations | Complete (scripts + runbook) | PIN rotation verified live |
 | E2E and CI | Complete (API + Flutter client, real stack) | CI job `supabase-e2e` |
 
-Quality snapshot (2026-10-28, local stack): **972 Flutter tests + 1 integration
+Quality snapshot (2026-10-28, local stack): **993 Flutter tests + 1 integration
 test**, SQL/RLS suite green, web build green, analyzer with **0 errors and 0
 warnings** (only SDK deprecation infos from the pinned beta channel), restore
 drill green.
@@ -63,14 +63,15 @@ the main data it touches.
 | `check_out` | Open sessions (paged), payment, receipt | `check_out`, `calculate_fare`, `open_sessions_view` |
 | `records` | Site activity log with a plate filter and paging | `session_records` |
 | `policies` | Public legal policy / service contract | `public_lot_profile`, `reset_legal_policy` |
-| `vehicle_history` | Timeline, notes, blacklist, phone, reprint, WhatsApp | `vehicle_history`, `update_vehicle_flags` |
+| `vehicle_history` | Timeline, notes, blacklist, owner name/phone, reprint, WhatsApp | `vehicle_history`, `update_vehicle_flags` |
 | `vehicles` | Registry CRUD and paging | `vehicles` |
 | `categories` / `tariffs` | Reference data per site, capacity | `categories`, `tariffs` |
 | `monthly_passes` | Passes, charges, collection, expiry notices | `monthly_passes`, `monthly_pass_payments`, `register_pass_payment` |
 | `shifts` | Open/close with expected-vs-counted and a denomination counter, movements, history filters, corrections, PDF | `shifts`, `cash_movements`, `shift_adjustments`, `list_shifts`, `adjust_shift` |
 | `reports` | Revenue, occupancy, site comparison, WhatsApp metrics, PDF | `report_revenue(_all)`, `report_occupancy`, `report_whatsapp` |
 | `notifications` | Inbox, bell, deep links, browser push toggle | `notifications`, `web_push_subscriptions` |
-| `settings` | Per-site identity, branding, currency (COP/USD), retention, WhatsApp mode | `parking_settings`, `set_branding_logo` |
+| `settings` | Per-site identity, branding, currency (COP/USD), retention, WhatsApp mode, police quadrant | `parking_settings`, `set_branding_logo` |
+| `emergency` | One-tap call to the nearest police quadrant (123 fallback) | `parking_settings.police_phone` |
 | `users` | Admin user management | `admin-users` Edge Function |
 | `lots` | Sites and membership | `my_lots`, `create_lot`, `set_lot_member`, `list_lot_members` |
 | `reservations` | Capacity holds | `category_reservations`, `create/cancel_reservation` |

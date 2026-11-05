@@ -371,4 +371,45 @@ void main() {
 
     expect(repository.settings.currency, 'USD');
   });
+
+  testWidgets('Success: the police quadrant is saved for emergencies', (
+    tester,
+  ) async {
+    final repository = FakeParkingSettingsRepository(_configured);
+    await pumpPage(tester, repository: repository);
+
+    final field = find.byKey(const Key('settings_police_phone'));
+    await tester.scrollUntilVisible(
+      field,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(field, '+57 300 111 2233');
+    await tester.tap(find.byKey(const Key('settings_save')));
+    await tester.pumpAndSettle();
+
+    expect(repository.settings.policePhone, '+57 300 111 2233');
+  });
+
+  testWidgets('Failure: an invalid emergency number is rejected', (
+    tester,
+  ) async {
+    final repository = FakeParkingSettingsRepository(_configured);
+    await pumpPage(tester, repository: repository);
+
+    final field = find.byKey(const Key('settings_police_phone'));
+    await tester.scrollUntilVisible(
+      field,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(field, '12');
+    await tester.tap(find.byKey(const Key('settings_save')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Escribe un número válido (3 a 15 dígitos)'), findsOneWidget);
+    expect(repository.settings.policePhone, isEmpty);
+  });
 }

@@ -13,6 +13,7 @@ import '../../../core/widgets/error_state.dart';
 import '../../../core/widgets/metric_card.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/skeleton.dart';
+import '../../emergency/presentation/emergency_action.dart';
 import '../../../core/widgets/status_chip.dart';
 import '../application/diagnostics_cubit.dart';
 import '../domain/entities/client_error_report.dart';
@@ -47,6 +48,7 @@ class _DiagnosticsPageState extends State<DiagnosticsPage> {
             icon: const Icon(Icons.refresh),
             onPressed: () => context.read<DiagnosticsCubit>().load(),
           ),
+          const EmergencyAction(),
         ],
       ),
       body: BlocBuilder<DiagnosticsCubit, DiagnosticsState>(

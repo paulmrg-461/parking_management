@@ -13,6 +13,7 @@ class VehicleDto {
     this.color,
     this.brand,
     this.ownerPhone,
+    this.ownerName,
   });
 
   factory VehicleDto.fromJson(Map<String, dynamic> json) =>
@@ -30,6 +31,9 @@ class VehicleDto {
   @JsonKey(name: 'owner_phone')
   final String? ownerPhone;
 
+  @JsonKey(name: 'owner_name')
+  final String? ownerName;
+
   Map<String, dynamic> toJson() => _$VehicleDtoToJson(this);
 
   Vehicle toDomain() => Vehicle(
@@ -39,5 +43,6 @@ class VehicleDto {
         color: color,
         brand: brand,
         ownerPhone: ownerPhone,
+        ownerName: ownerName,
       );
 }

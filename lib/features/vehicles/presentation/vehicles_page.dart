@@ -212,6 +212,7 @@ class _VehicleTile extends StatelessWidget {
     categoryName,
     ?vehicle.brand,
     ?vehicle.color,
+    ?vehicle.ownerName,
   ].where((part) => part.isNotEmpty).join(' · ');
 
   void _edit(BuildContext context) {

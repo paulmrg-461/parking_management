@@ -22,6 +22,7 @@ class ParkingSettings extends Equatable {
     this.legalPolicy = '',
     this.currency = 'COP',
     this.minAppVersion = '',
+    this.policePhone = '',
   });
 
   final String name;
@@ -67,6 +68,9 @@ class ParkingSettings extends Equatable {
   /// Oldest app build allowed for this site ('' = no minimum).
   final String minAppVersion;
 
+  /// Nearest police quadrant for the emergency action ('' = use 123).
+  final String policePhone;
+
   /// The never-configured record (mirrors the backend default).
   static ParkingSettings defaults() => const ParkingSettings();
 
@@ -88,6 +92,7 @@ class ParkingSettings extends Equatable {
     String? legalPolicy,
     String? currency,
     String? minAppVersion,
+    String? policePhone,
   }) => ParkingSettings(
     name: name ?? this.name,
     address: address ?? this.address,
@@ -106,6 +111,7 @@ class ParkingSettings extends Equatable {
     legalPolicy: legalPolicy ?? this.legalPolicy,
     currency: currency ?? this.currency,
     minAppVersion: minAppVersion ?? this.minAppVersion,
+    policePhone: policePhone ?? this.policePhone,
   );
 
   /// Editable fields (metadata excluded).
@@ -126,6 +132,7 @@ class ParkingSettings extends Equatable {
     'legal_policy': legalPolicy,
     'currency': currency,
     'min_app_version': minAppVersion,
+    'police_phone': policePhone,
   };
 
   @override
@@ -147,5 +154,6 @@ class ParkingSettings extends Equatable {
     legalPolicy,
     currency,
     minAppVersion,
+    policePhone,
   ];
 }

@@ -4,6 +4,8 @@ import '../../../core/error/failure.dart';
 import '../../../core/state/submission.dart';
 import '../../vehicles/domain/entities/vehicle.dart';
 import '../../vehicles/domain/repositories/vehicle_repository.dart';
+import '../../tariffs/domain/entities/tariff.dart';
+import '../../tariffs/domain/repositories/tariff_repository.dart';
 import '../domain/commands/create_monthly_pass_command.dart';
 import '../domain/commands/update_monthly_pass_command.dart';
 import '../domain/entities/monthly_pass.dart';
@@ -37,6 +39,7 @@ final class MonthlyPassesLoaded extends MonthlyPassesState {
     this.vehicles = const [],
     this.plates = const {},
     this.pendingPayments = const [],
+    this.tariffs = const [],
     this.submission = const SubmissionIdle(),
     this.lastAction,
   });
@@ -48,8 +51,40 @@ final class MonthlyPassesLoaded extends MonthlyPassesState {
   final MonthlyPassAction? lastAction;
   final List<MonthlyPassPayment> pendingPayments;
 
+  /// Price catalog; the pass dialog prefills the monthly amount from here.
+  final List<Tariff> tariffs;
+
+  /// Active monthly tariffs keyed by category, for the pass dialog.
+  Map<int, int> get monthlyTariffByCategory => {
+    for (final tariff in tariffs)
+      if (tariff.active && tariff.type == TariffType.monthly)
+        tariff.categoryId: tariff.amount,
+  };
+
+  /// Monthly tariff for [categoryId], when configured and active.
+  int? monthlyTariffFor(int categoryId) {
+    for (final tariff in tariffs) {
+      if (tariff.active &&
+          tariff.type == TariffType.monthly &&
+          tariff.categoryId == categoryId) {
+        return tariff.amount;
+      }
+    }
+    return null;
+  }
+
   String plateOf(MonthlyPass pass) =>
       plates[pass.vehicleId] ?? 'Vehicle ${pass.vehicleId}';
+
+  /// Owner name of the pass' vehicle, when known.
+  String? ownerNameOf(MonthlyPass pass) {
+    for (final vehicle in vehicles) {
+      if (vehicle.id == pass.vehicleId) {
+        return vehicle.ownerName;
+      }
+    }
+    return null;
+  }
 
   /// Customer phone of the pass' vehicle, when known.
   String? phoneOf(MonthlyPass pass) {
@@ -64,11 +99,13 @@ final class MonthlyPassesLoaded extends MonthlyPassesState {
   MonthlyPassesLoaded copyWith({
     List<MonthlyPass>? monthlyPasses,
     List<MonthlyPassPayment>? pendingPayments,
+    List<Tariff>? tariffs,
     Submission? submission,
     MonthlyPassAction? lastAction,
   }) => MonthlyPassesLoaded(
     monthlyPasses: monthlyPasses ?? this.monthlyPasses,
     pendingPayments: pendingPayments ?? this.pendingPayments,
+    tariffs: tariffs ?? this.tariffs,
     vehicles: vehicles,
     plates: plates,
     submission: submission ?? this.submission,
@@ -81,6 +118,7 @@ final class MonthlyPassesLoaded extends MonthlyPassesState {
     vehicles,
     plates,
     pendingPayments,
+    tariffs,
     submission,
     lastAction,
   ];
@@ -101,23 +139,27 @@ final class MonthlyPassesFailure extends MonthlyPassesState {
 }
 
 class MonthlyPassesCubit extends ResilientCubit<MonthlyPassesState> {
-  MonthlyPassesCubit(this._repository, this._vehicles)
+  MonthlyPassesCubit(this._repository, this._vehicles, [this._tariffs])
     : super(const MonthlyPassesInitial());
 
   final MonthlyPassRepository _repository;
   final VehicleRepository _vehicles;
+  final TariffRepository? _tariffs;
 
   Future<void> load({int? vehicleId}) async {
     emit(const MonthlyPassesLoading());
     final vehicles = _loadVehicles();
+    final tariffs = _loadTariffs();
     try {
       final passes = await _repository.list(vehicleId: vehicleId);
       final pending = await _repository.pendingPayments();
       final loadedVehicles = await vehicles;
+      final loadedTariffs = await tariffs;
       emit(
         MonthlyPassesLoaded(
           monthlyPasses: sortMonthlyPasses(passes),
           pendingPayments: pending,
+          tariffs: loadedTariffs,
           vehicles: loadedVehicles,
           plates: {
             for (final vehicle in loadedVehicles)
@@ -211,6 +253,14 @@ class MonthlyPassesCubit extends ResilientCubit<MonthlyPassesState> {
   }
 
   /// Best-effort: without vehicles rows fall back to `Vehicle <id>`.
+  Future<List<Tariff>> _loadTariffs() async {
+    try {
+      return await _tariffs?.list() ?? const [];
+    } on Failure {
+      return const [];
+    }
+  }
+
   Future<List<Vehicle>> _loadVehicles() async {
     try {
       return await _vehicles.list();

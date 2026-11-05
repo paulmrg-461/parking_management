@@ -35,6 +35,24 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Added
 
+- **Emergency action**: a red police icon in every app bar (and an entry in the
+  desktop sidebar footer and the phone drawer) opens a one-tap panel with the
+  site location, the nearest police quadrant and a large **Call now** button.
+  The quadrant number is configured in **Ajustes → Emergencias**
+  (`parking_settings.police_phone` in `0079`, 3–15 digits). Until it is set,
+  the panel falls back to the national emergency line **123** and admins get a
+  shortcut to settings; operators see a note to ask the administrator.
+- Vehicles now keep **optional owner details**: a full name (`owner_name`) and
+  the existing phone. Admins can set/edit them from the vehicle list or the
+  vehicle history, and both are optional (a plate without them works as
+  before). `0078` adds the column + validation, returns `owner_name` from
+  `update_vehicle_flags`/`vehicle_history`, and the history offers a single
+  "Datos del propietario" dialog for name + phone (useful for monthly passes or
+  when an owner leaves the keys). The monthly-pass tile shows the owner name.
+- Monthly passes now take the amount from the **tariffs list**: the dialog
+  prefills the active `monthly` tariff of the selected vehicle's category,
+  follows the vehicle change, and offers "Usar tarifa mensual (…)" when editing.
+  `MonthlyPassesCubit` loads tariffs alongside vehicles; no manual retyping.
 - About copy now presents Paul as a **Systems Engineer with 7+ years in web and
   mobile development**, explicitly including backend/database/infrastructure,
   instead of "Flutter apps only"; English and Spanish updated.

@@ -8,6 +8,7 @@ import '../../../features/monthly_passes/domain/repositories/monthly_pass_reposi
 import '../../../features/monthly_passes/infrastructure/monthly_pass_local_data_source.dart';
 import '../../../features/monthly_passes/infrastructure/monthly_pass_remote_data_source.dart';
 import '../../../features/monthly_passes/infrastructure/monthly_pass_repository_impl.dart';
+import '../../../features/tariffs/domain/repositories/tariff_repository.dart';
 import '../../../features/vehicles/domain/repositories/vehicle_repository.dart';
 
 void registerMonthlyPassesModule(GetIt sl) {
@@ -28,6 +29,7 @@ void registerMonthlyPassesModule(GetIt sl) {
       () => MonthlyPassesCubit(
         sl<MonthlyPassRepository>(),
         sl<VehicleRepository>(),
+        sl<TariffRepository>(),
       ),
     );
 }

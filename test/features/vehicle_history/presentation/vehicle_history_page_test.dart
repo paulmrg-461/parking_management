@@ -216,7 +216,10 @@ void main() {
     tester,
   ) async {
     final repository = FakeVehicleHistoryRepository(
-      history: sampleHistory(ownerPhone: '+57 300 111 2233'),
+      history: sampleHistory(
+        ownerName: 'Paul Realpe',
+        ownerPhone: '+57 300 111 2233',
+      ),
     );
     final cubit = VehicleHistoryCubit(repository);
     addTearDown(cubit.close);
@@ -230,12 +233,16 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(find.text('Propietario: Paul Realpe'), findsOneWidget);
     expect(find.text('+57 300 111 2233'), findsOneWidget);
     expect(find.byTooltip('Enviar recibo por WhatsApp'), findsWidgets);
-    expect(find.text('Agregar teléfono'), findsNothing);
+    expect(find.byTooltip('Editar datos del propietario'), findsOneWidget);
+    expect(find.text('Agregar propietario'), findsNothing);
   });
 
-  testWidgets('Success: a plate without a phone can add one', (tester) async {
+  testWidgets('Success: owner name and phone can be added from history', (
+    tester,
+  ) async {
     final repository = FakeVehicleHistoryRepository(history: sampleHistory());
     final cubit = VehicleHistoryCubit(repository);
     addTearDown(cubit.close);
@@ -249,15 +256,80 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Agregar teléfono'), findsOneWidget);
+    expect(find.text('Agregar propietario'), findsOneWidget);
 
-    await tester.tap(find.text('Agregar teléfono'));
+    await tester.tap(find.text('Agregar propietario'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextFormField), '+57 300 111 2233');
+    await tester.enterText(
+      find.byKey(const Key('owner_name')),
+      'Paul Realpe',
+    );
+    await tester.enterText(
+      find.byKey(const Key('owner_phone')),
+      '+57 300 111 2233',
+    );
     await tester.tap(find.text('Guardar'));
     await tester.pumpAndSettle();
 
+    expect(repository.lastOwnerName, 'Paul Realpe');
     expect(repository.lastOwnerPhone, '+57 300 111 2233');
+    expect(find.text('Propietario: Paul Realpe'), findsOneWidget);
+  });
+
+  testWidgets('Security: an invalid owner phone is not saved', (tester) async {
+    final repository = FakeVehicleHistoryRepository(history: sampleHistory());
+    final cubit = VehicleHistoryCubit(repository);
+    addTearDown(cubit.close);
+    await tester.pumpWidget(
+      testApp(
+        BlocProvider.value(
+          value: cubit,
+          child: const VehicleHistoryPage(initialPlate: 'ABC123'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Agregar propietario'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('owner_phone')), '123');
+    await tester.tap(find.text('Guardar'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Escribe un teléfono válido (7 a 15 dígitos)'), findsOneWidget);
+    expect(repository.lastOwnerPhone, isNull);
+  });
+
+  testWidgets('Success: the owner card edits the saved name and phone', (
+    tester,
+  ) async {
+    final repository = FakeVehicleHistoryRepository(
+      history: sampleHistory(
+        ownerName: 'Paul Realpe',
+        ownerPhone: '+57 300 111 2233',
+      ),
+    );
+    final cubit = VehicleHistoryCubit(repository);
+    addTearDown(cubit.close);
+    await tester.pumpWidget(
+      testApp(
+        BlocProvider.value(
+          value: cubit,
+          child: const VehicleHistoryPage(initialPlate: 'ABC123'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Editar datos del propietario'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('owner_name')), 'Jimmy Realpe');
+    await tester.tap(find.text('Guardar'));
+    await tester.pumpAndSettle();
+
+    expect(repository.lastOwnerName, 'Jimmy Realpe');
+    expect(repository.lastOwnerPhone, '+57 300 111 2233');
+    expect(find.text('Propietario: Jimmy Realpe'), findsOneWidget);
   });
 
   testWidgets('Success: an open session can notify that the car is ready', (

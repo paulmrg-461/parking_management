@@ -667,6 +667,34 @@ begin
     end if;
 end $$;
 
+-- Owner name: optional, trimmed, exposed in the history and rejectable when
+-- too short (a stray one-letter contact is a typo, not a real name).
+select public.update_vehicle_flags('BLK001', null, null, null, '  Paul Realpe  ');
+
+do $$
+begin
+    if (select owner_name from public.vehicles where plate = 'BLK001')
+        is distinct from 'Paul Realpe' then
+        raise exception 'owner name was not stored or trimmed';
+    end if;
+    if (public.vehicle_history('BLK001') ->> 'owner_name')
+        is distinct from 'Paul Realpe' then
+        raise exception 'vehicle history does not expose the owner name';
+    end if;
+    begin
+        perform public.update_vehicle_flags('BLK001', null, null, null, 'A');
+        raise exception 'a one-letter owner name was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidOwnerNameError%' then
+            raise;
+        end if;
+    end;
+    perform public.update_vehicle_flags('BLK001', null, null, null, '');
+    if (select owner_name from public.vehicles where plate = 'BLK001') is not null then
+        raise exception 'empty owner name did not clear the field';
+    end if;
+end $$;
+
 -- WhatsApp queue: disabled by default, validates the phone, records the lot.
 set local request.headers = '{"x-lot-id":"2"}';
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
@@ -2801,5 +2829,29 @@ begin
     end if;
 end $$;
 reset role;
+
+-- Police quadrant (0079): the emergency action reads it from the settings row
+-- and the database rejects numbers that could never be dialed.
+update public.parking_settings
+   set police_phone = '+57 300 111 2233'
+ where id = 1;
+
+do $$
+begin
+    if (select police_phone from public.parking_settings where id = 1)
+        is distinct from '+57 300 111 2233' then
+        raise exception 'police phone was not stored';
+    end if;
+    begin
+        update public.parking_settings set police_phone = '12' where id = 1;
+        raise exception 'an invalid police phone was accepted';
+    exception when check_violation then
+        null;
+    end;
+    update public.parking_settings set police_phone = '' where id = 1;
+    if (select police_phone from public.parking_settings where id = 1) is distinct from '' then
+        raise exception 'empty police phone did not clear the field';
+    end if;
+end $$;
 
 rollback;

@@ -930,6 +930,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String get vehicleEditPhone => 'Edit phone';
 
   @override
+  String get vehicleOwner => 'Owner';
+
+  @override
+  String get vehicleOwnerNameOptional => 'Owner name (optional)';
+
+  @override
+  String get vehicleOwnerNameHint => 'e.g. Paul Realpe';
+
+  @override
+  String get vehicleOwnerTitle => 'Owner details';
+
+  @override
+  String get vehicleOwnerHint => 'Optional: useful for passes or left keys.';
+
+  @override
+  String get vehicleAddOwner => 'Add owner';
+
+  @override
+  String get vehicleEditOwner => 'Edit owner details';
+
+  @override
+  String get errorInvalidOwnerName =>
+      'Enter the full name (2 to 120 characters)';
+
+  @override
   String get vehicleSendWhatsapp => 'Send receipt via WhatsApp';
 
   @override
@@ -1163,6 +1188,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsSectionEvidence => 'Evidence';
+
+  @override
+  String get settingsSectionEmergency => 'Emergency';
+
+  @override
+  String get settingsPolicePhone => 'Nearest police quadrant';
+
+  @override
+  String get settingsPolicePhoneHint =>
+      'Used by the emergency button. Leave it empty to call 123.';
+
+  @override
+  String get errorInvalidEmergencyPhone =>
+      'Enter a valid number (3 to 15 digits)';
 
   @override
   String get settingsSectionPreferences => 'Preferences';
@@ -3084,4 +3123,52 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aboutJimmyRole => 'Developer';
+
+  @override
+  String monthlyPassUseTariff(String amount) {
+    return 'Use monthly tariff ($amount)';
+  }
+
+  @override
+  String get emergencyTitle => 'Emergency';
+
+  @override
+  String get emergencyBody =>
+      'Report the emergency to the nearest police quadrant.';
+
+  @override
+  String get emergencyDrawerHint => 'Call the police quadrant';
+
+  @override
+  String get emergencyNumberLabel => 'Nearest police quadrant';
+
+  @override
+  String get emergencyDefaultLabel => 'Emergency line';
+
+  @override
+  String get emergencyDefaultHint =>
+      'No police quadrant number has been configured yet.';
+
+  @override
+  String get emergencyCallNow => 'Call now';
+
+  @override
+  String emergencyCallDefault(String phone) {
+    return 'Call $phone';
+  }
+
+  @override
+  String get emergencyGoToSettings => 'Configure in Settings';
+
+  @override
+  String get emergencyAskAdmin =>
+      'Ask the administrator to configure the quadrant number in Settings.';
+
+  @override
+  String get emergencyCallFailed => 'Could not open the dialer.';
+
+  @override
+  String emergencyLocation(String location) {
+    return 'Location: $location';
+  }
 }

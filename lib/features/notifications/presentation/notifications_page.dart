@@ -7,6 +7,7 @@ import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../emergency/presentation/emergency_action.dart';
 import '../../../core/widgets/error_state.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/skeleton.dart';
@@ -78,6 +79,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                 child: Text(context.l10n.notificationsMarkAll),
               ),
             ),
+            const EmergencyAction(),
           ],
         ),
         body: Column(
