@@ -5539,6 +5539,36 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Hola, escribo por el vehículo {plate}.'**
   String evidenceWhatsAppMessage(String plate);
+
+  /// No description provided for @preferencesTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Ajustes'**
+  String get preferencesTitle;
+
+  /// No description provided for @preferencesHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Idioma, apariencia y bloqueo automático.'**
+  String get preferencesHint;
+
+  /// No description provided for @aboutTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Acerca de'**
+  String get aboutTitle;
+
+  /// No description provided for @aboutDevelopers.
+  ///
+  /// In es, this message translates to:
+  /// **'Desarrolladores'**
+  String get aboutDevelopers;
+
+  /// No description provided for @aboutJimmyRole.
+  ///
+  /// In es, this message translates to:
+  /// **'Desarrollador'**
+  String get aboutJimmyRole;
 }
 
 class _AppLocalizationsDelegate

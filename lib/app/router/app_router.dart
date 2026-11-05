@@ -24,6 +24,7 @@ import '../../features/check_out/presentation/check_out_page.dart';
 import '../../features/about/presentation/about_developer_page.dart';
 import '../../features/evidence/application/evidence_cubit.dart';
 import '../../features/help/presentation/help_page.dart';
+import '../../features/preferences/presentation/preferences_page.dart';
 import '../../features/evidence/presentation/public_evidence_page.dart';
 import '../../features/policies/application/policies_cubit.dart';
 import '../../features/policies/presentation/policies_page.dart';
@@ -211,6 +212,10 @@ GoRoute _homeRoute(AuthCubit auth) => GoRoute(
     GoRoute(
       path: 'help',
       builder: (context, state) => const HelpPage(),
+    ),
+    GoRoute(
+      path: 'preferences',
+      builder: (context, state) => const PreferencesPage(),
     ),
     GoRoute(
       path: 'notifications',

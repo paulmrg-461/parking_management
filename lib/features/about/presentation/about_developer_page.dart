@@ -33,6 +33,7 @@ class AboutDeveloperPage extends StatelessWidget {
   static const _github = 'https://github.com/paulmrg-461';
   static const _linkedin = 'https://www.linkedin.com/in/paul-realpe-631b17a6/';
   static const _instagram = 'https://www.instagram.com/devpaul_co/';
+  static const _jimmy = 'https://jimmy-realpe.web.app';
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +41,7 @@ class AboutDeveloperPage extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.aboutDeveloper)),
+      appBar: AppBar(title: Text(l10n.aboutTitle)),
       body: ListView(
         padding: const EdgeInsets.all(Space.md),
         children: [
@@ -51,6 +52,50 @@ class AboutDeveloperPage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const _Hero(version: _version, buildNumber: _build),
+                  const SizedBox(height: Space.lg),
+                  SectionHeader(
+                    icon: Icons.people_outline,
+                    title: l10n.aboutDevelopers,
+                  ),
+                  const SizedBox(height: Space.sm),
+                  Card(
+                    margin: EdgeInsets.zero,
+                    clipBehavior: Clip.antiAlias,
+                    child: Column(
+                      children: [
+                        ListTile(
+                          onTap: () => _open(context, Uri.parse(_devpaul)),
+                          leading: CircleAvatar(
+                            backgroundColor: scheme.primary,
+                            foregroundColor: scheme.onPrimary,
+                            child: const Text('PR'),
+                          ),
+                          title: const Text('Paul Realpe'),
+                          subtitle: Text(l10n.aboutRole),
+                          trailing: const StatusChip(
+                            label: 'DevPaul',
+                            tone: StatusTone.pending,
+                          ),
+                        ),
+                        const Divider(height: 1),
+                        ListTile(
+                          onTap: () => _open(context, Uri.parse(_jimmy)),
+                          leading: CircleAvatar(
+                            backgroundColor: scheme.surfaceContainerHighest,
+                            foregroundColor: scheme.onSurfaceVariant,
+                            child: const Text('JR'),
+                          ),
+                          title: const Text('Jimmy Realpe'),
+                          subtitle: Text(l10n.aboutJimmyRole),
+                          trailing: Icon(
+                            Icons.open_in_new,
+                            size: 18,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                   const SizedBox(height: Space.lg),
                   _LinkCard(
                     links: [

@@ -977,5 +977,10 @@
   "evidencePriceMayChange": "May change until check-out",
   "evidenceCall": "Call the lot",
   "evidenceWhatsApp": "Message on WhatsApp",
-  "evidenceWhatsAppMessage": "Hi, I am writing about vehicle {plate}."
+  "evidenceWhatsAppMessage": "Hi, I am writing about vehicle {plate}.",
+  "preferencesTitle": "Settings",
+  "preferencesHint": "Language, appearance and auto-lock.",
+  "aboutTitle": "About",
+  "aboutDevelopers": "Developers",
+  "aboutJimmyRole": "Developer"
 }

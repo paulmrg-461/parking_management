@@ -13,7 +13,7 @@ Last updated: 2026-11-03 (statement timeouts, CI release APK, audit fixes
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0068` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 968 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 971 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -45,6 +45,18 @@ Last updated: 2026-11-03 (statement timeouts, CI release APK, audit fixes
    `0024` (`current_lot_id`, lot CRUD, re-scoped policies/RPCs/reports,
    `report_revenue_all`), `0025` (offline replay lot capture via
    `resolve_lot`), `0026` (`list_lot_members`).
+
+## Settings/about navigation (2026-11-05)
+
+- Replaced the sidebar's five preference icons with two footer links:
+  **Ajustes** (`/preferences`, operator route) and **Acerca de** (`/about`).
+  The drawer mirrors them plus Ayuda (also reachable from Ajustes) and logout.
+- `PreferencesPage` holds language, appearance and auto-lock with their pickers;
+  it uses `context.push` for Help/About. Tests pin `testApp` to Spanish, so
+  changing the language cubit there does not relabel the page.
+- About shows a **Desarrolladores** card with Paul Realpe (DevPaul) and
+  **Jimmy Realpe** (`jimmy-realpe.web.app`), both using the injectable launcher.
+- Test count: 971.
 
 ## Public QR contact (2026-11-05)
 
@@ -1005,7 +1017,7 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 ## Latest verification (2026-10-28)
 
-- `flutter test`: 968 passed (+1 live-stack integration skipped); `flutter
+- `flutter test`: 971 passed (+1 live-stack integration skipped); `flutter
   analyze` 152 infos, all SDK `deprecated_member_use` (zero warnings/errors);
   `flutter build web --release` OK.
 - `supabase/tests/run.sh` passed (migrations `0001`–`0067`); `e2e.sh` passed

@@ -6,11 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/l10n/l10n.dart';
-import '../../core/l10n/locale_cubit.dart';
 import '../../core/realtime/local_activity.dart';
-import '../../core/security/auto_lock_cubit.dart';
-import '../../core/theme/theme_cubit.dart';
-import '../../core/widgets/auto_lock_menu.dart';
 import '../router/route_access.dart';
 import '../di/injection.dart';
 import '../../core/qr/qr_decoder.dart';
@@ -367,19 +363,10 @@ class _AppMenuDrawer extends StatelessWidget {
                       onTap: () => onNavigate(destination.path),
                     ),
                   const Divider(),
-                  ListTile(
-                    leading: const Icon(Icons.help_outline),
-                    title: Text(l10n.helpTitle),
-                    subtitle: Text(l10n.helpIntro),
-                    onTap: () => onNavigate(helpPath),
+                  _DrawerPreferences(
+                    onNavigate: onNavigate,
+                    onLogout: onLogout,
                   ),
-                  ListTile(
-                    leading: const Icon(Icons.code),
-                    title: Text(l10n.aboutDeveloper),
-                    subtitle: Text(l10n.aboutMadeBy),
-                    onTap: () => onNavigate(aboutPath),
-                  ),
-                  _DrawerPreferences(onLogout: onLogout),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(
                       Space.md,
@@ -415,66 +402,43 @@ class _AppMenuDrawer extends StatelessWidget {
   }
 }
 
-/// Language, appearance and sign-out moved out of the phone app bar: they
-/// live at the bottom of the drawer, with the current value as subtitle.
+/// Drawer footer: Ajustes (device preferences + help), Acerca de and sign-out.
 class _DrawerPreferences extends StatelessWidget {
-  const _DrawerPreferences({required this.onLogout});
+  const _DrawerPreferences({
+    required this.onNavigate,
+    required this.onLogout,
+  });
 
+  final ValueChanged<String> onNavigate;
   final VoidCallback onLogout;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final theme = Theme.of(context);
-    final localeCubit = _locale(context);
-    final themeCubit = _theme(context);
-    final autoLockCubit = _autoLock(context);
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-            Space.md,
-            Space.md,
-            Space.md,
-            Space.xs,
-          ),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              l10n.settingsSectionPreferences.toUpperCase(),
-              style: theme.textTheme.labelSmall?.copyWith(
-                letterSpacing: 1.2,
-                fontWeight: FontWeight.w700,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ),
+        ListTile(
+          leading: const Icon(Icons.settings_outlined),
+          title: Text(l10n.preferencesTitle),
+          subtitle: Text(l10n.preferencesHint),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => onNavigate(preferencesPath),
         ),
-        if (localeCubit != null)
-          ListTile(
-            leading: const Icon(Icons.translate),
-            title: Text(l10n.languageTooltip),
-            subtitle: Text(_languageName(l10n, localeCubit.state)),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _pickLanguage(context, localeCubit),
-          ),
-        if (themeCubit != null)
-          ListTile(
-            leading: Icon(_themeIcon(themeCubit.state)),
-            title: Text(l10n.themeMode),
-            subtitle: Text(_themeName(l10n, themeCubit.state)),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _pickTheme(context, themeCubit),
-          ),
-        if (autoLockCubit != null)
-          ListTile(
-            leading: const Icon(Icons.lock_clock),
-            title: Text(l10n.autoLockTitle),
-            subtitle: Text(autoLockLabel(l10n, autoLockCubit.minutes)),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => showAutoLockSheet(context, autoLockCubit),
-          ),
+        ListTile(
+          leading: const Icon(Icons.help_outline),
+          title: Text(l10n.helpTitle),
+          subtitle: Text(l10n.helpIntro),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => onNavigate(helpPath),
+        ),
+        ListTile(
+          leading: const Icon(Icons.info_outline),
+          title: Text(l10n.aboutTitle),
+          subtitle: Text(l10n.aboutMadeBy),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => onNavigate(aboutPath),
+        ),
         const Divider(height: 1),
         ListTile(
           leading: const Icon(Icons.logout),
@@ -484,126 +448,8 @@ class _DrawerPreferences extends StatelessWidget {
       ],
     );
   }
-
-  LocaleCubit? _locale(BuildContext context) {
-    try {
-      return context.watch<LocaleCubit>();
-    } on ProviderNotFoundException {
-      return null;
-    }
-  }
-
-  AutoLockCubit? _autoLock(BuildContext context) {
-    try {
-      return context.watch<AutoLockCubit>();
-    } on ProviderNotFoundException {
-      return null;
-    }
-  }
-
-  ThemeCubit? _theme(BuildContext context) {
-    try {
-      return context.watch<ThemeCubit>();
-    } on ProviderNotFoundException {
-      return null;
-    }
-  }
-
-  String _languageName(AppLocalizations l10n, Locale? locale) =>
-      switch (locale?.languageCode) {
-        'es' => l10n.languageSpanish,
-        'en' => l10n.languageEnglish,
-        _ => l10n.languageSystem,
-      };
-
-  String _themeName(AppLocalizations l10n, ThemeMode mode) => switch (mode) {
-    ThemeMode.light => l10n.themeLight,
-    ThemeMode.dark => l10n.themeDark,
-    ThemeMode.system => l10n.themeSystem,
-  };
-
-  IconData _themeIcon(ThemeMode mode) => switch (mode) {
-    ThemeMode.light => Icons.light_mode_outlined,
-    ThemeMode.dark => Icons.dark_mode_outlined,
-    ThemeMode.system => Icons.brightness_auto_outlined,
-  };
-
-  Future<void> _pickLanguage(
-    BuildContext context,
-    LocaleCubit cubit,
-  ) async {
-    final l10n = context.l10n;
-    final current = cubit.state?.languageCode ?? 'system';
-    final choice = await showModalBottomSheet<String>(
-      context: context,
-      showDragHandle: true,
-      builder: (sheet) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final option in [
-              ('system', l10n.languageSystem),
-              ('es', l10n.languageSpanish),
-              ('en', l10n.languageEnglish),
-            ])
-              ListTile(
-                leading: Icon(
-                  option.$1 == current
-                      ? Icons.radio_button_checked
-                      : Icons.radio_button_unchecked,
-                ),
-                title: Text(option.$2),
-                selected: option.$1 == current,
-                onTap: () => Navigator.of(sheet).pop(option.$1),
-              ),
-          ],
-        ),
-      ),
-    );
-    if (choice == null) {
-      return;
-    }
-    await cubit.select(choice == 'system' ? null : Locale(choice));
-  }
-
-  Future<void> _pickTheme(BuildContext context, ThemeCubit cubit) async {
-    final l10n = context.l10n;
-    final current = cubit.state;
-    final choice = await showModalBottomSheet<ThemeMode>(
-      context: context,
-      showDragHandle: true,
-      builder: (sheet) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final option in [
-              (ThemeMode.system, l10n.themeSystem),
-              (ThemeMode.light, l10n.themeLight),
-              (ThemeMode.dark, l10n.themeDark),
-            ])
-              ListTile(
-                leading: Icon(
-                  option.$1 == current
-                      ? Icons.radio_button_checked
-                      : Icons.radio_button_unchecked,
-                ),
-                title: Text(option.$2),
-                selected: option.$1 == current,
-                onTap: () => Navigator.of(sheet).pop(option.$1),
-              ),
-          ],
-        ),
-      ),
-    );
-    if (choice == null) {
-      return;
-    }
-    await cubit.select(choice);
-  }
 }
 
-/// Floating shortcut: photograph a receipt's QR and open that session's
-/// check-out. Hidden when the platform has no camera capture/decoder.
 class _ScanQrFab extends StatelessWidget {
   const _ScanQrFab();
 

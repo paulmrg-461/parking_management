@@ -31,6 +31,11 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Added
 
+- Navigation cleanup: the sidebar's preference icon row is gone. The footer now
+  has **Ajustes** (language, appearance, auto-lock, help) and **Acerca de**
+  entries; the mobile drawer mirrors them. `PreferencesPage` lives at
+  `/preferences` and is available to operators. About now lists both
+  developers (Paul Realpe/DevPaul and Jimmy Realpe) with their sites.
 - The public evidence page now carries the site's identity and contact: name,
   logo (public branding bucket URL), address/schedule, a **Call** button and a
   direct **WhatsApp** button with a message prefilled with the plate. Data comes

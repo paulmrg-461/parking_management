@@ -10,51 +10,62 @@ String autoLockLabel(AppLocalizations l10n, int minutes) =>
 
 /// Bottom sheet used by the drawer and the desktop sidebar to pick the idle
 /// lock timeout. Stored per device in [AutoLockCubit].
-Future<void> showAutoLockSheet(
-  BuildContext context,
-  AutoLockCubit cubit,
-) => showModalBottomSheet<void>(
-  context: context,
-  showDragHandle: true,
-  builder: (sheet) {
-    final l10n = sheet.l10n;
-    return SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(Space.md, 0, Space.md, Space.xs),
-            child: Text(
-              l10n.autoLockTitle,
-              style: Theme.of(sheet).textTheme.titleMedium,
+Future<void> showAutoLockSheet(BuildContext context, AutoLockCubit cubit) =>
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (sheet) {
+        final l10n = sheet.l10n;
+        return SafeArea(
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    Space.md,
+                    0,
+                    Space.md,
+                    Space.xs,
+                  ),
+                  child: Text(
+                    l10n.autoLockTitle,
+                    style: Theme.of(sheet).textTheme.titleMedium,
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    Space.md,
+                    0,
+                    Space.md,
+                    Space.sm,
+                  ),
+                  child: Text(
+                    l10n.autoLockHint,
+                    style: Theme.of(sheet).textTheme.bodySmall,
+                  ),
+                ),
+                for (final minutes in AutoLockCubit.options)
+                  RadioListTile<int>(
+                    value: minutes,
+                    groupValue: cubit.minutes,
+                    title: Text(autoLockLabel(l10n, minutes)),
+                    onChanged: (value) async {
+                      if (value == null) {
+                        return;
+                      }
+                      await cubit.select(value);
+                      if (sheet.mounted) {
+                        Navigator.of(sheet).pop();
+                      }
+                    },
+                  ),
+                const SizedBox(height: Space.sm),
+              ],
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(Space.md, 0, Space.md, Space.sm),
-            child: Text(
-              l10n.autoLockHint,
-              style: Theme.of(sheet).textTheme.bodySmall,
-            ),
-          ),
-          for (final minutes in AutoLockCubit.options)
-            RadioListTile<int>(
-              value: minutes,
-              groupValue: cubit.minutes,
-              title: Text(autoLockLabel(l10n, minutes)),
-              onChanged: (value) async {
-                if (value == null) {
-                  return;
-                }
-                await cubit.select(value);
-                if (sheet.mounted) {
-                  Navigator.of(sheet).pop();
-                }
-              },
-            ),
-          const SizedBox(height: Space.sm),
-        ],
-      ),
+        );
+      },
     );
-  },
-);

@@ -3085,4 +3085,19 @@ class AppLocalizationsEs extends AppLocalizations {
   String evidenceWhatsAppMessage(String plate) {
     return 'Hola, escribo por el vehículo $plate.';
   }
+
+  @override
+  String get preferencesTitle => 'Ajustes';
+
+  @override
+  String get preferencesHint => 'Idioma, apariencia y bloqueo automático.';
+
+  @override
+  String get aboutTitle => 'Acerca de';
+
+  @override
+  String get aboutDevelopers => 'Desarrolladores';
+
+  @override
+  String get aboutJimmyRole => 'Desarrollador';
 }

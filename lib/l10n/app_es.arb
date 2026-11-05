@@ -1057,5 +1057,10 @@
   "evidenceCall": "Llamar al parqueadero",
   "evidenceWhatsApp": "Escribir por WhatsApp",
   "evidenceWhatsAppMessage": "Hola, escribo por el vehículo {plate}.",
-  "@evidenceWhatsAppMessage": {"placeholders": {"plate": {"type": "String"}}}
+  "@evidenceWhatsAppMessage": {"placeholders": {"plate": {"type": "String"}}},
+  "preferencesTitle": "Ajustes",
+  "preferencesHint": "Idioma, apariencia y bloqueo automático.",
+  "aboutTitle": "Acerca de",
+  "aboutDevelopers": "Desarrolladores",
+  "aboutJimmyRole": "Desarrollador"
 }
