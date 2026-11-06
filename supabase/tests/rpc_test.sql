@@ -601,6 +601,56 @@ begin
     end if;
 end $$;
 
+-- Weekly trend: a contiguous series that ends today and stays lot-scoped.
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+declare
+    trend jsonb := public.dashboard_trend(7);
+    days jsonb := trend -> 'days';
+    today_entry jsonb;
+begin
+    if jsonb_array_length(days) <> 7 then
+        raise exception 'trend did not return one row per day';
+    end if;
+    if trend ->> 'end_date' <> to_char(current_date, 'YYYY-MM-DD') then
+        raise exception 'trend did not end on the business day';
+    end if;
+    select item into today_entry
+      from jsonb_array_elements(days) item
+     where item ->> 'date' = to_char(current_date, 'YYYY-MM-DD');
+    if today_entry is null then
+        raise exception 'trend omitted today';
+    end if;
+    if (today_entry ->> 'revenue')::integer < 1 then
+        raise exception 'trend ignored today revenue';
+    end if;
+    begin
+        perform public.dashboard_trend(0);
+        raise exception 'trend accepted an invalid range';
+    exception when others then
+        if sqlerrm not like '%InvalidTrendRangeError%' then
+            raise;
+        end if;
+    end;
+end $$;
+
+set local request.headers = '{"x-lot-id":"2"}';
+do $$
+declare
+    trend jsonb := public.dashboard_trend(7);
+    total bigint;
+begin
+    if (trend ->> 'lot_id')::integer <> 2 then
+        raise exception 'trend used the wrong lot';
+    end if;
+    select coalesce(sum((item ->> 'revenue')::bigint), 0) into total
+      from jsonb_array_elements(trend -> 'days') item;
+    if total <> 0 then
+        raise exception 'trend leaked revenue from another lot';
+    end if;
+end $$;
+set local request.headers = '{"x-lot-id":"1"}';
+
 -- Consolidated report exposes per-site revenue, tickets and average ticket.
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
 do $$

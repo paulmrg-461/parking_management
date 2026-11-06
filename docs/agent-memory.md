@@ -4,16 +4,15 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-11-05 (owner contact data, emergency action, monthly-pass
-tariff, device preferences, QR contact/summary). Branch `feature/supabase`.
+Last updated: 2026-11-06 (home weekly trend). Branch `feature/supabase`.
 
 ## Where we are
 
 - Stack: Flutter (android + web) + self-hosted Supabase only. No FastAPI,
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
-- `supabase/migrations/0001..0079` are the schema owner (applied by
+- `supabase/migrations/0001..0080` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 993 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 1006 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -74,6 +73,30 @@ tariff, device preferences, QR contact/summary). Branch `feature/supabase`.
   configured number, the 123 fallback and the settings shortcut; the settings,
   shell, SQL and repository tests cover the rest. Test count: 993, schema
   `0001..0079`.
+
+## Home weekly trend (2026-11-06)
+
+- `0080_dashboard_trend` adds `dashboard_trend(p_days default 7, allowed
+  1..31)`: `security definer`, `require_app_user()`, lot-scoped through
+  `current_lot_id()`, business timezone. It returns
+  `{lot_id, start_date, end_date, days:[{date, revenue, entries, exits}]}` and
+  uses `generate_series`, so quiet days are zero rows (the client never fills
+  gaps). Operators may call it (unlike `report_revenue`); an out-of-range
+  `p_days` raises `InvalidTrendRangeError`.
+- `CheckOutRepository.dashboardTrend()` feeds `DashboardLoaded.trend`; a failed
+  trend degrades to `DashboardTrend.empty` without hiding the rest of the home
+  (same rule as `todaySummary`). `TrendCard` in
+  `home/presentation/widgets/dashboard_widgets.dart` paints the bars scaled to
+  the peak day (today in `tertiary`), the weekly revenue/entries/exits totals,
+  a skeleton while loading and a quiet-week message; admins get a reports
+  shortcut, operators do not.
+- Tests: entity parsing, cubit degradation, card totals/quiet/failure and the
+  admin-only shortcut; SQL covers the contiguous 7-day series, today's revenue,
+  invalid ranges and lot isolation. Test count: 1006; schema `0001..0080`.
+- The new 400 px + 1.6 text-scale test exposed a pre-existing overflow in
+  `_CapacityRow` (home capacity card): its label is now clamped to two lines
+  and the counter is a flexible, ellipsized `Text`. Keep the test; it guards
+  both cards.
 
 ## Owner contact data (2026-11-05)
 

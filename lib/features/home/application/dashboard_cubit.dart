@@ -2,6 +2,7 @@ import 'package:equatable/equatable.dart';
 
 import '../../../core/error/failure.dart';
 import '../../check_out/domain/entities/capacity_snapshot.dart';
+import '../../check_out/domain/entities/dashboard_trend.dart';
 import '../../check_out/domain/entities/occupancy_snapshot.dart';
 import '../../check_out/domain/entities/check_out_preview.dart';
 import '../../check_out/domain/entities/open_session.dart';
@@ -27,6 +28,7 @@ final class DashboardLoaded extends DashboardState {
     this.totalCapacity = 0,
     this.categories = const [],
     this.today = TodaySummary.empty,
+    this.trend = DashboardTrend.empty,
     this.capacity = CapacitySnapshot.empty,
     this.sessions = const [],
     this.slotBoard = SlotBoard.empty,
@@ -37,6 +39,9 @@ final class DashboardLoaded extends DashboardState {
   final int totalCapacity;
   final List<CategoryOccupancySnapshot> categories;
   final TodaySummary today;
+
+  /// Daily activity for the last week (empty when the RPC failed).
+  final DashboardTrend trend;
 
   /// Space configuration (cars/pickups, motorcycles, keys) vs. what is inside.
   final CapacitySnapshot capacity;
@@ -58,6 +63,7 @@ final class DashboardLoaded extends DashboardState {
     totalCapacity,
     categories,
     today,
+    trend,
     capacity,
     sessions,
     slotBoard,
@@ -116,6 +122,9 @@ class DashboardCubit extends ResilientCubit<DashboardState> {
     final today = await _sessions.todaySummary().catchError(
       (Object _) => TodaySummary.empty,
     );
+    final trend = await _sessions.dashboardTrend().catchError(
+      (Object _) => DashboardTrend.empty,
+    );
     final capacity = await _sessions.capacitySnapshot().catchError(
       (Object _) => CapacitySnapshot.empty,
     );
@@ -127,6 +136,7 @@ class DashboardCubit extends ResilientCubit<DashboardState> {
       totalCapacity: snapshot.totalCapacity,
       categories: snapshot.byCategory,
       today: today,
+      trend: trend,
       capacity: capacity,
       sessions: await _inside(),
       slotBoard: slotBoard,

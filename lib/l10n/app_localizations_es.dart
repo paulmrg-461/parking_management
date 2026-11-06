@@ -1426,6 +1426,40 @@ class AppLocalizationsEs extends AppLocalizations {
   String get homeTodayPasses => 'Mensualidades';
 
   @override
+  String get homeTrend => 'Tendencia';
+
+  @override
+  String get homeTrendHint => 'Últimos 7 días';
+
+  @override
+  String homeTrendRange(String start, String end) {
+    return '$start – $end';
+  }
+
+  @override
+  String get homeTrendTotal => 'Ingresos';
+
+  @override
+  String get homeTrendEntries => 'Entradas';
+
+  @override
+  String get homeTrendExits => 'Salidas';
+
+  @override
+  String get homeTrendOpenReports => 'Abrir reportes';
+
+  @override
+  String get homeTrendEmpty => 'Sin movimientos en los últimos días';
+
+  @override
+  String get homeTrendUnavailable => 'Tendencia no disponible';
+
+  @override
+  String homeTrendDay(String date, String amount, int entries, int exits) {
+    return '$date: $amount · $entries entradas · $exits salidas';
+  }
+
+  @override
   String get homeCapacityTitle => 'Capacidad del parqueadero';
 
   @override

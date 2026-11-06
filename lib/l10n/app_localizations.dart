@@ -2654,6 +2654,66 @@ abstract class AppLocalizations {
   /// **'Mensualidades'**
   String get homeTodayPasses;
 
+  /// No description provided for @homeTrend.
+  ///
+  /// In es, this message translates to:
+  /// **'Tendencia'**
+  String get homeTrend;
+
+  /// No description provided for @homeTrendHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Últimos 7 días'**
+  String get homeTrendHint;
+
+  /// No description provided for @homeTrendRange.
+  ///
+  /// In es, this message translates to:
+  /// **'{start} – {end}'**
+  String homeTrendRange(String start, String end);
+
+  /// No description provided for @homeTrendTotal.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresos'**
+  String get homeTrendTotal;
+
+  /// No description provided for @homeTrendEntries.
+  ///
+  /// In es, this message translates to:
+  /// **'Entradas'**
+  String get homeTrendEntries;
+
+  /// No description provided for @homeTrendExits.
+  ///
+  /// In es, this message translates to:
+  /// **'Salidas'**
+  String get homeTrendExits;
+
+  /// No description provided for @homeTrendOpenReports.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir reportes'**
+  String get homeTrendOpenReports;
+
+  /// No description provided for @homeTrendEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin movimientos en los últimos días'**
+  String get homeTrendEmpty;
+
+  /// No description provided for @homeTrendUnavailable.
+  ///
+  /// In es, this message translates to:
+  /// **'Tendencia no disponible'**
+  String get homeTrendUnavailable;
+
+  /// No description provided for @homeTrendDay.
+  ///
+  /// In es, this message translates to:
+  /// **'{date}: {amount} · {entries} entradas · {exits} salidas'**
+  String homeTrendDay(String date, String amount, int entries, int exits);
+
   /// No description provided for @homeCapacityTitle.
   ///
   /// In es, this message translates to:

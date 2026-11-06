@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../../../app/shell/app_destinations.dart';
 import '../../../../core/l10n/failure_messages.dart';
@@ -16,6 +17,7 @@ import '../../../../core/widgets/status_chip.dart';
 import '../../../auth/application/auth_cubit.dart';
 import '../../../auth/domain/entities/user.dart';
 import '../../../check_out/domain/entities/capacity_snapshot.dart';
+import '../../../check_out/domain/entities/dashboard_trend.dart';
 import '../../../shifts/application/shift_cubit.dart';
 import '../../application/dashboard_cubit.dart';
 
@@ -447,11 +449,26 @@ class _CapacityRow extends StatelessWidget {
             children: [
               Icon(icon, size: 16, color: scheme.onSurfaceVariant),
               const SizedBox(width: 6),
-              Expanded(child: Text(label, style: theme.textTheme.bodyMedium)),
-              Text(
-                limited ? '$open / $available' : '$open · ${l10n.homeNoLimit}',
-                style: theme.textTheme.labelLarge?.copyWith(
-                  color: full ? scheme.error : scheme.onSurfaceVariant,
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ),
+              const SizedBox(width: Space.xs),
+              Flexible(
+                child: Text(
+                  limited
+                      ? '$open / $available'
+                      : '$open · ${l10n.homeNoLimit}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.end,
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: full ? scheme.error : scheme.onSurfaceVariant,
+                  ),
                 ),
               ),
             ],
@@ -988,6 +1005,280 @@ class _TodayMetric extends StatelessWidget {
           ),
         ),
         Text(value, style: textTheme.titleSmall),
+      ],
+    );
+  }
+}
+
+/// Seven-day activity for the site: one bar per business day, the weekly
+/// totals below and (for admins) a shortcut to the full reports screen.
+/// Operators see it too: it is a summary, not an admin-only report.
+class TrendCard extends StatelessWidget {
+  const TrendCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final textTheme = Theme.of(context).textTheme;
+    return BlocBuilder<DashboardCubit, DashboardState>(
+      buildWhen: (previous, current) =>
+          previous is! DashboardLoaded ||
+          current is! DashboardLoaded ||
+          previous.trend != current.trend,
+      builder: (context, state) {
+        final loading = state is DashboardLoading;
+        final failed = state is DashboardFailure;
+        final trend = state is DashboardLoaded
+            ? state.trend
+            : DashboardTrend.empty;
+        final quiet = state is DashboardLoaded && !trend.hasMovement;
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(Space.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    const _KpiIcon(icon: Icons.show_chart),
+                    const SizedBox(width: Space.sm),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(l10n.homeTrend, style: textTheme.titleSmall),
+                          Text(
+                            trend.isEmpty
+                                ? l10n.homeTrendHint
+                                : _rangeLabel(context, trend),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (_isAdmin(context))
+                      AppIconButton(
+                        icon: Icons.open_in_new,
+                        tooltip: l10n.homeTrendOpenReports,
+                        onPressed: () => context.go('/reports'),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: Space.md),
+                if (loading)
+                  const _TrendSkeleton()
+                else if (failed)
+                  _TrendQuiet(message: l10n.homeTrendUnavailable)
+                else if (quiet)
+                  _TrendQuiet(message: l10n.homeTrendEmpty)
+                else ...[
+                  _TrendChart(days: trend.days),
+                  const SizedBox(height: Space.md),
+                  Wrap(
+                    spacing: Space.lg,
+                    runSpacing: Space.xs,
+                    children: [
+                      _TodayMetric(
+                        label: l10n.homeTrendTotal,
+                        value: Formatters.money(trend.totalRevenue),
+                      ),
+                      _TodayMetric(
+                        label: l10n.homeTrendEntries,
+                        value: '${trend.totalEntries}',
+                      ),
+                      _TodayMetric(
+                        label: l10n.homeTrendExits,
+                        value: '${trend.totalExits}',
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  static String _rangeLabel(BuildContext context, DashboardTrend trend) {
+    final format = DateFormat.MMMd(context.l10n.localeName);
+    return context.l10n.homeTrendRange(
+      format.format(trend.days.first.date),
+      format.format(trend.days.last.date),
+    );
+  }
+}
+
+/// Bars scaled to the best day of the range; zero days keep a thin baseline
+/// so the series stays readable.
+class _TrendChart extends StatelessWidget {
+  const _TrendChart({required this.days});
+
+  final List<TrendDay> days;
+
+  @override
+  Widget build(BuildContext context) {
+    final peak = days.fold<int>(
+      0,
+      (max, day) => day.revenue > max ? day.revenue : max,
+    );
+    return SizedBox(
+      height: 116,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          for (var i = 0; i < days.length; i++)
+            Expanded(
+              child: _TrendBar(
+                day: days[i],
+                peak: peak,
+                isToday: i == days.length - 1,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TrendBar extends StatelessWidget {
+  const _TrendBar({
+    required this.day,
+    required this.peak,
+    required this.isToday,
+  });
+
+  final TrendDay day;
+  final int peak;
+  final bool isToday;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final label = DateFormat.MMMd(l10n.localeName).format(day.date);
+    final semantic = l10n.homeTrendDay(
+      label,
+      Formatters.money(day.revenue),
+      day.entries,
+      day.exits,
+    );
+    final ratio = peak <= 0 ? 0.0 : day.revenue / peak;
+    Widget bar() {
+      if (day.revenue == 0) {
+        return Container(
+          height: 3,
+          decoration: BoxDecoration(
+            color: scheme.outlineVariant,
+            borderRadius: BorderRadius.circular(Radii.sm),
+          ),
+        );
+      }
+      return FractionallySizedBox(
+        heightFactor: ratio.clamp(0.08, 1.0),
+        child: Container(
+          decoration: BoxDecoration(
+            color: isToday ? scheme.tertiary : scheme.primary,
+            borderRadius: BorderRadius.circular(Radii.sm),
+          ),
+        ),
+      );
+    }
+
+    return Tooltip(
+      message: semantic,
+      child: Semantics(
+        label: semantic,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 2),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Expanded(
+                child: Align(alignment: Alignment.bottomCenter, child: bar()),
+              ),
+              const SizedBox(height: Space.xs),
+              Text(
+                DateFormat.d(l10n.localeName).format(day.date),
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: isToday ? scheme.onSurface : scheme.onSurfaceVariant,
+                  fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Placeholder with the same geometry as the chart while the dashboard loads.
+class _TrendSkeleton extends StatelessWidget {
+  const _TrendSkeleton();
+
+  static const _heights = [0.4, 0.7, 0.55, 0.9, 0.35, 0.8, 0.6];
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return SizedBox(
+      height: 116,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          for (final factor in _heights)
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 2,
+                  vertical: Space.xs,
+                ),
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: FractionallySizedBox(
+                    heightFactor: factor,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: scheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(Radii.sm),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TrendQuiet extends StatelessWidget {
+  const _TrendQuiet({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Icon(
+          Icons.insights_outlined,
+          size: 18,
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+        const SizedBox(width: Space.sm),
+        Expanded(child: Text(message, style: theme.textTheme.bodyMedium)),
       ],
     );
   }

@@ -1415,6 +1415,40 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeTodayPasses => 'Monthly passes';
 
   @override
+  String get homeTrend => 'Trend';
+
+  @override
+  String get homeTrendHint => 'Last 7 days';
+
+  @override
+  String homeTrendRange(String start, String end) {
+    return '$start – $end';
+  }
+
+  @override
+  String get homeTrendTotal => 'Revenue';
+
+  @override
+  String get homeTrendEntries => 'Entries';
+
+  @override
+  String get homeTrendExits => 'Exits';
+
+  @override
+  String get homeTrendOpenReports => 'Open reports';
+
+  @override
+  String get homeTrendEmpty => 'No activity in the last few days';
+
+  @override
+  String get homeTrendUnavailable => 'Trend not available';
+
+  @override
+  String homeTrendDay(String date, String amount, int entries, int exits) {
+    return '$date: $amount · $entries entries · $exits exits';
+  }
+
+  @override
   String get homeCapacityTitle => 'Parking capacity';
 
   @override

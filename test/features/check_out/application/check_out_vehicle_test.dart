@@ -9,6 +9,7 @@ import 'package:parking_management/features/check_out/domain/entities/capacity_s
 import 'package:parking_management/features/check_out/domain/entities/occupancy_snapshot.dart';
 import 'package:parking_management/features/check_out/domain/entities/slot_board.dart';
 import 'package:parking_management/features/check_out/domain/entities/today_summary.dart';
+import 'package:parking_management/features/check_out/domain/entities/dashboard_trend.dart';
 import 'package:parking_management/features/check_out/domain/repositories/check_out_repository.dart';
 
 class _FakeRepository implements CheckOutRepository {
@@ -16,6 +17,10 @@ class _FakeRepository implements CheckOutRepository {
 
   @override
   Future<TodaySummary> todaySummary() async => TodaySummary.empty;
+
+  @override
+  Future<DashboardTrend> dashboardTrend({int days = 7}) async =>
+      DashboardTrend.empty;
 
   @override
   Future<SlotBoard> slotBoard() async => SlotBoard.empty;

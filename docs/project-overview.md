@@ -43,7 +43,7 @@ WhatsApp (manual or automated).
 | Secrets / PIN operations | Complete (scripts + runbook) | PIN rotation verified live |
 | E2E and CI | Complete (API + Flutter client, real stack) | CI job `supabase-e2e` |
 
-Quality snapshot (2026-10-28, local stack): **993 Flutter tests + 1 integration
+Quality snapshot (2026-11-06, local stack): **1006 Flutter tests + 1 integration
 test**, SQL/RLS suite green, web build green, analyzer with **0 errors and 0
 warnings** (only SDK deprecation infos from the pinned beta channel), restore
 drill green.
@@ -57,7 +57,7 @@ the main data it touches.
 | Module (`lib/features/…`) | Responsibility | Backing data / RPCs |
 |---|---|---|
 | `auth` | PIN login, session restore, logout | GoTrue, `users`, `lot_members` |
-| `home` | Dashboard: occupancy + radial, space board (physical map), today KPIs, shift card, shortcuts | `occupancy_snapshot`, `dashboard_today`, `slot_board` |
+| `home` | Dashboard: occupancy + radial, space board (physical map), today KPIs, 7-day trend, shift card, shortcuts | `occupancy_snapshot`, `dashboard_today`, `dashboard_trend`, `slot_board` |
 | `spots` | Admin drag & drop map editor and bay layout | `parking_spots`, `save/delete_parking_spot` |
 | `check_in` | Plate lookup, evidence photos, offline queue | `check_in`, `vehicles`, Storage `evidence` |
 | `check_out` | Open sessions (paged), payment, receipt | `check_out`, `calculate_fare`, `open_sessions_view` |
@@ -149,9 +149,10 @@ Deployment: [`setup-cloud.md`](setup-cloud.md) (single VM + TLS proxy) and
 
 - Real FCM/Meta/VAPID credentials for production push and automated WhatsApp.
 - Cold-storage archival for evidence files (currently deleted after retention).
-- Historical per-site metrics dashboard (today's KPIs exist; trends do not).
-- Physical bays with per-bay out-of-service state (the current state is a
-  per-group count).
+- Longer trend analysis: the home shows the last 7 days and reports cover the
+  selected range, but there is no month-over-month or year-over-year view.
+- Per-bay maintenance history (the map already takes a bay out of service; it
+  does not log when or why).
 - iOS target if required.
 - Template management UI for automated WhatsApp.
 - Conflict resolution for offline reference-data edits (last-write-wins today).

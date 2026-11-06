@@ -2,6 +2,7 @@ import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/core/pagination/paged_result.dart';
 import 'package:parking_management/features/check_out/domain/entities/check_out_preview.dart';
 import 'package:parking_management/features/check_out/domain/entities/check_out_receipt.dart';
+import 'package:parking_management/features/check_out/domain/entities/dashboard_trend.dart';
 import 'package:parking_management/features/check_out/domain/entities/open_session.dart';
 import 'package:parking_management/features/check_out/domain/entities/capacity_snapshot.dart';
 import 'package:parking_management/features/check_out/domain/entities/occupancy_snapshot.dart';
@@ -18,6 +19,8 @@ class FakeCheckOutRepository implements CheckOutRepository {
     this.categories = const [],
     this.today = TodaySummary.empty,
     this.todayError,
+    this.trend = DashboardTrend.empty,
+    this.trendError,
   });
 
   List<OpenSession> sessions;
@@ -26,6 +29,9 @@ class FakeCheckOutRepository implements CheckOutRepository {
   final List<CategoryOccupancySnapshot> categories;
   TodaySummary today;
   Failure? todayError;
+  DashboardTrend trend;
+  Failure? trendError;
+  int trendCalls = 0;
   int occupancyCalls = 0;
   int listCalls = 0;
 
@@ -39,6 +45,16 @@ class FakeCheckOutRepository implements CheckOutRepository {
       throw error;
     }
     return today;
+  }
+
+  @override
+  Future<DashboardTrend> dashboardTrend({int days = 7}) async {
+    trendCalls++;
+    final error = trendError;
+    if (error != null) {
+      throw error;
+    }
+    return trend;
   }
 
   CapacitySnapshot capacityToReturn = CapacitySnapshot.empty;

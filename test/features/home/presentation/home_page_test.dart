@@ -6,6 +6,7 @@ import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/features/auth/application/auth_cubit.dart';
 import 'package:parking_management/features/auth/domain/entities/user.dart';
 import 'package:parking_management/features/check_out/domain/entities/capacity_snapshot.dart';
+import 'package:parking_management/features/check_out/domain/entities/dashboard_trend.dart';
 import 'package:parking_management/features/check_out/domain/entities/today_summary.dart';
 import 'package:parking_management/features/check_out/domain/entities/open_session.dart';
 import 'package:parking_management/core/widgets/plate_text.dart';
@@ -30,6 +31,8 @@ Future<FakeCheckOutRepository> _pump(
   UserRole role = UserRole.operator,
   Failure? error,
   TodaySummary today = TodaySummary.empty,
+  DashboardTrend trend = DashboardTrend.empty,
+  Failure? trendError,
   int capacity = 0,
   CapacitySnapshot? space,
   SlotBoard? board,
@@ -55,6 +58,8 @@ Future<FakeCheckOutRepository> _pump(
           ],
           listError: error,
           today: today,
+          trend: trend,
+          trendError: trendError,
         )
         ..capacityToReturn = space ?? CapacitySnapshot.empty
         ..slotBoardToReturn = board ?? SlotBoard.empty;
@@ -117,6 +122,18 @@ class _RoutePage extends StatelessWidget {
 
 String _routeQuery(WidgetTester tester) =>
     tester.widget<Text>(find.byKey(const Key('route_query'))).data ?? '';
+
+DashboardTrend _week() => DashboardTrend(
+  days: [
+    for (var i = 0; i < 7; i++)
+      TrendDay(
+        date: DateTime(2026, 11, 3).add(Duration(days: i)),
+        revenue: i * 1000,
+        entries: i + 1,
+        exits: i,
+      ),
+  ],
+);
 
 void main() {
   testWidgets('Success: operator dashboard shows occupancy and actions', (
@@ -215,6 +232,88 @@ void main() {
     expect(find.text('5'), findsOneWidget);
     expect(find.textContaining('30.000'), findsOneWidget);
     expect(find.text('Mensualidades'), findsOneWidget);
+  });
+
+  testWidgets('Success: the trend card sums the week and its totals', (
+    tester,
+  ) async {
+    final trend = DashboardTrend(
+      days: [
+        for (var i = 0; i < 7; i++)
+          TrendDay(
+            date: DateTime(2026, 11, 3).add(Duration(days: i)),
+            revenue: i * 1000,
+            entries: i + 1,
+            exits: i,
+          ),
+      ],
+    );
+
+    final sessions = await _pump(tester, trend: trend);
+
+    expect(sessions.trendCalls, 1);
+    expect(find.text('Tendencia'), findsOneWidget);
+    expect(find.textContaining('21.000'), findsOneWidget);
+    expect(find.text('Ingresos'), findsOneWidget);
+  });
+
+  testWidgets('Failure: a quiet week shows the empty trend message', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      trend: DashboardTrend(
+        days: [
+          for (var i = 0; i < 7; i++)
+            TrendDay(date: DateTime(2026, 11, 3).add(Duration(days: i))),
+        ],
+      ),
+    );
+
+    expect(find.text('Sin movimientos en los últimos días'), findsOneWidget);
+  });
+
+  testWidgets('Failure: a broken trend never hides the rest of the home', (
+    tester,
+  ) async {
+    await _pump(tester, trendError: const NetworkFailure('offline'));
+
+    expect(find.text('Sin movimientos en los últimos días'), findsOneWidget);
+    expect(find.text('Vehículos dentro'), findsWidgets);
+  });
+
+  testWidgets('Failure: a broken dashboard says the trend is unavailable', (
+    tester,
+  ) async {
+    await _pump(tester, error: const NetworkFailure('offline'));
+
+    expect(find.text('Tendencia no disponible'), findsOneWidget);
+  });
+
+  testWidgets('Security: only admins get the reports shortcut', (tester) async {
+    await _pump(tester, trend: _week());
+
+    expect(find.byTooltip('Abrir reportes'), findsNothing);
+  });
+
+  testWidgets('Success: admins open the reports screen from the trend', (
+    tester,
+  ) async {
+    await _pump(tester, role: UserRole.admin, trend: _week());
+
+    expect(find.byTooltip('Abrir reportes'), findsOneWidget);
+  });
+
+  testWidgets('A11y: the trend card fits a phone with large text', (
+    tester,
+  ) async {
+    tester.platformDispatcher.textScaleFactorTestValue = 1.6;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+    await _pump(tester, size: const Size(400, 2200), trend: _week());
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Tendencia'), findsOneWidget);
   });
 
   testWidgets('A11y: reduced motion fills the occupancy bar immediately', (

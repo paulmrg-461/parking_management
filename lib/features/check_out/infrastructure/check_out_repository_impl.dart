@@ -9,6 +9,7 @@ import '../../../core/sync/sync_outbox.dart';
 import '../domain/entities/capacity_snapshot.dart';
 import '../domain/entities/check_out_preview.dart';
 import '../domain/entities/check_out_receipt.dart';
+import '../domain/entities/dashboard_trend.dart';
 import '../domain/entities/occupancy_snapshot.dart';
 import '../domain/entities/slot_board.dart';
 import '../domain/entities/open_session.dart';
@@ -46,6 +47,10 @@ class CheckOutRepositoryImpl implements CheckOutRepository {
 
   @override
   Future<TodaySummary> todaySummary() => _remote.todaySummary();
+
+  @override
+  Future<DashboardTrend> dashboardTrend({int days = 7}) =>
+      _remote.dashboardTrend(days: days);
 
   @override
   Future<CheckOutPreview> preview(int sessionId) => _remote.preview(sessionId);

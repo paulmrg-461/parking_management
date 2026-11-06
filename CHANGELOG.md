@@ -10,6 +10,9 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 ## [Unreleased] — 2026-11 (app reliability and operator UX)
 
 ### Fixed
+- Capacity rows (home capacity card) no longer overflow with large
+  accessibility text: the label clamps to two lines and the counter is
+  flexible and ellipsized.
 - Device preferences (auto-lock, language, appearance, sidebar state) were lost
   on a cold start: `HiveKeyValueStore.get` is synchronous and only reads open
   boxes, and the `preferences` box was opened only on the first `put`. `init()`
@@ -35,6 +38,12 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Added
 
+- **Home trend card**: `0080_dashboard_trend` adds `dashboard_trend(p_days)`, a
+  lot-scoped, operator-callable daily series (revenue, entries, exits) in the
+  site's business timezone. Days without movement come back as zeroes, so the
+  home dashboard paints the last 7 days as bars scaled to the best day, with
+  weekly revenue/entries/exits totals, a quiet-week message, a loading skeleton
+  and an admin shortcut to reports.
 - **Emergency action**: a red police icon in every app bar (and an entry in the
   desktop sidebar footer and the phone drawer) opens a one-tap panel with the
   site location, the nearest police quadrant and a large **Call now** button.

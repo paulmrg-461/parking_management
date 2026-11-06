@@ -5,6 +5,7 @@ import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/features/check_out/domain/entities/open_session.dart';
 import 'package:parking_management/features/check_out/domain/entities/today_summary.dart';
 import 'package:parking_management/features/check_out/domain/entities/capacity_snapshot.dart';
+import 'package:parking_management/features/check_out/domain/entities/dashboard_trend.dart';
 import 'package:parking_management/features/check_out/domain/entities/slot_board.dart';
 import 'package:parking_management/features/home/application/dashboard_cubit.dart';
 
@@ -85,6 +86,36 @@ void main() {
     final state = cubit.state as DashboardLoaded;
     expect(state.openSessions, 2);
     expect(state.today, TodaySummary.empty);
+  });
+
+  test('Success: the weekly trend lands in the loaded state', () async {
+    final repository = FakeCheckOutRepository(sessions: _sessions(2))
+      ..trend = DashboardTrend(
+        days: [
+          TrendDay(date: DateTime(2026, 11, 4), revenue: 8000, entries: 2),
+          TrendDay(date: DateTime(2026, 11, 5), revenue: 12000, entries: 3),
+        ],
+      );
+    final cubit = DashboardCubit(repository);
+
+    await cubit.load();
+
+    final state = cubit.state as DashboardLoaded;
+    expect(repository.trendCalls, 1);
+    expect(state.trend.days, hasLength(2));
+    expect(state.trend.totalRevenue, 20000);
+  });
+
+  test('Failure: a broken trend keeps the rest of the home', () async {
+    final repository = FakeCheckOutRepository(sessions: _sessions(2))
+      ..trendError = const NetworkFailure('offline');
+    final cubit = DashboardCubit(repository);
+
+    await cubit.load();
+
+    final state = cubit.state as DashboardLoaded;
+    expect(state.openSessions, 2);
+    expect(state.trend, DashboardTrend.empty);
   });
 
   test(
