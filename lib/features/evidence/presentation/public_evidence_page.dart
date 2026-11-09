@@ -83,26 +83,27 @@ class _PublicEvidencePageState extends State<PublicEvidencePage> {
         builder: (context, state) {
           if ((_key ?? '').trim().isEmpty) {
             return _PlateGate(
-              sessionInvalid: widget.sessionId == null || widget.sessionId! <= 0,
+              sessionInvalid:
+                  widget.sessionId == null || widget.sessionId! <= 0,
               controller: _plate,
               onUnlock: _unlock,
             );
           }
           return switch (state.status) {
-          EvidenceStatus.initial ||
-          EvidenceStatus.loading => const SkeletonCardList(itemCount: 3),
-          EvidenceStatus.failure => Padding(
-            padding: const EdgeInsets.all(Space.lg),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ErrorState(
-                  message: l10n.evidenceInvalid,
-                  onRetry: () => unawaited(_load()),
-                ),
-              ],
+            EvidenceStatus.initial ||
+            EvidenceStatus.loading => const SkeletonCardList(itemCount: 3),
+            EvidenceStatus.failure => Padding(
+              padding: const EdgeInsets.all(Space.lg),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ErrorState(
+                    message: l10n.evidenceInvalid,
+                    onRetry: () => unawaited(_load()),
+                  ),
+                ],
+              ),
             ),
-          ),
             EvidenceStatus.loaded => _EvidenceBody(
               evidence: state.evidence!,
               onOpen: _open,
@@ -317,6 +318,15 @@ class _EvidenceBody extends StatelessWidget {
                     ],
                   ),
                 ],
+                if (evidence.lot case final lot? when lot.id > 0) ...[
+                  const SizedBox(height: Space.md),
+                  FilledButton.icon(
+                    key: const Key('evidence_book'),
+                    onPressed: () => context.push('/reserve?lot=${lot.id}'),
+                    icon: const Icon(Icons.event_available),
+                    label: Text(l10n.bookingTitle),
+                  ),
+                ],
               ],
             ),
           ),
@@ -381,10 +391,7 @@ class _EvidenceBody extends StatelessWidget {
               crossAxisSpacing: Space.sm,
               children: [
                 for (final photo in evidence.photos)
-                  _PhotoTile(
-                    media: photo,
-                    onTap: () => onOpen(photo.url),
-                  ),
+                  _PhotoTile(media: photo, onTap: () => onOpen(photo.url)),
               ],
             ),
           if (evidence.videos.isNotEmpty) ...[

@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/qr/qr_decoder.dart';
 import '../../core/receipt/evidence_link.dart';
+import '../../features/public_booking/application/public_booking_cubit.dart';
+import '../../features/public_booking/presentation/public_booking_page.dart';
 import '../../features/reservations/domain/repositories/reservation_repository.dart';
 import '../../features/vehicles/domain/repositories/vehicle_repository.dart';
 import '../../core/widgets/deferred_page.dart';
@@ -84,6 +86,15 @@ GoRouter buildRouter(AuthCubit auth, Listenable refresh) => GoRouter(
         create: (_) => serviceLocator<PoliciesCubit>(),
         child: PoliciesPage(
           lotId: int.tryParse(state.uri.queryParameters['lot'] ?? ''),
+        ),
+      ),
+    ),
+    GoRoute(
+      path: reservePath,
+      builder: (context, state) => BlocProvider<PublicBookingCubit>(
+        create: (_) => serviceLocator<PublicBookingCubit>(),
+        child: PublicBookingPage(
+          lotId: int.tryParse(state.uri.queryParameters['lot'] ?? '') ?? 1,
         ),
       ),
     ),
@@ -209,10 +220,7 @@ GoRoute _homeRoute(AuthCubit auth) => GoRoute(
         child: const ReservationsPage(),
       ),
     ),
-    GoRoute(
-      path: 'help',
-      builder: (context, state) => const HelpPage(),
-    ),
+    GoRoute(path: 'help', builder: (context, state) => const HelpPage()),
     GoRoute(
       path: 'preferences',
       builder: (context, state) => const PreferencesPage(),

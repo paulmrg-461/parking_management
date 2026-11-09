@@ -296,6 +296,252 @@ abstract class AppLocalizations {
   /// **'Políticas y contrato'**
   String get policiesTitle;
 
+  /// No description provided for @bookingTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Reserva tu espacio'**
+  String get bookingTitle;
+
+  /// No description provided for @bookingSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Elige el tipo de vehículo y asegura tu cupo en segundos.'**
+  String get bookingSubtitle;
+
+  /// No description provided for @bookingOnline.
+  ///
+  /// In es, this message translates to:
+  /// **'Reserva en línea'**
+  String get bookingOnline;
+
+  /// No description provided for @bookingSectionAvailability.
+  ///
+  /// In es, this message translates to:
+  /// **'Disponibilidad ahora'**
+  String get bookingSectionAvailability;
+
+  /// No description provided for @bookingSectionHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Datos en tiempo real del parqueadero'**
+  String get bookingSectionHint;
+
+  /// No description provided for @bookingRefresh.
+  ///
+  /// In es, this message translates to:
+  /// **'Actualizar disponibilidad'**
+  String get bookingRefresh;
+
+  /// No description provided for @bookingAvailable.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 disponible} other{{count} disponibles}}'**
+  String bookingAvailable(int count);
+
+  /// No description provided for @bookingFull.
+  ///
+  /// In es, this message translates to:
+  /// **'Completo'**
+  String get bookingFull;
+
+  /// No description provided for @bookingUnlimited.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin límite'**
+  String get bookingUnlimited;
+
+  /// No description provided for @bookingSelectCategory.
+  ///
+  /// In es, this message translates to:
+  /// **'Elige un tipo de vehículo'**
+  String get bookingSelectCategory;
+
+  /// No description provided for @bookingFormTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tus datos'**
+  String get bookingFormTitle;
+
+  /// No description provided for @bookingPhone.
+  ///
+  /// In es, this message translates to:
+  /// **'Teléfono'**
+  String get bookingPhone;
+
+  /// No description provided for @bookingPhoneHint.
+  ///
+  /// In es, this message translates to:
+  /// **'300 000 0000'**
+  String get bookingPhoneHint;
+
+  /// No description provided for @bookingName.
+  ///
+  /// In es, this message translates to:
+  /// **'Nombre (opcional)'**
+  String get bookingName;
+
+  /// No description provided for @bookingDuration.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Cuánto tiempo necesitas?'**
+  String get bookingDuration;
+
+  /// No description provided for @bookingDurationHours.
+  ///
+  /// In es, this message translates to:
+  /// **'{hours} h'**
+  String bookingDurationHours(int hours);
+
+  /// No description provided for @bookingSubmit.
+  ///
+  /// In es, this message translates to:
+  /// **'Reservar espacio'**
+  String get bookingSubmit;
+
+  /// No description provided for @bookingSubmitting.
+  ///
+  /// In es, this message translates to:
+  /// **'Reservando…'**
+  String get bookingSubmitting;
+
+  /// No description provided for @bookingLegal.
+  ///
+  /// In es, this message translates to:
+  /// **'Al reservar aceptas las políticas y el contrato del parqueadero.'**
+  String get bookingLegal;
+
+  /// No description provided for @bookingPolicies.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver políticas'**
+  String get bookingPolicies;
+
+  /// No description provided for @bookingSuccessTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¡Reserva confirmada!'**
+  String get bookingSuccessTitle;
+
+  /// No description provided for @bookingSuccessHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Muestra este código al llegar al parqueadero.'**
+  String get bookingSuccessHint;
+
+  /// No description provided for @bookingCode.
+  ///
+  /// In es, this message translates to:
+  /// **'Código de reserva'**
+  String get bookingCode;
+
+  /// No description provided for @bookingPlateDetail.
+  ///
+  /// In es, this message translates to:
+  /// **'Placa'**
+  String get bookingPlateDetail;
+
+  /// No description provided for @bookingCategoryDetail.
+  ///
+  /// In es, this message translates to:
+  /// **'Tipo'**
+  String get bookingCategoryDetail;
+
+  /// No description provided for @bookingUntil.
+  ///
+  /// In es, this message translates to:
+  /// **'Válida hasta'**
+  String get bookingUntil;
+
+  /// No description provided for @bookingAddress.
+  ///
+  /// In es, this message translates to:
+  /// **'Dirección'**
+  String get bookingAddress;
+
+  /// No description provided for @bookingAnother.
+  ///
+  /// In es, this message translates to:
+  /// **'Hacer otra reserva'**
+  String get bookingAnother;
+
+  /// No description provided for @bookingCall.
+  ///
+  /// In es, this message translates to:
+  /// **'Llamar'**
+  String get bookingCall;
+
+  /// No description provided for @bookingWhatsApp.
+  ///
+  /// In es, this message translates to:
+  /// **'WhatsApp'**
+  String get bookingWhatsApp;
+
+  /// No description provided for @bookingWhatsAppMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'Hola, tengo una reserva en {lot}.'**
+  String bookingWhatsAppMessage(String lot);
+
+  /// No description provided for @bookingEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay tipos de vehículo configurados. Llama al parqueadero.'**
+  String get bookingEmpty;
+
+  /// No description provided for @bookingFooter.
+  ///
+  /// In es, this message translates to:
+  /// **'Reserva sujeta a disponibilidad. Si no puedes asistir, avísanos.'**
+  String get bookingFooter;
+
+  /// No description provided for @bookingErrorFull.
+  ///
+  /// In es, this message translates to:
+  /// **'Ese tipo de vehículo ya no tiene espacio. Elige otro o intenta más tarde.'**
+  String get bookingErrorFull;
+
+  /// No description provided for @bookingErrorExists.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya tienes una reserva activa para esta placa.'**
+  String get bookingErrorExists;
+
+  /// No description provided for @bookingErrorLimit.
+  ///
+  /// In es, this message translates to:
+  /// **'Alcanzaste el límite de reservas para este teléfono.'**
+  String get bookingErrorLimit;
+
+  /// No description provided for @bookingErrorInside.
+  ///
+  /// In es, this message translates to:
+  /// **'Este vehículo ya está dentro del parqueadero.'**
+  String get bookingErrorInside;
+
+  /// No description provided for @bookingErrorWindow.
+  ///
+  /// In es, this message translates to:
+  /// **'La hora de la reserva no es válida.'**
+  String get bookingErrorWindow;
+
+  /// No description provided for @bookingErrorPhone.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresa un teléfono válido (7 a 15 dígitos).'**
+  String get bookingErrorPhone;
+
+  /// No description provided for @bookingErrorPlate.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresa una placa válida.'**
+  String get bookingErrorPlate;
+
+  /// No description provided for @bookingErrorLot.
+  ///
+  /// In es, this message translates to:
+  /// **'No encontramos este parqueadero.'**
+  String get bookingErrorLot;
+
   /// No description provided for @policiesInvalid.
   ///
   /// In es, this message translates to:

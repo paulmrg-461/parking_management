@@ -4,15 +4,15 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-11-09 (registry history shortcut, owner search).
+Last updated: 2026-11-09 (public booking page, owner search).
 
 ## Where we are
 
 - Stack: Flutter (android + web) + self-hosted Supabase only. No FastAPI,
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
-- `supabase/migrations/0001..0086` are the schema owner (applied by
+- `supabase/migrations/0001..0087` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 1077 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 1099 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -355,6 +355,37 @@ Last updated: 2026-11-09 (registry history shortcut, owner search).
   three actions. l10n gotcha: `vehicleHistoryOpen` was already the "in progress"
   label, so the action key is `vehicleHistoryAction` (a duplicate key silently
   wins in gen-l10n). Test count: 1077.
+- Follow-up: a vehicle with no open session offers "Registrar entrada" from
+  its history (`/check-in?plate=`, `onCheckIn` injectable); a vehicle already
+  inside keeps the charge action. Fixing the sample fixture's `openSessions`
+  exposed the guard in tests. Test count: 1099.
+
+### Public booking page (2026-11-09)
+
+- `0087_public_booking.sql` adds `customer_name`, `customer_phone` and
+  `source` (`app`/`public`) to `category_reservations`, a shared
+  `reservation_capacity_check(lot, category, plate)` (same locks/order as
+  check-in; `create_reservation` now delegates to it), anon
+  `public_availability(lot)` (identity + per-category availability, **no
+  plates**) and anon `public_create_reservation(...)` with guards: 10 min..24 h
+  window, one active hold per plate/lot, two active public holds per phone,
+  plate/phone validation and the full category/group refusal. Anon has no
+  SELECT grant on the reservation table. Public holds carry the customer
+  name/phone and `source='public'`.
+- Flutter `features/public_booking`: entities/cubit/repository + a mobile-first
+  page at `/reserve?lot=<id>` (public in `authRedirect`). Hero with lot
+  identity/logo/contact, live category cards (available/full/no limit, progress
+  bar), plate/phone/name + hourly duration chips, submit, and a confirmation
+  with code, until, call/WhatsApp and "Hacer otra reserva". Loading skeleton,
+  empty, error+retry and inline submit errors. Linked from the public policy
+  page and the evidence page; DI registers the repository/cubit.
+- Live smoke: `public_availability(1)` returned the lot and categories; anon
+  `public_create_reservation` created `WEBTEST1` (`source=public`, phone
+  stored), then the row was deleted.
+- Abuse note: there is no captcha/proof-of-work; the per-plate/phone limits and
+  capacity guard are the only controls. Add a captcha at the edge if the page
+  is exposed to the open internet.
+- Test count: 1099; schema `0001..0087`.
 
 ## Owner contact data (2026-11-05)
 

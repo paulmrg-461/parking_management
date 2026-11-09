@@ -118,6 +118,7 @@ void main() {
     expect(find.textContaining('Cra 7'), findsOneWidget);
     expect(find.text('Llamar al parqueadero'), findsOneWidget);
     expect(find.text('Escribir por WhatsApp'), findsOneWidget);
+    expect(find.byKey(const Key('evidence_book')), findsOneWidget);
   });
 
   testWidgets('Failure: a wrong or incomplete link explains the key', (
@@ -175,10 +176,17 @@ void main() {
   testWidgets('Security: an invalid session id never unlocks the page', (
     tester,
   ) async {
-    await pumpPage(tester, FakeEvidenceRepository(), sessionId: null, plate: null);
+    await pumpPage(
+      tester,
+      FakeEvidenceRepository(),
+      sessionId: null,
+      plate: null,
+    );
 
-    expect(find.text('Este enlace no es válido o la placa no coincide.'),
-        findsOneWidget);
+    expect(
+      find.text('Este enlace no es válido o la placa no coincide.'),
+      findsOneWidget,
+    );
     expect(find.byKey(const Key('evidence_plate')), findsNothing);
   });
 }

@@ -2586,16 +2586,21 @@ begin
     end if;
 end $$;
 
--- Fix 4: create_reservation locks the group key before the category key,
--- exactly like check_in -> enforce_category_capacity.
+-- Fix 4: the capacity helper locks the group key before the category key,
+-- exactly like check_in -> enforce_category_capacity, and create_reservation
+-- delegates to it.
 do $$
 declare
-    src text := pg_get_functiondef('public.create_reservation(text,integer,timestamptz,text)'::regprocedure);
+    res_src text := pg_get_functiondef('public.create_reservation(text,integer,timestamptz,text)'::regprocedure);
+    check_src text := pg_get_functiondef('public.reservation_capacity_check(integer,integer,text)'::regprocedure);
 begin
-    if position('''group:''' in src) = 0
-       or position('''category:''' in src) = 0
-       or position('''group:''' in src) > position('''category:''' in src)
-       or src not like '%category_group(category_name)%' then
+    if res_src not like '%reservation_capacity_check%' then
+        raise exception 'fix4: create_reservation does not use the shared capacity check';
+    end if;
+    if position('''group:''' in check_src) = 0
+       or position('''category:''' in check_src) = 0
+       or position('''group:''' in check_src) > position('''category:''' in check_src)
+       or check_src not like '%category_group(category_name)%' then
         raise exception 'fix4: reservation lock keys/order differ from check_in';
     end if;
 end $$;
@@ -3210,6 +3215,134 @@ begin
             raise;
         end if;
     end;
+end $$;
+
+-- Public booking: anon sees availability, creates guarded holds and cannot read
+-- the reservation table directly.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    cat integer;
+begin
+    update public.parking_settings
+       set car_capacity = 0, moto_capacity = 0, key_capacity = 0
+     where lot_id = 1;
+    delete from public.parking_spots where lot_id = 1;
+    insert into public.categories (name, capacity, lot_id)
+    values ('public-car', 10, 1)
+    returning id into cat;
+    perform set_config('app.public_cat', cat::text, true);
+end $$;
+
+set local role anon;
+do $$
+declare
+    avail jsonb;
+    first jsonb;
+begin
+    avail := public.public_availability(1);
+    if avail is null or jsonb_array_length(avail -> 'categories') < 1 then
+        raise exception 'public availability is empty: %', avail;
+    end if;
+    if (avail ->> 'max_reservation_hours')::integer <> 24 then
+        raise exception 'public availability lost the window cap';
+    end if;
+    if (avail::text like '%"plate"%') then
+        raise exception 'public availability leaked plates: %', avail;
+    end if;
+    if public.public_availability(999999) is not null then
+        raise exception 'an unknown lot returned availability';
+    end if;
+
+    first := public.public_create_reservation(
+        1, 'PUB001', current_setting('app.public_cat')::integer,
+        now() + interval '2 hours', 'Ana', '3001112233'
+    );
+    if first ->> 'plate' <> 'PUB001' or (first ->> 'id')::integer < 1 then
+        raise exception 'public reservation was not created: %', first;
+    end if;
+
+    perform public.public_create_reservation(
+        1, 'PUB002', current_setting('app.public_cat')::integer,
+        now() + interval '2 hours', 'Ana', '3001112233'
+    );
+
+    begin
+        perform public.public_create_reservation(
+            1, 'PUB002', current_setting('app.public_cat')::integer,
+            now() + interval '2 hours', 'Ana', '3001112233'
+        );
+        raise exception 'a duplicate plate was accepted';
+    exception when others then
+        if sqlerrm not like '%ReservationExistsError%' then
+            raise;
+        end if;
+    end;
+
+    begin
+        perform public.public_create_reservation(
+            1, 'PUB003', current_setting('app.public_cat')::integer,
+            now() + interval '2 hours', 'Ana', '3001112233'
+        );
+        raise exception 'the phone limit was ignored';
+    exception when others then
+        if sqlerrm not like '%ReservationLimitError%' then
+            raise;
+        end if;
+    end;
+
+    begin
+        perform public.public_create_reservation(
+            1, 'PUB004', current_setting('app.public_cat')::integer,
+            now() + interval '5 minutes', 'Ana', '3002223344'
+        );
+        raise exception 'a too-short window was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidReservationWindowError%' then
+            raise;
+        end if;
+    end;
+
+    begin
+        perform public.public_create_reservation(
+            1, 'PUB005', current_setting('app.public_cat')::integer,
+            now() + interval '2 hours', 'Ana', '123'
+        );
+        raise exception 'an invalid phone was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidPhoneError%' then
+            raise;
+        end if;
+    end;
+
+    avail := public.public_availability(1);
+    if (
+        select (item ->> 'available')::integer
+          from jsonb_array_elements(avail -> 'categories') item
+         where (item ->> 'id')::integer = current_setting('app.public_cat')::integer
+    ) <> 8 then
+        raise exception 'public availability ignored the holds: %', avail;
+    end if;
+
+    begin
+        perform 1 from public.category_reservations limit 1;
+        raise exception 'anon read the reservation table';
+    exception when insufficient_privilege then
+        null;
+    end;
+end $$;
+reset role;
+
+do $$
+begin
+    if (
+        select count(*)
+          from public.category_reservations
+         where source = 'public' and plate like 'PUB%'
+    ) <> 2 then
+        raise exception 'public reservations were not stamped';
+    end if;
 end $$;
 
 rollback;

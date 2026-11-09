@@ -118,6 +118,151 @@ class AppLocalizationsEs extends AppLocalizations {
   String get policiesTitle => 'Políticas y contrato';
 
   @override
+  String get bookingTitle => 'Reserva tu espacio';
+
+  @override
+  String get bookingSubtitle =>
+      'Elige el tipo de vehículo y asegura tu cupo en segundos.';
+
+  @override
+  String get bookingOnline => 'Reserva en línea';
+
+  @override
+  String get bookingSectionAvailability => 'Disponibilidad ahora';
+
+  @override
+  String get bookingSectionHint => 'Datos en tiempo real del parqueadero';
+
+  @override
+  String get bookingRefresh => 'Actualizar disponibilidad';
+
+  @override
+  String bookingAvailable(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count disponibles',
+      one: '1 disponible',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get bookingFull => 'Completo';
+
+  @override
+  String get bookingUnlimited => 'Sin límite';
+
+  @override
+  String get bookingSelectCategory => 'Elige un tipo de vehículo';
+
+  @override
+  String get bookingFormTitle => 'Tus datos';
+
+  @override
+  String get bookingPhone => 'Teléfono';
+
+  @override
+  String get bookingPhoneHint => '300 000 0000';
+
+  @override
+  String get bookingName => 'Nombre (opcional)';
+
+  @override
+  String get bookingDuration => '¿Cuánto tiempo necesitas?';
+
+  @override
+  String bookingDurationHours(int hours) {
+    return '$hours h';
+  }
+
+  @override
+  String get bookingSubmit => 'Reservar espacio';
+
+  @override
+  String get bookingSubmitting => 'Reservando…';
+
+  @override
+  String get bookingLegal =>
+      'Al reservar aceptas las políticas y el contrato del parqueadero.';
+
+  @override
+  String get bookingPolicies => 'Ver políticas';
+
+  @override
+  String get bookingSuccessTitle => '¡Reserva confirmada!';
+
+  @override
+  String get bookingSuccessHint =>
+      'Muestra este código al llegar al parqueadero.';
+
+  @override
+  String get bookingCode => 'Código de reserva';
+
+  @override
+  String get bookingPlateDetail => 'Placa';
+
+  @override
+  String get bookingCategoryDetail => 'Tipo';
+
+  @override
+  String get bookingUntil => 'Válida hasta';
+
+  @override
+  String get bookingAddress => 'Dirección';
+
+  @override
+  String get bookingAnother => 'Hacer otra reserva';
+
+  @override
+  String get bookingCall => 'Llamar';
+
+  @override
+  String get bookingWhatsApp => 'WhatsApp';
+
+  @override
+  String bookingWhatsAppMessage(String lot) {
+    return 'Hola, tengo una reserva en $lot.';
+  }
+
+  @override
+  String get bookingEmpty =>
+      'No hay tipos de vehículo configurados. Llama al parqueadero.';
+
+  @override
+  String get bookingFooter =>
+      'Reserva sujeta a disponibilidad. Si no puedes asistir, avísanos.';
+
+  @override
+  String get bookingErrorFull =>
+      'Ese tipo de vehículo ya no tiene espacio. Elige otro o intenta más tarde.';
+
+  @override
+  String get bookingErrorExists =>
+      'Ya tienes una reserva activa para esta placa.';
+
+  @override
+  String get bookingErrorLimit =>
+      'Alcanzaste el límite de reservas para este teléfono.';
+
+  @override
+  String get bookingErrorInside =>
+      'Este vehículo ya está dentro del parqueadero.';
+
+  @override
+  String get bookingErrorWindow => 'La hora de la reserva no es válida.';
+
+  @override
+  String get bookingErrorPhone =>
+      'Ingresa un teléfono válido (7 a 15 dígitos).';
+
+  @override
+  String get bookingErrorPlate => 'Ingresa una placa válida.';
+
+  @override
+  String get bookingErrorLot => 'No encontramos este parqueadero.';
+
+  @override
   String get policiesInvalid =>
       'No pudimos cargar las políticas de este parqueadero.';
 

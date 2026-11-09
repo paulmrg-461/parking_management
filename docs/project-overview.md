@@ -43,7 +43,7 @@ WhatsApp (manual or automated).
 | Secrets / PIN operations | Complete (scripts + runbook) | PIN rotation verified live |
 | E2E and CI | Complete (API + Flutter client, real stack) | CI job `supabase-e2e` |
 
-Quality snapshot (2026-11-09, local stack): **1077 Flutter tests + 1 integration
+Quality snapshot (2026-11-09, local stack): **1099 Flutter tests + 1 integration
 test**, SQL/RLS suite green, web build green, analyzer with **0 errors and 0
 warnings** (only SDK deprecation infos from the pinned beta channel), restore
 drill green.
@@ -63,6 +63,7 @@ the main data it touches.
 | `check_out` | Open sessions (paged), payment, receipt | `check_out`, `calculate_fare`, `open_sessions_view` |
 | `records` | Site activity log with a plate/date filter, paging and evidence access | `session_records` |
 | `policies` | Public legal policy / service contract | `public_lot_profile`, `reset_legal_policy` |
+| `public_booking` | Public availability and anonymous reservations (`/reserve?lot=`) | `public_availability`, `public_create_reservation` |
 | `vehicle_history` | Timeline, notes, blacklist, owner name/phone, evidence viewer, reprint, WhatsApp | `vehicle_history`, `update_vehicle_flags` |
 | `vehicles` | Registry CRUD and paging | `vehicles` |
 | `categories` / `tariffs` | Reference data per site, capacity | `categories`, `tariffs` |
@@ -142,6 +143,10 @@ Deployment: [`setup-cloud.md`](setup-cloud.md) (single VM + TLS proxy) and
 - **Physical bays are optional.** Without a map the board paints virtual
   capacity cells and capacity comes from Ajustes; with a map the bays define the
   capacity. Bicycles are not modelled.
+- **Public booking has no captcha.** `/reserve` limits one active hold per
+  plate and two per phone and enforces capacity, but a determined caller can
+  cycle phones; put it behind a captcha/WAF if the site is open to the
+  internet.
 - **Beta Flutter SDK pinned**; analyzer output is limited to SDK deprecation
   infos until the pin moves to stable.
 

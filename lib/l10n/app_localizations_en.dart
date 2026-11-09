@@ -117,6 +117,148 @@ class AppLocalizationsEn extends AppLocalizations {
   String get policiesTitle => 'Policies and contract';
 
   @override
+  String get bookingTitle => 'Reserve your space';
+
+  @override
+  String get bookingSubtitle =>
+      'Pick your vehicle type and secure a spot in seconds.';
+
+  @override
+  String get bookingOnline => 'Online booking';
+
+  @override
+  String get bookingSectionAvailability => 'Availability now';
+
+  @override
+  String get bookingSectionHint => 'Live data from the parking lot';
+
+  @override
+  String get bookingRefresh => 'Refresh availability';
+
+  @override
+  String bookingAvailable(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count available',
+      one: '1 available',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get bookingFull => 'Full';
+
+  @override
+  String get bookingUnlimited => 'No limit';
+
+  @override
+  String get bookingSelectCategory => 'Choose a vehicle type';
+
+  @override
+  String get bookingFormTitle => 'Your details';
+
+  @override
+  String get bookingPhone => 'Phone';
+
+  @override
+  String get bookingPhoneHint => '300 000 0000';
+
+  @override
+  String get bookingName => 'Name (optional)';
+
+  @override
+  String get bookingDuration => 'How long do you need it?';
+
+  @override
+  String bookingDurationHours(int hours) {
+    return '$hours h';
+  }
+
+  @override
+  String get bookingSubmit => 'Reserve a space';
+
+  @override
+  String get bookingSubmitting => 'Reserving…';
+
+  @override
+  String get bookingLegal =>
+      'By booking you accept the lot\'s policies and contract.';
+
+  @override
+  String get bookingPolicies => 'View policies';
+
+  @override
+  String get bookingSuccessTitle => 'Reservation confirmed!';
+
+  @override
+  String get bookingSuccessHint => 'Show this code when you arrive.';
+
+  @override
+  String get bookingCode => 'Reservation code';
+
+  @override
+  String get bookingPlateDetail => 'Plate';
+
+  @override
+  String get bookingCategoryDetail => 'Type';
+
+  @override
+  String get bookingUntil => 'Valid until';
+
+  @override
+  String get bookingAddress => 'Address';
+
+  @override
+  String get bookingAnother => 'Book another space';
+
+  @override
+  String get bookingCall => 'Call';
+
+  @override
+  String get bookingWhatsApp => 'WhatsApp';
+
+  @override
+  String bookingWhatsAppMessage(String lot) {
+    return 'Hi, I have a reservation at $lot.';
+  }
+
+  @override
+  String get bookingEmpty =>
+      'No vehicle types configured. Please call the lot.';
+
+  @override
+  String get bookingFooter =>
+      'Booking subject to availability. If you cannot make it, let us know.';
+
+  @override
+  String get bookingErrorFull =>
+      'That vehicle type is full. Pick another or try later.';
+
+  @override
+  String get bookingErrorExists =>
+      'You already have an active reservation for this plate.';
+
+  @override
+  String get bookingErrorLimit =>
+      'You reached the reservation limit for this phone.';
+
+  @override
+  String get bookingErrorInside => 'This vehicle is already inside the lot.';
+
+  @override
+  String get bookingErrorWindow => 'The reservation time is not valid.';
+
+  @override
+  String get bookingErrorPhone => 'Enter a valid phone (7 to 15 digits).';
+
+  @override
+  String get bookingErrorPlate => 'Enter a valid plate.';
+
+  @override
+  String get bookingErrorLot => 'We could not find this parking lot.';
+
+  @override
   String get policiesInvalid => 'We could not load this parking lot policies.';
 
   @override

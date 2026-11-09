@@ -7,6 +7,7 @@ import 'package:parking_management/features/lots/domain/entities/lot_member.dart
 import 'package:parking_management/features/lots/domain/entities/parking_lot.dart';
 import 'package:parking_management/features/monthly_passes/domain/entities/monthly_pass_payment.dart';
 import 'package:parking_management/features/policies/domain/entities/lot_profile.dart';
+import 'package:parking_management/features/public_booking/domain/entities/public_booking.dart';
 import 'package:parking_management/features/check_out/domain/entities/lot_setup_status.dart';
 import 'package:parking_management/features/evidence/domain/entities/session_evidence.dart';
 import 'package:parking_management/features/reports/domain/entities/hourly_traffic.dart';
@@ -276,6 +277,74 @@ void main() {
       expect(mapOnly.complete, isFalse);
       expect(mapOnly.doneSteps, 3);
       expect(LotSetupStatus.unknown.known, isFalse);
+    });
+
+    test(
+      'PublicBookingAvailability keeps unlimited categories and identity',
+      () {
+        final availability = PublicBookingAvailability.fromJson({
+          'lot': {
+            'id': 1,
+            'name': 'Central',
+            'address': 'Calle 1',
+            'schedule': '24 h',
+            'phone': '300',
+            'whatsapp': '300',
+            'logo_path': 'lot1/logo.png',
+            'timezone': 'America/Bogota',
+            'currency': 'COP',
+          },
+          'max_reservation_hours': 24,
+          'categories': [
+            {
+              'id': 2,
+              'name': 'car',
+              'group': 'car',
+              'category_capacity': 10,
+              'group_capacity': 10,
+              'occupied': 6,
+              'reserved': 1,
+              'available': 3,
+            },
+            {
+              'id': 4,
+              'name': 'camion',
+              'group': 'heavy',
+              'category_capacity': 0,
+              'group_capacity': 0,
+              'available': null,
+            },
+          ],
+        }, logoUrl: 'http://host/logo.png');
+
+        expect(availability.lotName, 'Central');
+        expect(availability.logoUrl, 'http://host/logo.png');
+        expect(availability.maxReservationHours, 24);
+        expect(availability.categories.first.available, 3);
+        expect(availability.categories.first.isFull, isFalse);
+        expect(availability.categories.last.isUnlimited, isTrue);
+        expect(availability.hasAvailability, isTrue);
+      },
+    );
+
+    test('PublicReservation parses the confirmation and lot contact', () {
+      final reservation = PublicReservation.fromJson({
+        'id': 12,
+        'plate': 'ABC123',
+        'category_name': 'car',
+        'reserved_until': '2026-11-09T14:00:00Z',
+        'lot': {
+          'name': 'Central',
+          'address': 'Calle 1',
+          'phone': '300',
+          'whatsapp': '300',
+        },
+      });
+
+      expect(reservation.id, 12);
+      expect(reservation.plate, 'ABC123');
+      expect(reservation.lotName, 'Central');
+      expect(reservation.reservedUntil.isUtc, isFalse);
     });
 
     test('SessionEvidence maps kind, duration and an optional signed URL', () {

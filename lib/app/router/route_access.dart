@@ -7,6 +7,7 @@ const homePath = '/';
 const aboutPath = '/about';
 const helpPath = '/help';
 const preferencesPath = '/preferences';
+const reservePath = '/reserve';
 
 /// Operators get an ALLOWLIST (secure by default: any new route is
 /// admin-only until added here). Check-in reads categories/vehicles through
@@ -32,7 +33,10 @@ bool canAccess(UserRole role, String location) =>
 String? authRedirect(AuthState auth, String location) {
   final path = _normalize(location);
   // The evidence page is public: the receipt QR carries the key (the plate).
-  if (path == evidencePath || path == policiesPath || path == aboutPath) {
+  if (path == evidencePath ||
+      path == policiesPath ||
+      path == aboutPath ||
+      path == reservePath) {
     return null;
   }
   final atLogin = path == loginPath;

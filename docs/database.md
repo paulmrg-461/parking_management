@@ -60,7 +60,7 @@ erDiagram
 | `shift_adjustments` | Audit of admin corrections to a closed shift. | via shift |
 | `monthly_passes` | Pass period/amount, auto-renew flag, renewal link. | yes |
 | `monthly_pass_payments` | Exactly one charge per pass (`pending`/`paid`/`waived`), collected into a shift. | yes |
-| `category_reservations` | Capacity hold for a plate (`active`/`used`/`cancelled`/`expired`). | yes |
+| `category_reservations` | Capacity hold for a plate (`active`/`used`/`cancelled`/`expired`), with the public customer name/phone and `source` when created from `/reserve`. | yes |
 | `parking_spots` | Physical bay per site: code, group (`car`/`moto`/`heavy`), grid cell and `active`/`out_of_service`; unique code and cell per lot. | yes |
 | `parking_spot_events` | Maintenance history of a bay: status transition, optional reason, actor and timestamp; written by `save_parking_spot`, lot-scoped RLS. | yes |
 | `parking_settings` (`car_capacity`, `moto_capacity`, `key_capacity`) | Per-site branding (name, address, schedule, contacts, police quadrant, logo version/path) + `business_timezone`, `overstay_hours`, `lost_ticket_fee`, `evidence_retention_days`. | yes |
@@ -131,6 +131,14 @@ identity, contact, policy).
 `public-evidence` Edge Function (service role): verifies a session + plate and
 returns 1-hour signed URLs for that session's photos/videos (no login; the
 plate is the key).
+
+**Public booking**
+`public_availability(lot_id)` (anon: identity + per-category availability,
+no plates), `public_create_reservation(lot, plate, category, until, name,
+phone)` (anon: 10-min..24-h window, one active hold per plate, two per phone,
+shared capacity check) and `reservation_capacity_check(lot, category, plate)`
+(shared by the operator and public paths). `category_reservations` also stores
+`customer_name`, `customer_phone` and `source` (`app`/`public`).
 
 **Records**
 `session_records(plate, limit, offset, from, to)`: lot-scoped session log

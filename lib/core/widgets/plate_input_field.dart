@@ -35,6 +35,7 @@ class PlateInputField extends StatelessWidget {
     this.onKeypad,
     this.autofocus = false,
     this.label,
+    this.validator,
   });
 
   /// Backend `max_length` for plates.
@@ -50,6 +51,7 @@ class PlateInputField extends StatelessWidget {
   final VoidCallback? onKeypad;
   final bool autofocus;
   final String? label;
+  final String? Function(String?)? validator;
 
   @override
   Widget build(BuildContext context) {
@@ -90,8 +92,9 @@ class PlateInputField extends StatelessWidget {
                 ],
               ),
       ),
-      validator: (value) =>
-          (value ?? '').trim().isEmpty ? l10n.errorEmptyPlate : null,
+      validator:
+          validator ??
+          (value) => (value ?? '').trim().isEmpty ? l10n.errorEmptyPlate : null,
       onChanged: onChanged,
       onFieldSubmitted: onSubmitted,
     );

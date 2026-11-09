@@ -27,6 +27,7 @@ import 'modules/receipt_printing_module.dart';
 import 'modules/reports_module.dart';
 import 'modules/evidence_module.dart';
 import 'modules/policies_module.dart';
+import 'modules/public_booking_module.dart';
 import 'modules/records_module.dart';
 import 'modules/reservations_module.dart';
 import 'modules/spots_module.dart';
@@ -122,6 +123,7 @@ void registerAllModules(GetIt sl, AppConfig config) {
   registerRecordsModule(sl);
   registerPoliciesModule(sl);
   registerEvidenceModule(sl);
+  registerPublicBookingModule(sl);
   registerSpotsModule(sl);
   registerSettingsModule(sl);
   registerShiftsModule(sl);

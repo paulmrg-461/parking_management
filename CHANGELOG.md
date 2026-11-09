@@ -132,6 +132,20 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   action (48 dp) that opens `/history?plate=…`, so finding a car by owner name
   or phone and reviewing its visits takes one tap. The row fits a 400 px phone
   with the three actions.
+- **Check-in from the history**: a vehicle with no open session offers
+  "Registrar entrada" in its history, opening `/check-in?plate=…` with the
+  plate prefilled; a vehicle already inside keeps "Cobrar en caja".
+- **Public booking page**: `/reserve?lot=<id>` is a public, mobile-first page
+  served by the self-hosted web host. It shows the lot identity and real
+  availability per vehicle category (`public_availability`, anon), lets the
+  customer pick a category and duration (1/2/4/8 h), and creates an anonymous
+  hold with plate, phone and optional name (`public_create_reservation`).
+  The confirmation carries the reservation code, until, lot contact, call and
+  WhatsApp actions. Guards: 10-minute minimum / 24-hour maximum window, one
+  active hold per plate, two active public holds per phone, invalid plates and
+  phones rejected, and a full category/group refused. The capacity rules are
+  shared with the operator path, and anon cannot read the reservation table.
+  The page is linked from the public policy page and the evidence page.
 - **Emergency action**: a red police icon in every app bar (and an entry in the
   desktop sidebar footer and the phone drawer) opens a one-tap panel with the
   site location, the nearest police quadrant and a large **Call now** button.

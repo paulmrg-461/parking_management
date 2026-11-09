@@ -43,18 +43,39 @@ void main() {
           address: 'Tv 7 #51N-24',
           schedule: '24 horas',
           phone: '3013495689',
-          legalPolicy:
-              'POLÍTICAS DE {{parking}}\nAtendemos {{schedule}} en {{address}}.',
+          legalPolicy: 'POLÍTICAS DE {{parking}}\nAtendemos {{schedule}} en {{address}}.',
         ),
       ),
     );
 
     expect(find.text('Parqueadero DevPaul'), findsOneWidget);
     expect(find.text('Tv 7 #51N-24'), findsWidgets);
-    expect(find.textContaining('POLÍTICAS DE Parqueadero DevPaul'), findsOneWidget);
+    expect(
+      find.textContaining('POLÍTICAS DE Parqueadero DevPaul'),
+      findsOneWidget,
+    );
     expect(find.textContaining('Atendemos 24 horas'), findsOneWidget);
     // The policy body is split into numbered clauses.
     expect(find.text('1'), findsOneWidget);
+  });
+
+  testWidgets('Success: the policy offers the public booking page', (
+    tester,
+  ) async {
+    await pumpPage(
+      tester,
+      FakePolicyRepository(
+        profile: const LotProfile(
+          id: 1,
+          name: 'Parqueadero DevPaul',
+          address: 'Tv 7 #51N-24',
+          phone: '3013495689',
+          legalPolicy: 'POLÍTICAS\nAtendemos 24 horas.',
+        ),
+      ),
+    );
+
+    expect(find.text('Reserva tu espacio'), findsOneWidget);
   });
 
   testWidgets('Failure: an unknown lot shows the error with retry', (
