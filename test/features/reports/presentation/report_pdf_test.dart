@@ -83,6 +83,27 @@ void main() {
     },
   );
 
+  test('Success: the daily chart scales to the best day', () {
+    final heights = revenueBarHeights([
+      DailyRevenue(date: DateTime(2026, 1, 1), amount: 0),
+      DailyRevenue(date: DateTime(2026, 1, 2), amount: 100),
+      DailyRevenue(date: DateTime(2026, 1, 3), amount: 50),
+    ], height: 68);
+
+    expect(heights, [0, 68, 34]);
+  });
+
+  test('Failure: a quiet period has no bars', () {
+    expect(
+      revenueBarHeights([
+        DailyRevenue(date: DateTime(2026, 1, 1), amount: 0),
+        DailyRevenue(date: DateTime(2026, 1, 2), amount: 0),
+      ]),
+      [0, 0],
+    );
+    expect(revenueBarHeights(const []), isEmpty);
+  });
+
   test('Security: an empty report still produces a readable PDF', () async {
     final bytes = await buildRevenueReportPdf(
       l10n: await AppLocalizations.delegate.load(defaultLocale),

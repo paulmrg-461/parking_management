@@ -102,6 +102,11 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   a shortcut to the screen that fixes each step; operators never see it and it
   hides once the site is complete. A failed status call hides the card instead
   of showing a false "not configured" state.
+- **Daily revenue chart in the PDF**: the exported report draws a compact bar
+  chart of revenue by day above the table (scaled to the best day, with the
+  first and last dates underneath), so the period's shape is visible without
+  reading every row. Quiet periods keep zero-height bars and an empty range
+  skips the chart.
 - **Emergency action**: a red police icon in every app bar (and an entry in the
   desktop sidebar footer and the phone drawer) opens a one-tap panel with the
   site location, the nearest police quadrant and a large **Call now** button.

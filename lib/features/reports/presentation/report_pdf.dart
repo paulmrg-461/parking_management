@@ -81,6 +81,10 @@ Future<Uint8List> buildRevenueReportPdf({
                 ),
             ]),
           PdfDocumentBuilder.section(l10n.reportsRevenueByDay, [
+            if (revenue.byDay.isNotEmpty) ...[
+              buildRevenueBarChart(revenue.byDay),
+              pw.SizedBox(height: 6),
+            ],
             for (final day in revenue.byDay)
               PdfDocumentBuilder.row(
                 Formatters.date(day.date),
@@ -120,6 +124,68 @@ Future<Uint8List> buildRevenueReportPdf({
     ),
   );
   return doc.save();
+}
+
+/// Bar heights for the revenue-by-day chart in the PDF: the best day fills
+/// [height], quiet days stay at zero. Pure so it can be unit-tested.
+List<double> revenueBarHeights(List<DailyRevenue> byDay, {double height = 68}) {
+  final max = byDay.fold<int>(
+    0,
+    (peak, day) => day.amount > peak ? day.amount : peak,
+  );
+  if (max <= 0) {
+    return List<double>.filled(byDay.length, 0);
+  }
+  return [for (final day in byDay) height * day.amount / max];
+}
+
+/// Compact daily-revenue bar chart for the exported PDF: no axes, just the
+/// shape, with the first and last date underneath. The table below keeps the
+/// exact numbers, so the chart never needs labels on every bar.
+pw.Widget buildRevenueBarChart(List<DailyRevenue> byDay, {double height = 68}) {
+  if (byDay.isEmpty) {
+    return pw.SizedBox();
+  }
+  final heights = revenueBarHeights(byDay, height: height);
+  final gap = byDay.length > 15 ? 1.0 : 3.0;
+  final color = PdfColor.fromHex('#2A78D6');
+  return pw.Column(
+    crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+    children: [
+      pw.SizedBox(
+        height: height,
+        child: pw.Row(
+          crossAxisAlignment: pw.CrossAxisAlignment.end,
+          children: [
+            for (final bar in heights)
+              pw.Expanded(
+                child: pw.Padding(
+                  padding: pw.EdgeInsets.symmetric(horizontal: gap / 2),
+                  child: pw.Container(
+                    height: bar,
+                    decoration: pw.BoxDecoration(color: color),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+      pw.SizedBox(height: 2),
+      pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text(
+            Formatters.date(byDay.first.date),
+            style: const pw.TextStyle(fontSize: 8),
+          ),
+          pw.Text(
+            Formatters.date(byDay.last.date),
+            style: const pw.TextStyle(fontSize: 8),
+          ),
+        ],
+      ),
+    ],
+  );
 }
 
 /// The period-over-period lines of the PDF. Empty when the previous window is

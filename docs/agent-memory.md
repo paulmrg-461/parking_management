@@ -4,7 +4,7 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-11-09 (records evidence, setup checklist, evidence viewer).
+Last updated: 2026-11-09 (PDF chart, records evidence, setup checklist).
 
 ## Where we are
 
@@ -12,7 +12,7 @@ Last updated: 2026-11-09 (records evidence, setup checklist, evidence viewer).
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0086` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 1059 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 1061 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -264,6 +264,15 @@ Last updated: 2026-11-09 (records evidence, setup checklist, evidence viewer).
   `0001..0086`.
 - Live smoke: `session_records` for `LCR481` returned session 48 with
   `photo_count: 2` (session 43 with 0), matching `vehicle_history`.
+
+### Revenue chart in the PDF (2026-11-09)
+
+- `buildRevenueReportPdf` now draws a compact bar chart above the by-day table:
+  `revenueBarHeights` (pure, tested) scales the best day to 68 pt and zero days
+  to 0; `buildRevenueBarChart` renders it with the first/last dates underneath
+  and no per-bar labels (the table below keeps the exact numbers). An empty
+  range skips the chart, and quiet periods keep flat bars.
+- No new SQL. Test count: 1061; schema `0001..0086`.
 
 ## Owner contact data (2026-11-05)
 
