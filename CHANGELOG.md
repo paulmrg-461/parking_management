@@ -80,6 +80,13 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   example a plate from a support call — combinable with the table, actor and
   date filters. `0083` recreates `list_audit_log` with `p_search` and fixes the
   old ordering bug where the page limit was applied before the actor filter.
+- **In-app evidence viewer**: `0084` exposes `photo_count` per session in
+  `vehicle_history` (scoped to the active lot). The vehicle history now offers
+  "Ver evidencias (N)" when a session has photos or videos; a bottom sheet
+  signs Storage URLs on demand and shows a photo grid (tap to zoom) and video
+  tiles with a play action, with loading, empty and error+retry states. Listing
+  stays protected by the lot RLS; a file whose signature fails is kept as an
+  unavailable tile instead of hiding the row.
 - **Emergency action**: a red police icon in every app bar (and an entry in the
   desktop sidebar footer and the phone drawer) opens a one-tap panel with the
   site location, the nearest police quadrant and a large **Call now** button.

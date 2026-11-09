@@ -66,6 +66,7 @@ VehicleHistory sampleHistory({
   String? ownerPhone,
   String? ownerName,
   bool withOpenSession = false,
+  int photos = 0,
 }) => VehicleHistory(
   plate: plate,
   vehicleId: 1,
@@ -101,6 +102,7 @@ VehicleHistory sampleHistory({
       lotName: 'Central',
       discountAmount: 1000,
       discountReason: 'cortesia',
+      photoCount: photos,
     ),
     VehicleHistorySession(
       id: 1,

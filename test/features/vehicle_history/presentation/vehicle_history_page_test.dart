@@ -10,6 +10,7 @@ import 'package:parking_management/features/vehicle_history/presentation/vehicle
 
 import '../../../helpers/app_harness.dart';
 import '../../../helpers/fake_auth_repository.dart';
+import '../../../helpers/fake_session_evidence_repository.dart';
 import '../../../helpers/fake_vehicle_history_repository.dart';
 import '../../../helpers/test_app.dart';
 
@@ -35,6 +36,57 @@ void main() {
     expect(find.text('TCK-000002'), findsOneWidget);
     expect(find.text('Tarjeta'), findsOneWidget);
     expect(repository.lookups, ['ABC123']);
+  });
+
+  testWidgets('Success: a session with evidence opens the viewer', (
+    tester,
+  ) async {
+    final repository = FakeVehicleHistoryRepository(
+      history: sampleHistory(photos: 2),
+    );
+    final evidence = FakeSessionEvidenceRepository();
+    final cubit = VehicleHistoryCubit(repository);
+    addTearDown(cubit.close);
+    await tester.pumpWidget(
+      testApp(
+        BlocProvider.value(
+          value: cubit,
+          child: VehicleHistoryPage(evidenceRepository: evidence),
+        ),
+      ),
+    );
+
+    await tester.enterText(find.byType(TextField), 'ABC123');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ver evidencias (2)'), findsOneWidget);
+    await tester.ensureVisible(find.text('Ver evidencias (2)'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Ver evidencias (2)'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Evidencias de ABC123'), findsOneWidget);
+    expect(evidence.calls, 1);
+  });
+
+  testWidgets('Security: a session without evidence hides the viewer action', (
+    tester,
+  ) async {
+    final repository = FakeVehicleHistoryRepository(history: sampleHistory());
+    final cubit = VehicleHistoryCubit(repository);
+    addTearDown(cubit.close);
+    await tester.pumpWidget(
+      testApp(
+        BlocProvider.value(value: cubit, child: const VehicleHistoryPage()),
+      ),
+    );
+
+    await tester.enterText(find.byType(TextField), 'ABC123');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Ver evidencias'), findsNothing);
   });
 
   testWidgets('Failure: an unknown plate shows the localized error', (
@@ -260,10 +312,7 @@ void main() {
 
     await tester.tap(find.text('Agregar propietario'));
     await tester.pumpAndSettle();
-    await tester.enterText(
-      find.byKey(const Key('owner_name')),
-      'Paul Realpe',
-    );
+    await tester.enterText(find.byKey(const Key('owner_name')), 'Paul Realpe');
     await tester.enterText(
       find.byKey(const Key('owner_phone')),
       '+57 300 111 2233',
@@ -296,7 +345,10 @@ void main() {
     await tester.tap(find.text('Guardar'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Escribe un teléfono válido (7 a 15 dígitos)'), findsOneWidget);
+    expect(
+      find.text('Escribe un teléfono válido (7 a 15 dígitos)'),
+      findsOneWidget,
+    );
     expect(repository.lastOwnerPhone, isNull);
   });
 

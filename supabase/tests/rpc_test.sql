@@ -2068,6 +2068,7 @@ declare
     entry jsonb;
     vid_session integer;
     board jsonb;
+    hist jsonb;
 begin
     select id into car_cat
       from public.categories
@@ -2101,6 +2102,15 @@ begin
            and (item ->> 'video_count')::integer = 1
     ) then
         raise exception 'board lost the video count: %', board;
+    end if;
+
+    hist := public.vehicle_history('VID001');
+    if not exists (
+        select 1 from jsonb_array_elements(hist -> 'sessions') item
+         where (item ->> 'id')::integer = vid_session
+           and (item ->> 'photo_count')::integer = 1
+    ) then
+        raise exception 'vehicle history lost the evidence count: %', hist;
     end if;
 
     perform public.check_out(vid_session, null, null, 'cash');

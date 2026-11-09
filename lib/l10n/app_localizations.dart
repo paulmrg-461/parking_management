@@ -1850,6 +1850,48 @@ abstract class AppLocalizations {
   /// **'Cobrar en caja'**
   String get vehicleChargeAction;
 
+  /// No description provided for @vehicleEvidenceAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver evidencias ({count})'**
+  String vehicleEvidenceAction(int count);
+
+  /// No description provided for @sessionEvidenceTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Evidencias de {plate}'**
+  String sessionEvidenceTitle(String plate);
+
+  /// No description provided for @sessionEvidenceEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin fotos ni videos para esta sesión'**
+  String get sessionEvidenceEmpty;
+
+  /// No description provided for @sessionEvidencePhotoLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Foto {index}'**
+  String sessionEvidencePhotoLabel(int index);
+
+  /// No description provided for @sessionEvidenceVideoLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Video de {seconds} s'**
+  String sessionEvidenceVideoLabel(int seconds);
+
+  /// No description provided for @sessionEvidenceDurationShort.
+  ///
+  /// In es, this message translates to:
+  /// **'{seconds} s'**
+  String sessionEvidenceDurationShort(int seconds);
+
+  /// No description provided for @sessionEvidenceOpenFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo abrir la evidencia'**
+  String get sessionEvidenceOpenFailed;
+
   /// No description provided for @vehicleWhatsappReadyAction.
   ///
   /// In es, this message translates to:

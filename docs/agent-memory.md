@@ -4,15 +4,15 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-11-09 (audit search, hourly reports, offline dashboard cache).
+Last updated: 2026-11-09 (evidence viewer, audit search, hourly reports).
 
 ## Where we are
 
 - Stack: Flutter (android + web) + self-hosted Supabase only. No FastAPI,
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
-- `supabase/migrations/0001..0083` are the schema owner (applied by
+- `supabase/migrations/0001..0084` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 1041 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 1051 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -205,6 +205,26 @@ Last updated: 2026-11-09 (audit search, hourly reports, offline dashboard cache)
   debounced reload. Test count: 1041; schema `0001..0083`.
 - Live smoke: `list_audit_log` with `p_search=LCR481` returned the vehicle row
   (`entity_id 34`).
+
+### In-app evidence viewer (2026-11-09)
+
+- `0084_vehicle_history_evidence.sql` redefines `vehicle_history` with a
+  per-session `photo_count`, scoped to `current_lot_id()`: the history lists
+  sessions from every site, but evidence viewing (and its count) follows the
+  active lot, matching the evidence RLS policy.
+- `SessionEvidenceRepository` lists `evidence_photos` and signs each object for
+  one hour. A refused signature keeps the row with `url = null` (the tile shows
+  a cloud-off placeholder instead of hiding that evidence exists); list errors
+  map to a `Failure` and the sheet offers retry.
+- The history tile shows "Ver evidencias (N)" when `photo_count > 0`, below the
+  amount so the action row never overflows a 360 dp phone. The bottom sheet has
+  a photo grid (tap → black `InteractiveViewer` dialog) and video tiles (tap →
+  external player), with skeleton/empty/error states.
+- Tests: SQL photo_count, entity parsing, remote signing/denied/list-failure
+  with a MockClient, repository delegation, sheet states and the history
+  action. Test count: 1051; schema `0001..0084`.
+- Live smoke: `vehicle_history('LCR481')` returned session 48 with
+  `photo_count: 2` (session 43 has 0).
 
 ## Owner contact data (2026-11-05)
 

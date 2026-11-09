@@ -7,6 +7,7 @@ import 'package:parking_management/features/lots/domain/entities/lot_member.dart
 import 'package:parking_management/features/lots/domain/entities/parking_lot.dart';
 import 'package:parking_management/features/monthly_passes/domain/entities/monthly_pass_payment.dart';
 import 'package:parking_management/features/policies/domain/entities/lot_profile.dart';
+import 'package:parking_management/features/evidence/domain/entities/session_evidence.dart';
 import 'package:parking_management/features/reports/domain/entities/hourly_traffic.dart';
 import 'package:parking_management/features/records/domain/entities/session_record.dart';
 import 'package:parking_management/features/spots/domain/entities/spot_event.dart';
@@ -245,6 +246,31 @@ void main() {
 
       expect(HourlyTraffic.fromJson(const {}).hasData, isFalse);
       expect(HourlyTraffic.empty.peak, isNull);
+    });
+
+    test('SessionEvidence maps kind, duration and an optional signed URL', () {
+      final photo = SessionEvidence.fromJson({
+        'id': 1,
+        'file_path': 'abc/0.jpg',
+        'kind': 'photo',
+        'taken_at': '2026-11-09T10:00:00Z',
+      });
+      final video = SessionEvidence.fromJson({
+        'id': 2,
+        'file_path': 'abc/1.mp4',
+        'kind': 'video',
+        'duration_seconds': 42,
+        'taken_at': '2026-11-09T10:05:00Z',
+        'url': 'https://example.test/signed',
+      });
+
+      expect(photo.kind, EvidenceKind.photo);
+      expect(photo.isVideo, isFalse);
+      expect(photo.isAvailable, isFalse);
+      expect(video.isVideo, isTrue);
+      expect(video.isAvailable, isTrue);
+      expect(video.durationSeconds, 42);
+      expect(video.takenAt.isUtc, isFalse);
     });
   });
 }

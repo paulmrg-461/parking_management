@@ -972,6 +972,37 @@ class AppLocalizationsEn extends AppLocalizations {
   String get vehicleChargeAction => 'Charge at checkout';
 
   @override
+  String vehicleEvidenceAction(int count) {
+    return 'View evidence ($count)';
+  }
+
+  @override
+  String sessionEvidenceTitle(String plate) {
+    return 'Evidence for $plate';
+  }
+
+  @override
+  String get sessionEvidenceEmpty => 'No photos or videos for this session';
+
+  @override
+  String sessionEvidencePhotoLabel(int index) {
+    return 'Photo $index';
+  }
+
+  @override
+  String sessionEvidenceVideoLabel(int seconds) {
+    return 'Video of $seconds s';
+  }
+
+  @override
+  String sessionEvidenceDurationShort(int seconds) {
+    return '$seconds s';
+  }
+
+  @override
+  String get sessionEvidenceOpenFailed => 'Could not open the evidence';
+
+  @override
   String get vehicleWhatsappReadyAction => 'Notify it is ready';
 
   @override
