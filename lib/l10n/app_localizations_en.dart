@@ -1904,6 +1904,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchPlate => 'Search by plate';
 
   @override
+  String get monthlyPassesSearch => 'Search plate or owner';
+
+  @override
+  String get monthlyPassesSearchHint => 'Plate, name or phone';
+
+  @override
   String get checkOutClearSearch => 'Clear search';
 
   @override

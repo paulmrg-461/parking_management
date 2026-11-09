@@ -4,7 +4,7 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-11-09 (owner search, PDF fonts, check-in preload).
+Last updated: 2026-11-09 (owner search everywhere, PDF fonts).
 
 ## Where we are
 
@@ -12,7 +12,7 @@ Last updated: 2026-11-09 (owner search, PDF fonts, check-in preload).
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0086` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 1074 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 1075 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -346,6 +346,10 @@ Last updated: 2026-11-09 (owner search, PDF fonts, check-in preload).
   phone, plus the existing paging/offline tests. Live PostgREST check: the
   quoted `or` filter found `LCR481` by plate, by "Samuel" (owner name) and by
   "310428" (owner phone). Test count: 1074.
+- Follow-up: monthly passes apply the same owner search client-side
+  (`MonthlyPassesLoaded.matchesPass/matchesPayment` over plate, owner name and
+  phone; pending charges resolve the owner through the loaded vehicles). The
+  page label/hint say "Buscar placa o propietario". Test count: 1075.
 
 ## Owner contact data (2026-11-05)
 

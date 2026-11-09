@@ -626,6 +626,8 @@
   "statusClosed": "Closed",
   "checkOutTitle": "Check-out",
   "searchPlate": "Search by plate",
+  "monthlyPassesSearch": "Search plate or owner",
+  "monthlyPassesSearchHint": "Plate, name or phone",
   "checkOutClearSearch": "Clear search",
   "scanExitTooltip": "Scan a QR to check out",
   "scanQrTitle": "Scan receipt",

@@ -3488,6 +3488,18 @@ abstract class AppLocalizations {
   /// **'Buscar por placa'**
   String get searchPlate;
 
+  /// No description provided for @monthlyPassesSearch.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscar placa o propietario'**
+  String get monthlyPassesSearch;
+
+  /// No description provided for @monthlyPassesSearchHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Placa, nombre o teléfono'**
+  String get monthlyPassesSearchHint;
+
   /// No description provided for @checkOutClearSearch.
   ///
   /// In es, this message translates to:

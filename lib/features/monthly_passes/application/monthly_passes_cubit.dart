@@ -76,6 +76,40 @@ final class MonthlyPassesLoaded extends MonthlyPassesState {
   String plateOf(MonthlyPass pass) =>
       plates[pass.vehicleId] ?? 'Vehicle ${pass.vehicleId}';
 
+  /// True when the pass matches the registry search (plate, owner or phone).
+  bool matchesPass(MonthlyPass pass, String query) =>
+      _matchesText(plateOf(pass), ownerNameOf(pass), phoneOf(pass), query);
+
+  /// Same search for a pending charge (it only carries the plate, so the
+  /// owner data is resolved through the loaded vehicles).
+  bool matchesPayment(MonthlyPassPayment payment, String query) {
+    String? name;
+    String? phone;
+    for (final vehicle in vehicles) {
+      if (vehicle.plate == payment.plate) {
+        name = vehicle.ownerName;
+        phone = vehicle.ownerPhone;
+        break;
+      }
+    }
+    return _matchesText(payment.plate, name, phone, query);
+  }
+
+  static bool _matchesText(
+    String plate,
+    String? ownerName,
+    String? ownerPhone,
+    String query,
+  ) {
+    final term = query.trim().toLowerCase();
+    if (term.isEmpty) {
+      return true;
+    }
+    return plate.toLowerCase().contains(term) ||
+        (ownerName?.toLowerCase().contains(term) ?? false) ||
+        (ownerPhone?.contains(term) ?? false);
+  }
+
   /// Owner name of the pass' vehicle, when known.
   String? ownerNameOf(MonthlyPass pass) {
     for (final vehicle in vehicles) {

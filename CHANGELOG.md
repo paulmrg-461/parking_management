@@ -125,6 +125,9 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   `owner_phone.ilike`, quoted so names with spaces/commas work), and the
   offline cache filter mirrors it. The field label/hint say so; owner data was
   already captured, so no schema change was needed.
+- **Owner search in monthly passes**: the passes search now also matches the
+  owner name or phone, for both passes and pending charges (resolved through
+  the loaded vehicles); the empty state and count follow the same filter.
 - **Emergency action**: a red police icon in every app bar (and an entry in the
   desktop sidebar footer and the phone drawer) opens a one-tap panel with the
   site location, the nearest police quadrant and a large **Call now** button.

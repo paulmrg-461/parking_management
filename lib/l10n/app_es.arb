@@ -653,6 +653,8 @@
 
   "checkOutTitle": "Registrar salida",
   "searchPlate": "Buscar por placa",
+  "monthlyPassesSearch": "Buscar placa o propietario",
+  "monthlyPassesSearchHint": "Placa, nombre o teléfono",
   "checkOutClearSearch": "Limpiar búsqueda",
   "scanExitTooltip": "Escanear QR y registrar salida",
   "scanQrTitle": "Escanear recibo",

@@ -1916,6 +1916,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get searchPlate => 'Buscar por placa';
 
   @override
+  String get monthlyPassesSearch => 'Buscar placa o propietario';
+
+  @override
+  String get monthlyPassesSearchHint => 'Placa, nombre o teléfono';
+
+  @override
   String get checkOutClearSearch => 'Limpiar búsqueda';
 
   @override

@@ -164,12 +164,14 @@ void main() {
     await expectLater(tester, meetsGuideline(textContrastGuideline));
   });
 
-  testWidgets('Success: a pass with a customer phone offers the WhatsApp notice',
-      (tester) async {
-    await pumpPage(tester, ownerPhone: '+57 300 111 2233');
+  testWidgets(
+    'Success: a pass with a customer phone offers the WhatsApp notice',
+    (tester) async {
+      await pumpPage(tester, ownerPhone: '+57 300 111 2233');
 
-    expect(find.byTooltip('Avisar por WhatsApp'), findsOneWidget);
-  });
+      expect(find.byTooltip('Avisar por WhatsApp'), findsOneWidget);
+    },
+  );
 
   testWidgets('Success: the pass shows the owner name when known', (
     tester,
@@ -185,17 +187,14 @@ void main() {
     expect(find.byTooltip('Avisar por WhatsApp'), findsNothing);
   });
 
-  testWidgets('Success: automated mode queues the reminder instead of wa.me',
-      (tester) async {
+  testWidgets('Success: automated mode queues the reminder instead of wa.me', (
+    tester,
+  ) async {
     final messages = FakeCustomerMessageRepository();
     serviceLocator.registerSingleton<CustomerMessageRepository>(messages);
     addTearDown(serviceLocator.reset);
 
-    await pumpPage(
-      tester,
-      ownerPhone: '+57 300 111 2233',
-      whatsappAuto: true,
-    );
+    await pumpPage(tester, ownerPhone: '+57 300 111 2233', whatsappAuto: true);
 
     await tester.tap(find.byTooltip('Avisar por WhatsApp'));
     await tester.pumpAndSettle();
@@ -232,18 +231,31 @@ void main() {
     expect(find.text('XYZ999'), findsOneWidget);
   });
 
+  testWidgets('Success: the owner search matches names and phones', (
+    tester,
+  ) async {
+    await pumpPage(tester, ownerName: 'Juan Perez', ownerPhone: '3001112233');
+
+    await tester.enterText(find.byType(TextField), 'juan');
+    await tester.pumpAndSettle();
+    expect(find.text('ABC123'), findsWidgets);
+
+    await tester.enterText(find.byType(TextField), '300111');
+    await tester.pumpAndSettle();
+    expect(find.text('ABC123'), findsWidgets);
+
+    await tester.enterText(find.byType(TextField), 'zzz');
+    await tester.pumpAndSettle();
+    expect(find.text('ABC123'), findsNothing);
+  });
+
   testWidgets('Success: the monthly tariff prefills the new pass amount', (
     tester,
   ) async {
     await pumpPage(
       tester,
       tariffs: const [
-        Tariff(
-          id: 9,
-          categoryId: 1,
-          type: TariffType.monthly,
-          amount: 120000,
-        ),
+        Tariff(id: 9, categoryId: 1, type: TariffType.monthly, amount: 120000),
       ],
     );
 
@@ -305,10 +317,7 @@ void main() {
     await tester.enterText(find.byType(TextField), 'QQQ');
     await tester.pumpAndSettle();
 
-    expect(
-      find.text('Ninguna mensualidad coincide con «QQQ»'),
-      findsOneWidget,
-    );
+    expect(find.text('Ninguna mensualidad coincide con «QQQ»'), findsOneWidget);
   });
 
   testWidgets('Success: collecting a pending payment is confirmed', (
