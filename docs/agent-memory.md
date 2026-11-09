@@ -4,7 +4,7 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-11-09 (PDF fonts, check-in preload, startup splash).
+Last updated: 2026-11-09 (owner search, PDF fonts, check-in preload).
 
 ## Where we are
 
@@ -12,7 +12,7 @@ Last updated: 2026-11-09 (PDF fonts, check-in preload, startup splash).
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0086` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 1070 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 1074 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -331,6 +331,21 @@ Last updated: 2026-11-09 (PDF fonts, check-in preload, startup splash).
 - On-screen labels may keep the typographic dash; only PDF text must stay
   ASCII/Latin-1. A test guards `pdfDateRange` against `—`/`–`, and the PDF
   suite no longer logs "Unable to find a font to draw". Test count: 1070.
+
+### Vehicle search by owner (2026-11-09)
+
+- `VehicleRepository.listPage(plate:)` became `query:` (interface, remote,
+  repository, fakes): the remote builds
+  `vehicleSearchFilter(query)` → `plate.ilike."%term%",owner_name.ilike...,
+  owner_phone.ilike...` (values quoted so names with spaces/commas do not break
+  the PostgREST `or` expression). Empty/blank → no filter.
+- The offline cache filter mirrors plate/owner-name/owner-phone; the page label
+  is "Buscar placa o propietario" with a "Placa, nombre o teléfono" hint.
+  No schema/RLS change: owner data already exists and vehicles are global.
+- Tests: filter builder (including quote safety), cubit search by name and
+  phone, plus the existing paging/offline tests. Live PostgREST check: the
+  quoted `or` filter found `LCR481` by plate, by "Samuel" (owner name) and by
+  "310428" (owner phone). Test count: 1074.
 
 ## Owner contact data (2026-11-05)
 

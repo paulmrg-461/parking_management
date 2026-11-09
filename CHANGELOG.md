@@ -120,6 +120,11 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   the network before the first `runApp` (a blank screen on slow links). The
   real app replaces the splash once the restore resolves; corrupt local
   storage falls back to login instead of leaving the splash forever.
+- **Search vehicles by owner**: the registry search now matches the plate, the
+  owner name or the owner phone (`plate.ilike` OR `owner_name.ilike` OR
+  `owner_phone.ilike`, quoted so names with spaces/commas work), and the
+  offline cache filter mirrors it. The field label/hint say so; owner data was
+  already captured, so no schema change was needed.
 - **Emergency action**: a red police icon in every app bar (and an entry in the
   desktop sidebar footer and the phone drawer) opens a one-tap panel with the
   site location, the nearest police quadrant and a large **Call now** button.

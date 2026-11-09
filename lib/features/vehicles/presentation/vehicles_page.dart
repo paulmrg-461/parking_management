@@ -68,6 +68,7 @@ class _VehiclesPageState extends State<VehiclesPage> {
                     child: SearchField(
                       fieldKey: const Key('vehicles_search'),
                       label: context.l10n.vehiclesSearch,
+                      hint: context.l10n.vehiclesSearchHint,
                       onChanged: context.read<VehiclesCubit>().search,
                     ),
                   ),
@@ -140,10 +141,8 @@ class _VehiclesPageState extends State<VehiclesPage> {
       context,
       message: l10n.vehicleCreated(result.plate),
       actionLabel: l10n.vehicleCheckInAction,
-      onAction: () => (widget.onCheckIn ?? _checkInWithPlate)(
-        context,
-        result.plate,
-      ),
+      onAction: () =>
+          (widget.onCheckIn ?? _checkInWithPlate)(context, result.plate),
     );
   }
 
@@ -163,9 +162,8 @@ class _VehiclesPageState extends State<VehiclesPage> {
   }
 }
 
-void _checkInWithPlate(BuildContext context, String plate) => context.push(
-  '/check-in?plate=${Uri.encodeQueryComponent(plate)}',
-);
+void _checkInWithPlate(BuildContext context, String plate) =>
+    context.push('/check-in?plate=${Uri.encodeQueryComponent(plate)}');
 
 class _VehicleList extends StatelessWidget {
   const _VehicleList({required this.state});

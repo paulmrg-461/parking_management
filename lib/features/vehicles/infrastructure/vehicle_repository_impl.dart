@@ -33,13 +33,13 @@ class VehicleRepositoryImpl implements VehicleRepository {
   Future<PagedResult<Vehicle>> listPage({
     int offset = 0,
     int limit = defaultPageSize,
-    String? plate,
+    String? query,
   }) async {
     try {
       final page = await _remote.listPage(
         limit: limit,
         offset: offset,
-        plate: plate,
+        query: query,
       );
       for (final vehicle in page.items) {
         await _local.upsert(vehicle);
@@ -47,12 +47,15 @@ class VehicleRepositoryImpl implements VehicleRepository {
       return page;
     } on NetworkFailure {
       final cached = await _local.readAll();
-      final term = plate?.trim().toUpperCase() ?? '';
+      final term = query?.trim().toUpperCase() ?? '';
       final filtered = term.isEmpty
           ? cached
           : [
               for (final vehicle in cached)
-                if (vehicle.plate.toUpperCase().contains(term)) vehicle,
+                if (vehicle.plate.toUpperCase().contains(term) ||
+                    (vehicle.ownerName ?? '').toUpperCase().contains(term) ||
+                    (vehicle.ownerPhone ?? '').contains(term))
+                  vehicle,
             ];
       return PagedResult(
         filtered.skip(offset).take(limit).toList(),
@@ -198,6 +201,7 @@ class VehicleRepositoryImpl implements VehicleRepository {
     if (command.brand != null) 'brand': command.brand,
     if (command.ownerPhone != null)
       'owner_phone': _optionalPatch(command.ownerPhone),
-    if (command.ownerName != null) 'owner_name': _optionalPatch(command.ownerName),
+    if (command.ownerName != null)
+      'owner_name': _optionalPatch(command.ownerName),
   };
 }

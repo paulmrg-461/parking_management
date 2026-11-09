@@ -18,7 +18,7 @@ class _FakeRemote implements VehicleRemoteDataSource {
   Future<PagedResult<Vehicle>> listPage({
     required int limit,
     required int offset,
-    String? plate,
+    String? query,
   }) async => const PagedResult([]);
 
   @override

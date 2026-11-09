@@ -27,11 +27,8 @@ void main() {
 
   VehiclesLoaded loaded() => cubit.state as VehiclesLoaded;
 
-  VehiclesCubit fastCubit() => VehiclesCubit(
-    vehicles,
-    categories,
-    searchDebounce: Duration.zero,
-  );
+  VehiclesCubit fastCubit() =>
+      VehiclesCubit(vehicles, categories, searchDebounce: Duration.zero);
 
   test(
     'Success: load emits vehicles with precomputed category names',
@@ -140,6 +137,34 @@ void main() {
     final state = searchCubit.state as VehiclesLoaded;
     expect(state.query, 'xyz');
     expect(state.vehicles.map((v) => v.plate), ['XYZ999']);
+  });
+
+  test('Success: search also matches the owner name and phone', () async {
+    final searchCubit = fastCubit();
+    addTearDown(searchCubit.close);
+    vehicles.vehicles = const [
+      Vehicle(
+        id: 1,
+        plate: 'ABC123',
+        categoryId: 1,
+        ownerName: 'Juan Perez',
+        ownerPhone: '3001112233',
+      ),
+      Vehicle(id: 2, plate: 'XYZ999', categoryId: 1),
+    ];
+    await searchCubit.load();
+
+    searchCubit.search('juan');
+    await Future<void>.delayed(Duration.zero);
+    expect((searchCubit.state as VehiclesLoaded).vehicles.map((v) => v.plate), [
+      'ABC123',
+    ]);
+
+    searchCubit.search('300111');
+    await Future<void>.delayed(Duration.zero);
+    expect((searchCubit.state as VehiclesLoaded).vehicles.map((v) => v.plate), [
+      'ABC123',
+    ]);
   });
 
   test('Success: a query with no matches loads an empty page', () async {

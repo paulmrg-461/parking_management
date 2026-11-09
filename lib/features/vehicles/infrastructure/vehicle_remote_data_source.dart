@@ -5,13 +5,24 @@ import '../../../core/pagination/paged_result.dart';
 import '../domain/entities/vehicle.dart';
 import 'models/vehicle_dto.dart';
 
+/// PostgREST `or` filter for the registry search: plate, owner name or phone.
+/// Values are quoted so spaces or commas in a name do not break the expression.
+String? vehicleSearchFilter(String raw) {
+  final term = raw.trim();
+  if (term.isEmpty) {
+    return null;
+  }
+  final value = '"%${term.replaceAll('"', '')}%"';
+  return 'plate.ilike.$value,owner_name.ilike.$value,owner_phone.ilike.$value';
+}
+
 abstract class VehicleRemoteDataSource {
   Future<List<Vehicle>> list({String? plate});
 
   Future<PagedResult<Vehicle>> listPage({
     required int limit,
     required int offset,
-    String? plate,
+    String? query,
   });
 
   Future<Vehicle> create(Map<String, dynamic> payload);
@@ -57,15 +68,15 @@ class SupabaseVehicleRemoteDataSource implements VehicleRemoteDataSource {
   Future<PagedResult<Vehicle>> listPage({
     required int limit,
     required int offset,
-    String? plate,
+    String? query,
   }) async {
     try {
-      var query = _client.from(_table).select();
-      final term = plate?.trim() ?? '';
-      if (term.isNotEmpty) {
-        query = query.ilike('plate', '%$term%');
+      var request = _client.from(_table).select();
+      final filter = vehicleSearchFilter(query ?? '');
+      if (filter != null) {
+        request = request.or(filter);
       }
-      final response = await query
+      final response = await request
           .order('id')
           .range(offset, offset + limit - 1)
           .count(CountOption.exact);
@@ -75,17 +86,14 @@ class SupabaseVehicleRemoteDataSource implements VehicleRemoteDataSource {
     }
   }
 
-  List<Vehicle> _parse(List<Map<String, dynamic>> rows) =>
-      [for (final row in rows) VehicleDto.fromJson(row).toDomain()];
+  List<Vehicle> _parse(List<Map<String, dynamic>> rows) => [
+    for (final row in rows) VehicleDto.fromJson(row).toDomain(),
+  ];
 
   @override
   Future<Vehicle> create(Map<String, dynamic> payload) async {
     try {
-      final row = await _client
-          .from(_table)
-          .insert(payload)
-          .select()
-          .single();
+      final row = await _client.from(_table).insert(payload).select().single();
       return VehicleDto.fromJson(row).toDomain();
     } catch (error) {
       throw mapSupabaseError(error);

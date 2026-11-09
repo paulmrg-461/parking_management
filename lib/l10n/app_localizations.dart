@@ -4127,8 +4127,14 @@ abstract class AppLocalizations {
   /// No description provided for @vehiclesSearch.
   ///
   /// In es, this message translates to:
-  /// **'Buscar placa'**
+  /// **'Buscar placa o propietario'**
   String get vehiclesSearch;
+
+  /// No description provided for @vehiclesSearchHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Placa, nombre o teléfono'**
+  String get vehiclesSearchHint;
 
   /// No description provided for @vehiclesNoMatch.
   ///

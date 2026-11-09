@@ -144,7 +144,7 @@ class VehiclesCubit extends ResilientCubit<VehiclesState> {
       final page = await _repository.listPage(
         offset: 0,
         limit: pageSize,
-        plate: query.isEmpty ? null : query,
+        query: query.isEmpty ? null : query,
       );
       final loadedCategories = await categories;
       if (token != _searchToken) {
@@ -170,7 +170,7 @@ class VehiclesCubit extends ResilientCubit<VehiclesState> {
       final page = await _repository.listPage(
         offset: current.vehicles.length,
         limit: pageSize,
-        plate: current.query.isEmpty ? null : current.query,
+        query: current.query.isEmpty ? null : current.query,
       );
       emit(
         current.copyWith(
@@ -220,7 +220,7 @@ class VehiclesCubit extends ResilientCubit<VehiclesState> {
       final page = await _repository.listPage(
         offset: 0,
         limit: pageSize,
-        plate: current.query.isEmpty ? null : current.query,
+        query: current.query.isEmpty ? null : current.query,
       );
       emit(
         current.copyWith(

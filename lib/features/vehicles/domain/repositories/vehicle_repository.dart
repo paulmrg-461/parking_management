@@ -9,10 +9,13 @@ abstract class VehicleRepository {
 
   /// One page (`limit`/`offset`, `X-Total-Count`); offline, sliced from the
   /// local cache.
+  /// One page of the registry. [query] matches the plate, the owner name or
+  /// the owner phone (case-insensitive), so an operator can find a car by its
+  /// driver.
   Future<PagedResult<Vehicle>> listPage({
     int offset = 0,
     int limit = defaultPageSize,
-    String? plate,
+    String? query,
   });
 
   Future<Vehicle?> findByPlate(String plate);

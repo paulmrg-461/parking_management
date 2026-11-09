@@ -785,7 +785,8 @@
   "categoryFallback": "Categoría {id}",
   "@categoryFallback": {"placeholders": {"id": {"type": "int"}}},
 
-  "vehiclesSearch": "Buscar placa",
+  "vehiclesSearch": "Buscar placa o propietario",
+  "vehiclesSearchHint": "Placa, nombre o teléfono",
   "vehiclesNoMatch": "No hay vehículos para «{query}»",
   "@vehiclesNoMatch": {"placeholders": {"query": {"type": "String"}}},
   "vehicleCreated": "Vehículo creado: {plate}",

@@ -23,7 +23,7 @@ class _FakeVehicleRepository implements VehicleRepository {
   Future<PagedResult<Vehicle>> listPage({
     int offset = 0,
     int limit = defaultPageSize,
-    String? plate,
+    String? query,
   }) => throw UnimplementedError();
 
   @override

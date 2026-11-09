@@ -2271,7 +2271,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get vehiclesSearch => 'Search plate';
+  String get vehiclesSearch => 'Search plate or owner';
+
+  @override
+  String get vehiclesSearchHint => 'Plate, name or phone';
 
   @override
   String vehiclesNoMatch(String query) {
