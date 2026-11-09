@@ -151,7 +151,8 @@ inclusive business-date range and a total; powers `/records` and its exports.
 
 **Sites and users**
 `my_lots`, `list_lots`, `create_lot`, `update_lot`, `set_lot_member`,
-`list_lot_members`, `set_branding_logo`.
+`list_lot_members`, `set_branding_logo`, `lot_setup_status` (home checklist:
+categories, active tariffs, capacity/bays, address + phone).
 
 **Audit**
 `list_audit_log` (filters: limit, date range, table, actor username and

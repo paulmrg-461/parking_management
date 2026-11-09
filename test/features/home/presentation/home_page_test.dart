@@ -9,6 +9,7 @@ import 'package:parking_management/features/auth/application/auth_cubit.dart';
 import 'package:parking_management/features/auth/domain/entities/user.dart';
 import 'package:parking_management/features/check_out/domain/entities/capacity_snapshot.dart';
 import 'package:parking_management/features/check_out/domain/entities/dashboard_trend.dart';
+import 'package:parking_management/features/check_out/domain/entities/lot_setup_status.dart';
 import 'package:parking_management/features/check_out/domain/entities/today_summary.dart';
 import 'package:parking_management/features/check_out/domain/entities/open_session.dart';
 import 'package:parking_management/core/widgets/plate_text.dart';
@@ -40,6 +41,7 @@ Future<FakeCheckOutRepository> _pump(
   TodaySummary today = TodaySummary.empty,
   DashboardTrend trend = DashboardTrend.empty,
   Failure? trendError,
+  LotSetupStatus setup = LotSetupStatus.unknown,
   Future<void>? todayGate,
   DashboardCache? cache,
   bool settle = true,
@@ -73,6 +75,7 @@ Future<FakeCheckOutRepository> _pump(
         )
         ..capacityToReturn = space ?? CapacitySnapshot.empty
         ..slotBoardToReturn = board ?? SlotBoard.empty
+        ..setupToReturn = setup
         ..todayGate = todayGate;
   final auth = AuthCubit(
     FakeAuthRepository(sessionToRestore: sessionFor(role)),
@@ -416,6 +419,43 @@ void main() {
     expect(find.textContaining('25.000'), findsWidgets);
     expect(find.byType(SlotBoardCard), findsNothing);
     expect(find.byType(InsideCard), findsNothing);
+  });
+
+  testWidgets('Success: an unfinished site guides admins through setup', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      role: UserRole.admin,
+      setup: const LotSetupStatus(categories: 1),
+    );
+
+    expect(find.text('Primeros pasos'), findsOneWidget);
+    expect(find.text('1 de 4 listos'), findsOneWidget);
+    expect(find.text('Tarifas'), findsOneWidget);
+    expect(find.text('Datos del parqueadero'), findsOneWidget);
+  });
+
+  testWidgets('Security: operators never see the setup card', (tester) async {
+    await _pump(tester, setup: const LotSetupStatus(categories: 1));
+
+    expect(find.text('Primeros pasos'), findsNothing);
+  });
+
+  testWidgets('Success: a ready site hides the setup card', (tester) async {
+    await _pump(
+      tester,
+      role: UserRole.admin,
+      setup: const LotSetupStatus(
+        categories: 1,
+        tariffs: 1,
+        carCapacity: 10,
+        hasAddress: true,
+        hasPhone: true,
+      ),
+    );
+
+    expect(find.text('Primeros pasos'), findsNothing);
   });
 
   testWidgets('A11y: the trend card fits a phone with large text', (

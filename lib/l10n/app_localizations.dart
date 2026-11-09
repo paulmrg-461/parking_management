@@ -2006,6 +2006,66 @@ abstract class AppLocalizations {
   /// **'Historial de vehículo'**
   String get vehicleHistoryTitle;
 
+  /// No description provided for @setupTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Primeros pasos'**
+  String get setupTitle;
+
+  /// No description provided for @setupProgress.
+  ///
+  /// In es, this message translates to:
+  /// **'{done} de {total} listos'**
+  String setupProgress(int done, int total);
+
+  /// No description provided for @setupCategories.
+  ///
+  /// In es, this message translates to:
+  /// **'Categorías de vehículos'**
+  String get setupCategories;
+
+  /// No description provided for @setupCategoriesHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Carros, motos y otros tipos'**
+  String get setupCategoriesHint;
+
+  /// No description provided for @setupTariffs.
+  ///
+  /// In es, this message translates to:
+  /// **'Tarifas'**
+  String get setupTariffs;
+
+  /// No description provided for @setupTariffsHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Precios por hora, día y noche'**
+  String get setupTariffsHint;
+
+  /// No description provided for @setupCapacity.
+  ///
+  /// In es, this message translates to:
+  /// **'Espacios y capacidad'**
+  String get setupCapacity;
+
+  /// No description provided for @setupCapacityHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Capacidad en Ajustes o mapa físico'**
+  String get setupCapacityHint;
+
+  /// No description provided for @setupIdentity.
+  ///
+  /// In es, this message translates to:
+  /// **'Datos del parqueadero'**
+  String get setupIdentity;
+
+  /// No description provided for @setupIdentityHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Dirección y teléfono para recibos y QR'**
+  String get setupIdentityHint;
+
   /// No description provided for @vehicleHistoryPrompt.
   ///
   /// In es, this message translates to:

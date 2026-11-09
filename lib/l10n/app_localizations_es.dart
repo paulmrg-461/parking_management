@@ -1076,6 +1076,38 @@ class AppLocalizationsEs extends AppLocalizations {
   String get vehicleHistoryTitle => 'Historial de vehículo';
 
   @override
+  String get setupTitle => 'Primeros pasos';
+
+  @override
+  String setupProgress(int done, int total) {
+    return '$done de $total listos';
+  }
+
+  @override
+  String get setupCategories => 'Categorías de vehículos';
+
+  @override
+  String get setupCategoriesHint => 'Carros, motos y otros tipos';
+
+  @override
+  String get setupTariffs => 'Tarifas';
+
+  @override
+  String get setupTariffsHint => 'Precios por hora, día y noche';
+
+  @override
+  String get setupCapacity => 'Espacios y capacidad';
+
+  @override
+  String get setupCapacityHint => 'Capacidad en Ajustes o mapa físico';
+
+  @override
+  String get setupIdentity => 'Datos del parqueadero';
+
+  @override
+  String get setupIdentityHint => 'Dirección y teléfono para recibos y QR';
+
+  @override
   String get vehicleHistoryPrompt =>
       'Busca una placa para ver sus entradas y salidas';
 

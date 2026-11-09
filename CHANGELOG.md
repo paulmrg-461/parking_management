@@ -91,6 +91,13 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   chip when the car has photos/videos, so an operator can review the entry
   evidence without leaving the exit flow. It opens the same viewer and wraps
   with the other status chips on phones.
+- **First-steps checklist**: `0085` adds `lot_setup_status()` with the active
+  site's categories, active tariffs, capacity/active bays and identity flags.
+  Admins of a new site see a **Primeros pasos** card on the home with a
+  4-step progress bar (categories, tariffs, capacity/map, address + phone) and
+  a shortcut to the screen that fixes each step; operators never see it and it
+  hides once the site is complete. A failed status call hides the card instead
+  of showing a false "not configured" state.
 - **Emergency action**: a red police icon in every app bar (and an entry in the
   desktop sidebar footer and the phone drawer) opens a one-tap panel with the
   site location, the nearest police quadrant and a large **Call now** button.

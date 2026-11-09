@@ -7,6 +7,7 @@ import 'package:parking_management/features/lots/domain/entities/lot_member.dart
 import 'package:parking_management/features/lots/domain/entities/parking_lot.dart';
 import 'package:parking_management/features/monthly_passes/domain/entities/monthly_pass_payment.dart';
 import 'package:parking_management/features/policies/domain/entities/lot_profile.dart';
+import 'package:parking_management/features/check_out/domain/entities/lot_setup_status.dart';
 import 'package:parking_management/features/evidence/domain/entities/session_evidence.dart';
 import 'package:parking_management/features/reports/domain/entities/hourly_traffic.dart';
 import 'package:parking_management/features/records/domain/entities/session_record.dart';
@@ -246,6 +247,33 @@ void main() {
 
       expect(HourlyTraffic.fromJson(const {}).hasData, isFalse);
       expect(HourlyTraffic.empty.peak, isNull);
+    });
+
+    test('LotSetupStatus computes steps and completion from the flags', () {
+      final ready = LotSetupStatus.fromJson({
+        'categories': 2,
+        'tariffs': 3,
+        'car_capacity': 10,
+        'moto_capacity': 5,
+        'spots': 0,
+        'has_address': true,
+        'has_phone': true,
+      });
+      final mapOnly = LotSetupStatus.fromJson({
+        'categories': 1,
+        'tariffs': 1,
+        'spots': 4,
+        'has_address': true,
+        'has_phone': false,
+      });
+
+      expect(ready.complete, isTrue);
+      expect(ready.doneSteps, 4);
+      expect(mapOnly.hasCapacity, isTrue);
+      expect(mapOnly.hasIdentity, isFalse);
+      expect(mapOnly.complete, isFalse);
+      expect(mapOnly.doneSteps, 3);
+      expect(LotSetupStatus.unknown.known, isFalse);
     });
 
     test('SessionEvidence maps kind, duration and an optional signed URL', () {

@@ -6,6 +6,7 @@ import 'package:parking_management/features/check_out/domain/entities/open_sessi
 import 'package:parking_management/features/check_out/domain/entities/today_summary.dart';
 import 'package:parking_management/features/check_out/domain/entities/capacity_snapshot.dart';
 import 'package:parking_management/features/check_out/domain/entities/dashboard_trend.dart';
+import 'package:parking_management/features/check_out/domain/entities/lot_setup_status.dart';
 import 'package:parking_management/features/check_out/domain/entities/slot_board.dart';
 import 'package:parking_management/features/home/application/dashboard_cubit.dart';
 
@@ -201,6 +202,30 @@ void main() {
     await cubit.load();
 
     expect(cubit.state, isA<DashboardFailure>());
+  });
+
+  test('Success: the setup checklist lands in the loaded state', () async {
+    final repository = FakeCheckOutRepository(sessions: _sessions(1))
+      ..setupToReturn = const LotSetupStatus(categories: 1);
+    final cubit = DashboardCubit(repository);
+
+    await cubit.load();
+
+    final state = cubit.state as DashboardLoaded;
+    expect(state.setup.known, isTrue);
+    expect(state.setup.hasCategories, isTrue);
+    expect(state.setup.complete, isFalse);
+  });
+
+  test('Failure: a broken setup status is unknown', () async {
+    final repository = FakeCheckOutRepository(sessions: _sessions(1))
+      ..setupError = const NetworkFailure('offline');
+    final cubit = DashboardCubit(repository);
+
+    await cubit.load();
+
+    final state = cubit.state as DashboardLoaded;
+    expect(state.setup, LotSetupStatus.unknown);
   });
 
   test('Security: a degraded load never overwrites the cache', () async {

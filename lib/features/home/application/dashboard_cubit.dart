@@ -7,6 +7,7 @@ import '../../../core/state/resilient_cubit.dart';
 import '../../check_out/domain/entities/capacity_snapshot.dart';
 import '../../check_out/domain/entities/check_out_preview.dart';
 import '../../check_out/domain/entities/dashboard_trend.dart';
+import '../../check_out/domain/entities/lot_setup_status.dart';
 import '../../check_out/domain/entities/occupancy_snapshot.dart';
 import '../../check_out/domain/entities/open_session.dart';
 import '../../check_out/domain/entities/slot_board.dart';
@@ -36,6 +37,7 @@ final class DashboardLoaded extends DashboardState {
     this.capacity = CapacitySnapshot.empty,
     this.sessions = const [],
     this.slotBoard = SlotBoard.empty,
+    this.setup = LotSetupStatus.unknown,
     this.cachedAt,
   });
 
@@ -56,6 +58,9 @@ final class DashboardLoaded extends DashboardState {
 
   /// Visual board (spaces, cars inside, holds).
   final SlotBoard slotBoard;
+
+  /// First-steps checklist of the active site (unknown when it failed).
+  final LotSetupStatus setup;
 
   /// When this came from the offline cache: the state is stale, the board and
   /// the inside list are intentionally empty.
@@ -78,6 +83,7 @@ final class DashboardLoaded extends DashboardState {
     capacity,
     sessions,
     slotBoard,
+    setup,
     cachedAt,
   ];
 }
@@ -157,7 +163,7 @@ class DashboardCubit extends ResilientCubit<DashboardState> {
     // the whole dashboard). `complete` is false when one of the cached KPIs
     // failed, so a degraded load never overwrites a good cached snapshot.
     var complete = true;
-    final (today, trend, capacity, slotBoard, inside) = await (
+    final (today, trend, capacity, slotBoard, inside, setup) = await (
       _sessions.todaySummary().catchError((Object _) {
         complete = false;
         return TodaySummary.empty;
@@ -172,6 +178,7 @@ class DashboardCubit extends ResilientCubit<DashboardState> {
       }),
       _sessions.slotBoard().catchError((Object _) => SlotBoard.empty),
       _inside(),
+      _sessions.lotSetup().catchError((Object _) => LotSetupStatus.unknown),
     ).wait;
     return (
       DashboardLoaded(
@@ -183,6 +190,7 @@ class DashboardCubit extends ResilientCubit<DashboardState> {
         capacity: capacity,
         sessions: inside,
         slotBoard: slotBoard,
+        setup: setup,
       ),
       complete,
     );

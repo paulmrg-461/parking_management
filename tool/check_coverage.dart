@@ -16,7 +16,7 @@ const _globalFloor = 79.0;
 /// Layer floors; keep them in sync with the measured baseline.
 const _layerFloors = <String, double>{
   'application/': 90.0,
-  'domain/': 53.0,
+  'domain/': 54.0,
   'infrastructure/': 40.0,
 };
 

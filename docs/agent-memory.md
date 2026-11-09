@@ -4,15 +4,15 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-11-09 (evidence viewer, audit search, hourly reports).
+Last updated: 2026-11-09 (setup checklist, evidence viewer, audit search).
 
 ## Where we are
 
 - Stack: Flutter (android + web) + self-hosted Supabase only. No FastAPI,
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
-- `supabase/migrations/0001..0084` are the schema owner (applied by
+- `supabase/migrations/0001..0085` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 1052 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 1058 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -229,6 +229,27 @@ Last updated: 2026-11-09 (evidence viewer, audit search, hourly reports).
   the 400 px row stays overflow-free. Test count: 1052.
 - Live smoke: `vehicle_history('LCR481')` returned session 48 with
   `photo_count: 2` (session 43 has 0).
+
+### Site setup checklist (2026-11-09)
+
+- `0085_lot_setup_status.sql` adds `lot_setup_status()` (any lot member):
+  category count, active tariffs, car/moto capacity, active bays and
+  address/phone flags. `complete` requires categories, tariffs and
+  capacity-or-bays plus address and phone. It is `security definer` and reads
+  `current_lot_id()`.
+- `CheckOutRepository.lotSetup()` feeds `DashboardLoaded.setup` (unknown on
+  failure, never a false "unconfigured"). `SetupChecklistCard` on the home is
+  admin-only, hidden when complete/unknown, and shows 4 steps with a progress
+  bar and links (`/categories`, `/tariffs`, `/settings`). Operators never see
+  it; the card is the onboarding fix for the "new lot without categories"
+  gotcha.
+- Tests: SQL flags against `parking_settings` and an incomplete lot, entity
+  step math, cubit fallback to unknown, and home visibility for admin/
+  operator/complete. Coverage floor: domain 54 (55.0 measured). Test count:
+  1058; schema `0001..0085`.
+- Live smoke: `lot_setup_status()` for lot 1 returned
+  `complete: true` (5 categories, 7 active tariffs, capacity 20/10,
+  address/phone set).
 
 ## Owner contact data (2026-11-05)
 

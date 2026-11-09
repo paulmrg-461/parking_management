@@ -3,6 +3,7 @@ import '../entities/capacity_snapshot.dart';
 import '../entities/check_out_preview.dart';
 import '../entities/check_out_receipt.dart';
 import '../entities/dashboard_trend.dart';
+import '../entities/lot_setup_status.dart';
 import '../entities/occupancy_snapshot.dart';
 import '../entities/slot_board.dart';
 import '../entities/open_session.dart';
@@ -50,4 +51,7 @@ abstract class CheckOutRepository {
 
   /// Daily revenue/entries/exits for the last [days] business days.
   Future<DashboardTrend> dashboardTrend({int days = 7});
+
+  /// First-steps checklist of the active site (home onboarding card).
+  Future<LotSetupStatus> lotSetup();
 }

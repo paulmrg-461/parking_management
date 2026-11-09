@@ -18,6 +18,7 @@ import '../../../auth/application/auth_cubit.dart';
 import '../../../auth/domain/entities/user.dart';
 import '../../../check_out/domain/entities/capacity_snapshot.dart';
 import '../../../check_out/domain/entities/dashboard_trend.dart';
+import '../../../check_out/domain/entities/lot_setup_status.dart';
 import '../../../shifts/application/shift_cubit.dart';
 import '../../application/dashboard_cubit.dart';
 
@@ -1319,6 +1320,170 @@ class _TrendQuiet extends StatelessWidget {
         const SizedBox(width: Space.sm),
         Expanded(child: Text(message, style: theme.textTheme.bodyMedium)),
       ],
+    );
+  }
+}
+
+/// Admin-only onboarding card: shows the missing setup steps of a new site
+/// and links to the screen that fixes each one. Hidden once the site is ready
+/// or when the status RPC failed.
+class SetupChecklistCard extends StatelessWidget {
+  const SetupChecklistCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final textTheme = Theme.of(context).textTheme;
+    if (!_isAdmin(context)) {
+      return const SizedBox.shrink();
+    }
+    return BlocBuilder<DashboardCubit, DashboardState>(
+      buildWhen: (previous, current) =>
+          previous is! DashboardLoaded ||
+          current is! DashboardLoaded ||
+          previous.setup != current.setup,
+      builder: (context, state) {
+        final setup = state is DashboardLoaded
+            ? state.setup
+            : LotSetupStatus.unknown;
+        if (!setup.known || setup.complete) {
+          return const SizedBox.shrink();
+        }
+        return Padding(
+          padding: const EdgeInsets.only(bottom: Space.lg),
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.all(Space.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      const _KpiIcon(icon: Icons.checklist_outlined),
+                      const SizedBox(width: Space.sm),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(l10n.setupTitle, style: textTheme.titleSmall),
+                            Text(
+                              l10n.setupProgress(
+                                setup.doneSteps,
+                                LotSetupStatus.totalSteps,
+                              ),
+                              style: textTheme.bodySmall?.copyWith(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: Space.sm),
+                  LinearProgressIndicator(
+                    value: setup.doneSteps / LotSetupStatus.totalSteps,
+                    minHeight: 6,
+                    borderRadius: BorderRadius.circular(Radii.pill),
+                  ),
+                  const SizedBox(height: Space.xs),
+                  _SetupStep(
+                    done: setup.hasCategories,
+                    title: l10n.setupCategories,
+                    hint: l10n.setupCategoriesHint,
+                    onTap: () => context.go('/categories'),
+                  ),
+                  _SetupStep(
+                    done: setup.hasTariffs,
+                    title: l10n.setupTariffs,
+                    hint: l10n.setupTariffsHint,
+                    onTap: () => context.go('/tariffs'),
+                  ),
+                  _SetupStep(
+                    done: setup.hasCapacity,
+                    title: l10n.setupCapacity,
+                    hint: l10n.setupCapacityHint,
+                    onTap: () => context.go('/settings'),
+                  ),
+                  _SetupStep(
+                    done: setup.hasIdentity,
+                    title: l10n.setupIdentity,
+                    hint: l10n.setupIdentityHint,
+                    onTap: () => context.go('/settings'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _SetupStep extends StatelessWidget {
+  const _SetupStep({
+    required this.done,
+    required this.title,
+    required this.hint,
+    required this.onTap,
+  });
+
+  final bool done;
+  final String title;
+  final String hint;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final color = done
+        ? StatusColors.of(context).success
+        : scheme.onSurfaceVariant;
+    return InkWell(
+      borderRadius: BorderRadius.circular(Radii.sm),
+      onTap: onTap,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: Layout.minTouch),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: Space.xs),
+          child: Row(
+            children: [
+              Icon(
+                done ? Icons.check_circle : Icons.radio_button_unchecked,
+                size: 22,
+                color: color,
+              ),
+              const SizedBox(width: Space.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: theme.textTheme.titleSmall),
+                    Text(
+                      hint,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (!done)
+                Icon(
+                  Icons.chevron_right,
+                  size: 18,
+                  color: scheme.onSurfaceVariant,
+                ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

@@ -141,6 +141,7 @@ class _Dashboard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: Space.lg),
+          const SetupChecklistCard(),
           SectionHeader(
             icon: Icons.insights_outlined,
             title: l10n.homeSummary,

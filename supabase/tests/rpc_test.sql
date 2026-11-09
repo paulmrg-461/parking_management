@@ -618,6 +618,44 @@ begin
     end if;
 end $$;
 
+-- Setup checklist: flags match the site's reference data and identity.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+declare
+    setup jsonb := public.lot_setup_status();
+begin
+    if (setup ->> 'categories')::integer < 1 then
+        raise exception 'setup lost the categories: %', setup;
+    end if;
+    if (setup ->> 'tariffs')::integer < 1 then
+        raise exception 'setup lost the active tariffs: %', setup;
+    end if;
+    if (setup ->> 'car_capacity')::integer
+       <> (select coalesce(car_capacity, 0) from public.parking_settings where lot_id = 1) then
+        raise exception 'setup reported a different capacity: %', setup;
+    end if;
+    if (setup ? 'complete') is not true then
+        raise exception 'setup omitted the complete flag: %', setup;
+    end if;
+end $$;
+
+set local request.headers = '{"x-lot-id":"2"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    setup jsonb := public.lot_setup_status();
+begin
+    -- Lot 2 has no phone configured, so it cannot be complete.
+    if (setup ->> 'complete')::boolean then
+        raise exception 'an incomplete site reported complete: %', setup;
+    end if;
+    if (setup ->> 'categories')::integer < 1 then
+        raise exception 'setup lost lot 2 categories: %', setup;
+    end if;
+end $$;
+set local request.headers = '{"x-lot-id":"1"}';
+
 -- Today's dashboard summary reflects the check-outs and entries of the lot.
 set local request.headers = '{"x-lot-id":"1"}';
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';

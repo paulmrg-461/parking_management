@@ -3,6 +3,7 @@ import 'package:parking_management/core/pagination/paged_result.dart';
 import 'package:parking_management/features/check_out/domain/entities/check_out_preview.dart';
 import 'package:parking_management/features/check_out/domain/entities/check_out_receipt.dart';
 import 'package:parking_management/features/check_out/domain/entities/dashboard_trend.dart';
+import 'package:parking_management/features/check_out/domain/entities/lot_setup_status.dart';
 import 'package:parking_management/features/check_out/domain/entities/open_session.dart';
 import 'package:parking_management/features/check_out/domain/entities/capacity_snapshot.dart';
 import 'package:parking_management/features/check_out/domain/entities/occupancy_snapshot.dart';
@@ -67,6 +68,18 @@ class FakeCheckOutRepository implements CheckOutRepository {
   Failure? capacityError;
 
   SlotBoard slotBoardToReturn = SlotBoard.empty;
+
+  LotSetupStatus setupToReturn = LotSetupStatus.unknown;
+  Failure? setupError;
+
+  @override
+  Future<LotSetupStatus> lotSetup() async {
+    final error = setupError;
+    if (error != null) {
+      throw error;
+    }
+    return setupToReturn;
+  }
 
   @override
   Future<SlotBoard> slotBoard() async => slotBoardToReturn;
