@@ -48,6 +48,13 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   compares the current week with the previous one (`+18 %` in success tone,
   warning tone when revenue drops, "same as last week" when flat). It is
   hidden when the previous week has no revenue to compare against.
+- **Bay maintenance history**: taking a bay out of service (or bringing it
+  back) now asks for an optional reason (3–200 characters) and records who,
+  when and why in `parking_spot_events` (`0081`): lot-scoped RLS, written by
+  `save_parking_spot` in the same transaction that changes the status, so the
+  log cannot drift. The bay editor shows **Ver historial** with the last
+  transitions (skeleton, empty and retry states); operators can read it, only
+  admins can change a bay. Any map edit refreshes the home board.
 - **Emergency action**: a red police icon in every app bar (and an entry in the
   desktop sidebar footer and the phone drawer) opens a one-tap panel with the
   site location, the nearest police quadrant and a large **Call now** button.

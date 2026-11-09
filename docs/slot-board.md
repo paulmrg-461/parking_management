@@ -44,6 +44,11 @@ check-in remaining-spaces labels all use `usable_capacity()`.
 | Reserved | Active hold | `StatusColors.pending` (amber) tint | plate, expiry time (`HH:mm`) |
 | Maintenance | Spot taken out of service by an admin | grey hatch (`ColorScheme.outline`) | build icon, `Mantenimiento` (not tappable) |
 
+Taking a bay out of service asks for an optional reason and records the
+transition (actor, timestamp, reason) in `parking_spot_events`; the map editor
+shows that history per bay. Operators can read it, only admins can change a
+bay, and any map edit refreshes the home board.
+
 The state is never conveyed by colour alone: each cell also carries a text
 label (`Libre`/`Ocupado`/`Reservado` in the tooltip and semantics) and a
 distinct icon per group.
@@ -129,6 +134,12 @@ fare_breakdown(category_id, entry, exit, has_pass) returns jsonb
 
 check_out_preview(session_id) returns jsonb
 -- fare_breakdown || { session_id, amount, has_pass, entry_time, previewed_at }
+
+-- 0081: per-bay maintenance history
+save_parking_spot(..., p_active, p_reason)
+-- logs an event when the status actually changes (same transaction)
+list_spot_events(spot_id, limit default 20) returns jsonb
+-- [{ id, spot_id, spot_code, status, active, reason, actor_name, created_at }]
 ```
 
 `slot_board()` is `security definer` and resolves the lot through the mandatory

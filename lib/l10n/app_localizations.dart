@@ -2144,6 +2144,48 @@ abstract class AppLocalizations {
   /// **'Desactívalo para mantenimiento'**
   String get spotsActiveHint;
 
+  /// No description provided for @spotsReason.
+  ///
+  /// In es, this message translates to:
+  /// **'Motivo del mantenimiento (opcional)'**
+  String get spotsReason;
+
+  /// No description provided for @spotsReasonHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Ej. fuga de aceite, pintura, vidrio roto'**
+  String get spotsReasonHint;
+
+  /// No description provided for @spotsReasonInvalid.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe al menos 3 caracteres o déjalo vacío'**
+  String get spotsReasonInvalid;
+
+  /// No description provided for @spotsHistory.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver historial'**
+  String get spotsHistory;
+
+  /// No description provided for @spotsHistoryTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Historial de {code}'**
+  String spotsHistoryTitle(String code);
+
+  /// No description provided for @spotsHistoryEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin cambios de estado'**
+  String get spotsHistoryEmpty;
+
+  /// No description provided for @spotsHistorySystem.
+  ///
+  /// In es, this message translates to:
+  /// **'Sistema'**
+  String get spotsHistorySystem;
+
   /// No description provided for @spotsDelete.
   ///
   /// In es, this message translates to:

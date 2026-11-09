@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/l10n/failure_messages.dart';
+import '../../../core/error/failure.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/status_colors.dart';
 import '../../../core/theme/tokens.dart';
@@ -13,10 +15,12 @@ import '../../emergency/presentation/emergency_action.dart';
 import '../../../core/widgets/error_state.dart';
 import '../../../core/widgets/skeleton.dart';
 import '../../../core/widgets/submission_feedback.dart';
+import '../../../core/utils/formatters.dart';
 import '../../check_out/domain/entities/slot_board.dart';
 import '../../home/application/dashboard_cubit.dart';
 import '../application/spots_cubit.dart';
 import '../domain/entities/parking_spot.dart';
+import '../domain/entities/spot_event.dart';
 import 'widgets/spot_cell_view.dart';
 
 /// Admin editor for the site's physical map: add bays, drag them around a
@@ -76,29 +80,41 @@ class _SpotsPageState extends State<SpotsPage> {
               title: l10n.spotsTitle,
               message: l10n.spotsAdminOnly,
             )
-          : BlocConsumer<SpotsCubit, SpotsState>(
+          : BlocListener<SpotsCubit, SpotsState>(
+              // The home board paints this map: refresh it after any edit.
               listenWhen: (previous, current) =>
-                  previous.actionError != current.actionError &&
-                  current.actionError != null,
+                  previous.spots != current.spots,
               listener: (context, state) {
-                final error = state.actionError;
-                if (error != null) {
-                  showErrorSnack(context, context.l10n.failure(error));
-                  context.read<SpotsCubit>().clearActionError();
+                try {
+                  unawaited(context.read<DashboardCubit>().load());
+                } on ProviderNotFoundException {
+                  // Isolated tests: no dashboard to refresh.
                 }
               },
-              builder: (context, state) => switch (state.status) {
-                SpotsStatus.initial ||
-                SpotsStatus.loading => const SkeletonCardList(itemCount: 3),
-                SpotsStatus.failure => ErrorState(
-                  message: context.l10n.failure(state.error!),
-                  onRetry: context.read<SpotsCubit>().load,
-                ),
-                SpotsStatus.loaded => _MapEditor(
-                  state: state,
-                  targets: _targets(context),
-                ),
-              },
+              child: BlocConsumer<SpotsCubit, SpotsState>(
+                listenWhen: (previous, current) =>
+                    previous.actionError != current.actionError &&
+                    current.actionError != null,
+                listener: (context, state) {
+                  final error = state.actionError;
+                  if (error != null) {
+                    showErrorSnack(context, context.l10n.failure(error));
+                    context.read<SpotsCubit>().clearActionError();
+                  }
+                },
+                builder: (context, state) => switch (state.status) {
+                  SpotsStatus.initial ||
+                  SpotsStatus.loading => const SkeletonCardList(itemCount: 3),
+                  SpotsStatus.failure => ErrorState(
+                    message: context.l10n.failure(state.error!),
+                    onRetry: context.read<SpotsCubit>().load,
+                  ),
+                  SpotsStatus.loaded => _MapEditor(
+                    state: state,
+                    targets: _targets(context),
+                  ),
+                },
+              ),
             ),
     );
   }
@@ -140,8 +156,18 @@ class _MapEditor extends StatelessWidget {
         break;
       }
     }
-    final rows = spots.fold<int>(3, (max, spot) => spot.row + 1 > max ? spot.row + 1 : max) + 1;
-    final cols = spots.fold<int>(4, (max, spot) => spot.col + 1 > max ? spot.col + 1 : max) + 1;
+    final rows =
+        spots.fold<int>(
+          3,
+          (max, spot) => spot.row + 1 > max ? spot.row + 1 : max,
+        ) +
+        1;
+    final cols =
+        spots.fold<int>(
+          4,
+          (max, spot) => spot.col + 1 > max ? spot.col + 1 : max,
+        ) +
+        1;
     final byCell = {for (final spot in spots) (spot.row, spot.col): spot};
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -252,10 +278,8 @@ class _MapEditor extends StatelessWidget {
     final suggestion = 'S${state.spots.length + 1}';
     final draft = await showDialog<_SpotDraft>(
       context: context,
-      builder: (_) => _AddSpotDialog(
-        initialCode: suggestion,
-        available: available,
-      ),
+      builder: (_) =>
+          _AddSpotDialog(initialCode: suggestion, available: available),
     );
     if (draft == null) {
       return;
@@ -420,10 +444,12 @@ class _AddSpotDialogState extends State<_AddSpotDialog> {
   late final TextEditingController _code = TextEditingController(
     text: widget.initialCode,
   );
-  late SlotGroup _group = [
-    for (final group in SlotGroup.values)
-      if (widget.available[group] != false) group,
-  ].firstOrNull ?? SlotGroup.car;
+  late SlotGroup _group =
+      [
+        for (final group in SlotGroup.values)
+          if (widget.available[group] != false) group,
+      ].firstOrNull ??
+      SlotGroup.car;
 
   @override
   void dispose() {
@@ -486,26 +512,47 @@ class _EditSpotSheetState extends State<_EditSpotSheet> {
   late final TextEditingController _code = TextEditingController(
     text: widget.spot.code,
   );
+  late final TextEditingController _reason = TextEditingController();
   late SlotGroup _group = widget.spot.group;
   late bool _active = widget.spot.active;
+  String? _reasonError;
 
   @override
   void dispose() {
     _code.dispose();
+    _reason.dispose();
     super.dispose();
   }
 
   Future<void> _save() async {
+    final l10n = context.l10n;
     final code = _code.text.trim().toUpperCase();
     if (code.isEmpty) {
       return;
     }
+    final reason = _reason.text.trim();
+    if (!_active && reason.isNotEmpty && reason.length < 3) {
+      setState(() => _reasonError = l10n.spotsReasonInvalid);
+      return;
+    }
     await context.read<SpotsCubit>().update(
       widget.spot.copyWith(code: code, group: _group, active: _active),
+      reason: _active ? null : (reason.isEmpty ? null : reason),
     );
     if (mounted) {
       Navigator.of(context).pop();
     }
+  }
+
+  Future<void> _openHistory() {
+    final cubit = context.read<SpotsCubit>();
+    return showDialog<void>(
+      context: context,
+      builder: (_) => BlocProvider<SpotsCubit>.value(
+        value: cubit,
+        child: _SpotHistoryDialog(spot: widget.spot),
+      ),
+    );
   }
 
   Future<void> _delete() async {
@@ -539,40 +586,212 @@ class _EditSpotSheetState extends State<_EditSpotSheet> {
           Space.md,
           Space.md + MediaQuery.viewInsetsOf(context).bottom,
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(l10n.spotLabel(widget.spot.code)),
-            const SizedBox(height: Space.sm),
-            TextField(
-              key: const Key('spot_edit_code'),
-              controller: _code,
-              textCapitalization: TextCapitalization.characters,
-              decoration: InputDecoration(labelText: l10n.spotsCode),
-            ),
-            const SizedBox(height: Space.md),
-            _GroupField(
-              value: _group,
-              onChanged: (value) => setState(() => _group = value),
-            ),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              value: _active,
-              onChanged: (value) => setState(() => _active = value),
-              title: Text(l10n.spotsActive),
-              subtitle: Text(l10n.spotsActiveHint),
-            ),
-            const SizedBox(height: Space.sm),
-            FilledButton(onPressed: _save, child: Text(l10n.actionSave)),
-            TextButton.icon(
-              onPressed: _delete,
-              icon: const Icon(Icons.delete_outline),
-              label: Text(l10n.spotsDelete),
-            ),
-          ],
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(l10n.spotLabel(widget.spot.code)),
+              const SizedBox(height: Space.sm),
+              TextField(
+                key: const Key('spot_edit_code'),
+                controller: _code,
+                textCapitalization: TextCapitalization.characters,
+                decoration: InputDecoration(labelText: l10n.spotsCode),
+              ),
+              const SizedBox(height: Space.md),
+              _GroupField(
+                value: _group,
+                onChanged: (value) => setState(() => _group = value),
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                value: _active,
+                onChanged: (value) => setState(() {
+                  _active = value;
+                  _reasonError = null;
+                }),
+                title: Text(l10n.spotsActive),
+                subtitle: Text(l10n.spotsActiveHint),
+              ),
+              if (!_active) ...[
+                const SizedBox(height: Space.sm),
+                TextField(
+                  key: const Key('spot_reason'),
+                  controller: _reason,
+                  maxLength: 200,
+                  maxLines: 2,
+                  minLines: 1,
+                  textCapitalization: TextCapitalization.sentences,
+                  onChanged: (_) {
+                    if (_reasonError != null) {
+                      setState(() => _reasonError = null);
+                    }
+                  },
+                  decoration: InputDecoration(
+                    labelText: l10n.spotsReason,
+                    hintText: l10n.spotsReasonHint,
+                    errorText: _reasonError,
+                    helperMaxLines: 2,
+                  ),
+                ),
+              ],
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: _openHistory,
+                  icon: const Icon(Icons.history, size: 18),
+                  label: Text(l10n.spotsHistory),
+                ),
+              ),
+              const SizedBox(height: Space.sm),
+              FilledButton(onPressed: _save, child: Text(l10n.actionSave)),
+              TextButton.icon(
+                onPressed: _delete,
+                icon: const Icon(Icons.delete_outline),
+                label: Text(l10n.spotsDelete),
+              ),
+            ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+class _SpotHistoryDialog extends StatefulWidget {
+  const _SpotHistoryDialog({required this.spot});
+
+  final ParkingSpot spot;
+
+  @override
+  State<_SpotHistoryDialog> createState() => _SpotHistoryDialogState();
+}
+
+class _SpotHistoryDialogState extends State<_SpotHistoryDialog> {
+  late Future<List<SpotEvent>> _events;
+
+  @override
+  void initState() {
+    super.initState();
+    _events = _load();
+  }
+
+  Future<List<SpotEvent>> _load() =>
+      context.read<SpotsCubit>().listEvents(widget.spot.id);
+
+  void _retry() {
+    setState(() {
+      _events = _load();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return AlertDialog(
+      title: Text(l10n.spotsHistoryTitle(widget.spot.code)),
+      content: SizedBox(
+        width: math.min(420, MediaQuery.sizeOf(context).width - 80),
+        height: 300,
+        child: FutureBuilder<List<SpotEvent>>(
+          future: _events,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const SkeletonPulse(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SkeletonBox(width: 180, height: 14),
+                    SizedBox(height: Space.md),
+                    SkeletonBox(height: 12),
+                    SizedBox(height: Space.md),
+                    SkeletonBox(width: 220, height: 14),
+                    SizedBox(height: Space.md),
+                    SkeletonBox(height: 12),
+                  ],
+                ),
+              );
+            }
+            if (snapshot.hasError) {
+              final error = snapshot.error;
+              return Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                    const SizedBox(height: Space.sm),
+                    Text(
+                      error is Failure
+                          ? l10n.failure(error)
+                          : l10n.errorUnknown,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: Space.sm),
+                    TextButton(
+                      onPressed: _retry,
+                      child: Text(l10n.actionRetry),
+                    ),
+                  ],
+                ),
+              );
+            }
+            final events = snapshot.data ?? const <SpotEvent>[];
+            if (events.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.history,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(height: Space.sm),
+                    Text(l10n.spotsHistoryEmpty, textAlign: TextAlign.center),
+                  ],
+                ),
+              );
+            }
+            final status = StatusColors.of(context);
+            return ListView.separated(
+              shrinkWrap: true,
+              itemCount: events.length,
+              separatorBuilder: (_, _) => const Divider(height: 1),
+              itemBuilder: (context, index) {
+                final event = events[index];
+                return ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(
+                    event.active
+                        ? Icons.check_circle_outline
+                        : Icons.build_outlined,
+                    color: event.active ? status.success : status.warning,
+                  ),
+                  title: Text(
+                    '${event.active ? l10n.spotsActive : l10n.slotMaintenance}'
+                    ' · ${Formatters.dateTime(event.createdAt)}',
+                  ),
+                  subtitle: Text(
+                    [
+                      event.actorName ?? l10n.spotsHistorySystem,
+                      if (event.reason != null) event.reason!,
+                    ].join(' · '),
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.actionClose),
+        ),
+      ],
     );
   }
 }
@@ -638,9 +857,7 @@ class _GroupProgress extends StatelessWidget {
       SlotGroup.heavy => l10n.slotBoardHeavy,
     };
     final mismatch = target > 0 && drawn != target;
-    final detail = target > 0
-        ? l10n.spotsGroupCount(drawn, target)
-        : '$drawn';
+    final detail = target > 0 ? l10n.spotsGroupCount(drawn, target) : '$drawn';
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -667,9 +884,8 @@ class _GroupProgress extends StatelessWidget {
             drawn < target
                 ? l10n.spotsRemaining(target - drawn)
                 : l10n.spotsExcess(drawn - target),
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: scheme.error,
-            ),
+            style: Theme.of(context).textTheme.labelSmall
+                ?.copyWith(color: scheme.error),
           ),
         ],
       ],

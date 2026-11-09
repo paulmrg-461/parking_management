@@ -5,6 +5,7 @@ import '../../../core/error/failure.dart';
 import '../../../core/state/resilient_cubit.dart';
 import '../../check_out/domain/entities/slot_board.dart';
 import '../domain/entities/parking_spot.dart';
+import '../domain/entities/spot_event.dart';
 import '../domain/repositories/spot_repository.dart';
 
 enum SpotsStatus { initial, loading, loaded, failure }
@@ -160,14 +161,12 @@ class SpotsCubit extends ResilientCubit<SpotsState> {
     }
   }
 
-  Future<ParkingSpot?> update(ParkingSpot spot) {
+  Future<ParkingSpot?> update(ParkingSpot spot, {String? reason}) {
     final previous = state.spots
         .where((item) => item.id == spot.id)
         .map((item) => item.group)
         .firstOrNull;
-    if (previous != null &&
-        previous != spot.group &&
-        !canAddTo(spot.group)) {
+    if (previous != null && previous != spot.group && !canAddTo(spot.group)) {
       emit(
         state.copyWith(
           actionError: const ValidationFailure(
@@ -180,16 +179,22 @@ class SpotsCubit extends ResilientCubit<SpotsState> {
     }
     return _write(
       save: () => _repository.save(
-      id: spot.id,
-      code: spot.code,
-      group: spot.group,
+        id: spot.id,
+        code: spot.code,
+        group: spot.group,
         row: spot.row,
         col: spot.col,
         active: spot.active,
+        reason: reason,
       ),
       onSaved: (saved) => state.copyWith(spots: _replace(spot.id, saved)),
     );
   }
+
+  /// Latest maintenance transitions of a bay; the editor dialog handles the
+  /// loading/error UI.
+  Future<List<SpotEvent>> listEvents(int spotId) =>
+      _repository.listEvents(spotId);
 
   Future<bool> remove(ParkingSpot spot) async {
     if (!canRemove(spot)) {
@@ -206,7 +211,10 @@ class SpotsCubit extends ResilientCubit<SpotsState> {
     final previous = state.spots;
     emit(
       state.copyWith(
-        spots: [for (final item in previous) if (item.id != spot.id) item],
+        spots: [
+          for (final item in previous)
+            if (item.id != spot.id) item,
+        ],
         actionError: null,
       ),
     );

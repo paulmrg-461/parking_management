@@ -1142,6 +1142,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get spotsActiveHint => 'Turn it off for maintenance';
 
   @override
+  String get spotsReason => 'Maintenance reason (optional)';
+
+  @override
+  String get spotsReasonHint => 'E.g. oil leak, painting, broken glass';
+
+  @override
+  String get spotsReasonInvalid =>
+      'Write at least 3 characters or leave it empty';
+
+  @override
+  String get spotsHistory => 'View history';
+
+  @override
+  String spotsHistoryTitle(String code) {
+    return 'History of $code';
+  }
+
+  @override
+  String get spotsHistoryEmpty => 'No status changes';
+
+  @override
+  String get spotsHistorySystem => 'System';
+
+  @override
   String get spotsDelete => 'Delete spot';
 
   @override

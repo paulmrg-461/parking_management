@@ -8,6 +8,7 @@ import 'package:parking_management/features/lots/domain/entities/parking_lot.dar
 import 'package:parking_management/features/monthly_passes/domain/entities/monthly_pass_payment.dart';
 import 'package:parking_management/features/policies/domain/entities/lot_profile.dart';
 import 'package:parking_management/features/records/domain/entities/session_record.dart';
+import 'package:parking_management/features/spots/domain/entities/spot_event.dart';
 import 'package:parking_management/features/monthly_passes/infrastructure/models/monthly_pass_dto.dart';
 import 'package:parking_management/features/vehicles/infrastructure/models/vehicle_dto.dart';
 
@@ -190,6 +191,34 @@ void main() {
       expect(edited.name, 'Norte 2');
       expect(edited.isLotAdmin, isTrue);
       expect(edited.id, lot.id);
+    });
+
+    test('SpotEvent keeps optional reason and actor', () {
+      final event = SpotEvent.fromJson({
+        'id': 3,
+        'spot_id': 7,
+        'spot_code': 'A1',
+        'status': 'out_of_service',
+        'active': false,
+        'reason': 'fuga de aceite',
+        'actor_name': 'Paul',
+        'created_at': '2026-11-09T10:00:00Z',
+      });
+
+      expect(event.active, isFalse);
+      expect(event.reason, 'fuga de aceite');
+      expect(event.actorName, 'Paul');
+      expect(event.spotId, 7);
+      expect(event.createdAt.isUtc, isFalse);
+
+      final bare = SpotEvent.fromJson({
+        'id': 4,
+        'spot_code': 'B2',
+        'active': true,
+      });
+      expect(bare.reason, isNull);
+      expect(bare.actorName, isNull);
+      expect(bare.active, isTrue);
     });
   });
 }

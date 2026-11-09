@@ -1814,6 +1814,119 @@ begin
     end if;
 end $$;
 
+-- Per-bay maintenance history: transitions are logged with actor and reason.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    spot_id integer;
+    events jsonb;
+    first_event jsonb;
+    refused boolean;
+begin
+    update public.parking_settings
+       set car_capacity = 0, moto_capacity = 0
+     where lot_id = 1;
+    spot_id := (public.save_parking_spot('M1', 'car', 0, 0) ->> 'id')::integer;
+
+    -- Saving the same status again must not pollute the history.
+    perform public.save_parking_spot('M1', 'car', 0, 0, spot_id, true);
+    if jsonb_array_length(public.list_spot_events(spot_id)) <> 0 then
+        raise exception 'a no-op save created a maintenance event';
+    end if;
+
+    perform public.save_parking_spot(
+        'M1', 'car', 0, 0, spot_id, false, 'fuga de aceite'
+    );
+    events := public.list_spot_events(spot_id);
+    if jsonb_array_length(events) <> 1 then
+        raise exception 'the maintenance event was not logged';
+    end if;
+    first_event := events -> 0;
+    if first_event ->> 'status' <> 'out_of_service'
+       or first_event ->> 'reason' <> 'fuga de aceite' then
+        raise exception 'maintenance event lost its status/reason: %', first_event;
+    end if;
+    if coalesce(first_event ->> 'actor_name', '') = '' then
+        raise exception 'maintenance event lost its actor';
+    end if;
+
+    perform public.save_parking_spot('M1', 'car', 0, 0, spot_id, true);
+    events := public.list_spot_events(spot_id);
+    if jsonb_array_length(events) <> 2
+       or (events -> 0 ->> 'status') <> 'active' then
+        raise exception 'the return to service was not logged newest first';
+    end if;
+
+    refused := false;
+    begin
+        perform public.save_parking_spot(
+            'M1', 'car', 0, 0, spot_id, false, 'ab'
+        );
+        raise exception 'a too-short reason was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidSpotReasonError%' then
+            raise;
+        end if;
+        refused := true;
+    end;
+    if not refused then
+        raise exception 'the bay accepted a 2-character reason';
+    end if;
+
+    refused := false;
+    begin
+        perform public.list_spot_events(spot_id, 0);
+        raise exception 'an invalid event limit was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidSpotEventLimitError%' then
+            raise;
+        end if;
+        refused := true;
+    end;
+    if not refused then
+        raise exception 'the bay history accepted limit 0';
+    end if;
+end $$;
+
+-- Operators can read the history but never change a bay status.
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+declare
+    spot_id integer := (
+        select id from public.parking_spots where lot_id = 1 and code = 'M1'
+    );
+begin
+    begin
+        perform public.save_parking_spot(
+            'M1', 'car', 0, 0, spot_id, false, 'prueba'
+        );
+        raise exception 'an operator changed a bay status';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then
+            raise;
+        end if;
+    end;
+    if (select count(*) from public.parking_spot_events where lot_id = 1) < 2 then
+        raise exception 'an operator could not read the maintenance history';
+    end if;
+end $$;
+
+-- The maintenance history is lot-scoped through RLS.
+set local role authenticated;
+set local request.headers = '{"x-lot-id":"2"}';
+do $$
+begin
+    if exists (select 1 from public.parking_spot_events) then
+        raise exception 'maintenance history leaked across lots';
+    end if;
+end $$;
+reset role;
+set local request.headers = '{"x-lot-id":"1"}';
+
+-- Leave the map as the next blocks expect it (no drawn car bays).
+delete from public.parking_spots where lot_id = 1 and code = 'M1';
+
 -- Records log: lot-scoped, plate filter, totals and paging.
 set local request.headers = '{"x-lot-id":"1"}';
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';

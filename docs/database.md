@@ -17,6 +17,9 @@ erDiagram
   parking_lots ||--o{ shifts : "hosts"
   parking_lots ||--o{ monthly_passes : "hosts"
   parking_lots ||--o{ category_reservations : "holds"
+  parking_lots ||--o{ parking_spots : "maps"
+  parking_spots ||--o{ parking_spot_events : "logged in"
+  users ||--o{ parking_spot_events : "changes"
 
   categories ||--o{ tariffs : "priced by"
   categories ||--o{ vehicles : "classifies"
@@ -58,6 +61,8 @@ erDiagram
 | `monthly_passes` | Pass period/amount, auto-renew flag, renewal link. | yes |
 | `monthly_pass_payments` | Exactly one charge per pass (`pending`/`paid`/`waived`), collected into a shift. | yes |
 | `category_reservations` | Capacity hold for a plate (`active`/`used`/`cancelled`/`expired`). | yes |
+| `parking_spots` | Physical bay per site: code, group (`car`/`moto`/`heavy`), grid cell and `active`/`out_of_service`; unique code and cell per lot. | yes |
+| `parking_spot_events` | Maintenance history of a bay: status transition, optional reason, actor and timestamp; written by `save_parking_spot`, lot-scoped RLS. | yes |
 | `parking_settings` (`car_capacity`, `moto_capacity`, `key_capacity`) | Per-site branding (name, address, schedule, contacts, police quadrant, logo version/path) + `business_timezone`, `overstay_hours`, `lost_ticket_fee`, `evidence_retention_days`. | yes |
 | `notifications` | Per-user inbox rows (type, title, body, data, read/pushed state, dedupe key). | optional |
 | `device_tokens` | FCM tokens per user/device. | no |
@@ -101,8 +106,10 @@ there).
 
 **Physical map**
 `parking_spots` (`code`, `group_name`, `grid_row`, `grid_col`, `status`;
-unique code and cell per lot), `parking_sessions.spot_id` (one open session per
-bay), `save_parking_spot`, `delete_parking_spot`, `assign_session_spot`,
+unique code and cell per lot), `parking_spot_events` (status transitions with
+actor, reason and timestamp; lot-scoped RLS, written by `save_parking_spot`),
+`parking_sessions.spot_id` (one open session per bay), `save_parking_spot`,
+`delete_parking_spot`, `assign_session_spot`, `list_spot_events`,
 `category_group(name)`, `spot_target_capacity(lot, group)`; a group with spots
 limits check-ins and holds to its active bays, and `save/delete_parking_spot`
 keep the drawn bays equal to the configured capacity (`0` = no limit).

@@ -43,7 +43,7 @@ WhatsApp (manual or automated).
 | Secrets / PIN operations | Complete (scripts + runbook) | PIN rotation verified live |
 | E2E and CI | Complete (API + Flutter client, real stack) | CI job `supabase-e2e` |
 
-Quality snapshot (2026-11-09, local stack): **1013 Flutter tests + 1 integration
+Quality snapshot (2026-11-09, local stack): **1022 Flutter tests + 1 integration
 test**, SQL/RLS suite green, web build green, analyzer with **0 errors and 0
 warnings** (only SDK deprecation infos from the pinned beta channel), restore
 drill green.
@@ -58,7 +58,7 @@ the main data it touches.
 |---|---|---|
 | `auth` | PIN login, session restore, logout | GoTrue, `users`, `lot_members` |
 | `home` | Dashboard: occupancy + radial, space board (physical map), today KPIs, 7-day trend with week-over-week comparison, shift card, shortcuts | `occupancy_snapshot`, `dashboard_today`, `dashboard_trend`, `slot_board` |
-| `spots` | Admin drag & drop map editor and bay layout | `parking_spots`, `save/delete_parking_spot` |
+| `spots` | Admin drag & drop map editor and bay layout, with a maintenance history per bay | `parking_spots`, `parking_spot_events`, `save/delete_parking_spot`, `list_spot_events` |
 | `check_in` | Plate lookup, evidence photos, offline queue | `check_in`, `vehicles`, Storage `evidence` |
 | `check_out` | Open sessions (paged), payment, receipt | `check_out`, `calculate_fare`, `open_sessions_view` |
 | `records` | Site activity log with a plate filter and paging | `session_records` |
@@ -151,8 +151,6 @@ Deployment: [`setup-cloud.md`](setup-cloud.md) (single VM + TLS proxy) and
 - Cold-storage archival for evidence files (currently deleted after retention).
 - Longer trend analysis: the home shows the last 7 days and reports cover the
   selected range, but there is no month-over-month or year-over-year view.
-- Per-bay maintenance history (the map already takes a bay out of service; it
-  does not log when or why).
 - iOS target if required.
 - Template management UI for automated WhatsApp.
 - Conflict resolution for offline reference-data edits (last-write-wins today).

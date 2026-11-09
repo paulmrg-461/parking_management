@@ -4,15 +4,15 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-11-09 (home trend comparison + parallel load). Branch `feature/supabase`.
+Last updated: 2026-11-09 (home trend comparison, parallel load, bay maintenance history). Branch `feature/supabase`.
 
 ## Where we are
 
 - Stack: Flutter (android + web) + self-hosted Supabase only. No FastAPI,
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
-- `supabase/migrations/0001..0080` are the schema owner (applied by
+- `supabase/migrations/0001..0081` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 1013 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 1022 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -114,6 +114,29 @@ Last updated: 2026-11-09 (home trend comparison + parallel load). Branch `featur
   `core/widgets/skeleton.dart` (`SkeletonCardList` reuses them).
 - Gotcha: never `pumpAndSettle` while the dashboard is still loading — the
   skeleton pulse repeats forever. Use `pump()` and complete the gate first.
+
+### Bay maintenance history (2026-11-09)
+
+- `0081` adds `parking_spot_events` (lot, spot, spot_code, status, reason,
+  actor, created_at; RLS `lot_id = current_lot_id()`, select grant only). The
+  RPC `save_parking_spot` gained a trailing `p_reason text default null` and
+  logs a row on real status transitions (a bay created already out of service,
+  or an update that changes the status). A no-op save does not pollute it.
+- The 6-argument `save_parking_spot` overload is **dropped on purpose**: with
+  the trailing default, keeping both makes 6-argument calls ambiguous (same
+  trap as `check_in`). Positional test calls still work.
+- `list_spot_events(p_spot_id, p_limit default 20)` returns newest first and
+  must order by `created_at desc, id desc`: `now()` is constant inside a
+  transaction, so the id is the tiebreaker between two transitions made in the
+  same RPC/test.
+- UI: turning a bay off reveals an optional reason (3..200 characters or
+  empty; shorter values are blocked client-side), "Ver historial" opens a
+  dialog with skeleton/empty/error+retry, and the editor refreshes
+  `DashboardCubit` whenever the map changes so the home board is not stale.
+  Operators can read the history; only admins can change a bay.
+- Live smoke (PostgREST): took bay S1 out with "prueba de humo", the event came
+  back with actor Admin and the reason, then restored it and deleted the two
+  smoke rows. Test count: 1022; schema `0001..0081`.
 
 ## Owner contact data (2026-11-05)
 

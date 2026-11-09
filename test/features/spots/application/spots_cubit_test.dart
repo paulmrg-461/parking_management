@@ -3,6 +3,7 @@ import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/features/check_out/domain/entities/slot_board.dart';
 import 'package:parking_management/features/spots/application/spots_cubit.dart';
 import 'package:parking_management/features/spots/domain/entities/parking_spot.dart';
+import 'package:parking_management/features/spots/domain/entities/spot_event.dart';
 
 import '../../../helpers/fake_spot_repository.dart';
 
@@ -103,5 +104,54 @@ void main() {
     // Lowering the target in Ajustes makes the removal legal.
     cubit.setTargets(const {SlotGroup.car: 1});
     expect(await cubit.remove(cubit.state.spots.first), isTrue);
+  });
+
+  test('Success: going out of service sends the maintenance reason', () async {
+    final repository = FakeSpotRepository(const [
+      ParkingSpot(id: 1, code: 'A1', group: SlotGroup.car, row: 0, col: 0),
+    ]);
+    final cubit = SpotsCubit(repository);
+    addTearDown(cubit.close);
+    await cubit.load();
+
+    await cubit.update(
+      cubit.state.spots.single.copyWith(active: false),
+      reason: 'fuga de aceite',
+    );
+
+    expect(repository.lastReason, 'fuga de aceite');
+    expect(cubit.state.spots.single.active, isFalse);
+  });
+
+  test('Success: the maintenance history is read per bay', () async {
+    final repository = FakeSpotRepository(const [
+      ParkingSpot(id: 1, code: 'A1', group: SlotGroup.car, row: 0, col: 0),
+    ]);
+    repository.events = [
+      SpotEvent(
+        id: 7,
+        spotId: 1,
+        spotCode: 'A1',
+        active: false,
+        reason: 'pintura',
+        actorName: 'Paul',
+        createdAt: DateTime(2026, 11, 9, 10),
+      ),
+      SpotEvent(
+        id: 8,
+        spotId: 2,
+        spotCode: 'B2',
+        active: true,
+        createdAt: DateTime(2026, 11, 9, 11),
+      ),
+    ];
+    final cubit = SpotsCubit(repository);
+    addTearDown(cubit.close);
+
+    final events = await cubit.listEvents(1);
+
+    expect(repository.eventCalls, 1);
+    expect(events, hasLength(1));
+    expect(events.single.reason, 'pintura');
   });
 }

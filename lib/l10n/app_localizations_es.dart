@@ -1149,6 +1149,30 @@ class AppLocalizationsEs extends AppLocalizations {
   String get spotsActiveHint => 'Desactívalo para mantenimiento';
 
   @override
+  String get spotsReason => 'Motivo del mantenimiento (opcional)';
+
+  @override
+  String get spotsReasonHint => 'Ej. fuga de aceite, pintura, vidrio roto';
+
+  @override
+  String get spotsReasonInvalid =>
+      'Escribe al menos 3 caracteres o déjalo vacío';
+
+  @override
+  String get spotsHistory => 'Ver historial';
+
+  @override
+  String spotsHistoryTitle(String code) {
+    return 'Historial de $code';
+  }
+
+  @override
+  String get spotsHistoryEmpty => 'Sin cambios de estado';
+
+  @override
+  String get spotsHistorySystem => 'Sistema';
+
+  @override
   String get spotsDelete => 'Eliminar espacio';
 
   @override
