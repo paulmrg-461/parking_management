@@ -4,7 +4,7 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-11-09 (PDF hourly chart, parallel loads, records evidence).
+Last updated: 2026-11-09 (startup splash, PDF hourly chart, parallel loads).
 
 ## Where we are
 
@@ -12,7 +12,7 @@ Last updated: 2026-11-09 (PDF hourly chart, parallel loads, records evidence).
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0086` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 1066 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 1067 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -292,6 +292,19 @@ Last updated: 2026-11-09 (PDF hourly chart, parallel loads, records evidence).
   scaled to the busiest entry hour, with 00/06/12/18/23 labels; the table below
   keeps exact entries/exits. `hourlyBarHeights` is pure and tested (busiest =
   68 pt, zero hours = 0). No new SQL. Test count: 1066.
+
+### Startup splash (2026-11-09)
+
+- `main()` now `runApp`s a minimal `_BootstrapSplash` (logo + loading, theme
+  and locale from the cubits) **before** `await authCubit.restore()`. The real
+  `ParkingApp` replaces it once the restore (Hive session + lot memberships +
+  `x-lot-id`) resolves, so a slow network no longer leaves a blank screen.
+  `initialLocation` stays `homePath`, so deep links/bookmarks are unaffected.
+- `AuthCubit.restore` catches local-storage errors and emits
+  `AuthUnauthenticated` (a corrupt cache lands on login, never a stuck splash).
+  `SyncService.start()` still runs after the restore so queued writes never
+  fire token-less.
+- `SplashPage` test covers the brand + progress; test count: 1067.
 
 ## Owner contact data (2026-11-05)
 
@@ -1142,6 +1155,8 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 ## Boot order (fresh installs)
 
+- `main()` renders a branded splash while `auth.restore()` reads the Hive
+  session and loads memberships; the real app replaces it when that resolves.
 - `configureDependencies()` initializes `KeyValueStore` (Hive) **before**
   `_initSupabase`: the boot clears a stale cached session through Hive, which
   needs `Hive.init(path)` on mobile (web needs no path, so the bug only showed

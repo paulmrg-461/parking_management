@@ -69,15 +69,20 @@ class AuthCubit extends ResilientCubit<AuthState> {
 
   Future<void> restore() async {
     emit(const AuthLoading());
-    final session = await _repository.restoreSession();
-    if (session != null) {
-      await _sessionReady();
+    try {
+      final session = await _repository.restoreSession();
+      if (session != null) {
+        await _sessionReady();
+      }
+      emit(
+        session == null
+            ? const AuthUnauthenticated()
+            : AuthAuthenticated(session),
+      );
+    } on Object {
+      // Corrupt local storage must never leave the app on the splash forever.
+      emit(const AuthUnauthenticated());
     }
-    emit(
-      session == null
-          ? const AuthUnauthenticated()
-          : AuthAuthenticated(session),
-    );
   }
 
   /// A broken lot lookup must not block sign-in: requests then fail closed
