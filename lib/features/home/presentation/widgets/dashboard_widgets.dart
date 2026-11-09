@@ -1031,7 +1031,19 @@ class TrendCard extends StatelessWidget {
         final trend = state is DashboardLoaded
             ? state.trend
             : DashboardTrend.empty;
-        final quiet = state is DashboardLoaded && !trend.hasMovement;
+        final current = trend.latest(7);
+        final previous = trend.window(7, skip: 7);
+        final quiet =
+            state is DashboardLoaded && !current.any((day) => day.hasMovement);
+        final previousTotal = trend.revenueOf(previous);
+        final currentTotal = trend.revenueOf(current);
+        final comparable =
+            previous.length == current.length &&
+            current.isNotEmpty &&
+            previousTotal > 0;
+        final delta = comparable
+            ? ((currentTotal - previousTotal) * 100 / previousTotal).round()
+            : null;
         return Card(
           child: Padding(
             padding: const EdgeInsets.all(Space.md),
@@ -1048,9 +1060,9 @@ class TrendCard extends StatelessWidget {
                         children: [
                           Text(l10n.homeTrend, style: textTheme.titleSmall),
                           Text(
-                            trend.isEmpty
+                            current.isEmpty
                                 ? l10n.homeTrendHint
-                                : _rangeLabel(context, trend),
+                                : _rangeLabel(context, current),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: textTheme.bodySmall?.copyWith(
@@ -1078,7 +1090,7 @@ class TrendCard extends StatelessWidget {
                 else if (quiet)
                   _TrendQuiet(message: l10n.homeTrendEmpty)
                 else ...[
-                  _TrendChart(days: trend.days),
+                  _TrendChart(days: current),
                   const SizedBox(height: Space.md),
                   Wrap(
                     spacing: Space.lg,
@@ -1086,18 +1098,39 @@ class TrendCard extends StatelessWidget {
                     children: [
                       _TodayMetric(
                         label: l10n.homeTrendTotal,
-                        value: Formatters.money(trend.totalRevenue),
+                        value: Formatters.money(currentTotal),
                       ),
                       _TodayMetric(
                         label: l10n.homeTrendEntries,
-                        value: '${trend.totalEntries}',
+                        value: '${_sum(current, (day) => day.entries)}',
                       ),
                       _TodayMetric(
                         label: l10n.homeTrendExits,
-                        value: '${trend.totalExits}',
+                        value: '${_sum(current, (day) => day.exits)}',
                       ),
                     ],
                   ),
+                  if (delta != null) ...[
+                    const SizedBox(height: Space.sm),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: StatusChip(
+                        label: delta == 0
+                            ? l10n.homeTrendFlat
+                            : l10n.homeTrendVsPrevious(_signedPercent(delta)),
+                        tone: switch (delta) {
+                          > 0 => StatusTone.success,
+                          < 0 => StatusTone.warning,
+                          _ => StatusTone.neutral,
+                        },
+                        icon: switch (delta) {
+                          > 0 => Icons.trending_up,
+                          < 0 => Icons.trending_down,
+                          _ => Icons.trending_flat,
+                        },
+                      ),
+                    ),
+                  ],
                 ],
               ],
             ),
@@ -1107,11 +1140,17 @@ class TrendCard extends StatelessWidget {
     );
   }
 
-  static String _rangeLabel(BuildContext context, DashboardTrend trend) {
+  static int _sum(List<TrendDay> days, int Function(TrendDay) value) =>
+      days.fold<int>(0, (total, day) => total + value(day));
+
+  static String _signedPercent(int percent) =>
+      percent > 0 ? '+$percent %' : '$percent %';
+
+  static String _rangeLabel(BuildContext context, List<TrendDay> days) {
     final format = DateFormat.MMMd(context.l10n.localeName);
     return context.l10n.homeTrendRange(
-      format.format(trend.days.first.date),
-      format.format(trend.days.last.date),
+      format.format(days.first.date),
+      format.format(days.last.date),
     );
   }
 }

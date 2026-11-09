@@ -612,6 +612,9 @@ begin
     if jsonb_array_length(days) <> 7 then
         raise exception 'trend did not return one row per day';
     end if;
+    if jsonb_array_length(public.dashboard_trend(14) -> 'days') <> 14 then
+        raise exception 'trend ignored the requested window length';
+    end if;
     if trend ->> 'end_date' <> to_char(current_date, 'YYYY-MM-DD') then
         raise exception 'trend did not end on the business day';
     end if;

@@ -118,6 +118,26 @@ void main() {
     expect(state.trend, DashboardTrend.empty);
   });
 
+  test('Success: the dashboard extras load in parallel', () async {
+    final repository = FakeCheckOutRepository(sessions: _sessions(1));
+    final gate = Completer<void>();
+    repository.todayGate = gate.future;
+    final cubit = DashboardCubit(repository);
+
+    final pending = cubit.load();
+    await pumpEventQueue();
+
+    // While today's summary is still waiting, the trend already ran: the
+    // extras are concurrent instead of serialized behind it.
+    expect(repository.trendCalls, 1);
+    expect(repository.trendDaysRequested, 14);
+
+    gate.complete();
+    await pending;
+
+    expect(cubit.state, isA<DashboardLoaded>());
+  });
+
   test(
     'Success: the capacity snapshot and inside list feed the home',
     () async {

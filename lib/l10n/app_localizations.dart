@@ -2714,6 +2714,18 @@ abstract class AppLocalizations {
   /// **'{date}: {amount} · {entries} entradas · {exits} salidas'**
   String homeTrendDay(String date, String amount, int entries, int exits);
 
+  /// No description provided for @homeTrendVsPrevious.
+  ///
+  /// In es, this message translates to:
+  /// **'{delta} vs semana anterior'**
+  String homeTrendVsPrevious(String delta);
+
+  /// No description provided for @homeTrendFlat.
+  ///
+  /// In es, this message translates to:
+  /// **'Igual que la semana anterior'**
+  String get homeTrendFlat;
+
   /// No description provided for @homeCapacityTitle.
   ///
   /// In es, this message translates to:

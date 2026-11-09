@@ -118,19 +118,20 @@ class DashboardCubit extends ResilientCubit<DashboardState> {
 
   Future<DashboardLoaded> _fetch() async {
     final snapshot = await _sessions.occupancy();
-    // The extras are nice-to-have: a failure keeps zeros, not an error.
-    final today = await _sessions.todaySummary().catchError(
-      (Object _) => TodaySummary.empty,
-    );
-    final trend = await _sessions.dashboardTrend().catchError(
-      (Object _) => DashboardTrend.empty,
-    );
-    final capacity = await _sessions.capacitySnapshot().catchError(
-      (Object _) => CapacitySnapshot.empty,
-    );
-    final slotBoard = await _sessions.slotBoard().catchError(
-      (Object _) => SlotBoard.empty,
-    );
+    // The extras are independent and nice-to-have: run them together and
+    // degrade each failure on its own (a slow/cold endpoint must not serialize
+    // the whole dashboard).
+    final (today, trend, capacity, slotBoard, inside) = await (
+      _sessions.todaySummary().catchError((Object _) => TodaySummary.empty),
+      _sessions
+          .dashboardTrend(days: 14)
+          .catchError((Object _) => DashboardTrend.empty),
+      _sessions.capacitySnapshot().catchError(
+        (Object _) => CapacitySnapshot.empty,
+      ),
+      _sessions.slotBoard().catchError((Object _) => SlotBoard.empty),
+      _inside(),
+    ).wait;
     return DashboardLoaded(
       openSessions: snapshot.totalOpen,
       totalCapacity: snapshot.totalCapacity,
@@ -138,7 +139,7 @@ class DashboardCubit extends ResilientCubit<DashboardState> {
       today: today,
       trend: trend,
       capacity: capacity,
-      sessions: await _inside(),
+      sessions: inside,
       slotBoard: slotBoard,
     );
   }

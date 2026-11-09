@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -10,6 +12,7 @@ import 'package:parking_management/features/check_out/domain/entities/dashboard_
 import 'package:parking_management/features/check_out/domain/entities/today_summary.dart';
 import 'package:parking_management/features/check_out/domain/entities/open_session.dart';
 import 'package:parking_management/core/widgets/plate_text.dart';
+import 'package:parking_management/core/widgets/skeleton.dart';
 import 'package:parking_management/features/check_out/domain/entities/slot_board.dart';
 import 'package:parking_management/features/home/application/dashboard_cubit.dart';
 import 'package:parking_management/features/home/presentation/home_page.dart';
@@ -33,6 +36,8 @@ Future<FakeCheckOutRepository> _pump(
   TodaySummary today = TodaySummary.empty,
   DashboardTrend trend = DashboardTrend.empty,
   Failure? trendError,
+  Future<void>? todayGate,
+  bool settle = true,
   int capacity = 0,
   CapacitySnapshot? space,
   SlotBoard? board,
@@ -62,7 +67,8 @@ Future<FakeCheckOutRepository> _pump(
           trendError: trendError,
         )
         ..capacityToReturn = space ?? CapacitySnapshot.empty
-        ..slotBoardToReturn = board ?? SlotBoard.empty;
+        ..slotBoardToReturn = board ?? SlotBoard.empty
+        ..todayGate = todayGate;
   final auth = AuthCubit(
     FakeAuthRepository(sessionToRestore: sessionFor(role)),
   );
@@ -98,7 +104,11 @@ Future<FakeCheckOutRepository> _pump(
       child: BlocProvider.value(value: auth, child: testRouterApp(router)),
     ),
   );
-  await tester.pumpAndSettle();
+  if (settle) {
+    await tester.pumpAndSettle();
+  } else {
+    await tester.pump();
+  }
   return sessions;
 }
 
@@ -128,6 +138,18 @@ DashboardTrend _week() => DashboardTrend(
     for (var i = 0; i < 7; i++)
       TrendDay(
         date: DateTime(2026, 11, 3).add(Duration(days: i)),
+        revenue: i * 1000,
+        entries: i + 1,
+        exits: i,
+      ),
+  ],
+);
+
+DashboardTrend _fortnight() => DashboardTrend(
+  days: [
+    for (var i = 0; i < 14; i++)
+      TrendDay(
+        date: DateTime(2026, 10, 27).add(Duration(days: i)),
         revenue: i * 1000,
         entries: i + 1,
         exits: i,
@@ -273,6 +295,78 @@ void main() {
     expect(find.text('Sin movimientos en los últimos días'), findsOneWidget);
   });
 
+  testWidgets('Success: the trend compares against the previous week', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      trend: DashboardTrend(
+        days: [
+          for (var i = 0; i < 14; i++)
+            TrendDay(
+              date: DateTime(2026, 10, 27).add(Duration(days: i)),
+              revenue: i < 7 ? 10000 : 15000,
+            ),
+        ],
+      ),
+    );
+
+    expect(find.text('+50 % vs semana anterior'), findsOneWidget);
+    expect(find.textContaining('105.000'), findsOneWidget);
+  });
+
+  testWidgets('Success: a weaker week is flagged as a warning', (tester) async {
+    await _pump(
+      tester,
+      trend: DashboardTrend(
+        days: [
+          for (var i = 0; i < 14; i++)
+            TrendDay(
+              date: DateTime(2026, 10, 27).add(Duration(days: i)),
+              revenue: i < 7 ? 10000 : 5000,
+            ),
+        ],
+      ),
+    );
+
+    expect(find.text('-50 % vs semana anterior'), findsOneWidget);
+  });
+
+  testWidgets('Success: an even week says it matches the previous one', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      trend: DashboardTrend(
+        days: [
+          for (var i = 0; i < 14; i++)
+            TrendDay(
+              date: DateTime(2026, 10, 27).add(Duration(days: i)),
+              revenue: 5000,
+            ),
+        ],
+      ),
+    );
+
+    expect(find.text('Igual que la semana anterior'), findsOneWidget);
+  });
+
+  testWidgets('Success: the home paints card skeletons until it loads', (
+    tester,
+  ) async {
+    final gate = Completer<void>();
+    await _pump(tester, todayGate: gate.future, settle: false);
+
+    expect(find.byType(SkeletonCard), findsNWidgets(4));
+    expect(find.byType(OccupancyCard), findsNothing);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SkeletonCard), findsNothing);
+    expect(find.text('Vehículos dentro'), findsWidgets);
+  });
+
   testWidgets('Failure: a broken trend never hides the rest of the home', (
     tester,
   ) async {
@@ -310,10 +404,11 @@ void main() {
     tester.platformDispatcher.textScaleFactorTestValue = 1.6;
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
 
-    await _pump(tester, size: const Size(400, 2200), trend: _week());
+    await _pump(tester, size: const Size(400, 2200), trend: _fortnight());
 
     expect(tester.takeException(), isNull);
     expect(find.text('Tendencia'), findsOneWidget);
+    expect(find.textContaining('vs semana anterior'), findsOneWidget);
   });
 
   testWidgets('A11y: reduced motion fills the occupancy bar immediately', (

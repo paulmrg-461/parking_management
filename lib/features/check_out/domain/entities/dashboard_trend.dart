@@ -58,6 +58,24 @@ class DashboardTrend extends Equatable {
 
   bool get hasMovement => days.any((day) => day.hasMovement);
 
+  /// The last [length] days, or fewer when the series is short.
+  List<TrendDay> latest(int length) => window(length);
+
+  /// A [length]-day slice ending [skip] days before the newest one.
+  /// Returns an empty list when the series does not cover it.
+  List<TrendDay> window(int length, {int skip = 0}) {
+    final end = days.length - skip;
+    if (length <= 0 || end <= 0) {
+      return const [];
+    }
+    final start = (end - length).clamp(0, end);
+    return days.sublist(start, end);
+  }
+
+  /// Revenue of a slice, so the card can compare two consecutive weeks.
+  int revenueOf(List<TrendDay> slice) =>
+      slice.fold<int>(0, (sum, day) => sum + day.revenue);
+
   int get totalRevenue => days.fold<int>(0, (sum, day) => sum + day.revenue);
 
   int get totalEntries => days.fold<int>(0, (sum, day) => sum + day.entries);

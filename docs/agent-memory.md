@@ -4,7 +4,7 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-11-06 (home weekly trend). Branch `feature/supabase`.
+Last updated: 2026-11-09 (home trend comparison + parallel load). Branch `feature/supabase`.
 
 ## Where we are
 
@@ -12,7 +12,7 @@ Last updated: 2026-11-06 (home weekly trend). Branch `feature/supabase`.
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0080` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 1006 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 1013 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -92,11 +92,28 @@ Last updated: 2026-11-06 (home weekly trend). Branch `feature/supabase`.
   shortcut, operators do not.
 - Tests: entity parsing, cubit degradation, card totals/quiet/failure and the
   admin-only shortcut; SQL covers the contiguous 7-day series, today's revenue,
-  invalid ranges and lot isolation. Test count: 1006; schema `0001..0080`.
+  invalid ranges and lot isolation. Test count: 1013; schema `0001..0080`.
 - The new 400 px + 1.6 text-scale test exposed a pre-existing overflow in
   `_CapacityRow` (home capacity card): its label is now clamped to two lines
   and the counter is a flexible, ellipsized `Text`. Keep the test; it guards
   both cards.
+
+### Home trend comparison + parallel load (2026-11-09)
+
+- The dashboard asks for `dashboard_trend(days: 14)`. `TrendCard` paints the
+  last 7 (`window(7)`) and compares them with `window(7, skip: 7)`: success
+  chip when revenue grows, warning when it drops, neutral "same as last week"
+  when flat, and no chip when the previous window is incomplete or earned
+  nothing (a zero base would divide by zero).
+- `DashboardCubit._fetch` awaits occupancy first, then runs today / trend /
+  capacity / board / inside with the record `.wait` (concurrent, each with its
+  own `catchError`). `FakeCheckOutRepository.todayGate` + `pumpEventQueue`
+  prove the extras start before the gated one finishes.
+- The KPI grid shows `SkeletonPulse` + four `SkeletonCard`s while the first
+  load is in flight. `SkeletonPulse`/`SkeletonCard` are public in
+  `core/widgets/skeleton.dart` (`SkeletonCardList` reuses them).
+- Gotcha: never `pumpAndSettle` while the dashboard is still loading — the
+  skeleton pulse repeats forever. Use `pump()` and complete the gate first.
 
 ## Owner contact data (2026-11-05)
 

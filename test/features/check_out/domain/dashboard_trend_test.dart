@@ -60,4 +60,39 @@ void main() {
     expect(trend.hasMovement, isFalse);
     expect(trend.peakRevenue, 0);
   });
+
+  test('Success: window slices the series for week-over-week comparison', () {
+    final trend = DashboardTrend(
+      days: [
+        for (var i = 0; i < 14; i++)
+          TrendDay(
+            date: DateTime(2026, 11, 1).add(Duration(days: i)),
+            revenue: i + 1,
+          ),
+      ],
+    );
+
+    final current = trend.window(7);
+    final previous = trend.window(7, skip: 7);
+
+    expect(current, hasLength(7));
+    expect(current.first.revenue, 8);
+    expect(current.last.revenue, 14);
+    expect(previous, hasLength(7));
+    expect(previous.first.revenue, 1);
+    expect(trend.revenueOf(current), 77);
+    expect(trend.revenueOf(previous), 28);
+    expect(trend.latest(7), current);
+  });
+
+  test('Failure: a short series has no previous window', () {
+    final trend = DashboardTrend(
+      days: [TrendDay(date: DateTime(2026, 11, 5), revenue: 9000)],
+    );
+
+    expect(trend.window(7), hasLength(1));
+    expect(trend.window(7, skip: 7), isEmpty);
+    expect(trend.window(0), isEmpty);
+    expect(trend.revenueOf(const []), 0);
+  });
 }

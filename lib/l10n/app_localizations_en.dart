@@ -1449,6 +1449,14 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String homeTrendVsPrevious(String delta) {
+    return '$delta vs last week';
+  }
+
+  @override
+  String get homeTrendFlat => 'Same as last week';
+
+  @override
   String get homeCapacityTitle => 'Parking capacity';
 
   @override

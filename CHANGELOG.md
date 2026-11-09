@@ -44,6 +44,10 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   home dashboard paints the last 7 days as bars scaled to the best day, with
   weekly revenue/entries/exits totals, a quiet-week message, a loading skeleton
   and an admin shortcut to reports.
+- **Week-over-week insight**: the home trend now loads fourteen days and
+  compares the current week with the previous one (`+18 %` in success tone,
+  warning tone when revenue drops, "same as last week" when flat). It is
+  hidden when the previous week has no revenue to compare against.
 - **Emergency action**: a red police icon in every app bar (and an entry in the
   desktop sidebar footer and the phone drawer) opens a one-tap panel with the
   site location, the nearest police quadrant and a large **Call now** button.
@@ -106,6 +110,9 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Hardened
 
+- Home dashboard reads are concurrent: occupancy first, then today, trend,
+  capacity, the space board and the inside list run together (each degrading on
+  its own), instead of six serial round trips.
 - Ops: optional `BACKUP_REMOTE` offsite copy with `rclone` (job fails if the
   copy fails), backup-age and disk warnings in `healthcheck.sh`, and systemd
   units/timers for healthcheck, cron and nightly backups
@@ -126,6 +133,9 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   release-only failures are caught before shipping.
 
 ### Changed (UX)
+- The home KPI grid paints `SkeletonCard` placeholders (shared pulse, static
+  under reduce motion) while the first dashboard load is in flight, instead of
+  mixing a progress bar with cards that appeared one by one.
 - Charge rows show a busy spinner, ignore double taps and are fully tappable.
 - Payment dialog: live total after discount, per-field errors, "Cobrar $X"
   button, "Exacto" and banknote shortcuts for cash received.

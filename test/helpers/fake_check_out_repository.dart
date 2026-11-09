@@ -32,8 +32,12 @@ class FakeCheckOutRepository implements CheckOutRepository {
   DashboardTrend trend;
   Failure? trendError;
   int trendCalls = 0;
+  int trendDaysRequested = 0;
   int occupancyCalls = 0;
   int listCalls = 0;
+
+  /// When set, `todaySummary()` waits for it (to prove parallel extras).
+  Future<void>? todayGate;
 
   /// When set, `occupancy()` waits for it (to interleave concurrent loads).
   Future<void>? occupancyGate;
@@ -44,12 +48,14 @@ class FakeCheckOutRepository implements CheckOutRepository {
     if (error != null) {
       throw error;
     }
+    await todayGate;
     return today;
   }
 
   @override
   Future<DashboardTrend> dashboardTrend({int days = 7}) async {
     trendCalls++;
+    trendDaysRequested = days;
     final error = trendError;
     if (error != null) {
       throw error;

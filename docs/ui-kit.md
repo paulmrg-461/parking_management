@@ -10,7 +10,7 @@ Every data screen maps its cubit state to one of four explicit views:
 
 | State | Widget | Rule |
 |---|---|---|
-| Loading | `SkeletonList`, `SkeletonCardList`, `SkeletonTable` | Placeholders mimic the real geometry (row, card or table). One shared pulse controller; static when the OS asks to reduce motion. |
+| Loading | `SkeletonList`, `SkeletonCardList`, `SkeletonTable`, plus the `SkeletonPulse`/`SkeletonCard`/`SkeletonBox` primitives for custom layouts (the home KPI grid) | Placeholders mimic the real geometry (row, card or table). One shared pulse controller; static when the OS asks to reduce motion. |
 | Success | the screen's own builder | Responsive, no layout shifts between data refreshes. |
 | Empty | `EmptyState` | Tonal circle icon + `title` + guidance `message` + an explicit `action` (first record, clear filters, register check-in...). |
 | Error | `ErrorState` | Localized `message` from the cubit, `title` ("Algo salió mal"), and a `Reintentar` button. Raw exceptions never reach the widget. |
