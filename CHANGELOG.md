@@ -169,6 +169,11 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Hardened
 
+- Shift, reservations and monthly-pass screens load their independent reads
+  concurrently instead of chaining round trips: current shift + history,
+  active reservations + categories, and passes + pending payments + vehicles +
+  tariffs now start together (each keeping its own failure handling). Tests
+  gate the first call and assert the second already started.
 - Home dashboard reads are concurrent: occupancy first, then today, trend,
   capacity, the space board and the inside list run together (each degrading on
   its own), instead of six serial round trips.

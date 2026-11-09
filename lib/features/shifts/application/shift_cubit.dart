@@ -61,18 +61,17 @@ class ShiftState extends Equatable {
   );
 
   @override
-  List<Object?> get props =>
-      [
-        status,
-        current,
-        history,
-        lastClosed,
-        submission,
-        lastAction,
-        error,
-        historyFrom,
-        historyTo,
-      ];
+  List<Object?> get props => [
+    status,
+    current,
+    history,
+    lastClosed,
+    submission,
+    lastAction,
+    error,
+    historyFrom,
+    historyTo,
+  ];
 }
 
 class ShiftCubit extends ResilientCubit<ShiftState> {
@@ -88,13 +87,19 @@ class ShiftCubit extends ResilientCubit<ShiftState> {
   }) async {
     emit(state.copyWith(status: ShiftStatus.loading, error: null));
     try {
-      final current = await _repository.current();
-      final history = admin
-          ? await _repository.history(
-              from: clearHistoryRange ? null : (historyFrom ?? state.historyFrom),
-              to: clearHistoryRange ? null : (historyTo ?? state.historyTo),
-            )
-          : const <ShiftSummary>[];
+      final results = await Future.wait<Object?>([
+        _repository.current(),
+        admin
+            ? _repository.history(
+                from: clearHistoryRange
+                    ? null
+                    : (historyFrom ?? state.historyFrom),
+                to: clearHistoryRange ? null : (historyTo ?? state.historyTo),
+              )
+            : Future.value(const <ShiftSummary>[]),
+      ]);
+      final current = results[0] as ShiftSummary?;
+      final history = results[1] as List<ShiftSummary>;
       emit(
         state.copyWith(
           status: ShiftStatus.loaded,
@@ -107,27 +112,19 @@ class ShiftCubit extends ResilientCubit<ShiftState> {
         ),
       );
     } on Failure catch (failure) {
-      emit(
-        state.copyWith(status: ShiftStatus.failure, error: failure),
-      );
+      emit(state.copyWith(status: ShiftStatus.failure, error: failure));
     }
   }
 
-  Future<void> open(int openingFloat) => _submit(
-    () => _repository.open(openingFloat),
-    action: ShiftAction.opened,
-  );
+  Future<void> open(int openingFloat) =>
+      _submit(() => _repository.open(openingFloat), action: ShiftAction.opened);
 
   Future<void> closeShift({required int countedCash, String? notes}) async {
     await _submit(
       () => _repository.close(countedCash: countedCash, notes: notes),
       action: ShiftAction.closed,
       onSuccess: (shift) => emit(
-        state.copyWith(
-          current: null,
-          clearCurrent: true,
-          lastClosed: shift,
-        ),
+        state.copyWith(current: null, clearCurrent: true, lastClosed: shift),
       ),
     );
   }

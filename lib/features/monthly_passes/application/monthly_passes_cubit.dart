@@ -148,13 +148,17 @@ class MonthlyPassesCubit extends ResilientCubit<MonthlyPassesState> {
 
   Future<void> load({int? vehicleId}) async {
     emit(const MonthlyPassesLoading());
-    final vehicles = _loadVehicles();
-    final tariffs = _loadTariffs();
     try {
-      final passes = await _repository.list(vehicleId: vehicleId);
-      final pending = await _repository.pendingPayments();
-      final loadedVehicles = await vehicles;
-      final loadedTariffs = await tariffs;
+      final results = await Future.wait<Object>([
+        _repository.list(vehicleId: vehicleId),
+        _repository.pendingPayments(),
+        _loadVehicles(),
+        _loadTariffs(),
+      ]);
+      final passes = results[0] as List<MonthlyPass>;
+      final pending = results[1] as List<MonthlyPassPayment>;
+      final loadedVehicles = results[2] as List<Vehicle>;
+      final loadedTariffs = results[3] as List<Tariff>;
       emit(
         MonthlyPassesLoaded(
           monthlyPasses: sortMonthlyPasses(passes),
@@ -168,7 +172,6 @@ class MonthlyPassesCubit extends ResilientCubit<MonthlyPassesState> {
         ),
       );
     } on Failure catch (failure) {
-      vehicles.ignore();
       emit(MonthlyPassesFailure.of(failure));
     }
   }

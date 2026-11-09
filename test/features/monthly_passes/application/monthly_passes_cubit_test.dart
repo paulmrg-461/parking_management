@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/core/state/submission.dart';
@@ -166,5 +168,18 @@ void main() {
         expect(loaded().submission, isA<SubmissionFailed>());
       },
     );
+  });
+
+  test('Success: passes and pending payments load in parallel', () async {
+    final gate = Completer<void>();
+    repository.listGate = gate.future;
+
+    final pending = cubit.load();
+    await pumpEventQueue();
+
+    expect(repository.pendingCalls, 1);
+    gate.complete();
+    await pending;
+    expect(loaded().monthlyPasses, isNotEmpty);
   });
 }

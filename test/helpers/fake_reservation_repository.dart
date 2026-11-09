@@ -13,10 +13,15 @@ class FakeReservationRepository implements ReservationRepository {
   int? createdCategoryId;
   DateTime? createdUntil;
   int? cancelledId;
+  Future<void>? activeGate;
+  int activeCalls = 0;
 
   @override
-  Future<List<Reservation>> listActive() async =>
-      listError == null ? List.of(reservations) : throw listError!;
+  Future<List<Reservation>> listActive() async {
+    activeCalls++;
+    await activeGate;
+    return listError == null ? List.of(reservations) : throw listError!;
+  }
 
   @override
   Future<Reservation> create({

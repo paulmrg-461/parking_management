@@ -10,10 +10,15 @@ class FakeCategoryRepository implements CategoryRepository {
   List<Category> categories;
   Failure? listError;
   Failure? writeError;
+  Future<void>? listGate;
+  int listCalls = 0;
 
   @override
-  Future<List<Category>> list() async =>
-      listError == null ? List.of(categories) : throw listError!;
+  Future<List<Category>> list() async {
+    listCalls++;
+    await listGate;
+    return listError == null ? List.of(categories) : throw listError!;
+  }
 
   @override
   Future<Category> create(String name) async {
@@ -35,11 +40,7 @@ class FakeCategoryRepository implements CategoryRepository {
   Future<Category> setCapacity(int id, int capacity) async {
     _throwIfWriteFails();
     final existing = categories.firstWhere((c) => c.id == id);
-    final updated = Category(
-      id: id,
-      name: existing.name,
-      capacity: capacity,
-    );
+    final updated = Category(id: id, name: existing.name, capacity: capacity);
     categories = [for (final c in categories) c.id == id ? updated : c];
     return updated;
   }

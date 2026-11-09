@@ -35,10 +35,17 @@ class FakeMonthlyPassRepository implements MonthlyPassRepository {
   CreateMonthlyPassCommand? created;
   List<MonthlyPassPayment> pending = const [];
   final List<int> paid = [];
+  Future<void>? listGate;
+  Future<void>? pendingGate;
+  int listCalls = 0;
+  int pendingCalls = 0;
 
   @override
-  Future<List<MonthlyPass>> list({int? vehicleId}) async =>
-      listError == null ? List.of(passes) : throw listError!;
+  Future<List<MonthlyPass>> list({int? vehicleId}) async {
+    listCalls++;
+    await listGate;
+    return listError == null ? List.of(passes) : throw listError!;
+  }
 
   @override
   Future<MonthlyPass> create(CreateMonthlyPassCommand command) async {
@@ -70,6 +77,8 @@ class FakeMonthlyPassRepository implements MonthlyPassRepository {
 
   @override
   Future<List<MonthlyPassPayment>> pendingPayments() async {
+    pendingCalls++;
+    await pendingGate;
     _throwIfWriteFails();
     return pending;
   }
@@ -79,7 +88,10 @@ class FakeMonthlyPassRepository implements MonthlyPassRepository {
     _throwIfWriteFails();
     paid.add(id);
     final payment = pending.firstWhere((p) => p.id == id);
-    pending = [for (final p in pending) if (p.id != id) p];
+    pending = [
+      for (final p in pending)
+        if (p.id != id) p,
+    ];
     return payment;
   }
 

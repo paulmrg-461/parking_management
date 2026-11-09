@@ -77,9 +77,16 @@ class ReservationsCubit extends ResilientCubit<ReservationsState> {
       emit(const ReservationsLoading());
     }
     try {
-      final reservations = await _repository.listActive();
-      final categories = await _categories.list();
-      emit(ReservationsLoaded(reservations, categories: categories));
+      final results = await Future.wait<Object>([
+        _repository.listActive(),
+        _categories.list(),
+      ]);
+      emit(
+        ReservationsLoaded(
+          results[0] as List<Reservation>,
+          categories: results[1] as List<Category>,
+        ),
+      );
     } on Failure catch (failure) {
       emit(ReservationsFailure(failure.message));
     }

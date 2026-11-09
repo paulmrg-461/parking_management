@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/core/state/submission.dart';
@@ -136,5 +138,18 @@ void main() {
         expect(loaded().reservations, hasLength(1));
       },
     );
+  });
+
+  test('Success: reservations and categories load in parallel', () async {
+    final gate = Completer<void>();
+    repository.activeGate = gate.future;
+
+    final pending = cubit.load();
+    await pumpEventQueue();
+
+    expect(categories.listCalls, 1);
+    gate.complete();
+    await pending;
+    expect((cubit.state as ReservationsLoaded).reservations, hasLength(1));
   });
 }

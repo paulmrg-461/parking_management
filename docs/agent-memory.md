@@ -4,7 +4,7 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-11-09 (PDF chart, records evidence, setup checklist).
+Last updated: 2026-11-09 (parallel loads, PDF chart, records evidence).
 
 ## Where we are
 
@@ -12,7 +12,7 @@ Last updated: 2026-11-09 (PDF chart, records evidence, setup checklist).
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0086` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 1061 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 1064 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -273,6 +273,18 @@ Last updated: 2026-11-09 (PDF chart, records evidence, setup checklist).
   and no per-bar labels (the table below keeps the exact numbers). An empty
   range skips the chart, and quiet periods keep flat bars.
 - No new SQL. Test count: 1061; schema `0001..0086`.
+
+### Parallel page loads (2026-11-09)
+
+- `ShiftCubit.load` runs `current()` and the admin `history()` in one
+  `Future.wait`; `ReservationsCubit.load` runs active reservations and
+  categories together; `MonthlyPassesCubit.load` starts passes, pending
+  payments, vehicles and tariffs together (`Future.wait<Object>` + casts,
+  still wrapped in the `on Failure` handler so list failures keep their
+  screen-level state). Each page saves one or more sequential round trips.
+- Tests use gates on the first fake call (`currentGate`, `activeGate`,
+  `listGate`) and `pumpEventQueue` to assert the second call already started.
+  Test count: 1064; schema `0001..0086`.
 
 ## Owner contact data (2026-11-05)
 
