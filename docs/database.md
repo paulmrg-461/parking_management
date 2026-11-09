@@ -119,8 +119,8 @@ settings) beside the derived `car_capacity`/`moto_capacity`.
 **Billing and reports**
 `report_revenue` (active lot), `report_revenue_all` (platform admins),
 `report_occupancy`, `occupancy_snapshot`, `dashboard_today` (home KPIs),
-`dashboard_trend` (home 7-day series), `report_whatsapp` (customer message
-delivery).
+`dashboard_trend` (home 7-day series), `report_hourly_traffic` (entries/exits
+per hour), `report_whatsapp` (customer message delivery).
 
 **Legal policy**
 `parking_settings.legal_policy` (template), `default_legal_policy()`,

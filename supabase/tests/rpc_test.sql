@@ -3020,4 +3020,103 @@ begin
     end if;
 end $$;
 
+-- Hourly traffic: entries/exits land in their business-day hour bucket.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    cat integer;
+    v1 integer;
+    v2 integer;
+    v3 integer;
+    result jsonb;
+    h8 jsonb;
+    h9 jsonb;
+    h10 jsonb;
+    h14 jsonb;
+begin
+    update public.parking_settings
+       set car_capacity = 0, moto_capacity = 0, key_capacity = 0
+     where lot_id = 1;
+    delete from public.parking_spots where lot_id = 1;
+
+    insert into public.categories (name, capacity, lot_id)
+    values ('hourly-traffic', 0, 1)
+    returning id into cat;
+    insert into public.vehicles (plate, category_id) values ('HT001', cat)
+    returning id into v1;
+    insert into public.vehicles (plate, category_id) values ('HT002', cat)
+    returning id into v2;
+    insert into public.vehicles (plate, category_id) values ('HT003', cat)
+    returning id into v3;
+
+    insert into public.parking_sessions (
+        vehicle_id, operator_id, entry_time, exit_time, status,
+        amount_charged, ticket_number, lot_id
+    ) values
+        (v1, 1, '2026-11-02 08:15-05', '2026-11-02 09:20-05', 'closed',
+         1000, 'HOUR1', 1),
+        (v2, 1, '2026-11-02 08:45-05', '2026-11-02 10:05-05', 'closed',
+         1000, 'HOUR2', 1),
+        (v3, 1, '2026-11-03 14:10-05', '2026-11-03 15:00-05', 'closed',
+         1000, 'HOUR3', 1);
+
+    result := public.report_hourly_traffic('2026-11-02', '2026-11-02');
+    if jsonb_array_length(result -> 'hours') <> 24 then
+        raise exception 'hourly traffic did not return 24 buckets';
+    end if;
+    if coalesce(result ->> 'timezone', '') = '' then
+        raise exception 'hourly traffic lost the business timezone';
+    end if;
+
+    select item into h8
+      from jsonb_array_elements(result -> 'hours') item
+     where (item ->> 'hour')::integer = 8;
+    select item into h9
+      from jsonb_array_elements(result -> 'hours') item
+     where (item ->> 'hour')::integer = 9;
+    select item into h10
+      from jsonb_array_elements(result -> 'hours') item
+     where (item ->> 'hour')::integer = 10;
+    if (h8 ->> 'entries')::integer <> 2 or (h8 ->> 'exits')::integer <> 0 then
+        raise exception 'hour 8 bucket is wrong: %', h8;
+    end if;
+    if (h9 ->> 'exits')::integer <> 1 then
+        raise exception 'hour 9 exit bucket is wrong: %', h9;
+    end if;
+    if (h10 ->> 'exits')::integer <> 1 then
+        raise exception 'hour 10 exit bucket is wrong: %', h10;
+    end if;
+
+    result := public.report_hourly_traffic('2026-11-02', '2026-11-03');
+    select item into h14
+      from jsonb_array_elements(result -> 'hours') item
+     where (item ->> 'hour')::integer = 14;
+    if (h14 ->> 'entries')::integer <> 1 then
+        raise exception 'the multi-day range lost hour 14: %', h14;
+    end if;
+
+    begin
+        perform public.report_hourly_traffic('2026-11-03', '2026-11-02');
+        raise exception 'an inverted hourly range was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidReportRangeError%' then
+            raise;
+        end if;
+    end;
+end $$;
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    begin
+        perform public.report_hourly_traffic('2026-11-02', '2026-11-02');
+        raise exception 'an operator read the hourly traffic report';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then
+            raise;
+        end if;
+    end;
+end $$;
+
 rollback;

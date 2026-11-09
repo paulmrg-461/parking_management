@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/error/failure.dart';
+import 'package:parking_management/features/reports/domain/entities/hourly_traffic.dart';
 import 'package:parking_management/features/reports/domain/entities/occupancy_report.dart';
 import 'package:parking_management/features/reports/domain/entities/revenue_report.dart';
 import 'package:parking_management/features/reports/domain/entities/whatsapp_report.dart';
@@ -31,6 +32,12 @@ class _FakeRemote implements ReportRemoteDataSource {
     required DateTime startDate,
     required DateTime endDate,
   }) async => WhatsappReport.empty;
+
+  @override
+  Future<HourlyTraffic> getHourlyTraffic({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async => HourlyTraffic.empty;
 
   @override
   Future<OccupancyReport> getOccupancyReport() async {

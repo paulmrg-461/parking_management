@@ -10,6 +10,8 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 ## [Unreleased] — 2026-11 (app reliability and operator UX)
 
 ### Fixed
+- Reports: the variation line ("vs previous period") now wraps on narrow
+  screens instead of overflowing its summary card.
 - Capacity rows (home capacity card) no longer overflow with large
   accessibility text: the label clamps to two lines and the counter is
   flexible and ellipsized.
@@ -62,6 +64,12 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   an empty dashboard; the live space board and inside list are hidden because
   they would be stale. A partial load (one RPC failed) never overwrites a
   complete snapshot.
+- **Hourly traffic on reports**: `0082` adds `report_hourly_traffic(start,
+  end)` (admin, lot-scoped, business timezone) with entries and exits for all
+  24 hours. The reports screen renders a compact hour grid sized for the
+  screen (4/6/8 columns), scaled to the busiest entry hour, with a peak-hour
+  summary, per-hour tooltip/semantics, an empty state and a legend. A failed
+  hourly RPC degrades to the empty grid without failing the report.
 - **Emergency action**: a red police icon in every app bar (and an entry in the
   desktop sidebar footer and the phone drawer) opens a one-tap panel with the
   site location, the nearest police quadrant and a large **Call now** button.

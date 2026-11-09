@@ -2542,6 +2542,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportsRevenueByDay => 'Revenue by day';
 
   @override
+  String get reportsHourlyTitle => 'Hourly traffic';
+
+  @override
+  String get reportsHourlySubtitle =>
+      'Entries and exits by hour in the parking schedule';
+
+  @override
+  String reportsHourlyPeak(String time, int count) {
+    return 'Peak hour: $time · $count entries';
+  }
+
+  @override
+  String reportsHourlyCell(String time, int entries, int exits) {
+    return '$time · $entries entries · $exits exits';
+  }
+
+  @override
+  String get reportsHourlyEmpty => 'No entries in the period';
+
+  @override
+  String get reportsHourlyLegend =>
+      'The bar shows entries; the detail includes exits.';
+
+  @override
   String get reportsPassRevenue => 'Monthly pass revenue';
 
   @override

@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/network/supabase_error_mapper.dart';
+import '../domain/entities/hourly_traffic.dart';
 import '../domain/entities/occupancy_report.dart';
 import '../domain/entities/revenue_report.dart';
 import '../domain/entities/whatsapp_report.dart';
@@ -17,6 +18,11 @@ abstract class ReportRemoteDataSource {
   Future<OccupancyReport> getOccupancyReport();
 
   Future<WhatsappReport> getWhatsappReport({
+    required DateTime startDate,
+    required DateTime endDate,
+  });
+
+  Future<HourlyTraffic> getHourlyTraffic({
     required DateTime startDate,
     required DateTime endDate,
   });
@@ -41,9 +47,8 @@ class SupabaseReportRemoteDataSource implements ReportRemoteDataSource {
           'p_end_date': _formatDate(endDate),
         },
       );
-      return RevenueReportDto.fromJson(
-        Map<String, dynamic>.from(result as Map),
-      ).toDomain();
+      return RevenueReportDto.fromJson(Map<String, dynamic>.from(result as Map))
+          .toDomain();
     } catch (error) {
       throw mapSupabaseError(error);
     }
@@ -56,6 +61,25 @@ class SupabaseReportRemoteDataSource implements ReportRemoteDataSource {
       return OccupancyReportDto.fromJson(
         Map<String, dynamic>.from(result as Map),
       ).toDomain();
+    } catch (error) {
+      throw mapSupabaseError(error);
+    }
+  }
+
+  @override
+  Future<HourlyTraffic> getHourlyTraffic({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    try {
+      final result = await _client.rpc(
+        'report_hourly_traffic',
+        params: {
+          'p_start_date': _formatDate(startDate),
+          'p_end_date': _formatDate(endDate),
+        },
+      );
+      return HourlyTraffic.fromJson(Map<String, dynamic>.from(result as Map));
     } catch (error) {
       throw mapSupabaseError(error);
     }
@@ -77,9 +101,7 @@ class SupabaseReportRemoteDataSource implements ReportRemoteDataSource {
           'p_end_date': _formatDate(endDate),
         },
       );
-      return WhatsappReport.fromJson(
-        Map<String, dynamic>.from(result as Map),
-      );
+      return WhatsappReport.fromJson(Map<String, dynamic>.from(result as Map));
     } catch (error) {
       throw mapSupabaseError(error);
     }

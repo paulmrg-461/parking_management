@@ -7,6 +7,7 @@ import 'package:parking_management/features/lots/domain/entities/lot_member.dart
 import 'package:parking_management/features/lots/domain/entities/parking_lot.dart';
 import 'package:parking_management/features/monthly_passes/domain/entities/monthly_pass_payment.dart';
 import 'package:parking_management/features/policies/domain/entities/lot_profile.dart';
+import 'package:parking_management/features/reports/domain/entities/hourly_traffic.dart';
 import 'package:parking_management/features/records/domain/entities/session_record.dart';
 import 'package:parking_management/features/spots/domain/entities/spot_event.dart';
 import 'package:parking_management/features/monthly_passes/infrastructure/models/monthly_pass_dto.dart';
@@ -219,6 +220,31 @@ void main() {
       expect(bare.reason, isNull);
       expect(bare.actorName, isNull);
       expect(bare.active, isTrue);
+    });
+
+    test('HourlyTraffic sorts its 24 buckets and picks the peak hour', () {
+      final traffic = HourlyTraffic.fromJson({
+        'timezone': 'America/Bogota',
+        'hours': [
+          for (var hour = 23; hour >= 0; hour--)
+            {
+              'hour': hour,
+              'entries': hour == 8 ? 5 : 0,
+              'exits': hour == 9 ? 3 : 0,
+            },
+        ],
+      });
+
+      expect(traffic.hours, hasLength(24));
+      expect(traffic.hours.first.hour, 0);
+      expect(traffic.hours.last.hour, 23);
+      expect(traffic.peak!.hour, 8);
+      expect(traffic.peakEntries, 5);
+      expect(traffic.hasData, isTrue);
+      expect(traffic.timezone, 'America/Bogota');
+
+      expect(HourlyTraffic.fromJson(const {}).hasData, isFalse);
+      expect(HourlyTraffic.empty.peak, isNull);
     });
   });
 }

@@ -4592,6 +4592,42 @@ abstract class AppLocalizations {
   /// **'Ingresos por día'**
   String get reportsRevenueByDay;
 
+  /// No description provided for @reportsHourlyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tráfico por hora'**
+  String get reportsHourlyTitle;
+
+  /// No description provided for @reportsHourlySubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Entradas y salidas en el horario del parqueadero'**
+  String get reportsHourlySubtitle;
+
+  /// No description provided for @reportsHourlyPeak.
+  ///
+  /// In es, this message translates to:
+  /// **'Hora pico: {time} · {count} entradas'**
+  String reportsHourlyPeak(String time, int count);
+
+  /// No description provided for @reportsHourlyCell.
+  ///
+  /// In es, this message translates to:
+  /// **'{time} · {entries} entradas · {exits} salidas'**
+  String reportsHourlyCell(String time, int entries, int exits);
+
+  /// No description provided for @reportsHourlyEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin entradas en el periodo'**
+  String get reportsHourlyEmpty;
+
+  /// No description provided for @reportsHourlyLegend.
+  ///
+  /// In es, this message translates to:
+  /// **'La barra muestra las entradas; el detalle incluye las salidas.'**
+  String get reportsHourlyLegend;
+
   /// No description provided for @reportsPassRevenue.
   ///
   /// In es, this message translates to:

@@ -1,3 +1,4 @@
+import '../entities/hourly_traffic.dart';
 import '../entities/occupancy_report.dart';
 import '../entities/revenue_report.dart';
 import '../entities/whatsapp_report.dart';
@@ -14,6 +15,12 @@ abstract class ReportRepository {
   Future<OccupancyReport> getOccupancyReport();
 
   Future<WhatsappReport> getWhatsappReport({
+    required DateTime startDate,
+    required DateTime endDate,
+  });
+
+  /// Entries/exits per hour of the business day for the range.
+  Future<HourlyTraffic> getHourlyTraffic({
     required DateTime startDate,
     required DateTime endDate,
   });

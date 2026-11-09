@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 
 import '../../../core/error/failure.dart';
+import '../domain/entities/hourly_traffic.dart';
 import '../domain/entities/occupancy_report.dart';
 import '../domain/entities/revenue_report.dart';
 import '../domain/entities/whatsapp_report.dart';
@@ -27,6 +28,7 @@ class ReportsLoaded extends ReportsState {
     this.revenue,
     this.occupancy, {
     this.whatsapp = WhatsappReport.empty,
+    this.hourly = HourlyTraffic.empty,
     this.allLots = false,
     this.previousTotal,
     this.previousStart,
@@ -36,6 +38,9 @@ class ReportsLoaded extends ReportsState {
   final RevenueReport revenue;
   final OccupancyReport occupancy;
   final WhatsappReport whatsapp;
+
+  /// Entries/exits per hour (empty when the RPC failed).
+  final HourlyTraffic hourly;
 
   /// `true` while the consolidated (every lot) view is selected.
   final bool allLots;
@@ -59,6 +64,7 @@ class ReportsLoaded extends ReportsState {
     revenue,
     occupancy,
     whatsapp,
+    hourly,
     allLots,
     previousTotal,
     previousStart,
@@ -103,10 +109,13 @@ class ReportsCubit extends ResilientCubit<ReportsState> {
           allLots: allLots,
         ),
         _repository.getOccupancyReport(),
-        _repository.getWhatsappReport(
-          startDate: startDate,
-          endDate: endDate,
-        ),
+        _repository.getWhatsappReport(startDate: startDate, endDate: endDate),
+        _repository
+            .getHourlyTraffic(startDate: startDate, endDate: endDate)
+            .then<HourlyTraffic>(
+              (report) => report,
+              onError: (Object _) => HourlyTraffic.empty,
+            ),
         _repository
             .getRevenueReport(
               startDate: previousStart,
@@ -118,12 +127,13 @@ class ReportsCubit extends ResilientCubit<ReportsState> {
               onError: (Object _) => null,
             ),
       ]);
-      final previous = results[3] as RevenueReport?;
+      final previous = results[4] as RevenueReport?;
       emit(
         ReportsLoaded(
           results[0] as RevenueReport,
           results[1] as OccupancyReport,
           whatsapp: results[2] as WhatsappReport,
+          hourly: results[3] as HourlyTraffic,
           allLots: allLots,
           previousTotal: previous?.total,
           previousStart: previous == null ? null : previousStart,

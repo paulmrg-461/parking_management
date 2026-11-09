@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/core/theme/contrast.dart';
 import 'package:parking_management/features/reports/application/reports_cubit.dart';
+import 'package:parking_management/features/reports/domain/entities/hourly_traffic.dart';
 import 'package:parking_management/features/reports/domain/entities/occupancy_report.dart';
 import 'package:parking_management/features/reports/domain/entities/revenue_report.dart';
 import 'package:parking_management/features/reports/domain/entities/whatsapp_report.dart';
@@ -31,6 +32,8 @@ class _FakeReportRepository implements ReportRepository {
     pending: 2,
     byDay: [WhatsappDaily(date: DateTime(2026, 1, 1), sent: 8, failed: 1)],
   );
+
+  HourlyTraffic hourly = HourlyTraffic.empty;
 
   int _revenueCalls = 0;
 
@@ -62,6 +65,12 @@ class _FakeReportRepository implements ReportRepository {
   }) async => whatsapp;
 
   @override
+  Future<HourlyTraffic> getHourlyTraffic({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async => hourly;
+
+  @override
   Future<OccupancyReport> getOccupancyReport() async => occupancy;
 }
 
@@ -73,12 +82,22 @@ final _revenue = RevenueReport(
   byCategory: const [
     CategoryRevenue(categoryId: 1, categoryName: 'Car', amount: 100000),
   ],
-  byPayment: const [
-    PaymentRevenue(paymentMethod: 'cash', amount: 100000),
-  ],
+  byPayment: const [PaymentRevenue(paymentMethod: 'cash', amount: 100000)],
   byLot: const [
-    LotRevenue(lotId: 1, lotName: 'Central', amount: 120000, tickets: 4, avgTicket: 30000),
-    LotRevenue(lotId: 2, lotName: 'North', amount: 30000, tickets: 2, avgTicket: 15000),
+    LotRevenue(
+      lotId: 1,
+      lotName: 'Central',
+      amount: 120000,
+      tickets: 4,
+      avgTicket: 30000,
+    ),
+    LotRevenue(
+      lotId: 2,
+      lotName: 'North',
+      amount: 30000,
+      tickets: 2,
+      avgTicket: 15000,
+    ),
   ],
 );
 
@@ -91,10 +110,12 @@ Future<_FakeReportRepository> _pump(
   WidgetTester tester, {
   Failure? error,
   RevenueReport? previousRevenue,
+  HourlyTraffic? hourly,
 }) async {
   final repository = _FakeReportRepository(_revenue, _occupancy)
     ..error = error
-    ..previousRevenue = previousRevenue;
+    ..previousRevenue = previousRevenue
+    ..hourly = hourly ?? HourlyTraffic.empty;
   await tester.pumpWidget(
     testApp(
       BlocProvider<ReportsCubit>(
@@ -127,6 +148,22 @@ Future<void> _scrollTo(WidgetTester tester, Finder finder) async {
   await Scrollable.ensureVisible(tester.element(finder));
 }
 
+HourlyTraffic _hourly() => HourlyTraffic(
+  timezone: 'America/Bogota',
+  hours: [
+    for (var hour = 0; hour < 24; hour++)
+      HourlyTrafficPoint(
+        hour: hour,
+        entries: hour == 8
+            ? 12
+            : hour == 14
+            ? 3
+            : 0,
+        exits: hour == 9 ? 4 : 0,
+      ),
+  ],
+);
+
 void main() {
   testWidgets('Success: renders total revenue and occupancy in Spanish', (
     tester,
@@ -141,6 +178,37 @@ void main() {
     expect(find.text('Efectivo'), findsOneWidget);
     await _scrollTo(tester, find.text('Vehículos dentro: 7'));
     expect(find.text('Vehículos dentro: 7'), findsOneWidget);
+  });
+
+  testWidgets('Success: hourly traffic shows the peak and hour cells', (
+    tester,
+  ) async {
+    await _pump(tester, hourly: _hourly());
+
+    await _scrollTo(tester, find.text('Hora pico: 08:00 · 12 entradas'));
+
+    expect(find.text('Hora pico: 08:00 · 12 entradas'), findsOneWidget);
+    expect(find.text('08'), findsOneWidget);
+    expect(find.text('14'), findsOneWidget);
+  });
+
+  testWidgets('Failure: an empty hourly period explains itself', (
+    tester,
+  ) async {
+    await _pump(tester);
+
+    await _scrollTo(tester, find.text('Sin entradas en el periodo'));
+
+    expect(find.text('Sin entradas en el periodo'), findsOneWidget);
+  });
+
+  testWidgets('A11y: the hourly grid fits a phone', (tester) async {
+    tester.view.physicalSize = const Size(400, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await _pump(tester);
+    await _scrollTo(tester, find.text('Sin entradas en el periodo'));
   });
 
   testWidgets('Failure: an error offers retry that reloads', (tester) async {

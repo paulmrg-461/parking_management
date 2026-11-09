@@ -4,15 +4,15 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-11-09 (offline dashboard cache, bay history, home trend).
+Last updated: 2026-11-09 (hourly traffic reports, offline dashboard cache, bay history).
 
 ## Where we are
 
 - Stack: Flutter (android + web) + self-hosted Supabase only. No FastAPI,
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
-- `supabase/migrations/0001..0081` are the schema owner (applied by
+- `supabase/migrations/0001..0082` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 1030 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 1036 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -158,6 +158,28 @@ Last updated: 2026-11-09 (offline dashboard cache, bay history, home trend).
 - Coverage floors raised with the new domain tests: global 79 (79.2 measured),
   application 90 (90.7), domain 52 (53.3), infrastructure 40 (40.3).
   Test count: 1030; schema `0001..0081`.
+
+### Hourly traffic reports (2026-11-09)
+
+- `0082_report_hourly_traffic.sql`: `report_hourly_traffic(date, date)` is
+  admin-only (`require_admin()`), lot-scoped, and returns
+  `{start_date, end_date, timezone, hours:[{hour, entries, exits}]}` for all
+  24 business-day hours (quiet hours included). Entries count `entry_time`;
+  exits count closed `exit_time`; the 0069 lot/entry and lot/exit indexes cover
+  both.
+- `HourlyTraffic`/`HourlyTrafficPoint` sort the buckets; `ReportsCubit` loads
+  it in the same `Future.wait` as the other reports and **degrades to empty**
+  when the RPC fails, so the page never fails because of the chart.
+  `HourlyTrafficChart` is a 4/6/8-column grid scaled to the peak entry hour,
+  with a peak-hour summary, per-cell tooltip/semantics (entries + exits), an
+  empty state and a legend.
+- The new 400 px test exposed a pre-existing overflow in `_DeltaRow` ("vs
+  previous period"): it now uses a `Wrap`, so it flows to a second line instead
+  of overflowing the summary card.
+- Coverage: global 79 (79.3), application 90 (90.7), domain 53 (54.2),
+  infrastructure 40 (40.2). Test count: 1036; schema `0001..0082`.
+- Live smoke: `report_hourly_traffic(2026-11-03, 2026-11-09)` returned 24
+  buckets with the expected entries/exits and `America/Bogota`.
 
 ## Owner contact data (2026-11-05)
 

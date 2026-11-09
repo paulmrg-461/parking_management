@@ -1,3 +1,4 @@
+import '../domain/entities/hourly_traffic.dart';
 import '../domain/entities/occupancy_report.dart';
 import '../domain/entities/revenue_report.dart';
 import '../domain/entities/whatsapp_report.dart';
@@ -34,9 +35,14 @@ class ReportRepositoryImpl implements ReportRepository {
     required DateTime startDate,
     required DateTime endDate,
   }) async {
-    return _remote.getWhatsappReport(
-      startDate: startDate,
-      endDate: endDate,
-    );
+    return _remote.getWhatsappReport(startDate: startDate, endDate: endDate);
+  }
+
+  @override
+  Future<HourlyTraffic> getHourlyTraffic({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    return _remote.getHourlyTraffic(startDate: startDate, endDate: endDate);
   }
 }

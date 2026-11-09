@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/features/reports/application/reports_cubit.dart';
+import 'package:parking_management/features/reports/domain/entities/hourly_traffic.dart';
 import 'package:parking_management/features/reports/domain/entities/occupancy_report.dart';
 import 'package:parking_management/features/reports/domain/entities/revenue_report.dart';
 import 'package:parking_management/features/reports/domain/entities/whatsapp_report.dart';
@@ -41,11 +42,25 @@ class _FakeReportRepository implements ReportRepository {
     return revenueToReturn!;
   }
 
+  HourlyTraffic? hourlyToReturn;
+  bool failHourly = false;
+
   @override
   Future<WhatsappReport> getWhatsappReport({
     required DateTime startDate,
     required DateTime endDate,
   }) async => WhatsappReport.empty;
+
+  @override
+  Future<HourlyTraffic> getHourlyTraffic({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    if (failHourly) {
+      throw const NetworkFailure('offline');
+    }
+    return hourlyToReturn ?? HourlyTraffic.empty;
+  }
 
   @override
   Future<OccupancyReport> getOccupancyReport() async {
@@ -98,37 +113,75 @@ void main() {
     },
   );
 
-  test(
-    'Failure: loadReports emits ReportsFailure when the repository throws NetworkFailure',
-    () async {
-      final cubit = ReportsCubit(
-        _FakeReportRepository(error: const NetworkFailure('offline')),
-      );
+  test('Failure: loadReports emits ReportsFailure when the repository throws NetworkFailure', () async {
+    final cubit = ReportsCubit(
+      _FakeReportRepository(error: const NetworkFailure('offline')),
+    );
 
-      await cubit.loadReports(
-        startDate: DateTime(2026, 1, 1),
-        endDate: DateTime(2026, 1, 31),
-      );
+    await cubit.loadReports(
+      startDate: DateTime(2026, 1, 1),
+      endDate: DateTime(2026, 1, 31),
+    );
 
-      expect(cubit.state, const ReportsFailure('offline'));
-    },
-  );
+    expect(cubit.state, const ReportsFailure('offline'));
+  });
 
-  test(
-    'Security: a mapped 403 (non-admin) AuthenticationFailure becomes ReportsFailure, not a crash',
-    () async {
-      final cubit = ReportsCubit(
-        _FakeReportRepository(error: const AuthenticationFailure('Forbidden')),
-      );
+  test('Success: hourly traffic lands in the loaded state', () async {
+    final cubit = ReportsCubit(
+      _FakeReportRepository(
+          revenueToReturn: revenue,
+          occupancyToReturn: occupancy,
+        )
+        ..hourlyToReturn = HourlyTraffic(
+          timezone: 'America/Bogota',
+          hours: [
+            const HourlyTrafficPoint(hour: 8, entries: 4, exits: 2),
+            const HourlyTrafficPoint(hour: 9, entries: 1, exits: 3),
+          ],
+        ),
+    );
 
-      await cubit.loadReports(
-        startDate: DateTime(2026, 1, 1),
-        endDate: DateTime(2026, 1, 31),
-      );
+    await cubit.loadReports(
+      startDate: DateTime(2026, 1, 1),
+      endDate: DateTime(2026, 1, 31),
+    );
 
-      expect(cubit.state, const ReportsFailure('Forbidden'));
-    },
-  );
+    final state = cubit.state as ReportsLoaded;
+    expect(state.hourly.timezone, 'America/Bogota');
+    expect(state.hourly.peak!.hour, 8);
+    expect(state.hourly.peakEntries, 4);
+  });
+
+  test('Failure: a broken hourly report never fails the page', () async {
+    final cubit = ReportsCubit(
+      _FakeReportRepository(
+        revenueToReturn: revenue,
+        occupancyToReturn: occupancy,
+      )..failHourly = true,
+    );
+
+    await cubit.loadReports(
+      startDate: DateTime(2026, 1, 1),
+      endDate: DateTime(2026, 1, 31),
+    );
+
+    final state = cubit.state as ReportsLoaded;
+    expect(state.hourly, HourlyTraffic.empty);
+    expect(state.revenue.total, 100000);
+  });
+
+  test('Security: a mapped 403 (non-admin) AuthenticationFailure becomes ReportsFailure, not a crash', () async {
+    final cubit = ReportsCubit(
+      _FakeReportRepository(error: const AuthenticationFailure('Forbidden')),
+    );
+
+    await cubit.loadReports(
+      startDate: DateTime(2026, 1, 1),
+      endDate: DateTime(2026, 1, 31),
+    );
+
+    expect(cubit.state, const ReportsFailure('Forbidden'));
+  });
 
   test('Success: the previous period drives the delta percentage', () async {
     final previous = RevenueReport(
@@ -156,22 +209,25 @@ void main() {
     expect(state.deltaPercent, 25);
   });
 
-  test('Security: a failing previous period keeps the current report', () async {
-    final cubit = ReportsCubit(
-      _FakeReportRepository(
-        revenueToReturn: revenue,
-        occupancyToReturn: occupancy,
-      )..failPrevious = true,
-    );
+  test(
+    'Security: a failing previous period keeps the current report',
+    () async {
+      final cubit = ReportsCubit(
+        _FakeReportRepository(
+          revenueToReturn: revenue,
+          occupancyToReturn: occupancy,
+        )..failPrevious = true,
+      );
 
-    await cubit.loadReports(
-      startDate: DateTime(2026, 1, 1),
-      endDate: DateTime(2026, 1, 31),
-    );
+      await cubit.loadReports(
+        startDate: DateTime(2026, 1, 1),
+        endDate: DateTime(2026, 1, 31),
+      );
 
-    final state = cubit.state as ReportsLoaded;
-    expect(state.previousTotal, isNull);
-    expect(state.deltaPercent, isNull);
-    expect(state.revenue.total, 100000);
-  });
+      final state = cubit.state as ReportsLoaded;
+      expect(state.previousTotal, isNull);
+      expect(state.deltaPercent, isNull);
+      expect(state.revenue.total, 100000);
+    },
+  );
 }

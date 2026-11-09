@@ -21,6 +21,7 @@ import '../application/reports_cubit.dart';
 import 'report_csv.dart';
 import 'report_pdf.dart';
 import 'widgets/category_bar_list.dart';
+import 'widgets/hourly_traffic_chart.dart';
 import 'widgets/lot_comparison.dart';
 import 'widgets/revenue_by_day_chart.dart';
 
@@ -216,9 +217,7 @@ class _ReportsPageState extends State<ReportsPage> {
                   },
                 ),
                 ConstrainedBox(
-                  constraints: const BoxConstraints(
-                    minHeight: Layout.minTouch,
-                  ),
+                  constraints: const BoxConstraints(minHeight: Layout.minTouch),
                   child: OutlinedButton.icon(
                     onPressed: () => _pickRange(context),
                     icon: const Icon(Icons.date_range),
@@ -284,10 +283,7 @@ class _ReportsBody extends StatelessWidget {
     final revenue = loaded.revenue;
     final occupancy = loaded.occupancy;
     final occupancyLabel = occupancy.totalCapacity > 0
-        ? l10n.reportsOccupancyOf(
-            occupancy.totalOpen,
-            occupancy.totalCapacity,
-          )
+        ? l10n.reportsOccupancyOf(occupancy.totalOpen, occupancy.totalCapacity)
         : l10n.reportsOpenSessions(occupancy.totalOpen);
     return ListView(
       padding: const EdgeInsets.all(Space.md),
@@ -398,12 +394,17 @@ class _ReportsBody extends StatelessWidget {
           ),
         ],
         const SizedBox(height: Space.lg),
-        SectionHeader(
-          icon: Icons.show_chart,
-          title: l10n.reportsRevenueByDay,
-        ),
+        SectionHeader(icon: Icons.show_chart, title: l10n.reportsRevenueByDay),
         const SizedBox(height: Space.sm),
         RevenueByDayChart(byDay: revenue.byDay),
+        const SizedBox(height: Space.lg),
+        SectionHeader(
+          icon: Icons.schedule_outlined,
+          title: l10n.reportsHourlyTitle,
+          subtitle: l10n.reportsHourlySubtitle,
+        ),
+        const SizedBox(height: Space.sm),
+        HourlyTrafficChart(traffic: loaded.hourly),
         const SizedBox(height: Space.lg),
         SectionHeader(
           icon: Icons.category_outlined,
@@ -440,10 +441,7 @@ class _ReportsBody extends StatelessWidget {
         ],
         if (loaded.whatsapp.hasData) ...[
           const SizedBox(height: Space.lg),
-          SectionHeader(
-            icon: Icons.chat_outlined,
-            title: l10n.reportsWhatsapp,
-          ),
+          SectionHeader(icon: Icons.chat_outlined, title: l10n.reportsWhatsapp),
           const SizedBox(height: Space.sm),
           IntrinsicHeight(
             child: Row(
@@ -544,21 +542,21 @@ class _DeltaRow extends StatelessWidget {
     final sign = delta > 0 ? '+' : '';
     return Semantics(
       label: l10n.reportsVsPrevious('$sign$delta'),
-      child: Row(
+      child: Wrap(
+        spacing: Space.xs,
+        runSpacing: 2,
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           Icon(
             delta >= 0 ? Icons.trending_up : Icons.trending_down,
             size: 18,
             color: color,
           ),
-          const SizedBox(width: 4),
           Text(
             l10n.reportsVsPrevious('$sign$delta'),
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: color),
+            style: Theme.of(context).textTheme.bodySmall
+                ?.copyWith(color: color),
           ),
-          const SizedBox(width: Space.sm),
           Text(
             l10n.reportsPreviousTotal(Formatters.money(previous)),
             style: Theme.of(context).textTheme.bodySmall,
