@@ -10,6 +10,11 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 ## [Unreleased] — 2026-11 (app reliability and operator UX)
 
 ### Fixed
+- **Web deep links were lost**: the bootstrap splash pushed its own route to
+  the browser history before the router existed, so `/reserve?lot=1`,
+  `/policies?lot=1` and the receipt `/evidence?…` links all landed on
+  `/login`. `main()` now captures the browser URL (`initialRouteFrom`) before
+  the first frame and hands it to the router; mobile still starts home.
 - Exported PDFs no longer contain a missing glyph where the report/records
   date range used an em dash: the built-in Helvetica font has no em/en dash,
   so PDFs now use `Formatters.pdfDateRange` (ASCII hyphen). On-screen labels

@@ -12,7 +12,7 @@ Last updated: 2026-11-09 (public booking page, owner search).
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0087` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 1099 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 1102 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -358,7 +358,7 @@ Last updated: 2026-11-09 (public booking page, owner search).
 - Follow-up: a vehicle with no open session offers "Registrar entrada" from
   its history (`/check-in?plate=`, `onCheckIn` injectable); a vehicle already
   inside keeps the charge action. Fixing the sample fixture's `openSessions`
-  exposed the guard in tests. Test count: 1099.
+  exposed the guard in tests. Test count: 1102.
 
 ### Public booking page (2026-11-09)
 
@@ -381,11 +381,21 @@ Last updated: 2026-11-09 (public booking page, owner search).
   page and the evidence page; DI registers the repository/cubit.
 - Live smoke: `public_availability(1)` returned the lot and categories; anon
   `public_create_reservation` created `WEBTEST1` (`source=public`, phone
-  stored), then the row was deleted.
+  stored), then the row was deleted. A full booking through the deployed page
+  (headless Chrome, 420 px) created reservation #2 and rendered the
+  confirmation; the row was deleted afterwards.
+- **Deep links were broken on web** (found while testing the page on the
+  phone): the bootstrap splash's `MaterialApp` pushes its own route to the
+  browser history, so by the time the router was built the engine reported `/`
+  and `/reserve`, `/policies` and `/evidence` all redirected to `/login`.
+  Fix: `initialRouteFrom(Uri.base)` (pure, unit-tested) is captured in
+  `main()` **before** the first `runApp` and passed to `buildRouter` through
+  `ParkingApp.initialLocation`; mobile keeps home. Do not move that capture
+  after `runApp` — the history is already rewritten by then.
 - Abuse note: there is no captcha/proof-of-work; the per-plate/phone limits and
   capacity guard are the only controls. Add a captcha at the edge if the page
   is exposed to the open internet.
-- Test count: 1099; schema `0001..0087`.
+- Test count: 1102; schema `0001..0087`.
 
 ## Owner contact data (2026-11-05)
 

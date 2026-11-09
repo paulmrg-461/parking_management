@@ -69,8 +69,12 @@ import 'route_error_page.dart';
 /// `go('/users')` builds the stack `[home, users]`: sub-pages get a back
 /// arrow and Android back returns home instead of closing the app.
 /// `/scan` lives on the root navigator (full-screen camera, returns a plate).
-GoRouter buildRouter(AuthCubit auth, Listenable refresh) => GoRouter(
-  initialLocation: homePath,
+GoRouter buildRouter(
+  AuthCubit auth,
+  Listenable refresh, {
+  String initialLocation = homePath,
+}) => GoRouter(
+  initialLocation: initialLocation,
   refreshListenable: refresh,
   redirect: (_, state) => authRedirect(auth.state, state.uri.path),
   errorBuilder: (context, state) => RouteErrorPage(error: state.error),

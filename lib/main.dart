@@ -12,6 +12,7 @@ import 'core/security/auto_lock_cubit.dart';
 import 'core/theme/theme_cubit.dart';
 import 'app/di/hive_registrar.g.dart';
 import 'app/di/injection.dart';
+import 'app/router/route_access.dart';
 import 'core/l10n/l10n.dart';
 import 'core/theme/app_theme.dart';
 import 'features/splash/presentation/splash_page.dart';
@@ -27,6 +28,9 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Clean deep links on web (`/check-in`, not `/#/check-in`); no-op elsewhere.
   usePathUrlStrategy();
+  // Read the deep link before any widget runs: the bootstrap splash pushes its
+  // own route to the browser history, which would otherwise hide `/reserve`.
+  final initialRoute = initialRouteFrom(Uri.base);
   await initializeDateFormatting(formatLocale);
   Hive.registerAdapters();
   await configureDependencies();
@@ -56,6 +60,7 @@ Future<void> main() async {
       themeCubit: themeCubit,
       localeCubit: localeCubit,
       autoLockCubit: serviceLocator<AutoLockCubit>(),
+      initialLocation: initialRoute,
     ),
   );
 }

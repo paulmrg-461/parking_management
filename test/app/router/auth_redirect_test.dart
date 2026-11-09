@@ -107,4 +107,37 @@ void main() {
       },
     );
   });
+
+  group('initialRouteFrom', () {
+    test('Success: web keeps the deep link and its query', () {
+      expect(
+        initialRouteFrom(Uri.parse('http://host/reserve?lot=1'), web: true),
+        '/reserve?lot=1',
+      );
+      expect(
+        initialRouteFrom(
+          Uri.parse('http://host/evidence?session=4&plate=ABC123'),
+          web: true,
+        ),
+        '/evidence?session=4&plate=ABC123',
+      );
+      expect(
+        initialRouteFrom(Uri.parse('http://host/policies/?lot=1'), web: true),
+        '/policies?lot=1',
+      );
+    });
+
+    test('Success: web at the root starts home', () {
+      expect(initialRouteFrom(Uri.parse('http://host/'), web: true), '/');
+      expect(initialRouteFrom(Uri.parse('http://host'), web: true), '/');
+    });
+
+    test('Success: mobile uses the engine launch route (home)', () {
+      expect(
+        initialRouteFrom(Uri.parse('http://host/reserve?lot=1')),
+        '/',
+        reason: 'kIsWeb is false outside a browser',
+      );
+    });
+  });
 }

@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 import '../../core/receipt/evidence_link.dart';
 import '../../features/auth/application/auth_cubit.dart';
 import '../../features/auth/domain/entities/user.dart';
@@ -25,6 +27,20 @@ const operatorRoutes = {
   helpPath,
   preferencesPath,
 };
+
+/// Route the router starts on.
+///
+/// On web the bootstrap splash runs before the router exists and takes over
+/// navigation, which resets the engine's default route to `/`; the browser URL
+/// is the only place a deep link (`/reserve?lot=1`, `/evidence?…`) survives.
+/// Elsewhere the engine reports the launch route itself, so home is right.
+String initialRouteFrom(Uri base, {bool web = kIsWeb}) {
+  if (!web) {
+    return homePath;
+  }
+  final path = base.path.isEmpty ? homePath : _normalize(base.path);
+  return base.hasQuery ? '$path?${base.query}' : path;
+}
 
 bool canAccess(UserRole role, String location) =>
     role == UserRole.admin || operatorRoutes.contains(_normalize(location));
