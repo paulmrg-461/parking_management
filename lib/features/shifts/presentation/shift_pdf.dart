@@ -21,7 +21,7 @@ Future<Uint8List> buildShiftPdf({
     subtitle: [
       ?lotName,
       '${Formatters.dateTime(shift.openedAt)}'
-          '${shift.closedAt == null ? '' : ' — ${Formatters.dateTime(shift.closedAt!)}'}',
+          '${shift.closedAt == null ? '' : ' - ${Formatters.dateTime(shift.closedAt!)}'}',
     ].join(' · '),
   );
 

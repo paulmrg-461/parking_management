@@ -28,9 +28,8 @@ Future<Uint8List> buildRevenueReportPdf({
   final builder = PdfDocumentBuilder(
     title: headline,
     subtitle: lotName == null
-        ? '${Formatters.date(revenue.startDate)} — ${Formatters.date(revenue.endDate)}'
-        : '$lotName · ${Formatters.date(revenue.startDate)} — '
-              '${Formatters.date(revenue.endDate)}',
+        ? Formatters.pdfDateRange(revenue.startDate, revenue.endDate)
+        : '$lotName · ${Formatters.pdfDateRange(revenue.startDate, revenue.endDate)}',
   );
 
   doc.addPage(

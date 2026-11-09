@@ -4,7 +4,7 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-11-09 (check-in preload, startup splash, PDF charts).
+Last updated: 2026-11-09 (PDF fonts, check-in preload, startup splash).
 
 ## Where we are
 
@@ -12,7 +12,7 @@ Last updated: 2026-11-09 (check-in preload, startup splash, PDF charts).
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0086` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 1069 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 1070 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -320,6 +320,17 @@ Last updated: 2026-11-09 (check-in preload, startup splash, PDF charts).
 - Tests: `vehicle.listPageCalls` stays 0 for one letter and becomes 1 on the
   second; a preloaded dashboard does one occupancy read and one extra capacity
   read on open (`occupancyCalls == 1`, `capacityCalls == 2`). Test count: 1069.
+
+### PDF fonts and the em dash (2026-11-09)
+
+- The `pdf` package uses built-in Helvetica, which has **no em/en dash
+  glyphs**: the report and records PDFs were drawing a missing glyph for
+  `—`. PDF date ranges now go through `Formatters.pdfDateRange` (ASCII
+  hyphen) and the shift/records separators use the same ASCII hyphen. The
+  middle dot `·` and Spanish accents are fine (Latin-1).
+- On-screen labels may keep the typographic dash; only PDF text must stay
+  ASCII/Latin-1. A test guards `pdfDateRange` against `—`/`–`, and the PDF
+  suite no longer logs "Unable to find a font to draw". Test count: 1070.
 
 ## Owner contact data (2026-11-05)
 

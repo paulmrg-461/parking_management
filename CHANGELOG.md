@@ -10,6 +10,10 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 ## [Unreleased] — 2026-11 (app reliability and operator UX)
 
 ### Fixed
+- Exported PDFs no longer contain a missing glyph where the report/records
+  date range used an em dash: the built-in Helvetica font has no em/en dash,
+  so PDFs now use `Formatters.pdfDateRange` (ASCII hyphen). On-screen labels
+  keep the typographic dash.
 - Reports: the variation line ("vs previous period") now wraps on narrow
   screens instead of overflowing its summary card.
 - Capacity rows (home capacity card) no longer overflow with large
