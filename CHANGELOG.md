@@ -178,6 +178,12 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Hardened
 
+- Check-in no longer downloads the 200-vehicle suggestion page on open: known
+  plates load when the operator types the second character (a failed attempt
+  is remembered so typing does not hammer the endpoint). On open it also
+  refreshes only the **capacity snapshot** when the shell already has the
+  dashboard loaded (one request instead of the six/seven KPI reads); a
+  successful entry still does the full refresh so home counters stay current.
 - Shift, reservations and monthly-pass screens load their independent reads
   concurrently instead of chaining round trips: current shift + history,
   active reservations + categories, and passes + pending payments + vehicles +

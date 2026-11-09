@@ -92,6 +92,7 @@ class _FakeVehicleRepository implements VehicleRepository {
   _FakeVehicleRepository({this.plates = const []});
 
   final List<String> plates;
+  int listPageCalls = 0;
 
   static const known = Vehicle(
     id: 7,
@@ -107,6 +108,7 @@ class _FakeVehicleRepository implements VehicleRepository {
     int limit = defaultPageSize,
     String? plate,
   }) async {
+    listPageCalls++;
     final items = [
       for (final (index, value) in plates.indexed)
         Vehicle(id: index + 1, plate: value, categoryId: 1),
@@ -222,6 +224,8 @@ void main() {
     void Function(BuildContext context, String plate)? onMarkExit,
     ReservationRepository? reservations,
     List<String> knownPlates = const [],
+    _FakeVehicleRepository? vehicles,
+    bool preloadDashboard = false,
     bool withVehicles = true,
     Future<XFile?> Function()? recordVideo,
     int? initialSpotId,
@@ -237,6 +241,11 @@ void main() {
     occupancy = FakeCheckOutRepository(categories: occupancyCategories)
       ..capacityToReturn = space
       ..slotBoardToReturn = board ?? SlotBoard.empty;
+    final dashboard = DashboardCubit(occupancy);
+    addTearDown(dashboard.close);
+    if (preloadDashboard) {
+      await dashboard.load();
+    }
     await tester.pumpWidget(
       testApp(
         MultiBlocProvider(
@@ -244,9 +253,7 @@ void main() {
             BlocProvider<CheckInCubit>(
               create: (_) => CheckInCubit(CreateCheckIn(checkIns), checkIns),
             ),
-            BlocProvider<DashboardCubit>(
-              create: (_) => DashboardCubit(occupancy),
-            ),
+            BlocProvider<DashboardCubit>.value(value: dashboard),
             BlocProvider<VehicleLookupCubit>(
               create: (_) => VehicleLookupCubit(
                 _FakeVehicleRepository(),
@@ -268,9 +275,11 @@ void main() {
             onMarkExit: onMarkExit,
             reservations: reservations,
             recordVideo: recordVideo,
-            vehicles: withVehicles
-                ? _FakeVehicleRepository(plates: knownPlates)
-                : null,
+            vehicles:
+                vehicles ??
+                (withVehicles
+                    ? _FakeVehicleRepository(plates: knownPlates)
+                    : null),
           ),
         ),
       ),
@@ -803,6 +812,36 @@ void main() {
     await enterPlate(tester, 'A');
 
     expect(find.byType(ActionChip), findsNothing);
+  });
+
+  testWidgets('Success: known plates load only after the second character', (
+    tester,
+  ) async {
+    final vehicles = _FakeVehicleRepository(plates: ['ABC123']);
+    await pumpPage(tester, vehicles: vehicles);
+
+    expect(vehicles.listPageCalls, 0);
+
+    await tester.enterText(plateField(), 'A');
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.pumpAndSettle();
+    expect(vehicles.listPageCalls, 0);
+
+    await tester.enterText(plateField(), 'AB');
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.pumpAndSettle();
+    expect(vehicles.listPageCalls, 1);
+  });
+
+  testWidgets('Success: a loaded dashboard refreshes only capacity', (
+    tester,
+  ) async {
+    await pumpPage(tester, preloadDashboard: true);
+
+    // The preloaded dashboard did one occupancy read; opening check-in only
+    // adds a capacity read, not the whole six-request dashboard load.
+    expect(occupancy.occupancyCalls, 1);
+    expect(occupancy.capacityCalls, 2);
   });
 
   testWidgets('Security: suggestions stay off without a repository', (

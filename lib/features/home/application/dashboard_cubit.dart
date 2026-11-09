@@ -70,6 +70,21 @@ final class DashboardLoaded extends DashboardState {
 
   bool get isFull => totalCapacity > 0 && openSessions >= totalCapacity;
 
+  /// Only the capacity changes on the hot check-in refresh; everything else
+  /// is preserved.
+  DashboardLoaded copyWith({CapacitySnapshot? capacity}) => DashboardLoaded(
+    openSessions: openSessions,
+    totalCapacity: totalCapacity,
+    categories: categories,
+    today: today,
+    trend: trend,
+    capacity: capacity ?? this.capacity,
+    sessions: sessions,
+    slotBoard: slotBoard,
+    setup: setup,
+    cachedAt: cachedAt,
+  );
+
   String plateOf(OpenSession session) =>
       session.plate.isEmpty ? 'Vehicle #${session.vehicleId}' : session.plate;
 
@@ -251,6 +266,27 @@ class DashboardCubit extends ResilientCubit<DashboardState> {
     capacity: snapshot.capacity,
     cachedAt: snapshot.cachedAt,
   );
+
+  /// Refreshes only the space snapshot used by the check-in form, keeping the
+  /// rest of the loaded dashboard untouched (one request instead of six).
+  Future<void> refreshCapacity() async {
+    final current = state;
+    if (current is! DashboardLoaded) {
+      return;
+    }
+    try {
+      final capacity = await _sessions.capacitySnapshot();
+      if (isClosed) {
+        return;
+      }
+      final latest = state;
+      if (latest is DashboardLoaded) {
+        _emit(latest.copyWith(capacity: capacity));
+      }
+    } catch (_) {
+      // Best effort: the check-in form keeps working with the old snapshot.
+    }
+  }
 
   /// Fare estimate for the board sheet (best effort).
   Future<CheckOutPreview?> preview(int sessionId) async {

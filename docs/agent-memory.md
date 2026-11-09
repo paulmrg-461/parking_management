@@ -4,7 +4,7 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-11-09 (startup splash, PDF hourly chart, parallel loads).
+Last updated: 2026-11-09 (check-in preload, startup splash, PDF charts).
 
 ## Where we are
 
@@ -12,7 +12,7 @@ Last updated: 2026-11-09 (startup splash, PDF hourly chart, parallel loads).
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0086` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 1067 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 1069 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -305,6 +305,21 @@ Last updated: 2026-11-09 (startup splash, PDF hourly chart, parallel loads).
   `SyncService.start()` still runs after the restore so queued writes never
   fire token-less.
 - `SplashPage` test covers the brand + progress; test count: 1067.
+
+### Check-in first paint (2026-11-09)
+
+- Known-plate suggestions no longer download `listPage(limit: 200)` on open:
+  `_loadKnownPlates` starts on the second typed character, guards against
+  concurrent loads, and marks a failed attempt as done so typing does not
+  hammer a failing endpoint (a successful check-in still refreshes it).
+- When the shell already has a `DashboardLoaded` state, the check-in page
+  refreshes only the space snapshot (`DashboardCubit.refreshCapacity`, one
+  request) instead of `load()` (occupancy + today + trend + capacity + board +
+  inside + setup). A successful entry still does the full refresh so the home
+  counters stay fresh.
+- Tests: `vehicle.listPageCalls` stays 0 for one letter and becomes 1 on the
+  second; a preloaded dashboard does one occupancy read and one extra capacity
+  read on open (`occupancyCalls == 1`, `capacityCalls == 2`). Test count: 1069.
 
 ## Owner contact data (2026-11-05)
 

@@ -131,6 +131,8 @@ class _CheckInPageState extends State<CheckInPage> {
   bool _leftKeys = false;
   List<Reservation> _activeHolds = const [];
   List<String> _knownPlates = const [];
+  bool _knownPlatesLoaded = false;
+  bool _knownPlatesLoading = false;
   static const _prefsBox = 'preferences';
   static const _lastPlateKey = 'last_plate';
 
@@ -143,18 +145,13 @@ class _CheckInPageState extends State<CheckInPage> {
     _spotId = _requestedSpotId;
     unawaited(context.read<CheckInCubit>().loadOpenSessions());
     unawaited(_loadHolds());
-    unawaited(_loadKnownPlates());
     // Fresh capacity snapshot so full categories are disabled in the
     // registration dropdown even on a deep link.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) {
         return;
       }
-      try {
-        unawaited(context.read<DashboardCubit>().load());
-      } on ProviderNotFoundException {
-        // Isolated tests may not provide the dashboard cubit.
-      }
+      _refreshDashboard();
       _restoreLastPlate();
       _prefillPlate();
     });
@@ -275,22 +272,49 @@ class _CheckInPageState extends State<CheckInPage> {
     }
   }
 
+  /// The check-in form only needs the capacity snapshot (full categories).
+  /// When the shell already loaded the dashboard, refresh that one value
+  /// instead of re-fetching the six KPI reads.
+  void _refreshDashboard() {
+    try {
+      final dashboard = context.read<DashboardCubit>();
+      if (dashboard.state is DashboardLoaded) {
+        unawaited(dashboard.refreshCapacity());
+      } else {
+        unawaited(dashboard.load());
+      }
+    } on ProviderNotFoundException {
+      // Isolated tests may not provide the dashboard cubit.
+    }
+  }
+
   /// Repeat customers type two letters and pick their plate: no full plate
-  /// memory needed from the operator.
+  /// memory needed from the operator. Loading waits for the first two
+  /// characters so opening check-in never downloads the vehicle page.
   Future<void> _loadKnownPlates() async {
     final repository = widget.vehicles;
     if (repository == null) {
+      _knownPlatesLoaded = true;
       return;
     }
+    if (_knownPlatesLoading) {
+      return;
+    }
+    _knownPlatesLoading = true;
     try {
       final page = await repository.listPage(offset: 0, limit: 200);
+      _knownPlatesLoaded = true;
       if (mounted) {
         setState(() {
           _knownPlates = [for (final vehicle in page.items) vehicle.plate];
         });
       }
     } catch (_) {
-      // Suggestions are an extra; check-in keeps working without them.
+      // Suggestions are an extra; check-in keeps working without them. Mark
+      // the attempt as done so typing does not hammer a failing endpoint.
+      _knownPlatesLoaded = true;
+    } finally {
+      _knownPlatesLoading = false;
     }
   }
 
@@ -366,6 +390,10 @@ class _CheckInPageState extends State<CheckInPage> {
 
   void _onPlateChanged(String _) {
     setState(() {});
+    final typed = _plateController.text.replaceAll(RegExp(r'\s'), '');
+    if (typed.length >= 2 && !_knownPlatesLoaded && !_knownPlatesLoading) {
+      unawaited(_loadKnownPlates());
+    }
     _debounce?.cancel();
     _debounce = Timer(_lookupDebounce, _lookupNow);
   }

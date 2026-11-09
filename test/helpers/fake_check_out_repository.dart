@@ -35,6 +35,7 @@ class FakeCheckOutRepository implements CheckOutRepository {
   int trendCalls = 0;
   int trendDaysRequested = 0;
   int occupancyCalls = 0;
+  int capacityCalls = 0;
   int listCalls = 0;
 
   /// When set, `todaySummary()` waits for it (to prove parallel extras).
@@ -86,6 +87,7 @@ class FakeCheckOutRepository implements CheckOutRepository {
 
   @override
   Future<CapacitySnapshot> capacitySnapshot() async {
+    capacityCalls++;
     final error = capacityError;
     if (error != null) {
       throw error;
