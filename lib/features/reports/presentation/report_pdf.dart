@@ -93,6 +93,10 @@ Future<Uint8List> buildRevenueReportPdf({
           ]),
           if (hourlyRows.isNotEmpty)
             PdfDocumentBuilder.section(l10n.reportsHourlyTitle, [
+              if (hourly != null) ...[
+                buildHourlyBarChart(hourly),
+                pw.SizedBox(height: 6),
+              ],
               for (final row in hourlyRows)
                 PdfDocumentBuilder.row(row.label, row.value),
             ]),
@@ -182,6 +186,69 @@ pw.Widget buildRevenueBarChart(List<DailyRevenue> byDay, {double height = 68}) {
             Formatters.date(byDay.last.date),
             style: const pw.TextStyle(fontSize: 8),
           ),
+        ],
+      ),
+    ],
+  );
+}
+
+/// Bar heights for the hourly traffic chart: the busiest entry hour fills
+/// [height], quiet hours stay at zero.
+List<double> hourlyBarHeights(
+  List<HourlyTrafficPoint> hours, {
+  double height = 68,
+}) {
+  final max = hours.fold<int>(
+    0,
+    (peak, hour) => hour.entries > peak ? hour.entries : peak,
+  );
+  if (max <= 0) {
+    return List<double>.filled(hours.length, 0);
+  }
+  return [for (final hour in hours) height * hour.entries / max];
+}
+
+/// Compact 24-hour entry chart for the exported PDF. Exits stay in the table
+/// below, so the chart answers "when does the gate get busy?" at a glance.
+pw.Widget buildHourlyBarChart(HourlyTraffic hourly, {double height = 68}) {
+  if (hourly.hours.isEmpty) {
+    return pw.SizedBox();
+  }
+  final heights = hourlyBarHeights(hourly.hours, height: height);
+  final color = PdfColor.fromHex('#1BAF7A');
+  return pw.Column(
+    crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+    children: [
+      pw.SizedBox(
+        height: height,
+        child: pw.Row(
+          crossAxisAlignment: pw.CrossAxisAlignment.end,
+          children: [
+            for (final bar in heights)
+              pw.Expanded(
+                child: pw.Padding(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 1),
+                  child: pw.Container(
+                    height: bar,
+                    decoration: pw.BoxDecoration(color: color),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+      pw.SizedBox(height: 2),
+      pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          for (final label in const [
+            '00:00',
+            '06:00',
+            '12:00',
+            '18:00',
+            '23:00',
+          ])
+            pw.Text(label, style: const pw.TextStyle(fontSize: 8)),
         ],
       ),
     ],

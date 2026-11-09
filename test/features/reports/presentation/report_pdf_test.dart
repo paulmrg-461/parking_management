@@ -104,6 +104,35 @@ void main() {
     expect(revenueBarHeights(const []), isEmpty);
   });
 
+  test('Success: the hourly chart scales to the busiest hour', () {
+    final heights = hourlyBarHeights([
+      for (var hour = 0; hour < 24; hour++)
+        HourlyTrafficPoint(
+          hour: hour,
+          entries: hour == 8
+              ? 10
+              : hour == 9
+              ? 5
+              : 0,
+        ),
+    ]);
+
+    expect(heights, hasLength(24));
+    expect(heights[8], 68);
+    expect(heights[9], 34);
+    expect(heights[0], 0);
+  });
+
+  test('Failure: a quiet day has no traffic bars', () {
+    expect(
+      hourlyBarHeights([
+        for (var hour = 0; hour < 24; hour++) HourlyTrafficPoint(hour: hour),
+      ]),
+      everyElement(0),
+    );
+    expect(hourlyBarHeights(const []), isEmpty);
+  });
+
   test('Security: an empty report still produces a readable PDF', () async {
     final bytes = await buildRevenueReportPdf(
       l10n: await AppLocalizations.delegate.load(defaultLocale),

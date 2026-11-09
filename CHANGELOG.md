@@ -107,6 +107,10 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   first and last dates underneath), so the period's shape is visible without
   reading every row. Quiet periods keep zero-height bars and an empty range
   skips the chart.
+- **Hourly chart in the PDF**: the hourly section now also draws 24 bars
+  scaled to the busiest entry hour, with 00/06/12/18/23 labels above the
+  table. Exits stay in the table, so the chart answers "when is the gate
+  busiest?" at a glance.
 - **Emergency action**: a red police icon in every app bar (and an entry in the
   desktop sidebar footer and the phone drawer) opens a one-tap panel with the
   site location, the nearest police quadrant and a large **Call now** button.

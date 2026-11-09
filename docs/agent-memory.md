@@ -4,7 +4,7 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-11-09 (parallel loads, PDF chart, records evidence).
+Last updated: 2026-11-09 (PDF hourly chart, parallel loads, records evidence).
 
 ## Where we are
 
@@ -12,7 +12,7 @@ Last updated: 2026-11-09 (parallel loads, PDF chart, records evidence).
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0086` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 1064 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 1066 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -285,6 +285,13 @@ Last updated: 2026-11-09 (parallel loads, PDF chart, records evidence).
 - Tests use gates on the first fake call (`currentGate`, `activeGate`,
   `listGate`) and `pumpEventQueue` to assert the second call already started.
   Test count: 1064; schema `0001..0086`.
+
+### Hourly chart in the PDF (2026-11-09)
+
+- The hourly section of the revenue PDF now draws 24 bars (`buildHourlyBarChart`)
+  scaled to the busiest entry hour, with 00/06/12/18/23 labels; the table below
+  keeps exact entries/exits. `hourlyBarHeights` is pure and tested (busiest =
+  68 pt, zero hours = 0). No new SQL. Test count: 1066.
 
 ## Owner contact data (2026-11-05)
 
