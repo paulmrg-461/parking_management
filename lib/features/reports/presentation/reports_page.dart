@@ -35,7 +35,7 @@ class ReportsPage extends StatefulWidget {
   State<ReportsPage> createState() => _ReportsPageState();
 }
 
-enum _RangePreset { today, last7, last30 }
+enum _RangePreset { today, last7, last30, thisMonth, lastMonth }
 
 class _ReportsPageState extends State<ReportsPage> {
   late DateTimeRange _range;
@@ -58,17 +58,28 @@ class _ReportsPageState extends State<ReportsPage> {
   void _selectPreset(_RangePreset preset) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final days = switch (preset) {
-      _RangePreset.today => 0,
-      _RangePreset.last7 => 6,
-      _RangePreset.last30 => 29,
+    final range = switch (preset) {
+      _RangePreset.today => DateTimeRange(start: today, end: today),
+      _RangePreset.last7 => DateTimeRange(
+        start: today.subtract(const Duration(days: 6)),
+        end: today,
+      ),
+      _RangePreset.last30 => DateTimeRange(
+        start: today.subtract(const Duration(days: 29)),
+        end: today,
+      ),
+      _RangePreset.thisMonth => DateTimeRange(
+        start: DateTime(today.year, today.month, 1),
+        end: today,
+      ),
+      _RangePreset.lastMonth => DateTimeRange(
+        start: DateTime(today.year, today.month - 1, 1),
+        end: DateTime(today.year, today.month, 0),
+      ),
     };
     setState(() {
       _preset = preset;
-      _range = DateTimeRange(
-        start: today.subtract(Duration(days: days)),
-        end: today,
-      );
+      _range = range;
     });
     _load();
   }
@@ -110,6 +121,7 @@ class _ReportsPageState extends State<ReportsPage> {
         lotName: _lotName(context, state.allLots),
         previousTotal: state.previousTotal,
         deltaPercent: state.deltaPercent,
+        hourly: state.hourly,
       );
       if (!context.mounted) {
         return;
@@ -137,6 +149,7 @@ class _ReportsPageState extends State<ReportsPage> {
           revenue: state.revenue,
           previousTotal: state.previousTotal,
           deltaPercent: state.deltaPercent,
+          hourly: state.hourly,
         ),
       ),
     );
@@ -192,30 +205,25 @@ class _ReportsPageState extends State<ReportsPage> {
                   '${Formatters.date(_range.start)} — '
                   '${Formatters.date(_range.end)}',
               children: [
-                SegmentedButton<_RangePreset>(
-                  segments: [
-                    ButtonSegment(
-                      value: _RangePreset.today,
-                      label: Text(l10n.reportsToday),
+                for (final (preset, label) in [
+                  (_RangePreset.today, l10n.reportsToday),
+                  (_RangePreset.last7, l10n.reportsLast7),
+                  (_RangePreset.last30, l10n.reportsLast30),
+                  (_RangePreset.thisMonth, l10n.reportsThisMonth),
+                  (_RangePreset.lastMonth, l10n.reportsLastMonth),
+                ])
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      minHeight: Layout.minTouch,
                     ),
-                    ButtonSegment(
-                      value: _RangePreset.last7,
-                      label: Text(l10n.reportsLast7),
+                    child: ChoiceChip(
+                      label: Text(label),
+                      selected: _preset == preset,
+                      showCheckmark: false,
+                      materialTapTargetSize: MaterialTapTargetSize.padded,
+                      onSelected: (_) => _selectPreset(preset),
                     ),
-                    ButtonSegment(
-                      value: _RangePreset.last30,
-                      label: Text(l10n.reportsLast30),
-                    ),
-                  ],
-                  selected: {?_preset},
-                  emptySelectionAllowed: true,
-                  showSelectedIcon: false,
-                  onSelectionChanged: (selection) {
-                    if (selection.isNotEmpty) {
-                      _selectPreset(selection.first);
-                    }
-                  },
-                ),
+                  ),
                 ConstrainedBox(
                   constraints: const BoxConstraints(minHeight: Layout.minTouch),
                   child: OutlinedButton.icon(

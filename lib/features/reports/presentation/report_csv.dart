@@ -1,3 +1,4 @@
+import '../domain/entities/hourly_traffic.dart';
 import '../domain/entities/revenue_report.dart';
 
 /// Machine-readable CSV of the revenue report: one row per figure, raw numbers
@@ -7,6 +8,7 @@ String reportCsv({
   required RevenueReport revenue,
   int? previousTotal,
   int? deltaPercent,
+  HourlyTraffic? hourly,
 }) {
   String cell(Object? value) {
     final text = (value ?? '').toString();
@@ -39,6 +41,11 @@ String reportCsv({
     for (final item in revenue.byPayment)
       ['by_payment', item.paymentMethod, item.amount],
     for (final item in revenue.byLot) ['by_lot', item.lotName, item.amount],
+    for (final point in hourly?.hours ?? const <HourlyTrafficPoint>[])
+      if (point.total > 0) ...[
+        ['hourly_entries', point.timeLabel, point.entries],
+        ['hourly_exits', point.timeLabel, point.exits],
+      ],
   ];
   return rows.map((row) => row.map(cell).join(',')).join('\n');
 }

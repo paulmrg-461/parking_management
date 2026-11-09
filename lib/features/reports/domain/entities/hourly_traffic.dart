@@ -15,6 +15,9 @@ class HourlyTrafficPoint extends Equatable {
 
   int get total => entries + exits;
 
+  /// `08:00`; locale-independent, used by the grid, CSV and PDF.
+  String get timeLabel => '${hour.toString().padLeft(2, '0')}:00';
+
   factory HourlyTrafficPoint.fromJson(Map<String, dynamic> json) {
     int value(Object? raw) => (raw as num?)?.toInt() ?? 0;
     return HourlyTrafficPoint(

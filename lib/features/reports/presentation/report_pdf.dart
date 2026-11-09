@@ -7,6 +7,7 @@ import '../../../core/l10n/l10n.dart';
 import '../../../core/receipt/pdf_table.dart';
 import '../../../core/utils/cop_formatter.dart';
 import '../../../core/utils/formatters.dart';
+import '../domain/entities/hourly_traffic.dart';
 import '../domain/entities/revenue_report.dart';
 
 /// Builds the shareable PDF for the revenue report (active lot, or every site
@@ -18,8 +19,12 @@ Future<Uint8List> buildRevenueReportPdf({
   String? lotName,
   int? previousTotal,
   int? deltaPercent,
+  HourlyTraffic? hourly,
 }) {
   final doc = pw.Document();
+  final hourlyRows = hourly == null
+      ? const <({String label, String value})>[]
+      : reportHourlyRows(l10n: l10n, hourly: hourly);
   final builder = PdfDocumentBuilder(
     title: headline,
     subtitle: lotName == null
@@ -82,6 +87,11 @@ Future<Uint8List> buildRevenueReportPdf({
                 CopFormatter.format(day.amount),
               ),
           ]),
+          if (hourlyRows.isNotEmpty)
+            PdfDocumentBuilder.section(l10n.reportsHourlyTitle, [
+              for (final row in hourlyRows)
+                PdfDocumentBuilder.row(row.label, row.value),
+            ]),
           PdfDocumentBuilder.section(l10n.reportsRevenueByCategory, [
             for (final category in revenue.byCategory)
               PdfDocumentBuilder.row(
@@ -130,3 +140,17 @@ List<({String label, String value})> reportComparisonRows({
     (label: l10n.reportsPreviousLabel, value: CopFormatter.format(previous)),
   ];
 }
+
+/// The hourly table of the PDF: one row per hour with movement (quiet hours
+/// add noise to a printed report). Empty when there was no traffic.
+List<({String label, String value})> reportHourlyRows({
+  required AppLocalizations l10n,
+  required HourlyTraffic hourly,
+}) => [
+  for (final point in hourly.hours)
+    if (point.total > 0)
+      (
+        label: point.timeLabel,
+        value: l10n.reportsHourlyPair(point.entries, point.exits),
+      ),
+];

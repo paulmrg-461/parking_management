@@ -288,6 +288,24 @@ void main() {
     expect(repository.lastEnd, DateTime(today.year, today.month, today.day));
   });
 
+  testWidgets('Success: month presets use calendar boundaries', (tester) async {
+    final repository = await _pump(tester);
+
+    await tester.tap(find.text('Mes anterior'));
+    await tester.pumpAndSettle();
+
+    final now = DateTime.now();
+    expect(repository.lastStart, DateTime(now.year, now.month - 1, 1));
+    expect(repository.lastEnd, DateTime(now.year, now.month, 0));
+
+    await tester.tap(find.text('Este mes'));
+    await tester.pumpAndSettle();
+
+    final today = DateTime(now.year, now.month, now.day);
+    expect(repository.lastStart, DateTime(today.year, today.month, 1));
+    expect(repository.lastEnd, today);
+  });
+
   testWidgets('Success: the variation against the previous period is shown', (
     tester,
   ) async {

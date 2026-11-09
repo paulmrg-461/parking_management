@@ -4520,6 +4520,18 @@ abstract class AppLocalizations {
   /// **'30 días'**
   String get reportsLast30;
 
+  /// No description provided for @reportsThisMonth.
+  ///
+  /// In es, this message translates to:
+  /// **'Este mes'**
+  String get reportsThisMonth;
+
+  /// No description provided for @reportsLastMonth.
+  ///
+  /// In es, this message translates to:
+  /// **'Mes anterior'**
+  String get reportsLastMonth;
+
   /// No description provided for @reportsTitle.
   ///
   /// In es, this message translates to:
@@ -4621,6 +4633,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Sin entradas en el periodo'**
   String get reportsHourlyEmpty;
+
+  /// No description provided for @reportsHourlyPair.
+  ///
+  /// In es, this message translates to:
+  /// **'{entries} entradas · {exits} salidas'**
+  String reportsHourlyPair(int entries, int exits);
 
   /// No description provided for @reportsHourlyLegend.
   ///

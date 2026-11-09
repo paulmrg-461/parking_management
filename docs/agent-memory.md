@@ -12,7 +12,7 @@ Last updated: 2026-11-09 (hourly traffic reports, offline dashboard cache, bay h
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0082` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 1036 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 1039 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -180,6 +180,12 @@ Last updated: 2026-11-09 (hourly traffic reports, offline dashboard cache, bay h
   infrastructure 40 (40.2). Test count: 1036; schema `0001..0082`.
 - Live smoke: `report_hourly_traffic(2026-11-03, 2026-11-09)` returned 24
   buckets with the expected entries/exits and `America/Bogota`.
+- Follow-up: the report presets added **Este mes / Mes anterior** (calendar
+  boundaries) and moved from a `SegmentedButton` to `ChoiceChip`s inside the
+  `FilterBar`, so they wrap on phones. `reportCsv` gains
+  `hourly_entries`/`hourly_exits` raw rows and `buildRevenueReportPdf` a
+  "Tráfico por hora" table via `reportHourlyRows`; both include only hours
+  with movement. Test count: 1039.
 
 ## Owner contact data (2026-11-05)
 

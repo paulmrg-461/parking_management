@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/l10n/l10n.dart';
+import 'package:parking_management/features/reports/domain/entities/hourly_traffic.dart';
 import 'package:parking_management/features/reports/domain/entities/revenue_report.dart';
 import 'package:parking_management/features/reports/presentation/report_pdf.dart';
 
@@ -11,12 +12,8 @@ final _revenue = RevenueReport(
   byCategory: const [
     CategoryRevenue(categoryId: 1, categoryName: 'Car', amount: 100000),
   ],
-  byPayment: const [
-    PaymentRevenue(paymentMethod: 'cash', amount: 100000),
-  ],
-  byLot: const [
-    LotRevenue(lotId: 1, lotName: 'Central', amount: 100000),
-  ],
+  byPayment: const [PaymentRevenue(paymentMethod: 'cash', amount: 100000)],
+  byLot: const [LotRevenue(lotId: 1, lotName: 'Central', amount: 100000)],
 );
 
 void main() {
@@ -54,15 +51,37 @@ void main() {
     expect(rows, isEmpty);
   });
 
-  test('Security: a zero previous total never yields a division result', () async {
-    final rows = reportComparisonRows(
-      l10n: await AppLocalizations.delegate.load(defaultLocale),
-      previousTotal: 0,
-      deltaPercent: null,
-    );
+  test(
+    'Security: a zero previous total never yields a division result',
+    () async {
+      final rows = reportComparisonRows(
+        l10n: await AppLocalizations.delegate.load(defaultLocale),
+        previousTotal: 0,
+        deltaPercent: null,
+      );
 
-    expect(rows, isEmpty);
-  });
+      expect(rows, isEmpty);
+    },
+  );
+
+  test(
+    'Success: only hours with movement reach the hourly PDF table',
+    () async {
+      final rows = reportHourlyRows(
+        l10n: await AppLocalizations.delegate.load(defaultLocale),
+        hourly: const HourlyTraffic(
+          hours: [
+            HourlyTrafficPoint(hour: 8, entries: 2, exits: 1),
+            HourlyTrafficPoint(hour: 9),
+          ],
+        ),
+      );
+
+      expect(rows, hasLength(1));
+      expect(rows.single.label, '08:00');
+      expect(rows.single.value, '2 entradas · 1 salidas');
+    },
+  );
 
   test('Security: an empty report still produces a readable PDF', () async {
     final bytes = await buildRevenueReportPdf(

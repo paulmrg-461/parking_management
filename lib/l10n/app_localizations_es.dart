@@ -2514,6 +2514,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get reportsLast30 => '30 días';
 
   @override
+  String get reportsThisMonth => 'Este mes';
+
+  @override
+  String get reportsLastMonth => 'Mes anterior';
+
+  @override
   String get reportsTitle => 'Reportes';
 
   @override
@@ -2574,6 +2580,11 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get reportsHourlyEmpty => 'Sin entradas en el periodo';
+
+  @override
+  String reportsHourlyPair(int entries, int exits) {
+    return '$entries entradas · $exits salidas';
+  }
 
   @override
   String get reportsHourlyLegend =>
