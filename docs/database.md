@@ -134,8 +134,9 @@ plate is the key).
 
 **Records**
 `session_records(plate, limit, offset, from, to)`: lot-scoped session log
-(entry, exit, duration, amount, status) with a partial plate filter, an
-inclusive business-date range and a total; powers `/records` and its exports.
+(entry, exit, duration, amount, status, evidence count) with a partial plate
+filter, an inclusive business-date range and a total; powers `/records` and
+its exports.
 
 **Shifts and cash**
 `open_shift`, `current_shift`, `close_shift`, `add_cash_movement`,

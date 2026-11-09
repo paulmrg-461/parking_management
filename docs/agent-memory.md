@@ -4,15 +4,15 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-11-09 (setup checklist, evidence viewer, audit search).
+Last updated: 2026-11-09 (records evidence, setup checklist, evidence viewer).
 
 ## Where we are
 
 - Stack: Flutter (android + web) + self-hosted Supabase only. No FastAPI,
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
-- `supabase/migrations/0001..0085` are the schema owner (applied by
+- `supabase/migrations/0001..0086` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 1058 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 1059 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -250,6 +250,20 @@ Last updated: 2026-11-09 (setup checklist, evidence viewer, audit search).
 - Live smoke: `lot_setup_status()` for lot 1 returned
   `complete: true` (5 categories, 7 active tariffs, capacity 20/10,
   address/phone set).
+
+### Evidence from records (2026-11-09)
+
+- `0086_session_records_evidence.sql` recreates `session_records` with a
+  `photo_count` per row (the query is already lot-scoped, so no extra filter is
+  needed). The activity log shows "Evidencias (N)" under the times when the
+  count is positive and opens the shared evidence sheet; the log row still
+  opens the vehicle history when tapped elsewhere.
+- `SessionRecord.photoCount` + `RecordsPage(evidenceRepository:)` (test seam).
+  Tests cover the SQL count, the parser and the log action; no evidence is
+  queried until the operator taps the action. Test count: 1059; schema
+  `0001..0086`.
+- Live smoke: `session_records` for `LCR481` returned session 48 with
+  `photo_count: 2` (session 43 with 0), matching `vehicle_history`.
 
 ## Owner contact data (2026-11-05)
 

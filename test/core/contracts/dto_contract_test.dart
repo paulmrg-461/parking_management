@@ -168,6 +168,7 @@ void main() {
         'entry_time': '2026-11-05T10:00:00Z',
         'status': 'open',
         'duration_seconds': 3600,
+        'photo_count': 2,
       });
       final closed = SessionRecord.fromJson({
         'id': 2,
@@ -181,6 +182,7 @@ void main() {
       expect(open.isOpen, isTrue);
       expect(open.exitTime, isNull);
       expect(open.duration, const Duration(hours: 1));
+      expect(open.photoCount, 2);
       expect(closed.isOpen, isFalse);
       expect(closed.amountCharged, 5000);
     });

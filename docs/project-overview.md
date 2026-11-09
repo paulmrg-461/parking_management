@@ -43,7 +43,7 @@ WhatsApp (manual or automated).
 | Secrets / PIN operations | Complete (scripts + runbook) | PIN rotation verified live |
 | E2E and CI | Complete (API + Flutter client, real stack) | CI job `supabase-e2e` |
 
-Quality snapshot (2026-11-09, local stack): **1058 Flutter tests + 1 integration
+Quality snapshot (2026-11-09, local stack): **1059 Flutter tests + 1 integration
 test**, SQL/RLS suite green, web build green, analyzer with **0 errors and 0
 warnings** (only SDK deprecation infos from the pinned beta channel), restore
 drill green.
@@ -61,7 +61,7 @@ the main data it touches.
 | `spots` | Admin drag & drop map editor and bay layout, with a maintenance history per bay | `parking_spots`, `parking_spot_events`, `save/delete_parking_spot`, `list_spot_events` |
 | `check_in` | Plate lookup, evidence photos, offline queue | `check_in`, `vehicles`, Storage `evidence` |
 | `check_out` | Open sessions (paged), payment, receipt | `check_out`, `calculate_fare`, `open_sessions_view` |
-| `records` | Site activity log with a plate filter and paging | `session_records` |
+| `records` | Site activity log with a plate/date filter, paging and evidence access | `session_records` |
 | `policies` | Public legal policy / service contract | `public_lot_profile`, `reset_legal_policy` |
 | `vehicle_history` | Timeline, notes, blacklist, owner name/phone, evidence viewer, reprint, WhatsApp | `vehicle_history`, `update_vehicle_flags` |
 | `vehicles` | Registry CRUD and paging | `vehicles` |

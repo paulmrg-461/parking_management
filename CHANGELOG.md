@@ -91,6 +91,10 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   chip when the car has photos/videos, so an operator can review the entry
   evidence without leaving the exit flow. It opens the same viewer and wraps
   with the other status chips on phones.
+- **Evidence from records**: `0086` adds the photo count to `session_records`,
+  so each activity-log row with evidence offers "Evidencias (N)" under its
+  times. The log reuses the same viewer (signed URLs, zoom, video, retry); the
+  evidence is only queried when the operator taps it.
 - **First-steps checklist**: `0085` adds `lot_setup_status()` with the active
   site's categories, active tariffs, capacity/active bays and identity flags.
   Admins of a new site see a **Primeros pasos** card on the home with a
