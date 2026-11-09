@@ -1492,6 +1492,11 @@ class AppLocalizationsEs extends AppLocalizations {
   String get homeTrendFlat => 'Igual que la semana anterior';
 
   @override
+  String homeStaleData(String time) {
+    return 'Sin conexión · datos guardados de las $time';
+  }
+
+  @override
   String get homeCapacityTitle => 'Capacidad del parqueadero';
 
   @override

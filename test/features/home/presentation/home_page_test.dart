@@ -15,16 +15,20 @@ import 'package:parking_management/core/widgets/plate_text.dart';
 import 'package:parking_management/core/widgets/skeleton.dart';
 import 'package:parking_management/features/check_out/domain/entities/slot_board.dart';
 import 'package:parking_management/features/home/application/dashboard_cubit.dart';
+import 'package:parking_management/features/home/domain/repositories/dashboard_cache.dart';
 import 'package:parking_management/features/home/presentation/home_page.dart';
 import 'package:parking_management/features/home/presentation/widgets/dashboard_widgets.dart';
+import 'package:parking_management/features/home/presentation/widgets/slot_board_card.dart';
 import 'package:parking_management/features/reservations/domain/entities/reservation.dart';
 import 'package:parking_management/features/spots/domain/entities/parking_spot.dart';
 import 'package:parking_management/features/reservations/domain/repositories/reservation_repository.dart';
 import 'package:parking_management/features/settings/application/branding_cubit.dart';
 
 import '../../../helpers/app_harness.dart';
+import '../../../helpers/dashboard_fixtures.dart';
 import '../../../helpers/fake_auth_repository.dart';
 import '../../../helpers/fake_check_out_repository.dart';
+import '../../../helpers/fake_dashboard_cache.dart';
 import '../../../helpers/fake_reservation_repository.dart';
 import '../../../helpers/fake_settings_repository.dart';
 import '../../../helpers/test_app.dart';
@@ -37,6 +41,7 @@ Future<FakeCheckOutRepository> _pump(
   DashboardTrend trend = DashboardTrend.empty,
   Failure? trendError,
   Future<void>? todayGate,
+  DashboardCache? cache,
   bool settle = true,
   int capacity = 0,
   CapacitySnapshot? space,
@@ -78,7 +83,7 @@ Future<FakeCheckOutRepository> _pump(
       GoRoute(
         path: '/',
         builder: (_, _) => BlocProvider(
-          create: (_) => DashboardCubit(sessions),
+          create: (_) => DashboardCubit(sessions, cache: cache),
           child: HomePage(reservations: reservations),
         ),
         routes: [
@@ -396,6 +401,21 @@ void main() {
     await _pump(tester, role: UserRole.admin, trend: _week());
 
     expect(find.byTooltip('Abrir reportes'), findsOneWidget);
+  });
+
+  testWidgets('Success: offline shows the cached KPIs with a stale notice', (
+    tester,
+  ) async {
+    final cache = FakeDashboardCache()..snapshot = sampleDashboardSnapshot();
+    await _pump(tester, error: const NetworkFailure('offline'), cache: cache);
+
+    expect(
+      find.text('Sin conexión · datos guardados de las 14:32'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('25.000'), findsWidgets);
+    expect(find.byType(SlotBoardCard), findsNothing);
+    expect(find.byType(InsideCard), findsNothing);
   });
 
   testWidgets('A11y: the trend card fits a phone with large text', (

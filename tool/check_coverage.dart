@@ -11,13 +11,13 @@ import 'dart:io';
 const _lcovPath = 'coverage/lcov.info';
 
 /// Global floor (all non-generated lib files).
-const _globalFloor = 78.0;
+const _globalFloor = 79.0;
 
 /// Layer floors; keep them in sync with the measured baseline.
 const _layerFloors = <String, double>{
   'application/': 90.0,
-  'domain/': 47.0,
-  'infrastructure/': 38.0,
+  'domain/': 52.0,
+  'infrastructure/': 40.0,
 };
 
 class _Counter {

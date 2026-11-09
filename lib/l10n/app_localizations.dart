@@ -2768,6 +2768,12 @@ abstract class AppLocalizations {
   /// **'Igual que la semana anterior'**
   String get homeTrendFlat;
 
+  /// No description provided for @homeStaleData.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin conexión · datos guardados de las {time}'**
+  String homeStaleData(String time);
+
   /// No description provided for @homeCapacityTitle.
   ///
   /// In es, this message translates to:

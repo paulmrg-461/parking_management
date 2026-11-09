@@ -503,6 +503,8 @@
   "homeTrendVsPrevious": "{delta} vs semana anterior",
   "@homeTrendVsPrevious": {"placeholders": {"delta": {"type": "String"}}},
   "homeTrendFlat": "Igual que la semana anterior",
+  "homeStaleData": "Sin conexión · datos guardados de las {time}",
+  "@homeStaleData": {"placeholders": {"time": {"type": "String"}}},
   "homeCapacityTitle": "Capacidad del parqueadero",
   "homeCapacityCars": "Carros y camionetas",
   "homeCapacityMotos": "Motos",

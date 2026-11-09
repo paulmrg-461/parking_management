@@ -1481,6 +1481,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeTrendFlat => 'Same as last week';
 
   @override
+  String homeStaleData(String time) {
+    return 'Offline · saved data from $time';
+  }
+
+  @override
   String get homeCapacityTitle => 'Parking capacity';
 
   @override

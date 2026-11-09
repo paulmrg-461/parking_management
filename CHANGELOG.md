@@ -55,6 +55,13 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   log cannot drift. The bay editor shows **Ver historial** with the last
   transitions (skeleton, empty and retry states); operators can read it, only
   admins can change a bay. Any map edit refreshes the home board.
+- **Offline dashboard**: the home keeps the last successful occupancy, today,
+  trend and capacity snapshot on the device (versioned JSON, one entry per
+  site). When a load fails the operator still sees those KPIs with a
+  "Sin conexión · datos guardados de las HH:mm" notice and a retry, instead of
+  an empty dashboard; the live space board and inside list are hidden because
+  they would be stale. A partial load (one RPC failed) never overwrites a
+  complete snapshot.
 - **Emergency action**: a red police icon in every app bar (and an entry in the
   desktop sidebar footer and the phone drawer) opens a one-tap panel with the
   site location, the nearest police quadrant and a large **Call now** button.

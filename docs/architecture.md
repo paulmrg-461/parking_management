@@ -121,6 +121,11 @@ sequenceDiagram
 - GoTrue rotates tokens; the auth-state listener rewrites the Hive snapshot.
 - Logout clears reference-data caches and signs out locally; the outbox is
   **never** cleared (work done offline must still reach the server).
+- The home dashboard keeps its last successful KPIs (occupancy, today, trend
+  and capacity) in the Hive `cache` box, keyed by site. When a load fails the
+  cubit serves that snapshot with `cachedAt`, the UI marks it as offline data
+  and hides the live board/inside list; the next complete load rewrites it.
+  A degraded load (one KPI failed) never overwrites a complete snapshot.
 
 ## 4. Check-in (online and offline)
 

@@ -30,6 +30,19 @@ class TrendDay extends Equatable {
 
   bool get hasMovement => revenue != 0 || entries != 0 || exits != 0;
 
+  /// `YYYY-MM-DD` in the site's business day (matches the RPC payload).
+  String get dateKey =>
+      '${date.year.toString().padLeft(4, '0')}-'
+      '${date.month.toString().padLeft(2, '0')}-'
+      '${date.day.toString().padLeft(2, '0')}';
+
+  Map<String, dynamic> toJson() => {
+    'date': dateKey,
+    'revenue': revenue,
+    'entries': entries,
+    'exits': exits,
+  };
+
   @override
   List<Object?> get props => [date, revenue, entries, exits];
 }
@@ -88,4 +101,8 @@ class DashboardTrend extends Equatable {
 
   @override
   List<Object?> get props => [days];
+
+  Map<String, dynamic> toJson() => {
+    'days': [for (final day in days) day.toJson()],
+  };
 }

@@ -8,6 +8,7 @@ import '../../../app/shell/app_destinations.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../reservations/domain/repositories/reservation_repository.dart';
 import '../../../core/theme/tokens.dart';
+import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/skeleton.dart';
 import '../../../core/widgets/sync_badge.dart';
@@ -86,6 +87,12 @@ class _Dashboard extends StatelessWidget {
         .where(managementDestinations.contains)
         .toList();
     final split = MediaQuery.sizeOf(context).width >= Layout.homeSplit;
+    final stale = context.select<DashboardCubit, DateTime?>(
+      (cubit) => switch (cubit.state) {
+        DashboardLoaded(:final cachedAt) => cachedAt,
+        _ => null,
+      },
+    );
     final list = RefreshIndicator(
       onRefresh: context.read<DashboardCubit>().load,
       child: ListView(
@@ -140,6 +147,10 @@ class _Dashboard extends StatelessWidget {
             subtitle: l10n.homeSummaryHint,
           ),
           const SizedBox(height: Space.sm),
+          if (stale != null) ...[
+            _StaleDashboardNotice(cachedAt: stale),
+            const SizedBox(height: Space.sm),
+          ],
           BlocBuilder<DashboardCubit, DashboardState>(
             buildWhen: (previous, current) =>
                 (previous is DashboardLoading) != (current is DashboardLoading),
@@ -156,10 +167,12 @@ class _Dashboard extends StatelessWidget {
           ),
           const SizedBox(height: Space.md),
           const TrendCard(),
-          const SizedBox(height: Space.md),
-          SlotBoardCard(reservations: reservations),
-          const SizedBox(height: Space.md),
-          if (!split) const InsideCard(),
+          if (stale == null) ...[
+            const SizedBox(height: Space.md),
+            SlotBoardCard(reservations: reservations),
+            const SizedBox(height: Space.md),
+            if (!split) const InsideCard(),
+          ],
           // The sidebar already lists every management section on desktop.
           if (management.isNotEmpty &&
               MediaQuery.sizeOf(context).width < Layout.railBreakpoint) ...[
@@ -170,6 +183,10 @@ class _Dashboard extends StatelessWidget {
       ),
     );
     if (!split) {
+      return list;
+    }
+    if (stale != null) {
+      // No live board/inside data offline: keep the KPI list full width.
       return list;
     }
     return Row(
@@ -188,6 +205,55 @@ class _Dashboard extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Offline notice shown above the KPIs when they come from the device cache:
+/// it names the time they were captured and offers a retry.
+class _StaleDashboardNotice extends StatelessWidget {
+  const _StaleDashboardNotice({required this.cachedAt});
+
+  final DateTime cachedAt;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(
+        Space.md,
+        Space.xs,
+        Space.xs,
+        Space.xs,
+      ),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(Radii.md),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.cloud_off_outlined,
+            size: 18,
+            color: scheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: Space.sm),
+          Expanded(
+            child: Text(
+              l10n.homeStaleData(Formatters.time(cachedAt)),
+              style: theme.textTheme.bodySmall,
+            ),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+            onPressed: context.read<DashboardCubit>().load,
+            child: Text(l10n.actionRetry),
+          ),
+        ],
+      ),
     );
   }
 }

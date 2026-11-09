@@ -488,6 +488,8 @@
   "homeTrendVsPrevious": "{delta} vs last week",
   "@homeTrendVsPrevious": {"placeholders": {"delta": {"type": "String"}}},
   "homeTrendFlat": "Same as last week",
+  "homeStaleData": "Offline · saved data from {time}",
+  "@homeStaleData": {"placeholders": {"time": {"type": "String"}}},
   "homeCapacityTitle": "Parking capacity",
   "homeCapacityCars": "Cars and pickups",
   "homeCapacityMotos": "Motorcycles",

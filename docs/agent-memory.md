@@ -4,7 +4,7 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-11-09 (home trend comparison, parallel load, bay maintenance history). Branch `feature/supabase`.
+Last updated: 2026-11-09 (offline dashboard cache, bay history, home trend).
 
 ## Where we are
 
@@ -12,7 +12,7 @@ Last updated: 2026-11-09 (home trend comparison, parallel load, bay maintenance 
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0081` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 1022 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 1030 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -137,6 +137,27 @@ Last updated: 2026-11-09 (home trend comparison, parallel load, bay maintenance 
 - Live smoke (PostgREST): took bay S1 out with "prueba de humo", the event came
   back with actor Admin and the reason, then restored it and deleted the two
   smoke rows. Test count: 1022; schema `0001..0081`.
+
+### Offline dashboard cache (2026-11-09)
+
+- `DashboardSnapshot` (`home/domain/entities`) serializes occupancy, today,
+  trend and capacity + `cachedAt` as versioned JSON. `DashboardCache` is the
+  port; `HiveDashboardCache` stores it in the `cache` box under
+  `dashboard_<lot>` so switching sites never shows another site's numbers.
+  `HiveKeyValueStore.init()` opens `cache` for the same cold-start reason as
+  `preferences` (`get` is synchronous and only sees open boxes).
+- `DashboardCubit` writes the cache only after a **complete** load (occupancy
+  plus today/trend/capacity all succeeded); a degraded load never overwrites a
+  good snapshot. On a failed initial/lot-switch load it reads the cache and
+  emits `DashboardLoaded(cachedAt: ...)` (`isStale`); without a cache it still
+  emits `DashboardFailure`. Cache read/write errors are ignored.
+- The stale state carries only the KPIs: the space board and inside list stay
+  empty and `HomePage` hides them (including the wide side panel), showing
+  `_StaleDashboardNotice` above the summary with the capture time and a retry.
+  The shell `OfflineBanner` still reports connectivity separately.
+- Coverage floors raised with the new domain tests: global 79 (79.2 measured),
+  application 90 (90.7), domain 52 (53.3), infrastructure 40 (40.3).
+  Test count: 1030; schema `0001..0081`.
 
 ## Owner contact data (2026-11-05)
 

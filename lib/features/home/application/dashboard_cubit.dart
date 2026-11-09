@@ -1,15 +1,19 @@
+import 'dart:async';
+
 import 'package:equatable/equatable.dart';
 
 import '../../../core/error/failure.dart';
+import '../../../core/state/resilient_cubit.dart';
 import '../../check_out/domain/entities/capacity_snapshot.dart';
+import '../../check_out/domain/entities/check_out_preview.dart';
 import '../../check_out/domain/entities/dashboard_trend.dart';
 import '../../check_out/domain/entities/occupancy_snapshot.dart';
-import '../../check_out/domain/entities/check_out_preview.dart';
 import '../../check_out/domain/entities/open_session.dart';
 import '../../check_out/domain/entities/slot_board.dart';
 import '../../check_out/domain/entities/today_summary.dart';
 import '../../check_out/domain/repositories/check_out_repository.dart';
-import '../../../core/state/resilient_cubit.dart';
+import '../domain/entities/dashboard_snapshot.dart';
+import '../domain/repositories/dashboard_cache.dart';
 
 sealed class DashboardState extends Equatable {
   const DashboardState();
@@ -32,6 +36,7 @@ final class DashboardLoaded extends DashboardState {
     this.capacity = CapacitySnapshot.empty,
     this.sessions = const [],
     this.slotBoard = SlotBoard.empty,
+    this.cachedAt,
   });
 
   /// Vehicles currently inside (open sessions).
@@ -52,6 +57,12 @@ final class DashboardLoaded extends DashboardState {
   /// Visual board (spaces, cars inside, holds).
   final SlotBoard slotBoard;
 
+  /// When this came from the offline cache: the state is stale, the board and
+  /// the inside list are intentionally empty.
+  final DateTime? cachedAt;
+
+  bool get isStale => cachedAt != null;
+
   bool get isFull => totalCapacity > 0 && openSessions >= totalCapacity;
 
   String plateOf(OpenSession session) =>
@@ -67,6 +78,7 @@ final class DashboardLoaded extends DashboardState {
     capacity,
     sessions,
     slotBoard,
+    cachedAt,
   ];
 }
 
@@ -83,13 +95,22 @@ final class DashboardFailure extends DashboardState {
 /// and reads the count from `X-Total-Count`, so it stays cheap.
 ///
 /// Lot-aware: every [load] takes a sequence token so a slower load started
-/// for the previous lot is dropped, and a failure right after a lot switch
-/// reports the failure instead of keeping the other lot's numbers.
+/// for the previous lot is dropped. A failed load falls back to the cached
+/// KPIs of the same lot (marked stale) when there is one.
 class DashboardCubit extends ResilientCubit<DashboardState> {
-  DashboardCubit(this._sessions, [this._activeLot])
-    : super(const DashboardLoading());
+  DashboardCubit(
+    this._sessions, {
+    int? Function()? activeLot,
+    DashboardCache? cache,
+    DateTime Function()? clock,
+  }) : _activeLot = activeLot,
+       _cache = cache,
+       _clock = clock ?? DateTime.now,
+       super(const DashboardLoading());
 
   final CheckOutRepository _sessions;
+  final DashboardCache? _cache;
+  final DateTime Function() _clock;
 
   /// Optional: the active lot id, to tell a refresh from a lot switch.
   final int? Function()? _activeLot;
@@ -104,43 +125,66 @@ class DashboardCubit extends ResilientCubit<DashboardState> {
       emit(const DashboardLoading());
     }
     try {
-      final loaded = await _fetch();
+      final (loaded, complete) = await _fetch();
       if (token == _loadSeq) {
         _loadedLot = lot;
         _emit(loaded);
+        if (complete) {
+          unawaited(_writeCache(loaded));
+        }
       }
     } on Failure catch (failure) {
-      if (token == _loadSeq && !sameLot) {
+      if (token != _loadSeq || sameLot) {
+        return;
+      }
+      final cached = await _readCache();
+      if (token != _loadSeq) {
+        return;
+      }
+      if (cached != null) {
+        _loadedLot = lot;
+        _emit(_fromCache(cached));
+      } else {
         _emit(DashboardFailure(failure));
       }
     }
   }
 
-  Future<DashboardLoaded> _fetch() async {
+  Future<(DashboardLoaded, bool)> _fetch() async {
     final snapshot = await _sessions.occupancy();
     // The extras are independent and nice-to-have: run them together and
     // degrade each failure on its own (a slow/cold endpoint must not serialize
-    // the whole dashboard).
+    // the whole dashboard). `complete` is false when one of the cached KPIs
+    // failed, so a degraded load never overwrites a good cached snapshot.
+    var complete = true;
     final (today, trend, capacity, slotBoard, inside) = await (
-      _sessions.todaySummary().catchError((Object _) => TodaySummary.empty),
-      _sessions
-          .dashboardTrend(days: 14)
-          .catchError((Object _) => DashboardTrend.empty),
-      _sessions.capacitySnapshot().catchError(
-        (Object _) => CapacitySnapshot.empty,
-      ),
+      _sessions.todaySummary().catchError((Object _) {
+        complete = false;
+        return TodaySummary.empty;
+      }),
+      _sessions.dashboardTrend(days: 14).catchError((Object _) {
+        complete = false;
+        return DashboardTrend.empty;
+      }),
+      _sessions.capacitySnapshot().catchError((Object _) {
+        complete = false;
+        return CapacitySnapshot.empty;
+      }),
       _sessions.slotBoard().catchError((Object _) => SlotBoard.empty),
       _inside(),
     ).wait;
-    return DashboardLoaded(
-      openSessions: snapshot.totalOpen,
-      totalCapacity: snapshot.totalCapacity,
-      categories: snapshot.byCategory,
-      today: today,
-      trend: trend,
-      capacity: capacity,
-      sessions: inside,
-      slotBoard: slotBoard,
+    return (
+      DashboardLoaded(
+        openSessions: snapshot.totalOpen,
+        totalCapacity: snapshot.totalCapacity,
+        categories: snapshot.byCategory,
+        today: today,
+        trend: trend,
+        capacity: capacity,
+        sessions: inside,
+        slotBoard: slotBoard,
+      ),
+      complete,
     );
   }
 
@@ -153,6 +197,52 @@ class DashboardCubit extends ResilientCubit<DashboardState> {
       return const <OpenSession>[];
     }
   }
+
+  Future<void> _writeCache(DashboardLoaded state) async {
+    final cache = _cache;
+    if (cache == null) {
+      return;
+    }
+    try {
+      await cache.write(
+        DashboardSnapshot(
+          occupancy: OccupancySnapshot(
+            totalOpen: state.openSessions,
+            totalCapacity: state.totalCapacity,
+            byCategory: state.categories,
+          ),
+          today: state.today,
+          trend: state.trend,
+          capacity: state.capacity,
+          cachedAt: _clock(),
+        ),
+      );
+    } catch (_) {
+      // Best effort: a cache write never breaks the dashboard.
+    }
+  }
+
+  Future<DashboardSnapshot?> _readCache() async {
+    final cache = _cache;
+    if (cache == null) {
+      return null;
+    }
+    try {
+      return await cache.read();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  DashboardLoaded _fromCache(DashboardSnapshot snapshot) => DashboardLoaded(
+    openSessions: snapshot.occupancy.totalOpen,
+    totalCapacity: snapshot.occupancy.totalCapacity,
+    categories: snapshot.occupancy.byCategory,
+    today: snapshot.today,
+    trend: snapshot.trend,
+    capacity: snapshot.capacity,
+    cachedAt: snapshot.cachedAt,
+  );
 
   /// Fare estimate for the board sheet (best effort).
   Future<CheckOutPreview?> preview(int sessionId) async {

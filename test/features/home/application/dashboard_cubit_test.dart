@@ -9,7 +9,9 @@ import 'package:parking_management/features/check_out/domain/entities/dashboard_
 import 'package:parking_management/features/check_out/domain/entities/slot_board.dart';
 import 'package:parking_management/features/home/application/dashboard_cubit.dart';
 
+import '../../../helpers/dashboard_fixtures.dart';
 import '../../../helpers/fake_check_out_repository.dart';
+import '../../../helpers/fake_dashboard_cache.dart';
 
 List<OpenSession> _sessions(int count) => [
   for (var i = 1; i <= count; i++)
@@ -138,6 +140,82 @@ void main() {
     expect(cubit.state, isA<DashboardLoaded>());
   });
 
+  test('Success: a complete load refreshes the offline cache', () async {
+    final repository = FakeCheckOutRepository(
+      sessions: _sessions(3),
+      today: const TodaySummary(revenue: 25000, entries: 4),
+    );
+    final cache = FakeDashboardCache();
+    final cubit = DashboardCubit(
+      repository,
+      cache: cache,
+      clock: () => DateTime(2026, 11, 9, 16),
+    );
+
+    await cubit.load();
+    await pumpEventQueue();
+
+    expect(cache.writes, 1);
+    expect(cache.snapshot!.today.revenue, 25000);
+    expect(cache.snapshot!.occupancy.totalOpen, 3);
+    expect(cache.snapshot!.cachedAt, DateTime(2026, 11, 9, 16));
+  });
+
+  test('Success: a failed load falls back to the cached KPIs', () async {
+    final repository = FakeCheckOutRepository(
+      listError: const NetworkFailure('offline'),
+    );
+    final cache = FakeDashboardCache()..snapshot = sampleDashboardSnapshot();
+    final cubit = DashboardCubit(repository, cache: cache);
+
+    await cubit.load();
+
+    final state = cubit.state as DashboardLoaded;
+    expect(state.isStale, isTrue);
+    expect(state.openSessions, 3);
+    expect(state.today.revenue, 25000);
+    expect(state.capacity.carCapacity, 10);
+    expect(state.trend.days, hasLength(2));
+    expect(state.slotBoard, SlotBoard.empty);
+    expect(cache.reads, 1);
+  });
+
+  test('Failure: a failed load without a cache still reports it', () async {
+    final repository = FakeCheckOutRepository(
+      listError: const NetworkFailure('offline'),
+    );
+    final cubit = DashboardCubit(repository, cache: FakeDashboardCache());
+
+    await cubit.load();
+
+    expect(cubit.state, isA<DashboardFailure>());
+  });
+
+  test('Failure: an unreadable cache is ignored', () async {
+    final repository = FakeCheckOutRepository(
+      listError: const NetworkFailure('offline'),
+    );
+    final cache = FakeDashboardCache()..failRead = true;
+    final cubit = DashboardCubit(repository, cache: cache);
+
+    await cubit.load();
+
+    expect(cubit.state, isA<DashboardFailure>());
+  });
+
+  test('Security: a degraded load never overwrites the cache', () async {
+    final repository = FakeCheckOutRepository(sessions: _sessions(2))
+      ..trendError = const NetworkFailure('offline');
+    final cache = FakeDashboardCache();
+    final cubit = DashboardCubit(repository, cache: cache);
+
+    await cubit.load();
+    await pumpEventQueue();
+
+    expect(cache.writes, 0);
+    expect(cubit.state, isA<DashboardLoaded>());
+  });
+
   test(
     'Success: the capacity snapshot and inside list feed the home',
     () async {
@@ -201,7 +279,7 @@ void main() {
     test('Success: a slower load for the previous lot never overwrites the new one', () async {
       var lot = 1;
       final repository = FakeCheckOutRepository(sessions: _sessions(7));
-      final cubit = DashboardCubit(repository, () => lot);
+      final cubit = DashboardCubit(repository, activeLot: () => lot);
       final gate = Completer<void>();
       repository.occupancyGate = gate.future;
 
@@ -223,7 +301,7 @@ void main() {
       () async {
         var lot = 1;
         final repository = FakeCheckOutRepository(sessions: _sessions(7));
-        final cubit = DashboardCubit(repository, () => lot);
+        final cubit = DashboardCubit(repository, activeLot: () => lot);
         await cubit.load();
 
         lot = 2;
