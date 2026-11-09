@@ -12,7 +12,7 @@ Last updated: 2026-11-09 (evidence viewer, audit search, hourly reports).
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0084` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 1051 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 1052 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -223,6 +223,10 @@ Last updated: 2026-11-09 (evidence viewer, audit search, hourly reports).
 - Tests: SQL photo_count, entity parsing, remote signing/denied/list-failure
   with a MockClient, repository delegation, sheet states and the history
   action. Test count: 1051; schema `0001..0084`.
+- Follow-up: the check-out row also shows an "Evidencias (N)" `ActionChip`
+  when the session has photos, using the same sheet (`CheckOutPage`'s
+  `evidenceRepository` is the test seam). It wraps with the status chips, so
+  the 400 px row stays overflow-free. Test count: 1052.
 - Live smoke: `vehicle_history('LCR481')` returned session 48 with
   `photo_count: 2` (session 43 has 0).
 

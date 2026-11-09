@@ -340,6 +340,8 @@
   "sessionEvidenceDurationShort": "{seconds} s",
   "@sessionEvidenceDurationShort": {"placeholders": {"seconds": {"type": "int"}}},
   "sessionEvidenceOpenFailed": "No se pudo abrir la evidencia",
+  "sessionEvidenceShort": "Evidencias ({count})",
+  "@sessionEvidenceShort": {"placeholders": {"count": {"type": "int"}}},
   "vehicleWhatsappReadyAction": "Avisar que está listo",
   "vehicleWhatsappReceipt": "Hola, te compartimos el recibo del vehículo {plate}:",
   "@vehicleWhatsappReceipt": {"placeholders": {"plate": {"type": "String"}}},

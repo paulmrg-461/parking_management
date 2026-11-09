@@ -25,6 +25,7 @@ import 'package:parking_management/features/check_out/domain/entities/today_summ
 import 'package:parking_management/features/check_out/domain/entities/dashboard_trend.dart';
 import 'package:parking_management/features/check_out/domain/repositories/check_out_repository.dart';
 import 'package:parking_management/features/check_out/presentation/check_out_page.dart';
+import 'package:parking_management/features/evidence/domain/repositories/session_evidence_repository.dart';
 import 'package:parking_management/features/auth/application/auth_cubit.dart';
 import 'package:parking_management/features/auth/domain/entities/user.dart';
 import 'package:parking_management/features/home/application/dashboard_cubit.dart';
@@ -34,6 +35,7 @@ import '../../../helpers/fake_auth_repository.dart';
 import '../../../helpers/fake_check_out_repository.dart';
 import '../../../helpers/fake_key_value_store.dart';
 import '../../../helpers/fake_notification_repository.dart';
+import '../../../helpers/fake_session_evidence_repository.dart';
 import '../../../helpers/test_app.dart';
 
 final _confirm = find.byKey(const Key('checkout_confirm'));
@@ -170,6 +172,7 @@ void main() {
     Future<String?> Function(BuildContext context)? scanQr,
     UserRole? role,
     bool empty = false,
+    SessionEvidenceRepository? evidence,
   }) async {
     repository = _FakeCheckOutRepository()
       ..firstHasPass = firstHasPass
@@ -208,6 +211,7 @@ void main() {
             initialQuery: initialQuery,
             scanPlate: initialScan,
             scanQr: scanQr,
+            evidenceRepository: evidence,
           ),
         ),
       ),
@@ -228,6 +232,20 @@ void main() {
     // Sessions entered in 2026-01 are long stays by the test clock.
     expect(find.text('Más de 24 h'), findsNWidgets(2));
     expect(find.textContaining('h'), findsWidgets);
+  });
+
+  testWidgets('Success: an open session with photos opens its evidence', (
+    tester,
+  ) async {
+    final evidence = FakeSessionEvidenceRepository();
+    await pumpPage(tester, evidence: evidence);
+
+    expect(find.text('Evidencias (2)'), findsOneWidget);
+    await tester.tap(find.text('Evidencias (2)'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Evidencias de ABC123'), findsOneWidget);
+    expect(evidence.calls, 1);
   });
 
   testWidgets('Success: searching filters the list through the cubit', (

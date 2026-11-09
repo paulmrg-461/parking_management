@@ -1892,6 +1892,12 @@ abstract class AppLocalizations {
   /// **'No se pudo abrir la evidencia'**
   String get sessionEvidenceOpenFailed;
 
+  /// No description provided for @sessionEvidenceShort.
+  ///
+  /// In es, this message translates to:
+  /// **'Evidencias ({count})'**
+  String sessionEvidenceShort(int count);
+
   /// No description provided for @vehicleWhatsappReadyAction.
   ///
   /// In es, this message translates to:

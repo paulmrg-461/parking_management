@@ -329,6 +329,8 @@
   "sessionEvidenceDurationShort": "{seconds} s",
   "@sessionEvidenceDurationShort": {"placeholders": {"seconds": {"type": "int"}}},
   "sessionEvidenceOpenFailed": "Could not open the evidence",
+  "sessionEvidenceShort": "Evidence ({count})",
+  "@sessionEvidenceShort": {"placeholders": {"count": {"type": "int"}}},
   "vehicleWhatsappReadyAction": "Notify it is ready",
   "vehicleWhatsappReceipt": "Hi, here is the receipt for plate {plate}:",
   "@vehicleWhatsappReceipt": {"placeholders": {"plate": {"type": "String"}}},

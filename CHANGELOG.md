@@ -87,6 +87,10 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   tiles with a play action, with loading, empty and error+retry states. Listing
   stays protected by the lot RLS; a file whose signature fails is kept as an
   unavailable tile instead of hiding the row.
+- **Evidence from check-out**: the open-session row shows an "Evidencias (N)"
+  chip when the car has photos/videos, so an operator can review the entry
+  evidence without leaving the exit flow. It opens the same viewer and wraps
+  with the other status chips on phones.
 - **Emergency action**: a red police icon in every app bar (and an entry in the
   desktop sidebar footer and the phone drawer) opens a one-tap panel with the
   site location, the nearest police quadrant and a large **Call now** button.

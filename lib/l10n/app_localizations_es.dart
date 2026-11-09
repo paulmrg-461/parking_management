@@ -1008,6 +1008,11 @@ class AppLocalizationsEs extends AppLocalizations {
   String get sessionEvidenceOpenFailed => 'No se pudo abrir la evidencia';
 
   @override
+  String sessionEvidenceShort(int count) {
+    return 'Evidencias ($count)';
+  }
+
+  @override
   String get vehicleWhatsappReadyAction => 'Avisar que está listo';
 
   @override
