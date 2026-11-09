@@ -26,10 +26,13 @@ import 'create_vehicle_dialog.dart';
 import 'edit_vehicle_dialog.dart';
 
 class VehiclesPage extends StatefulWidget {
-  const VehiclesPage({super.key, this.onCheckIn});
+  const VehiclesPage({super.key, this.onCheckIn, this.onHistory});
 
   /// Opens check-in with the plate prefilled (injectable for widget tests).
   final void Function(BuildContext context, String plate)? onCheckIn;
+
+  /// Opens the vehicle history (injectable for widget tests).
+  final void Function(BuildContext context, String plate)? onHistory;
 
   @override
   State<VehiclesPage> createState() => _VehiclesPageState();
@@ -87,7 +90,10 @@ class _VehiclesPageState extends State<VehiclesPage> {
                     previous.query != current.query,
                 builder: (context, state) => AsyncView<VehiclesLoaded>(
                   status: _status(context, state),
-                  builder: (loaded) => _VehicleList(state: loaded),
+                  builder: (loaded) => _VehicleList(
+                    state: loaded,
+                    onHistory: widget.onHistory ?? _openHistory,
+                  ),
                 ),
               ),
             ),
@@ -165,10 +171,14 @@ class _VehiclesPageState extends State<VehiclesPage> {
 void _checkInWithPlate(BuildContext context, String plate) =>
     context.push('/check-in?plate=${Uri.encodeQueryComponent(plate)}');
 
+void _openHistory(BuildContext context, String plate) =>
+    context.push('/history?plate=${Uri.encodeQueryComponent(plate)}');
+
 class _VehicleList extends StatelessWidget {
-  const _VehicleList({required this.state});
+  const _VehicleList({required this.state, required this.onHistory});
 
   final VehiclesLoaded state;
+  final void Function(BuildContext context, String plate) onHistory;
 
   @override
   Widget build(BuildContext context) {
@@ -189,6 +199,7 @@ class _VehicleList extends StatelessWidget {
           child: _VehicleTile(
             vehicle: vehicles[index],
             categoryName: _categoryName(context, vehicles[index]),
+            onHistory: onHistory,
           ),
         );
       },
@@ -201,10 +212,15 @@ class _VehicleList extends StatelessWidget {
 }
 
 class _VehicleTile extends StatelessWidget {
-  const _VehicleTile({required this.vehicle, required this.categoryName});
+  const _VehicleTile({
+    required this.vehicle,
+    required this.categoryName,
+    required this.onHistory,
+  });
 
   final Vehicle vehicle;
   final String categoryName;
+  final void Function(BuildContext context, String plate) onHistory;
 
   String get _subtitle => [
     categoryName,
@@ -254,6 +270,11 @@ class _VehicleTile extends StatelessWidget {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            AppIconButton(
+              icon: Icons.history,
+              tooltip: l10n.vehicleHistoryAction,
+              onPressed: () => onHistory(context, vehicle.plate),
+            ),
             AppIconButton(
               icon: Icons.edit_outlined,
               tooltip: l10n.vehicleEditTooltip(vehicle.plate),

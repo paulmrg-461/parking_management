@@ -128,6 +128,10 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - **Owner search in monthly passes**: the passes search now also matches the
   owner name or phone, for both passes and pending charges (resolved through
   the loaded vehicles); the empty state and count follow the same filter.
+- **History from the registry**: each vehicle row has a "Ver historial"
+  action (48 dp) that opens `/history?plate=…`, so finding a car by owner name
+  or phone and reviewing its visits takes one tap. The row fits a 400 px phone
+  with the three actions.
 - **Emergency action**: a red police icon in every app bar (and an entry in the
   desktop sidebar footer and the phone drawer) opens a one-tap panel with the
   site location, the nearest police quadrant and a large **Call now** button.

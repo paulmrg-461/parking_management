@@ -2006,6 +2006,12 @@ abstract class AppLocalizations {
   /// **'Historial de vehículo'**
   String get vehicleHistoryTitle;
 
+  /// No description provided for @vehicleHistoryAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver historial'**
+  String get vehicleHistoryAction;
+
   /// No description provided for @setupTitle.
   ///
   /// In es, this message translates to:

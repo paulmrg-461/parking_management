@@ -364,6 +364,7 @@
   "vehicleUnblockBody": "{plate} podrá volver a ingresar al parqueadero.",
   "@vehicleUnblockBody": {"placeholders": {"plate": {"type": "String"}}},
   "vehicleHistoryTitle": "Historial de vehículo",
+  "vehicleHistoryAction": "Ver historial",
   "setupTitle": "Primeros pasos",
   "setupProgress": "{done} de {total} listos",
   "@setupProgress": {"placeholders": {"done": {"type": "int"}, "total": {"type": "int"}}},

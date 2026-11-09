@@ -353,6 +353,7 @@
   "vehicleUnblockBody": "{plate} will be able to enter the parking lot again.",
   "@vehicleUnblockBody": {"placeholders": {"plate": {"type": "String"}}},
   "vehicleHistoryTitle": "Vehicle history",
+  "vehicleHistoryAction": "View history",
   "setupTitle": "First steps",
   "setupProgress": "{done} of {total} ready",
   "@setupProgress": {"placeholders": {"done": {"type": "int"}, "total": {"type": "int"}}},

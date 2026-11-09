@@ -4,7 +4,7 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-11-09 (owner search everywhere, PDF fonts).
+Last updated: 2026-11-09 (registry history shortcut, owner search).
 
 ## Where we are
 
@@ -12,7 +12,7 @@ Last updated: 2026-11-09 (owner search everywhere, PDF fonts).
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0086` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 1075 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 1077 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -350,6 +350,11 @@ Last updated: 2026-11-09 (owner search everywhere, PDF fonts).
   (`MonthlyPassesLoaded.matchesPass/matchesPayment` over plate, owner name and
   phone; pending charges resolve the owner through the loaded vehicles). The
   page label/hint say "Buscar placa o propietario". Test count: 1075.
+- Follow-up: each registry row has a "Ver historial" action → `/history?plate=…`
+  (`VehiclesPage(onHistory:)` is the test seam); the row still fits 400 px with
+  three actions. l10n gotcha: `vehicleHistoryOpen` was already the "in progress"
+  label, so the action key is `vehicleHistoryAction` (a duplicate key silently
+  wins in gen-l10n). Test count: 1077.
 
 ## Owner contact data (2026-11-05)
 

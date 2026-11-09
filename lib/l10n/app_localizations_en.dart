@@ -1071,6 +1071,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get vehicleHistoryTitle => 'Vehicle history';
 
   @override
+  String get vehicleHistoryAction => 'View history';
+
+  @override
   String get setupTitle => 'First steps';
 
   @override
