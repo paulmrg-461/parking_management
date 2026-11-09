@@ -38,6 +38,55 @@ void main() {
     expect(repository.lookups, ['ABC123']);
   });
 
+  testWidgets('Success: a vehicle that is not inside offers check-in', (
+    tester,
+  ) async {
+    String? requested;
+    final repository = FakeVehicleHistoryRepository(history: sampleHistory());
+    final cubit = VehicleHistoryCubit(repository);
+    addTearDown(cubit.close);
+    await tester.pumpWidget(
+      testApp(
+        BlocProvider.value(
+          value: cubit,
+          child: VehicleHistoryPage(onCheckIn: (_, plate) => requested = plate),
+        ),
+      ),
+    );
+
+    await tester.enterText(find.byType(TextField), 'ABC123');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+
+    final action = find.text('Registrar entrada');
+    expect(action, findsOneWidget);
+    await tester.ensureVisible(action);
+    await tester.pumpAndSettle();
+    await tester.tap(action);
+    expect(requested, 'ABC123');
+  });
+
+  testWidgets('Security: a vehicle already inside does not offer check-in', (
+    tester,
+  ) async {
+    final repository = FakeVehicleHistoryRepository(
+      history: sampleHistory(withOpenSession: true),
+    );
+    final cubit = VehicleHistoryCubit(repository);
+    addTearDown(cubit.close);
+    await tester.pumpWidget(
+      testApp(
+        BlocProvider.value(value: cubit, child: const VehicleHistoryPage()),
+      ),
+    );
+
+    await tester.enterText(find.byType(TextField), 'ABC123');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Registrar entrada'), findsNothing);
+  });
+
   testWidgets('Success: a session with evidence opens the viewer', (
     tester,
   ) async {

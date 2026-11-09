@@ -75,7 +75,7 @@ VehicleHistory sampleHistory({
   brand: 'Mazda',
   visits: 2,
   totalSpent: 12000,
-  openSessions: 0,
+  openSessions: withOpenSession ? 1 : 0,
   currentLotVisits: 1,
   ownerPhone: ownerPhone,
   ownerName: ownerName,

@@ -37,12 +37,16 @@ class VehicleHistoryPage extends StatefulWidget {
     super.key,
     this.initialPlate,
     this.onCharge,
+    this.onCheckIn,
     this.evidenceRepository,
   });
 
   /// Opens check-out filtered by the plate. Injectable so a widget test can
   /// record it without a router.
   final void Function(BuildContext context, String plate)? onCharge;
+
+  /// Opens check-in for a vehicle that is not inside. Injectable for tests.
+  final void Function(BuildContext context, String plate)? onCheckIn;
 
   /// Injectable for widget tests; production resolves it from the locator.
   final SessionEvidenceRepository? evidenceRepository;
@@ -155,6 +159,7 @@ class _VehicleHistoryPageState extends State<VehicleHistoryPage> {
                     history: state.history!,
                     canManage: _canManage(context),
                     onCharge: widget.onCharge ?? _chargeInCheckOut,
+                    onCheckIn: widget.onCheckIn ?? _checkInWithPlate,
                     evidenceRepository: widget.evidenceRepository,
                   ),
                 },
@@ -197,18 +202,23 @@ class _Hint extends StatelessWidget {
 void _chargeInCheckOut(BuildContext context, String plate) =>
     context.push('/check-out?plate=${Uri.encodeQueryComponent(plate)}');
 
+void _checkInWithPlate(BuildContext context, String plate) =>
+    context.push('/check-in?plate=${Uri.encodeQueryComponent(plate)}');
+
 class _HistoryBody extends StatefulWidget {
   const _HistoryBody({
     super.key,
     required this.history,
     required this.canManage,
     required this.onCharge,
+    required this.onCheckIn,
     this.evidenceRepository,
   });
 
   final VehicleHistory history;
   final bool canManage;
   final void Function(BuildContext context, String plate) onCharge;
+  final void Function(BuildContext context, String plate) onCheckIn;
   final SessionEvidenceRepository? evidenceRepository;
 
   @override
@@ -436,6 +446,12 @@ class _HistoryBodyState extends State<_HistoryBody> {
                       : l10n.vehicleEditNotes,
                 ),
               ),
+              if (history.openSessions == 0)
+                TextButton.icon(
+                  onPressed: () => widget.onCheckIn(context, history.plate),
+                  icon: const Icon(Icons.login),
+                  label: Text(l10n.vehicleCheckInAction),
+                ),
               if (canManage)
                 TextButton.icon(
                   onPressed: () => _toggleBlacklist(context),
