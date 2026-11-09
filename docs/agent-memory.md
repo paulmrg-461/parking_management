@@ -4,15 +4,15 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-11-09 (hourly traffic reports, offline dashboard cache, bay history).
+Last updated: 2026-11-09 (audit search, hourly reports, offline dashboard cache).
 
 ## Where we are
 
 - Stack: Flutter (android + web) + self-hosted Supabase only. No FastAPI,
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
-- `supabase/migrations/0001..0082` are the schema owner (applied by
+- `supabase/migrations/0001..0083` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 1039 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 1041 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -186,6 +186,25 @@ Last updated: 2026-11-09 (hourly traffic reports, offline dashboard cache, bay h
   `hourly_entries`/`hourly_exits` raw rows and `buildRevenueReportPdf` a
   "Tráfico por hora" table via `reportHourlyRows`; both include only hours
   with movement. Test count: 1039.
+
+### Audit search (2026-11-09)
+
+- `0083_audit_search.sql` drops/recreates `list_audit_log` with a trailing
+  `p_search text default null` (the 5-arg overload must stay dropped: with the
+  default, leaving both makes 5-arg calls ambiguous). It also fixes a real bug:
+  the old version limited the newest N rows **before** filtering by actor, so
+  selecting an actor only searched that page. Filters now run in the scan and
+  the limit applies last.
+- Search is case-insensitive over `entity_id`, `table_name`, actor
+  username/display name, and `after`/`before` `plate`/`name`; an empty term
+  means no filter and it composes with table/actor/date. JSONB text is not
+  searched wholesale (avoids matching timestamps/keys by accident).
+- Flutter: `AuditLoaded.search` + `AuditCubit.load(search:)`; the page adds a
+  300 ms debounced `SearchField`, clears it with "Limpiar filtros", and the PDF
+  subtitle includes the term. Tests cover search persistence, clearing and the
+  debounced reload. Test count: 1041; schema `0001..0083`.
+- Live smoke: `list_audit_log` with `p_search=LCR481` returned the vehicle row
+  (`entity_id 34`).
 
 ## Owner contact data (2026-11-05)
 

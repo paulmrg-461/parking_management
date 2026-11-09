@@ -462,6 +462,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get auditAllActors => 'All';
 
   @override
+  String get auditSearch => 'Search';
+
+  @override
+  String get auditSearchHint => 'Plate, user, table or value';
+
+  @override
   String get auditTitle => 'Audit log';
 
   @override

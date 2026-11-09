@@ -145,6 +145,8 @@
   "auditCopied": "CSV copied to the clipboard",
   "auditActor": "Actor",
   "auditAllActors": "All",
+  "auditSearch": "Search",
+  "auditSearchHint": "Plate, user, table or value",
   "auditTitle": "Audit log",
   "auditTable": "Table",
   "auditAllTables": "All",

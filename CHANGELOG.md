@@ -75,6 +75,11 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   filter bar (they wrap on phones instead of squeezing a segmented button).
   The CSV gains `hourly_entries`/`hourly_exits` raw rows and the PDF a
   "Tráfico por hora" table, both limited to hours with movement.
+- **Audit search**: the audit screen has a debounced free-text field matching
+  the entity id, table, actor (username/display name), plate and name — for
+  example a plate from a support call — combinable with the table, actor and
+  date filters. `0083` recreates `list_audit_log` with `p_search` and fixes the
+  old ordering bug where the page limit was applied before the actor filter.
 - **Emergency action**: a red police icon in every app bar (and an entry in the
   desktop sidebar footer and the phone drawer) opens a one-tap panel with the
   site location, the nearest police quadrant and a large **Call now** button.

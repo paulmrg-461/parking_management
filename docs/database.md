@@ -154,10 +154,10 @@ inclusive business-date range and a total; powers `/records` and its exports.
 `list_lot_members`, `set_branding_logo`.
 
 **Audit**
-`list_audit_log` (filters: limit, date range, table, actor username),
-`purge_audit_log`,
-`record_audit` (trigger on categories, tariffs, vehicles, monthly passes,
-settings, lots and memberships).
+`list_audit_log` (filters: limit, date range, table, actor username and
+free-text search over entity, table, actor, plate and name; filters run
+before the limit), `purge_audit_log`, `record_audit` (trigger on categories,
+tariffs, vehicles, monthly passes, settings, lots and memberships).
 
 **Customer messages**
 `enqueue_whatsapp_message` (operators, only when the site enabled

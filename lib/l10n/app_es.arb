@@ -155,6 +155,8 @@
   "auditCopied": "CSV copiado al portapapeles",
   "auditActor": "Actor",
   "auditAllActors": "Todos",
+  "auditSearch": "Buscar",
+  "auditSearchHint": "Placa, usuario, tabla o valor",
   "auditTitle": "Auditoría",
   "auditTable": "Tabla",
   "auditAllTables": "Todas",

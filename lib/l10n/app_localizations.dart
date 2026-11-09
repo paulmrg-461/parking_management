@@ -896,6 +896,18 @@ abstract class AppLocalizations {
   /// **'Todos'**
   String get auditAllActors;
 
+  /// No description provided for @auditSearch.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscar'**
+  String get auditSearch;
+
+  /// No description provided for @auditSearchHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Placa, usuario, tabla o valor'**
+  String get auditSearchHint;
+
   /// No description provided for @auditTitle.
   ///
   /// In es, this message translates to:

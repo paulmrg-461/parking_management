@@ -43,7 +43,7 @@ WhatsApp (manual or automated).
 | Secrets / PIN operations | Complete (scripts + runbook) | PIN rotation verified live |
 | E2E and CI | Complete (API + Flutter client, real stack) | CI job `supabase-e2e` |
 
-Quality snapshot (2026-11-09, local stack): **1039 Flutter tests + 1 integration
+Quality snapshot (2026-11-09, local stack): **1041 Flutter tests + 1 integration
 test**, SQL/RLS suite green, web build green, analyzer with **0 errors and 0
 warnings** (only SDK deprecation infos from the pinned beta channel), restore
 drill green.
@@ -75,7 +75,7 @@ the main data it touches.
 | `users` | Admin user management | `admin-users` Edge Function |
 | `lots` | Sites and membership | `my_lots`, `create_lot`, `set_lot_member`, `list_lot_members` |
 | `reservations` | Capacity holds | `category_reservations`, `create/cancel_reservation` |
-| `audit` | Admin audit trail and exports | `audit_log`, `list_audit_log` |
+| `audit` | Admin audit trail with free-text search and exports | `audit_log`, `list_audit_log` |
 | `diagnostics` | Operational counters, client errors, WhatsApp queue | `diagnostics_snapshot`, `list_*` |
 | `customer_messages` | Queue customer WhatsApp templates | `whatsapp_messages`, `enqueue_whatsapp_message` |
 | `plate_scanning` | On-device OCR (Android) | ML Kit |

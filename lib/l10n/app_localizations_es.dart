@@ -468,6 +468,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get auditAllActors => 'Todos';
 
   @override
+  String get auditSearch => 'Buscar';
+
+  @override
+  String get auditSearchHint => 'Placa, usuario, tabla o valor';
+
+  @override
   String get auditTitle => 'Auditoría';
 
   @override

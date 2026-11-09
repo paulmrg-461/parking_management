@@ -567,9 +567,11 @@ begin
     end;
 end $$;
 
--- Audit log filters: by actor, and the unfiltered call still works.
+-- Audit log filters: by actor, by free text, and the unfiltered call works.
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
 do $$
+declare
+    marker jsonb;
 begin
     if jsonb_array_length(
            public.list_audit_log(50, null, null, null, 'admin')
@@ -580,6 +582,39 @@ begin
            public.list_audit_log(50, null, null, null, 'ghost')
        ) <> 0 then
         raise exception 'audit actor filter ignored the name';
+    end if;
+
+    -- Free-text search over the entity, plate, name and actor.
+    insert into public.vehicles (plate, category_id) values ('SRCH01', 2);
+    marker := public.list_audit_log(50, null, null, null, null, 'srch01');
+    if jsonb_array_length(marker) < 1
+       or (marker -> 0 ->> 'table_name') <> 'vehicles' then
+        raise exception 'audit search did not find the vehicle: %', marker;
+    end if;
+    if jsonb_array_length(
+           public.list_audit_log(50, null, null, 'vehicles', null, 'SRCH01')
+       ) < 1 then
+        raise exception 'audit search ignored the table filter';
+    end if;
+    if jsonb_array_length(
+           public.list_audit_log(50, null, null, null, 'admin', 'SRCH01')
+       ) < 1 then
+        raise exception 'audit search broke the actor filter';
+    end if;
+    if jsonb_array_length(
+           public.list_audit_log(50, null, null, null, 'ghost', 'SRCH01')
+       ) <> 0 then
+        raise exception 'audit search ignored the actor';
+    end if;
+    if jsonb_array_length(
+           public.list_audit_log(50, null, null, null, null, 'no-such-value')
+       ) <> 0 then
+        raise exception 'audit search matched a missing term';
+    end if;
+    if jsonb_array_length(
+           public.list_audit_log(1, null, null, null, null, 'SRCH01')
+       ) > 1 then
+        raise exception 'audit search ignored the page limit';
     end if;
 end $$;
 
