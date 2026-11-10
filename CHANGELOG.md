@@ -165,6 +165,11 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   next to the phone and WhatsApp actions, and the availability re-reads itself
   every minute without flashing the skeleton, so a customer deciding on the
   page never reads stale numbers.
+- **A full lot says so**: when every vehicle type is at capacity, `/reserve`
+  hides the booking form (a form nobody can submit is a dead end) and shows
+  "No hay cupo en este momento" with the call/WhatsApp actions; the code
+  lookup stays, so a returning customer can free their own hold and the
+  one-minute refresh brings the form back as soon as a spot opens.
 - **The customer gets the booking on WhatsApp**: with "automated WhatsApp" on,
   a public hold queues a `reservation_confirmed` message (name, plate, time,
   lot) that `whatsapp-dispatch` sends once the Meta token and the approved

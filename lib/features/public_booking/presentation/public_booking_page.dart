@@ -212,30 +212,35 @@ class _PublicBookingPageState extends State<PublicBookingPage> {
                   );
                 },
               ),
-            if (_categoryError != null)
-              Padding(
-                padding: const EdgeInsets.only(top: Space.xs),
-                child: Text(
-                  _categoryError!,
-                  style: Theme.of(context).textTheme.bodySmall
-                      ?.copyWith(color: Theme.of(context).colorScheme.error),
+            if (!availability.hasAvailability) ...[
+              const SizedBox(height: Space.lg),
+              _NoSpace(availability: availability),
+            ] else ...[
+              if (_categoryError != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: Space.xs),
+                  child: Text(
+                    _categoryError!,
+                    style: Theme.of(context).textTheme.bodySmall
+                        ?.copyWith(color: Theme.of(context).colorScheme.error),
+                  ),
                 ),
+              const SizedBox(height: Space.lg),
+              _FormCard(
+                formKey: _formKey,
+                plate: _plate,
+                phone: _phone,
+                name: _name,
+                hours: _hours,
+                submitting: state.submitting,
+                error: state.actionFailure == null
+                    ? null
+                    : _errorText(l10n, state.actionFailure),
+                onHours: (hours) => setState(() => _hours = hours),
+                onSubmit: _submit,
+                onPolicies: () => context.push('/policies?lot=${widget.lotId}'),
               ),
-            const SizedBox(height: Space.lg),
-            _FormCard(
-              formKey: _formKey,
-              plate: _plate,
-              phone: _phone,
-              name: _name,
-              hours: _hours,
-              submitting: state.submitting,
-              error: state.actionFailure == null
-                  ? null
-                  : _errorText(l10n, state.actionFailure),
-              onHours: (hours) => setState(() => _hours = hours),
-              onSubmit: _submit,
-              onPolicies: () => context.push('/policies?lot=${widget.lotId}'),
-            ),
+            ],
             const SizedBox(height: Space.lg),
             _LookupCard(
               loading: state.lookupLoading,
@@ -269,6 +274,85 @@ class _PublicBookingPageState extends State<PublicBookingPage> {
 /// "Ya reservaste": retrieve an active hold with the code printed on the
 /// confirmation plus the mobile used to book, and cancel it from here. Without
 /// this the cancel action would only exist while the confirmation is open.
+
+/// Every category is full: offering a form nobody can submit would be a dead
+/// end, so the page explains the state and keeps the contact actions (and the
+/// lookup, where a returning customer can free their own hold).
+class _NoSpace extends StatelessWidget {
+  const _NoSpace({required this.availability});
+
+  final PublicBookingAvailability availability;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(Space.lg),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(Radii.lg),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.event_busy, color: scheme.error),
+              const SizedBox(width: Space.sm),
+              Expanded(
+                child: Text(
+                  l10n.bookingNoSpaceTitle,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: Space.xs),
+          Text(
+            l10n.bookingNoSpaceHint,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+          if (availability.phone.isNotEmpty ||
+              availability.whatsapp.isNotEmpty) ...[
+            const SizedBox(height: Space.md),
+            Wrap(
+              spacing: Space.sm,
+              runSpacing: Space.sm,
+              children: [
+                if (availability.phone.isNotEmpty)
+                  OutlinedButton.icon(
+                    onPressed: () => _call(availability.phone),
+                    icon: const Icon(Icons.call_outlined),
+                    label: Text(availability.phone),
+                  ),
+                if (availability.whatsapp.isNotEmpty)
+                  FilledButton.tonalIcon(
+                    onPressed: () => openWhatsapp(
+                      context,
+                      whatsappUrl(
+                        availability.whatsapp,
+                        text: l10n.bookingWhatsAppMessage(availability.lotName),
+                      ),
+                    ),
+                    icon: const Icon(Icons.chat_outlined),
+                    label: Text(l10n.bookingWhatsApp),
+                  ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 class _LookupCard extends StatefulWidget {
   const _LookupCard({
     required this.loading,

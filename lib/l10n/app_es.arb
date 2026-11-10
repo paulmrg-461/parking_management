@@ -49,6 +49,8 @@
   "@bookingAvailable": {"placeholders": {"count": {"type": "int"}}},
   "bookingFull": "Completo",
   "bookingUnlimited": "Sin límite",
+  "bookingNoSpaceTitle": "No hay cupo en este momento",
+  "bookingNoSpaceHint": "Se acaba de llenar. Puedes llamar al parqueadero o volver a intentar en unos minutos.",
   "bookingFromPrice": "Desde {price}/hora",
   "@bookingFromPrice": {"placeholders": {"price": {"type": "String"}}},
   "bookingPriceUndefined": "Tarifa en recepción",

@@ -350,6 +350,18 @@ abstract class AppLocalizations {
   /// **'Sin límite'**
   String get bookingUnlimited;
 
+  /// No description provided for @bookingNoSpaceTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay cupo en este momento'**
+  String get bookingNoSpaceTitle;
+
+  /// No description provided for @bookingNoSpaceHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Se acaba de llenar. Puedes llamar al parqueadero o volver a intentar en unos minutos.'**
+  String get bookingNoSpaceHint;
+
   /// No description provided for @bookingFromPrice.
   ///
   /// In es, this message translates to:

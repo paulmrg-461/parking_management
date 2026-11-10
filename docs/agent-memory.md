@@ -12,7 +12,7 @@ Last updated: 2026-11-09 (public booking page, owner search).
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0096` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 1138 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 1139 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -358,7 +358,7 @@ Last updated: 2026-11-09 (public booking page, owner search).
 - Follow-up: a vehicle with no open session offers "Registrar entrada" from
   its history (`/check-in?plate=`, `onCheckIn` injectable); a vehicle already
   inside keeps the charge action. Fixing the sample fixture's `openSessions`
-  exposed the guard in tests. Test count: 1138.
+  exposed the guard in tests. Test count: 1139.
 
 ### Public booking page (2026-11-09)
 
@@ -469,7 +469,10 @@ Last updated: 2026-11-09 (public booking page, owner search).
   queues a message — approval of the Meta template is what makes it send.
 - `0096_whatsapp_purge_pending.sql`: the purge drops rows older than 90 days
   regardless of status, so a queue that cannot drain does not grow.
-- Test count: 1138; schema `0001..0096`.
+- `/reserve` when everything is full: `availability.hasAvailability` false
+  renders `_NoSpace` (message + phone/WhatsApp) instead of `_FormCard`; the
+  lookup card stays and the 1-minute refresh restores the form by itself.
+- Test count: 1139; schema `0001..0096`.
 
 ## Owner contact data (2026-11-05)
 

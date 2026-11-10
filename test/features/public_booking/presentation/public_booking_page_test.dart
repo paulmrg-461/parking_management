@@ -73,6 +73,38 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
+  testWidgets('Empty: a full lot hides the form and keeps the contact', (
+    tester,
+  ) async {
+    final repository = FakePublicBookingRepository()
+      ..availabilityToReturn = const PublicBookingAvailability(
+        lotId: 1,
+        lotName: 'Parqueadero Central',
+        phone: '3001112233',
+        categories: [
+          PublicCategoryAvailability(
+            id: 2,
+            name: 'car',
+            group: 'car',
+            categoryCapacity: 1,
+            available: 0,
+          ),
+          PublicCategoryAvailability(
+            id: 3,
+            name: 'moto',
+            group: 'moto',
+            categoryCapacity: 1,
+            available: 0,
+          ),
+        ],
+      );
+    await _pump(tester, repository: repository);
+
+    expect(find.text('No hay cupo en este momento'), findsOneWidget);
+    expect(find.text('Reservar espacio'), findsNothing);
+    expect(find.text('Consultar reserva'), findsOneWidget);
+  });
+
   testWidgets('Success: a full category cannot be selected', (tester) async {
     final repository = FakePublicBookingRepository()
       ..availabilityToReturn = sampleAvailability(full: true);

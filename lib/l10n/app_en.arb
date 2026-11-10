@@ -46,6 +46,8 @@
   "@bookingAvailable": {"placeholders": {"count": {"type": "int"}}},
   "bookingFull": "Full",
   "bookingUnlimited": "No limit",
+  "bookingNoSpaceTitle": "No space right now",
+  "bookingNoSpaceHint": "The lot just filled up. Call us or try again in a few minutes.",
   "bookingFromPrice": "From {price}/hour",
   "@bookingFromPrice": {"placeholders": {"price": {"type": "String"}}},
   "bookingPriceUndefined": "Rate at the desk",

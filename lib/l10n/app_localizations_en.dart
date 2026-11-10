@@ -153,6 +153,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookingUnlimited => 'No limit';
 
   @override
+  String get bookingNoSpaceTitle => 'No space right now';
+
+  @override
+  String get bookingNoSpaceHint =>
+      'The lot just filled up. Call us or try again in a few minutes.';
+
+  @override
   String bookingFromPrice(String price) {
     return 'From $price/hour';
   }
