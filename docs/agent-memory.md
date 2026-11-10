@@ -10,7 +10,7 @@ Last updated: 2026-11-09 (public booking page, owner search).
 
 - Stack: Flutter (android + web) + self-hosted Supabase only. No FastAPI,
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
-- `supabase/migrations/0001..0092` are the schema owner (applied by
+- `supabase/migrations/0001..0093` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
 - Flutter: 1126 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
@@ -430,7 +430,11 @@ Last updated: 2026-11-09 (public booking page, owner search).
   and not an error), used by the "¿Ya reservaste?" card at the bottom of
   `/reserve`. The card reuses the same RPC for the plate, so cancelling from
   the lookup still sends code + plate + phone.
-- Test count: 1126; schema `0001..0092`.
+- `0093_public_availability_prices.sql`: `public_availability` per-category
+  `hourly_amount` from `tariffs` (`type='hourly'`, active, first row; `0` when
+  unset). The card shows `Money.formatAs(currency, amount)` and falls back to
+  "Tarifa en recepción" for `0`, so a missing tariff never looks free.
+- Test count: 1126; schema `0001..0093`.
 
 ## Owner contact data (2026-11-05)
 

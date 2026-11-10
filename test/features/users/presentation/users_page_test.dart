@@ -112,12 +112,7 @@ void main() {
     await pumpPage(
       tester,
       users: const [
-        User(
-          id: 1,
-          username: 'ana',
-          displayName: 'Ana',
-          role: UserRole.admin,
-        ),
+        User(id: 1, username: 'ana', displayName: 'Ana', role: UserRole.admin),
         User(
           id: 2,
           username: 'beto',
@@ -140,7 +135,9 @@ void main() {
     expect(find.text('Beto'), findsOneWidget);
   });
 
-  testWidgets('Success: the search narrows by name or username', (tester) async {
+  testWidgets('Success: the search narrows by name or username', (
+    tester,
+  ) async {
     await pumpPage(
       tester,
       users: const [

@@ -304,6 +304,7 @@ void main() {
               'group_capacity': 10,
               'occupied': 6,
               'reserved': 1,
+              'hourly_amount': 5000,
               'available': 3,
             },
             {
@@ -321,6 +322,8 @@ void main() {
         expect(availability.logoUrl, 'http://host/logo.png');
         expect(availability.maxReservationHours, 24);
         expect(availability.categories.first.available, 3);
+        expect(availability.categories.first.hourlyAmount, 5000);
+        expect(availability.categories.first.hasPrice, isTrue);
         expect(availability.categories.first.isFull, isFalse);
         expect(availability.categories.last.isUnlimited, isTrue);
         expect(availability.hasAvailability, isTrue);

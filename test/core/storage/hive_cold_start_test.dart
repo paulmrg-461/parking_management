@@ -101,15 +101,24 @@ void main() {
         await _coldStart();
 
         expect(await HiveVehicleLocalDataSource().readAll(), [vehicle]);
-        expect(await HiveCategoryLocalDataSource(LotSession()).readAll(), [category]);
-        expect(await HiveTariffLocalDataSource(LotSession()).readAll(), [tariff]);
-        expect(await HiveMonthlyPassLocalDataSource(LotSession()).readAll(), [pass]);
+        expect(await HiveCategoryLocalDataSource(LotSession()).readAll(), [
+          category,
+        ]);
+        expect(await HiveTariffLocalDataSource(LotSession()).readAll(), [
+          tariff,
+        ]);
+        expect(await HiveMonthlyPassLocalDataSource(LotSession()).readAll(), [
+          pass,
+        ]);
       },
     );
 
     test('Failure: empty caches read as empty lists, not errors', () async {
       expect(await HiveVehicleLocalDataSource().readAll(), isEmpty);
-      expect(await HiveCategoryLocalDataSource(LotSession()).readAll(), isEmpty);
+      expect(
+        await HiveCategoryLocalDataSource(LotSession()).readAll(),
+        isEmpty,
+      );
     });
   });
 
@@ -122,12 +131,7 @@ void main() {
 
       await categories.cacheAll(const [Category(id: 1, name: 'Car')]);
       await tariffs.cacheAll(const [
-        Tariff(
-          id: 1,
-          categoryId: 1,
-          type: TariffType.hourly,
-          amount: 5000,
-        ),
+        Tariff(id: 1, categoryId: 1, type: TariffType.hourly, amount: 5000),
       ]);
       await passes.cacheAll([
         MonthlyPass(

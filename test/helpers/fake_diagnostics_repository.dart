@@ -77,9 +77,7 @@ DiagnosticsSnapshot sampleSnapshot({
   whatsappPending: whatsappPending,
   whatsappFailed: whatsappFailed,
   whatsappSent24h: 2,
-  storage: const [
-    StorageUsage(bucket: 'evidence', objects: 5, bytes: 2048),
-  ],
+  storage: const [StorageUsage(bucket: 'evidence', objects: 5, bytes: 2048)],
 );
 
 ClientErrorReport sampleError({int id = 1}) => ClientErrorReport(

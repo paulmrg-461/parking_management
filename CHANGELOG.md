@@ -153,6 +153,10 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   and a full category/group is refused. The capacity rules are
   shared with the operator path, and anon cannot read the reservation table.
   The page is linked from the public policy page and the evidence page.
+- **Prices on the public page**: each vehicle card shows the lot's real
+  hourly tariff ("Desde $5.000/hora") from `tariffs` (`type='hourly'`,
+  active), formatted with the lot currency; a category without a tariff says
+  "Tarifa en recepción" instead of inventing a number.
 - **"Already booked?" lookup**: the public page ends with a code + mobile form
   (`public_reservation_lookup`, anon) that retrieves the active hold and lets
   the customer cancel it without the confirmation screen. It returns null for

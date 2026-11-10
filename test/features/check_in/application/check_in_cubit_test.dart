@@ -61,7 +61,8 @@ void main() {
   test(
     'Failure: an unexpected error still clears the in-progress submission',
     () async {
-      final repository = _FakeCheckInRepository()..unexpected = StateError('hive');
+      final repository = _FakeCheckInRepository()
+        ..unexpected = StateError('hive');
       final cubit = _cubit(repository);
 
       await cubit.submitCheckIn(plate: 'ABC123', photos: const []);

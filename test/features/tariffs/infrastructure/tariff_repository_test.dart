@@ -78,8 +78,11 @@ void main() {
     await tempDir.delete(recursive: true);
   });
 
-  TariffRepositoryImpl repository(_FakeRemote remote) =>
-      TariffRepositoryImpl(remote, HiveTariffLocalDataSource(LotSession()), outbox);
+  TariffRepositoryImpl repository(_FakeRemote remote) => TariffRepositoryImpl(
+    remote,
+    HiveTariffLocalDataSource(LotSession()),
+    outbox,
+  );
 
   test('list returns remote tariffs and caches them', () async {
     final result = await repository(_FakeRemote()).list();

@@ -22,7 +22,10 @@ void main() {
   test('Success: the audit PDF is a valid document', () async {
     final bytes = await buildAuditPdf(
       l10n: await AppLocalizations.delegate.load(defaultLocale),
-      entries: [sampleAudit(), sampleAudit(id: 2, action: 'delete')],
+      entries: [
+        sampleAudit(),
+        sampleAudit(id: 2, action: 'delete'),
+      ],
       subtitle: 'tariffs · admin',
     );
 

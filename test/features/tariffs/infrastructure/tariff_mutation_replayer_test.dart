@@ -63,8 +63,10 @@ void main() {
     final remote = _FakeRemote();
     final local = _FakeLocal();
 
-    await TariffMutationReplayer(remote, local)
-        .replay(_mutation(MutationOperation.update, '{"amount":2000}'));
+    await TariffMutationReplayer(
+      remote,
+      local,
+    ).replay(_mutation(MutationOperation.update, '{"amount":2000}'));
 
     expect(remote.updatePayload, {'amount': 2000});
     expect(local.upserted.single.amount, 2000);
@@ -73,8 +75,10 @@ void main() {
   test('Success: delete replays the delete', () async {
     final remote = _FakeRemote();
 
-    await TariffMutationReplayer(remote, _FakeLocal())
-        .replay(_mutation(MutationOperation.delete, null));
+    await TariffMutationReplayer(
+      remote,
+      _FakeLocal(),
+    ).replay(_mutation(MutationOperation.delete, null));
 
     expect(remote.deletedId, 3);
   });

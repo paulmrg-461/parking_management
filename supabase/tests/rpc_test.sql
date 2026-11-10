@@ -3232,6 +3232,8 @@ begin
     insert into public.categories (name, capacity, lot_id)
     values ('public-car', 10, 1)
     returning id into cat;
+    insert into public.tariffs (category_id, type, amount)
+    values (cat, 'hourly', 6500);
     perform set_config('app.public_cat', cat::text, true);
 end $$;
 
@@ -3250,6 +3252,13 @@ begin
     end if;
     if (avail::text like '%"plate"%') then
         raise exception 'public availability leaked plates: %', avail;
+    end if;
+    if (
+        select (item ->> 'hourly_amount')::integer
+          from jsonb_array_elements(avail -> 'categories') item
+         where (item ->> 'id')::integer = current_setting('app.public_cat')::integer
+    ) <> 6500 then
+        raise exception 'public availability lost the hourly tariff: %', avail;
     end if;
     if public.public_availability(999999) is not null then
         raise exception 'an unknown lot returned availability';

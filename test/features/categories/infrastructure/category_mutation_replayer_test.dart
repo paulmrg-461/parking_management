@@ -66,8 +66,10 @@ void main() {
     final remote = _FakeRemote();
     final local = _FakeLocal();
 
-    await CategoryMutationReplayer(remote, local)
-        .replay(_mutation(MutationOperation.update, '{"name":"bus"}'));
+    await CategoryMutationReplayer(
+      remote,
+      local,
+    ).replay(_mutation(MutationOperation.update, '{"name":"bus"}'));
 
     expect(remote.updatedName, 'bus');
     expect(local.upserted.single.name, 'bus');
@@ -76,16 +78,20 @@ void main() {
   test('Success: delete replays the delete', () async {
     final remote = _FakeRemote();
 
-    await CategoryMutationReplayer(remote, _FakeLocal())
-        .replay(_mutation(MutationOperation.delete, null));
+    await CategoryMutationReplayer(
+      remote,
+      _FakeLocal(),
+    ).replay(_mutation(MutationOperation.delete, null));
 
     expect(remote.deletedId, 2);
   });
 
   test('Failure: remote failures propagate', () async {
     await expectLater(
-      CategoryMutationReplayer(_FakeRemote(const NetworkFailure()), _FakeLocal())
-          .replay(_mutation(MutationOperation.update, '{"name":"bus"}')),
+      CategoryMutationReplayer(
+        _FakeRemote(const NetworkFailure()),
+        _FakeLocal(),
+      ).replay(_mutation(MutationOperation.update, '{"name":"bus"}')),
       throwsA(isA<NetworkFailure>()),
     );
   });

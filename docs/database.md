@@ -133,8 +133,8 @@ returns 1-hour signed URLs for that session's photos/videos (no login; the
 plate is the key).
 
 **Public booking**
-`public_availability(lot_id)` (anon: identity + per-category availability,
-no plates), `public_create_reservation(lot, plate, category, until, name,
+`public_availability(lot_id)` (anon: identity + per-category availability and
+hourly tariff, no plates), `public_create_reservation(lot, plate, category, until, name,
 phone)` (anon: name required, phone must be a Colombian mobile — 10 digits
 starting with 3, optional +57 —, 10-min..24-h window, one active hold per
 plate, two per phone, shared capacity check) and

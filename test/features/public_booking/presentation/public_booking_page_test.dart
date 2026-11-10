@@ -46,6 +46,7 @@ void main() {
     expect(find.text('Disponibilidad ahora'), findsOneWidget);
     expect(find.text('4 disponibles'), findsWidgets);
     expect(find.text('Reservar espacio'), findsOneWidget);
+    expect(find.text(r'Desde $5.000/hora'), findsOneWidget);
   });
 
   testWidgets('Success: a full category cannot be selected', (tester) async {

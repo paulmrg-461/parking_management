@@ -10,6 +10,7 @@ class PublicCategoryAvailability extends Equatable {
     this.groupCapacity = 0,
     this.occupied = 0,
     this.reserved = 0,
+    this.hourlyAmount = 0,
     this.available,
   });
 
@@ -22,6 +23,11 @@ class PublicCategoryAvailability extends Equatable {
   final int groupCapacity;
   final int occupied;
   final int reserved;
+
+  /// Active hourly tariff in minor units (`0` when the lot has not set one).
+  final int hourlyAmount;
+
+  bool get hasPrice => hourlyAmount > 0;
 
   /// `null` means unlimited (no category or group cap configured).
   final int? available;
@@ -48,6 +54,7 @@ class PublicCategoryAvailability extends Equatable {
       groupCapacity: value(json['group_capacity']),
       occupied: value(json['occupied']),
       reserved: value(json['reserved']),
+      hourlyAmount: value(json['hourly_amount']),
       available: json['available'] == null ? null : value(json['available']),
     );
   }
@@ -61,6 +68,7 @@ class PublicCategoryAvailability extends Equatable {
     groupCapacity,
     occupied,
     reserved,
+    hourlyAmount,
     available,
   ];
 }

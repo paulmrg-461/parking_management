@@ -154,6 +154,14 @@ class AppLocalizationsEs extends AppLocalizations {
   String get bookingUnlimited => 'Sin límite';
 
   @override
+  String bookingFromPrice(String price) {
+    return 'Desde $price/hora';
+  }
+
+  @override
+  String get bookingPriceUndefined => 'Tarifa en recepción';
+
+  @override
   String get bookingSelectCategory => 'Elige un tipo de vehículo';
 
   @override

@@ -69,7 +69,11 @@ void main() {
   });
 
   CategoryRepositoryImpl repository(_FakeRemote remote) =>
-      CategoryRepositoryImpl(remote, HiveCategoryLocalDataSource(LotSession()), outbox);
+      CategoryRepositoryImpl(
+        remote,
+        HiveCategoryLocalDataSource(LotSession()),
+        outbox,
+      );
 
   test('list returns remote categories and caches them', () async {
     final repo = repository(_FakeRemote());

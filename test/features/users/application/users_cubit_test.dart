@@ -158,21 +158,21 @@ void main() {
 
     expect(
       cubit.state,
-      const UsersLoaded([
-        _ana,
-      ], submission: SubmissionFailed('InvalidPin')),
+      const UsersLoaded([_ana], submission: SubmissionFailed('InvalidPin')),
     );
   });
 
-  test('Security: delete without a server id never calls the repository',
-      () async {
-    await cubit.load();
+  test(
+    'Security: delete without a server id never calls the repository',
+    () async {
+      await cubit.load();
 
-    await cubit.delete(
-      const User(username: 'x', displayName: 'X', role: UserRole.operator),
-    );
+      await cubit.delete(
+        const User(username: 'x', displayName: 'X', role: UserRole.operator),
+      );
 
-    expect(repository.users.map((u) => u.id), [1]);
-    expect(cubit.state, const UsersLoaded([_ana]));
-  });
+      expect(repository.users.map((u) => u.id), [1]);
+      expect(cubit.state, const UsersLoaded([_ana]));
+    },
+  );
 }

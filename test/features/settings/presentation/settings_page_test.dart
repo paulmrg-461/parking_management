@@ -51,7 +51,9 @@ Future<void> pumpPage(
 }
 
 void main() {
-  testWidgets('Success: saves the edited identity and confirms', (tester) async {
+  testWidgets('Success: saves the edited identity and confirms', (
+    tester,
+  ) async {
     final repository = FakeParkingSettingsRepository(_configured);
     await pumpPage(tester, repository: repository);
 
@@ -143,10 +145,7 @@ void main() {
       find.byKey(const Key('settings_moto_capacity')),
       '5',
     );
-    await tester.enterText(
-      find.byKey(const Key('settings_key_capacity')),
-      '3',
-    );
+    await tester.enterText(find.byKey(const Key('settings_key_capacity')), '3');
     await tester.ensureVisible(find.widgetWithText(FilledButton, 'Guardar'));
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, 'Guardar'));
@@ -185,10 +184,7 @@ void main() {
     final repository = FakeParkingSettingsRepository(_configured);
     await pumpPage(tester, repository: repository);
 
-    await tester.enterText(
-      find.byKey(const Key('settings_car_capacity')),
-      '4',
-    );
+    await tester.enterText(find.byKey(const Key('settings_car_capacity')), '4');
     await tester.enterText(
       find.byKey(const Key('settings_car_out_of_service')),
       '5',
@@ -232,15 +228,9 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
 
-    expect(
-      find.byKey(const Key('settings_car_out_of_service')),
-      findsNothing,
-    );
+    expect(find.byKey(const Key('settings_car_out_of_service')), findsNothing);
     expect(find.textContaining('1 bahía(s) en mantenimiento'), findsOneWidget);
-    expect(
-      find.byKey(const Key('settings_car_capacity')),
-      findsOneWidget,
-    );
+    expect(find.byKey(const Key('settings_car_capacity')), findsOneWidget);
   });
 
   testWidgets('Security: without a map the counters stay editable', (
@@ -249,10 +239,7 @@ void main() {
     final repository = FakeParkingSettingsRepository(_configured);
     await pumpPage(tester, repository: repository);
 
-    expect(
-      find.byKey(const Key('settings_car_out_of_service')),
-      findsWidgets,
-    );
+    expect(find.byKey(const Key('settings_car_out_of_service')), findsWidgets);
   });
 
   testWidgets('Success: the legal policy is edited and saved', (tester) async {
@@ -304,10 +291,7 @@ void main() {
     await tester.tap(find.text('Espacios y mapa').first);
     await tester.pumpAndSettle();
 
-    expect(
-      find.byKey(const Key('settings_car_capacity')),
-      findsOneWidget,
-    );
+    expect(find.byKey(const Key('settings_car_capacity')), findsOneWidget);
   });
 
   testWidgets('Success: the minimum app version is saved', (tester) async {
@@ -409,7 +393,10 @@ void main() {
     await tester.tap(find.byKey(const Key('settings_save')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Escribe un número válido (3 a 15 dígitos)'), findsOneWidget);
+    expect(
+      find.text('Escribe un número válido (3 a 15 dígitos)'),
+      findsOneWidget,
+    );
     expect(repository.settings.policePhone, isEmpty);
   });
 }

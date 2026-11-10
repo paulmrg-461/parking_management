@@ -79,11 +79,7 @@ void main() {
 
   test('Security: without a VAPID key the service stays inert', () async {
     final repository = _FakeRepository();
-    final service = BrowserWebPushService(
-      _FakeRegistrar(),
-      repository,
-      '',
-    );
+    final service = BrowserWebPushService(_FakeRegistrar(), repository, '');
 
     expect(service.supported, isFalse);
     expect(await service.enable(), isFalse);
@@ -92,30 +88,38 @@ void main() {
     expect(repository.removed, isEmpty);
   });
 
-  test('Success: an existing subscription re-binds to the signed-in user',
-      () async {
-    final repository = _FakeRepository();
-    final service = BrowserWebPushService(
-      _FakeRegistrar(existing: _subscription),
-      repository,
-      'BPublicKey',
-    );
+  test(
+    'Success: an existing subscription re-binds to the signed-in user',
+    () async {
+      final repository = _FakeRepository();
+      final service = BrowserWebPushService(
+        _FakeRegistrar(existing: _subscription),
+        repository,
+        'BPublicKey',
+      );
 
-    expect(await service.isEnabled(), isTrue);
-    expect(repository.saved, ['https://push.example/abc']);
-  });
+      expect(await service.isEnabled(), isTrue);
+      expect(repository.saved, ['https://push.example/abc']);
+    },
+  );
 
-  test('Success: disabling unsubscribes and drops the stored endpoint',
-      () async {
-    final registrar = _FakeRegistrar(existing: _subscription);
-    final repository = _FakeRepository();
-    final service = BrowserWebPushService(registrar, repository, 'BPublicKey');
+  test(
+    'Success: disabling unsubscribes and drops the stored endpoint',
+    () async {
+      final registrar = _FakeRegistrar(existing: _subscription);
+      final repository = _FakeRepository();
+      final service = BrowserWebPushService(
+        registrar,
+        repository,
+        'BPublicKey',
+      );
 
-    await service.disable();
+      await service.disable();
 
-    expect(registrar.unsubscribes, 1);
-    expect(repository.removed, ['https://push.example/abc']);
-  });
+      expect(registrar.unsubscribes, 1);
+      expect(repository.removed, ['https://push.example/abc']);
+    },
+  );
 
   test('Failure: a storage error is reported, not thrown', () async {
     final repository = _FakeRepository()..failing = true;

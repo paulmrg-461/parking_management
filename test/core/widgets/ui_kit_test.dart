@@ -84,9 +84,7 @@ void main() {
   ) async {
     var retries = 0;
     await tester.pumpWidget(
-      testApp(
-        ErrorState(message: 'Sin conexión', onRetry: () => retries++),
-      ),
+      testApp(ErrorState(message: 'Sin conexión', onRetry: () => retries++)),
     );
 
     expect(find.text('Algo salió mal'), findsOneWidget);

@@ -20,7 +20,10 @@ Widget _wrap(AuthCubit cubit) {
     initialLocation: '/login',
     routes: [
       GoRoute(path: '/login', builder: (_, _) => const LoginPage()),
-      GoRoute(path: '/', builder: (_, _) => const Scaffold(body: Text('home'))),
+      GoRoute(
+        path: '/',
+        builder: (_, _) => const Scaffold(body: Text('home')),
+      ),
     ],
   );
   return BlocProvider<BrandingCubit>.value(

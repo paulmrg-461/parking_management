@@ -77,7 +77,8 @@ class _FakePhotos implements PendingPhotoStorage {
   }) async => throw UnimplementedError();
 
   @override
-  Future<XFile?> loadVideo(String? ref) async => ref == null ? null : XFile(ref);
+  Future<XFile?> loadVideo(String? ref) async =>
+      ref == null ? null : XFile(ref);
 }
 
 PendingMutation _queued(String payload) => PendingMutation(

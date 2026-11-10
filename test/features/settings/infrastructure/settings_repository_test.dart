@@ -146,7 +146,10 @@ void main() {
     final repo = repository(remote);
 
     final saved = await repo.save(
-      const ParkingSettings(name: 'Parqueadero Sur', policePhone: '+57 300 111 2233'),
+      const ParkingSettings(
+        name: 'Parqueadero Sur',
+        policePhone: '+57 300 111 2233',
+      ),
     );
 
     expect(remote.lastPatch?['police_phone'], '+57 300 111 2233');

@@ -5,23 +5,27 @@ import 'package:parking_management/features/vehicle_history/application/vehicle_
 import '../../../helpers/fake_vehicle_history_repository.dart';
 
 void main() {
-  test('Success: searches a normalized plate and exposes the history', () async {
-    final repository = FakeVehicleHistoryRepository(
-      history: sampleHistory(),
-    );
-    final cubit = VehicleHistoryCubit(repository);
-    addTearDown(cubit.close);
+  test(
+    'Success: searches a normalized plate and exposes the history',
+    () async {
+      final repository = FakeVehicleHistoryRepository(history: sampleHistory());
+      final cubit = VehicleHistoryCubit(repository);
+      addTearDown(cubit.close);
 
-    await cubit.search(' abc 123 ');
+      await cubit.search(' abc 123 ');
 
-    expect(cubit.state.status, VehicleHistoryStatus.loaded);
-    expect(cubit.state.history?.plate, 'ABC123');
-    expect(repository.lookups, ['ABC123']);
-  });
+      expect(cubit.state.status, VehicleHistoryStatus.loaded);
+      expect(cubit.state.history?.plate, 'ABC123');
+      expect(repository.lookups, ['ABC123']);
+    },
+  );
 
   test('Failure: an unknown plate surfaces a retryable failure', () async {
     final repository = FakeVehicleHistoryRepository(
-      error: const ValidationFailure('VehicleNotFoundError', 'VehicleNotFoundError'),
+      error: const ValidationFailure(
+        'VehicleNotFoundError',
+        'VehicleNotFoundError',
+      ),
     );
     final cubit = VehicleHistoryCubit(repository);
     addTearDown(cubit.close);

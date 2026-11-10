@@ -198,9 +198,7 @@ void main() {
       testApp(
         BlocProvider.value(
           value: cubit,
-          child: Scaffold(
-            appBar: AppBar(actions: const [NotificationBell()]),
-          ),
+          child: Scaffold(appBar: AppBar(actions: const [NotificationBell()])),
         ),
       ),
     );

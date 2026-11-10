@@ -20,22 +20,25 @@ void main() {
     expect(cubit.state.total, 2);
   });
 
-  test('Failure: the plate filter is debounced and sent to the server', () async {
-    final repository = FakeRecordRepository([
-      sampleRecord(id: 1, plate: 'ABC123'),
-      sampleRecord(id: 2, plate: 'XYZ999'),
-    ]);
-    final cubit = RecordsCubit(repository, searchDebounce: Duration.zero);
-    addTearDown(cubit.close);
-    await cubit.load();
+  test(
+    'Failure: the plate filter is debounced and sent to the server',
+    () async {
+      final repository = FakeRecordRepository([
+        sampleRecord(id: 1, plate: 'ABC123'),
+        sampleRecord(id: 2, plate: 'XYZ999'),
+      ]);
+      final cubit = RecordsCubit(repository, searchDebounce: Duration.zero);
+      addTearDown(cubit.close);
+      await cubit.load();
 
-    cubit.search('abc');
-    await Future<void>.delayed(Duration.zero);
-    await Future<void>.delayed(Duration.zero);
+      cubit.search('abc');
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
 
-    expect(repository.lastPlate, 'abc');
-    expect(cubit.state.records.single.plate, 'ABC123');
-  });
+      expect(repository.lastPlate, 'abc');
+      expect(cubit.state.records.single.plate, 'ABC123');
+    },
+  );
 
   test('Security: paging appends without duplicating rows', () async {
     final repository = FakeRecordRepository([

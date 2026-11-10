@@ -123,8 +123,7 @@ Future<AuthCubit> pumpApp(
     ParkingApp(
       authCubit: auth,
       syncStatusCubit: syncStatus,
-      brandingCubit:
-          branding ?? BrandingCubit(FakeParkingSettingsRepository()),
+      brandingCubit: branding ?? BrandingCubit(FakeParkingSettingsRepository()),
       connectivityCubit: connectivity,
       lotsCubit: serviceLocator<LotsCubit>(),
       themeCubit: theme,

@@ -126,6 +126,7 @@ PublicBookingAvailability sampleAvailability({
       groupCapacity: 10,
       occupied: 6,
       reserved: 0,
+      hourlyAmount: 5000,
       available: unlimited ? null : (full ? 0 : available),
     ),
     PublicCategoryAvailability(

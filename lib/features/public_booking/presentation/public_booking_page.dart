@@ -10,6 +10,7 @@ import '../../../core/error/failure.dart';
 import '../../../core/l10n/failure_messages.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/status_colors.dart';
+import '../../../core/money/money.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/utils/whatsapp_launcher.dart';
@@ -165,6 +166,7 @@ class _PublicBookingPageState extends State<PublicBookingPage> {
                           width: width,
                           child: _CategoryCard(
                             category: category,
+                            currency: availability.currency,
                             selected: _categoryId == category.id,
                             onSelect: category.isFull
                                 ? null
@@ -596,11 +598,13 @@ class _Hero extends StatelessWidget {
 class _CategoryCard extends StatelessWidget {
   const _CategoryCard({
     required this.category,
+    required this.currency,
     required this.selected,
     required this.onSelect,
   });
 
   final PublicCategoryAvailability category;
+  final String currency;
   final bool selected;
   final VoidCallback? onSelect;
 
@@ -624,7 +628,10 @@ class _CategoryCard extends StatelessWidget {
     final ratio = category.isUnlimited || category.capacity <= 0
         ? null
         : ((category.available ?? 0) / category.capacity).clamp(0.0, 1.0);
-    final semantic = '${category.name}: $label';
+    final price = category.hasPrice
+        ? l10n.bookingFromPrice(Money.formatAs(currency, category.hourlyAmount))
+        : l10n.bookingPriceUndefined;
+    final semantic = '${category.name}: $label. $price';
     return Semantics(
       button: onSelect != null,
       selected: selected,
@@ -680,6 +687,13 @@ class _CategoryCard extends StatelessWidget {
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: color,
                     fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  price,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
                   ),
                 ),
                 if (ratio != null) ...[

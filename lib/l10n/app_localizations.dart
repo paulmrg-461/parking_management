@@ -350,6 +350,18 @@ abstract class AppLocalizations {
   /// **'Sin límite'**
   String get bookingUnlimited;
 
+  /// No description provided for @bookingFromPrice.
+  ///
+  /// In es, this message translates to:
+  /// **'Desde {price}/hora'**
+  String bookingFromPrice(String price);
+
+  /// No description provided for @bookingPriceUndefined.
+  ///
+  /// In es, this message translates to:
+  /// **'Tarifa en recepción'**
+  String get bookingPriceUndefined;
+
   /// No description provided for @bookingSelectCategory.
   ///
   /// In es, this message translates to:

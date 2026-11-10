@@ -17,18 +17,21 @@ void main() {
     );
   });
 
-  test('Security: a clock behind the server never shows negative time', () async {
-    final l10n = await AppLocalizations.delegate.load(defaultLocale);
+  test(
+    'Security: a clock behind the server never shows negative time',
+    () async {
+      final l10n = await AppLocalizations.delegate.load(defaultLocale);
 
-    expect(
-      elapsedLabel(
-        l10n,
-        DateTime(2026, 10, 26, 13),
-        now: DateTime(2026, 10, 26, 12),
-      ),
-      '0 min',
-    );
-  });
+      expect(
+        elapsedLabel(
+          l10n,
+          DateTime(2026, 10, 26, 13),
+          now: DateTime(2026, 10, 26, 12),
+        ),
+        '0 min',
+      );
+    },
+  );
 
   test('Success: 24 hours marks a long stay', () {
     final now = DateTime(2026, 10, 26, 12);
