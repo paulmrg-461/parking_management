@@ -46,10 +46,7 @@ class Reservation extends Equatable {
   String? get contactLine {
     final name = customerName?.trim();
     final phone = _phone;
-    final parts = [
-      if (name != null && name.isNotEmpty) name,
-      ?phone,
-    ];
+    final parts = [if (name != null && name.isNotEmpty) name, ?phone];
     return parts.isEmpty ? null : parts.join(' · ');
   }
 

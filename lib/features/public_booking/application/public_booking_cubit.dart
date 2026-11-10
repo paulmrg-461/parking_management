@@ -159,6 +159,19 @@ class PublicBookingCubit extends ResilientCubit<PublicBookingState> {
     }
   }
 
+  /// Re-reads the availability without flashing the skeleton (the page keeps
+  /// the current numbers when the call fails).
+  Future<void> refresh() async {
+    try {
+      final availability = await _repository.availability(_lotId);
+      if (!isClosed && availability != null) {
+        emit(state.copyWith(availability: availability));
+      }
+    } on Failure {
+      // Keep what the customer is looking at.
+    }
+  }
+
   Future<void> submit({
     required String plate,
     required int categoryId,

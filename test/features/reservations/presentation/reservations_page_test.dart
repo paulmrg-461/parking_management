@@ -208,6 +208,35 @@ void main() {
     expect(find.byTooltip('WhatsApp al cliente'), findsOneWidget);
   });
 
+  testWidgets('Success: the web filter hides the operator holds', (
+    tester,
+  ) async {
+    await pumpPage(
+      tester,
+      reservations: [
+        sampleReservation(id: 1, plate: 'AAA111'),
+        sampleReservation(
+          id: 2,
+          plate: 'WEB123',
+          customerName: 'Ana Perez',
+          customerPhone: '3009998877',
+          source: 'public',
+        ),
+      ],
+    );
+
+    await tester.tap(find.text('Solo web'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('AAA111'), findsNothing);
+    expect(find.text('WEB123'), findsOneWidget);
+    expect(find.text('1 reservas'), findsOneWidget);
+
+    await tester.tap(find.text('Limpiar filtros').first);
+    await tester.pumpAndSettle();
+    expect(find.text('AAA111'), findsOneWidget);
+  });
+
   testWidgets('Security: an operator hold has no customer actions', (
     tester,
   ) async {

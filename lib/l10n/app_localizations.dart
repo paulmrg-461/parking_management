@@ -2288,6 +2288,18 @@ abstract class AppLocalizations {
   /// **'No se pudo abrir WhatsApp en este dispositivo'**
   String get errorWhatsappUnavailable;
 
+  /// No description provided for @errorMapsUnavailable.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo abrir el mapa en este dispositivo'**
+  String get errorMapsUnavailable;
+
+  /// No description provided for @bookingDirections.
+  ///
+  /// In es, this message translates to:
+  /// **'Cómo llegar'**
+  String get bookingDirections;
+
   /// No description provided for @vehicleNotes.
   ///
   /// In es, this message translates to:
@@ -5587,6 +5599,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Solo por vencer'**
   String get reservationsOnlyExpiring;
+
+  /// No description provided for @reservationsOnlyPublic.
+  ///
+  /// In es, this message translates to:
+  /// **'Solo web'**
+  String get reservationsOnlyPublic;
 
   /// No description provided for @reservationsCount.
   ///

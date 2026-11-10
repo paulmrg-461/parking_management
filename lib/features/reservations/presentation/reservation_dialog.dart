@@ -68,7 +68,13 @@ class _ReservationDialogState extends State<ReservationDialog> {
       return;
     }
     setState(() {
-      _until = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+      _until = DateTime(
+        date.year,
+        date.month,
+        date.day,
+        time.hour,
+        time.minute,
+      );
     });
   }
 
@@ -103,7 +109,10 @@ class _ReservationDialogState extends State<ReservationDialog> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return AlertDialog(
-      title: DialogHeader(icon: Icons.event_available_outlined, title: l10n.reservationAdd),
+      title: DialogHeader(
+        icon: Icons.event_available_outlined,
+        title: l10n.reservationAdd,
+      ),
       content: Form(
         key: _formKey,
         child: SingleChildScrollView(

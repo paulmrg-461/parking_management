@@ -137,6 +137,7 @@ class _List extends StatefulWidget {
 class _ListState extends State<_List> {
   String _query = '';
   bool _onlyExpiring = false;
+  bool _onlyPublic = false;
 
   List<Reservation> get _all => sortedByExpiry(widget.loaded.reservations);
 
@@ -146,7 +147,8 @@ class _ListState extends State<_List> {
     return [
       for (final reservation in all)
         if ((needle.isEmpty || _matches(reservation, needle)) &&
-            (!_onlyExpiring || reservation.expiresSoon(now: now)))
+            (!_onlyExpiring || reservation.expiresSoon(now: now)) &&
+            (!_onlyPublic || reservation.isPublic))
           reservation,
     ];
   }
@@ -156,11 +158,13 @@ class _ListState extends State<_List> {
       (reservation.customerName ?? '').toLowerCase().contains(needle) ||
       (reservation.customerPhone ?? '').contains(needle);
 
-  bool get _filtered => _query.trim().isNotEmpty || _onlyExpiring;
+  bool get _filtered =>
+      _query.trim().isNotEmpty || _onlyExpiring || _onlyPublic;
 
   void _clear() => setState(() {
     _query = '';
     _onlyExpiring = false;
+    _onlyPublic = false;
   });
 
   @override
@@ -238,6 +242,19 @@ class _ListState extends State<_List> {
                       label: Text(l10n.reservationsOnlyExpiring),
                       onSelected: (value) =>
                           setState(() => _onlyExpiring = value),
+                    ),
+                  ),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      minHeight: Layout.minTouch,
+                    ),
+                    child: FilterChip(
+                      selected: _onlyPublic,
+                      showCheckmark: false,
+                      avatar: const Icon(Icons.public, size: 18),
+                      label: Text(l10n.reservationsOnlyPublic),
+                      onSelected: (value) =>
+                          setState(() => _onlyPublic = value),
                     ),
                   ),
                 ],

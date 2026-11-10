@@ -13,6 +13,7 @@ Future<FakePublicBookingRepository> _pump(
   WidgetTester tester, {
   FakePublicBookingRepository? repository,
   Size size = const Size(800, 1400),
+  Duration? refreshInterval,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -27,7 +28,7 @@ Future<FakePublicBookingRepository> _pump(
     testApp(
       BlocProvider<PublicBookingCubit>.value(
         value: cubit,
-        child: const PublicBookingPage(lotId: 1),
+        child: PublicBookingPage(lotId: 1, refreshInterval: refreshInterval),
       ),
     ),
   );
@@ -47,6 +48,29 @@ void main() {
     expect(find.text('4 disponibles'), findsWidgets);
     expect(find.text('Reservar espacio'), findsOneWidget);
     expect(find.text(r'Desde $5.000/hora'), findsOneWidget);
+  });
+
+  testWidgets('Success: the hero offers directions to the lot', (tester) async {
+    await _pump(tester);
+
+    expect(find.text('Cómo llegar'), findsOneWidget);
+  });
+
+  testWidgets('Success: availability refreshes on its own', (tester) async {
+    final repository = await _pump(
+      tester,
+      refreshInterval: const Duration(seconds: 30),
+    );
+    final calls = repository.availabilityCalls;
+
+    await tester.pump(const Duration(seconds: 31));
+    await tester.pump(Duration.zero);
+
+    expect(repository.availabilityCalls, calls + 1);
+    // The silent refresh never replaces the screen with the skeleton.
+    expect(find.text('Disponibilidad ahora'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
   });
 
   testWidgets('Success: a full category cannot be selected', (tester) async {

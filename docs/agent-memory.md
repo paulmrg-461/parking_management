@@ -12,7 +12,7 @@ Last updated: 2026-11-09 (public booking page, owner search).
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0093` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 1126 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 1132 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -358,7 +358,7 @@ Last updated: 2026-11-09 (public booking page, owner search).
 - Follow-up: a vehicle with no open session offers "Registrar entrada" from
   its history (`/check-in?plate=`, `onCheckIn` injectable); a vehicle already
   inside keeps the charge action. Fixing the sample fixture's `openSessions`
-  exposed the guard in tests. Test count: 1126.
+  exposed the guard in tests. Test count: 1132.
 
 ### Public booking page (2026-11-09)
 
@@ -434,7 +434,14 @@ Last updated: 2026-11-09 (public booking page, owner search).
   `hourly_amount` from `tariffs` (`type='hourly'`, active, first row; `0` when
   unset). The card shows `Money.formatAs(currency, amount)` and falls back to
   "Tarifa en recepción" for `0`, so a missing tariff never looks free.
-- Test count: 1126; schema `0001..0093`.
+- Public page polish: "Cómo llegar" (`core/utils/maps_launcher.dart`,
+  `mapsUrl` is pure and tested) opens a Google Maps search for the lot address;
+  `PublicBookingPage.refreshInterval` (1 min, `null` disables it in tests) calls
+  `PublicBookingCubit.refresh`, which re-reads availability without emitting
+  the loading state, so the form never flashes.
+- The reservations board has a "Solo web" filter (`isPublic`) beside "por
+  vencer"; `_clear` resets both.
+- Test count: 1132; schema `0001..0093`.
 
 ## Owner contact data (2026-11-05)
 

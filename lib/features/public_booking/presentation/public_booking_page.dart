@@ -13,6 +13,7 @@ import '../../../core/theme/status_colors.dart';
 import '../../../core/money/money.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/utils/maps_launcher.dart';
 import '../../../core/utils/whatsapp_launcher.dart';
 import '../../../core/widgets/error_state.dart';
 import '../../../core/widgets/plate_input_field.dart';
@@ -27,9 +28,17 @@ import '../domain/phone_rules.dart';
 /// Public, mobile-first customer page: the site's real availability and a
 /// direct reservation, no account needed.
 class PublicBookingPage extends StatefulWidget {
-  const PublicBookingPage({super.key, required this.lotId});
+  const PublicBookingPage({
+    super.key,
+    required this.lotId,
+    this.refreshInterval = const Duration(minutes: 1),
+  });
 
   final int lotId;
+
+  /// How often the availability is re-read while the form is open (`null`
+  /// disables it, e.g. in tests).
+  final Duration? refreshInterval;
 
   @override
   State<PublicBookingPage> createState() => _PublicBookingPageState();
@@ -43,15 +52,38 @@ class _PublicBookingPageState extends State<PublicBookingPage> {
   int? _categoryId;
   int _hours = 2;
   String? _categoryError;
+  Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
     unawaited(context.read<PublicBookingCubit>().load(widget.lotId));
+    final interval = widget.refreshInterval;
+    if (interval != null) {
+      _refreshTimer = Timer.periodic(interval, (_) => _refreshAvailability());
+    }
+  }
+
+  /// A customer may leave the page open while deciding; the numbers should
+  /// not go stale, and a silent refresh never replaces the form with a
+  /// skeleton (the screen they are reading stays put).
+  void _refreshAvailability() {
+    if (!mounted) {
+      return;
+    }
+    final cubit = context.read<PublicBookingCubit>();
+    final state = cubit.state;
+    if (state.status != PublicBookingStatus.loaded ||
+        state.submitting ||
+        state.cancelling) {
+      return;
+    }
+    unawaited(cubit.refresh());
   }
 
   @override
   void dispose() {
+    _refreshTimer?.cancel();
     _plate.dispose();
     _phone.dispose();
     _name.dispose();
@@ -585,6 +617,12 @@ class _Hero extends StatelessWidget {
                         text: l10n.bookingWhatsAppMessage(availability.lotName),
                       ),
                     ),
+                  ),
+                if (availability.address.isNotEmpty)
+                  ActionChip(
+                    avatar: const Icon(Icons.directions_outlined, size: 18),
+                    label: Text(l10n.bookingDirections),
+                    onPressed: () => openMaps(context, availability.address),
                   ),
               ],
             ),

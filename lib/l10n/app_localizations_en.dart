@@ -1239,6 +1239,12 @@ class AppLocalizationsEn extends AppLocalizations {
       'WhatsApp could not be opened on this device';
 
   @override
+  String get errorMapsUnavailable => 'Maps could not be opened on this device';
+
+  @override
+  String get bookingDirections => 'Directions';
+
+  @override
   String get vehicleNotes => 'Vehicle notes';
 
   @override
@@ -3109,6 +3115,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reservationsOnlyExpiring => 'Expiring only';
+
+  @override
+  String get reservationsOnlyPublic => 'Web only';
 
   @override
   String reservationsCount(int count) {

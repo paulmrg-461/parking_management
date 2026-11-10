@@ -153,6 +153,14 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   and a full category/group is refused. The capacity rules are
   shared with the operator path, and anon cannot read the reservation table.
   The page is linked from the public policy page and the evidence page.
+- **Directions and live numbers**: the `/reserve` hero offers "Cómo llegar"
+  (Google Maps search for the lot address, `core/utils/maps_launcher.dart`)
+  next to the phone and WhatsApp actions, and the availability re-reads itself
+  every minute without flashing the skeleton, so a customer deciding on the
+  page never reads stale numbers.
+- **"Web only" filter**: the reservations board can show just the holds that
+  came from the public page, next to "por vencer", and the filter chip resets
+  with "limpiar filtros".
 - **Prices on the public page**: each vehicle card shows the lot's real
   hourly tariff ("Desde $5.000/hora") from `tariffs` (`type='hourly'`,
   active), formatted with the lot currency; a category without a tariff says
