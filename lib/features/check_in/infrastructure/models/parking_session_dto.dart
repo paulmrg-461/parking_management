@@ -46,16 +46,16 @@ class ParkingSessionDto {
   Map<String, dynamic> toJson() => _$ParkingSessionDtoToJson(this);
 
   ParkingSession toDomain() => ParkingSession(
-        id: id,
-        plate: plate,
-        status: status == 'closed'
-            ? ParkingSessionStatus.closed
-            : ParkingSessionStatus.open,
-        entryTime: entryTime,
-        photoCount: photoCount,
-        leftKeys: leftKeys,
-        spotId: spotId,
-        spotCode: spotCode,
-        videoCount: videoCount,
-      );
+    id: id,
+    plate: plate,
+    status: status == 'closed'
+        ? ParkingSessionStatus.closed
+        : ParkingSessionStatus.open,
+    entryTime: entryTime,
+    photoCount: photoCount,
+    leftKeys: leftKeys,
+    spotId: spotId,
+    spotCode: spotCode,
+    videoCount: videoCount,
+  );
 }

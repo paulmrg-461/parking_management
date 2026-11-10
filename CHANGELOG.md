@@ -165,6 +165,10 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   next to the phone and WhatsApp actions, and the availability re-reads itself
   every minute without flashing the skeleton, so a customer deciding on the
   page never reads stale numbers.
+- **Check-in by reservation code**: the check-in screen lists the active holds
+  ("Buscar reserva (N)") with the code the customer shows (#7), the plate, the
+  customer and the expiry; picking one fills the plate and runs the lookup, so
+  reception does not have to ask for it.
 - **Did the web page bring cars in?**: the reports screen has a "Reservas de
   cupo" section with the holds created in the period, how many came from
   `/reserve`, the share that turned into a stay, and the cancelled/expired

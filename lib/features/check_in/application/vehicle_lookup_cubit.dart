@@ -48,7 +48,8 @@ class VehicleLookupNotFound extends VehicleLookupState {
 class VehicleLookupFailure extends VehicleLookupState {
   const VehicleLookupFailure(this.message, {this.failure});
 
-  VehicleLookupFailure.of(Failure failure) : this(failure.message, failure: failure);
+  VehicleLookupFailure.of(Failure failure)
+    : this(failure.message, failure: failure);
 
   final String message;
   final Failure? failure;

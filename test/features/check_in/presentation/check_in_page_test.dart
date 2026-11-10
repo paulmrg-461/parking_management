@@ -768,6 +768,32 @@ void main() {
     expect(find.text('Motorcycle'), findsOneWidget);
   });
 
+  testWidgets('Success: a hold is picked by its code from check-in', (
+    tester,
+  ) async {
+    final holds = FakeReservationRepository([
+      sampleReservation(id: 7, plate: 'CODE07', categoryName: 'car'),
+      sampleReservation(id: 9, plate: 'CODE09', categoryName: 'moto'),
+    ]);
+    await pumpPage(tester, reservations: holds);
+    await scrollTo(tester, find.byKey(const Key('check_in_hold_lookup')));
+
+    await tester.tap(find.byKey(const Key('check_in_hold_lookup')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Reservas activas'), findsOneWidget);
+    expect(find.text('#7'), findsOneWidget);
+    expect(find.text('CODE09'), findsOneWidget);
+
+    await tester.tap(find.text('CODE07'));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.widget<TextField>(find.byType(TextField).first).controller!.text,
+      'CODE07',
+    );
+  });
+
   testWidgets('Success: an active hold can be cancelled from check-in', (
     tester,
   ) async {

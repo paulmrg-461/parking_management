@@ -5798,6 +5798,24 @@ abstract class AppLocalizations {
   /// **'Vehículo'**
   String get checkInVehicleSection;
 
+  /// No description provided for @checkInHoldLookup.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscar reserva ({count})'**
+  String checkInHoldLookup(int count);
+
+  /// No description provided for @checkInHoldLookupTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Reservas activas'**
+  String get checkInHoldLookupTitle;
+
+  /// No description provided for @checkInHoldLookupEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay reservas activas en este momento.'**
+  String get checkInHoldLookupEmpty;
+
   /// No description provided for @checkInVehicleHint.
   ///
   /// In es, this message translates to:

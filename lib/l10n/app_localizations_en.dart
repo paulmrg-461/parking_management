@@ -3237,6 +3237,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get checkInVehicleSection => 'Vehicle';
 
   @override
+  String checkInHoldLookup(int count) {
+    return 'Find a reservation ($count)';
+  }
+
+  @override
+  String get checkInHoldLookupTitle => 'Active reservations';
+
+  @override
+  String get checkInHoldLookupEmpty =>
+      'There are no active reservations right now.';
+
+  @override
   String get checkInVehicleHint => 'Plate, category and vehicle details';
 
   @override

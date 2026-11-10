@@ -26,6 +26,7 @@ import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/photo_strip.dart';
 import '../../../core/widgets/plate_input_field.dart';
 import '../../../core/widgets/plate_keypad.dart';
+import '../../../core/widgets/plate_text.dart';
 import '../../../core/receipt/evidence_link.dart';
 import '../../../core/widgets/receipt_card.dart';
 import '../../../core/widgets/section_header.dart';
@@ -255,6 +256,26 @@ class _CheckInPageState extends State<CheckInPage> {
     setState(() => _plateController.text = plate);
     _lookupNow();
     _plateFocus.requestFocus();
+  }
+
+  /// The customer shows the code from the web confirmation: list the active
+  /// holds so reception can pick one instead of asking for the plate.
+  Future<void> _pickHoldByCode() async {
+    await _loadHolds();
+    if (!mounted) {
+      return;
+    }
+    final selected = await showModalBottomSheet<Reservation>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => _HoldsSheet(holds: _activeHolds),
+    );
+    if (selected == null || !mounted) {
+      return;
+    }
+    setState(() => _plateController.text = selected.plate);
+    _plateFocus.requestFocus();
+    _lookupNow();
   }
 
   Future<void> _loadHolds() async {
@@ -798,6 +819,15 @@ class _CheckInPageState extends State<CheckInPage> {
           ),
           const SizedBox(height: 8),
         ],
+        if (_activeHolds.isNotEmpty) ...[
+          OutlinedButton.icon(
+            key: const Key('check_in_hold_lookup'),
+            onPressed: _pickHoldByCode,
+            icon: const Icon(Icons.confirmation_number_outlined),
+            label: Text(l10n.checkInHoldLookup(_activeHolds.length)),
+          ),
+          const SizedBox(height: 8),
+        ],
         PlateInputField(
           controller: _plateController,
           focusNode: _plateFocus,
@@ -1125,6 +1155,89 @@ class _CheckInPageState extends State<CheckInPage> {
 
 /// Live context above the form: how many vehicles are inside and how many
 /// reservations are waiting, without leaving the check-in flow.
+
+/// Active holds in a sheet: the code the customer shows (#7), the plate, the
+/// category and the expiry. Tapping one fills the plate.
+class _HoldsSheet extends StatelessWidget {
+  const _HoldsSheet({required this.holds});
+
+  final List<Reservation> holds;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    return SafeArea(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.7,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                Space.md,
+                0,
+                Space.md,
+                Space.sm,
+              ),
+              child: Text(
+                l10n.checkInHoldLookupTitle,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            if (holds.isEmpty)
+              Padding(
+                padding: const EdgeInsets.all(Space.md),
+                child: Text(l10n.checkInHoldLookupEmpty),
+              )
+            else
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: holds.length,
+                  separatorBuilder: (_, _) => const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final hold = holds[index];
+                    final until = Formatters.dateTime(
+                      hold.reservedUntil.toLocal(),
+                    );
+                    return ListTile(
+                      key: ValueKey('hold_${hold.id}'),
+                      leading: CircleAvatar(
+                        child: Text(
+                          '#${hold.id}',
+                          style: theme.textTheme.labelSmall,
+                        ),
+                      ),
+                      title: PlateText(hold.plate),
+                      subtitle: Text(
+                        [
+                          if (hold.customerName?.trim().isNotEmpty ?? false)
+                            hold.customerName!.trim(),
+                          hold.categoryName,
+                          '${l10n.bookingUntil} $until',
+                        ].join(' · '),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      onTap: () => Navigator.of(context).pop(hold),
+                    );
+                  },
+                ),
+              ),
+            const SizedBox(height: Space.sm),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _SessionPulse extends StatelessWidget {
   const _SessionPulse({required this.holds});
 
