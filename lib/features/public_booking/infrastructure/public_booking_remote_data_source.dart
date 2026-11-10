@@ -6,6 +6,12 @@ import '../domain/entities/public_booking.dart';
 abstract class PublicBookingRemoteDataSource {
   Future<PublicBookingAvailability?> availability(int lotId);
 
+  Future<PublicReservation?> lookup({
+    required int lotId,
+    required int reservationId,
+    required String phone,
+  });
+
   Future<void> cancel({
     required int lotId,
     required int reservationId,
@@ -48,6 +54,30 @@ class SupabasePublicBookingRemoteDataSource
           ? null
           : _client.storage.from('branding').getPublicUrl(logoPath);
       return PublicBookingAvailability.fromJson(json, logoUrl: logoUrl);
+    } catch (error) {
+      throw mapSupabaseError(error);
+    }
+  }
+
+  @override
+  Future<PublicReservation?> lookup({
+    required int lotId,
+    required int reservationId,
+    required String phone,
+  }) async {
+    try {
+      final result = await _client.rpc(
+        'public_reservation_lookup',
+        params: {
+          'p_lot_id': lotId,
+          'p_reservation_id': reservationId,
+          'p_customer_phone': phone,
+        },
+      );
+      if (result is! Map) {
+        return null;
+      }
+      return PublicReservation.fromJson(Map<String, dynamic>.from(result));
     } catch (error) {
       throw mapSupabaseError(error);
     }

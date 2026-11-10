@@ -213,6 +213,38 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookingAnother => 'Book another space';
 
   @override
+  String get bookingLookupTitle => 'Already booked?';
+
+  @override
+  String get bookingLookupHint =>
+      'Check or cancel with the code and the mobile you booked with.';
+
+  @override
+  String get bookingLookupCode => 'Code';
+
+  @override
+  String get bookingLookupPhone => 'Mobile phone';
+
+  @override
+  String get bookingLookupAction => 'Find my reservation';
+
+  @override
+  String get bookingLookupChecking => 'Looking…';
+
+  @override
+  String get bookingLookupInvalid =>
+      'Enter the code and a valid mobile number.';
+
+  @override
+  String get bookingLookupNotFound =>
+      'We could not find an active reservation with that code and mobile.';
+
+  @override
+  String bookingLookupFound(String plate) {
+    return 'Reservation for $plate';
+  }
+
+  @override
   String get bookingCancel => 'Cancel reservation';
 
   @override

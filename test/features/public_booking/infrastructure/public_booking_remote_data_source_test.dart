@@ -87,6 +87,29 @@ void main() {
     expect(jsonDecode(request.body), {'p_lot_id': 1});
   });
 
+  test(
+    'Success: the lookup sends the code and phone and maps the hold',
+    () async {
+      final h = _harness();
+
+      final found = await h.remote.lookup(
+        lotId: 1,
+        reservationId: 12,
+        phone: '3001112233',
+      );
+
+      expect(found?.plate, 'ABC123');
+      expect(found?.categoryName, 'car');
+      final request = h.sent.single;
+      expect(request.url.path, endsWith('/rpc/public_reservation_lookup'));
+      expect(jsonDecode(request.body), {
+        'p_lot_id': 1,
+        'p_reservation_id': 12,
+        'p_customer_phone': '3001112233',
+      });
+    },
+  );
+
   test('Success: cancelling sends the code, plate and phone', () async {
     final h = _harness();
 

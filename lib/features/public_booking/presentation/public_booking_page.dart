@@ -61,25 +61,8 @@ class _PublicBookingPageState extends State<PublicBookingPage> {
     BuildContext context,
     PublicReservation reservation,
   ) async {
-    final l10n = context.l10n;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(l10n.bookingCancelTitle),
-        content: Text(l10n.bookingCancelBody(reservation.plate)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(l10n.actionCancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(l10n.bookingCancel),
-          ),
-        ],
-      ),
-    );
-    if (confirmed == true && context.mounted) {
+    final confirmed = await _confirmCancel(context, reservation.plate);
+    if (confirmed && context.mounted) {
       await context.read<PublicBookingCubit>().cancel();
     }
   }
@@ -220,6 +203,20 @@ class _PublicBookingPageState extends State<PublicBookingPage> {
               onPolicies: () => context.push('/policies?lot=${widget.lotId}'),
             ),
             const SizedBox(height: Space.lg),
+            _LookupCard(
+              loading: state.lookupLoading,
+              done: state.lookupDone,
+              result: state.lookupResult,
+              error: state.lookupFailure == null
+                  ? null
+                  : _errorText(l10n, state.lookupFailure),
+              cancelling: state.cancelling,
+              onLookup: (code, phone) => context
+                  .read<PublicBookingCubit>()
+                  .lookup(code: code, phone: phone),
+              onCancel: context.read<PublicBookingCubit>().cancelLookup,
+            ),
+            const SizedBox(height: Space.lg),
             Text(
               l10n.bookingFooter,
               textAlign: TextAlign.center,
@@ -228,6 +225,229 @@ class _PublicBookingPageState extends State<PublicBookingPage> {
               ),
             ),
             const SizedBox(height: Space.md),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// "Ya reservaste": retrieve an active hold with the code printed on the
+/// confirmation plus the mobile used to book, and cancel it from here. Without
+/// this the cancel action would only exist while the confirmation is open.
+class _LookupCard extends StatefulWidget {
+  const _LookupCard({
+    required this.loading,
+    required this.done,
+    required this.result,
+    required this.error,
+    required this.cancelling,
+    required this.onLookup,
+    required this.onCancel,
+  });
+
+  final bool loading;
+  final bool done;
+  final PublicReservation? result;
+  final String? error;
+  final bool cancelling;
+  final void Function(int code, String phone) onLookup;
+  final VoidCallback onCancel;
+
+  @override
+  State<_LookupCard> createState() => _LookupCardState();
+}
+
+class _LookupCardState extends State<_LookupCard> {
+  final _code = TextEditingController();
+  final _phone = TextEditingController();
+  String? _invalid;
+
+  @override
+  void dispose() {
+    _code.dispose();
+    _phone.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final l10n = context.l10n;
+    final code = int.tryParse(_code.text.trim());
+    final phone = normalizeMobilePhone(_phone.text);
+    if (code == null || code <= 0 || phone == null) {
+      setState(() => _invalid = l10n.bookingLookupInvalid);
+      return;
+    }
+    setState(() => _invalid = null);
+    FocusScope.of(context).unfocus();
+    widget.onLookup(code, phone);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final result = widget.result;
+    final error = widget.error ?? _invalid;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(Space.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.confirmation_number_outlined, color: scheme.primary),
+                const SizedBox(width: Space.sm),
+                Expanded(
+                  child: Text(
+                    l10n.bookingLookupTitle,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: Space.xs),
+            Text(
+              l10n.bookingLookupHint,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: Space.sm),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 96,
+                  child: TextField(
+                    key: const Key('booking_lookup_code'),
+                    controller: _code,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(9),
+                    ],
+                    decoration: InputDecoration(
+                      labelText: l10n.bookingLookupCode,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: Space.sm),
+                Expanded(
+                  child: TextField(
+                    key: const Key('booking_lookup_phone'),
+                    controller: _phone,
+                    keyboardType: TextInputType.phone,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(12),
+                    ],
+                    decoration: InputDecoration(
+                      labelText: l10n.bookingLookupPhone,
+                      hintText: l10n.bookingPhoneHint,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: Space.sm),
+            FilledButton.tonalIcon(
+              onPressed: widget.loading ? null : _submit,
+              icon: widget.loading
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.search),
+              label: Text(
+                widget.loading
+                    ? l10n.bookingLookupChecking
+                    : l10n.bookingLookupAction,
+              ),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(Layout.minTouch),
+              ),
+            ),
+            if (error != null) ...[
+              const SizedBox(height: Space.sm),
+              Text(
+                error,
+                style: theme.textTheme.bodySmall?.copyWith(color: scheme.error),
+              ),
+            ],
+            if (result != null) ...[
+              const SizedBox(height: Space.sm),
+              Container(
+                padding: const EdgeInsets.all(Space.sm),
+                decoration: BoxDecoration(
+                  color: scheme.surfaceContainerHigh,
+                  borderRadius: BorderRadius.circular(Radii.sm),
+                  border: Border.all(color: scheme.outlineVariant),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            l10n.bookingLookupFound(result.plate),
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        StatusChip(
+                          label: _categoryLabel(result.categoryName),
+                          tone: StatusTone.neutral,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: Space.xs),
+                    Text(
+                      '${l10n.bookingUntil} '
+                      '${Formatters.dateTime(result.reservedUntil)}',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: Space.xs),
+                    TextButton.icon(
+                      onPressed: widget.cancelling
+                          ? null
+                          : () async {
+                              final confirmed = await _confirmCancel(
+                                context,
+                                result.plate,
+                              );
+                              if (confirmed) {
+                                widget.onCancel();
+                              }
+                            },
+                      icon: const Icon(Icons.event_busy_outlined),
+                      label: Text(l10n.bookingCancel),
+                      style: TextButton.styleFrom(
+                        foregroundColor: scheme.error,
+                        minimumSize: const Size(0, Layout.minTouch),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ] else if (widget.done) ...[
+              const SizedBox(height: Space.sm),
+              Text(
+                l10n.bookingLookupNotFound,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -977,6 +1197,29 @@ Future<void> _call(String phone) async {
   } catch (_) {
     // A device without a dialer simply does nothing.
   }
+}
+
+/// One dialog for both cancel paths (confirmation screen and lookup).
+Future<bool> _confirmCancel(BuildContext context, String plate) async {
+  final l10n = context.l10n;
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: Text(l10n.bookingCancelTitle),
+      content: Text(l10n.bookingCancelBody(plate)),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(dialogContext).pop(false),
+          child: Text(l10n.actionCancel),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(dialogContext).pop(true),
+          child: Text(l10n.bookingCancel),
+        ),
+      ],
+    ),
+  );
+  return confirmed ?? false;
 }
 
 String _errorText(AppLocalizations l10n, Failure? failure) {

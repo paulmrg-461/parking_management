@@ -10,9 +10,9 @@ Last updated: 2026-11-09 (public booking page, owner search).
 
 - Stack: Flutter (android + web) + self-hosted Supabase only. No FastAPI,
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
-- `supabase/migrations/0001..0091` are the schema owner (applied by
+- `supabase/migrations/0001..0092` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 1118 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 1126 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -358,7 +358,7 @@ Last updated: 2026-11-09 (public booking page, owner search).
 - Follow-up: a vehicle with no open session offers "Registrar entrada" from
   its history (`/check-in?plate=`, `onCheckIn` injectable); a vehicle already
   inside keeps the charge action. Fixing the sample fixture's `openSessions`
-  exposed the guard in tests. Test count: 1118.
+  exposed the guard in tests. Test count: 1126.
 
 ### Public booking page (2026-11-09)
 
@@ -425,7 +425,12 @@ Last updated: 2026-11-09 (public booking page, owner search).
   without asking again, and shows a "Reserva cancelada" screen. Cancelling is
   only reachable from the confirmation screen today — a "cancel with my code"
   lookup is the natural follow-up.
-- Test count: 1118; schema `0001..0091`.
+- `0092_public_reservation_lookup.sql`: code + mobile returns the active
+  public hold (`null` when nothing matches, so "no encontramos" is an answer
+  and not an error), used by the "¿Ya reservaste?" card at the bottom of
+  `/reserve`. The card reuses the same RPC for the plate, so cancelling from
+  the lookup still sends code + plate + phone.
+- Test count: 1126; schema `0001..0092`.
 
 ## Owner contact data (2026-11-05)
 

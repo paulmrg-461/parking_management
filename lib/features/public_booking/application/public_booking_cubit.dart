@@ -3,6 +3,7 @@ import 'package:equatable/equatable.dart';
 import '../../../core/error/failure.dart';
 import '../../../core/state/resilient_cubit.dart';
 import '../domain/entities/public_booking.dart';
+import '../domain/phone_rules.dart';
 import '../domain/repositories/public_booking_repository.dart';
 
 enum PublicBookingStatus { initial, loading, loaded, failure }
@@ -17,6 +18,10 @@ class PublicBookingState extends Equatable {
     this.actionFailure,
     this.cancelling = false,
     this.cancelled = false,
+    this.lookupLoading = false,
+    this.lookupDone = false,
+    this.lookupResult,
+    this.lookupFailure,
   });
 
   final PublicBookingStatus status;
@@ -36,6 +41,15 @@ class PublicBookingState extends Equatable {
   /// The customer freed the hold; the page thanks them and offers another.
   final bool cancelled;
 
+  /// "Ya reservaste" lookup: searching, the hold found, or why it did not
+  /// match (the form stays usable either way).
+  final bool lookupLoading;
+
+  /// A lookup finished without finding anything (the "no match" message).
+  final bool lookupDone;
+  final PublicReservation? lookupResult;
+  final Failure? lookupFailure;
+
   PublicBookingState copyWith({
     PublicBookingStatus? status,
     PublicBookingAvailability? availability,
@@ -48,6 +62,12 @@ class PublicBookingState extends Equatable {
     bool clearActionFailure = false,
     bool? cancelling,
     bool? cancelled,
+    bool? lookupLoading,
+    bool? lookupDone,
+    PublicReservation? lookupResult,
+    bool clearLookupResult = false,
+    Failure? lookupFailure,
+    bool clearLookupFailure = false,
   }) => PublicBookingState(
     status: status ?? this.status,
     availability: availability ?? this.availability,
@@ -59,6 +79,14 @@ class PublicBookingState extends Equatable {
         : (actionFailure ?? this.actionFailure),
     cancelling: cancelling ?? this.cancelling,
     cancelled: cancelled ?? this.cancelled,
+    lookupLoading: lookupLoading ?? this.lookupLoading,
+    lookupDone: lookupDone ?? this.lookupDone,
+    lookupResult: clearLookupResult
+        ? null
+        : (lookupResult ?? this.lookupResult),
+    lookupFailure: clearLookupFailure
+        ? null
+        : (lookupFailure ?? this.lookupFailure),
   );
 
   @override
@@ -71,6 +99,10 @@ class PublicBookingState extends Equatable {
     actionFailure,
     cancelling,
     cancelled,
+    lookupLoading,
+    lookupDone,
+    lookupResult,
+    lookupFailure,
   ];
 }
 
@@ -85,6 +117,7 @@ class PublicBookingCubit extends ResilientCubit<PublicBookingState> {
   /// asking again (the RPC needs id + plate + phone).
   String _plate = '';
   String _phone = '';
+  String _lookupPhone = '';
 
   Future<void> load(int lotId) async {
     _lotId = lotId;
@@ -173,16 +206,86 @@ class PublicBookingCubit extends ResilientCubit<PublicBookingState> {
   /// phone, so a stranger cannot cancel someone else's space.
   Future<void> cancel() async {
     final reservation = state.reservation;
-    if (reservation == null || state.cancelling) {
+    if (reservation == null) {
+      return;
+    }
+    await _cancel(
+      lotId: _lotId,
+      reservationId: reservation.id,
+      plate: _plate,
+      phone: _phone,
+    );
+  }
+
+  /// Retrieves an active hold with the code on the confirmation plus the
+  /// mobile used to book. Null is an answer ("nothing matches"), not an error.
+  Future<void> lookup({required int code, required String phone}) async {
+    if (state.lookupLoading) {
+      return;
+    }
+    final normalized = normalizeMobilePhone(phone) ?? phone.trim();
+    emit(
+      state.copyWith(
+        lookupLoading: true,
+        lookupDone: false,
+        clearLookupResult: true,
+        clearLookupFailure: true,
+      ),
+    );
+    try {
+      final found = await _repository.lookup(
+        lotId: _lotId,
+        reservationId: code,
+        phone: normalized,
+      );
+      if (isClosed) {
+        return;
+      }
+      _lookupPhone = normalized;
+      emit(
+        state.copyWith(
+          lookupLoading: false,
+          lookupDone: true,
+          lookupResult: found,
+        ),
+      );
+    } on Failure catch (failure) {
+      if (!isClosed) {
+        emit(state.copyWith(lookupLoading: false, lookupFailure: failure));
+      }
+    }
+  }
+
+  /// Cancels the hold retrieved by [lookup] (same guards as the confirmation).
+  Future<void> cancelLookup() async {
+    final found = state.lookupResult;
+    if (found == null) {
+      return;
+    }
+    await _cancel(
+      lotId: _lotId,
+      reservationId: found.id,
+      plate: found.plate,
+      phone: _lookupPhone,
+    );
+  }
+
+  Future<void> _cancel({
+    required int lotId,
+    required int reservationId,
+    required String plate,
+    required String phone,
+  }) async {
+    if (state.cancelling) {
       return;
     }
     emit(state.copyWith(cancelling: true, clearActionFailure: true));
     try {
       await _repository.cancel(
-        lotId: _lotId,
-        reservationId: reservation.id,
-        plate: _plate,
-        phone: _phone,
+        lotId: lotId,
+        reservationId: reservationId,
+        plate: plate,
+        phone: phone,
       );
       if (isClosed) {
         return;
@@ -192,6 +295,7 @@ class PublicBookingCubit extends ResilientCubit<PublicBookingState> {
           cancelling: false,
           cancelled: true,
           clearReservation: true,
+          clearLookupResult: true,
         ),
       );
       try {

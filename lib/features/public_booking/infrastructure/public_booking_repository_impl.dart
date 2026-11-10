@@ -12,6 +12,14 @@ class PublicBookingRepositoryImpl implements PublicBookingRepository {
       _remote.availability(lotId);
 
   @override
+  Future<PublicReservation?> lookup({
+    required int lotId,
+    required int reservationId,
+    required String phone,
+  }) =>
+      _remote.lookup(lotId: lotId, reservationId: reservationId, phone: phone);
+
+  @override
   Future<void> cancel({
     required int lotId,
     required int reservationId,

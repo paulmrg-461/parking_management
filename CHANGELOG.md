@@ -153,6 +153,11 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   and a full category/group is refused. The capacity rules are
   shared with the operator path, and anon cannot read the reservation table.
   The page is linked from the public policy page and the evidence page.
+- **"Already booked?" lookup**: the public page ends with a code + mobile form
+  (`public_reservation_lookup`, anon) that retrieves the active hold and lets
+  the customer cancel it without the confirmation screen. It returns null for
+  a wrong code/phone, an expired hold or an operator hold, so only the
+  customer's own visible booking is exposed.
 - **Customers can give the space back**: the `/reserve` confirmation offers
   "Cancelar reserva" (with a confirmation dialog) and ends on a
   "Reserva cancelada" screen. `public_cancel_reservation(code, plate, phone)`

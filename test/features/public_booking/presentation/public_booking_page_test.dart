@@ -147,6 +147,88 @@ void main() {
     expect(find.text('¡Reserva confirmada!'), findsOneWidget);
   });
 
+  testWidgets('Success: a returning customer finds and cancels the hold', (
+    tester,
+  ) async {
+    final repository = FakePublicBookingRepository()
+      ..availabilityToReturn = sampleAvailability()
+      ..lookupToReturn = PublicReservation(
+        id: 42,
+        plate: 'ABC123',
+        categoryName: 'car',
+        reservedUntil: DateTime(2026, 11, 10, 20),
+      );
+    await _pump(tester, repository: repository);
+
+    await tester.drag(find.byType(ListView), const Offset(0, -900));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('booking_lookup_code')), '42');
+    await tester.enterText(
+      find.byKey(const Key('booking_lookup_phone')),
+      '3001112233',
+    );
+    await tester.tap(find.text('Consultar reserva'));
+    await tester.pumpAndSettle();
+
+    expect(repository.lastLookupId, 42);
+    expect(repository.lastLookupPhone, '3001112233');
+    expect(find.text('Reserva de ABC123'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Cancelar reserva'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cancelar reserva'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Cancelar reserva'));
+    await tester.pumpAndSettle();
+
+    expect(repository.cancelCalls, 1);
+    expect(repository.lastCancelId, 42);
+    expect(repository.lastCancelPlate, 'ABC123');
+    expect(find.text('Reserva cancelada'), findsOneWidget);
+  });
+
+  testWidgets('Failure: the lookup explains when nothing matches', (
+    tester,
+  ) async {
+    await _pump(tester);
+
+    await tester.drag(find.byType(ListView), const Offset(0, -900));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('booking_lookup_code')), '99');
+    await tester.enterText(
+      find.byKey(const Key('booking_lookup_phone')),
+      '3001112233',
+    );
+    await tester.tap(find.text('Consultar reserva'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'No encontramos una reserva activa con esos datos. '
+        'Revisa el código y el celular.',
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('Failure: the lookup asks for a valid code and mobile', (
+    tester,
+  ) async {
+    await _pump(tester);
+
+    await tester.drag(find.byType(ListView), const Offset(0, -900));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('booking_lookup_code')), '4');
+    await tester.enterText(
+      find.byKey(const Key('booking_lookup_phone')),
+      '6011234567',
+    );
+    await tester.tap(find.text('Consultar reserva'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Escribe el código y un celular válido.'), findsOneWidget);
+  });
+
   testWidgets('Failure: the form validates plate and phone', (tester) async {
     await _pump(tester);
 

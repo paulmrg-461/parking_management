@@ -464,6 +464,60 @@ abstract class AppLocalizations {
   /// **'Hacer otra reserva'**
   String get bookingAnother;
 
+  /// No description provided for @bookingLookupTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Ya reservaste?'**
+  String get bookingLookupTitle;
+
+  /// No description provided for @bookingLookupHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Consulta o cancela con el código y el celular de tu reserva.'**
+  String get bookingLookupHint;
+
+  /// No description provided for @bookingLookupCode.
+  ///
+  /// In es, this message translates to:
+  /// **'Código'**
+  String get bookingLookupCode;
+
+  /// No description provided for @bookingLookupPhone.
+  ///
+  /// In es, this message translates to:
+  /// **'Celular'**
+  String get bookingLookupPhone;
+
+  /// No description provided for @bookingLookupAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Consultar reserva'**
+  String get bookingLookupAction;
+
+  /// No description provided for @bookingLookupChecking.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscando…'**
+  String get bookingLookupChecking;
+
+  /// No description provided for @bookingLookupInvalid.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe el código y un celular válido.'**
+  String get bookingLookupInvalid;
+
+  /// No description provided for @bookingLookupNotFound.
+  ///
+  /// In es, this message translates to:
+  /// **'No encontramos una reserva activa con esos datos. Revisa el código y el celular.'**
+  String get bookingLookupNotFound;
+
+  /// No description provided for @bookingLookupFound.
+  ///
+  /// In es, this message translates to:
+  /// **'Reserva de {plate}'**
+  String bookingLookupFound(String plate);
+
   /// No description provided for @bookingCancel.
   ///
   /// In es, this message translates to:

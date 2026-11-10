@@ -10,6 +10,11 @@ class FakePublicBookingRepository implements PublicBookingRepository {
   int availabilityCalls = 0;
   int reserveCalls = 0;
   Failure? cancelError;
+  PublicReservation? lookupToReturn;
+  Failure? lookupError;
+  int lookupCalls = 0;
+  int? lastLookupId;
+  String? lastLookupPhone;
   int cancelCalls = 0;
   int? lastCancelId;
   String? lastCancelPlate;
@@ -30,6 +35,23 @@ class FakePublicBookingRepository implements PublicBookingRepository {
       throw error;
     }
     return availabilityToReturn;
+  }
+
+  @override
+  Future<PublicReservation?> lookup({
+    required int lotId,
+    required int reservationId,
+    required String phone,
+  }) async {
+    lookupCalls++;
+    lastLotId = lotId;
+    lastLookupId = reservationId;
+    lastLookupPhone = phone;
+    final error = lookupError;
+    if (error != null) {
+      throw error;
+    }
+    return lookupToReturn;
   }
 
   @override

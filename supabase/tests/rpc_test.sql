@@ -3350,6 +3350,25 @@ begin
         raise exception 'public availability ignored the holds: %', avail;
     end if;
 
+    -- The customer can come back with the code and the mobile.
+    if (
+        public.public_reservation_lookup(
+            1, (first ->> 'id')::integer, '+57 300 111 2233'
+        ) ->> 'plate'
+    ) is distinct from 'PUB001' then
+        raise exception 'the lookup did not find the active hold';
+    end if;
+    if public.public_reservation_lookup(
+        1, (first ->> 'id')::integer, '3000000000'
+    ) is not null then
+        raise exception 'the lookup answered a wrong phone';
+    end if;
+    if public.public_reservation_lookup(
+        1, 999999, '3001112233'
+    ) is not null then
+        raise exception 'the lookup answered an unknown code';
+    end if;
+
     begin
         perform public.public_cancel_reservation(
             1, (first ->> 'id')::integer, 'PUB001', '3000000000'
@@ -3395,6 +3414,12 @@ begin
             raise;
         end if;
     end;
+
+    if public.public_reservation_lookup(
+        1, (first ->> 'id')::integer, '3001112233'
+    ) is not null then
+        raise exception 'the lookup answered a cancelled hold';
+    end if;
 
     begin
         perform 1 from public.category_reservations limit 1;

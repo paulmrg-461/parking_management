@@ -140,7 +140,9 @@ starting with 3, optional +57 —, 10-min..24-h window, one active hold per
 plate, two per phone, shared capacity check) and
 `reservation_capacity_check(lot, category, plate)`,
 `public_cancel_reservation(lot, reservation_id, plate, phone)` (anon: only
-public holds, all three values must match, sets `status = 'cancelled'`)
+public holds, all three values must match, sets `status = 'cancelled'`) and
+`public_reservation_lookup(lot, reservation_id, phone)` (anon: the active
+public hold for that code + mobile, or `null`)
 (shared by the operator and public paths). `category_reservations` also stores
 `customer_name`, `customer_phone` and `source` (`app`/`public`); the constraint
 `category_reservations_public_contact_check` keeps public rows from existing

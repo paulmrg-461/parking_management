@@ -11,6 +11,14 @@ abstract class PublicBookingRepository {
     required String phone,
   });
 
+  /// Active public hold for [reservationId] + [phone], or null when nothing
+  /// matches (the customer mistyped, or the hold expired or was used).
+  Future<PublicReservation?> lookup({
+    required int lotId,
+    required int reservationId,
+    required String phone,
+  });
+
   Future<PublicReservation> reserve({
     required int lotId,
     required String plate,
