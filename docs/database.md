@@ -132,6 +132,11 @@ identity, contact, policy).
 returns 1-hour signed URLs for that session's photos/videos (no login; the
 plate is the key).
 
+**Reservations report**
+`report_reservations(from, to)`: holds created in the window (business
+timezone), split by `source` (`public`/`app`) and `status`, plus
+`used_public` for the web conversion.
+
 **Public booking**
 `public_availability(lot_id)` (anon: identity + per-category availability and
 hourly tariff, no plates), `public_create_reservation(lot, plate, category, until, name,

@@ -18,7 +18,13 @@ class CategoryOccupancy extends Equatable {
   final bool isFull;
 
   @override
-  List<Object?> get props => [categoryId, categoryName, count, capacity, isFull];
+  List<Object?> get props => [
+    categoryId,
+    categoryName,
+    count,
+    capacity,
+    isFull,
+  ];
 }
 
 /// Current occupancy snapshot, as returned by `rpc/report_occupancy`.

@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/features/reports/application/reports_cubit.dart';
 import 'package:parking_management/features/reports/domain/entities/hourly_traffic.dart';
+import 'package:parking_management/features/reports/domain/entities/reservation_report.dart';
 import 'package:parking_management/features/reports/domain/entities/occupancy_report.dart';
 import 'package:parking_management/features/reports/domain/entities/revenue_report.dart';
 import 'package:parking_management/features/reports/domain/entities/whatsapp_report.dart';
@@ -19,6 +20,7 @@ class _FakeReportRepository implements ReportRepository {
   final RevenueReport? previousRevenue;
   final OccupancyReport? occupancyToReturn;
   final Failure? error;
+  ReservationReport reservations = ReservationReport.empty;
   bool failPrevious = false;
 
   @override
@@ -50,6 +52,12 @@ class _FakeReportRepository implements ReportRepository {
     required DateTime startDate,
     required DateTime endDate,
   }) async => WhatsappReport.empty;
+
+  @override
+  Future<ReservationReport> getReservationReport({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async => reservations;
 
   @override
   Future<HourlyTraffic> getHourlyTraffic({

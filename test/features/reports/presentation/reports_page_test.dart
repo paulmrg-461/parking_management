@@ -6,6 +6,7 @@ import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/core/theme/contrast.dart';
 import 'package:parking_management/features/reports/application/reports_cubit.dart';
 import 'package:parking_management/features/reports/domain/entities/hourly_traffic.dart';
+import 'package:parking_management/features/reports/domain/entities/reservation_report.dart';
 import 'package:parking_management/features/reports/domain/entities/occupancy_report.dart';
 import 'package:parking_management/features/reports/domain/entities/revenue_report.dart';
 import 'package:parking_management/features/reports/domain/entities/whatsapp_report.dart';
@@ -34,8 +35,15 @@ class _FakeReportRepository implements ReportRepository {
   );
 
   HourlyTraffic hourly = HourlyTraffic.empty;
+  ReservationReport reservations = ReservationReport.empty;
 
   int _revenueCalls = 0;
+
+  @override
+  Future<ReservationReport> getReservationReport({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async => reservations;
 
   @override
   Future<RevenueReport> getRevenueReport({
@@ -111,21 +119,25 @@ Future<_FakeReportRepository> _pump(
   Failure? error,
   RevenueReport? previousRevenue,
   HourlyTraffic? hourly,
+  ReservationReport? reservations,
+  _FakeReportRepository? repository,
 }) async {
-  final repository = _FakeReportRepository(_revenue, _occupancy)
+  final fake = repository ?? _FakeReportRepository(_revenue, _occupancy);
+  fake
     ..error = error
     ..previousRevenue = previousRevenue
-    ..hourly = hourly ?? HourlyTraffic.empty;
+    ..hourly = hourly ?? HourlyTraffic.empty
+    ..reservations = reservations ?? ReservationReport.empty;
   await tester.pumpWidget(
     testApp(
       BlocProvider<ReportsCubit>(
-        create: (_) => ReportsCubit(repository),
+        create: (_) => ReportsCubit(fake),
         child: const ReportsPage(),
       ),
     ),
   );
   await tester.pumpAndSettle();
-  return repository;
+  return fake;
 }
 
 /// The report list is lazy and disposes rows quickly: move in small steps so
@@ -331,6 +343,28 @@ void main() {
 
     expect(find.byType(MetricCard), findsWidgets);
     expect(find.text('Ingresos totales'), findsOneWidget);
+  });
+
+  testWidgets('Success: the reservations section shows the web conversion', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      reservations: const ReservationReport(
+        total: 6,
+        public: 4,
+        app: 2,
+        used: 3,
+        usedPublic: 3,
+        cancelled: 1,
+        expired: 1,
+      ),
+    );
+    await _scrollTo(tester, find.text('75% llegaron a entrar'));
+
+    expect(find.text('Reservas de cupo'), findsOneWidget);
+    expect(find.text('75% llegaron a entrar'), findsOneWidget);
+    expect(find.textContaining('6 reservas en total'), findsOneWidget);
   });
 
   testWidgets('Success: the CSV button copies the report', (tester) async {

@@ -165,6 +165,10 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   next to the phone and WhatsApp actions, and the availability re-reads itself
   every minute without flashing the skeleton, so a customer deciding on the
   page never reads stale numbers.
+- **Did the web page bring cars in?**: the reports screen has a "Reservas de
+  cupo" section with the holds created in the period, how many came from
+  `/reserve`, the share that turned into a stay, and the cancelled/expired
+  count (`report_reservations`, admin, business-timezone window).
 - **The grace window is a setting**: "Tolerancia de reservas (min)" in Ajustes
   (0..120, default 15) is the single value the capacity check, public
   availability, check-in and the board read. `0` disables it: the hold stops

@@ -1,5 +1,6 @@
 import '../entities/hourly_traffic.dart';
 import '../entities/occupancy_report.dart';
+import '../entities/reservation_report.dart';
 import '../entities/revenue_report.dart';
 import '../entities/whatsapp_report.dart';
 
@@ -15,6 +16,12 @@ abstract class ReportRepository {
   Future<OccupancyReport> getOccupancyReport();
 
   Future<WhatsappReport> getWhatsappReport({
+    required DateTime startDate,
+    required DateTime endDate,
+  });
+
+  /// Holds created in the range, by origin and outcome.
+  Future<ReservationReport> getReservationReport({
     required DateTime startDate,
     required DateTime endDate,
   });

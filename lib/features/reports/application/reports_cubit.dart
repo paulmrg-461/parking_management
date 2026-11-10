@@ -3,6 +3,7 @@ import 'package:equatable/equatable.dart';
 import '../../../core/error/failure.dart';
 import '../domain/entities/hourly_traffic.dart';
 import '../domain/entities/occupancy_report.dart';
+import '../domain/entities/reservation_report.dart';
 import '../domain/entities/revenue_report.dart';
 import '../domain/entities/whatsapp_report.dart';
 import '../domain/repositories/report_repository.dart';
@@ -29,6 +30,7 @@ class ReportsLoaded extends ReportsState {
     this.occupancy, {
     this.whatsapp = WhatsappReport.empty,
     this.hourly = HourlyTraffic.empty,
+    this.reservations = ReservationReport.empty,
     this.allLots = false,
     this.previousTotal,
     this.previousStart,
@@ -41,6 +43,9 @@ class ReportsLoaded extends ReportsState {
 
   /// Entries/exits per hour (empty when the RPC failed).
   final HourlyTraffic hourly;
+
+  /// Holds created in the window, by origin and outcome.
+  final ReservationReport reservations;
 
   /// `true` while the consolidated (every lot) view is selected.
   final bool allLots;
@@ -65,6 +70,7 @@ class ReportsLoaded extends ReportsState {
     occupancy,
     whatsapp,
     hourly,
+    reservations,
     allLots,
     previousTotal,
     previousStart,
@@ -117,6 +123,12 @@ class ReportsCubit extends ResilientCubit<ReportsState> {
               onError: (Object _) => HourlyTraffic.empty,
             ),
         _repository
+            .getReservationReport(startDate: startDate, endDate: endDate)
+            .then<ReservationReport>(
+              (report) => report,
+              onError: (Object _) => ReservationReport.empty,
+            ),
+        _repository
             .getRevenueReport(
               startDate: previousStart,
               endDate: previousEnd,
@@ -127,13 +139,14 @@ class ReportsCubit extends ResilientCubit<ReportsState> {
               onError: (Object _) => null,
             ),
       ]);
-      final previous = results[4] as RevenueReport?;
+      final previous = results[5] as RevenueReport?;
       emit(
         ReportsLoaded(
           results[0] as RevenueReport,
           results[1] as OccupancyReport,
           whatsapp: results[2] as WhatsappReport,
           hourly: results[3] as HourlyTraffic,
+          reservations: results[4] as ReservationReport,
           allLots: allLots,
           previousTotal: previous?.total,
           previousStart: previous == null ? null : previousStart,

@@ -5144,6 +5144,48 @@ abstract class AppLocalizations {
   /// **'Ingresos por día'**
   String get reportsRevenueByDay;
 
+  /// No description provided for @reportsReservationsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Reservas de cupo'**
+  String get reportsReservationsTitle;
+
+  /// No description provided for @reportsReservationsSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuántas se crearon en el periodo y cómo terminaron'**
+  String get reportsReservationsSubtitle;
+
+  /// No description provided for @reportsReservationsPublic.
+  ///
+  /// In es, this message translates to:
+  /// **'Reservas web'**
+  String get reportsReservationsPublic;
+
+  /// No description provided for @reportsReservationsConversion.
+  ///
+  /// In es, this message translates to:
+  /// **'{value}% llegaron a entrar'**
+  String reportsReservationsConversion(int value);
+
+  /// No description provided for @reportsReservationsClosed.
+  ///
+  /// In es, this message translates to:
+  /// **'Canceladas o vencidas'**
+  String get reportsReservationsClosed;
+
+  /// No description provided for @reportsReservationsClosedHint.
+  ///
+  /// In es, this message translates to:
+  /// **'{cancelled, plural, =1{1 cancelada} other{{cancelled} canceladas}} · {expired, plural, =1{1 vencida} other{{expired} vencidas}}'**
+  String reportsReservationsClosedHint(int cancelled, int expired);
+
+  /// No description provided for @reportsReservationsTotal.
+  ///
+  /// In es, this message translates to:
+  /// **'{total} reservas en total · {app} desde recepción · {used} terminaron en entrada'**
+  String reportsReservationsTotal(int total, int app, int used);
+
   /// No description provided for @reportsHourlyTitle.
   ///
   /// In es, this message translates to:

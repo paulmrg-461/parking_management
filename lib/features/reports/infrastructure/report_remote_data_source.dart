@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/network/supabase_error_mapper.dart';
 import '../domain/entities/hourly_traffic.dart';
 import '../domain/entities/occupancy_report.dart';
+import '../domain/entities/reservation_report.dart';
 import '../domain/entities/revenue_report.dart';
 import '../domain/entities/whatsapp_report.dart';
 import 'models/occupancy_report_dto.dart';
@@ -18,6 +19,11 @@ abstract class ReportRemoteDataSource {
   Future<OccupancyReport> getOccupancyReport();
 
   Future<WhatsappReport> getWhatsappReport({
+    required DateTime startDate,
+    required DateTime endDate,
+  });
+
+  Future<ReservationReport> getReservationReport({
     required DateTime startDate,
     required DateTime endDate,
   });
@@ -61,6 +67,27 @@ class SupabaseReportRemoteDataSource implements ReportRemoteDataSource {
       return OccupancyReportDto.fromJson(
         Map<String, dynamic>.from(result as Map),
       ).toDomain();
+    } catch (error) {
+      throw mapSupabaseError(error);
+    }
+  }
+
+  @override
+  Future<ReservationReport> getReservationReport({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    try {
+      final result = await _client.rpc(
+        'report_reservations',
+        params: {
+          'p_start_date': startDate.toIso8601String().substring(0, 10),
+          'p_end_date': endDate.toIso8601String().substring(0, 10),
+        },
+      );
+      return ReservationReport.fromJson(
+        Map<String, dynamic>.from(result as Map),
+      );
     } catch (error) {
       throw mapSupabaseError(error);
     }

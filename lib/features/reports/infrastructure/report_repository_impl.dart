@@ -1,5 +1,6 @@
 import '../domain/entities/hourly_traffic.dart';
 import '../domain/entities/occupancy_report.dart';
+import '../domain/entities/reservation_report.dart';
 import '../domain/entities/revenue_report.dart';
 import '../domain/entities/whatsapp_report.dart';
 import '../domain/repositories/report_repository.dart';
@@ -37,6 +38,12 @@ class ReportRepositoryImpl implements ReportRepository {
   }) async {
     return _remote.getWhatsappReport(startDate: startDate, endDate: endDate);
   }
+
+  @override
+  Future<ReservationReport> getReservationReport({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) => _remote.getReservationReport(startDate: startDate, endDate: endDate);
 
   @override
   Future<HourlyTraffic> getHourlyTraffic({

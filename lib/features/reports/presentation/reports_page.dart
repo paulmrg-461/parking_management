@@ -18,6 +18,7 @@ import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/widgets/sync_badge.dart';
 import '../../emergency/presentation/emergency_action.dart';
 import '../application/reports_cubit.dart';
+import '../domain/entities/reservation_report.dart';
 import 'report_csv.dart';
 import 'report_pdf.dart';
 import 'widgets/category_bar_list.dart';
@@ -415,6 +416,14 @@ class _ReportsBody extends StatelessWidget {
         HourlyTrafficChart(traffic: loaded.hourly),
         const SizedBox(height: Space.lg),
         SectionHeader(
+          icon: Icons.event_available_outlined,
+          title: l10n.reportsReservationsTitle,
+          subtitle: l10n.reportsReservationsSubtitle,
+        ),
+        const SizedBox(height: Space.sm),
+        _ReservationMetrics(report: loaded.reservations),
+        const SizedBox(height: Space.lg),
+        SectionHeader(
           icon: Icons.category_outlined,
           title: l10n.reportsRevenueByCategory,
         ),
@@ -571,6 +580,62 @@ class _DeltaRow extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Holds created in the window: how many, how many came from the web and how
+/// they ended. A quiet lot shows zeros instead of hiding the section, so the
+/// owner can tell "no bookings" from "feature off".
+class _ReservationMetrics extends StatelessWidget {
+  const _ReservationMetrics({required this.report});
+
+  final ReservationReport report;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final conversion = report.publicConversion;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: MetricCard(
+                  icon: Icons.public,
+                  label: l10n.reportsReservationsPublic,
+                  value: '${report.public}',
+                  caption: conversion == null
+                      ? null
+                      : l10n.reportsReservationsConversion(conversion),
+                  tone: MetricTone.primary,
+                ),
+              ),
+              const SizedBox(width: Space.sm),
+              Expanded(
+                child: MetricCard(
+                  icon: Icons.event_busy_outlined,
+                  label: l10n.reportsReservationsClosed,
+                  value: '${report.cancelled + report.expired}',
+                  caption: l10n.reportsReservationsClosedHint(
+                    report.cancelled,
+                    report.expired,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: Space.sm),
+        Text(
+          l10n.reportsReservationsTotal(report.total, report.app, report.used),
+          style: Theme.of(context).textTheme.bodySmall
+              ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+        ),
+      ],
     );
   }
 }

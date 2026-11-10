@@ -3751,4 +3751,51 @@ begin
     end if;
 end $$;
 
+-- Reservations report: origin and outcome for the web bookings.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    cat integer := (select id from public.categories where lot_id = 1 order by id limit 1);
+    report jsonb;
+begin
+    insert into public.category_reservations (
+        plate, category_id, reserved_from, reserved_until, lot_id, status,
+        source, customer_name, customer_phone
+    )
+    values
+        ('RPT-WEB1', cat, '2020-03-10 10:00+00', '2020-03-10 12:00+00', 1,
+         'used', 'public', 'Ana', '3001112233'),
+        ('RPT-WEB2', cat, '2020-03-10 11:00+00', '2020-03-10 13:00+00', 1,
+         'cancelled', 'public', 'Ana', '3001112233'),
+        ('RPT-WEB3', cat, '2020-03-10 12:00+00', '2020-03-10 14:00+00', 1,
+         'active', 'public', 'Ana', '3001112233'),
+        ('RPT-APP1', cat, '2020-03-11 09:00+00', '2020-03-11 11:00+00', 1,
+         'used', 'app', null, null),
+        ('RPT-OLD1', cat, '2020-02-01 09:00+00', '2020-02-01 11:00+00', 1,
+         'used', 'app', null, null);
+
+    report := public.report_reservations('2020-03-10', '2020-03-11');
+    if (report ->> 'total')::integer <> 4
+       or (report ->> 'public')::integer <> 3
+       or (report ->> 'app')::integer <> 1 then
+        raise exception 'reservation report mixed the sources: %', report;
+    end if;
+    if (report ->> 'used')::integer <> 2
+       or (report ->> 'used_public')::integer <> 1
+       or (report ->> 'cancelled')::integer <> 1
+       or (report ->> 'active')::integer <> 1
+       or (report ->> 'expired')::integer <> 0 then
+        raise exception 'reservation report mixed the outcomes: %', report;
+    end if;
+    begin
+        perform public.report_reservations('2020-03-11', '2020-03-10');
+        raise exception 'an inverted range was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidReportRangeError%' then
+            raise;
+        end if;
+    end;
+end $$;
+
 rollback;

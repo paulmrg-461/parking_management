@@ -2865,6 +2865,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportsRevenueByDay => 'Revenue by day';
 
   @override
+  String get reportsReservationsTitle => 'Reservations';
+
+  @override
+  String get reportsReservationsSubtitle =>
+      'How many were created in the period and how they ended';
+
+  @override
+  String get reportsReservationsPublic => 'Web bookings';
+
+  @override
+  String reportsReservationsConversion(int value) {
+    return '$value% turned into a stay';
+  }
+
+  @override
+  String get reportsReservationsClosed => 'Cancelled or expired';
+
+  @override
+  String reportsReservationsClosedHint(int cancelled, int expired) {
+    return '$cancelled cancelled · $expired expired';
+  }
+
+  @override
+  String reportsReservationsTotal(int total, int app, int used) {
+    return '$total reservations · $app from the desk · $used turned into a stay';
+  }
+
+  @override
   String get reportsHourlyTitle => 'Hourly traffic';
 
   @override

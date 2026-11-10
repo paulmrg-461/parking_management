@@ -2881,6 +2881,46 @@ class AppLocalizationsEs extends AppLocalizations {
   String get reportsRevenueByDay => 'Ingresos por día';
 
   @override
+  String get reportsReservationsTitle => 'Reservas de cupo';
+
+  @override
+  String get reportsReservationsSubtitle =>
+      'Cuántas se crearon en el periodo y cómo terminaron';
+
+  @override
+  String get reportsReservationsPublic => 'Reservas web';
+
+  @override
+  String reportsReservationsConversion(int value) {
+    return '$value% llegaron a entrar';
+  }
+
+  @override
+  String get reportsReservationsClosed => 'Canceladas o vencidas';
+
+  @override
+  String reportsReservationsClosedHint(int cancelled, int expired) {
+    String _temp0 = intl.Intl.pluralLogic(
+      cancelled,
+      locale: localeName,
+      other: '$cancelled canceladas',
+      one: '1 cancelada',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      expired,
+      locale: localeName,
+      other: '$expired vencidas',
+      one: '1 vencida',
+    );
+    return '$_temp0 · $_temp1';
+  }
+
+  @override
+  String reportsReservationsTotal(int total, int app, int used) {
+    return '$total reservas en total · $app desde recepción · $used terminaron en entrada';
+  }
+
+  @override
   String get reportsHourlyTitle => 'Tráfico por hora';
 
   @override
