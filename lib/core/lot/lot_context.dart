@@ -30,7 +30,13 @@ class LotContext {
 
   Future<void> select(int? lotId) async {
     session.select(lotId);
-    await _store.put(box, _key, lotId);
+    // Remembering the choice is a convenience: a slow or broken local store
+    // (seen on web after login) must never block sign-in.
+    try {
+      await _store.put(box, _key, lotId).timeout(const Duration(seconds: 2));
+    } on Object {
+      // Keep the in-memory selection for this session.
+    }
   }
 
   void onApplied(void Function(int? lotId) callback) =>
