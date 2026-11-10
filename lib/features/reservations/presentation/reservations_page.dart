@@ -361,7 +361,7 @@ class _ReservationTile extends StatelessWidget {
     final scheme = theme.colorScheme;
     final now = DateTime.now();
     final soon = reservation.expiresSoon(now: now);
-    final inGrace = reservation.inGraceAt(now);
+    final inGrace = reservation.inGrace;
     final notes = reservation.notes;
     return Card(
       margin: const EdgeInsets.fromLTRB(Space.md, Space.xs, Space.md, Space.xs),

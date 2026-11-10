@@ -165,6 +165,11 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   next to the phone and WhatsApp actions, and the availability re-reads itself
   every minute without flashing the skeleton, so a customer deciding on the
   page never reads stale numbers.
+- **One owner for the grace window**: the reservations board now loads through
+  `list_active_reservations()`, which applies `reservation_grace()` and
+  returns an `in_grace` flag. The Dart copy of the 15 minutes (and the
+  PostgREST date arithmetic) is gone, so changing the window in SQL can no
+  longer disagree with the app.
 - **A full lot says so**: when every vehicle type is at capacity, `/reserve`
   hides the booking form (a form nobody can submit is a dead end) and shows
   "No hay cupo en este momento" with the call/WhatsApp actions; the code

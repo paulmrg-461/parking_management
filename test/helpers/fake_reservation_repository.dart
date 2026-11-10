@@ -68,6 +68,7 @@ Reservation sampleReservation({
   String? customerName,
   String? customerPhone,
   String source = 'app',
+  bool inGrace = false,
 }) => Reservation(
   id: id,
   plate: plate,
@@ -78,4 +79,5 @@ Reservation sampleReservation({
   customerName: customerName,
   customerPhone: customerPhone,
   source: source,
+  inGrace: inGrace,
 );

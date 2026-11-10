@@ -22,28 +22,16 @@ class SupabaseReservationRemoteDataSource
 
   final SupabaseClient _client;
 
-  static const _table = 'category_reservations';
-
   @override
   Future<List<Reservation>> listActive() async {
     try {
-      final rows = await _client
-          .from(_table)
-          .select(
-            'id, plate, category_id, reserved_until, status, notes, '
-            'customer_name, customer_phone, source, categories(name)',
-          )
-          .eq('status', 'active')
-          // Include the grace window: those holds still block a slot.
-          .gt(
-            'reserved_until',
-            DateTime.now()
-                .toUtc()
-                .subtract(Reservation.graceWindow)
-                .toIso8601String(),
-          )
-          .order('reserved_until');
-      return [for (final row in rows) Reservation.fromJson(row)];
+      // The RPC applies `reservation_grace()` and returns `in_grace`, so the
+      // app never re-implements the window (see 0097).
+      final rows = await _client.rpc('list_active_reservations');
+      return [
+        for (final row in rows as List<dynamic>)
+          Reservation.fromJson(Map<String, dynamic>.from(row as Map)),
+      ];
     } catch (error) {
       throw mapSupabaseError(error);
     }

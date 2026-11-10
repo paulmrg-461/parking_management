@@ -3584,6 +3584,30 @@ begin
     end if;
 end $$;
 
+-- The board reads the same rule from the server, flag included.
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    late jsonb;
+    gone integer;
+begin
+    select to_jsonb(row) into late
+      from public.list_active_reservations() row
+     where row.plate = 'LATE01';
+    if late is null or (late ->> 'in_grace')::boolean is not true then
+        raise exception 'the board did not flag the late hold: %', late;
+    end if;
+    if (late ->> 'customer_name') is not null then
+        raise exception 'the board invented a customer for an operator hold';
+    end if;
+    select count(*) into gone
+      from public.list_active_reservations() row
+     where row.plate = 'GONE01';
+    if gone <> 0 then
+        raise exception 'the board listed a hold outside the grace window';
+    end if;
+end $$;
+
 do $$
 declare
     cat integer := current_setting('app.grace_cat')::integer;

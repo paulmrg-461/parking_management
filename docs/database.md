@@ -142,7 +142,10 @@ plate, two per phone, shared capacity check) and
 `public_cancel_reservation(lot, reservation_id, plate, phone)` (anon: only
 public holds, all three values must match, sets `status = 'cancelled'`) and
 `public_reservation_lookup(lot, reservation_id, phone)` (anon: the active
-public hold for that code + mobile, or `null`)
+public hold for that code + mobile, or `null`) and
+`list_active_reservations()` (authenticated: the lot's active holds with the
+category name and an `in_grace` flag; it applies `reservation_grace()`, so the
+app never re-implements the window)
 (shared by the operator and public paths; holds count until
 `reserved_until + reservation_grace()`, 15 minutes, so a late customer keeps
 the space). `category_reservations` also stores

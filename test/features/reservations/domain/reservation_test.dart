@@ -67,20 +67,23 @@ void main() {
     expect(hold.contactLine, isNull);
   });
 
-  test('Success: a hold just past its time is still in grace', () {
-    final late = _reservation(now.subtract(const Duration(minutes: 5)));
+  test('Success: the grace flag comes from the server', () {
+    final late = Reservation.fromJson({
+      'id': 3,
+      'plate': 'LATE01',
+      'category_id': 2,
+      'reserved_until': '2026-11-10T10:00:00Z',
+      'in_grace': true,
+    });
+    final onTime = Reservation.fromJson({
+      'id': 4,
+      'plate': 'SOON01',
+      'category_id': 2,
+      'reserved_until': '2026-11-10T12:00:00Z',
+    });
 
-    expect(late.isExpiredAt(now), isTrue);
-    expect(late.inGraceAt(now), isTrue);
-    expect(late.expiresSoon(now: now), isFalse);
-  });
-
-  test('Failure: past the grace window the hold is gone', () {
-    final gone = _reservation(
-      now.subtract(Reservation.graceWindow + const Duration(minutes: 1)),
-    );
-
-    expect(gone.inGraceAt(now), isFalse);
+    expect(late.inGrace, isTrue);
+    expect(onTime.inGrace, isFalse);
   });
 
   test('Success: sorting lists the soonest expiry first without mutating', () {

@@ -15,6 +15,7 @@ class Reservation extends Equatable {
     this.customerName,
     this.customerPhone,
     this.source = 'app',
+    this.inGrace = false,
   });
 
   final int id;
@@ -53,20 +54,14 @@ class Reservation extends Equatable {
   /// Holds that lapse within this window are flagged on the list.
   static const expiringWindow = Duration(hours: 2);
 
-  /// Mirrors `reservation_grace()` in SQL: after `reserved_until` the hold
-  /// still counts for capacity (and check-in consumes it) for this long, so a
-  /// customer a few minutes late does not lose the space.
-  static const graceWindow = Duration(minutes: 15);
-
   bool get isExpired => isExpiredAt(DateTime.now());
 
   bool isExpiredAt(DateTime now) => !reservedUntil.isAfter(now);
 
-  /// Past its time but still inside the grace window.
-  bool get inGrace => inGraceAt(DateTime.now());
-
-  bool inGraceAt(DateTime now) =>
-      isExpiredAt(now) && now.isBefore(reservedUntil.add(graceWindow));
+  /// Past its time but still inside the grace window. Decided by the server
+  /// (`list_active_reservations`, which knows `reservation_grace()`), so the
+  /// app never keeps a second copy of the rule.
+  final bool inGrace;
 
   /// About to lapse (but still holding capacity). Expired holds are not
   /// "soon": they are already gone.
@@ -84,15 +79,20 @@ class Reservation extends Equatable {
       id: (json['id'] as num).toInt(),
       plate: json['plate'] as String,
       categoryId: (json['category_id'] as num).toInt(),
-      categoryName: category is Map<String, dynamic>
-          ? category['name'] as String? ?? ''
-          : '',
+      // `list_active_reservations` flattens the name; the table select used
+      // to nest it under `categories`.
+      categoryName:
+          json['category_name'] as String? ??
+          (category is Map<String, dynamic>
+              ? category['name'] as String? ?? ''
+              : ''),
       reservedUntil: DateTime.parse(json['reserved_until'] as String),
       status: json['status'] as String? ?? 'active',
       notes: json['notes'] as String?,
       customerName: json['customer_name'] as String?,
       customerPhone: json['customer_phone'] as String?,
       source: json['source'] as String? ?? 'app',
+      inGrace: json['in_grace'] as bool? ?? false,
     );
   }
 
@@ -108,6 +108,7 @@ class Reservation extends Equatable {
     customerName,
     customerPhone,
     source,
+    inGrace,
   ];
 }
 

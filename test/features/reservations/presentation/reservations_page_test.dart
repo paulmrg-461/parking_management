@@ -255,6 +255,7 @@ void main() {
           id: 3,
           plate: 'LATE01',
           reservedUntil: DateTime.now().subtract(const Duration(minutes: 5)),
+          inGrace: true,
         ),
       ],
     );

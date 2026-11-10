@@ -10,7 +10,7 @@ Last updated: 2026-11-09 (public booking page, owner search).
 
 - Stack: Flutter (android + web) + self-hosted Supabase only. No FastAPI,
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
-- `supabase/migrations/0001..0096` are the schema owner (applied by
+- `supabase/migrations/0001..0097` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
 - Flutter: 1139 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
