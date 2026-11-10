@@ -230,9 +230,11 @@ a banner when a new row arrives.
 
 **Background push (FCM):** Supabase does not deliver push itself. Set
 `FCM_SERVICE_ACCOUNT_JSON` in `.env` (single-line Firebase service-account
-JSON), restart the `functions` service, and schedule `supabase/notifications-cron.sh`
-from host cron every minute. The cron also renews monthly passes, raises
-overstay alerts and purges expired idempotency keys. The `push-dispatch` Edge
+JSON) and restart the `functions` service. The `supabase-jobs` service (part
+of `docker-compose.yml`) dispatches pending pushes every 5 minutes, renews
+monthly passes, raises overstay alerts, expires unused holds and purges old
+rows; `supabase/notifications-cron.sh` remains available for hosts that
+prefer system cron. The `push-dispatch` Edge
 Function sends pending notifications to FCM and is protected by the service-role
 key.
 
@@ -447,8 +449,10 @@ These functions are safe to call repeatedly:
   (and anything older than a year).
 - `purge_expired_idempotency()` drops expired retry keys.
 
-`supabase/notifications-cron.sh` runs all of them every minute from host cron,
-which is the supported path. If your Postgres ships **pg_cron**, run
+`supabase-jobs` (the compose service) runs all of them every 5 minutes inside
+the stack, so no host cron daemon is needed; `supabase/notifications-cron.sh`
+still works from host cron (every minute) if you prefer it. Both are
+idempotent. If your Postgres ships **pg_cron**, run
 `ALTER SYSTEM SET cron.database_name = 'parking';`, restart the database,
 `CREATE EXTENSION pg_cron;` and re-apply `0028_retention.sql`: it then
 schedules the same jobs inside Postgres. Storage evidence files are not purged

@@ -153,6 +153,13 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   and a full category/group is refused. The capacity rules are
   shared with the operator path, and anon cannot read the reservation table.
   The page is linked from the public policy page and the evidence page.
+- **Scheduled jobs actually run**: `docker-compose.yml` gains `supabase-jobs`,
+  a small container that calls the retention/notification functions every 5
+  minutes (expire unused holds, renew passes, overstay and expiring-pass
+  alerts, purge old notifications/audit/idempotency/WhatsApp rows) and
+  dispatches pending push/WhatsApp messages. Neither the stock Postgres image
+  (no pg_cron) nor this host (no cron daemon) ran them before, so stale holds
+  stayed `active` forever and push never left the queue.
 - **Directions and live numbers**: the `/reserve` hero offers "Cómo llegar"
   (Google Maps search for the lot address, `core/utils/maps_launcher.dart`)
   next to the phone and WhatsApp actions, and the availability re-reads itself

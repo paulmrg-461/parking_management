@@ -28,3 +28,26 @@ services:
       - ./supabase/migrations:/migrations:ro
       - ./supabase/migrate.sh:/migrate.sh:ro
     entrypoint: ["/bin/sh", "/migrate.sh"]
+
+  # Retention and scheduled notifications inside the stack: the stock Postgres
+  # image ships no pg_cron and a host may not run a cron daemon, so without
+  # this nothing expires holds, prunes logs or dispatches push. Every task is
+  # idempotent and safe to overlap with `supabase/notifications-cron.sh`.
+  supabase-jobs:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGUSER: postgres
+      PGPASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      PGDATABASE: ${POSTGRES_DB:-parking}
+      SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY:-}
+      API_URL: ${JOBS_API_URL:-http://api-gw:8000}
+      JOBS_INTERVAL_SECONDS: ${JOBS_INTERVAL_SECONDS:-300}
+      TZ: ${TZ:-America/Bogota}
+    volumes:
+      - ./supabase/jobs.sh:/jobs.sh:ro
+    entrypoint: ["/bin/sh", "/jobs.sh"]

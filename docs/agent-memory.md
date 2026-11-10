@@ -441,6 +441,16 @@ Last updated: 2026-11-09 (public booking page, owner search).
   the loading state, so the form never flashes.
 - The reservations board has a "Solo web" filter (`isPublic`) beside "por
   vencer"; `_clear` resets both.
+- **Scheduled jobs**: `supabase-jobs` (docker-compose) runs
+  `supabase/jobs.sh` every `JOBS_INTERVAL_SECONDS` (default 300) inside the
+  network: monthly-pass/overstay alerts, renewals, `expire_reservations`,
+  purges and the push/WhatsApp dispatch via busybox `wget` to
+  `http://api-gw:8000`. Why: the stock image has no pg_cron and this host has
+  no `crontab`, so nothing expired holds or dispatched push. Verified by
+  inserting an active hold that ended 30 h ago and restarting the service: it
+  became `expired` within seconds, and `push-dispatch` answered
+  `{"configured":false}`. `supabase/notifications-cron.sh` still works from
+  host cron; both are idempotent.
 - Test count: 1132; schema `0001..0093`.
 
 ## Owner contact data (2026-11-05)
