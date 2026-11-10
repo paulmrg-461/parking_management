@@ -150,7 +150,10 @@ the space). `category_reservations` also stores
 `category_reservations_public_contact_check` keeps public rows from existing
 without a name and a 10-digit mobile. A public hold also inserts a
 `public_reservation` notification for every active member of the lot
-(`user_id`, `lot_id`, `data.reservation_id`), deduplicated per reservation.
+(`user_id`, `lot_id`, `data.reservation_id`), deduplicated per reservation,
+and — when `parking_settings.whatsapp_auto` is on — a `reservation_confirmed`
+row in `whatsapp_messages` (params: name, plate, until, lot) for
+`whatsapp-dispatch` to send.
 
 **Records**
 `session_records(plate, limit, offset, from, to)`: lot-scoped session log

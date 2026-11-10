@@ -297,8 +297,13 @@ prefilled; an open session can notify that the vehicle is **ready for pickup**.
 If the site enables **automated WhatsApp** in settings, those actions enqueue
 the message instead (`whatsapp_messages`) and the `whatsapp-dispatch` Edge
 Function sends it with the Meta token, so the operator does not need WhatsApp
-installed. The revenue report shows delivery metrics (sent/failed/queued per
-day). Check-out searches plates **server-side** with pagination, so
+installed. A **web booking** queues `reservation_confirmed` (body params:
+name, plate, until, lot) the same way, so the customer receives the code they
+will show at the door; nothing is queued while `automated WhatsApp` is off.
+The templates are approved in Meta and mapped with `WHATSAPP_TEMPLATE_*`
+(`RECEIPT`, `PASS`, `READY`, `RESERVATION`). The queue drops rows older than
+90 days even if they were never sent. The revenue report shows delivery
+metrics (sent/failed/queued per day). Check-out searches plates **server-side** with pagination, so
 a vehicle outside the first page is still found; the query shows a proper
 "no plate matches" state. Discounts appear in the report with their reason,
 admin and timestamp.

@@ -3605,4 +3605,103 @@ begin
     end if;
 end $$;
 
+-- A queue that never drains must not grow forever: pending rows age out.
+do $$
+declare
+    fresh integer;
+begin
+    insert into public.whatsapp_messages (to_phone, template, params, created_at)
+    values ('3001112299', 'receipt', '[]'::jsonb, now() - interval '100 days');
+    select count(*) into fresh
+      from public.whatsapp_messages
+     where created_at > now() - interval '90 days';
+    perform public.purge_whatsapp_messages(90);
+    if exists (
+        select 1 from public.whatsapp_messages where to_phone = '3001112299'
+    ) then
+        raise exception 'a stale pending message survived the purge';
+    end if;
+    if (
+        select count(*)
+          from public.whatsapp_messages
+         where created_at > now() - interval '90 days'
+    ) <> fresh then
+        raise exception 'the purge removed a fresh message';
+    end if;
+end $$;
+
+-- WhatsApp confirmation: queued only when the lot enables automatic messages.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    cat integer;
+begin
+    delete from public.parking_spots where lot_id = 1;
+    update public.parking_settings
+       set car_capacity = 0, moto_capacity = 0, key_capacity = 0,
+           whatsapp_auto = false
+     where lot_id = 1;
+    insert into public.categories (name, capacity, lot_id)
+    values ('wa-car', 5, 1)
+    returning id into cat;
+    perform set_config('app.wa_cat', cat::text, true);
+end $$;
+
+set local role anon;
+do $$
+declare
+    cat integer := current_setting('app.wa_cat')::integer;
+begin
+    perform public.public_create_reservation(
+        1, 'WAOFF1', cat, now() + interval '2 hours', 'Ana', '3004445566'
+    );
+end $$;
+reset role;
+
+do $$
+begin
+    if exists (
+        select 1 from public.whatsapp_messages where to_phone = '3004445566'
+    ) then
+        raise exception 'a message was queued with whatsapp_auto off';
+    end if;
+end $$;
+
+update public.parking_settings set whatsapp_auto = true where lot_id = 1;
+
+set local role anon;
+do $$
+declare
+    cat integer := current_setting('app.wa_cat')::integer;
+begin
+    perform public.public_create_reservation(
+        1, 'WAON01', cat, now() + interval '2 hours', 'Ana', '3004445577'
+    );
+end $$;
+reset role;
+
+do $$
+declare
+    queued public.whatsapp_messages%rowtype;
+begin
+    select * into queued
+      from public.whatsapp_messages
+     where to_phone = '3004445577';
+    if not found then
+        raise exception 'the confirmation was not queued';
+    end if;
+    if queued.template <> 'reservation_confirmed' then
+        raise exception 'wrong template: %', queued.template;
+    end if;
+    if queued.lot_id <> 1 or queued.status <> 'pending' then
+        raise exception 'the queued message is not pending for the lot: %', queued;
+    end if;
+    if jsonb_array_length(queued.params) <> 4
+       or queued.params ->> 0 <> 'Ana'
+       or queued.params ->> 1 <> 'WAON01' then
+        raise exception 'unexpected params: %', queued.params;
+    end if;
+end $$;
+
 rollback;

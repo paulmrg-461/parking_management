@@ -165,6 +165,12 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   next to the phone and WhatsApp actions, and the availability re-reads itself
   every minute without flashing the skeleton, so a customer deciding on the
   page never reads stale numbers.
+- **The customer gets the booking on WhatsApp**: with "automated WhatsApp" on,
+  a public hold queues a `reservation_confirmed` message (name, plate, time,
+  lot) that `whatsapp-dispatch` sends once the Meta token and the approved
+  template exist — nothing is sent while the switch is off. The queue now
+  ages out pending rows too (90 days), so a lot without credentials does not
+  accumulate them forever.
 - **Grace window for late customers**: `reservation_grace()` (15 minutes) is
   honoured by the shared capacity check, `public_availability` and `check_in`,
   so a customer who arrives a few minutes late still has the space: the hold

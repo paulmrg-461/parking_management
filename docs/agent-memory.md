@@ -10,7 +10,7 @@ Last updated: 2026-11-09 (public booking page, owner search).
 
 - Stack: Flutter (android + web) + self-hosted Supabase only. No FastAPI,
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
-- `supabase/migrations/0001..0094` are the schema owner (applied by
+- `supabase/migrations/0001..0096` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
 - Flutter: 1138 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
@@ -459,7 +459,17 @@ Last updated: 2026-11-09 (public booking page, owner search).
   a late hold `used`). Dart mirrors it as `Reservation.graceWindow`, the board
   queries `reserved_until > now - grace` and flags those cards "En tolerancia".
   If the window changes, update the SQL function and the Dart constant together.
-- Test count: 1138; schema `0001..0094`.
+- `0095_public_booking_whatsapp.sql`: `public_create_reservation` queues a
+  `reservation_confirmed` row (params: name, plate, "DD/MM HH24:MI", lot) when
+  `whatsapp_auto` is on; the Edge Function maps the template with
+  `WHATSAPP_TEMPLATE_RESERVATION` (default `reservation_confirmed`). Live
+  smoke: reservation `WAMSG1` queued
+  `["Ana Wa","WAMSG1","10/11 10:40","Parqueadero"]`; row removed afterwards.
+  Reminder: the live lot has `whatsapp_auto = true`, so every new web booking
+  queues a message — approval of the Meta template is what makes it send.
+- `0096_whatsapp_purge_pending.sql`: the purge drops rows older than 90 days
+  regardless of status, so a queue that cannot drain does not grow.
+- Test count: 1138; schema `0001..0096`.
 
 ## Owner contact data (2026-11-05)
 
