@@ -53,6 +53,7 @@ class _SettingsPageState extends State<SettingsPage> {
   late final TextEditingController _whatsapp;
   late final TextEditingController _policePhone;
   late final TextEditingController _evidenceRetention;
+  late final TextEditingController _grace;
   late final TextEditingController _carCapacity;
   late final TextEditingController _motoCapacity;
   late final TextEditingController _keyCapacity;
@@ -87,6 +88,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _whatsapp = TextEditingController();
     _policePhone = TextEditingController();
     _evidenceRetention = TextEditingController();
+    _grace = TextEditingController();
     _carCapacity = TextEditingController();
     _motoCapacity = TextEditingController();
     _keyCapacity = TextEditingController();
@@ -108,6 +110,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _whatsapp.dispose();
     _policePhone.dispose();
     _evidenceRetention.dispose();
+    _grace.dispose();
     _carCapacity.dispose();
     _motoCapacity.dispose();
     _keyCapacity.dispose();
@@ -196,6 +199,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _whatsapp.text,
     _policePhone.text,
     _evidenceRetention.text,
+    _grace.text,
     _carCapacity.text,
     _motoCapacity.text,
     _keyCapacity.text,
@@ -242,6 +246,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _whatsapp.text = settings.whatsapp;
     _policePhone.text = settings.policePhone;
     _evidenceRetention.text = settings.evidenceRetentionDays.toString();
+    _grace.text = settings.reservationGraceMinutes.toString();
     _carCapacity.text = settings.carCapacity.toString();
     _motoCapacity.text = settings.motoCapacity.toString();
     _keyCapacity.text = settings.keyCapacity.toString();
@@ -391,10 +396,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const SizedBox(height: Space.md),
           if (_carBays > 0)
-            _MapMaintenanceNote(
-              label: l10n.homeCapacityCars,
-              bays: _carBaysOut,
-            )
+            _MapMaintenanceNote(label: l10n.homeCapacityCars, bays: _carBaysOut)
           else
             TextFormField(
               key: const Key('settings_car_out_of_service'),
@@ -439,6 +441,24 @@ class _SettingsPageState extends State<SettingsPage> {
               helperMaxLines: 2,
             ),
             validator: _capacity,
+          ),
+          const SizedBox(height: Space.md),
+          TextFormField(
+            key: const Key('settings_reservation_grace'),
+            controller: _grace,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: InputDecoration(
+              labelText: l10n.settingsReservationGrace,
+              helperText: l10n.settingsReservationGraceHint,
+              helperMaxLines: 2,
+            ),
+            validator: (value) {
+              final minutes = int.tryParse((value ?? '').trim());
+              return minutes == null || minutes < 0 || minutes > 120
+                  ? l10n.invalidAmount
+                  : null;
+            },
           ),
           const SizedBox(height: Space.md),
           OutlinedButton.icon(
@@ -778,6 +798,7 @@ class _SettingsPageState extends State<SettingsPage> {
         policePhone: _policePhone.text.trim(),
         evidenceRetentionDays:
             int.tryParse(_evidenceRetention.text.trim()) ?? 0,
+        reservationGraceMinutes: int.tryParse(_grace.text.trim()) ?? 15,
         whatsappAuto: _whatsappAuto,
         carCapacity: int.tryParse(_carCapacity.text.trim()) ?? 0,
         motoCapacity: int.tryParse(_motoCapacity.text.trim()) ?? 0,

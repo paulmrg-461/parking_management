@@ -124,16 +124,14 @@ class ContactPage extends StatelessWidget {
                     configured ? settings.name : l10n.appTitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: Theme.of(context).textTheme.titleLarge
+                        ?.copyWith(fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     l10n.contactTitle,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
+                    style: Theme.of(context).textTheme.bodySmall
+                        ?.copyWith(color: scheme.onSurfaceVariant),
                   ),
                 ],
               ),
@@ -165,14 +163,11 @@ class ContactPage extends StatelessWidget {
       ),
       title: Text(
         label,
-        style: Theme.of(
-          context,
-        ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600),
+        style: Theme.of(context).textTheme.labelMedium
+            ?.copyWith(fontWeight: FontWeight.w600),
       ),
       subtitle: Text(value),
-      trailing: onTap == null
-          ? null
-          : const Icon(Icons.open_in_new, size: 18),
+      trailing: onTap == null ? null : const Icon(Icons.open_in_new, size: 18),
     ),
   );
 

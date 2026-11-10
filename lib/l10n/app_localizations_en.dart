@@ -1627,6 +1627,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsKeyCapacity => 'Maximum cars leaving keys';
 
   @override
+  String get settingsReservationGrace => 'Reservation grace (min)';
+
+  @override
+  String get settingsReservationGraceHint =>
+      'Minutes after expiry for a late customer; 0 disables it.';
+
+  @override
   String get settingsCapacityHint => '0 = no limit';
 
   @override

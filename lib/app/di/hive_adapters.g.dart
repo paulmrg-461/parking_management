@@ -423,6 +423,9 @@ class ParkingSettingsAdapter extends TypeAdapter<ParkingSettings> {
       whatsapp: fields[5] == null ? '' : fields[5] as String,
       logoVersion: fields[6] == null ? 0 : (fields[6] as num).toInt(),
       evidenceRetentionDays: fields[7] == null ? 0 : (fields[7] as num).toInt(),
+      reservationGraceMinutes: fields[18] == null
+          ? 15
+          : (fields[18] as num).toInt(),
       whatsappAuto: fields[8] == null ? false : fields[8] as bool,
       carCapacity: fields[9] == null ? 0 : (fields[9] as num).toInt(),
       motoCapacity: fields[10] == null ? 0 : (fields[10] as num).toInt(),
@@ -439,7 +442,7 @@ class ParkingSettingsAdapter extends TypeAdapter<ParkingSettings> {
   @override
   void write(BinaryWriter writer, ParkingSettings obj) {
     writer
-      ..writeByte(18)
+      ..writeByte(19)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
@@ -475,7 +478,9 @@ class ParkingSettingsAdapter extends TypeAdapter<ParkingSettings> {
       ..writeByte(16)
       ..write(obj.minAppVersion)
       ..writeByte(17)
-      ..write(obj.policePhone);
+      ..write(obj.policePhone)
+      ..writeByte(18)
+      ..write(obj.reservationGraceMinutes);
   }
 
   @override

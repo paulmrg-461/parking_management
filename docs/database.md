@@ -147,8 +147,8 @@ public hold for that code + mobile, or `null`) and
 category name and an `in_grace` flag; it applies `reservation_grace()`, so the
 app never re-implements the window)
 (shared by the operator and public paths; holds count until
-`reserved_until + reservation_grace()`, 15 minutes, so a late customer keeps
-the space). `category_reservations` also stores
+`reserved_until + reservation_grace(lot)`, the `parking_settings
+.reservation_grace_minutes` value — 0..120, default 15, `0` disables it). `category_reservations` also stores
 `customer_name`, `customer_phone` and `source` (`app`/`public`); the constraint
 `category_reservations_public_contact_check` keeps public rows from existing
 without a name and a 10-digit mobile. A public hold also inserts a

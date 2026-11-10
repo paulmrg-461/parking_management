@@ -3582,6 +3582,29 @@ begin
     if available_now <> 2 then
         raise exception 'the grace window did not count the late hold: %', available_now;
     end if;
+
+    -- The window is a setting: 0 turns it off and the hold stops counting.
+    update public.parking_settings
+       set reservation_grace_minutes = 0
+     where lot_id = 1;
+    select (item ->> 'available')::integer into available_now
+      from jsonb_array_elements(public.public_availability(1) -> 'categories') item
+     where (item ->> 'id')::integer = cat;
+    if available_now <> 3 then
+        raise exception 'a zero grace window still counted the hold: %', available_now;
+    end if;
+
+    begin
+        update public.parking_settings
+           set reservation_grace_minutes = 500
+         where lot_id = 1;
+        raise exception 'an out-of-range grace window was accepted';
+    exception when check_violation then
+        null;
+    end;
+    update public.parking_settings
+       set reservation_grace_minutes = 15
+     where lot_id = 1;
 end $$;
 
 -- The board reads the same rule from the server, flag included.

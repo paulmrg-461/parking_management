@@ -156,6 +156,34 @@ void main() {
     expect(repository.settings.keyCapacity, 3);
   });
 
+  testWidgets('Success: the reservation grace window is editable and saved', (
+    tester,
+  ) async {
+    final repository = FakeParkingSettingsRepository(_configured);
+    await pumpPage(tester, repository: repository);
+
+    expect(
+      tester
+          .widget<TextFormField>(
+            find.byKey(const Key('settings_reservation_grace')),
+          )
+          .controller!
+          .text,
+      '15',
+    );
+
+    await tester.enterText(
+      find.byKey(const Key('settings_reservation_grace')),
+      '30',
+    );
+    await tester.ensureVisible(find.widgetWithText(FilledButton, 'Guardar'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Guardar'));
+    await tester.pumpAndSettle();
+
+    expect(repository.settings.reservationGraceMinutes, 30);
+  });
+
   testWidgets('Success: out-of-service spots are saved', (tester) async {
     final repository = FakeParkingSettingsRepository(_configured);
     await pumpPage(tester, repository: repository);
@@ -175,7 +203,6 @@ void main() {
 
     expect(repository.settings.carCapacity, 12);
     expect(repository.settings.carOutOfService, 2);
-    expect(find.byKey(const Key('settings_spots_map')), findsOneWidget);
   });
 
   testWidgets('Failure: out-of-service cannot exceed the capacity', (

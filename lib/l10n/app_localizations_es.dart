@@ -1638,6 +1638,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsKeyCapacity => 'Máximo de vehículos con llaves';
 
   @override
+  String get settingsReservationGrace => 'Tolerancia de reservas (min)';
+
+  @override
+  String get settingsReservationGraceHint =>
+      'Minutos de gracia tras el vencimiento para que el cliente llegue; 0 la desactiva.';
+
+  @override
   String get settingsCapacityHint => '0 = sin límite';
 
   @override

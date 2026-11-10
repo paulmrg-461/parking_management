@@ -2990,6 +2990,18 @@ abstract class AppLocalizations {
   /// **'Máximo de vehículos con llaves'**
   String get settingsKeyCapacity;
 
+  /// No description provided for @settingsReservationGrace.
+  ///
+  /// In es, this message translates to:
+  /// **'Tolerancia de reservas (min)'**
+  String get settingsReservationGrace;
+
+  /// No description provided for @settingsReservationGraceHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Minutos de gracia tras el vencimiento para que el cliente llegue; 0 la desactiva.'**
+  String get settingsReservationGraceHint;
+
   /// No description provided for @settingsCapacityHint.
   ///
   /// In es, this message translates to:

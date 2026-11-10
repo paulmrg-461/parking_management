@@ -13,6 +13,7 @@ class ParkingSettings extends Equatable {
     this.whatsapp = '',
     this.logoVersion = 0,
     this.evidenceRetentionDays = 0,
+    this.reservationGraceMinutes = 15,
     this.whatsappAuto = false,
     this.carCapacity = 0,
     this.motoCapacity = 0,
@@ -38,6 +39,10 @@ class ParkingSettings extends Equatable {
   /// Evidence photos older than this are deleted by `evidence-archive`.
   /// `0` keeps them forever (default).
   final int evidenceRetentionDays;
+
+  /// Minutes after a hold's expiry where it still counts (and check-in
+  /// consumes it). `0` means the hold stops counting exactly on time.
+  final int reservationGraceMinutes;
 
   /// When true, customer messages are queued for the WhatsApp dispatcher
   /// instead of opening `wa.me` on the device.
@@ -83,6 +88,7 @@ class ParkingSettings extends Equatable {
     String? whatsapp,
     int? logoVersion,
     int? evidenceRetentionDays,
+    int? reservationGraceMinutes,
     bool? whatsappAuto,
     int? carCapacity,
     int? motoCapacity,
@@ -102,6 +108,8 @@ class ParkingSettings extends Equatable {
     whatsapp: whatsapp ?? this.whatsapp,
     logoVersion: logoVersion ?? this.logoVersion,
     evidenceRetentionDays: evidenceRetentionDays ?? this.evidenceRetentionDays,
+    reservationGraceMinutes:
+        reservationGraceMinutes ?? this.reservationGraceMinutes,
     whatsappAuto: whatsappAuto ?? this.whatsappAuto,
     carCapacity: carCapacity ?? this.carCapacity,
     motoCapacity: motoCapacity ?? this.motoCapacity,
@@ -123,6 +131,7 @@ class ParkingSettings extends Equatable {
     'website': website,
     'whatsapp': whatsapp,
     'evidence_retention_days': evidenceRetentionDays,
+    'reservation_grace_minutes': reservationGraceMinutes,
     'whatsapp_auto': whatsappAuto,
     'car_capacity': carCapacity,
     'moto_capacity': motoCapacity,
@@ -145,6 +154,7 @@ class ParkingSettings extends Equatable {
     whatsapp,
     logoVersion,
     evidenceRetentionDays,
+    reservationGraceMinutes,
     whatsappAuto,
     carCapacity,
     motoCapacity,

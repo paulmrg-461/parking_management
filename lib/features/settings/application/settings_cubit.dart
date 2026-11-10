@@ -63,13 +63,11 @@ class SettingsCubit extends ResilientCubit<SettingsState> {
     }
   }
 
-  Future<void> save(ParkingSettings settings) => _submit(
-    () => _repository.save(settings),
-  );
+  Future<void> save(ParkingSettings settings) =>
+      _submit(() => _repository.save(settings));
 
-  Future<void> uploadLogo(Uint8List bytes) => _submit(
-    () => _repository.uploadLogo(bytes),
-  );
+  Future<void> uploadLogo(Uint8List bytes) =>
+      _submit(() => _repository.uploadLogo(bytes));
 
   /// Loads the server default template (throws a Failure when offline).
   Future<String> resetLegalPolicy() => _repository.resetLegalPolicy();
@@ -86,9 +84,7 @@ class SettingsCubit extends ResilientCubit<SettingsState> {
       final updated = await action();
       emit(SettingsLoaded(updated, submission: SubmissionSucceeded(updated)));
     } on Failure catch (failure) {
-      emit(
-        SettingsLoaded(settings, submission: SubmissionFailed.of(failure)),
-      );
+      emit(SettingsLoaded(settings, submission: SubmissionFailed.of(failure)));
     }
   }
 }

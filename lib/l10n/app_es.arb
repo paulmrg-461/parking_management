@@ -546,6 +546,8 @@
   "slotMaintenance": "Mantenimiento",
   "slotMaintenanceShort": "Mant.",
   "settingsKeyCapacity": "Máximo de vehículos con llaves",
+  "settingsReservationGrace": "Tolerancia de reservas (min)",
+  "settingsReservationGraceHint": "Minutos de gracia tras el vencimiento para que el cliente llegue; 0 la desactiva.",
   "settingsCapacityHint": "0 = sin límite",
   "errorParkingFull": "No hay espacios disponibles para este tipo de vehículo",
   "errorKeysFull": "Se alcanzó el máximo de vehículos que pueden dejar las llaves",

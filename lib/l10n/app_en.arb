@@ -534,6 +534,8 @@
   "slotMaintenance": "Maintenance",
   "slotMaintenanceShort": "Maint.",
   "settingsKeyCapacity": "Maximum cars leaving keys",
+  "settingsReservationGrace": "Reservation grace (min)",
+  "settingsReservationGraceHint": "Minutes after expiry for a late customer; 0 disables it.",
   "settingsCapacityHint": "0 = no limit",
   "errorParkingFull": "No spaces left for this vehicle type",
   "errorKeysFull": "The maximum of cars leaving keys was reached",

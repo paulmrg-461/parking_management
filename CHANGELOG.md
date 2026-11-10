@@ -165,6 +165,10 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   next to the phone and WhatsApp actions, and the availability re-reads itself
   every minute without flashing the skeleton, so a customer deciding on the
   page never reads stale numbers.
+- **The grace window is a setting**: "Tolerancia de reservas (min)" in Ajustes
+  (0..120, default 15) is the single value the capacity check, public
+  availability, check-in and the board read. `0` disables it: the hold stops
+  counting exactly on time.
 - **One owner for the grace window**: the reservations board now loads through
   `list_active_reservations()`, which applies `reservation_grace()` and
   returns an `in_grace` flag. The Dart copy of the 15 minutes (and the

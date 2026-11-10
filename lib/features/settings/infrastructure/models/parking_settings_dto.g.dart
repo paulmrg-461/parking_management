@@ -17,6 +17,8 @@ ParkingSettingsDto _$ParkingSettingsDtoFromJson(Map<String, dynamic> json) =>
       logoVersion: (json['logo_version'] as num?)?.toInt() ?? 0,
       evidenceRetentionDays:
           (json['evidence_retention_days'] as num?)?.toInt() ?? 0,
+      reservationGraceMinutes:
+          (json['reservation_grace_minutes'] as num?)?.toInt() ?? 15,
       whatsappAuto: json['whatsapp_auto'] as bool? ?? false,
       carCapacity: (json['car_capacity'] as num?)?.toInt() ?? 0,
       motoCapacity: (json['moto_capacity'] as num?)?.toInt() ?? 0,
@@ -39,6 +41,7 @@ Map<String, dynamic> _$ParkingSettingsDtoToJson(ParkingSettingsDto instance) =>
       'whatsapp': instance.whatsapp,
       'logo_version': instance.logoVersion,
       'evidence_retention_days': instance.evidenceRetentionDays,
+      'reservation_grace_minutes': instance.reservationGraceMinutes,
       'whatsapp_auto': instance.whatsappAuto,
       'car_capacity': instance.carCapacity,
       'moto_capacity': instance.motoCapacity,
