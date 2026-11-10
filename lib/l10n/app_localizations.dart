@@ -5702,6 +5702,18 @@ abstract class AppLocalizations {
   /// **'Solo web'**
   String get reservationsOnlyPublic;
 
+  /// No description provided for @reservationsCopyCsv.
+  ///
+  /// In es, this message translates to:
+  /// **'Copiar CSV'**
+  String get reservationsCopyCsv;
+
+  /// No description provided for @reservationsCsvCopied.
+  ///
+  /// In es, this message translates to:
+  /// **'Reservas copiadas en CSV'**
+  String get reservationsCsvCopied;
+
   /// No description provided for @reservationsCount.
   ///
   /// In es, this message translates to:

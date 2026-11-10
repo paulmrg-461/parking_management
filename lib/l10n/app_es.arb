@@ -1095,6 +1095,8 @@
   "@reservationWhatsAppMessage": {"placeholders": {"plate": {"type": "String"}}},
   "reservationsOnlyExpiring": "Solo por vencer",
   "reservationsOnlyPublic": "Solo web",
+  "reservationsCopyCsv": "Copiar CSV",
+  "reservationsCsvCopied": "Reservas copiadas en CSV",
   "reservationsCount": "{count} reservas",
   "reservationsFilteredEmpty": "Ninguna reserva coincide con el filtro",
   "monthlyPassesEmptyTitle": "Sin mensualidades",

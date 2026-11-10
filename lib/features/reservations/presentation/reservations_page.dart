@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -27,6 +28,7 @@ import '../../settings/domain/whatsapp_url.dart';
 import '../application/reservations_cubit.dart';
 import '../domain/entities/reservation.dart';
 import 'reservation_dialog.dart';
+import 'reservations_csv.dart';
 
 class ReservationsPage extends StatefulWidget {
   const ReservationsPage({super.key, this.onCheckIn});
@@ -167,6 +169,15 @@ class _ListState extends State<_List> {
   bool get _filtered =>
       _query.trim().isNotEmpty || _onlyExpiring || _onlyPublic;
 
+  /// Reception prints the shift list: the visible rows (filters included) as
+  /// CSV, with the code the customer shows.
+  Future<void> _copyCsv(BuildContext context, List<Reservation> rows) async {
+    await Clipboard.setData(ClipboardData(text: reservationsCsv(rows)));
+    if (context.mounted) {
+      showInfoSnack(context, context.l10n.reservationsCsvCopied);
+    }
+  }
+
   void _clear() => setState(() {
     _query = '';
     _onlyExpiring = false;
@@ -248,6 +259,19 @@ class _ListState extends State<_List> {
                       label: Text(l10n.reservationsOnlyExpiring),
                       onSelected: (value) =>
                           setState(() => _onlyExpiring = value),
+                    ),
+                  ),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      minHeight: Layout.minTouch,
+                    ),
+                    child: OutlinedButton.icon(
+                      key: const Key('reservations_csv'),
+                      onPressed: visible.isEmpty
+                          ? null
+                          : () => _copyCsv(context, visible),
+                      icon: const Icon(Icons.file_download_outlined),
+                      label: Text(l10n.reservationsCopyCsv),
                     ),
                   ),
                   ConstrainedBox(

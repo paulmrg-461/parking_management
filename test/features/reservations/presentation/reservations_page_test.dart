@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/features/categories/domain/entities/category.dart';
@@ -335,6 +336,48 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.byKey(const Key('reservation_public')), findsOneWidget);
+  });
+
+  testWidgets('Success: the CSV button copies the visible holds', (
+    tester,
+  ) async {
+    final calls = <MethodCall>[];
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        calls.add(call);
+        return null;
+      },
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
+    );
+
+    await pumpPage(
+      tester,
+      reservations: [
+        sampleReservation(
+          id: 7,
+          plate: 'WEB123',
+          customerName: 'Ana',
+          customerPhone: '3009998877',
+          source: 'public',
+        ),
+      ],
+    );
+    await tester.tap(find.byKey(const Key('reservations_csv')));
+    await tester.pumpAndSettle();
+
+    final copy = calls.firstWhere((c) => c.method == 'Clipboard.setData');
+    final text = (copy.arguments as Map)['text'] as String;
+    expect(text, contains('code,plate,category,reserved_until'));
+    expect(text, contains('7,WEB123,car'));
+    expect(text, contains('Ana'));
+    expect(text, contains('3009998877,public,active'));
+    expect(find.text('Reservas copiadas en CSV'), findsOneWidget);
   });
 
   testWidgets('Success: the reservation plate is uppercased while typing', (

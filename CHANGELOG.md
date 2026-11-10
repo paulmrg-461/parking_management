@@ -165,6 +165,13 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   next to the phone and WhatsApp actions, and the availability re-reads itself
   every minute without flashing the skeleton, so a customer deciding on the
   page never reads stale numbers.
+- **Reservations CSV**: the board has "Copiar CSV" (visible rows, filters
+  included) with the code, plate, category, ISO expiry, customer, phone,
+  source, status and grace flag, escaped for Excel — reception can print the
+  shift list or hand it to the accountant.
+- **The web no longer needs the internet**: the release build ships
+  CanvasKit inside the app (`--no-web-resources-cdn`), so a LAN without
+  outbound access still renders; verified with gstatic/googleapis blocked.
 - **The lot's cancellation reaches the customer**: when an operator cancels a
   web hold, `cancel_reservation` queues a `reservation_cancelled` WhatsApp
   (name, plate, lot) if automated messaging is on, so nobody travels for a

@@ -1028,6 +1028,8 @@
   "@reservationWhatsAppMessage": {"placeholders": {"plate": {"type": "String"}}},
   "reservationsOnlyExpiring": "Expiring only",
   "reservationsOnlyPublic": "Web only",
+  "reservationsCopyCsv": "Copy CSV",
+  "reservationsCsvCopied": "Reservations copied as CSV",
   "reservationsCount": "{count} holds",
   "reservationsFilteredEmpty": "No holds match the filter",
   "monthlyPassesEmptyTitle": "No passes yet",

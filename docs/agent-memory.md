@@ -12,7 +12,7 @@ Last updated: 2026-11-09 (public booking page, owner search).
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0102` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 1148 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 1152 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -358,7 +358,7 @@ Last updated: 2026-11-09 (public booking page, owner search).
 - Follow-up: a vehicle with no open session offers "Registrar entrada" from
   its history (`/check-in?plate=`, `onCheckIn` injectable); a vehicle already
   inside keeps the charge action. Fixing the sample fixture's `openSessions`
-  exposed the guard in tests. Test count: 1148.
+  exposed the guard in tests. Test count: 1152.
 
 ### Public booking page (2026-11-09)
 
@@ -472,7 +472,7 @@ Last updated: 2026-11-09 (public booking page, owner search).
 - `/reserve` when everything is full: `availability.hasAvailability` false
   renders `_NoSpace` (message + phone/WhatsApp) instead of `_FormCard`; the
   lookup card stays and the 1-minute refresh restores the form by itself.
-- Test count: 1148; schema `0001..0096`.
+- Test count: 1152; schema `0001..0096`.
 
 ## Owner contact data (2026-11-05)
 

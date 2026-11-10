@@ -3207,6 +3207,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get reservationsOnlyPublic => 'Solo web';
 
   @override
+  String get reservationsCopyCsv => 'Copiar CSV';
+
+  @override
+  String get reservationsCsvCopied => 'Reservas copiadas en CSV';
+
+  @override
   String reservationsCount(int count) {
     return '$count reservas';
   }
