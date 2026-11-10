@@ -165,6 +165,12 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   next to the phone and WhatsApp actions, and the availability re-reads itself
   every minute without flashing the skeleton, so a customer deciding on the
   page never reads stale numbers.
+- **Web login no longer hangs over plain HTTP**: the session was persisted with
+  `flutter_secure_storage`, whose browser backend needs a secure context
+  (HTTPS or localhost). On the LAN address the auth call succeeded but the
+  storage call never resolved, leaving the Sign in button spinning forever and
+  nothing in localStorage. The web build now uses GoTrue's localStorage store;
+  mobile keeps the Keychain/Keystore.
 - **The board refreshes after check-in**: coming back from "Registrar entrada"
   reloads the list, so the hold that just turned into a stay disappears
   instead of lingering until a manual refresh.

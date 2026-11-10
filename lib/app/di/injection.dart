@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:get_it/get_it.dart';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -69,7 +70,11 @@ Future<void> _initSupabase(AppConfig config) async {
     anonKey: config.supabaseAnonKey,
     httpClient: ResilientHttpClient(http.Client()),
     authOptions: FlutterAuthClientOptions(
-      localStorage: SecureSupabaseStorage(),
+      // Keychain/Keystore on mobile. On the web `flutter_secure_storage`
+      // needs a secure context (HTTPS or localhost): over plain HTTP on the
+      // LAN its WebCrypto calls are unavailable and the login hangs, so the
+      // browser falls back to gotrue's localStorage store.
+      localStorage: kIsWeb ? null : SecureSupabaseStorage(),
     ),
   );
   serviceLocator.registerSingleton<SupabaseClient>(supabase.client);

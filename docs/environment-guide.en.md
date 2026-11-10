@@ -193,7 +193,9 @@ python3 tool/generate_branding.py   # needs Pillow
 ### 3.8 Production builds
 
 ```bash
-# Static web (any host; use HTTPS in production)
+# Static web (any host; use HTTPS in production).
+# Over plain HTTP the browser login uses localStorage; HTTPS (or localhost) is
+# still recommended — see the note below.
 flutter build web --release \
   --dart-define=SUPABASE_URL=https://your-domain.com \
   --dart-define=SUPABASE_ANON_KEY=<production ANON_KEY>
