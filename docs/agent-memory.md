@@ -10,9 +10,9 @@ Last updated: 2026-11-09 (public booking page, owner search).
 
 - Stack: Flutter (android + web) + self-hosted Supabase only. No FastAPI,
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
-- `supabase/migrations/0001..0089` are the schema owner (applied by
+- `supabase/migrations/0001..0090` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 1112 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 1113 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -358,7 +358,7 @@ Last updated: 2026-11-09 (public booking page, owner search).
 - Follow-up: a vehicle with no open session offers "Registrar entrada" from
   its history (`/check-in?plate=`, `onCheckIn` injectable); a vehicle already
   inside keeps the charge action. Fixing the sample fixture's `openSessions`
-  exposed the guard in tests. Test count: 1112.
+  exposed the guard in tests. Test count: 1113.
 
 ### Public booking page (2026-11-09)
 
@@ -411,7 +411,14 @@ Last updated: 2026-11-09 (public booking page, owner search).
 - The reservations board shows `customer_name`/`customer_phone`/`source` (a
   "Web" badge) with call/WhatsApp actions, and its search matches plate, name
   or phone. `openDialer` lives in `core/utils/dialer.dart`.
-- Test count: 1112; schema `0001..0089`.
+- **Operators now run the board** (decision taken 2026-11-09): `/reservations`
+  is in `operatorRoutes`, the home "Ver reservas" shortcut is not admin-only,
+  and the management section on Home lists only the sections the role may use.
+  `0090` widens the `public_reservation` alert to every active lot member
+  (admins + operators); the SQL test checks one row per active member and none
+  duplicated. If this is ever reversed, restore the allowlist entry, the home
+  guard and the audience in the RPC together.
+- Test count: 1113; schema `0001..0090`.
 
 ## Owner contact data (2026-11-05)
 

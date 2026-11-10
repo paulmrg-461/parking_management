@@ -14,6 +14,9 @@ const reservePath = '/reserve';
 /// Operators get an ALLOWLIST (secure by default: any new route is
 /// admin-only until added here). Check-in reads categories/vehicles through
 /// repositories, so operators never need the management routes themselves.
+/// Reservations are on the list: the front desk receives the web bookings and
+/// hands the space to the customer, so it needs the board (create, cancel and
+/// check-in from a hold).
 const operatorRoutes = {
   homePath,
   '/check-in',
@@ -21,6 +24,7 @@ const operatorRoutes = {
   '/notifications',
   '/history',
   '/records',
+  '/reservations',
   '/shift',
   '/scan',
   '/contact',

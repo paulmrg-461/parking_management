@@ -3389,29 +3389,42 @@ begin
     end;
 end $$;
 
--- The admins who run the lot hear about the booking.
+-- Everyone who works the lot hears about the booking (the board is theirs).
 do $$
 begin
-    if not exists (
-        select 1
-          from public.notifications n
-          join public.lot_members lm on lm.user_id = n.user_id and lm.lot_id = 1
-          join public.users u on u.id = n.user_id
-         where n.type = 'public_reservation'
-           and n.lot_id = 1
-           and n.data ->> 'plate' = 'PUB001'
-           and u.role = 'admin'
-           and u.is_active
-    ) then
-        raise exception 'the public booking did not notify the lot admins';
-    end if;
     if (
         select count(*)
           from public.notifications n
          where n.type = 'public_reservation'
            and n.data ->> 'plate' = 'PUB001'
-    ) <> 1 then
+    ) <> (
+        select count(*)
+          from public.lot_members lm
+          join public.users u on u.id = lm.user_id
+         where lm.lot_id = 1
+           and u.is_active
+    ) then
+        raise exception 'the public booking did not reach every active member';
+    end if;
+    if exists (
+        select 1
+          from public.notifications n
+         where n.type = 'public_reservation'
+           and n.data ->> 'plate' = 'PUB001'
+         group by n.user_id
+        having count(*) > 1
+    ) then
         raise exception 'the public booking notified someone twice';
+    end if;
+    if not exists (
+        select 1
+          from public.notifications n
+          join public.users u on u.id = n.user_id
+         where n.type = 'public_reservation'
+           and n.data ->> 'plate' = 'PUB001'
+           and u.role = 'operator'
+    ) then
+        raise exception 'the front desk did not hear about the booking';
     end if;
 end $$;
 

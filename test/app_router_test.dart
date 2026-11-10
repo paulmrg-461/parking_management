@@ -151,15 +151,14 @@ void main() {
       expect(find.widgetWithText(AppBar, 'Reservas de cupo'), findsOneWidget);
     });
 
-    testWidgets('Security: operator typing /reservations is redirected home', (
+    testWidgets('Success: an operator opens the reservations board', (
       tester,
     ) async {
       await pumpApp(tester, role: UserRole.operator);
 
       await goTo(tester, '/reservations');
 
-      expect(find.widgetWithText(AppBar, 'Reservas de cupo'), findsNothing);
-      expect(find.text('Hola, Juan'), findsOneWidget);
+      expect(find.widgetWithText(AppBar, 'Reservas de cupo'), findsOneWidget);
     });
 
     testWidgets('Security: operator typing /users is redirected home', (tester) async {

@@ -153,15 +153,19 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   and a full category/group is refused. The capacity rules are
   shared with the operator path, and anon cannot read the reservation table.
   The page is linked from the public policy page and the evidence page.
+- **Operators run the reservations board**: `/reservations` joined the operator
+  allowlist (with its "Ver reservas" shortcut on the home dashboard), because
+  whoever is at the desk hands the web bookings to the customer. The management
+  section on Home now lists only the sections the signed-in role may use.
 - **Who booked from the web**: the reservations board now shows the customer's
   name and mobile, a "Web" badge for holds created on `/reserve`, and one-tap
   call/WhatsApp actions, so the front desk can reach the person before they
   arrive. Search matches the plate, the name or the phone.
 - **Web bookings alert the lot**: every public hold leaves a
-  `public_reservation` notification for the lot's active admins (same audience
-  as check-in/check-out), with the plate, the customer and the expiry in the
-  lot's timezone; tapping it opens the reservations board. Deduplicated per
-  reservation and user.
+  `public_reservation` notification for every active member of the lot (admins
+  and operators, who now work the board), with the plate, the customer and the
+  expiry in the lot's timezone; tapping it opens the reservations board.
+  Deduplicated per reservation and user.
 - **Emergency action**: a red police icon in every app bar (and an entry in the
   desktop sidebar footer and the phone drawer) opens a one-tap panel with the
   site location, the nearest police quadrant and a large **Call now** button.

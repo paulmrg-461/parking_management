@@ -205,11 +205,23 @@ void main() {
     expect(find.text('Entrada'), findsOneWidget);
   });
 
-  testWidgets('Security: operators do not see the management section', (
-    tester,
-  ) async {
+  testWidgets('Security: operators only see the management sections they '
+      'may use', (tester) async {
     await _pump(tester);
-    expect(find.text('Gestión'), findsNothing);
+    await tester.scrollUntilVisible(
+      find.text('Gestión'),
+      200,
+      scrollable: find
+          .descendant(
+            of: find.byType(RefreshIndicator),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+
+    expect(find.text('Reservas'), findsOneWidget);
+    expect(find.text('Reportes'), findsNothing);
+    expect(find.text('Usuarios'), findsNothing);
   });
 
   testWidgets('Success: admins get management shortcuts', (tester) async {
@@ -576,9 +588,7 @@ void main() {
     expect(find.text('reservations page'), findsOneWidget);
   });
 
-  testWidgets('Security: operators do not get the holds shortcut', (
-    tester,
-  ) async {
+  testWidgets('Success: operators get the holds shortcut too', (tester) async {
     await _pump(
       tester,
       capacity: 8,
@@ -586,7 +596,9 @@ void main() {
     );
 
     expect(find.text('3 reservas activas'), findsOneWidget);
-    expect(find.text('Ver reservas'), findsNothing);
+    await tester.tap(find.text('Ver reservas'));
+    await tester.pumpAndSettle();
+    expect(find.text('reservations page'), findsOneWidget);
   });
 
   testWidgets('Success: the space map paints free, occupied and held cells', (
@@ -624,7 +636,14 @@ void main() {
     expect(find.text('BRD001'), findsOneWidget);
     expect(find.textContaining('HOLD01'), findsOneWidget);
 
-    await tester.tap(find.text('Reservas'));
+    // The map has its own "Reservas" filter chip; the management tile sits
+    // further down and would make find.text ambiguous.
+    await tester.tap(
+      find.descendant(
+        of: find.byType(ChoiceChip),
+        matching: find.text('Reservas'),
+      ),
+    );
     await tester.pumpAndSettle();
     expect(find.text('BRD001'), findsNothing);
     expect(find.textContaining('HOLD01'), findsOneWidget);

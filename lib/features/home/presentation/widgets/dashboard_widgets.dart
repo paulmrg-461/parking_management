@@ -383,11 +383,10 @@ class CapacityCard extends StatelessWidget {
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ),
-                      if (_isAdmin(context))
-                        TextButton(
-                          onPressed: () => context.go('/reservations'),
-                          child: Text(l10n.homeSeeReservations),
-                        ),
+                      TextButton(
+                        onPressed: () => context.go('/reservations'),
+                        child: Text(l10n.homeSeeReservations),
+                      ),
                     ],
                   ),
                   if (capacity.reservationsExpiring > 0)
