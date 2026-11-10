@@ -153,6 +153,12 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   and a full category/group is refused. The capacity rules are
   shared with the operator path, and anon cannot read the reservation table.
   The page is linked from the public policy page and the evidence page.
+- **Customers can give the space back**: the `/reserve` confirmation offers
+  "Cancelar reserva" (with a confirmation dialog) and ends on a
+  "Reserva cancelada" screen. `public_cancel_reservation(code, plate, phone)`
+  (anon) only cancels `source = 'public'` holds and needs all three values, so
+  a plate alone is not enough to free someone else's space; availability
+  refreshes right away. The hold is marked `cancelled` (history is kept).
 - **Operators run the reservations board**: `/reservations` joined the operator
   allowlist (with its "Ver reservas" shortcut on the home dashboard), because
   whoever is at the desk hands the web bookings to the customer. The management

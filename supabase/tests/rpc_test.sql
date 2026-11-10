@@ -3351,6 +3351,52 @@ begin
     end if;
 
     begin
+        perform public.public_cancel_reservation(
+            1, (first ->> 'id')::integer, 'PUB001', '3000000000'
+        );
+        raise exception 'a wrong phone cancelled the hold';
+    exception when others then
+        if sqlerrm not like '%ReservationNotFoundError%' then
+            raise;
+        end if;
+    end;
+
+    begin
+        perform public.public_cancel_reservation(
+            1, (first ->> 'id')::integer, 'OTHER1', '3001112233'
+        );
+        raise exception 'a wrong plate cancelled the hold';
+    exception when others then
+        if sqlerrm not like '%ReservationNotFoundError%' then
+            raise;
+        end if;
+    end;
+
+    perform public.public_cancel_reservation(
+        1, (first ->> 'id')::integer, 'PUB001', '3001112233'
+    );
+
+    avail := public.public_availability(1);
+    if (
+        select (item ->> 'available')::integer
+          from jsonb_array_elements(avail -> 'categories') item
+         where (item ->> 'id')::integer = current_setting('app.public_cat')::integer
+    ) <> 9 then
+        raise exception 'cancelling did not free the space: %', avail;
+    end if;
+
+    begin
+        perform public.public_cancel_reservation(
+            1, (first ->> 'id')::integer, 'PUB001', '3001112233'
+        );
+        raise exception 'a cancelled hold was cancelled again';
+    exception when others then
+        if sqlerrm not like '%ReservationNotFoundError%' then
+            raise;
+        end if;
+    end;
+
+    begin
         perform 1 from public.category_reservations limit 1;
         raise exception 'anon read the reservation table';
     exception when insufficient_privilege then
@@ -3374,6 +3420,13 @@ begin
          where plate = 'PUB002'
     ) is distinct from '3001112233' then
         raise exception 'the country code was not stripped from the public phone';
+    end if;
+    if (
+        select status
+          from public.category_reservations
+         where plate = 'PUB001'
+    ) is distinct from 'cancelled' then
+        raise exception 'the customer cancellation was not stored';
     end if;
     begin
         insert into public.category_reservations (

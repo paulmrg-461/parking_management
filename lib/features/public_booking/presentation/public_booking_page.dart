@@ -57,6 +57,33 @@ class _PublicBookingPageState extends State<PublicBookingPage> {
     super.dispose();
   }
 
+  Future<void> _cancel(
+    BuildContext context,
+    PublicReservation reservation,
+  ) async {
+    final l10n = context.l10n;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.bookingCancelTitle),
+        content: Text(l10n.bookingCancelBody(reservation.plate)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.actionCancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(l10n.bookingCancel),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && context.mounted) {
+      await context.read<PublicBookingCubit>().cancel();
+    }
+  }
+
   Future<void> _submit() async {
     final l10n = context.l10n;
     final valid = _formKey.currentState?.validate() ?? false;
@@ -101,11 +128,19 @@ class _PublicBookingPageState extends State<PublicBookingPage> {
     PublicBookingState state,
     AppLocalizations l10n,
   ) {
+    if (state.cancelled) {
+      return _Cancelled(onAnother: context.read<PublicBookingCubit>().reset);
+    }
     final reservation = state.reservation;
     if (reservation != null) {
       return _Confirmation(
         reservation: reservation,
+        cancelling: state.cancelling,
+        error: state.actionFailure == null
+            ? null
+            : _errorText(l10n, state.actionFailure),
         onAnother: context.read<PublicBookingCubit>().reset,
+        onCancel: () => _cancel(context, reservation),
       );
     }
     final availability = state.availability!;
@@ -626,11 +661,71 @@ class _FormCard extends StatelessWidget {
   }
 }
 
+/// The customer freed the space: thank them and offer a new booking.
+class _Cancelled extends StatelessWidget {
+  const _Cancelled({required this.onAnother});
+
+  final VoidCallback onAnother;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 520),
+        child: ListView(
+          padding: const EdgeInsets.all(Space.lg),
+          children: [
+            const SizedBox(height: Space.xxl),
+            Icon(Icons.event_busy_outlined, size: 72, color: scheme.primary),
+            const SizedBox(height: Space.md),
+            Text(
+              l10n.bookingCancelledTitle,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: Space.xs),
+            Text(
+              l10n.bookingCancelledHint,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: Space.lg),
+            FilledButton.icon(
+              onPressed: onAnother,
+              icon: const Icon(Icons.add),
+              label: Text(l10n.bookingAnother),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(52),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _Confirmation extends StatelessWidget {
-  const _Confirmation({required this.reservation, required this.onAnother});
+  const _Confirmation({
+    required this.reservation,
+    required this.cancelling,
+    required this.error,
+    required this.onAnother,
+    required this.onCancel,
+  });
 
   final PublicReservation reservation;
+  final bool cancelling;
+  final String? error;
   final VoidCallback onAnother;
+  final VoidCallback onCancel;
 
   @override
   Widget build(BuildContext context) {
@@ -743,6 +838,50 @@ class _Confirmation extends StatelessWidget {
               icon: const Icon(Icons.add),
               label: Text(l10n.bookingAnother),
             ),
+            if (error != null) ...[
+              const SizedBox(height: Space.sm),
+              Container(
+                padding: const EdgeInsets.all(Space.sm),
+                decoration: BoxDecoration(
+                  color: scheme.errorContainer,
+                  borderRadius: BorderRadius.circular(Radii.sm),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      size: 18,
+                      color: scheme.onErrorContainer,
+                    ),
+                    const SizedBox(width: Space.xs),
+                    Expanded(
+                      child: Text(
+                        error!,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: scheme.onErrorContainer,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            const SizedBox(height: Space.sm),
+            TextButton.icon(
+              onPressed: cancelling ? null : onCancel,
+              icon: cancelling
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.event_busy_outlined),
+              label: Text(l10n.bookingCancel),
+              style: TextButton.styleFrom(
+                foregroundColor: scheme.error,
+                minimumSize: const Size(0, Layout.minTouch),
+              ),
+            ),
           ],
         ),
       ),
@@ -848,6 +987,7 @@ String _errorText(AppLocalizations l10n, Failure? failure) {
     'CategoryFullError' || 'ParkingFullError' => l10n.bookingErrorFull,
     'ReservationExistsError' => l10n.bookingErrorExists,
     'ReservationLimitError' => l10n.bookingErrorLimit,
+    'ReservationNotFoundError' => l10n.bookingErrorNotFound,
     'VehicleAlreadyInsideError' => l10n.bookingErrorInside,
     'InvalidReservationWindowError' => l10n.bookingErrorWindow,
     'InvalidPhoneError' => l10n.bookingErrorPhone,

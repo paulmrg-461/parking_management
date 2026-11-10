@@ -86,6 +86,67 @@ void main() {
     expect(find.text('#12'), findsOneWidget);
   });
 
+  testWidgets('Success: the customer cancels the hold from the confirmation', (
+    tester,
+  ) async {
+    final repository = await _pump(tester);
+
+    await tester.tap(find.text('Car'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).at(0), 'ABC123');
+    await tester.enterText(find.byType(TextField).at(1), '3001112233');
+    await tester.enterText(find.byType(TextField).at(2), 'Ana');
+    await tester.tap(find.text('Reservar espacio'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Cancelar reserva'));
+    await tester.pumpAndSettle();
+    expect(find.text('¿Cancelar tu reserva?'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Cancelar reserva'));
+    await tester.pumpAndSettle();
+
+    expect(repository.cancelCalls, 1);
+    expect(repository.lastCancelId, 12);
+    expect(repository.lastCancelPhone, '3001112233');
+    expect(find.text('Reserva cancelada'), findsOneWidget);
+  });
+
+  testWidgets('Failure: a rejected cancellation explains itself', (
+    tester,
+  ) async {
+    final repository = FakePublicBookingRepository()
+      ..availabilityToReturn = sampleAvailability()
+      ..cancelError = const ValidationFailure(
+        'ReservationNotFoundError',
+        'ReservationNotFoundError',
+      );
+    await _pump(tester, repository: repository);
+
+    await tester.tap(find.text('Car'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).at(0), 'ABC123');
+    await tester.enterText(find.byType(TextField).at(1), '3001112233');
+    await tester.enterText(find.byType(TextField).at(2), 'Ana');
+    await tester.tap(find.text('Reservar espacio'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Cancelar reserva'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Cancelar reserva'));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(ListView), const Offset(0, -200));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'No encontramos esa reserva. Revisa el código o llama al parqueadero.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('¡Reserva confirmada!'), findsOneWidget);
+  });
+
   testWidgets('Failure: the form validates plate and phone', (tester) async {
     await _pump(tester);
 

@@ -464,6 +464,42 @@ abstract class AppLocalizations {
   /// **'Hacer otra reserva'**
   String get bookingAnother;
 
+  /// No description provided for @bookingCancel.
+  ///
+  /// In es, this message translates to:
+  /// **'Cancelar reserva'**
+  String get bookingCancel;
+
+  /// No description provided for @bookingCancelTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Cancelar tu reserva?'**
+  String get bookingCancelTitle;
+
+  /// No description provided for @bookingCancelBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Se liberará el cupo de {plate}. Esta acción no se puede deshacer.'**
+  String bookingCancelBody(String plate);
+
+  /// No description provided for @bookingCancelledTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Reserva cancelada'**
+  String get bookingCancelledTitle;
+
+  /// No description provided for @bookingCancelledHint.
+  ///
+  /// In es, this message translates to:
+  /// **'El cupo volvió a quedar disponible. Gracias por avisar.'**
+  String get bookingCancelledHint;
+
+  /// No description provided for @bookingErrorNotFound.
+  ///
+  /// In es, this message translates to:
+  /// **'No encontramos esa reserva. Revisa el código o llama al parqueadero.'**
+  String get bookingErrorNotFound;
+
   /// No description provided for @bookingCall.
   ///
   /// In es, this message translates to:

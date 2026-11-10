@@ -10,9 +10,9 @@ Last updated: 2026-11-09 (public booking page, owner search).
 
 - Stack: Flutter (android + web) + self-hosted Supabase only. No FastAPI,
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
-- `supabase/migrations/0001..0090` are the schema owner (applied by
+- `supabase/migrations/0001..0091` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 1113 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 1118 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -358,7 +358,7 @@ Last updated: 2026-11-09 (public booking page, owner search).
 - Follow-up: a vehicle with no open session offers "Registrar entrada" from
   its history (`/check-in?plate=`, `onCheckIn` injectable); a vehicle already
   inside keeps the charge action. Fixing the sample fixture's `openSessions`
-  exposed the guard in tests. Test count: 1113.
+  exposed the guard in tests. Test count: 1118.
 
 ### Public booking page (2026-11-09)
 
@@ -418,7 +418,14 @@ Last updated: 2026-11-09 (public booking page, owner search).
   (admins + operators); the SQL test checks one row per active member and none
   duplicated. If this is ever reversed, restore the allowlist entry, the home
   guard and the audience in the RPC together.
-- Test count: 1113; schema `0001..0090`.
+- `0091_public_cancel_reservation.sql`: the customer cancels with code +
+  plate + phone (anon); only `source = 'public'` and `status = 'active'` rows
+  are updated, anything else raises `ReservationNotFoundError`. The page keeps
+  the plate/phone in the cubit after submitting so the confirmation can cancel
+  without asking again, and shows a "Reserva cancelada" screen. Cancelling is
+  only reachable from the confirmation screen today — a "cancel with my code"
+  lookup is the natural follow-up.
+- Test count: 1118; schema `0001..0091`.
 
 ## Owner contact data (2026-11-05)
 

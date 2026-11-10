@@ -12,6 +12,19 @@ class PublicBookingRepositoryImpl implements PublicBookingRepository {
       _remote.availability(lotId);
 
   @override
+  Future<void> cancel({
+    required int lotId,
+    required int reservationId,
+    required String plate,
+    required String phone,
+  }) => _remote.cancel(
+    lotId: lotId,
+    reservationId: reservationId,
+    plate: plate,
+    phone: phone,
+  );
+
+  @override
   Future<PublicReservation> reserve({
     required int lotId,
     required String plate,

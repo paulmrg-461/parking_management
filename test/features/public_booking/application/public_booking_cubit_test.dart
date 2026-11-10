@@ -86,6 +86,57 @@ void main() {
     },
   );
 
+  test(
+    'Success: cancelling the hold frees it and thanks the customer',
+    () async {
+      final repository = FakePublicBookingRepository()
+        ..availabilityToReturn = sampleAvailability();
+      final cubit = PublicBookingCubit(repository);
+      await cubit.load(1);
+      await cubit.submit(
+        plate: 'ABC123',
+        categoryId: 2,
+        hours: 2,
+        phone: '3001112233',
+        name: 'Ana',
+      );
+
+      await cubit.cancel();
+
+      expect(cubit.state.cancelled, isTrue);
+      expect(cubit.state.reservation, isNull);
+      expect(repository.cancelCalls, 1);
+      expect(repository.lastCancelId, 12);
+      expect(repository.lastCancelPlate, 'ABC123');
+      expect(repository.lastCancelPhone, '3001112233');
+    },
+  );
+
+  test('Failure: a rejected cancellation keeps the confirmation', () async {
+    final repository = FakePublicBookingRepository()
+      ..availabilityToReturn = sampleAvailability()
+      ..cancelError = const ValidationFailure(
+        'ReservationNotFoundError',
+        'ReservationNotFoundError',
+      );
+    final cubit = PublicBookingCubit(repository);
+    await cubit.load(1);
+    await cubit.submit(
+      plate: 'ABC123',
+      categoryId: 2,
+      hours: 2,
+      phone: '3001112233',
+      name: 'Ana',
+    );
+
+    await cubit.cancel();
+
+    expect(cubit.state.cancelled, isFalse);
+    expect(cubit.state.reservation, isNotNull);
+    expect(cubit.state.actionFailure?.code, 'ReservationNotFoundError');
+    expect(cubit.state.cancelling, isFalse);
+  });
+
   test('Success: reset returns to the form for another reservation', () async {
     final repository = FakePublicBookingRepository()
       ..availabilityToReturn = sampleAvailability();

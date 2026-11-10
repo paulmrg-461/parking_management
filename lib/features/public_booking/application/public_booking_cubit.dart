@@ -15,6 +15,8 @@ class PublicBookingState extends Equatable {
     this.submitting = false,
     this.reservation,
     this.actionFailure,
+    this.cancelling = false,
+    this.cancelled = false,
   });
 
   final PublicBookingStatus status;
@@ -28,6 +30,12 @@ class PublicBookingState extends Equatable {
   /// Submit error (form stays visible); separate from the load failure.
   final Failure? actionFailure;
 
+  /// Cancelling the confirmed hold.
+  final bool cancelling;
+
+  /// The customer freed the hold; the page thanks them and offers another.
+  final bool cancelled;
+
   PublicBookingState copyWith({
     PublicBookingStatus? status,
     PublicBookingAvailability? availability,
@@ -38,6 +46,8 @@ class PublicBookingState extends Equatable {
     bool clearReservation = false,
     Failure? actionFailure,
     bool clearActionFailure = false,
+    bool? cancelling,
+    bool? cancelled,
   }) => PublicBookingState(
     status: status ?? this.status,
     availability: availability ?? this.availability,
@@ -47,6 +57,8 @@ class PublicBookingState extends Equatable {
     actionFailure: clearActionFailure
         ? null
         : (actionFailure ?? this.actionFailure),
+    cancelling: cancelling ?? this.cancelling,
+    cancelled: cancelled ?? this.cancelled,
   );
 
   @override
@@ -57,6 +69,8 @@ class PublicBookingState extends Equatable {
     submitting,
     reservation,
     actionFailure,
+    cancelling,
+    cancelled,
   ];
 }
 
@@ -66,6 +80,11 @@ class PublicBookingCubit extends ResilientCubit<PublicBookingState> {
 
   final PublicBookingRepository _repository;
   int _lotId = 1;
+
+  /// What the customer already sent, so the hold can be cancelled without
+  /// asking again (the RPC needs id + plate + phone).
+  String _plate = '';
+  String _phone = '';
 
   Future<void> load(int lotId) async {
     _lotId = lotId;
@@ -131,6 +150,8 @@ class PublicBookingCubit extends ResilientCubit<PublicBookingState> {
       if (isClosed) {
         return;
       }
+      _plate = plate;
+      _phone = phone;
       emit(state.copyWith(submitting: false, reservation: reservation));
       // Availability should drop by one; a failure keeps the confirmation.
       try {
@@ -148,8 +169,54 @@ class PublicBookingCubit extends ResilientCubit<PublicBookingState> {
     }
   }
 
+  /// Frees the confirmed hold. The RPC needs the code, the plate and the
+  /// phone, so a stranger cannot cancel someone else's space.
+  Future<void> cancel() async {
+    final reservation = state.reservation;
+    if (reservation == null || state.cancelling) {
+      return;
+    }
+    emit(state.copyWith(cancelling: true, clearActionFailure: true));
+    try {
+      await _repository.cancel(
+        lotId: _lotId,
+        reservationId: reservation.id,
+        plate: _plate,
+        phone: _phone,
+      );
+      if (isClosed) {
+        return;
+      }
+      emit(
+        state.copyWith(
+          cancelling: false,
+          cancelled: true,
+          clearReservation: true,
+        ),
+      );
+      try {
+        final availability = await _repository.availability(_lotId);
+        if (!isClosed && availability != null) {
+          emit(state.copyWith(availability: availability));
+        }
+      } on Failure {
+        // Best effort.
+      }
+    } on Failure catch (failure) {
+      if (!isClosed) {
+        emit(state.copyWith(cancelling: false, actionFailure: failure));
+      }
+    }
+  }
+
   /// Back to the form for a second reservation.
   void reset() {
-    emit(state.copyWith(clearReservation: true, clearActionFailure: true));
+    emit(
+      state.copyWith(
+        clearReservation: true,
+        clearActionFailure: true,
+        cancelled: false,
+      ),
+    );
   }
 }

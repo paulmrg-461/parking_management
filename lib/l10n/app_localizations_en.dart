@@ -213,6 +213,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookingAnother => 'Book another space';
 
   @override
+  String get bookingCancel => 'Cancel reservation';
+
+  @override
+  String get bookingCancelTitle => 'Cancel your reservation?';
+
+  @override
+  String bookingCancelBody(String plate) {
+    return 'The space held for $plate will be released. This cannot be undone.';
+  }
+
+  @override
+  String get bookingCancelledTitle => 'Reservation cancelled';
+
+  @override
+  String get bookingCancelledHint =>
+      'The space is available again. Thanks for letting us know.';
+
+  @override
+  String get bookingErrorNotFound =>
+      'We could not find that reservation. Check the code or call the lot.';
+
+  @override
   String get bookingCall => 'Call';
 
   @override

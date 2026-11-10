@@ -87,6 +87,26 @@ void main() {
     expect(jsonDecode(request.body), {'p_lot_id': 1});
   });
 
+  test('Success: cancelling sends the code, plate and phone', () async {
+    final h = _harness();
+
+    await h.remote.cancel(
+      lotId: 1,
+      reservationId: 12,
+      plate: 'ABC123',
+      phone: '3001112233',
+    );
+
+    final request = h.sent.single;
+    expect(request.url.path, endsWith('/rpc/public_cancel_reservation'));
+    expect(jsonDecode(request.body), {
+      'p_lot_id': 1,
+      'p_reservation_id': 12,
+      'p_plate': 'ABC123',
+      'p_customer_phone': '3001112233',
+    });
+  });
+
   test('Success: a reservation sends the form and returns the code', () async {
     final h = _harness();
     final until = DateTime.utc(2026, 11, 9, 14);

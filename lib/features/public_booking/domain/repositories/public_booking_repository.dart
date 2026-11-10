@@ -4,6 +4,13 @@ import '../entities/public_booking.dart';
 abstract class PublicBookingRepository {
   Future<PublicBookingAvailability?> availability(int lotId);
 
+  Future<void> cancel({
+    required int lotId,
+    required int reservationId,
+    required String plate,
+    required String phone,
+  });
+
   Future<PublicReservation> reserve({
     required int lotId,
     required String plate,

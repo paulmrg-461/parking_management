@@ -215,6 +215,28 @@ class AppLocalizationsEs extends AppLocalizations {
   String get bookingAnother => 'Hacer otra reserva';
 
   @override
+  String get bookingCancel => 'Cancelar reserva';
+
+  @override
+  String get bookingCancelTitle => '¿Cancelar tu reserva?';
+
+  @override
+  String bookingCancelBody(String plate) {
+    return 'Se liberará el cupo de $plate. Esta acción no se puede deshacer.';
+  }
+
+  @override
+  String get bookingCancelledTitle => 'Reserva cancelada';
+
+  @override
+  String get bookingCancelledHint =>
+      'El cupo volvió a quedar disponible. Gracias por avisar.';
+
+  @override
+  String get bookingErrorNotFound =>
+      'No encontramos esa reserva. Revisa el código o llama al parqueadero.';
+
+  @override
   String get bookingCall => 'Llamar';
 
   @override
