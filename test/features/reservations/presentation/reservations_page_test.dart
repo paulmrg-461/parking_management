@@ -14,7 +14,7 @@ void main() {
   Future<FakeReservationRepository> pumpPage(
     WidgetTester tester, {
     List<dynamic> reservations = const [],
-    void Function(BuildContext context, String plate)? onCheckIn,
+    Future<void> Function(BuildContext context, String plate)? onCheckIn,
     Size size = const Size(800, 1200),
   }) async {
     tester.view.physicalSize = size;
@@ -180,7 +180,7 @@ void main() {
     await pumpPage(
       tester,
       reservations: [sampleReservation(plate: 'ABC123')],
-      onCheckIn: (_, plate) => requested = plate,
+      onCheckIn: (_, plate) async => requested = plate,
     );
 
     await tester.tap(find.byTooltip('Registrar entrada'));
@@ -378,6 +378,22 @@ void main() {
     expect(text, contains('Ana'));
     expect(text, contains('3009998877,public,active'));
     expect(find.text('Reservas copiadas en CSV'), findsOneWidget);
+  });
+
+  testWidgets('Success: coming back from check-in reloads the board', (
+    tester,
+  ) async {
+    final repository = await pumpPage(
+      tester,
+      reservations: [sampleReservation(plate: 'ABC123')],
+      onCheckIn: (_, _) async {},
+    );
+    final calls = repository.activeCalls;
+
+    await tester.tap(find.byTooltip('Registrar entrada'));
+    await tester.pumpAndSettle();
+
+    expect(repository.activeCalls, calls + 1);
   });
 
   testWidgets('Success: the reservation plate is uppercased while typing', (

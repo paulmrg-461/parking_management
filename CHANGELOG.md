@@ -165,6 +165,9 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   next to the phone and WhatsApp actions, and the availability re-reads itself
   every minute without flashing the skeleton, so a customer deciding on the
   page never reads stale numbers.
+- **The board refreshes after check-in**: coming back from "Registrar entrada"
+  reloads the list, so the hold that just turned into a stay disappears
+  instead of lingering until a manual refresh.
 - **Reservations CSV**: the board has "Copiar CSV" (visible rows, filters
   included) with the code, plate, category, ISO expiry, customer, phone,
   source, status and grace flag, escaped for Excel — reception can print the

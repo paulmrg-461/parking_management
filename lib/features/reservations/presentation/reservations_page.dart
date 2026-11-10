@@ -35,7 +35,7 @@ class ReservationsPage extends StatefulWidget {
 
   /// Sends the operator to check-in with the plate prefilled. Injectable so a
   /// widget test can record it without a router.
-  final void Function(BuildContext context, String plate)? onCheckIn;
+  final Future<void> Function(BuildContext context, String plate)? onCheckIn;
 
   @override
   State<ReservationsPage> createState() => _ReservationsPageState();
@@ -118,7 +118,7 @@ class _ReservationsPageState extends State<ReservationsPage> {
   }
 }
 
-void _checkInWithPlate(BuildContext context, String plate) =>
+Future<void> _checkInWithPlate(BuildContext context, String plate) =>
     context.push('/check-in?plate=${Uri.encodeQueryComponent(plate)}');
 
 class _List extends StatefulWidget {
@@ -130,7 +130,7 @@ class _List extends StatefulWidget {
 
   final ReservationsLoaded loaded;
   final VoidCallback onAdd;
-  final void Function(BuildContext context, String plate) onCheckIn;
+  final Future<void> Function(BuildContext context, String plate) onCheckIn;
 
   @override
   State<_List> createState() => _ListState();
@@ -376,7 +376,7 @@ class _ReservationTile extends StatelessWidget {
   const _ReservationTile({required this.reservation, required this.onCheckIn});
 
   final Reservation reservation;
-  final void Function(BuildContext context, String plate) onCheckIn;
+  final Future<void> Function(BuildContext context, String plate) onCheckIn;
 
   @override
   Widget build(BuildContext context) {
@@ -493,7 +493,14 @@ class _ReservationTile extends StatelessWidget {
                 IconButton(
                   tooltip: l10n.reservationCheckIn,
                   icon: const Icon(Icons.login),
-                  onPressed: () => onCheckIn(context, reservation.plate),
+                  onPressed: () async {
+                    // Coming back from check-in, the hold is gone (`used`):
+                    // reload so the board is not stale.
+                    await onCheckIn(context, reservation.plate);
+                    if (context.mounted) {
+                      unawaited(context.read<ReservationsCubit>().load());
+                    }
+                  },
                 ),
                 IconButton(
                   tooltip: l10n.reservationCancel,
