@@ -1698,6 +1698,20 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsSaved => 'Configuración guardada';
 
   @override
+  String get settingsCoverSection => 'Portada de la página pública';
+
+  @override
+  String get settingsCoverHint =>
+      'Una foto ancha del parqueadero se muestra en la página de reservas.';
+
+  @override
+  String get settingsCoverConfigured =>
+      'Portada configurada. Puedes reemplazarla cuando quieras.';
+
+  @override
+  String get settingsCoverPick => 'Elegir portada';
+
+  @override
   String get settingsLogoSection => 'Logo';
 
   @override

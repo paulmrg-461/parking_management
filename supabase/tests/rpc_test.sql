@@ -3260,6 +3260,9 @@ begin
     ) <> 6500 then
         raise exception 'public availability lost the hourly tariff: %', avail;
     end if;
+    if (avail -> 'lot' ->> 'cover_path') is distinct from '' then
+        raise exception 'public availability invented a cover: %', avail -> 'lot';
+    end if;
     if public.public_availability(999999) is not null then
         raise exception 'an unknown lot returned availability';
     end if;
@@ -3793,6 +3796,90 @@ begin
         raise exception 'an inverted range was accepted';
     exception when others then
         if sqlerrm not like '%InvalidReportRangeError%' then
+            raise;
+        end if;
+    end;
+end $$;
+
+-- Reservation reminder: one message per hold, an hour before it lapses.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    cat integer;
+    queued integer;
+begin
+    delete from public.parking_spots where lot_id = 1;
+    update public.parking_settings
+       set car_capacity = 0, moto_capacity = 0, key_capacity = 0,
+           whatsapp_auto = true
+     where lot_id = 1;
+    insert into public.categories (name, capacity, lot_id)
+    values ('rem-car', 5, 1)
+    returning id into cat;
+
+    insert into public.category_reservations (
+        plate, category_id, reserved_from, reserved_until, lot_id, status,
+        source, customer_name, customer_phone
+    )
+    values
+        ('REM-SOON', cat, now() - interval '30 minutes',
+         now() + interval '30 minutes', 1, 'active', 'public',
+         'Ana', '3002221133'),
+        ('REM-LATE', cat, now() - interval '30 minutes',
+         now() + interval '3 hours', 1, 'active', 'public',
+         'Ana', '3002221144');
+
+    queued := public.notify_expiring_reservations(60);
+    if queued <> 1 then
+        raise exception 'the reminder fired for % holds', queued;
+    end if;
+    if not exists (
+        select 1 from public.whatsapp_messages
+         where to_phone = '3002221133'
+           and template = 'reservation_reminder'
+           and jsonb_array_length(params) = 4
+    ) then
+        raise exception 'the reminder was not queued';
+    end if;
+    if exists (
+        select 1 from public.whatsapp_messages where to_phone = '3002221144'
+    ) then
+        raise exception 'a hold outside the window was reminded';
+    end if;
+    if (
+        select reminder_sent_at from public.category_reservations
+         where plate = 'REM-SOON'
+    ) is null then
+        raise exception 'the hold was not stamped as reminded';
+    end if;
+    if public.notify_expiring_reservations(60) <> 0 then
+        raise exception 'the reminder was sent twice';
+    end if;
+    update public.parking_settings set whatsapp_auto = false where lot_id = 1;
+end $$;
+
+-- Cover photo: the lot admin sets it and the public page receives the path.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    updated public.parking_settings%rowtype;
+    avail jsonb;
+begin
+    updated := public.set_branding_cover('cover_1.jpg');
+    if updated.cover_path <> 'cover_1.jpg' or updated.cover_version < 1 then
+        raise exception 'the cover was not stored: %', updated.cover_path;
+    end if;
+    avail := public.public_availability(1);
+    if (avail -> 'lot' ->> 'cover_path') <> 'cover_1.jpg' then
+        raise exception 'the public page did not get the cover: %', avail -> 'lot';
+    end if;
+    begin
+        perform public.set_branding_cover('   ');
+        raise exception 'an empty cover path was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then
             raise;
         end if;
     end;

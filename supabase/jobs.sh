@@ -34,6 +34,7 @@ while true; do
   # Alerts for passes and overstays, pass renewals, and the retention jobs.
   run notify_expiring_monthly_passes
   run notify_overstays
+  run notify_expiring_reservations
   run renew_monthly_passes
   run expire_reservations
   run purge_expired_idempotency

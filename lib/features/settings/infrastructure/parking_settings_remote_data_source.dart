@@ -16,6 +16,8 @@ abstract class ParkingSettingsRemoteDataSource {
 
   Future<ParkingSettings> uploadLogo(Uint8List bytes);
 
+  Future<ParkingSettings> uploadCover(Uint8List bytes);
+
   Future<Uint8List> fetchLogo();
 
   Future<String> resetLegalPolicy();
@@ -103,6 +105,31 @@ class SupabaseParkingSettingsRemoteDataSource
   }
 
   @override
+  Future<ParkingSettings> uploadCover(Uint8List bytes) async {
+    try {
+      final path = coverPathForLot(_lotId);
+      await _client.storage
+          .from(_bucket)
+          .uploadBinary(
+            path,
+            bytes,
+            fileOptions: FileOptions(
+              contentType: _contentType(bytes),
+              upsert: true,
+            ),
+          );
+      final row = await _client.rpc(
+        'set_branding_cover',
+        params: {'p_path': path},
+      );
+      return ParkingSettingsDto.fromJson(Map<String, dynamic>.from(row as Map))
+          .toDomain();
+    } catch (error) {
+      throw mapSupabaseError(error);
+    }
+  }
+
+  @override
   Future<String> resetLegalPolicy() async {
     try {
       final result = await _client.rpc('reset_legal_policy');
@@ -133,3 +160,5 @@ class SupabaseParkingSettingsRemoteDataSource
 /// One logo object per lot, so uploading a site's logo never overwrites the
 /// other site's branding.
 String logoPathForLot(int lotId) => 'logo_$lotId';
+
+String coverPathForLot(int lotId) => 'cover_$lotId';

@@ -15,6 +15,8 @@ ParkingSettingsDto _$ParkingSettingsDtoFromJson(Map<String, dynamic> json) =>
       website: json['website'] as String,
       whatsapp: json['whatsapp'] as String,
       logoVersion: (json['logo_version'] as num?)?.toInt() ?? 0,
+      coverPath: json['cover_path'] as String? ?? '',
+      coverVersion: (json['cover_version'] as num?)?.toInt() ?? 0,
       evidenceRetentionDays:
           (json['evidence_retention_days'] as num?)?.toInt() ?? 0,
       reservationGraceMinutes:
@@ -40,6 +42,8 @@ Map<String, dynamic> _$ParkingSettingsDtoToJson(ParkingSettingsDto instance) =>
       'website': instance.website,
       'whatsapp': instance.whatsapp,
       'logo_version': instance.logoVersion,
+      'cover_path': instance.coverPath,
+      'cover_version': instance.coverVersion,
       'evidence_retention_days': instance.evidenceRetentionDays,
       'reservation_grace_minutes': instance.reservationGraceMinutes,
       'whatsapp_auto': instance.whatsappAuto,

@@ -83,6 +83,7 @@ class PublicBookingAvailability extends Equatable {
     this.phone = '',
     this.whatsapp = '',
     this.logoUrl,
+    this.coverUrl,
     this.timezone = 'America/Bogota',
     this.currency = 'COP',
     this.maxReservationHours = 24,
@@ -96,6 +97,9 @@ class PublicBookingAvailability extends Equatable {
   final String phone;
   final String whatsapp;
   final String? logoUrl;
+
+  /// Wide banner for the hero (null when the lot has no cover).
+  final String? coverUrl;
   final String timezone;
   final String currency;
   final int maxReservationHours;
@@ -106,6 +110,7 @@ class PublicBookingAvailability extends Equatable {
   factory PublicBookingAvailability.fromJson(
     Map<String, dynamic> json, {
     String? logoUrl,
+    String? coverUrl,
   }) {
     final lot = json['lot'] is Map
         ? Map<String, dynamic>.from(json['lot'] as Map)
@@ -119,6 +124,7 @@ class PublicBookingAvailability extends Equatable {
       phone: lot['phone'] as String? ?? '',
       whatsapp: lot['whatsapp'] as String? ?? '',
       logoUrl: logoUrl,
+      coverUrl: coverUrl,
       timezone: lot['timezone'] as String? ?? 'America/Bogota',
       currency: lot['currency'] as String? ?? 'COP',
       maxReservationHours: value(json['max_reservation_hours']),
@@ -140,6 +146,7 @@ class PublicBookingAvailability extends Equatable {
     phone,
     whatsapp,
     logoUrl,
+    coverUrl,
     timezone,
     currency,
     maxReservationHours,

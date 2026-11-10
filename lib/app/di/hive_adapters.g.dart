@@ -422,6 +422,8 @@ class ParkingSettingsAdapter extends TypeAdapter<ParkingSettings> {
       website: fields[4] == null ? '' : fields[4] as String,
       whatsapp: fields[5] == null ? '' : fields[5] as String,
       logoVersion: fields[6] == null ? 0 : (fields[6] as num).toInt(),
+      coverPath: fields[19] == null ? '' : fields[19] as String,
+      coverVersion: fields[20] == null ? 0 : (fields[20] as num).toInt(),
       evidenceRetentionDays: fields[7] == null ? 0 : (fields[7] as num).toInt(),
       reservationGraceMinutes: fields[18] == null
           ? 15
@@ -442,7 +444,7 @@ class ParkingSettingsAdapter extends TypeAdapter<ParkingSettings> {
   @override
   void write(BinaryWriter writer, ParkingSettings obj) {
     writer
-      ..writeByte(19)
+      ..writeByte(21)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
@@ -480,7 +482,11 @@ class ParkingSettingsAdapter extends TypeAdapter<ParkingSettings> {
       ..writeByte(17)
       ..write(obj.policePhone)
       ..writeByte(18)
-      ..write(obj.reservationGraceMinutes);
+      ..write(obj.reservationGraceMinutes)
+      ..writeByte(19)
+      ..write(obj.coverPath)
+      ..writeByte(20)
+      ..write(obj.coverVersion);
   }
 
   @override

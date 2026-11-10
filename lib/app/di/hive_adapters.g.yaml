@@ -121,7 +121,7 @@ types:
         index: 7
   ParkingSettings:
     typeId: 9
-    nextIndex: 19
+    nextIndex: 21
     fields:
       name:
         index: 0
@@ -161,3 +161,7 @@ types:
         index: 17
       reservationGraceMinutes:
         index: 18
+      coverPath:
+        index: 19
+      coverVersion:
+        index: 20

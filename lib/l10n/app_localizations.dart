@@ -3098,6 +3098,30 @@ abstract class AppLocalizations {
   /// **'Configuración guardada'**
   String get settingsSaved;
 
+  /// No description provided for @settingsCoverSection.
+  ///
+  /// In es, this message translates to:
+  /// **'Portada de la página pública'**
+  String get settingsCoverSection;
+
+  /// No description provided for @settingsCoverHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Una foto ancha del parqueadero se muestra en la página de reservas.'**
+  String get settingsCoverHint;
+
+  /// No description provided for @settingsCoverConfigured.
+  ///
+  /// In es, this message translates to:
+  /// **'Portada configurada. Puedes reemplazarla cuando quieras.'**
+  String get settingsCoverConfigured;
+
+  /// No description provided for @settingsCoverPick.
+  ///
+  /// In es, this message translates to:
+  /// **'Elegir portada'**
+  String get settingsCoverPick;
+
   /// No description provided for @settingsLogoSection.
   ///
   /// In es, this message translates to:

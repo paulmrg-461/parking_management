@@ -597,6 +597,28 @@ class _Hero extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (availability.coverUrl case final cover?) ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(Radii.md),
+              child: AspectRatio(
+                aspectRatio: 16 / 9,
+                child: Image.network(
+                  cover,
+                  key: const Key('booking_cover'),
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => ColoredBox(
+                    color: scheme.surfaceContainerHigh,
+                    child: Icon(
+                      Icons.photo_outlined,
+                      size: 40,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: Space.md),
+          ],
           Row(
             children: [
               ClipRRect(

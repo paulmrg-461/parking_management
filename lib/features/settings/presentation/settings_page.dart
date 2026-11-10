@@ -30,7 +30,7 @@ final _websitePattern = RegExp(
 
 /// Admin-only form for the singleton parking identity plus logo upload.
 class SettingsPage extends StatefulWidget {
-  const SettingsPage({super.key, this.pickLogo, this.spots});
+  const SettingsPage({super.key, this.pickLogo, this.pickCover, this.spots});
 
   /// Optional map access: when the site already drew bays, out-of-service is
   /// per bay and the count fields are hidden.
@@ -38,6 +38,9 @@ class SettingsPage extends StatefulWidget {
 
   /// Test seam: returns the picked logo bytes (or null when cancelled).
   final Future<Uint8List?> Function()? pickLogo;
+
+  /// Test seam for the wide cover shown on the public page.
+  final Future<Uint8List?> Function()? pickCover;
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -278,6 +281,7 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         children: [
           _logoSection(context, settings),
+          _coverSection(context, settings),
           if (MediaQuery.sizeOf(context).width >= 720) ...[
             _sectionIndex(context),
             const SizedBox(height: Space.md),
@@ -781,6 +785,62 @@ class _SettingsPageState extends State<SettingsPage> {
         );
       },
     );
+  }
+
+  Widget _coverSection(BuildContext context, ParkingSettings settings) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Card(
+      margin: const EdgeInsets.only(bottom: Space.lg),
+      child: Padding(
+        padding: const EdgeInsets.all(Space.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.panorama_outlined, color: scheme.primary),
+                const SizedBox(width: Space.sm),
+                Expanded(
+                  child: Text(
+                    l10n.settingsCoverSection,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: Space.xs),
+            Text(
+              settings.hasCover
+                  ? l10n.settingsCoverConfigured
+                  : l10n.settingsCoverHint,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: Space.sm),
+            FilledButton.tonalIcon(
+              key: const Key('settings_cover_pick'),
+              onPressed: _uploadCover,
+              icon: const Icon(Icons.image_outlined),
+              label: Text(l10n.settingsCoverPick),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _uploadCover() async {
+    final pick = widget.pickCover ?? _pickFromGallery;
+    final bytes = await pick();
+    if (bytes == null || !mounted) {
+      return;
+    }
+    await context.read<SettingsCubit>().uploadCover(bytes);
   }
 
   Future<void> _save(BuildContext context, ParkingSettings current) async {

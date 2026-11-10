@@ -69,6 +69,9 @@ class SettingsCubit extends ResilientCubit<SettingsState> {
   Future<void> uploadLogo(Uint8List bytes) =>
       _submit(() => _repository.uploadLogo(bytes));
 
+  Future<void> uploadCover(Uint8List bytes) =>
+      _submit(() => _repository.uploadCover(bytes));
+
   /// Loads the server default template (throws a Failure when offline).
   Future<String> resetLegalPolicy() => _repository.resetLegalPolicy();
 

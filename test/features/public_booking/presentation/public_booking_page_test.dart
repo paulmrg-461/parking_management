@@ -50,6 +50,20 @@ void main() {
     expect(find.text(r'Desde $5.000/hora'), findsOneWidget);
   });
 
+  testWidgets('Success: the lot cover is shown when it has one', (
+    tester,
+  ) async {
+    final repository = FakePublicBookingRepository()
+      ..availabilityToReturn = const PublicBookingAvailability(
+        lotId: 1,
+        lotName: 'Central',
+        coverUrl: 'http://host/cover.jpg',
+      );
+    await _pump(tester, repository: repository);
+
+    expect(find.byKey(const Key('booking_cover')), findsOneWidget);
+  });
+
   testWidgets('Success: the hero offers directions to the lot', (tester) async {
     await _pump(tester);
 

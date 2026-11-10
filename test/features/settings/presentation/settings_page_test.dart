@@ -29,11 +29,12 @@ Future<void> pumpPage(
   required FakeParkingSettingsRepository repository,
   BrandingCubit? branding,
   Future<Uint8List?> Function()? pickLogo,
+  Future<Uint8List?> Function()? pickCover,
   SpotRepository? spots,
 }) async {
   // Tall viewport: the settings form (logo + 8 fields + save) must fit
   // without fighting ListView's lazy children while tapping.
-  tester.view.physicalSize = const Size(800, 1600);
+  tester.view.physicalSize = const Size(800, 2400);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
@@ -44,7 +45,13 @@ Future<void> pumpPage(
           value: branding ?? BrandingCubit(repository),
         ),
       ],
-      child: testApp(SettingsPage(pickLogo: pickLogo, spots: spots)),
+      child: testApp(
+        SettingsPage(
+          pickLogo: pickLogo,
+          pickCover: pickCover ?? () async => Uint8List.fromList(_logoBytes),
+          spots: spots,
+        ),
+      ),
     ),
   );
   await tester.pumpAndSettle();
@@ -154,6 +161,18 @@ void main() {
     expect(repository.settings.carCapacity, 12);
     expect(repository.settings.motoCapacity, 5);
     expect(repository.settings.keyCapacity, 3);
+  });
+
+  testWidgets('Success: the public page cover can be uploaded', (tester) async {
+    final repository = FakeParkingSettingsRepository(_configured);
+    await pumpPage(tester, repository: repository);
+    await tester.ensureVisible(find.byKey(const Key('settings_cover_pick')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('settings_cover_pick')));
+    await tester.pumpAndSettle();
+
+    expect(repository.settings.coverPath, 'cover_1');
   });
 
   testWidgets('Success: the reservation grace window is editable and saved', (

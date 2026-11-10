@@ -1685,6 +1685,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsSaved => 'Settings saved';
 
   @override
+  String get settingsCoverSection => 'Public page cover';
+
+  @override
+  String get settingsCoverHint =>
+      'A wide photo of the lot is shown on the booking page.';
+
+  @override
+  String get settingsCoverConfigured =>
+      'Cover set. You can replace it at any time.';
+
+  @override
+  String get settingsCoverPick => 'Choose cover';
+
+  @override
   String get settingsLogoSection => 'Logo';
 
   @override

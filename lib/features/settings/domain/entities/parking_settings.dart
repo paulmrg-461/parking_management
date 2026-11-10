@@ -12,6 +12,8 @@ class ParkingSettings extends Equatable {
     this.website = '',
     this.whatsapp = '',
     this.logoVersion = 0,
+    this.coverPath = '',
+    this.coverVersion = 0,
     this.evidenceRetentionDays = 0,
     this.reservationGraceMinutes = 15,
     this.whatsappAuto = false,
@@ -35,6 +37,12 @@ class ParkingSettings extends Equatable {
 
   /// Server-side counter (`0` = no logo); doubles as the logo cache key.
   final int logoVersion;
+
+  /// Storage path of the wide cover shown on the public page ('' = none).
+  final String coverPath;
+  final int coverVersion;
+
+  bool get hasCover => coverPath.isNotEmpty;
 
   /// Evidence photos older than this are deleted by `evidence-archive`.
   /// `0` keeps them forever (default).
@@ -87,6 +95,8 @@ class ParkingSettings extends Equatable {
     String? website,
     String? whatsapp,
     int? logoVersion,
+    String? coverPath,
+    int? coverVersion,
     int? evidenceRetentionDays,
     int? reservationGraceMinutes,
     bool? whatsappAuto,
@@ -107,6 +117,8 @@ class ParkingSettings extends Equatable {
     website: website ?? this.website,
     whatsapp: whatsapp ?? this.whatsapp,
     logoVersion: logoVersion ?? this.logoVersion,
+    coverPath: coverPath ?? this.coverPath,
+    coverVersion: coverVersion ?? this.coverVersion,
     evidenceRetentionDays: evidenceRetentionDays ?? this.evidenceRetentionDays,
     reservationGraceMinutes:
         reservationGraceMinutes ?? this.reservationGraceMinutes,
@@ -153,6 +165,8 @@ class ParkingSettings extends Equatable {
     website,
     whatsapp,
     logoVersion,
+    coverPath,
+    coverVersion,
     evidenceRetentionDays,
     reservationGraceMinutes,
     whatsappAuto,

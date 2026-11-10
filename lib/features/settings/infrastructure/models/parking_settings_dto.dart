@@ -14,6 +14,8 @@ class ParkingSettingsDto {
     required this.website,
     required this.whatsapp,
     this.logoVersion = 0,
+    this.coverPath = '',
+    this.coverVersion = 0,
     this.evidenceRetentionDays = 0,
     this.reservationGraceMinutes = 15,
     this.whatsappAuto = false,
@@ -38,6 +40,8 @@ class ParkingSettingsDto {
   final String website;
   final String whatsapp;
   final int logoVersion;
+  final String coverPath;
+  final int coverVersion;
   final int evidenceRetentionDays;
 
   /// Minutes after `reserved_until` a hold still counts (0..120).
@@ -63,6 +67,8 @@ class ParkingSettingsDto {
     website: website,
     whatsapp: whatsapp,
     logoVersion: logoVersion,
+    coverPath: coverPath,
+    coverVersion: coverVersion,
     evidenceRetentionDays: evidenceRetentionDays,
     reservationGraceMinutes: reservationGraceMinutes,
     whatsappAuto: whatsappAuto,

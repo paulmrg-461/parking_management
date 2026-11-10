@@ -69,6 +69,14 @@ class _FakeRemote implements ParkingSettingsRemoteDataSource {
   }
 
   @override
+  Future<ParkingSettings> uploadCover(Uint8List bytes) async {
+    _ensureOnline();
+    uploaded = bytes;
+    settings = settings.copyWith(coverPath: 'cover_1', coverVersion: 1);
+    return settings;
+  }
+
+  @override
   Future<ParkingSettings> uploadLogo(Uint8List bytes) async {
     _ensureOnline();
     uploaded = bytes;

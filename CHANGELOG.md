@@ -165,6 +165,15 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   next to the phone and WhatsApp actions, and the availability re-reads itself
   every minute without flashing the skeleton, so a customer deciding on the
   page never reads stale numbers.
+- **Cover photo for the public page**: Ajustes has "Portada de la página
+  pública" (wide image, `branding/cover_<lot>`, lot-admin RPC
+  `set_branding_cover`); `/reserve` shows it as a 16:9 banner above the lot
+  identity, with the logo and a placeholder when there is no cover.
+- **Reminder before the hold lapses**: `notify_expiring_reservations()` queues
+  a `reservation_reminder` WhatsApp one hour before `reserved_until` (only
+  public holds with a mobile and automated WhatsApp on), stamped with
+  `reminder_sent_at` so the 5-minute job never repeats it. The jobs service
+  runs it every cycle.
 - **Check-in by reservation code**: the check-in screen lists the active holds
   ("Buscar reserva (N)") with the code the customer shows (#7), the plate, the
   customer and the expiry; picking one fills the plate and runs the lookup, so

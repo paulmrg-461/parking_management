@@ -132,6 +132,16 @@ identity, contact, policy).
 returns 1-hour signed URLs for that session's photos/videos (no login; the
 plate is the key).
 
+**Branding**
+`set_branding_logo(path)` / `set_branding_cover(path)` (lot admin) store the
+logo and the wide cover of the public page; `public_availability` ships
+`logo_path` and `cover_path` to the anonymous page (public `branding` bucket).
+
+**Reservation reminders**
+`notify_expiring_reservations(window)` queues a `reservation_reminder`
+WhatsApp for public holds ending inside the window (default 60 min) when the
+lot has automated WhatsApp on, and stamps `reminder_sent_at` (idempotent).
+
 **Reservations report**
 `report_reservations(from, to)`: holds created in the window (business
 timezone), split by `source` (`public`/`app`) and `status`, plus

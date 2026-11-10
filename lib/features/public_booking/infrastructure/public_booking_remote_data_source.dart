@@ -50,10 +50,18 @@ class SupabasePublicBookingRemoteDataSource
           ? Map<String, dynamic>.from(json['lot'] as Map)
           : const <String, dynamic>{};
       final logoPath = lot['logo_path'] as String? ?? '';
+      final coverPath = lot['cover_path'] as String? ?? '';
       final logoUrl = logoPath.isEmpty
           ? null
           : _client.storage.from('branding').getPublicUrl(logoPath);
-      return PublicBookingAvailability.fromJson(json, logoUrl: logoUrl);
+      final coverUrl = coverPath.isEmpty
+          ? null
+          : _client.storage.from('branding').getPublicUrl(coverPath);
+      return PublicBookingAvailability.fromJson(
+        json,
+        logoUrl: logoUrl,
+        coverUrl: coverUrl,
+      );
     } catch (error) {
       throw mapSupabaseError(error);
     }
