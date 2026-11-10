@@ -3113,7 +3113,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get reservationsSearchLabel => 'Buscar reserva';
 
   @override
-  String get reservationsSearchHint => 'Placa, nombre o celular';
+  String get reservationsSearchHint => 'Placa, nombre, celular o código';
 
   @override
   String get reservationWeb => 'Web';

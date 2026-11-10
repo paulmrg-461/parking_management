@@ -12,7 +12,7 @@ Last updated: 2026-11-09 (public booking page, owner search).
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0093` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 1132 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 1134 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -358,7 +358,7 @@ Last updated: 2026-11-09 (public booking page, owner search).
 - Follow-up: a vehicle with no open session offers "Registrar entrada" from
   its history (`/check-in?plate=`, `onCheckIn` injectable); a vehicle already
   inside keeps the charge action. Fixing the sample fixture's `openSessions`
-  exposed the guard in tests. Test count: 1132.
+  exposed the guard in tests. Test count: 1134.
 
 ### Public booking page (2026-11-09)
 
@@ -451,7 +451,10 @@ Last updated: 2026-11-09 (public booking page, owner search).
   became `expired` within seconds, and `push-dispatch` answered
   `{"configured":false}`. `supabase/notifications-cron.sh` still works from
   host cron; both are idempotent.
-- Test count: 1132; schema `0001..0093`.
+- The reservations board shows `#<id> · Hasta …` on every card and its search
+  matches a 1..6 digit code exactly (`_matches`), so the customer's "code #7"
+  is usable at reception; check-in is still the one-tap action on the card.
+- Test count: 1134; schema `0001..0093`.
 
 ## Owner contact data (2026-11-05)
 

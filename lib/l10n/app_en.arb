@@ -1001,7 +1001,7 @@
   "reservationsEmptyTitle": "No holds",
   "reservationsEmptyHint": "Hold a spot for a customer so their entry is guaranteed.",
   "reservationsSearchLabel": "Search holds",
-  "reservationsSearchHint": "Plate, name or mobile",
+  "reservationsSearchHint": "Plate, name, mobile or code",
   "reservationWeb": "Web",
   "reservationCall": "Call the customer",
   "reservationWhatsApp": "WhatsApp the customer",

@@ -153,10 +153,16 @@ class _ListState extends State<_List> {
     ];
   }
 
-  bool _matches(Reservation reservation, String needle) =>
-      reservation.plate.toLowerCase().contains(needle) ||
-      (reservation.customerName ?? '').toLowerCase().contains(needle) ||
-      (reservation.customerPhone ?? '').contains(needle);
+  bool _matches(Reservation reservation, String needle) {
+    // A short number can be the reservation code printed on the confirmation.
+    if (RegExp(r'^\d{1,6}$').hasMatch(needle) &&
+        reservation.id.toString() == needle) {
+      return true;
+    }
+    return reservation.plate.toLowerCase().contains(needle) ||
+        (reservation.customerName ?? '').toLowerCase().contains(needle) ||
+        (reservation.customerPhone ?? '').contains(needle);
+  }
 
   bool get _filtered =>
       _query.trim().isNotEmpty || _onlyExpiring || _onlyPublic;
@@ -410,10 +416,11 @@ class _ReservationTile extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: Space.xs),
+                  // The code the customer shows (#7) sits first: reception can
+                  // match it against the web confirmation at a glance.
                   Text(
-                    l10n.reservationUntil(
-                      Formatters.dateTime(reservation.reservedUntil.toLocal()),
-                    ),
+                    '#${reservation.id} · '
+                    '${l10n.reservationUntil(Formatters.dateTime(reservation.reservedUntil.toLocal()))}',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: scheme.onSurfaceVariant,
                     ),

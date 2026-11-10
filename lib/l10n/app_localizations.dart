@@ -5567,7 +5567,7 @@ abstract class AppLocalizations {
   /// No description provided for @reservationsSearchHint.
   ///
   /// In es, this message translates to:
-  /// **'Placa, nombre o celular'**
+  /// **'Placa, nombre, celular o código'**
   String get reservationsSearchHint;
 
   /// No description provided for @reservationWeb.

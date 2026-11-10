@@ -1068,7 +1068,7 @@
   "reservationsEmptyTitle": "Sin reservas",
   "reservationsEmptyHint": "Reserva el cupo de un cliente para asegurar su entrada.",
   "reservationsSearchLabel": "Buscar reserva",
-  "reservationsSearchHint": "Placa, nombre o celular",
+  "reservationsSearchHint": "Placa, nombre, celular o código",
   "reservationWeb": "Web",
   "reservationCall": "Llamar al cliente",
   "reservationWhatsApp": "WhatsApp al cliente",

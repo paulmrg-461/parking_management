@@ -247,6 +247,32 @@ void main() {
     expect(find.byTooltip('WhatsApp al cliente'), findsNothing);
   });
 
+  testWidgets('Success: the card shows the code the customer was given', (
+    tester,
+  ) async {
+    await pumpPage(tester, reservations: [sampleReservation(id: 12)]);
+
+    expect(find.textContaining('#12 ·'), findsOneWidget);
+  });
+
+  testWidgets('Success: the search finds a booking by its code', (
+    tester,
+  ) async {
+    await pumpPage(
+      tester,
+      reservations: [
+        sampleReservation(id: 7, plate: 'AAA111'),
+        sampleReservation(id: 12, plate: 'BBB222'),
+      ],
+    );
+
+    await tester.enterText(find.byType(TextField).first, '12');
+    await tester.pumpAndSettle();
+
+    expect(find.text('AAA111'), findsNothing);
+    expect(find.text('BBB222'), findsOneWidget);
+  });
+
   testWidgets('Success: the search finds a booking by customer', (
     tester,
   ) async {

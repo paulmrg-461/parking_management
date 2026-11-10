@@ -165,6 +165,11 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   next to the phone and WhatsApp actions, and the availability re-reads itself
   every minute without flashing the skeleton, so a customer deciding on the
   page never reads stale numbers.
+- **The reservation code reaches reception**: each card on the reservations
+  board shows the code the customer was given (`#7 · Hasta 20:35`) and the
+  search matches it, so the front desk can act on the number printed on the
+  confirmation instead of asking for the plate. "Registrar entrada" on the
+  card still opens check-in with the plate prefilled.
 - **"Web only" filter**: the reservations board can show just the holds that
   came from the public page, next to "por vencer", and the filter chip resets
   with "limpiar filtros".

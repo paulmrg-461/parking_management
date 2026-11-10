@@ -3097,7 +3097,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reservationsSearchLabel => 'Search holds';
 
   @override
-  String get reservationsSearchHint => 'Plate, name or mobile';
+  String get reservationsSearchHint => 'Plate, name, mobile or code';
 
   @override
   String get reservationWeb => 'Web';
