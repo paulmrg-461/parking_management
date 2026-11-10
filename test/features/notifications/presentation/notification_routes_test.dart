@@ -15,10 +15,7 @@ AppNotification _n(String type, [Map<String, dynamic> data = const {}]) =>
 void main() {
   test('Success: shift and pass notifications open their screens', () {
     expect(routeForNotification(_n('shift_closed')), '/shift');
-    expect(
-      routeForNotification(_n('monthly_pass_renewed')),
-      '/monthly-passes',
-    );
+    expect(routeForNotification(_n('monthly_pass_renewed')), '/monthly-passes');
   });
 
   test('Success: vehicle events open the history for the plate', () {
@@ -29,6 +26,15 @@ void main() {
     expect(
       routeForNotification(_n('overstay', {'plate': 'XYZ999'})),
       '/history?plate=XYZ999',
+    );
+  });
+
+  test('Success: a web booking opens the reservations board', () {
+    expect(
+      routeForNotification(
+        _n('public_reservation', {'plate': 'WEB123', 'reservation_id': 7}),
+      ),
+      '/reservations',
     );
   });
 

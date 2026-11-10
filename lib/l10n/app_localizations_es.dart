@@ -3045,7 +3045,21 @@ class AppLocalizationsEs extends AppLocalizations {
   String get reservationsSearchLabel => 'Buscar reserva';
 
   @override
-  String get reservationsSearchHint => 'Placa';
+  String get reservationsSearchHint => 'Placa, nombre o celular';
+
+  @override
+  String get reservationWeb => 'Web';
+
+  @override
+  String get reservationCall => 'Llamar al cliente';
+
+  @override
+  String get reservationWhatsApp => 'WhatsApp al cliente';
+
+  @override
+  String reservationWhatsAppMessage(String plate) {
+    return 'Hola, te escribimos por tu reserva de la placa $plate.';
+  }
 
   @override
   String get reservationsOnlyExpiring => 'Solo por vencer';
@@ -3147,6 +3161,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get notifTypeOverstay => 'Estadía larga';
+
+  @override
+  String get notifTypeReservation => 'Reserva web';
 
   @override
   String get notifTypeShiftClosed => 'Cierre de turno';

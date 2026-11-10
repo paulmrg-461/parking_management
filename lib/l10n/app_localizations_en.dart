@@ -3029,7 +3029,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reservationsSearchLabel => 'Search holds';
 
   @override
-  String get reservationsSearchHint => 'Plate';
+  String get reservationsSearchHint => 'Plate, name or mobile';
+
+  @override
+  String get reservationWeb => 'Web';
+
+  @override
+  String get reservationCall => 'Call the customer';
+
+  @override
+  String get reservationWhatsApp => 'WhatsApp the customer';
+
+  @override
+  String reservationWhatsAppMessage(String plate) {
+    return 'Hi, we are contacting you about the reservation for plate $plate.';
+  }
 
   @override
   String get reservationsOnlyExpiring => 'Expiring only';
@@ -3130,6 +3144,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get notifTypeOverstay => 'Overstay';
+
+  @override
+  String get notifTypeReservation => 'Web booking';
 
   @override
   String get notifTypeShiftClosed => 'Shift closed';

@@ -16,7 +16,8 @@ abstract class ReservationRemoteDataSource {
   Future<void> cancel(int id);
 }
 
-class SupabaseReservationRemoteDataSource implements ReservationRemoteDataSource {
+class SupabaseReservationRemoteDataSource
+    implements ReservationRemoteDataSource {
   SupabaseReservationRemoteDataSource(this._client);
 
   final SupabaseClient _client;
@@ -30,14 +31,12 @@ class SupabaseReservationRemoteDataSource implements ReservationRemoteDataSource
           .from(_table)
           .select(
             'id, plate, category_id, reserved_until, status, notes, '
-            'categories(name)',
+            'customer_name, customer_phone, source, categories(name)',
           )
           .eq('status', 'active')
           .gt('reserved_until', DateTime.now().toUtc().toIso8601String())
           .order('reserved_until');
-      return [
-        for (final row in rows) Reservation.fromJson(row),
-      ];
+      return [for (final row in rows) Reservation.fromJson(row)];
     } catch (error) {
       throw mapSupabaseError(error);
     }

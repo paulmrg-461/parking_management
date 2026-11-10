@@ -8,7 +8,9 @@ import 'package:go_router/go_router.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/state/submission.dart';
 import '../../../core/theme/tokens.dart';
+import '../../../core/utils/dialer.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/utils/whatsapp_launcher.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_state.dart';
 import '../../../core/widgets/filter_bar.dart';
@@ -21,6 +23,7 @@ import '../../../core/widgets/staggered_list_item.dart';
 import '../../../core/widgets/status_chip.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/widgets/submission_listener.dart';
+import '../../settings/domain/whatsapp_url.dart';
 import '../application/reservations_cubit.dart';
 import '../domain/entities/reservation.dart';
 import 'reservation_dialog.dart';
@@ -56,8 +59,8 @@ class _ReservationsPageState extends State<ReservationsPage> {
         onRefresh: context.read<ReservationsCubit>().load,
         body: BlocBuilder<ReservationsCubit, ReservationsState>(
           builder: (context, state) => switch (state) {
-            ReservationsInitial() || ReservationsLoading() =>
-              const SkeletonList(),
+            ReservationsInitial() ||
+            ReservationsLoading() => const SkeletonList(),
             ReservationsFailure(:final message) => ErrorState(
               message: message,
               onRetry: context.read<ReservationsCubit>().load,
@@ -113,9 +116,8 @@ class _ReservationsPageState extends State<ReservationsPage> {
   }
 }
 
-void _checkInWithPlate(BuildContext context, String plate) => context.push(
-  '/check-in?plate=${Uri.encodeQueryComponent(plate)}',
-);
+void _checkInWithPlate(BuildContext context, String plate) =>
+    context.push('/check-in?plate=${Uri.encodeQueryComponent(plate)}');
 
 class _List extends StatefulWidget {
   const _List({
@@ -143,12 +145,16 @@ class _ListState extends State<_List> {
     final now = DateTime.now();
     return [
       for (final reservation in all)
-        if ((needle.isEmpty ||
-                reservation.plate.toLowerCase().contains(needle)) &&
+        if ((needle.isEmpty || _matches(reservation, needle)) &&
             (!_onlyExpiring || reservation.expiresSoon(now: now)))
           reservation,
     ];
   }
+
+  bool _matches(Reservation reservation, String needle) =>
+      reservation.plate.toLowerCase().contains(needle) ||
+      (reservation.customerName ?? '').toLowerCase().contains(needle) ||
+      (reservation.customerPhone ?? '').contains(needle);
 
   bool get _filtered => _query.trim().isNotEmpty || _onlyExpiring;
 
@@ -222,7 +228,9 @@ class _ListState extends State<_List> {
                     ),
                   ),
                   ConstrainedBox(
-                    constraints: const BoxConstraints(minHeight: Layout.minTouch),
+                    constraints: const BoxConstraints(
+                      minHeight: Layout.minTouch,
+                    ),
                     child: FilterChip(
                       selected: _onlyExpiring,
                       showCheckmark: false,
@@ -266,6 +274,57 @@ class _ListState extends State<_List> {
   }
 }
 
+/// Name + phone of a public booking, with the one-tap actions the front desk
+/// needs: call or WhatsApp the customer without copying the number.
+class _ContactLine extends StatelessWidget {
+  const _ContactLine({required this.reservation});
+
+  final Reservation reservation;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final phone = reservation.customerPhone?.trim();
+    final hasPhone = phone != null && phone.isNotEmpty;
+    return Row(
+      children: [
+        Icon(Icons.person_outline, size: 16, color: scheme.onSurfaceVariant),
+        const SizedBox(width: Space.xs),
+        Expanded(
+          child: Text(
+            reservation.contactLine ?? '',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+        if (hasPhone) ...[
+          IconButton(
+            tooltip: l10n.reservationCall,
+            icon: const Icon(Icons.call_outlined),
+            onPressed: () => openDialer(phone),
+          ),
+          IconButton(
+            tooltip: l10n.reservationWhatsApp,
+            icon: const Icon(Icons.chat_outlined),
+            onPressed: () => openWhatsapp(
+              context,
+              whatsappUrl(
+                phone,
+                text: l10n.reservationWhatsAppMessage(reservation.plate),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
 class _ReservationTile extends StatelessWidget {
   const _ReservationTile({required this.reservation, required this.onCheckIn});
 
@@ -284,7 +343,12 @@ class _ReservationTile extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(Space.md, Space.xs, Space.md, Space.xs),
       clipBehavior: Clip.antiAlias,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(Space.md, Space.sm, Space.sm, Space.sm),
+        padding: const EdgeInsets.fromLTRB(
+          Space.md,
+          Space.sm,
+          Space.sm,
+          Space.sm,
+        ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -292,7 +356,9 @@ class _ReservationTile extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: soon ? scheme.tertiaryContainer : scheme.primaryContainer,
+                color: soon
+                    ? scheme.tertiaryContainer
+                    : scheme.primaryContainer,
                 borderRadius: BorderRadius.circular(Radii.sm),
               ),
               child: Icon(
@@ -310,6 +376,15 @@ class _ReservationTile extends StatelessWidget {
                   Row(
                     children: [
                       Expanded(child: PlateText(reservation.plate)),
+                      if (reservation.isPublic) ...[
+                        StatusChip(
+                          key: const Key('reservation_public'),
+                          label: l10n.reservationWeb,
+                          tone: StatusTone.success,
+                          icon: Icons.public,
+                        ),
+                        const SizedBox(width: Space.xs),
+                      ],
                       if (reservation.categoryName.isNotEmpty)
                         StatusChip(
                           label: reservation.categoryName,
@@ -326,6 +401,10 @@ class _ReservationTile extends StatelessWidget {
                       color: scheme.onSurfaceVariant,
                     ),
                   ),
+                  if (reservation.hasContact) ...[
+                    const SizedBox(height: Space.xs),
+                    _ContactLine(reservation: reservation),
+                  ],
                   if (notes != null && notes.isNotEmpty) ...[
                     const SizedBox(height: 2),
                     Text(

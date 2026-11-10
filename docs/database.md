@@ -142,7 +142,9 @@ plate, two per phone, shared capacity check) and
 (shared by the operator and public paths). `category_reservations` also stores
 `customer_name`, `customer_phone` and `source` (`app`/`public`); the constraint
 `category_reservations_public_contact_check` keeps public rows from existing
-without a name and a 10-digit mobile.
+without a name and a 10-digit mobile. A public hold also inserts a
+`public_reservation` notification for the lot's active admins
+(`user_id`, `lot_id`, `data.reservation_id`), deduplicated per reservation.
 
 **Records**
 `session_records(plate, limit, offset, from, to)`: lot-scoped session log

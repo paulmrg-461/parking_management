@@ -10,9 +10,9 @@ Last updated: 2026-11-09 (public booking page, owner search).
 
 - Stack: Flutter (android + web) + self-hosted Supabase only. No FastAPI,
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
-- `supabase/migrations/0001..0088` are the schema owner (applied by
+- `supabase/migrations/0001..0089` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 1105 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 1112 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -358,7 +358,7 @@ Last updated: 2026-11-09 (public booking page, owner search).
 - Follow-up: a vehicle with no open session offers "Registrar entrada" from
   its history (`/check-in?plate=`, `onCheckIn` injectable); a vehicle already
   inside keeps the charge action. Fixing the sample fixture's `openSessions`
-  exposed the guard in tests. Test count: 1105.
+  exposed the guard in tests. Test count: 1112.
 
 ### Public booking page (2026-11-09)
 
@@ -402,7 +402,16 @@ Last updated: 2026-11-09 (public booking page, owner search).
   name + `^3[0-9]{9}$`), so a direct insert cannot bypass it. The Flutter rule
   lives in `features/public_booking/domain/phone_rules.dart`
   (`normalizeMobilePhone`, shared by the form validator and the submit).
-- Test count: 1105; schema `0001..0088`.
+- `0089_public_booking_notification.sql`: a public hold inserts a
+  `public_reservation` notification for the lot's active admins (dedupe
+  `public_reservation:<id>:user:<uid>`), body with the customer, category and
+  expiry in the lot timezone. Flutter maps the type to "Reserva web" with an
+  event icon and routes the tap to `/reservations`; it is also in the inbox
+  filter.
+- The reservations board shows `customer_name`/`customer_phone`/`source` (a
+  "Web" badge) with call/WhatsApp actions, and its search matches plate, name
+  or phone. `openDialer` lives in `core/utils/dialer.dart`.
+- Test count: 1112; schema `0001..0089`.
 
 ## Owner contact data (2026-11-05)
 

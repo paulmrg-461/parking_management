@@ -22,7 +22,10 @@ void main() {
 
     expect(hold.expiresSoon(now: now), isFalse);
     // The window is configurable for callers with a tighter policy.
-    expect(hold.expiresSoon(now: now, window: const Duration(hours: 6)), isTrue);
+    expect(
+      hold.expiresSoon(now: now, window: const Duration(hours: 6)),
+      isTrue,
+    );
   });
 
   test('Security: an expired hold is never reported as expiring soon', () {
@@ -30,6 +33,38 @@ void main() {
 
     expect(hold.isExpiredAt(now), isTrue);
     expect(hold.expiresSoon(now: now), isFalse);
+  });
+
+  test('Success: a public booking exposes the customer contact', () {
+    final hold = Reservation.fromJson({
+      'id': 9,
+      'plate': 'WEB123',
+      'category_id': 2,
+      'reserved_until': '2026-11-09T20:00:00Z',
+      'status': 'active',
+      'customer_name': ' Ana Perez ',
+      'customer_phone': '3009998877',
+      'source': 'public',
+      'categories': {'name': 'car'},
+    });
+
+    expect(hold.isPublic, isTrue);
+    expect(hold.hasContact, isTrue);
+    expect(hold.customerName, ' Ana Perez ');
+    expect(hold.contactLine, 'Ana Perez · 3009998877');
+  });
+
+  test('Failure: an operator hold has no contact line', () {
+    final hold = Reservation.fromJson({
+      'id': 10,
+      'plate': 'ABC123',
+      'category_id': 2,
+      'reserved_until': '2026-11-09T20:00:00Z',
+    });
+
+    expect(hold.isPublic, isFalse);
+    expect(hold.hasContact, isFalse);
+    expect(hold.contactLine, isNull);
   });
 
   test('Success: sorting lists the soonest expiry first without mutating', () {

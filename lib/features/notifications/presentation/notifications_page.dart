@@ -67,6 +67,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                   ('monthly_pass', context.l10n.notifTypePassExpiring),
                   ('overstay', context.l10n.notifTypeOverstay),
                   ('shift_closed', context.l10n.notifTypeShiftClosed),
+                  ('public_reservation', context.l10n.notifTypeReservation),
                 ])
                   PopupMenuItem(value: entry.$1, child: Text(entry.$2)),
               ],
@@ -440,11 +441,15 @@ class _NotificationTile extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     return Material(
-      color: unread ? scheme.primaryContainer.withValues(alpha: 0.35) : scheme.surface,
+      color: unread
+          ? scheme.primaryContainer.withValues(alpha: 0.35)
+          : scheme.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(Radii.md),
         side: BorderSide(
-          color: unread ? scheme.primary.withValues(alpha: 0.4) : scheme.outlineVariant,
+          color: unread
+              ? scheme.primary.withValues(alpha: 0.4)
+              : scheme.outlineVariant,
         ),
       ),
       clipBehavior: Clip.antiAlias,
@@ -510,6 +515,7 @@ class _NotificationTile extends StatelessWidget {
         'monthly_pass_renewed' => l10n.notifTypePassRenewed,
         'overstay' => l10n.notifTypeOverstay,
         'shift_closed' => l10n.notifTypeShiftClosed,
+        'public_reservation' => l10n.notifTypeReservation,
         _ => l10n.notifTypeGeneric,
       };
 
@@ -520,6 +526,7 @@ class _NotificationTile extends StatelessWidget {
     'monthly_pass_renewed' => Icons.autorenew,
     'overstay' => Icons.timer_outlined,
     'shift_closed' => Icons.point_of_sale,
+    'public_reservation' => Icons.event_available_outlined,
     _ => Icons.notifications,
   };
 }

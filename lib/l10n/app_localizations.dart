@@ -5453,8 +5453,32 @@ abstract class AppLocalizations {
   /// No description provided for @reservationsSearchHint.
   ///
   /// In es, this message translates to:
-  /// **'Placa'**
+  /// **'Placa, nombre o celular'**
   String get reservationsSearchHint;
+
+  /// No description provided for @reservationWeb.
+  ///
+  /// In es, this message translates to:
+  /// **'Web'**
+  String get reservationWeb;
+
+  /// No description provided for @reservationCall.
+  ///
+  /// In es, this message translates to:
+  /// **'Llamar al cliente'**
+  String get reservationCall;
+
+  /// No description provided for @reservationWhatsApp.
+  ///
+  /// In es, this message translates to:
+  /// **'WhatsApp al cliente'**
+  String get reservationWhatsApp;
+
+  /// No description provided for @reservationWhatsAppMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'Hola, te escribimos por tu reserva de la placa {plate}.'**
+  String reservationWhatsAppMessage(String plate);
 
   /// No description provided for @reservationsOnlyExpiring.
   ///
@@ -5629,6 +5653,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Estadía larga'**
   String get notifTypeOverstay;
+
+  /// No description provided for @notifTypeReservation.
+  ///
+  /// In es, this message translates to:
+  /// **'Reserva web'**
+  String get notifTypeReservation;
 
   /// No description provided for @notifTypeShiftClosed.
   ///

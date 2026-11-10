@@ -12,6 +12,9 @@ class Reservation extends Equatable {
     this.categoryName = '',
     this.status = 'active',
     this.notes,
+    this.customerName,
+    this.customerPhone,
+    this.source = 'app',
   });
 
   final int id;
@@ -21,6 +24,34 @@ class Reservation extends Equatable {
   final DateTime reservedUntil;
   final String status;
   final String? notes;
+
+  /// Whoever booked from the public page (null for an operator hold).
+  final String? customerName;
+  final String? customerPhone;
+
+  /// `app` (front desk) or `public` (the customer booked it themselves).
+  final String source;
+
+  bool get isPublic => source == 'public';
+
+  String? get _phone => switch (customerPhone?.trim()) {
+    final phone? when phone.isNotEmpty => phone,
+    _ => null,
+  };
+
+  bool get hasContact =>
+      _phone != null || (customerName?.trim().isNotEmpty ?? false);
+
+  /// Name and phone on one line for the list (`null` when there is neither).
+  String? get contactLine {
+    final name = customerName?.trim();
+    final phone = _phone;
+    final parts = [
+      if (name != null && name.isNotEmpty) name,
+      ?phone,
+    ];
+    return parts.isEmpty ? null : parts.join(' · ');
+  }
 
   /// Holds that lapse within this window are flagged on the list.
   static const expiringWindow = Duration(hours: 2);
@@ -51,12 +82,25 @@ class Reservation extends Equatable {
       reservedUntil: DateTime.parse(json['reserved_until'] as String),
       status: json['status'] as String? ?? 'active',
       notes: json['notes'] as String?,
+      customerName: json['customer_name'] as String?,
+      customerPhone: json['customer_phone'] as String?,
+      source: json['source'] as String? ?? 'app',
     );
   }
 
   @override
-  List<Object?> get props =>
-      [id, plate, categoryId, categoryName, reservedUntil, status, notes];
+  List<Object?> get props => [
+    id,
+    plate,
+    categoryId,
+    categoryName,
+    reservedUntil,
+    status,
+    notes,
+    customerName,
+    customerPhone,
+    source,
+  ];
 }
 
 /// Soonest expiry first, so the holds about to lapse are seen at the top.

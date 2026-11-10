@@ -65,6 +65,9 @@ Reservation sampleReservation({
   String categoryName = 'car',
   String? notes,
   DateTime? reservedUntil,
+  String? customerName,
+  String? customerPhone,
+  String source = 'app',
 }) => Reservation(
   id: id,
   plate: plate,
@@ -72,4 +75,7 @@ Reservation sampleReservation({
   categoryName: categoryName,
   reservedUntil: reservedUntil ?? DateTime.now().add(const Duration(hours: 2)),
   notes: notes,
+  customerName: customerName,
+  customerPhone: customerPhone,
+  source: source,
 );

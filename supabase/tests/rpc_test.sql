@@ -3389,4 +3389,58 @@ begin
     end;
 end $$;
 
+-- The admins who run the lot hear about the booking.
+do $$
+begin
+    if not exists (
+        select 1
+          from public.notifications n
+          join public.lot_members lm on lm.user_id = n.user_id and lm.lot_id = 1
+          join public.users u on u.id = n.user_id
+         where n.type = 'public_reservation'
+           and n.lot_id = 1
+           and n.data ->> 'plate' = 'PUB001'
+           and u.role = 'admin'
+           and u.is_active
+    ) then
+        raise exception 'the public booking did not notify the lot admins';
+    end if;
+    if (
+        select count(*)
+          from public.notifications n
+         where n.type = 'public_reservation'
+           and n.data ->> 'plate' = 'PUB001'
+    ) <> 1 then
+        raise exception 'the public booking notified someone twice';
+    end if;
+end $$;
+
+-- The front desk sees who booked, and only its own lot's holds.
+set local role authenticated;
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    contact text;
+begin
+    select customer_name || '|' || customer_phone || '|' || source
+      into contact
+      from public.category_reservations
+     where plate = 'PUB002';
+    if contact is distinct from 'Ana|3001112233|public' then
+        raise exception 'the front desk cannot see the public booking contact: %', contact;
+    end if;
+end $$;
+
+set local request.headers = '{"x-lot-id":"2"}';
+do $$
+begin
+    if exists (
+        select 1 from public.category_reservations where plate = 'PUB002'
+    ) then
+        raise exception 'a reservation leaked to another lot';
+    end if;
+end $$;
+reset role;
+
 rollback;
