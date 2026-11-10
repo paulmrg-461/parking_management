@@ -3543,4 +3543,66 @@ begin
 end $$;
 reset role;
 
+-- Grace window: a customer who is a few minutes late keeps the slot, and
+-- check-in turns that hold into an occupied one.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    cat integer;
+    available_now integer;
+begin
+    delete from public.parking_spots where lot_id = 1;
+    update public.parking_settings
+       set car_capacity = 0, moto_capacity = 0, key_capacity = 0
+     where lot_id = 1;
+    insert into public.categories (name, capacity, lot_id)
+    values ('grace-car', 3, 1)
+    returning id into cat;
+    perform set_config('app.grace_cat', cat::text, true);
+
+    insert into public.category_reservations (
+        plate, category_id, reserved_from, reserved_until, lot_id, status, source
+    )
+    values (
+        'LATE01', cat, now() - interval '2 hours', now() - interval '5 minutes',
+        1, 'active', 'app'
+    );
+    insert into public.category_reservations (
+        plate, category_id, reserved_from, reserved_until, lot_id, status, source
+    )
+    values (
+        'GONE01', cat, now() - interval '3 hours', now() - interval '20 minutes',
+        1, 'active', 'app'
+    );
+
+    select (item ->> 'available')::integer into available_now
+      from jsonb_array_elements(public.public_availability(1) -> 'categories') item
+     where (item ->> 'id')::integer = cat;
+    if available_now <> 2 then
+        raise exception 'the grace window did not count the late hold: %', available_now;
+    end if;
+end $$;
+
+do $$
+declare
+    cat integer := current_setting('app.grace_cat')::integer;
+    session_json jsonb;
+begin
+    session_json := public.check_in('LATE01', cat, null, null, '[]'::jsonb, null, null);
+    if session_json ->> 'plate' <> 'LATE01' then
+        raise exception 'a late customer could not check in: %', session_json;
+    end if;
+    if (
+        select status from public.category_reservations where plate = 'LATE01'
+    ) <> 'used' then
+        raise exception 'check-in did not consume the late hold';
+    end if;
+    if (
+        select status from public.category_reservations where plate = 'GONE01'
+    ) <> 'active' then
+        raise exception 'check-in touched a hold outside the grace window';
+    end if;
+end $$;
+
 rollback;

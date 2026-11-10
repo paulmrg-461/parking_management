@@ -53,9 +53,20 @@ class Reservation extends Equatable {
   /// Holds that lapse within this window are flagged on the list.
   static const expiringWindow = Duration(hours: 2);
 
+  /// Mirrors `reservation_grace()` in SQL: after `reserved_until` the hold
+  /// still counts for capacity (and check-in consumes it) for this long, so a
+  /// customer a few minutes late does not lose the space.
+  static const graceWindow = Duration(minutes: 15);
+
   bool get isExpired => isExpiredAt(DateTime.now());
 
   bool isExpiredAt(DateTime now) => !reservedUntil.isAfter(now);
+
+  /// Past its time but still inside the grace window.
+  bool get inGrace => inGraceAt(DateTime.now());
+
+  bool inGraceAt(DateTime now) =>
+      isExpiredAt(now) && now.isBefore(reservedUntil.add(graceWindow));
 
   /// About to lapse (but still holding capacity). Expired holds are not
   /// "soon": they are already gone.

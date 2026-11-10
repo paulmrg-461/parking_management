@@ -233,6 +233,7 @@
   "reservationCancelled": "Reservation cancelled",
   "reservationsEmpty": "No active reservations",
   "reservationExpiresIn": "Expires in {duration}",
+  "reservationInGrace": "Grace period",
   "@reservationExpiresIn": {"placeholders": {"duration": {"type": "String"}}},
   "reservationQuick2h": "+2 h",
   "reservationQuick4h": "+4 h",

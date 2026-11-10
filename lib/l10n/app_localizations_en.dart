@@ -740,6 +740,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get reservationInGrace => 'Grace period';
+
+  @override
   String get reservationQuick2h => '+2 h';
 
   @override

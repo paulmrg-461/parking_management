@@ -165,6 +165,12 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   next to the phone and WhatsApp actions, and the availability re-reads itself
   every minute without flashing the skeleton, so a customer deciding on the
   page never reads stale numbers.
+- **Grace window for late customers**: `reservation_grace()` (15 minutes) is
+  honoured by the shared capacity check, `public_availability` and `check_in`,
+  so a customer who arrives a few minutes late still has the space: the hold
+  keeps counting until the window ends and check-in turns it into `used`
+  instead of leaving a stale row. The board keeps those holds visible with an
+  "En tolerancia" chip.
 - **The reservation code reaches reception**: each card on the reservations
   board shows the code the customer was given (`#7 · Hasta 20:35`) and the
   search matches it, so the front desk can act on the number printed on the

@@ -243,6 +243,7 @@
   "reservationCancelled": "Reserva cancelada",
   "reservationsEmpty": "No hay reservas activas",
   "reservationExpiresIn": "Vence en {duration}",
+  "reservationInGrace": "En tolerancia",
   "@reservationExpiresIn": {"placeholders": {"duration": {"type": "String"}}},
   "reservationQuick2h": "+2 h",
   "reservationQuick4h": "+4 h",

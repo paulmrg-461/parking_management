@@ -247,6 +247,22 @@ void main() {
     expect(find.byTooltip('WhatsApp al cliente'), findsNothing);
   });
 
+  testWidgets('Success: a late hold is flagged as in grace', (tester) async {
+    await pumpPage(
+      tester,
+      reservations: [
+        sampleReservation(
+          id: 3,
+          plate: 'LATE01',
+          reservedUntil: DateTime.now().subtract(const Duration(minutes: 5)),
+        ),
+      ],
+    );
+
+    expect(find.byKey(const Key('reservation_in_grace')), findsOneWidget);
+    expect(find.text('En tolerancia'), findsOneWidget);
+  });
+
   testWidgets('Success: the card shows the code the customer was given', (
     tester,
   ) async {

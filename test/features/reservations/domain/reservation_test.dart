@@ -67,6 +67,22 @@ void main() {
     expect(hold.contactLine, isNull);
   });
 
+  test('Success: a hold just past its time is still in grace', () {
+    final late = _reservation(now.subtract(const Duration(minutes: 5)));
+
+    expect(late.isExpiredAt(now), isTrue);
+    expect(late.inGraceAt(now), isTrue);
+    expect(late.expiresSoon(now: now), isFalse);
+  });
+
+  test('Failure: past the grace window the hold is gone', () {
+    final gone = _reservation(
+      now.subtract(Reservation.graceWindow + const Duration(minutes: 1)),
+    );
+
+    expect(gone.inGraceAt(now), isFalse);
+  });
+
   test('Success: sorting lists the soonest expiry first without mutating', () {
     final late = _reservation(now.add(const Duration(hours: 6)), id: 2);
     final soon = _reservation(now.add(const Duration(minutes: 10)), id: 1);

@@ -34,7 +34,14 @@ class SupabaseReservationRemoteDataSource
             'customer_name, customer_phone, source, categories(name)',
           )
           .eq('status', 'active')
-          .gt('reserved_until', DateTime.now().toUtc().toIso8601String())
+          // Include the grace window: those holds still block a slot.
+          .gt(
+            'reserved_until',
+            DateTime.now()
+                .toUtc()
+                .subtract(Reservation.graceWindow)
+                .toIso8601String(),
+          )
           .order('reserved_until');
       return [for (final row in rows) Reservation.fromJson(row)];
     } catch (error) {

@@ -143,7 +143,9 @@ plate, two per phone, shared capacity check) and
 public holds, all three values must match, sets `status = 'cancelled'`) and
 `public_reservation_lookup(lot, reservation_id, phone)` (anon: the active
 public hold for that code + mobile, or `null`)
-(shared by the operator and public paths). `category_reservations` also stores
+(shared by the operator and public paths; holds count until
+`reserved_until + reservation_grace()`, 15 minutes, so a late customer keeps
+the space). `category_reservations` also stores
 `customer_name`, `customer_phone` and `source` (`app`/`public`); the constraint
 `category_reservations_public_contact_check` keeps public rows from existing
 without a name and a 10-digit mobile. A public hold also inserts a

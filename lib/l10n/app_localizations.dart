@@ -1382,6 +1382,12 @@ abstract class AppLocalizations {
   /// **'Vence en {duration}'**
   String reservationExpiresIn(String duration);
 
+  /// No description provided for @reservationInGrace.
+  ///
+  /// In es, this message translates to:
+  /// **'En tolerancia'**
+  String get reservationInGrace;
+
   /// No description provided for @reservationQuick2h.
   ///
   /// In es, this message translates to:

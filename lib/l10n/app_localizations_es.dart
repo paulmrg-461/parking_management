@@ -747,6 +747,9 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get reservationInGrace => 'En tolerancia';
+
+  @override
   String get reservationQuick2h => '+2 h';
 
   @override

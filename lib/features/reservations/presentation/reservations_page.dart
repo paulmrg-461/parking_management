@@ -361,6 +361,7 @@ class _ReservationTile extends StatelessWidget {
     final scheme = theme.colorScheme;
     final now = DateTime.now();
     final soon = reservation.expiresSoon(now: now);
+    final inGrace = reservation.inGraceAt(now);
     final notes = reservation.notes;
     return Card(
       margin: const EdgeInsets.fromLTRB(Space.md, Space.xs, Space.md, Space.xs),
@@ -438,7 +439,15 @@ class _ReservationTile extends StatelessWidget {
                       style: theme.textTheme.bodySmall,
                     ),
                   ],
-                  if (soon) ...[
+                  if (inGrace) ...[
+                    const SizedBox(height: Space.xs),
+                    StatusChip(
+                      key: const Key('reservation_in_grace'),
+                      label: l10n.reservationInGrace,
+                      tone: StatusTone.warning,
+                      icon: Icons.hourglass_bottom,
+                    ),
+                  ] else if (soon) ...[
                     const SizedBox(height: Space.xs),
                     StatusChip(
                       label: l10n.reservationExpiresIn(
