@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
   <!--
     If you are serving your web app in a path other than the root, change the
@@ -18,20 +18,33 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="Parking lot operations: check-in, billing, monthly passes and cash shifts.">
+  <meta name="description" content="Reserva tu espacio en el parqueadero: disponibilidad y precio por tipo de vehículo en tiempo real. Operación: entrada, cobro, mensualidades y turnos de caja.">
   <meta name="theme-color" content="#0B0D10">
+  <!-- Link previews (WhatsApp, Telegram, X). Replace the absolute URLs with
+       your domain when the site moves behind HTTPS. -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Parqueadero DevPaul">
+  <meta property="og:title" content="Parqueadero DevPaul · Reserva tu espacio">
+  <meta property="og:description" content="Mira la disponibilidad real por tipo de vehículo, el precio por hora y reserva en segundos.">
+  <meta property="og:url" content="http://192.168.0.17:8080/reserve">
+  <meta property="og:image" content="http://192.168.0.17:8080/icons/Icon-512.png">
+  <meta property="og:locale" content="es_CO">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Parqueadero DevPaul · Reserva tu espacio">
+  <meta name="twitter:description" content="Disponibilidad real, precio por hora y reserva en segundos.">
+  <meta name="twitter:image" content="http://192.168.0.17:8080/icons/Icon-512.png">
   <meta name="color-scheme" content="dark light">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="Parking Management">
+  <meta name="apple-mobile-web-app-title" content="Parqueadero DevPaul">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>Parking Management</title>
+  <title>Parqueadero DevPaul · Reserva tu espacio</title>
   <link rel="manifest" href="manifest.json">
 
   <style>
@@ -54,7 +67,7 @@
   <!-- Branded first paint: Flutter removes it on its first frame. -->
   <div id="splash">
     <img src="icons/Icon-192.png" alt="">
-    <p>Parking Management</p>
+    <p>Parqueadero DevPaul</p>
   </div>
   <script>
     window.addEventListener('flutter-first-frame', function () {

@@ -165,6 +165,10 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   next to the phone and WhatsApp actions, and the availability re-reads itself
   every minute without flashing the skeleton, so a customer deciding on the
   page never reads stale numbers.
+- **The lot's cancellation reaches the customer**: when an operator cancels a
+  web hold, `cancel_reservation` queues a `reservation_cancelled` WhatsApp
+  (name, plate, lot) if automated messaging is on, so nobody travels for a
+  space that is gone. Operator holds are untouched (no phone was collected).
 - **Cover photo for the public page**: Ajustes has "Portada de la página
   pública" (wide image, `branding/cover_<lot>`, lot-admin RPC
   `set_branding_cover`); `/reserve` shows it as a 16:9 banner above the lot

@@ -137,6 +137,10 @@ plate is the key).
 logo and the wide cover of the public page; `public_availability` ships
 `logo_path` and `cover_path` to the anonymous page (public `branding` bucket).
 
+**Reservation notices**
+`cancel_reservation(id)` (operator) marks the hold cancelled and, for a public
+hold with a phone and automated WhatsApp, queues `reservation_cancelled`.
+
 **Reservation reminders**
 `notify_expiring_reservations(window)` queues a `reservation_reminder`
 WhatsApp for public holds ending inside the window (default 60 min) when the

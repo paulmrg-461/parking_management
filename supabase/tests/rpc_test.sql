@@ -3885,4 +3885,51 @@ begin
     end;
 end $$;
 
+-- Cancelling a web hold tells the customer; an operator hold has no phone.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    cat integer;
+    web_id bigint;
+    app_id bigint;
+begin
+    update public.parking_settings set whatsapp_auto = true where lot_id = 1;
+    insert into public.categories (name, capacity, lot_id)
+    values ('cancel-car', 5, 1)
+    returning id into cat;
+
+    insert into public.category_reservations (
+        plate, category_id, reserved_from, reserved_until, lot_id, status,
+        source, customer_name, customer_phone
+    )
+    values ('CAN-WEB', cat, now(), now() + interval '2 hours', 1, 'active',
+            'public', 'Ana', '3007778899')
+    returning id into web_id;
+    insert into public.category_reservations (
+        plate, category_id, reserved_from, reserved_until, lot_id, status, source
+    )
+    values ('CAN-APP', cat, now(), now() + interval '2 hours', 1, 'active', 'app')
+    returning id into app_id;
+
+    perform public.cancel_reservation(web_id);
+    perform public.cancel_reservation(app_id);
+
+    if not exists (
+        select 1 from public.whatsapp_messages
+         where to_phone = '3007778899'
+           and template = 'reservation_cancelled'
+           and jsonb_array_length(params) = 3
+    ) then
+        raise exception 'the customer was not told about the cancellation';
+    end if;
+    if (
+        select count(*) from public.whatsapp_messages
+         where template = 'reservation_cancelled'
+    ) <> 1 then
+        raise exception 'an operator hold tried to message a customer';
+    end if;
+    update public.parking_settings set whatsapp_auto = false where lot_id = 1;
+end $$;
+
 rollback;
