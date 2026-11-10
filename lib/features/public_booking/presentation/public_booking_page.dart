@@ -21,6 +21,7 @@ import '../../../core/widgets/status_chip.dart';
 import '../../settings/domain/whatsapp_url.dart';
 import '../application/public_booking_cubit.dart';
 import '../domain/entities/public_booking.dart';
+import '../domain/phone_rules.dart';
 
 /// Public, mobile-first customer page: the site's real availability and a
 /// direct reservation, no account needed.
@@ -65,13 +66,12 @@ class _PublicBookingPageState extends State<PublicBookingPage> {
     if (!valid || _categoryId == null) {
       return;
     }
-    final name = _name.text.trim();
     await context.read<PublicBookingCubit>().submit(
       plate: _plate.text.trim().toUpperCase(),
       categoryId: _categoryId!,
       hours: _hours,
-      phone: _phone.text.trim(),
-      name: name.isEmpty ? null : name,
+      phone: normalizeMobilePhone(_phone.text) ?? _phone.text.trim(),
+      name: _name.text.trim(),
     );
   }
 
@@ -512,18 +512,15 @@ class _FormCard extends StatelessWidget {
                 keyboardType: TextInputType.phone,
                 inputFormatters: [
                   FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(15),
+                  LengthLimitingTextInputFormatter(12),
                 ],
                 decoration: InputDecoration(
                   labelText: l10n.bookingPhone,
                   hintText: l10n.bookingPhoneHint,
                 ),
-                validator: (value) {
-                  final digits = (value ?? '').replaceAll(RegExp(r'\D'), '');
-                  return digits.length < 7 || digits.length > 15
-                      ? l10n.bookingErrorPhone
-                      : null;
-                },
+                validator: (value) => normalizeMobilePhone(value ?? '') == null
+                    ? l10n.bookingErrorPhone
+                    : null,
               ),
               const SizedBox(height: Space.sm),
               TextFormField(
@@ -534,6 +531,8 @@ class _FormCard extends StatelessWidget {
                   labelText: l10n.bookingName,
                   counterText: '',
                 ),
+                validator: (value) =>
+                    (value ?? '').trim().isEmpty ? l10n.bookingErrorName : null,
               ),
               const SizedBox(height: Space.xs),
               Text(
@@ -852,6 +851,7 @@ String _errorText(AppLocalizations l10n, Failure? failure) {
     'VehicleAlreadyInsideError' => l10n.bookingErrorInside,
     'InvalidReservationWindowError' => l10n.bookingErrorWindow,
     'InvalidPhoneError' => l10n.bookingErrorPhone,
+    'InvalidNameError' => l10n.bookingErrorName,
     'InvalidPlateError' => l10n.bookingErrorPlate,
     'LotNotFoundError' => l10n.bookingErrorLot,
     _ => l10n.failure(failure),

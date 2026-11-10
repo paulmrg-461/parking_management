@@ -34,7 +34,7 @@ class FakePublicBookingRepository implements PublicBookingRepository {
     required int categoryId,
     required DateTime until,
     required String phone,
-    String? name,
+    required String name,
   }) async {
     reserveCalls++;
     lastLotId = lotId;

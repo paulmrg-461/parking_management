@@ -77,6 +77,7 @@ void main() {
         categoryId: 2,
         hours: 2,
         phone: '3001112233',
+        name: 'Ana',
       );
 
       expect(cubit.state.reservation, isNull);
@@ -95,6 +96,7 @@ void main() {
       categoryId: 2,
       hours: 1,
       phone: '3001112233',
+      name: 'Ana',
     );
 
     cubit.reset();

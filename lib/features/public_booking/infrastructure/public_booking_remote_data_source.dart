@@ -12,7 +12,7 @@ abstract class PublicBookingRemoteDataSource {
     required int categoryId,
     required DateTime until,
     required String phone,
-    String? name,
+    required String name,
   });
 }
 
@@ -53,7 +53,7 @@ class SupabasePublicBookingRemoteDataSource
     required int categoryId,
     required DateTime until,
     required String phone,
-    String? name,
+    required String name,
   }) async {
     try {
       final result = await _client.rpc(
@@ -63,7 +63,7 @@ class SupabasePublicBookingRemoteDataSource
           'p_plate': plate,
           'p_category_id': categoryId,
           'p_until': until.toUtc().toIso8601String(),
-          'p_customer_name': ?name,
+          'p_customer_name': name,
           'p_customer_phone': phone,
         },
       );

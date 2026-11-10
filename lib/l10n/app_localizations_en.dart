@@ -159,13 +159,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookingFormTitle => 'Your details';
 
   @override
-  String get bookingPhone => 'Phone';
+  String get bookingPhone => 'Mobile phone';
 
   @override
   String get bookingPhoneHint => '300 000 0000';
 
   @override
-  String get bookingName => 'Name (optional)';
+  String get bookingName => 'Name';
 
   @override
   String get bookingDuration => 'How long do you need it?';
@@ -250,7 +250,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookingErrorWindow => 'The reservation time is not valid.';
 
   @override
-  String get bookingErrorPhone => 'Enter a valid phone (7 to 15 digits).';
+  String get bookingErrorPhone =>
+      'Enter a valid 10-digit mobile number (starts with 3).';
+
+  @override
+  String get bookingErrorName => 'Enter your name.';
 
   @override
   String get bookingErrorPlate => 'Enter a valid plate.';

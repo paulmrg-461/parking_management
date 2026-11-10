@@ -22,6 +22,7 @@ const _domainCodes = {
   'InvalidBillingPeriodError',
   'InvalidEntryTimeError',
   'InvalidExitTimeError',
+  'InvalidNameError',
   'InvalidReportRangeError',
   'InvalidTokenError',
   'LostTicketPassMethodError',

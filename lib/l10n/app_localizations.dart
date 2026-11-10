@@ -365,7 +365,7 @@ abstract class AppLocalizations {
   /// No description provided for @bookingPhone.
   ///
   /// In es, this message translates to:
-  /// **'Teléfono'**
+  /// **'Celular'**
   String get bookingPhone;
 
   /// No description provided for @bookingPhoneHint.
@@ -377,7 +377,7 @@ abstract class AppLocalizations {
   /// No description provided for @bookingName.
   ///
   /// In es, this message translates to:
-  /// **'Nombre (opcional)'**
+  /// **'Nombre'**
   String get bookingName;
 
   /// No description provided for @bookingDuration.
@@ -527,8 +527,14 @@ abstract class AppLocalizations {
   /// No description provided for @bookingErrorPhone.
   ///
   /// In es, this message translates to:
-  /// **'Ingresa un teléfono válido (7 a 15 dígitos).'**
+  /// **'Ingresa un celular válido de 10 dígitos (empieza por 3).'**
   String get bookingErrorPhone;
+
+  /// No description provided for @bookingErrorName.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresa tu nombre.'**
+  String get bookingErrorName;
 
   /// No description provided for @bookingErrorPlate.
   ///

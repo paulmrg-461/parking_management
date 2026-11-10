@@ -3263,10 +3263,35 @@ begin
         raise exception 'public reservation was not created: %', first;
     end if;
 
+    -- The country code is optional and never stored.
     perform public.public_create_reservation(
         1, 'PUB002', current_setting('app.public_cat')::integer,
-        now() + interval '2 hours', 'Ana', '3001112233'
+        now() + interval '2 hours', 'Ana', '+57 300 111 2233'
     );
+
+    begin
+        perform public.public_create_reservation(
+            1, 'PUBNAME', current_setting('app.public_cat')::integer,
+            now() + interval '2 hours', '   ', '3005556677'
+        );
+        raise exception 'a reservation without a name was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidNameError%' then
+            raise;
+        end if;
+    end;
+
+    begin
+        perform public.public_create_reservation(
+            1, 'PUBLAND', current_setting('app.public_cat')::integer,
+            now() + interval '2 hours', 'Ana', '6011234567'
+        );
+        raise exception 'a landline was accepted as a mobile';
+    exception when others then
+        if sqlerrm not like '%InvalidPhoneError%' then
+            raise;
+        end if;
+    end;
 
     begin
         perform public.public_create_reservation(
@@ -3343,6 +3368,25 @@ begin
     ) <> 2 then
         raise exception 'public reservations were not stamped';
     end if;
+    if (
+        select customer_phone
+          from public.category_reservations
+         where plate = 'PUB002'
+    ) is distinct from '3001112233' then
+        raise exception 'the country code was not stripped from the public phone';
+    end if;
+    begin
+        insert into public.category_reservations (
+            plate, category_id, reserved_until, lot_id, source
+        )
+        values (
+            'PUBBAD', current_setting('app.public_cat')::integer,
+            now() + interval '1 hour', 1, 'public'
+        );
+        raise exception 'a public reservation without contact data was stored';
+    exception when check_violation then
+        null;
+    end;
 end $$;
 
 rollback;

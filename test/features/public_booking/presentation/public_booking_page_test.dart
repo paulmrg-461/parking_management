@@ -60,6 +60,7 @@ void main() {
     // No selected card and the submit still asks for a category.
     await tester.enterText(find.byType(TextField).at(0), 'ABC123');
     await tester.enterText(find.byType(TextField).at(1), '3001112233');
+    await tester.enterText(find.byType(TextField).at(2), 'Ana');
     await tester.tap(find.text('Reservar espacio'));
     await tester.pumpAndSettle();
 
@@ -93,9 +94,10 @@ void main() {
 
     expect(find.text('Ingresa una placa válida.'), findsOneWidget);
     expect(
-      find.text('Ingresa un teléfono válido (7 a 15 dígitos).'),
+      find.text('Ingresa un celular válido de 10 dígitos (empieza por 3).'),
       findsOneWidget,
     );
+    expect(find.text('Ingresa tu nombre.'), findsOneWidget);
   });
 
   testWidgets('Failure: a rejected reservation shows the reason', (
@@ -113,7 +115,10 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).at(0), 'ABC123');
     await tester.enterText(find.byType(TextField).at(1), '3001112233');
+    await tester.enterText(find.byType(TextField).at(2), 'Ana');
     await tester.tap(find.text('Reservar espacio'));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(ListView), const Offset(0, -300));
     await tester.pumpAndSettle();
 
     expect(

@@ -10,9 +10,9 @@ Last updated: 2026-11-09 (public booking page, owner search).
 
 - Stack: Flutter (android + web) + self-hosted Supabase only. No FastAPI,
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
-- `supabase/migrations/0001..0087` are the schema owner (applied by
+- `supabase/migrations/0001..0088` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 1102 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 1105 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -358,7 +358,7 @@ Last updated: 2026-11-09 (public booking page, owner search).
 - Follow-up: a vehicle with no open session offers "Registrar entrada" from
   its history (`/check-in?plate=`, `onCheckIn` injectable); a vehicle already
   inside keeps the charge action. Fixing the sample fixture's `openSessions`
-  exposed the guard in tests. Test count: 1102.
+  exposed the guard in tests. Test count: 1105.
 
 ### Public booking page (2026-11-09)
 
@@ -395,7 +395,14 @@ Last updated: 2026-11-09 (public booking page, owner search).
 - Abuse note: there is no captcha/proof-of-work; the per-plate/phone limits and
   capacity guard are the only controls. Add a captcha at the edge if the page
   is exposed to the open internet.
-- Test count: 1102; schema `0001..0087`.
+- `0088_public_booking_contact.sql` makes the name required and the phone a
+  Colombian mobile (10 digits starting with 3, optional +57, stored as the
+  10-digit local form so the per-phone guard still counts one customer). The
+  check is duplicated in a table constraint (`source = 'public'` rows need
+  name + `^3[0-9]{9}$`), so a direct insert cannot bypass it. The Flutter rule
+  lives in `features/public_booking/domain/phone_rules.dart`
+  (`normalizeMobilePhone`, shared by the form validator and the submit).
+- Test count: 1105; schema `0001..0088`.
 
 ## Owner contact data (2026-11-05)
 

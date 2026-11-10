@@ -18,7 +18,7 @@ class PublicBookingRepositoryImpl implements PublicBookingRepository {
     required int categoryId,
     required DateTime until,
     required String phone,
-    String? name,
+    required String name,
   }) => _remote.reserve(
     lotId: lotId,
     plate: plate,

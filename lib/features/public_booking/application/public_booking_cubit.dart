@@ -112,7 +112,7 @@ class PublicBookingCubit extends ResilientCubit<PublicBookingState> {
     required int categoryId,
     required int hours,
     required String phone,
-    String? name,
+    required String name,
   }) async {
     if (state.submitting) {
       return;

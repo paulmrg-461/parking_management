@@ -135,10 +135,14 @@ plate is the key).
 **Public booking**
 `public_availability(lot_id)` (anon: identity + per-category availability,
 no plates), `public_create_reservation(lot, plate, category, until, name,
-phone)` (anon: 10-min..24-h window, one active hold per plate, two per phone,
-shared capacity check) and `reservation_capacity_check(lot, category, plate)`
+phone)` (anon: name required, phone must be a Colombian mobile — 10 digits
+starting with 3, optional +57 —, 10-min..24-h window, one active hold per
+plate, two per phone, shared capacity check) and
+`reservation_capacity_check(lot, category, plate)`
 (shared by the operator and public paths). `category_reservations` also stores
-`customer_name`, `customer_phone` and `source` (`app`/`public`).
+`customer_name`, `customer_phone` and `source` (`app`/`public`); the constraint
+`category_reservations_public_contact_check` keeps public rows from existing
+without a name and a 10-digit mobile.
 
 **Records**
 `session_records(plate, limit, offset, from, to)`: lot-scoped session log

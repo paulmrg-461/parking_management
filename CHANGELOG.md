@@ -143,12 +143,14 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - **Public booking page**: `/reserve?lot=<id>` is a public, mobile-first page
   served by the self-hosted web host. It shows the lot identity and real
   availability per vehicle category (`public_availability`, anon), lets the
-  customer pick a category and duration (1/2/4/8 h), and creates an anonymous
-  hold with plate, phone and optional name (`public_create_reservation`).
+  customer pick a category and duration (1/2/4/8 h), and creates a hold with
+  plate, **name** and **mobile phone** (`public_create_reservation`).
   The confirmation carries the reservation code, until, lot contact, call and
   WhatsApp actions. Guards: 10-minute minimum / 24-hour maximum window, one
-  active hold per plate, two active public holds per phone, invalid plates and
-  phones rejected, and a full category/group refused. The capacity rules are
+  active hold per plate, two active public holds per phone, invalid plates
+  rejected, the name is required and the phone has to be a Colombian mobile
+  (10 digits starting with 3, optional +57, stored without the country code),
+  and a full category/group is refused. The capacity rules are
   shared with the operator path, and anon cannot read the reservation table.
   The page is linked from the public policy page and the evidence page.
 - **Emergency action**: a red police icon in every app bar (and an entry in the

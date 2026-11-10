@@ -10,6 +10,6 @@ abstract class PublicBookingRepository {
     required int categoryId,
     required DateTime until,
     required String phone,
-    String? name,
+    required String name,
   });
 }
