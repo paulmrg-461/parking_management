@@ -26,6 +26,7 @@ class ParkingSettings extends Equatable {
     this.currency = 'COP',
     this.minAppVersion = '',
     this.policePhone = '',
+    this.version = 0,
   });
 
   final String name;
@@ -84,6 +85,10 @@ class ParkingSettings extends Equatable {
   /// Nearest police quadrant for the emergency action ('' = use 123).
   final String policePhone;
 
+  /// Row version from the server (`0` when unknown); an edit sends it so a
+  /// concurrent change is a conflict, not an overwrite.
+  final int version;
+
   /// The never-configured record (mirrors the backend default).
   static ParkingSettings defaults() => const ParkingSettings();
 
@@ -109,6 +114,7 @@ class ParkingSettings extends Equatable {
     String? currency,
     String? minAppVersion,
     String? policePhone,
+    int? version,
   }) => ParkingSettings(
     name: name ?? this.name,
     address: address ?? this.address,
@@ -132,6 +138,7 @@ class ParkingSettings extends Equatable {
     currency: currency ?? this.currency,
     minAppVersion: minAppVersion ?? this.minAppVersion,
     policePhone: policePhone ?? this.policePhone,
+    version: version ?? this.version,
   );
 
   /// Editable fields (metadata excluded).
@@ -179,5 +186,6 @@ class ParkingSettings extends Equatable {
     currency,
     minAppVersion,
     policePhone,
+    version,
   ];
 }

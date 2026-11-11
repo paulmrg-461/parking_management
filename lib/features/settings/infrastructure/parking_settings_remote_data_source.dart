@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/error/failure.dart';
 import '../../../core/lot/lot_session.dart';
 import '../../../core/network/supabase_error_mapper.dart';
+import '../../../core/network/versioned_write.dart';
 import '../domain/entities/parking_settings.dart';
 import 'models/parking_settings_dto.dart';
 
@@ -12,7 +13,14 @@ abstract class ParkingSettingsRemoteDataSource {
   Future<ParkingSettings> fetch();
 
   /// Updates the settings row of [lotId] (the active lot when `null`).
-  Future<ParkingSettings> patch(Map<String, dynamic> fields, {int? lotId});
+  ///
+  /// [fields] may be a partial row: only those keys are written, so a text
+  /// edit never clobbers a logo someone else uploaded.
+  Future<ParkingSettings> patch(
+    Map<String, dynamic> fields, {
+    int? lotId,
+    int? baseVersion,
+  });
 
   Future<ParkingSettings> uploadLogo(Uint8List bytes);
 
@@ -53,18 +61,20 @@ class SupabaseParkingSettingsRemoteDataSource
   Future<ParkingSettings> patch(
     Map<String, dynamic> fields, {
     int? lotId,
+    int? baseVersion,
   }) async {
     try {
       final lot = lotId ?? _lotId;
       // The header must match the filter: RLS reads `current_lot_id()` from
       // it, so a replay for another site would otherwise update 0 rows.
-      final row = await _client
-          .from(_table)
-          .update(fields)
-          .eq('lot_id', lot)
-          .setHeader('x-lot-id', '$lot')
-          .select()
-          .single();
+      final row = await updateVersioned(
+        _client,
+        _table,
+        payload: fields,
+        match: {'lot_id': lot},
+        baseVersion: baseVersion,
+        lotHeader: lot,
+      );
       return ParkingSettingsDto.fromJson(row).toDomain();
     } catch (error) {
       throw mapSupabaseError(error);

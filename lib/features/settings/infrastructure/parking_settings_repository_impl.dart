@@ -39,10 +39,29 @@ class ParkingSettingsRepositoryImpl implements ParkingSettingsRepository {
 
   @override
   Future<ParkingSettings> save(ParkingSettings settings) async {
+    final cached = await _local.read();
+    final base = cached ?? ParkingSettings.defaults();
+    // Only the fields the operator actually changed are written: a text edit
+    // must not clobber a logo someone else uploaded meanwhile.
+    final fields = _changedFields(base, settings);
+    if (fields.isEmpty) {
+      return base;
+    }
+    final activeLot = _lots.activeLotId;
+    if (cached != null) {
+      await _guardPendingConflict();
+    }
     try {
-      final saved = await _remote.patch(settings.toPayload());
+      final saved = await _remote.patch(
+        fields,
+        lotId: activeLot,
+        baseVersion: base.version > 0 ? base.version : null,
+      );
       await _local.upsert(saved);
       return saved;
+    } on VersionConflictFailure catch (failure) {
+      await _parkConflict(fields, activeLot, cached, failure);
+      rethrow;
     } on NetworkFailure {
       // Optimistic: the form is usable offline and the queue replays later.
       await _local.upsert(settings);
@@ -52,16 +71,71 @@ class ParkingSettingsRepositoryImpl implements ParkingSettingsRepository {
           operation: MutationOperation.update,
           entityId: null,
           // The replay must hit this lot even if the operator switches sites.
-          payloadJson: jsonEncode({
-            ...settings.toPayload(),
-            'lot_id': ?_lots.activeLotId,
-          }),
+          payloadJson: jsonEncode({...fields, 'lot_id': ?activeLot}),
           enqueuedAt: DateTime.now(),
+          baseVersion: base.version > 0 ? base.version : null,
+          baseSnapshotJson: cached == null
+              ? null
+              : jsonEncode(_snapshot(cached)),
         ),
       );
       return settings;
     }
   }
+
+  /// Payload keys whose value differs between [base] and [edited].
+  Map<String, dynamic> _changedFields(
+    ParkingSettings base,
+    ParkingSettings edited,
+  ) {
+    final before = base.toPayload();
+    return {
+      for (final entry in edited.toPayload().entries)
+        if (before[entry.key] != entry.value) entry.key: entry.value,
+    };
+  }
+
+  Future<void> _guardPendingConflict() async {
+    final conflicts = await _outbox.listConflicts();
+    if (conflicts.any(
+      (entry) => entry.value.entityType == MutationEntity.settings,
+    )) {
+      throw const ValidationFailure(
+        'Conflict pending',
+        ClientFailureCodes.conflictPending,
+      );
+    }
+  }
+
+  Future<void> _parkConflict(
+    Map<String, dynamic> fields,
+    int? lotId,
+    ParkingSettings? cached,
+    VersionConflictFailure failure,
+  ) async {
+    final entry = PendingMutation(
+      entityType: MutationEntity.settings,
+      operation: MutationOperation.update,
+      entityId: null,
+      payloadJson: jsonEncode({...fields, 'lot_id': ?lotId}),
+      enqueuedAt: DateTime.now(),
+      baseVersion: cached?.version,
+      baseSnapshotJson: cached == null ? null : jsonEncode(_snapshot(cached)),
+    );
+    await _outbox.enqueue(
+      entry.asConflict(
+        kind: failure.serverRow == null ? 'deleted' : 'edited',
+        serverRow: failure.serverRow,
+      ),
+    );
+  }
+
+  /// The cached row as the server sees it, so a three-way merge can tell
+  /// which side changed a field.
+  Map<String, dynamic> _snapshot(ParkingSettings settings) => {
+    ...settings.toPayload(),
+    'version': settings.version,
+  };
 
   @override
   Future<Uint8List?> loadLogo(int version) async {

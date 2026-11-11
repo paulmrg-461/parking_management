@@ -38,6 +38,11 @@ const _domainCodes = {
 /// Maps Supabase client errors (PostgREST, Storage, Functions, Auth) to the
 /// app's [Failure] hierarchy.
 Failure mapSupabaseError(Object error) {
+  // Already typed (e.g. a `VersionConflictFailure` raised by the versioned
+  // write helpers): keep its identity so callers can park the conflict.
+  if (error is Failure) {
+    return error;
+  }
   if (error is sb.PostgrestException) {
     return _postgrest(error);
   }

@@ -6,6 +6,7 @@ import 'package:parking_management/core/lot/lot_session.dart';
 import 'package:hive_ce/hive_ce.dart';
 import 'package:parking_management/app/di/hive_registrar.g.dart';
 import 'package:parking_management/core/error/failure.dart';
+import 'package:parking_management/core/sync/conflict/three_way_merge.dart';
 import 'package:parking_management/core/sync/pending_mutation.dart';
 import 'package:parking_management/features/settings/domain/entities/parking_settings.dart';
 import 'package:parking_management/features/settings/infrastructure/parking_settings_local_data_source.dart';
@@ -20,6 +21,7 @@ const _remoteSettings = ParkingSettings(
   address: 'Cra 7 # 12-34',
   phone: '+57 300 111 2233',
   logoVersion: 1,
+  version: 3,
 );
 
 const _logo = [1, 2, 3, 4];
@@ -31,6 +33,8 @@ class _FakeRemote implements ParkingSettingsRemoteDataSource {
   ParkingSettings settings = _remoteSettings;
   Map<String, dynamic>? lastPatch;
   int? lastPatchLot;
+  int? lastPatchVersion;
+  VersionConflictFailure? conflict;
   Uint8List? uploaded;
 
   void _ensureOnline() {
@@ -49,7 +53,13 @@ class _FakeRemote implements ParkingSettingsRemoteDataSource {
   Future<ParkingSettings> patch(
     Map<String, dynamic> fields, {
     int? lotId,
+    int? baseVersion,
   }) async {
+    lastPatchVersion = baseVersion;
+    final error = conflict;
+    if (error != null) {
+      throw error;
+    }
     _ensureOnline();
     lastPatch = fields;
     lastPatchLot = lotId;
@@ -369,6 +379,124 @@ void main() {
       },
     );
   });
+
+  test('Success: saving with no changes sends nothing', () async {
+    final remote = _FakeRemote();
+    final repo = repository(remote);
+    final loaded = await repo.load();
+
+    final saved = await repo.save(loaded);
+
+    expect(remote.lastPatch, isNull);
+    expect(saved.name, loaded.name);
+    expect(outbox.enqueued, isEmpty);
+  });
+
+  test('Success: an edit sends the base version and only the diff', () async {
+    final remote = _FakeRemote();
+    final repo = repository(remote);
+    final loaded = await repo.load();
+
+    await repo.save(loaded.copyWith(name: 'Parqueadero Sur'));
+
+    expect(remote.lastPatch, {'name': 'Parqueadero Sur'});
+    expect(loaded.version, 3);
+    expect(remote.lastPatchVersion, 3);
+  });
+
+  test('Failure: an online conflict is parked with the server row', () async {
+    await repository(_FakeRemote()).load();
+    final remote = _FakeRemote()
+      ..conflict = VersionConflictFailure({
+        'name': 'Otra sede',
+        'logo_version': 4,
+        'version': 9,
+      });
+    final repo = repository(remote);
+    await repo.load();
+
+    await expectLater(
+      repo.save((await repo.loadCached())!.copyWith(name: 'Parqueadero Sur')),
+      throwsA(isA<VersionConflictFailure>()),
+    );
+
+    final parked = (await outbox.listConflicts()).single;
+    expect(parked.value.decodePayload()['name'], 'Parqueadero Sur');
+    expect(parked.value.decodeServerRow()?['version'], 9);
+  });
+
+  test('Security: a pending conflict blocks further edits', () async {
+    await outbox.enqueue(
+      PendingMutation(
+        entityType: MutationEntity.settings,
+        operation: MutationOperation.update,
+        entityId: null,
+        payloadJson: '{"name":"Parqueadero Sur"}',
+        enqueuedAt: DateTime.utc(2026, 1, 1),
+      ).asConflict(kind: 'edited', serverRow: {'version': 3}),
+    );
+    final remote = _FakeRemote();
+    final repo = repository(remote);
+    await repo.load();
+
+    await expectLater(
+      repo.save(const ParkingSettings(name: 'Otra')),
+      throwsA(
+        isA<ValidationFailure>().having(
+          (failure) => failure.code,
+          'code',
+          ClientFailureCodes.conflictPending,
+        ),
+      ),
+    );
+    expect(remote.lastPatch, isNull);
+  });
+
+  test(
+    'Success: an offline edit queues only the changed fields and the base',
+    () async {
+      final local = HiveParkingSettingsLocalDataSource(LotSession());
+      final session = LotSession()..select(1);
+      await ParkingSettingsRepositoryImpl(
+        _FakeRemote(),
+        local,
+        outbox,
+        session,
+      ).load();
+      final offline = ParkingSettingsRepositoryImpl(
+        _FakeRemote(failWithNetwork: true),
+        local,
+        outbox,
+        session,
+      );
+      final cached = (await offline.loadCached())!;
+
+      await offline.save(cached.copyWith(name: 'Parqueadero Norte'));
+
+      final queued = outbox.enqueued.single;
+      expect(queued.decodePayload(), {
+        'name': 'Parqueadero Norte',
+        'lot_id': 1,
+      });
+      expect(cached.version, 3);
+      expect(queued.baseVersion, 3);
+      expect(queued.decodeBaseSnapshot()?['name'], cached.name);
+    },
+  );
+
+  test(
+    'Success: a text edit merges cleanly past a logo uploaded meanwhile',
+    () async {
+      final plan = planMerge(
+        base: {'name': 'Central', 'logo_version': 1},
+        mine: {'name': 'Central Norte'},
+        theirs: {'name': 'Central', 'logo_version': 2},
+      );
+
+      expect(plan.conflicts, isEmpty);
+      expect(plan.autoApply, {'name': 'Central Norte'});
+    },
+  );
 }
 
 PendingMutation _settingsMutation(String payload) => PendingMutation(

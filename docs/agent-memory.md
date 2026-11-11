@@ -574,12 +574,23 @@ Last updated: 2026-11-11 (period comparison reports).
   cached base, parks conflicts, guards pending ones, and queues the **whole
   row** offline so a rename never drops a queued capacity change. The replayer
   replays that whole payload with the base and adopts the server row.
+- Settings are wired (5.4): `ParkingSettings.version` in entity/DTO/Hive, the
+  remote `patch(fields, {lotId, baseVersion})` goes through `updateVersioned`
+  (match `lot_id`, same header), and `save` writes **only the fields that
+  differ** from the cached row (an empty diff sends nothing, so the form does
+  not rewrite the whole row). Text edits therefore cannot clobber a logo
+  someone else uploaded: the queued payload is the diff plus `lot_id`.
+  Conflicts park with the server row, a pending conflict blocks saving, and
+  the replayer sends the base and adopts the server row.
+- `mapSupabaseError` now passes an already typed `Failure` through unchanged;
+  without it the versioned `VersionConflictFailure` was flattened into
+  `ServerFailure` inside every remote data source.
 - Conflicts are visible: `SyncStatus` carries the parked conflicts, the cubit
   loads them and exposes `resolve(key, choice)`, and the `SyncBadge` shows a
   merge icon with the count and a dialog offering keep-mine / keep-theirs.
   The field-by-field merge and the per-field dialog are still pending.
-- Pending (3.3, 4.2, 5.4, 6.1-6.3, 6.5): replayer `Future<int?>`, field-by-field
-  merge in `resolve`, settings and the full resolution dialog.
+- Pending (3.3, 4.2, 6.1-6.3, 6.5): replayer `Future<int?>`, field-by-field merge
+  in `resolve`, and the full resolution dialog.
 
 ## Period comparison reports (2026-11-11, `0104`)
 
