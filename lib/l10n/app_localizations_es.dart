@@ -3732,4 +3732,113 @@ class AppLocalizationsEs extends AppLocalizations {
   String emergencyLocation(String location) {
     return 'Ubicación: $location';
   }
+
+  @override
+  String get reportsPeriodTitle => 'Comparación por periodo';
+
+  @override
+  String get reportsPeriodSubtitle =>
+      'Cada mes frente al mes anterior y al mismo mes del año pasado';
+
+  @override
+  String get reportsPeriodActiveLotOnly => 'Solo la sede activa';
+
+  @override
+  String reportsPeriodMonths(int count) {
+    return '$count meses';
+  }
+
+  @override
+  String get reportsPeriodMetricLabel => 'Indicador';
+
+  @override
+  String get reportsPeriodMetricRevenue => 'Ingresos';
+
+  @override
+  String get reportsPeriodMetricEntries => 'Entradas';
+
+  @override
+  String get reportsPeriodMetricExits => 'Salidas';
+
+  @override
+  String get reportsPeriodMetricAvgTicket => 'Ticket promedio';
+
+  @override
+  String get reportsPeriodMetricAvgStay => 'Estadía promedio';
+
+  @override
+  String get reportsPeriodMetricPassRevenue => 'Ingresos por mensualidades';
+
+  @override
+  String get reportsPeriodMetricReservations => 'Reservas';
+
+  @override
+  String reportsPeriodReservationsUsed(int count) {
+    return '$count usadas';
+  }
+
+  @override
+  String reportsPeriodPartial(int days, int total) {
+    return 'Mes en curso · $days de $total días';
+  }
+
+  @override
+  String get reportsPeriodPartialChip => 'Parcial';
+
+  @override
+  String reportsPeriodPartialHint(int days) {
+    return 'Se compara con los primeros $days días de cada mes';
+  }
+
+  @override
+  String reportsPeriodVsMonth(String delta) {
+    return '$delta vs mes anterior';
+  }
+
+  @override
+  String reportsPeriodVsYear(String delta) {
+    return '$delta vs año anterior';
+  }
+
+  @override
+  String get reportsPeriodFlatMonth => 'Igual que el mes anterior';
+
+  @override
+  String get reportsPeriodFlatYear => 'Igual que el año anterior';
+
+  @override
+  String get reportsPeriodNoBase => 'Sin base de comparación';
+
+  @override
+  String get reportsPeriodLegendCurrent => 'Mes';
+
+  @override
+  String get reportsPeriodLegendLastYear => 'Mismo mes del año anterior';
+
+  @override
+  String get reportsPeriodEmptyTitle => 'Aún no hay historial';
+
+  @override
+  String get reportsPeriodEmpty =>
+      'Cuando el parqueadero tenga movimiento verás aquí la comparación mensual.';
+
+  @override
+  String get reportsPeriodUnavailable => 'No se pudo cargar la comparación.';
+
+  @override
+  String reportsPeriodBarSemantics(
+    String month,
+    String value,
+    String previous,
+  ) {
+    return '$month: $value; año anterior: $previous';
+  }
+
+  @override
+  String reportsPeriodPdfPartial(String month, String days) {
+    return '$month ($days)';
+  }
+
+  @override
+  String get reportsPeriodPdfNoBase => 'n/d';
 }

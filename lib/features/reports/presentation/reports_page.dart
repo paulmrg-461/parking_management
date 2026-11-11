@@ -24,6 +24,7 @@ import 'report_pdf.dart';
 import 'widgets/category_bar_list.dart';
 import 'widgets/hourly_traffic_chart.dart';
 import 'widgets/lot_comparison.dart';
+import 'widgets/period_comparison_section.dart';
 import 'widgets/revenue_by_day_chart.dart';
 
 /// Admin reports screen: a date-range picker driving a revenue report
@@ -39,6 +40,7 @@ class ReportsPage extends StatefulWidget {
 enum _RangePreset { today, last7, last30, thisMonth, lastMonth }
 
 class _ReportsPageState extends State<ReportsPage> {
+  int _comparisonMonths = 6;
   late DateTimeRange _range;
   _RangePreset? _preset = _RangePreset.last30;
   bool _allLots = false;
@@ -90,6 +92,7 @@ class _ReportsPageState extends State<ReportsPage> {
       startDate: _range.start,
       endDate: _range.end,
       allLots: _allLots,
+      comparisonMonths: _comparisonMonths,
     );
   }
 
@@ -255,8 +258,16 @@ class _ReportsPageState extends State<ReportsPage> {
               child: BlocBuilder<ReportsCubit, ReportsState>(
                 builder: (context, state) => AsyncView<ReportsLoaded>(
                   status: _status(context, state),
-                  builder: (loaded) =>
-                      _ReportsBody(range: _range, loaded: loaded),
+                  builder: (loaded) => _ReportsBody(
+                    range: _range,
+                    loaded: loaded,
+                    onMonthsChanged: (months) {
+                      setState(() => _comparisonMonths = months);
+                      context.read<ReportsCubit>().loadComparison(
+                        months: months,
+                      );
+                    },
+                  ),
                 ),
               ),
             ),
@@ -280,10 +291,15 @@ class _ReportsPageState extends State<ReportsPage> {
 }
 
 class _ReportsBody extends StatelessWidget {
-  const _ReportsBody({required this.range, required this.loaded});
+  const _ReportsBody({
+    required this.range,
+    required this.loaded,
+    required this.onMonthsChanged,
+  });
 
   final DateTimeRange range;
   final ReportsLoaded loaded;
+  final ValueChanged<int> onMonthsChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -415,6 +431,18 @@ class _ReportsBody extends StatelessWidget {
         const SizedBox(height: Space.sm),
         HourlyTrafficChart(traffic: loaded.hourly),
         const SizedBox(height: Space.lg),
+        const SizedBox(height: Space.lg),
+        PeriodComparisonSection(
+          comparison: loaded.comparison,
+          months: loaded.comparisonMonths,
+          loading: loaded.comparisonLoading,
+          failed: loaded.comparisonFailed,
+          activeLotOnly: loaded.allLots,
+          onMonthsChanged: onMonthsChanged,
+          onRetry: () => context.read<ReportsCubit>().loadComparison(
+            months: loaded.comparisonMonths,
+          ),
+        ),
         SectionHeader(
           icon: Icons.event_available_outlined,
           title: l10n.reportsReservationsTitle,

@@ -6607,6 +6607,180 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Ubicación: {location}'**
   String emergencyLocation(String location);
+
+  /// No description provided for @reportsPeriodTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Comparación por periodo'**
+  String get reportsPeriodTitle;
+
+  /// No description provided for @reportsPeriodSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Cada mes frente al mes anterior y al mismo mes del año pasado'**
+  String get reportsPeriodSubtitle;
+
+  /// No description provided for @reportsPeriodActiveLotOnly.
+  ///
+  /// In es, this message translates to:
+  /// **'Solo la sede activa'**
+  String get reportsPeriodActiveLotOnly;
+
+  /// No description provided for @reportsPeriodMonths.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} meses'**
+  String reportsPeriodMonths(int count);
+
+  /// No description provided for @reportsPeriodMetricLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Indicador'**
+  String get reportsPeriodMetricLabel;
+
+  /// No description provided for @reportsPeriodMetricRevenue.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresos'**
+  String get reportsPeriodMetricRevenue;
+
+  /// No description provided for @reportsPeriodMetricEntries.
+  ///
+  /// In es, this message translates to:
+  /// **'Entradas'**
+  String get reportsPeriodMetricEntries;
+
+  /// No description provided for @reportsPeriodMetricExits.
+  ///
+  /// In es, this message translates to:
+  /// **'Salidas'**
+  String get reportsPeriodMetricExits;
+
+  /// No description provided for @reportsPeriodMetricAvgTicket.
+  ///
+  /// In es, this message translates to:
+  /// **'Ticket promedio'**
+  String get reportsPeriodMetricAvgTicket;
+
+  /// No description provided for @reportsPeriodMetricAvgStay.
+  ///
+  /// In es, this message translates to:
+  /// **'Estadía promedio'**
+  String get reportsPeriodMetricAvgStay;
+
+  /// No description provided for @reportsPeriodMetricPassRevenue.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresos por mensualidades'**
+  String get reportsPeriodMetricPassRevenue;
+
+  /// No description provided for @reportsPeriodMetricReservations.
+  ///
+  /// In es, this message translates to:
+  /// **'Reservas'**
+  String get reportsPeriodMetricReservations;
+
+  /// No description provided for @reportsPeriodReservationsUsed.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} usadas'**
+  String reportsPeriodReservationsUsed(int count);
+
+  /// No description provided for @reportsPeriodPartial.
+  ///
+  /// In es, this message translates to:
+  /// **'Mes en curso · {days} de {total} días'**
+  String reportsPeriodPartial(int days, int total);
+
+  /// No description provided for @reportsPeriodPartialChip.
+  ///
+  /// In es, this message translates to:
+  /// **'Parcial'**
+  String get reportsPeriodPartialChip;
+
+  /// No description provided for @reportsPeriodPartialHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Se compara con los primeros {days} días de cada mes'**
+  String reportsPeriodPartialHint(int days);
+
+  /// No description provided for @reportsPeriodVsMonth.
+  ///
+  /// In es, this message translates to:
+  /// **'{delta} vs mes anterior'**
+  String reportsPeriodVsMonth(String delta);
+
+  /// No description provided for @reportsPeriodVsYear.
+  ///
+  /// In es, this message translates to:
+  /// **'{delta} vs año anterior'**
+  String reportsPeriodVsYear(String delta);
+
+  /// No description provided for @reportsPeriodFlatMonth.
+  ///
+  /// In es, this message translates to:
+  /// **'Igual que el mes anterior'**
+  String get reportsPeriodFlatMonth;
+
+  /// No description provided for @reportsPeriodFlatYear.
+  ///
+  /// In es, this message translates to:
+  /// **'Igual que el año anterior'**
+  String get reportsPeriodFlatYear;
+
+  /// No description provided for @reportsPeriodNoBase.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin base de comparación'**
+  String get reportsPeriodNoBase;
+
+  /// No description provided for @reportsPeriodLegendCurrent.
+  ///
+  /// In es, this message translates to:
+  /// **'Mes'**
+  String get reportsPeriodLegendCurrent;
+
+  /// No description provided for @reportsPeriodLegendLastYear.
+  ///
+  /// In es, this message translates to:
+  /// **'Mismo mes del año anterior'**
+  String get reportsPeriodLegendLastYear;
+
+  /// No description provided for @reportsPeriodEmptyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no hay historial'**
+  String get reportsPeriodEmptyTitle;
+
+  /// No description provided for @reportsPeriodEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuando el parqueadero tenga movimiento verás aquí la comparación mensual.'**
+  String get reportsPeriodEmpty;
+
+  /// No description provided for @reportsPeriodUnavailable.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo cargar la comparación.'**
+  String get reportsPeriodUnavailable;
+
+  /// No description provided for @reportsPeriodBarSemantics.
+  ///
+  /// In es, this message translates to:
+  /// **'{month}: {value}; año anterior: {previous}'**
+  String reportsPeriodBarSemantics(String month, String value, String previous);
+
+  /// No description provided for @reportsPeriodPdfPartial.
+  ///
+  /// In es, this message translates to:
+  /// **'{month} ({days})'**
+  String reportsPeriodPdfPartial(String month, String days);
+
+  /// No description provided for @reportsPeriodPdfNoBase.
+  ///
+  /// In es, this message translates to:
+  /// **'n/d'**
+  String get reportsPeriodPdfNoBase;
 }
 
 class _AppLocalizationsDelegate
