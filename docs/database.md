@@ -146,6 +146,13 @@ hold with a phone and automated WhatsApp, queues `reservation_cancelled`.
 WhatsApp for public holds ending inside the window (default 60 min) when the
 lot has automated WhatsApp on, and stamps `reminder_sent_at` (idempotent).
 
+**Row versions (offline conflict resolution)**
+`vehicles`, `tariffs`, `categories` and `parking_settings` carry `version`
+(bumped by `row_version_guard()` only when the row really changes).
+`set_row_version_policy(required)` (lot admin, needs `min_app_version`) turns on
+`row_version_enforcement`: a direct table write without the `x-versioned-write`
+header is refused with `VersionRequiredError`; `/rpc/*` paths are exempt.
+
 **Period comparison**
 `report_period_comparison(months, as_of)` (admin, lot-scoped, business
 timezone): the trailing 1..24 calendar months, each with `current`,

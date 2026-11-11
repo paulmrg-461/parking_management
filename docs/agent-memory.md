@@ -523,6 +523,23 @@ Last updated: 2026-11-11 (period comparison reports).
   the edge-runtime container (it was exercised with Deno against mocks).
 - Test count: 1172; schema `0001..0103`.
 
+## Offline conflict resolution, database half (2026-11-11, `0105`)
+
+- `vehicles`, `tariffs`, `categories` and `parking_settings` have `version`
+  (default 1). `row_version_guard()` bumps it only on a real change (a no-op
+  update keeps it) and ignores a client-supplied value, so an offline base can
+  be checked with `version=eq.<n>`: zero rows means someone else changed the
+  row.
+- `parking_settings.row_version_required` plus the `row_version_enforcement`
+  trigger refuse a direct table write without the `x-versioned-write` header;
+  `/rpc/*` paths are exempt. `set_row_version_policy(boolean)` (lot admin)
+  turns it on, and only after `min_app_version` is set (an old build cannot be
+  locked out). Off by default.
+- `request.path` was verified as a PostgREST GUC in the suite by setting it
+  explicitly; with an empty path the guard does nothing.
+- Pending (sections 2-6 of the change): `baseVersion` in the outbox, three-way
+  merge, conflict UI, versioned writes in the four features.
+
 ## Period comparison reports (2026-11-11, `0104`)
 
 - `report_period_comparison(months, as_of)` returns the trailing 1..24 calendar

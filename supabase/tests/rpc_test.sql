@@ -4454,4 +4454,176 @@ begin
     end;
 end $$;
 
+-- Row versions: the base an offline edit was written from.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- row versions: a fresh row starts at 1
+do $$
+declare
+    new_vehicle integer;
+begin
+    insert into public.vehicles (plate, category_id)
+    values ('VRNEW1', (select c.id from public.categories c where c.lot_id = 1 limit 1))
+    returning id into new_vehicle;
+    if (select v.version from public.vehicles v where v.id = new_vehicle) <> 1 then
+        raise exception 'a new row did not start at version 1';
+    end if;
+    delete from public.vehicles v where v.id = new_vehicle;
+end $$;
+
+-- row versions: real change bumps once
+do $$
+declare
+    row_id integer;
+    before_version integer;
+begin
+    select t.id, t.version into row_id, before_version
+      from public.tariffs t
+      join public.categories c on c.id = t.category_id
+     where c.lot_id = 1 limit 1;
+    update public.tariffs set amount = amount + 1 where tariffs.id = row_id;
+    if (select t.version from public.tariffs t where t.id = row_id) <> before_version + 1 then
+        raise exception 'a real change did not bump the version once';
+    end if;
+end $$;
+
+-- row versions: no-op update keeps version
+do $$
+declare
+    row_id integer;
+    before_version integer;
+begin
+    select v.id, v.version into row_id, before_version from public.vehicles v limit 1;
+    update public.vehicles set plate = plate where vehicles.id = row_id;
+    if (select v.version from public.vehicles v where v.id = row_id) <> before_version then
+        raise exception 'a no-op update bumped the version';
+    end if;
+end $$;
+
+-- row versions: client cannot forge version
+do $$
+declare
+    row_id integer;
+    before_version integer;
+begin
+    select t.id, t.version into row_id, before_version
+      from public.tariffs t
+      join public.categories c on c.id = t.category_id
+     where c.lot_id = 1 limit 1;
+    update public.tariffs set version = 99, amount = amount + 1
+     where tariffs.id = row_id;
+    if (select t.version from public.tariffs t where t.id = row_id) <> before_version + 1 then
+        raise exception 'the client forged the version';
+    end if;
+end $$;
+
+-- row versions: insert resets to 1
+do $$
+declare
+    new_category integer;
+begin
+    insert into public.categories (name, capacity, lot_id, version)
+    values ('versioned-insert', 1, 1, 50) returning id into new_category;
+    if (select c.version from public.categories c where c.id = new_category) <> 1 then
+        raise exception 'an insert kept a client version';
+    end if;
+end $$;
+
+-- row versions: stale base matches zero rows, current base updates one
+do $$
+declare
+    row_id integer;
+    current_version integer;
+    changed integer;
+begin
+    select t.id, t.version into row_id, current_version
+      from public.tariffs t
+      join public.categories c on c.id = t.category_id
+     where c.lot_id = 1 limit 1;
+    update public.tariffs set amount = amount + 1
+     where tariffs.id = row_id and version = current_version - 1;
+    get diagnostics changed = row_count;
+    if changed <> 0 then
+        raise exception 'a stale base updated a row';
+    end if;
+    update public.tariffs set amount = amount + 1
+     where tariffs.id = row_id and version = current_version;
+    get diagnostics changed = row_count;
+    if changed <> 1 then
+        raise exception 'the current base did not update the row';
+    end if;
+end $$;
+
+-- row versions: stale delete matches zero rows
+do $$
+declare
+    new_vehicle integer;
+    changed integer;
+begin
+    insert into public.vehicles (plate, category_id)
+    values ('VRDEL1', (select c.id from public.categories c where c.lot_id = 1 limit 1))
+    returning id into new_vehicle;
+    update public.vehicles set plate = 'VRDEL2' where vehicles.id = new_vehicle;
+    delete from public.vehicles where vehicles.id = new_vehicle and version = 1;
+    get diagnostics changed = row_count;
+    if changed <> 0 then
+        raise exception 'a stale delete removed the row';
+    end if;
+    delete from public.vehicles where vehicles.id = new_vehicle and version = 2;
+    get diagnostics changed = row_count;
+    if changed <> 1 then
+        raise exception 'the current base did not delete the row';
+    end if;
+end $$;
+
+-- row versions: policy needs min_app_version, admin only, on and off
+do $$
+begin
+    update public.parking_settings set min_app_version = '' where lot_id = 1;
+    begin
+        perform public.set_row_version_policy(true);
+        raise exception 'the policy turned on without a minimum version';
+    exception when others then
+        if sqlerrm not like '%MinVersionRequiredError%' then raise; end if;
+    end;
+    update public.parking_settings set min_app_version = '1.0.0' where lot_id = 1;
+    if public.set_row_version_policy(true) is not true then
+        raise exception 'the policy did not turn on';
+    end if;
+    if public.set_row_version_policy(false) is not false then
+        raise exception 'the policy did not turn off';
+    end if;
+    update public.parking_settings set min_app_version = '' where lot_id = 1;
+end $$;
+
+-- row versions: enforcement refuses an unaware table write, allows aware/rpc
+do $$
+declare
+    row_id integer;
+begin
+    select v.id into row_id from public.vehicles v limit 1;
+    update public.parking_settings set min_app_version = '1.0.0' where lot_id = 1;
+    perform public.set_row_version_policy(true);
+    perform set_config('request.path', '/vehicles', true);
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    begin
+        update public.vehicles set plate = plate where vehicles.id = row_id;
+        raise exception 'an unaware table write was accepted';
+    exception when others then
+        if sqlerrm not like '%VersionRequiredError%' then raise; end if;
+    end;
+    perform set_config(
+        'request.headers', '{"x-lot-id":"1","x-versioned-write":"1"}', true
+    );
+    update public.vehicles set plate = plate where vehicles.id = row_id;
+    perform set_config('request.path', '/rpc/check_in', true);
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    update public.vehicles set plate = plate where vehicles.id = row_id;
+    perform public.set_row_version_policy(false);
+    perform set_config('request.path', '', true);
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    update public.parking_settings set min_app_version = '' where lot_id = 1;
+end $$;
+
 rollback;
