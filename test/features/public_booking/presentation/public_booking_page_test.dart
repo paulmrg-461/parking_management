@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/features/public_booking/application/public_booking_cubit.dart';
 import 'package:parking_management/features/public_booking/domain/entities/public_booking.dart';
+import 'package:parking_management/features/public_booking/presentation/captcha/captcha_request.dart';
 import 'package:parking_management/features/public_booking/presentation/public_booking_page.dart';
 
 import '../../../helpers/fake_public_booking_repository.dart';
@@ -14,6 +15,8 @@ Future<FakePublicBookingRepository> _pump(
   FakePublicBookingRepository? repository,
   Size size = const Size(800, 1400),
   Duration? refreshInterval,
+  String captchaSiteKey = '',
+  CaptchaBuilder? captchaBuilder,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -28,7 +31,12 @@ Future<FakePublicBookingRepository> _pump(
     testApp(
       BlocProvider<PublicBookingCubit>.value(
         value: cubit,
-        child: PublicBookingPage(lotId: 1, refreshInterval: refreshInterval),
+        child: PublicBookingPage(
+          lotId: 1,
+          refreshInterval: refreshInterval,
+          captchaSiteKey: captchaSiteKey,
+          captchaBuilder: captchaBuilder,
+        ),
       ),
     ),
   );
@@ -36,7 +44,283 @@ Future<FakePublicBookingRepository> _pump(
   return repo;
 }
 
+/// Stands in for the Turnstile iframe: three buttons drive the callbacks the
+/// real widget fires, and [builds] counts how many times it was re-rendered.
+class _FakeCaptcha {
+  int builds = 0;
+  String? lastSiteKey;
+  String token = 'token-1';
+
+  Widget build(BuildContext context, CaptchaRequest request) =>
+      _FakeCaptchaView(fake: this, request: request);
+}
+
+class _FakeCaptchaView extends StatefulWidget {
+  const _FakeCaptchaView({required this.fake, required this.request});
+
+  final _FakeCaptcha fake;
+  final CaptchaRequest request;
+
+  @override
+  State<_FakeCaptchaView> createState() => _FakeCaptchaViewState();
+}
+
+class _FakeCaptchaViewState extends State<_FakeCaptchaView> {
+  @override
+  void initState() {
+    super.initState();
+    widget.fake.builds++;
+    widget.fake.lastSiteKey = widget.request.siteKey;
+  }
+
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      TextButton(
+        onPressed: () => widget.request.onToken(widget.fake.token),
+        child: const Text('solve'),
+      ),
+      TextButton(
+        onPressed: widget.request.onExpired,
+        child: const Text('expire'),
+      ),
+      TextButton(onPressed: widget.request.onError, child: const Text('fail')),
+    ],
+  );
+}
+
+Future<void> _fillForm(WidgetTester tester) async {
+  await tester.tap(find.text('Car'));
+  await tester.pumpAndSettle();
+  await tester.enterText(find.byType(TextField).at(0), 'ABC123');
+  await tester.enterText(find.byType(TextField).at(1), '3001112233');
+  await tester.enterText(find.byType(TextField).at(2), 'Ana');
+}
+
+Future<void> _tap(WidgetTester tester, String label) async {
+  await tester.ensureVisible(find.text(label));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text(label));
+  await tester.pumpAndSettle();
+}
+
+const _captchaPending = 'Completa la verificación de seguridad para reservar.';
+const _captchaExpired = 'La verificación venció. Complétala de nuevo.';
+const _captchaFailed =
+    'No pudimos verificar que eres una persona. Inténtalo de nuevo.';
+
 void main() {
+  group('captcha', () {
+    testWidgets('Success: without a site key the form has no captcha', (
+      tester,
+    ) async {
+      final captcha = _FakeCaptcha();
+      final repository = await _pump(tester, captchaBuilder: captcha.build);
+
+      expect(find.text('Verificación de seguridad'), findsNothing);
+      expect(captcha.builds, 0);
+      await _fillForm(tester);
+      await _tap(tester, 'Reservar espacio');
+
+      expect(repository.reserveCalls, 1);
+      expect(repository.lastCaptchaToken, isNull);
+    });
+
+    testWidgets('Success: a solved captcha travels with the booking', (
+      tester,
+    ) async {
+      final captcha = _FakeCaptcha();
+      final repository = await _pump(
+        tester,
+        captchaSiteKey: 'site-key',
+        captchaBuilder: captcha.build,
+      );
+
+      expect(find.text('Verificación de seguridad'), findsOneWidget);
+      expect(captcha.lastSiteKey, 'site-key');
+      await _fillForm(tester);
+      await _tap(tester, 'solve');
+      await _tap(tester, 'Reservar espacio');
+
+      expect(repository.reserveCalls, 1);
+      expect(repository.lastCaptchaToken, 'token-1');
+      expect(find.text('¡Reserva confirmada!'), findsOneWidget);
+    });
+
+    testWidgets('Security: the form does not submit without a token', (
+      tester,
+    ) async {
+      final captcha = _FakeCaptcha();
+      final repository = await _pump(
+        tester,
+        captchaSiteKey: 'site-key',
+        captchaBuilder: captcha.build,
+      );
+
+      await _fillForm(tester);
+      await _tap(tester, 'Reservar espacio');
+
+      expect(repository.reserveCalls, 0);
+      expect(find.text(_captchaPending), findsOneWidget);
+    });
+
+    testWidgets('Failure: an expired token blocks the submit until retried', (
+      tester,
+    ) async {
+      final captcha = _FakeCaptcha();
+      final repository = await _pump(
+        tester,
+        captchaSiteKey: 'site-key',
+        captchaBuilder: captcha.build,
+      );
+
+      await _fillForm(tester);
+      await _tap(tester, 'solve');
+      await _tap(tester, 'expire');
+
+      expect(find.text(_captchaExpired), findsOneWidget);
+      await _tap(tester, 'Reservar espacio');
+      expect(repository.reserveCalls, 0);
+
+      // Retry renders a fresh challenge and clears the message.
+      await _tap(tester, 'Reintentar');
+      expect(captcha.builds, 2);
+      expect(find.text(_captchaExpired), findsNothing);
+      captcha.token = 'token-2';
+      await _tap(tester, 'solve');
+      await _tap(tester, 'Reservar espacio');
+
+      expect(repository.reserveCalls, 1);
+      expect(repository.lastCaptchaToken, 'token-2');
+    });
+
+    testWidgets('Failure: a widget error explains itself and offers a retry', (
+      tester,
+    ) async {
+      final captcha = _FakeCaptcha();
+      await _pump(
+        tester,
+        captchaSiteKey: 'site-key',
+        captchaBuilder: captcha.build,
+      );
+
+      await _tap(tester, 'fail');
+
+      expect(find.text(_captchaFailed), findsOneWidget);
+      await _tap(tester, 'Reintentar');
+      expect(captcha.builds, 2);
+      expect(find.text(_captchaFailed), findsNothing);
+    });
+
+    testWidgets(
+      'Security: a token the server rejects is discarded, not reused',
+      (tester) async {
+        final captcha = _FakeCaptcha();
+        final repository = FakePublicBookingRepository()
+          ..availabilityToReturn = sampleAvailability()
+          ..reserveError = const ValidationFailure(
+            'CaptchaFailedError',
+            'CaptchaFailedError',
+          );
+        await _pump(
+          tester,
+          repository: repository,
+          captchaSiteKey: 'site-key',
+          captchaBuilder: captcha.build,
+        );
+
+        await _fillForm(tester);
+        await _tap(tester, 'solve');
+        await _tap(tester, 'Reservar espacio');
+
+        expect(repository.reserveCalls, 1);
+        expect(find.text(_captchaFailed), findsOneWidget);
+        // Tokens are single use: a new challenge is rendered and the old
+        // token cannot be sent again.
+        expect(captcha.builds, 2);
+        await _tap(tester, 'Reservar espacio');
+        expect(repository.reserveCalls, 1);
+        expect(find.text(_captchaPending), findsOneWidget);
+      },
+    );
+
+    testWidgets('Failure: a server-side expiry asks to solve it again', (
+      tester,
+    ) async {
+      final captcha = _FakeCaptcha();
+      final repository = FakePublicBookingRepository()
+        ..availabilityToReturn = sampleAvailability()
+        ..reserveError = const ValidationFailure(
+          'CaptchaExpiredError',
+          'CaptchaExpiredError',
+        );
+      await _pump(
+        tester,
+        repository: repository,
+        captchaSiteKey: 'site-key',
+        captchaBuilder: captcha.build,
+      );
+
+      await _fillForm(tester);
+      await _tap(tester, 'solve');
+      await _tap(tester, 'Reservar espacio');
+
+      expect(find.text(_captchaExpired), findsOneWidget);
+    });
+
+    testWidgets('Failure: a lot that demands a captcha explains the refusal', (
+      tester,
+    ) async {
+      final repository = FakePublicBookingRepository()
+        ..availabilityToReturn = sampleAvailability()
+        ..reserveError = const ValidationFailure(
+          'CaptchaRequiredError',
+          'CaptchaRequiredError',
+        );
+      await _pump(tester, repository: repository);
+
+      await _fillForm(tester);
+      await _tap(tester, 'Reservar espacio');
+
+      expect(
+        find.textContaining('pide una verificación de seguridad'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('Failure: a throttled lot shows a friendly message', (
+      tester,
+    ) async {
+      final repository = FakePublicBookingRepository()
+        ..availabilityToReturn = sampleAvailability()
+        ..reserveError = const ValidationFailure(
+          'BookingThrottledError',
+          'BookingThrottledError',
+        );
+      await _pump(tester, repository: repository);
+
+      await _fillForm(tester);
+      await _tap(tester, 'Reservar espacio');
+
+      expect(find.textContaining('muchas reservas en línea'), findsOneWidget);
+    });
+
+    testWidgets(
+      'Success: a site key on a platform without the widget books directly',
+      (tester) async {
+        // Flutter tests run on the VM, where the Turnstile stub is selected.
+        final repository = await _pump(tester, captchaSiteKey: 'site-key');
+
+        expect(find.text('Verificación de seguridad'), findsNothing);
+        await _fillForm(tester);
+        await _tap(tester, 'Reservar espacio');
+
+        expect(repository.reserveCalls, 1);
+        expect(repository.lastCaptchaToken, isNull);
+      },
+    );
+  });
+
   testWidgets('Success: shows the lot, availability and the form', (
     tester,
   ) async {

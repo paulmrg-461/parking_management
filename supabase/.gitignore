@@ -15,6 +15,9 @@ volumes/functions/admin-users/**
 !volumes/functions/push-dispatch/
 volumes/functions/push-dispatch/**
 !volumes/functions/push-dispatch/index.ts
+!volumes/functions/public-booking/
+volumes/functions/public-booking/**
+!volumes/functions/public-booking/index.ts
 .env
 test.http
 docker-compose.override.yml

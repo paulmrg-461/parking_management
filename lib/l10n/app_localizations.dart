@@ -662,6 +662,48 @@ abstract class AppLocalizations {
   /// **'No encontramos este parqueadero.'**
   String get bookingErrorLot;
 
+  /// No description provided for @bookingCaptchaLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Verificación de seguridad'**
+  String get bookingCaptchaLabel;
+
+  /// No description provided for @bookingCaptchaPending.
+  ///
+  /// In es, this message translates to:
+  /// **'Completa la verificación de seguridad para reservar.'**
+  String get bookingCaptchaPending;
+
+  /// No description provided for @bookingCaptchaExpired.
+  ///
+  /// In es, this message translates to:
+  /// **'La verificación venció. Complétala de nuevo.'**
+  String get bookingCaptchaExpired;
+
+  /// No description provided for @bookingCaptchaFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos verificar que eres una persona. Inténtalo de nuevo.'**
+  String get bookingCaptchaFailed;
+
+  /// No description provided for @bookingCaptchaUnavailable.
+  ///
+  /// In es, this message translates to:
+  /// **'La verificación de seguridad no está disponible en este momento. Intenta en unos minutos o llama al parqueadero.'**
+  String get bookingCaptchaUnavailable;
+
+  /// No description provided for @bookingCaptchaRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'Este parqueadero pide una verificación de seguridad para reservar en línea. Recarga la página o llama al parqueadero.'**
+  String get bookingCaptchaRequired;
+
+  /// No description provided for @bookingErrorThrottled.
+  ///
+  /// In es, this message translates to:
+  /// **'Hay muchas reservas en línea en este momento. Intenta en unos minutos o llama al parqueadero.'**
+  String get bookingErrorThrottled;
+
   /// No description provided for @policiesInvalid.
   ///
   /// In es, this message translates to:

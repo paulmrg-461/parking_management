@@ -49,6 +49,26 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Added
 
+- **Bot protection on the public booking page** (`0103`,
+  `openspec/changes/add-public-booking-captcha`). Two controls per lot:
+  - *Hourly ceiling*, no credentials needed: at most
+    `parking_settings.public_booking_hourly_limit` public holds (default 20)
+    are created per lot in any hour; the next one gets `BookingThrottledError`
+    and a "try again in a few minutes or call" message. Cancelled holds still
+    count; staff reservations neither count nor are refused.
+  - *Cloudflare Turnstile*, inert without keys: the new `public-booking` Edge
+    Function verifies the token with `TURNSTILE_SECRET_KEY` and books through
+    `public_create_reservation_verified` (service role only). A lot with
+    `public_booking_captcha = true` refuses the anonymous RPC
+    (`CaptchaRequiredError`), so the captcha cannot be skipped with a direct
+    call. Lot admins switch it with
+    `set_public_booking_protection(p_captcha, p_hourly_limit)`.
+  The web form renders the widget when built with
+  `--dart-define=TURNSTILE_SITE_KEY=...`, blocks the submit until it is
+  solved, and recovers from expiry/failure with a retry (ES/EN). With no keys
+  and the switch off (default) the page books exactly as before, plus the
+  ceiling.
+
 - **Home trend card**: `0080_dashboard_trend` adds `dashboard_trend(p_days)`, a
   lot-scoped, operator-callable daily series (revenue, entries, exits) in the
   site's business timezone. Days without movement come back as zeroes, so the

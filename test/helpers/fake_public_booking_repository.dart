@@ -25,6 +25,7 @@ class FakePublicBookingRepository implements PublicBookingRepository {
   DateTime? lastUntil;
   String? lastPhone;
   String? lastName;
+  String? lastCaptchaToken;
 
   @override
   Future<PublicBookingAvailability?> availability(int lotId) async {
@@ -80,8 +81,10 @@ class FakePublicBookingRepository implements PublicBookingRepository {
     required DateTime until,
     required String phone,
     required String name,
+    String? captchaToken,
   }) async {
     reserveCalls++;
+    lastCaptchaToken = captchaToken;
     lastLotId = lotId;
     lastPlate = plate;
     lastCategoryId = categoryId;

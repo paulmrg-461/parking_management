@@ -334,6 +334,33 @@ class AppLocalizationsEs extends AppLocalizations {
   String get bookingErrorLot => 'No encontramos este parqueadero.';
 
   @override
+  String get bookingCaptchaLabel => 'Verificación de seguridad';
+
+  @override
+  String get bookingCaptchaPending =>
+      'Completa la verificación de seguridad para reservar.';
+
+  @override
+  String get bookingCaptchaExpired =>
+      'La verificación venció. Complétala de nuevo.';
+
+  @override
+  String get bookingCaptchaFailed =>
+      'No pudimos verificar que eres una persona. Inténtalo de nuevo.';
+
+  @override
+  String get bookingCaptchaUnavailable =>
+      'La verificación de seguridad no está disponible en este momento. Intenta en unos minutos o llama al parqueadero.';
+
+  @override
+  String get bookingCaptchaRequired =>
+      'Este parqueadero pide una verificación de seguridad para reservar en línea. Recarga la página o llama al parqueadero.';
+
+  @override
+  String get bookingErrorThrottled =>
+      'Hay muchas reservas en línea en este momento. Intenta en unos minutos o llama al parqueadero.';
+
+  @override
   String get policiesInvalid =>
       'No pudimos cargar las políticas de este parqueadero.';
 

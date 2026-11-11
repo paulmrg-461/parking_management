@@ -226,4 +226,73 @@ void main() {
     expect(cubit.state.reservation, isNull);
     expect(cubit.state.availability, isNotNull);
   });
+
+  test(
+    'Success: submit forwards the captcha token to the repository',
+    () async {
+      final repository = FakePublicBookingRepository()
+        ..availabilityToReturn = sampleAvailability();
+      final cubit = PublicBookingCubit(repository);
+      await cubit.load(1);
+
+      await cubit.submit(
+        plate: 'ABC123',
+        categoryId: 2,
+        hours: 2,
+        phone: '3001112233',
+        name: 'Ana',
+        captchaToken: 'token-1',
+      );
+
+      expect(cubit.state.reservation?.id, 12);
+      expect(repository.lastCaptchaToken, 'token-1');
+    },
+  );
+
+  test('Failure: a throttled lot keeps the form with a typed error', () async {
+    final repository = FakePublicBookingRepository()
+      ..availabilityToReturn = sampleAvailability()
+      ..reserveError = const ValidationFailure(
+        'BookingThrottledError',
+        'BookingThrottledError',
+      );
+    final cubit = PublicBookingCubit(repository);
+    await cubit.load(1);
+
+    await cubit.submit(
+      plate: 'ABC123',
+      categoryId: 2,
+      hours: 2,
+      phone: '3001112233',
+      name: 'Ana',
+    );
+
+    expect(cubit.state.reservation, isNull);
+    expect(cubit.state.actionFailure?.code, 'BookingThrottledError');
+    expect(cubit.state.submitting, isFalse);
+  });
+
+  test('Security: a rejected captcha never confirms a hold', () async {
+    final repository = FakePublicBookingRepository()
+      ..availabilityToReturn = sampleAvailability()
+      ..reserveError = const ValidationFailure(
+        'CaptchaFailedError',
+        'CaptchaFailedError',
+      );
+    final cubit = PublicBookingCubit(repository);
+    await cubit.load(1);
+
+    await cubit.submit(
+      plate: 'ABC123',
+      categoryId: 2,
+      hours: 2,
+      phone: '3001112233',
+      name: 'Ana',
+      captchaToken: 'forged',
+    );
+
+    expect(cubit.state.reservation, isNull);
+    expect(cubit.state.actionFailure?.code, 'CaptchaFailedError');
+    expect(repository.lastCaptchaToken, 'forged');
+  });
 }

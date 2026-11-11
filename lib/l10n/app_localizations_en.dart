@@ -332,6 +332,32 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookingErrorLot => 'We could not find this parking lot.';
 
   @override
+  String get bookingCaptchaLabel => 'Security check';
+
+  @override
+  String get bookingCaptchaPending => 'Complete the security check to book.';
+
+  @override
+  String get bookingCaptchaExpired =>
+      'The security check expired. Please complete it again.';
+
+  @override
+  String get bookingCaptchaFailed =>
+      'We could not verify that you are a person. Please try again.';
+
+  @override
+  String get bookingCaptchaUnavailable =>
+      'The security check is not available right now. Try again in a few minutes or call the parking lot.';
+
+  @override
+  String get bookingCaptchaRequired =>
+      'This parking lot requires a security check to book online. Reload the page or call the parking lot.';
+
+  @override
+  String get bookingErrorThrottled =>
+      'There are too many online bookings right now. Try again in a few minutes or call the parking lot.';
+
+  @override
   String get policiesInvalid => 'We could not load this parking lot policies.';
 
   @override

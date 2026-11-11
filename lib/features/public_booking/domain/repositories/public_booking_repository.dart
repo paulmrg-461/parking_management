@@ -19,6 +19,9 @@ abstract class PublicBookingRepository {
     required String phone,
   });
 
+  /// Creates the hold. [captchaToken] is the proof from the captcha widget
+  /// when the page rendered one; with it the booking goes through the
+  /// verifying Edge Function instead of the anonymous RPC.
   Future<PublicReservation> reserve({
     required int lotId,
     required String plate,
@@ -26,5 +29,6 @@ abstract class PublicBookingRepository {
     required DateTime until,
     required String phone,
     required String name,
+    String? captchaToken,
   });
 }

@@ -40,6 +40,7 @@ class PublicBookingRepositoryImpl implements PublicBookingRepository {
     required DateTime until,
     required String phone,
     required String name,
+    String? captchaToken,
   }) => _remote.reserve(
     lotId: lotId,
     plate: plate,
@@ -47,5 +48,6 @@ class PublicBookingRepositoryImpl implements PublicBookingRepository {
     until: until,
     phone: phone,
     name: name,
+    captchaToken: captchaToken,
   );
 }

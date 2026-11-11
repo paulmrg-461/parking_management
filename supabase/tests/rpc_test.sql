@@ -3932,4 +3932,268 @@ begin
     update public.parking_settings set whatsapp_auto = false where lot_id = 1;
 end $$;
 
+-- 0103: bot protection on the public booking. A per-lot hourly ceiling on
+-- public holds (staff holds are free of it), and a captcha switch that closes
+-- the anonymous RPC so only the service-role twin (Edge Function) can book.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    cat integer;
+    cat_two integer;
+    protection jsonb;
+begin
+    update public.parking_settings
+       set car_capacity = 0, moto_capacity = 0, key_capacity = 0,
+           whatsapp_auto = false
+     where lot_id in (1, 2);
+    delete from public.parking_spots where lot_id in (1, 2);
+    -- Earlier sections booked in this same transaction; age those rows so the
+    -- window starts empty (and prove that old holds stop counting).
+    update public.category_reservations
+       set created_at = now() - interval '2 hours'
+     where source = 'public';
+    insert into public.categories (name, capacity, lot_id)
+    values ('guard-car', 50, 1)
+    returning id into cat;
+    insert into public.categories (name, capacity, lot_id)
+    values ('guard-car-two', 50, 2)
+    returning id into cat_two;
+    perform set_config('app.guard_cat', cat::text, true);
+    perform set_config('app.guard_cat_two', cat_two::text, true);
+
+    if (select public_booking_captcha from public.parking_settings where lot_id = 1)
+       or (select public_booking_hourly_limit from public.parking_settings where lot_id = 1) <> 20 then
+        raise exception 'the protection defaults changed (captcha off, 20 per hour)';
+    end if;
+
+    protection := public.set_public_booking_protection(null, 2);
+    if (protection ->> 'hourly_limit')::integer <> 2
+       or (protection ->> 'captcha')::boolean then
+        raise exception 'the hourly limit was not stored: %', protection;
+    end if;
+    if (select public_booking_hourly_limit from public.parking_settings where lot_id = 2) <> 20 then
+        raise exception 'the limit of another lot was changed';
+    end if;
+    begin
+        perform public.set_public_booking_protection(null, 0);
+        raise exception 'a zero hourly limit was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then
+            raise;
+        end if;
+    end;
+end $$;
+
+-- Only a lot admin tunes the protection.
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+set local role authenticated;
+do $$
+begin
+    begin
+        perform public.set_public_booking_protection(true, 500);
+        raise exception 'an operator changed the booking protection';
+    exception when others then
+        if sqlerrm like '%an operator changed%' then
+            raise;
+        end if;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+do $$
+begin
+    if (select public_booking_captcha from public.parking_settings where lot_id = 1)
+       or (select public_booking_hourly_limit from public.parking_settings where lot_id = 1) <> 2 then
+        raise exception 'the operator call leaked into the settings';
+    end if;
+end $$;
+
+set local role anon;
+do $$
+declare
+    cat integer := current_setting('app.guard_cat')::integer;
+    cat_two integer := current_setting('app.guard_cat_two')::integer;
+    booked jsonb;
+begin
+    -- Success: captcha off, under the ceiling, the anonymous RPC still books.
+    booked := public.public_create_reservation(
+        1, 'GUARD1', cat, now() + interval '2 hours', 'Ana', '3101110001'
+    );
+    if booked ->> 'plate' <> 'GUARD1' then
+        raise exception 'the guarded booking failed: %', booked;
+    end if;
+    perform public.public_create_reservation(
+        1, 'GUARD2', cat, now() + interval '2 hours', 'Luis', '3101110002'
+    );
+
+    -- Throttled: the third hold of the hour is refused with a typed error.
+    begin
+        perform public.public_create_reservation(
+            1, 'GUARD3', cat, now() + interval '2 hours', 'Eva', '3101110003'
+        );
+        raise exception 'the hourly ceiling was ignored';
+    exception when others then
+        if sqlerrm not like '%BookingThrottledError%' then
+            raise;
+        end if;
+    end;
+
+    -- Lot isolation: lot 1 being throttled does not close lot 2.
+    perform public.public_create_reservation(
+        2, 'GUARD4', cat_two, now() + interval '2 hours', 'Eva', '3101110003'
+    );
+
+    -- The verified twin is not callable by anon, whatever the settings say.
+    begin
+        perform public.public_create_reservation_verified(
+            2, 'GUARD5', cat_two, now() + interval '2 hours', 'Eva', '3101110004'
+        );
+        raise exception 'anon executed the service-role booking';
+    exception when insufficient_privilege then
+        null;
+    end;
+end $$;
+reset role;
+
+-- Cancelling does not hand the slot back to the window, and staff holds are
+-- outside it: the desk keeps reserving while the public page is throttled.
+update public.category_reservations
+   set status = 'cancelled'
+ where plate = 'GUARD2' and lot_id = 1;
+set local role anon;
+do $$
+begin
+    begin
+        perform public.public_create_reservation(
+            1, 'GUARD6', current_setting('app.guard_cat')::integer,
+            now() + interval '2 hours', 'Eva', '3101110003'
+        );
+        raise exception 'book-and-cancel reset the hourly ceiling';
+    exception when others then
+        if sqlerrm not like '%BookingThrottledError%' then
+            raise;
+        end if;
+    end;
+end $$;
+reset role;
+
+set local role authenticated;
+do $$
+begin
+    perform public.create_reservation(
+        'GUARDSTAFF', current_setting('app.guard_cat')::integer,
+        now() + interval '2 hours'
+    );
+end $$;
+reset role;
+
+do $$
+begin
+    if not exists (
+        select 1 from public.category_reservations
+         where plate = 'GUARDSTAFF' and source = 'app' and status = 'active'
+    ) then
+        raise exception 'a staff hold was blocked by the public throttle';
+    end if;
+    -- Staff holds never fill the public window either.
+    if (
+        select count(*) from public.category_reservations
+         where lot_id = 1 and source = 'public'
+           and created_at > now() - interval '1 hour'
+    ) <> 2 then
+        raise exception 'the public window counted something else';
+    end if;
+end $$;
+
+-- Captcha on: the anonymous RPC is closed for that lot only, and the
+-- service-role twin (what the Edge Function calls after Turnstile) books.
+do $$
+declare
+    protection jsonb;
+begin
+    protection := public.set_public_booking_protection(true, 100);
+    if not (protection ->> 'captcha')::boolean then
+        raise exception 'the captcha switch was not stored: %', protection;
+    end if;
+end $$;
+
+set local role anon;
+do $$
+declare
+    cat integer := current_setting('app.guard_cat')::integer;
+    cat_two integer := current_setting('app.guard_cat_two')::integer;
+begin
+    begin
+        perform public.public_create_reservation(
+            1, 'GUARD7', cat, now() + interval '2 hours', 'Eva', '3101110005'
+        );
+        raise exception 'anon bypassed the captcha with a direct call';
+    exception when others then
+        if sqlerrm not like '%CaptchaRequiredError%' then
+            raise;
+        end if;
+    end;
+    -- Lot 2 never asked for a captcha.
+    perform public.public_create_reservation(
+        2, 'GUARD8', cat_two, now() + interval '2 hours', 'Eva', '3101110005'
+    );
+end $$;
+reset role;
+
+set local role authenticated;
+do $$
+begin
+    begin
+        perform public.public_create_reservation(
+            1, 'GUARD7', current_setting('app.guard_cat')::integer,
+            now() + interval '2 hours', 'Eva', '3101110005'
+        );
+        raise exception 'a signed-in user bypassed the captcha';
+    exception when others then
+        if sqlerrm not like '%CaptchaRequiredError%' then
+            raise;
+        end if;
+    end;
+    begin
+        perform public.public_create_reservation_verified(
+            1, 'GUARD7', current_setting('app.guard_cat')::integer,
+            now() + interval '2 hours', 'Eva', '3101110005'
+        );
+        raise exception 'a signed-in user executed the service-role booking';
+    exception when insufficient_privilege then
+        null;
+    end;
+end $$;
+reset role;
+
+set local role service_role;
+do $$
+declare
+    booked jsonb;
+begin
+    booked := public.public_create_reservation_verified(
+        1, 'GUARD7', current_setting('app.guard_cat')::integer,
+        now() + interval '2 hours', 'Eva', '3101110005'
+    );
+    if booked ->> 'plate' <> 'GUARD7' then
+        raise exception 'the verified booking failed: %', booked;
+    end if;
+end $$;
+reset role;
+
+do $$
+begin
+    if not exists (
+        select 1 from public.category_reservations
+         where plate = 'GUARD7' and source = 'public' and lot_id = 1
+    ) then
+        raise exception 'the verified booking was not stored as a public hold';
+    end if;
+    update public.parking_settings
+       set public_booking_captcha = false, public_booking_hourly_limit = 20
+     where lot_id = 1;
+end $$;
+
 rollback;

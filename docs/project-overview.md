@@ -143,10 +143,14 @@ Deployment: [`setup-cloud.md`](setup-cloud.md) (single VM + TLS proxy) and
 - **Physical bays are optional.** Without a map the board paints virtual
   capacity cells and capacity comes from Ajustes; with a map the bays define the
   capacity. Bicycles are not modelled.
-- **Public booking has no captcha.** `/reserve` limits one active hold per
-  plate and two per phone and enforces capacity, but a determined caller can
-  cycle phones; put it behind a captcha/WAF if the site is open to the
-  internet.
+- **Public booking captcha is opt-in.** `/reserve` always enforces one active
+  hold per plate, two per phone, capacity and a per-lot ceiling of public
+  holds per hour (default 20). The Cloudflare Turnstile check only protects a
+  lot when the operator provides the keys (`TURNSTILE_SECRET_KEY`,
+  `--dart-define=TURNSTILE_SITE_KEY`) **and** turns the requirement on for
+  that lot (`set_public_booking_protection(true, null)`; there is no toggle in
+  Ajustes yet). Without that, a caller who rotates plates and phones is
+  stopped only by the hourly ceiling. There is no per-IP limit.
 - **Beta Flutter SDK pinned**; analyzer output is limited to SDK deprecation
   infos until the pin moves to stable.
 

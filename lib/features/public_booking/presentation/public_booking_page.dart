@@ -24,6 +24,9 @@ import '../../settings/domain/whatsapp_url.dart';
 import '../application/public_booking_cubit.dart';
 import '../domain/entities/public_booking.dart';
 import '../domain/phone_rules.dart';
+import 'captcha/booking_captcha_field.dart';
+import 'captcha/captcha_request.dart';
+import 'captcha/turnstile_view.dart';
 
 /// Public, mobile-first customer page: the site's real availability and a
 /// direct reservation, no account needed.
@@ -32,9 +35,19 @@ class PublicBookingPage extends StatefulWidget {
     super.key,
     required this.lotId,
     this.refreshInterval = const Duration(minutes: 1),
+    this.captchaSiteKey = '',
+    this.captchaBuilder,
   });
 
   final int lotId;
+
+  /// Public Turnstile site key (`TURNSTILE_SITE_KEY`). Empty means the
+  /// deployment has no captcha and the form books as it always did.
+  final String captchaSiteKey;
+
+  /// Captcha widget; defaults to Turnstile where the platform can render it
+  /// (the browser). Tests inject a fake.
+  final CaptchaBuilder? captchaBuilder;
 
   /// How often the availability is re-read while the form is open (`null`
   /// disables it, e.g. in tests).
@@ -53,6 +66,20 @@ class _PublicBookingPageState extends State<PublicBookingPage> {
   int _hours = 2;
   String? _categoryError;
   Timer? _refreshTimer;
+
+  /// Proof from the captcha widget; single use, so it is dropped after every
+  /// submit and whenever the widget says it expired or failed.
+  String? _captchaToken;
+  _CaptchaProblem? _captchaProblem;
+
+  /// Bumped to throw the current challenge away and render a fresh one.
+  int _captchaEpoch = 0;
+
+  CaptchaBuilder? get _captchaBuilder =>
+      widget.captchaBuilder ?? (turnstileSupported ? buildTurnstile : null);
+
+  bool get _captchaOn =>
+      widget.captchaSiteKey.isNotEmpty && _captchaBuilder != null;
 
   @override
   void initState() {
@@ -109,12 +136,79 @@ class _PublicBookingPageState extends State<PublicBookingPage> {
     if (!valid || _categoryId == null) {
       return;
     }
+    final token = _captchaToken;
+    if (_captchaOn && token == null) {
+      setState(() => _captchaProblem ??= _CaptchaProblem.pending);
+      return;
+    }
     await context.read<PublicBookingCubit>().submit(
       plate: _plate.text.trim().toUpperCase(),
       categoryId: _categoryId!,
       hours: _hours,
       phone: normalizeMobilePhone(_phone.text) ?? _phone.text.trim(),
       name: _name.text.trim(),
+      captchaToken: _captchaOn ? token : null,
+    );
+    // The server consumed the token whatever the answer was; the next
+    // attempt (or the next booking) needs a new challenge.
+    if (mounted && _captchaOn) {
+      _restartCaptcha();
+    }
+  }
+
+  void _restartCaptcha() {
+    setState(() {
+      _captchaToken = null;
+      _captchaProblem = null;
+      _captchaEpoch++;
+    });
+  }
+
+  void _captchaSolved(String token) {
+    setState(() {
+      _captchaToken = token;
+      _captchaProblem = null;
+    });
+  }
+
+  void _captchaBroke(_CaptchaProblem problem) {
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _captchaToken = null;
+      _captchaProblem = problem;
+    });
+  }
+
+  Widget? _captchaField(BuildContext context) {
+    final builder = _captchaBuilder;
+    if (!_captchaOn || builder == null) {
+      return null;
+    }
+    final l10n = context.l10n;
+    final problem = _captchaProblem;
+    return BookingCaptchaField(
+      captcha: KeyedSubtree(
+        key: ValueKey(_captchaEpoch),
+        child: builder(
+          context,
+          CaptchaRequest(
+            siteKey: widget.captchaSiteKey,
+            onToken: _captchaSolved,
+            onExpired: () => _captchaBroke(_CaptchaProblem.expired),
+            onError: () => _captchaBroke(_CaptchaProblem.failed),
+          ),
+        ),
+      ),
+      message: switch (problem) {
+        null => null,
+        _CaptchaProblem.pending => l10n.bookingCaptchaPending,
+        _CaptchaProblem.expired => l10n.bookingCaptchaExpired,
+        _CaptchaProblem.failed => l10n.bookingCaptchaFailed,
+      },
+      canRetry: problem != null && problem != _CaptchaProblem.pending,
+      onRetry: _restartCaptcha,
     );
   }
 
@@ -236,6 +330,7 @@ class _PublicBookingPageState extends State<PublicBookingPage> {
                 error: state.actionFailure == null
                     ? null
                     : _errorText(l10n, state.actionFailure),
+                captcha: _captchaField(context),
                 onHours: (hours) => setState(() => _hours = hours),
                 onSubmit: _submit,
                 onPolicies: () => context.push('/policies?lot=${widget.lotId}'),
@@ -270,6 +365,9 @@ class _PublicBookingPageState extends State<PublicBookingPage> {
     );
   }
 }
+
+/// Why the captcha block is asking for attention.
+enum _CaptchaProblem { pending, expired, failed }
 
 /// "Ya reservaste": retrieve an active hold with the code printed on the
 /// confirmation plus the mobile used to book, and cancel it from here. Without
@@ -871,6 +969,7 @@ class _FormCard extends StatelessWidget {
     required this.onHours,
     required this.onSubmit,
     required this.onPolicies,
+    this.captcha,
   });
 
   final GlobalKey<FormState> formKey;
@@ -883,6 +982,9 @@ class _FormCard extends StatelessWidget {
   final ValueChanged<int> onHours;
   final VoidCallback onSubmit;
   final VoidCallback onPolicies;
+
+  /// Security check shown above the submit (null when not configured).
+  final Widget? captcha;
 
   @override
   Widget build(BuildContext context) {
@@ -969,6 +1071,10 @@ class _FormCard extends StatelessWidget {
                     ),
                 ],
               ),
+              if (captcha != null) ...[
+                const SizedBox(height: Space.md),
+                captcha!,
+              ],
               if (error != null) ...[
                 const SizedBox(height: Space.sm),
                 Container(
@@ -1395,6 +1501,12 @@ String _errorText(AppLocalizations l10n, Failure? failure) {
     'InvalidNameError' => l10n.bookingErrorName,
     'InvalidPlateError' => l10n.bookingErrorPlate,
     'LotNotFoundError' => l10n.bookingErrorLot,
+    'BookingThrottledError' => l10n.bookingErrorThrottled,
+    'CaptchaRequiredError' => l10n.bookingCaptchaRequired,
+    'CaptchaExpiredError' => l10n.bookingCaptchaExpired,
+    'CaptchaFailedError' => l10n.bookingCaptchaFailed,
+    'CaptchaUnavailableError' ||
+    'BookingUnavailableError' => l10n.bookingCaptchaUnavailable,
     _ => l10n.failure(failure),
   };
 }

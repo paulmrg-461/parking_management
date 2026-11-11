@@ -178,6 +178,7 @@ class PublicBookingCubit extends ResilientCubit<PublicBookingState> {
     required int hours,
     required String phone,
     required String name,
+    String? captchaToken,
   }) async {
     if (state.submitting) {
       return;
@@ -192,6 +193,7 @@ class PublicBookingCubit extends ResilientCubit<PublicBookingState> {
         until: until,
         phone: phone,
         name: name,
+        captchaToken: captchaToken,
       );
       if (isClosed) {
         return;

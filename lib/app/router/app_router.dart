@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/config/app_config.dart';
 import '../../core/qr/qr_decoder.dart';
 import '../../core/receipt/evidence_link.dart';
 import '../../features/public_booking/application/public_booking_cubit.dart';
@@ -99,6 +100,9 @@ GoRouter buildRouter(
         create: (_) => serviceLocator<PublicBookingCubit>(),
         child: PublicBookingPage(
           lotId: int.tryParse(state.uri.queryParameters['lot'] ?? '') ?? 1,
+          captchaSiteKey: serviceLocator.isRegistered<AppConfig>()
+              ? serviceLocator<AppConfig>().turnstileSiteKey
+              : '',
         ),
       ),
     ),

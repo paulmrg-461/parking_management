@@ -4,7 +4,7 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-11-09 (public booking page, owner search).
+Last updated: 2026-11-10 (public booking bot protection).
 
 ## Where we are
 
@@ -473,6 +473,55 @@ Last updated: 2026-11-09 (public booking page, owner search).
   renders `_NoSpace` (message + phone/WhatsApp) instead of `_FormCard`; the
   lookup card stays and the 1-minute refresh restores the form by itself.
 - Test count: 1153; schema `0001..0096`.
+
+### Public booking bot protection (2026-11-10)
+
+- `0103_public_booking_protection.sql`: the booking body lives in
+  `public_create_reservation_verified` (**service_role only**; the revoke
+  names `anon, authenticated` because Supabase default privileges grant new
+  functions to them). `public_create_reservation` keeps its 6-arg signature
+  and anon grant as a gate: `CaptchaRequiredError` when
+  `parking_settings.public_booking_captcha` is on, else it calls the verified
+  body. No parameter was added on purpose (no overload). When the booking
+  rules change, edit the **verified** function, not the gate.
+- Throttle: `public_booking_hourly_limit` (1..1000, default 20) = public holds
+  created per lot in the last hour, any status, counted under
+  `pg_advisory_xact_lock(hashtext('public_booking_throttle'), lot)` taken
+  before the capacity locks. `source = 'app'` holds are outside it.
+  `BookingThrottledError`.
+- `set_public_booking_protection(p_captcha, p_hourly_limit)` (lot admin, null
+  keeps the value). There is no UI for it yet.
+- Edge Function `public-booking`: verifies Turnstile with
+  `TURNSTILE_SECRET_KEY`, then calls the verified RPC with the service key.
+  No secret → forwards to the anonymous RPC with the anon key (inert, never
+  permissive). Errors travel as `{"message": "<Name>Error"}`
+  (`CaptchaRequiredError`/`CaptchaExpiredError`/`CaptchaFailedError`/
+  `CaptchaUnavailableError`, throttle as 429). `TURNSTILE_VERIFY_URL` exists
+  only to point it at a mock.
+- Three switches must agree to protect a lot: secret in `.env` (+ restart
+  `functions`), `--dart-define=TURNSTILE_SITE_KEY` in the web build, and the
+  lot switch. Turn the lot switch on last; on without keys = online booking
+  refused for that lot.
+- Flutter: the client picks the path by the token — no token → RPC (today's
+  request), token → `functions.invoke('public-booking')`. The page takes
+  `captchaSiteKey` + an injectable `captchaBuilder`; `presentation/captcha/`
+  has the Turnstile web view behind a conditional export (stub elsewhere, so
+  mobile shows no widget). Tokens are single use: the page drops the token and
+  re-renders the challenge after every submit.
+- Gotcha: a new Edge Function must be allowlisted in `supabase/.gitignore`
+  (`volumes/functions/**` is ignored) and any new function env var must be
+  added to the `functions` service in `supabase/docker-compose.yml`.
+  `public-evidence`, `whatsapp-dispatch` and `evidence-archive` are **not**
+  allowlisted (untracked), and `WHATSAPP_*`/`VAPID_*` are not passed to the
+  container — both predate this change and are still open.
+- Gotcha: `supabase/tests/run.sh` fails at "anon read the reservation table"
+  on the image's pre-initialized database (`POSTGRES_DB`, where Supabase
+  default privileges give anon table access) — also at `17b454e`, before this
+  change. It passes on a plain `create database` scratch database, which is
+  what the documented command uses.
+- Not verified: the real Turnstile iframe in a browser and the function inside
+  the edge-runtime container (it was exercised with Deno against mocks).
+- Test count: 1172; schema `0001..0103`.
 
 ## Owner contact data (2026-11-05)
 
