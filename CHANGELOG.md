@@ -10,6 +10,16 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 ## [Unreleased] — 2026-11 (app reliability and operator UX)
 
 ### Fixed
+- **Pass income leaked across lots**: `report_revenue` summed monthly-pass
+  payments of every lot (`pass_revenue` and `pass_by_payment`) inside a
+  `security definer` function, so a lot admin saw other lots' pass income in
+  their own report. `0108` scopes both reads to the active lot; the SQL suite
+  asserts it with two lots. `report_revenue_all` stays cross-lot on purpose.
+- The SQL suite no longer fails on CI's database: Supabase's default
+  privileges give `anon` ALL on new public tables, so RLS (not a privilege
+  error) hides the reservation rows; the assertion now accepts either.
+- `public-evidence` and `evidence-archive` Edge Functions were ignored by
+  `supabase/.gitignore` and not in git; they are tracked now.
 - **Web deep links were lost**: the bootstrap splash pushed its own route to
   the browser history before the router existed, so `/reserve?lot=1`,
   `/policies?lot=1` and the receipt `/evidence?…` links all landed on

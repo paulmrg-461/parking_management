@@ -3433,9 +3433,14 @@ begin
         raise exception 'the lookup answered a cancelled hold';
     end if;
 
+    -- Supabase's default privileges grant anon ALL on new public tables, so
+    -- RLS (no anon policy) is what hides the rows; a bare privilege error
+    -- only happens on a database without those defaults. Accept either, but
+    -- anon must never see a row.
     begin
-        perform 1 from public.category_reservations limit 1;
-        raise exception 'anon read the reservation table';
+        if exists (select 1 from public.category_reservations) then
+            raise exception 'anon read the reservation table';
+        end if;
     exception when insufficient_privilege then
         null;
     end;
@@ -6184,6 +6189,58 @@ begin
     exception when others then
         if sqlerrm not like '%AdminRequiredError%' then raise; end if;
     end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- report_revenue: pass income is scoped to the active lot (0108). Before the
+-- fix a lot admin saw the pass payments of every lot in their own report.
+do $$
+declare
+    cat integer := (select min(id) from public.categories);
+    v1 integer;
+    v2 integer;
+    p1 bigint;
+    p2 bigint;
+begin
+    insert into public.vehicles (plate, category_id) values ('PSL001', cat)
+    returning id into v1;
+    insert into public.vehicles (plate, category_id) values ('PSL002', cat)
+    returning id into v2;
+    insert into public.monthly_passes (vehicle_id, start_date, end_date, amount, lot_id)
+    values (v1, '2031-03-01', '2031-03-31', 70000, 1) returning id into p1;
+    insert into public.monthly_passes (vehicle_id, start_date, end_date, amount, lot_id)
+    values (v2, '2031-03-01', '2031-03-31', 30000, 2) returning id into p2;
+    update public.monthly_pass_payments
+       set status = 'paid', paid_at = '2031-03-05 12:00+00',
+           amount = 70000, lot_id = 1
+     where monthly_pass_id = p1;
+    update public.monthly_pass_payments
+       set status = 'paid', paid_at = '2031-03-05 12:00+00',
+           amount = 30000, lot_id = 2
+     where monthly_pass_id = p2;
+end $$;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+declare
+    mine jsonb;
+    other jsonb;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    mine := public.report_revenue('2031-03-01', '2031-03-31');
+    if (mine ->> 'pass_revenue')::bigint <> 70000 then
+        raise exception 'lot 1 pass revenue leaked another lot: %', mine ->> 'pass_revenue';
+    end if;
+    if (select coalesce(sum((i ->> 'amount')::bigint), 0)
+          from jsonb_array_elements(mine -> 'pass_by_payment') i) <> 70000 then
+        raise exception 'lot 1 pass_by_payment leaked another lot: %', mine -> 'pass_by_payment';
+    end if;
+    perform set_config('request.headers', '{"x-lot-id":"2"}', true);
+    other := public.report_revenue('2031-03-01', '2031-03-31');
+    if (other ->> 'pass_revenue')::bigint <> 30000 then
+        raise exception 'lot 2 pass revenue is wrong: %', other ->> 'pass_revenue';
+    end if;
 end $$;
 reset role;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
