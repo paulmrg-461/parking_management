@@ -96,4 +96,17 @@ void main() {
     expect(sorted.map((r) => r.id), [1, 2]);
     expect(input.map((r) => r.id), [2, 1]);
   });
+
+  test('Success: a waitlist offer is not a web booking', () {
+    final offer = Reservation.fromJson({
+      'id': 4,
+      'plate': 'ABC123',
+      'category_id': 2,
+      'reserved_until': '2026-01-01T12:00:00Z',
+      'source': 'waitlist',
+    });
+
+    expect(offer.isWaitlistOffer, isTrue);
+    expect(offer.isPublic, isFalse);
+  });
 }

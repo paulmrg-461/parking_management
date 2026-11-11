@@ -35,6 +35,9 @@ class Reservation extends Equatable {
 
   bool get isPublic => source == 'public';
 
+  /// An unclaimed waitlist offer: a real hold created by the queue.
+  bool get isWaitlistOffer => source == 'waitlist';
+
   String? get _phone => switch (customerPhone?.trim()) {
     final phone? when phone.isNotEmpty => phone,
     _ => null,

@@ -29,6 +29,7 @@ import 'modules/reports_module.dart';
 import 'modules/evidence_module.dart';
 import 'modules/policies_module.dart';
 import 'modules/public_booking_module.dart';
+import 'modules/waitlist_module.dart';
 import 'modules/records_module.dart';
 import 'modules/reservations_module.dart';
 import 'modules/spots_module.dart';
@@ -136,6 +137,7 @@ void registerAllModules(GetIt sl, AppConfig config) {
   registerPoliciesModule(sl);
   registerEvidenceModule(sl);
   registerPublicBookingModule(sl);
+  registerWaitlistModule(sl);
   registerSpotsModule(sl);
   registerSettingsModule(sl);
   registerShiftsModule(sl);

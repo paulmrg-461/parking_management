@@ -68,6 +68,8 @@ class _NotificationsPageState extends State<NotificationsPage> {
                   ('overstay', context.l10n.notifTypeOverstay),
                   ('shift_closed', context.l10n.notifTypeShiftClosed),
                   ('public_reservation', context.l10n.notifTypeReservation),
+                  ('waitlist_joined', context.l10n.notifTypeWaitlist),
+                  ('waitlist_offer', context.l10n.notifTypeWaitlist),
                 ])
                   PopupMenuItem(value: entry.$1, child: Text(entry.$2)),
               ],
@@ -527,6 +529,7 @@ class _NotificationTile extends StatelessWidget {
     'overstay' => Icons.timer_outlined,
     'shift_closed' => Icons.point_of_sale,
     'public_reservation' => Icons.event_available_outlined,
+    'waitlist_joined' || 'waitlist_offer' => Icons.hourglass_top_outlined,
     _ => Icons.notifications,
   };
 }

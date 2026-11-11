@@ -650,6 +650,181 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cfNo => 'No';
 
   @override
+  String get waitlistJoinTitle => 'Waitlist';
+
+  @override
+  String get waitlistJoinHint =>
+      'We are full. Leave your details and we will tell you when a space frees up.';
+
+  @override
+  String get waitlistJoinAction => 'Join the waitlist';
+
+  @override
+  String get waitlistWaitFor => 'I can wait until:';
+
+  @override
+  String get waitlistHoldFor => 'Hold the space for:';
+
+  @override
+  String waitlistHoldHours(int hours) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hours,
+      locale: localeName,
+      other: '$hours hours',
+      one: '1 hour',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get waitlistJoined => 'You are on the waitlist';
+
+  @override
+  String waitlistPosition(int position) {
+    return 'Your turn: $position';
+  }
+
+  @override
+  String waitlistCode(int code) {
+    return 'Code $code';
+  }
+
+  @override
+  String get waitlistKeepCode =>
+      'Keep this code: you need it to claim or leave.';
+
+  @override
+  String get waitlistNotifyWhatsapp => 'We will notify you by WhatsApp.';
+
+  @override
+  String get waitlistNotifyScreen =>
+      'Keep this page open or call us: we will tell you here.';
+
+  @override
+  String get waitlistOfferTitle => 'A space is free!';
+
+  @override
+  String waitlistOfferBody(String time) {
+    return 'Claim it before $time.';
+  }
+
+  @override
+  String get waitlistClaim => 'Claim my space';
+
+  @override
+  String get waitlistLeave => 'Leave the waitlist';
+
+  @override
+  String get waitlistLeft => 'You left the waitlist';
+
+  @override
+  String get waitlistExpiredTitle => 'Your offer expired';
+
+  @override
+  String get waitlistExpiredHint => 'You can join the waitlist again.';
+
+  @override
+  String waitlistWaitingCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count people waiting',
+      one: '1 person waiting',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get waitlistLookupLabel => 'Waitlist code';
+
+  @override
+  String get waitlistDeskTitle => 'Waitlist';
+
+  @override
+  String get waitlistDeskEmptyTitle => 'Nobody on the waitlist';
+
+  @override
+  String get waitlistDeskEmptyHint =>
+      'When the lot is full, web customers can join here.';
+
+  @override
+  String waitlistDeskOffered(String time) {
+    return 'Offer until $time';
+  }
+
+  @override
+  String get waitlistDeskCallCustomer => 'Call: automatic WhatsApp is off';
+
+  @override
+  String get waitlistDeskClaim => 'Give the space';
+
+  @override
+  String get waitlistDeskRemove => 'Remove from the waitlist';
+
+  @override
+  String waitlistDeskRemoveBody(String plate) {
+    return '$plate will be removed and its offer released.';
+  }
+
+  @override
+  String get waitlistSettingsTitle => 'Waitlist';
+
+  @override
+  String get waitlistSettingsEnabled => 'Enable public waitlist';
+
+  @override
+  String get waitlistSettingsClaimMinutes => 'Minutes to claim an offer';
+
+  @override
+  String get waitlistSettingsMaxEntries => 'Maximum people on the list';
+
+  @override
+  String get waitlistOfferChip => 'Offer';
+
+  @override
+  String get notifTypeWaitlist => 'Waitlist';
+
+  @override
+  String get errorWaitlistDisabled => 'The waitlist is not available.';
+
+  @override
+  String get errorWaitlistNotNeeded => 'There is space: you can book now.';
+
+  @override
+  String get errorWaitlistExists => 'That plate is already on the waitlist.';
+
+  @override
+  String get errorWaitlistLimit =>
+      'This mobile already has two turns on the list.';
+
+  @override
+  String get errorWaitlistFull => 'The waitlist is full.';
+
+  @override
+  String get errorWaitlistWindow => 'Pick a valid waiting time.';
+
+  @override
+  String get errorWaitlistNotFound => 'We could not find that turn.';
+
+  @override
+  String get errorWaitlistNotOffered => 'There is no space for you yet.';
+
+  @override
+  String get errorOfferGone => 'The offer is no longer available.';
+
+  @override
+  String get reportWaitlistTitle => 'Waitlist';
+
+  @override
+  String get reportWaitlistJoined => 'Joined';
+
+  @override
+  String get reportWaitlistOffered => 'Offers';
+
+  @override
+  String get reportWaitlistClaimed => 'Claimed';
+
+  @override
   String syncQueued(int count) {
     return '$count queued, retried automatically.';
   }

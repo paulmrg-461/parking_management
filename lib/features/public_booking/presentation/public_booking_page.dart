@@ -24,6 +24,7 @@ import '../../settings/domain/whatsapp_url.dart';
 import '../application/public_booking_cubit.dart';
 import '../domain/entities/public_booking.dart';
 import '../domain/phone_rules.dart';
+import '../../waitlist/presentation/public_waitlist_card.dart';
 import 'captcha/booking_captcha_field.dart';
 import 'captcha/captcha_request.dart';
 import 'captcha/turnstile_view.dart';
@@ -37,6 +38,7 @@ class PublicBookingPage extends StatefulWidget {
     this.refreshInterval = const Duration(minutes: 1),
     this.captchaSiteKey = '',
     this.captchaBuilder,
+    this.waitlistCode,
   });
 
   final int lotId;
@@ -52,6 +54,9 @@ class PublicBookingPage extends StatefulWidget {
   /// How often the availability is re-read while the form is open (`null`
   /// disables it, e.g. in tests).
   final Duration? refreshInterval;
+
+  /// Waitlist code from the deep link (`/reserve?lot=1&waitlist=42`).
+  final int? waitlistCode;
 
   @override
   State<PublicBookingPage> createState() => _PublicBookingPageState();
@@ -181,6 +186,20 @@ class _PublicBookingPageState extends State<PublicBookingPage> {
     });
   }
 
+  /// The queue, rendered only when some category has no space. The card hides
+  /// itself when the lot has the waitlist off.
+  Widget _waitlist(PublicBookingAvailability availability) =>
+      PublicWaitlistCard(
+        lotId: widget.lotId,
+        fullCategories: [
+          for (final category in availability.categories)
+            if (category.isFull) (id: category.id, name: category.name),
+        ],
+        initialCode: widget.waitlistCode,
+        captchaSiteKey: widget.captchaSiteKey,
+        captchaBuilder: _captchaBuilder,
+      );
+
   Widget? _captchaField(BuildContext context) {
     final builder = _captchaBuilder;
     if (!_captchaOn || builder == null) {
@@ -309,6 +328,7 @@ class _PublicBookingPageState extends State<PublicBookingPage> {
             if (!availability.hasAvailability) ...[
               const SizedBox(height: Space.lg),
               _NoSpace(availability: availability),
+              _waitlist(availability),
             ] else ...[
               if (_categoryError != null)
                 Padding(
@@ -319,6 +339,8 @@ class _PublicBookingPageState extends State<PublicBookingPage> {
                         ?.copyWith(color: Theme.of(context).colorScheme.error),
                   ),
                 ),
+              if (availability.categories.any((category) => category.isFull))
+                _waitlist(availability),
               const SizedBox(height: Space.lg),
               _FormCard(
                 formKey: _formKey,

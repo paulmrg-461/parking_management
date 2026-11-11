@@ -7,6 +7,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/l10n/l10n.dart';
+import '../../waitlist/application/waitlist_cubit.dart';
+import '../../waitlist/presentation/waitlist_section.dart';
 import '../../../core/state/submission.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/dialer.dart';
@@ -46,6 +48,13 @@ class _ReservationsPageState extends State<ReservationsPage> {
   void initState() {
     super.initState();
     unawaited(context.read<ReservationsCubit>().load());
+    // The queue is a section of this board; a test that mounts the page
+    // without the waitlist still renders the reservations.
+    try {
+      unawaited(context.read<WaitlistCubit>().load());
+    } on ProviderNotFoundException {
+      // No waitlist provider in this tree.
+    }
   }
 
   @override
@@ -59,23 +68,49 @@ class _ReservationsPageState extends State<ReservationsPage> {
         addTooltip: l10n.reservationAdd,
         onAdd: _add,
         onRefresh: context.read<ReservationsCubit>().load,
-        body: BlocBuilder<ReservationsCubit, ReservationsState>(
-          builder: (context, state) => switch (state) {
-            ReservationsInitial() ||
-            ReservationsLoading() => const SkeletonList(),
-            ReservationsFailure(:final message) => ErrorState(
-              message: message,
-              onRetry: context.read<ReservationsCubit>().load,
+        body: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                Space.md,
+                Space.md,
+                Space.md,
+                0,
+              ),
+              child: _waitlist(),
             ),
-            final ReservationsLoaded loaded => _List(
-              loaded: loaded,
-              onAdd: _add,
-              onCheckIn: widget.onCheckIn ?? _checkInWithPlate,
+            Expanded(
+              child: BlocBuilder<ReservationsCubit, ReservationsState>(
+                builder: (context, state) => switch (state) {
+                  ReservationsInitial() ||
+                  ReservationsLoading() => const SkeletonList(),
+                  ReservationsFailure(:final message) => ErrorState(
+                    message: message,
+                    onRetry: context.read<ReservationsCubit>().load,
+                  ),
+                  final ReservationsLoaded loaded => _List(
+                    loaded: loaded,
+                    onAdd: _add,
+                    onCheckIn: widget.onCheckIn ?? _checkInWithPlate,
+                  ),
+                },
+              ),
             ),
-          },
+          ],
         ),
       ),
     );
+  }
+
+  Widget _waitlist() {
+    try {
+      return BlocProvider.value(
+        value: context.read<WaitlistCubit>(),
+        child: const WaitlistSection(),
+      );
+    } on ProviderNotFoundException {
+      return const SizedBox.shrink();
+    }
   }
 
   static Submission? _submissionOf(ReservationsState state) =>
@@ -430,6 +465,15 @@ class _ReservationTile extends StatelessWidget {
                           label: l10n.reservationWeb,
                           tone: StatusTone.success,
                           icon: Icons.public,
+                        ),
+                        const SizedBox(width: Space.xs),
+                      ],
+                      if (reservation.isWaitlistOffer) ...[
+                        StatusChip(
+                          key: const Key('reservation_waitlist'),
+                          label: l10n.waitlistOfferChip,
+                          tone: StatusTone.pending,
+                          icon: Icons.hourglass_top_outlined,
                         ),
                         const SizedBox(width: Space.xs),
                       ],

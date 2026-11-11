@@ -26,6 +26,10 @@ import 'package:parking_management/features/reports/application/reports_cubit.da
 import 'package:parking_management/features/tariffs/application/tariffs_cubit.dart';
 import 'package:parking_management/features/users/application/users_cubit.dart';
 import 'package:parking_management/features/vehicles/application/vehicles_cubit.dart';
+import 'package:parking_management/features/waitlist/application/public_waitlist_cubit.dart';
+import 'package:parking_management/features/waitlist/application/waitlist_cubit.dart';
+import 'package:parking_management/features/waitlist/domain/repositories/public_waitlist_repository.dart';
+import 'package:parking_management/features/waitlist/domain/repositories/waitlist_repository.dart';
 
 const _config = AppConfig(
   appName: 'test',
@@ -60,6 +64,15 @@ void main() {
       expect(sl<SyncService>(), isA<SyncService>());
     },
   );
+
+  test('Success: registers the waitlist module', () {
+    _register(sl);
+
+    expect(sl<WaitlistRepository>(), isA<WaitlistRepository>());
+    expect(sl<PublicWaitlistRepository>(), isA<PublicWaitlistRepository>());
+    expect(sl<WaitlistCubit>(), isA<WaitlistCubit>());
+    expect(sl<PublicWaitlistCubit>(), isA<PublicWaitlistCubit>());
+  });
 
   test('Success: the shared outbox kicks a drain on every enqueue', () {
     _register(sl);

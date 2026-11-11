@@ -42,4 +42,9 @@ void main() {
     expect(routeForNotification(_n('unknown')), isNull);
     expect(routeForNotification(_n('check_in')), isNull);
   });
+
+  test('Success: waitlist events open the reservations board', () {
+    expect(routeForNotification(_n('waitlist_joined')), '/reservations');
+    expect(routeForNotification(_n('waitlist_offer')), '/reservations');
+  });
 }

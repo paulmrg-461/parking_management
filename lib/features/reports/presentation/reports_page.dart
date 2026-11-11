@@ -452,6 +452,15 @@ class _ReportsBody extends StatelessWidget {
         ),
         const SizedBox(height: Space.sm),
         _ReservationMetrics(report: loaded.reservations),
+        if (loaded.reservations.waitlist.hasData) ...[
+          const SizedBox(height: Space.md),
+          SectionHeader(
+            icon: Icons.hourglass_top_outlined,
+            title: l10n.reportWaitlistTitle,
+          ),
+          const SizedBox(height: Space.sm),
+          _WaitlistMetrics(report: loaded.reservations.waitlist),
+        ],
         const SizedBox(height: Space.lg),
         SectionHeader(
           icon: Icons.category_outlined,
@@ -610,6 +619,44 @@ class _DeltaRow extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// The queue behind those holds: joined, offered and claimed turns.
+class _WaitlistMetrics extends StatelessWidget {
+  const _WaitlistMetrics({required this.report});
+
+  final WaitlistReport report;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final conversion = report.conversion;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          child: MetricCard(
+            icon: Icons.hourglass_top_outlined,
+            label: l10n.reportWaitlistJoined,
+            value: '${report.joined}',
+            caption: l10n.waitlistWaitingCount(report.waiting),
+          ),
+        ),
+        const SizedBox(width: Space.sm),
+        Expanded(
+          child: MetricCard(
+            icon: Icons.assignment_turned_in_outlined,
+            label: l10n.reportWaitlistClaimed,
+            value: '${report.claimed}',
+            caption: conversion == null
+                ? l10n.reportWaitlistOffered
+                : '${l10n.reportWaitlistOffered}: ${report.offered} · '
+                      '$conversion%',
+          ),
+        ),
+      ],
     );
   }
 }

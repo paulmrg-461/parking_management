@@ -10,7 +10,8 @@ String? routeForNotification(AppNotification notification) {
     'shift_closed' => '/shift',
     'monthly_pass_expiring' || 'monthly_pass_renewed' => '/monthly-passes',
     'check_in' || 'check_out' || 'overstay' => historyRoute,
-    'public_reservation' => '/reservations',
+    'public_reservation' || 'waitlist_joined' || 'waitlist_offer' =>
+      '/reservations',
     _ => null,
   };
 }

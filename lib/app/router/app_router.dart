@@ -48,6 +48,8 @@ import '../../features/plate_scanning/domain/repositories/plate_image_capture.da
 import '../../features/plate_scanning/domain/repositories/plate_scanner.dart';
 import '../../features/plate_scanning/presentation/plate_scan_page.dart';
 import '../../features/reservations/application/reservations_cubit.dart';
+import '../../features/waitlist/application/public_waitlist_cubit.dart';
+import '../../features/waitlist/application/waitlist_cubit.dart';
 import '../../features/reservations/presentation/reservations_page.dart';
 import '../di/injection.dart';
 import '../shell/app_shell.dart';
@@ -96,10 +98,20 @@ GoRouter buildRouter(
     ),
     GoRoute(
       path: reservePath,
-      builder: (context, state) => BlocProvider<PublicBookingCubit>(
-        create: (_) => serviceLocator<PublicBookingCubit>(),
+      builder: (context, state) => MultiBlocProvider(
+        providers: [
+          BlocProvider<PublicBookingCubit>(
+            create: (_) => serviceLocator<PublicBookingCubit>(),
+          ),
+          BlocProvider<PublicWaitlistCubit>(
+            create: (_) => serviceLocator<PublicWaitlistCubit>(),
+          ),
+        ],
         child: PublicBookingPage(
           lotId: int.tryParse(state.uri.queryParameters['lot'] ?? '') ?? 1,
+          waitlistCode: int.tryParse(
+            state.uri.queryParameters['waitlist'] ?? '',
+          ),
           captchaSiteKey: serviceLocator.isRegistered<AppConfig>()
               ? serviceLocator<AppConfig>().turnstileSiteKey
               : '',
@@ -223,8 +235,15 @@ GoRoute _homeRoute(AuthCubit auth) => GoRoute(
     ),
     GoRoute(
       path: 'reservations',
-      builder: (context, state) => BlocProvider<ReservationsCubit>(
-        create: (_) => serviceLocator<ReservationsCubit>(),
+      builder: (context, state) => MultiBlocProvider(
+        providers: [
+          BlocProvider<ReservationsCubit>(
+            create: (_) => serviceLocator<ReservationsCubit>(),
+          ),
+          BlocProvider<WaitlistCubit>(
+            create: (_) => serviceLocator<WaitlistCubit>(),
+          ),
+        ],
         child: const ReservationsPage(),
       ),
     ),

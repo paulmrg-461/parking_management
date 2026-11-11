@@ -655,6 +655,183 @@ class AppLocalizationsEs extends AppLocalizations {
   String get cfNo => 'No';
 
   @override
+  String get waitlistJoinTitle => 'Lista de espera';
+
+  @override
+  String get waitlistJoinHint =>
+      'Estamos llenos. Déjanos tus datos y te avisamos cuando se libere un cupo.';
+
+  @override
+  String get waitlistJoinAction => 'Unirme a la lista de espera';
+
+  @override
+  String get waitlistWaitFor => 'Puedo esperar hasta:';
+
+  @override
+  String get waitlistHoldFor => 'Reservar el cupo por:';
+
+  @override
+  String waitlistHoldHours(int hours) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hours,
+      locale: localeName,
+      other: '$hours horas',
+      one: '1 hora',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get waitlistJoined => 'Estás en la lista de espera';
+
+  @override
+  String waitlistPosition(int position) {
+    return 'Tu turno: $position';
+  }
+
+  @override
+  String waitlistCode(int code) {
+    return 'Código $code';
+  }
+
+  @override
+  String get waitlistKeepCode =>
+      'Guarda este código: lo necesitas para reclamar o salir de la lista.';
+
+  @override
+  String get waitlistNotifyWhatsapp => 'Te avisaremos por WhatsApp.';
+
+  @override
+  String get waitlistNotifyScreen =>
+      'Mantén esta página abierta o llámanos: te avisaremos aquí.';
+
+  @override
+  String get waitlistOfferTitle => '¡Se liberó un cupo!';
+
+  @override
+  String waitlistOfferBody(String time) {
+    return 'Resérvalo antes de las $time.';
+  }
+
+  @override
+  String get waitlistClaim => 'Reclamar mi cupo';
+
+  @override
+  String get waitlistLeave => 'Salir de la lista';
+
+  @override
+  String get waitlistLeft => 'Saliste de la lista de espera';
+
+  @override
+  String get waitlistExpiredTitle => 'Tu oferta venció';
+
+  @override
+  String get waitlistExpiredHint => 'Puedes volver a unirte a la lista.';
+
+  @override
+  String waitlistWaitingCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count personas esperando',
+      one: '1 persona esperando',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get waitlistLookupLabel => 'Código de lista de espera';
+
+  @override
+  String get waitlistDeskTitle => 'Lista de espera';
+
+  @override
+  String get waitlistDeskEmptyTitle => 'Nadie en lista de espera';
+
+  @override
+  String get waitlistDeskEmptyHint =>
+      'Cuando el parqueadero se llene, los clientes web podrán anotarse aquí.';
+
+  @override
+  String waitlistDeskOffered(String time) {
+    return 'Oferta hasta $time';
+  }
+
+  @override
+  String get waitlistDeskCallCustomer =>
+      'Llamar: el cliente no tiene WhatsApp automático';
+
+  @override
+  String get waitlistDeskClaim => 'Dar el cupo';
+
+  @override
+  String get waitlistDeskRemove => 'Quitar de la lista';
+
+  @override
+  String waitlistDeskRemoveBody(String plate) {
+    return 'Se quitará a $plate de la lista y se liberará su oferta.';
+  }
+
+  @override
+  String get waitlistSettingsTitle => 'Lista de espera';
+
+  @override
+  String get waitlistSettingsEnabled => 'Activar lista de espera pública';
+
+  @override
+  String get waitlistSettingsClaimMinutes => 'Minutos para reclamar una oferta';
+
+  @override
+  String get waitlistSettingsMaxEntries => 'Máximo de personas en lista';
+
+  @override
+  String get waitlistOfferChip => 'Oferta';
+
+  @override
+  String get notifTypeWaitlist => 'Lista de espera';
+
+  @override
+  String get errorWaitlistDisabled => 'La lista de espera no está disponible.';
+
+  @override
+  String get errorWaitlistNotNeeded =>
+      'Hay cupo disponible: puedes reservar ahora.';
+
+  @override
+  String get errorWaitlistExists => 'Esa placa ya está en la lista de espera.';
+
+  @override
+  String get errorWaitlistLimit =>
+      'Este celular ya tiene dos turnos en la lista.';
+
+  @override
+  String get errorWaitlistFull => 'La lista de espera está llena.';
+
+  @override
+  String get errorWaitlistWindow => 'Elige un tiempo de espera válido.';
+
+  @override
+  String get errorWaitlistNotFound => 'No encontramos ese turno.';
+
+  @override
+  String get errorWaitlistNotOffered => 'Aún no hay un cupo para ti.';
+
+  @override
+  String get errorOfferGone => 'La oferta ya no está disponible.';
+
+  @override
+  String get reportWaitlistTitle => 'Lista de espera';
+
+  @override
+  String get reportWaitlistJoined => 'Anotados';
+
+  @override
+  String get reportWaitlistOffered => 'Ofertas';
+
+  @override
+  String get reportWaitlistClaimed => 'Reclamadas';
+
+  @override
   String syncQueued(int count) {
     return '$count en cola, se reintentarán solos.';
   }

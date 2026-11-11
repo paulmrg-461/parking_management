@@ -1178,6 +1178,294 @@ abstract class AppLocalizations {
   /// **'No'**
   String get cfNo;
 
+  /// No description provided for @waitlistJoinTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Lista de espera'**
+  String get waitlistJoinTitle;
+
+  /// No description provided for @waitlistJoinHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Estamos llenos. Déjanos tus datos y te avisamos cuando se libere un cupo.'**
+  String get waitlistJoinHint;
+
+  /// No description provided for @waitlistJoinAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Unirme a la lista de espera'**
+  String get waitlistJoinAction;
+
+  /// No description provided for @waitlistWaitFor.
+  ///
+  /// In es, this message translates to:
+  /// **'Puedo esperar hasta:'**
+  String get waitlistWaitFor;
+
+  /// No description provided for @waitlistHoldFor.
+  ///
+  /// In es, this message translates to:
+  /// **'Reservar el cupo por:'**
+  String get waitlistHoldFor;
+
+  /// No description provided for @waitlistHoldHours.
+  ///
+  /// In es, this message translates to:
+  /// **'{hours, plural, =1{1 hora} other{{hours} horas}}'**
+  String waitlistHoldHours(int hours);
+
+  /// No description provided for @waitlistJoined.
+  ///
+  /// In es, this message translates to:
+  /// **'Estás en la lista de espera'**
+  String get waitlistJoined;
+
+  /// No description provided for @waitlistPosition.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu turno: {position}'**
+  String waitlistPosition(int position);
+
+  /// No description provided for @waitlistCode.
+  ///
+  /// In es, this message translates to:
+  /// **'Código {code}'**
+  String waitlistCode(int code);
+
+  /// No description provided for @waitlistKeepCode.
+  ///
+  /// In es, this message translates to:
+  /// **'Guarda este código: lo necesitas para reclamar o salir de la lista.'**
+  String get waitlistKeepCode;
+
+  /// No description provided for @waitlistNotifyWhatsapp.
+  ///
+  /// In es, this message translates to:
+  /// **'Te avisaremos por WhatsApp.'**
+  String get waitlistNotifyWhatsapp;
+
+  /// No description provided for @waitlistNotifyScreen.
+  ///
+  /// In es, this message translates to:
+  /// **'Mantén esta página abierta o llámanos: te avisaremos aquí.'**
+  String get waitlistNotifyScreen;
+
+  /// No description provided for @waitlistOfferTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¡Se liberó un cupo!'**
+  String get waitlistOfferTitle;
+
+  /// No description provided for @waitlistOfferBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Resérvalo antes de las {time}.'**
+  String waitlistOfferBody(String time);
+
+  /// No description provided for @waitlistClaim.
+  ///
+  /// In es, this message translates to:
+  /// **'Reclamar mi cupo'**
+  String get waitlistClaim;
+
+  /// No description provided for @waitlistLeave.
+  ///
+  /// In es, this message translates to:
+  /// **'Salir de la lista'**
+  String get waitlistLeave;
+
+  /// No description provided for @waitlistLeft.
+  ///
+  /// In es, this message translates to:
+  /// **'Saliste de la lista de espera'**
+  String get waitlistLeft;
+
+  /// No description provided for @waitlistExpiredTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu oferta venció'**
+  String get waitlistExpiredTitle;
+
+  /// No description provided for @waitlistExpiredHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Puedes volver a unirte a la lista.'**
+  String get waitlistExpiredHint;
+
+  /// No description provided for @waitlistWaitingCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 persona esperando} other{{count} personas esperando}}'**
+  String waitlistWaitingCount(int count);
+
+  /// No description provided for @waitlistLookupLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Código de lista de espera'**
+  String get waitlistLookupLabel;
+
+  /// No description provided for @waitlistDeskTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Lista de espera'**
+  String get waitlistDeskTitle;
+
+  /// No description provided for @waitlistDeskEmptyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Nadie en lista de espera'**
+  String get waitlistDeskEmptyTitle;
+
+  /// No description provided for @waitlistDeskEmptyHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuando el parqueadero se llene, los clientes web podrán anotarse aquí.'**
+  String get waitlistDeskEmptyHint;
+
+  /// No description provided for @waitlistDeskOffered.
+  ///
+  /// In es, this message translates to:
+  /// **'Oferta hasta {time}'**
+  String waitlistDeskOffered(String time);
+
+  /// No description provided for @waitlistDeskCallCustomer.
+  ///
+  /// In es, this message translates to:
+  /// **'Llamar: el cliente no tiene WhatsApp automático'**
+  String get waitlistDeskCallCustomer;
+
+  /// No description provided for @waitlistDeskClaim.
+  ///
+  /// In es, this message translates to:
+  /// **'Dar el cupo'**
+  String get waitlistDeskClaim;
+
+  /// No description provided for @waitlistDeskRemove.
+  ///
+  /// In es, this message translates to:
+  /// **'Quitar de la lista'**
+  String get waitlistDeskRemove;
+
+  /// No description provided for @waitlistDeskRemoveBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Se quitará a {plate} de la lista y se liberará su oferta.'**
+  String waitlistDeskRemoveBody(String plate);
+
+  /// No description provided for @waitlistSettingsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Lista de espera'**
+  String get waitlistSettingsTitle;
+
+  /// No description provided for @waitlistSettingsEnabled.
+  ///
+  /// In es, this message translates to:
+  /// **'Activar lista de espera pública'**
+  String get waitlistSettingsEnabled;
+
+  /// No description provided for @waitlistSettingsClaimMinutes.
+  ///
+  /// In es, this message translates to:
+  /// **'Minutos para reclamar una oferta'**
+  String get waitlistSettingsClaimMinutes;
+
+  /// No description provided for @waitlistSettingsMaxEntries.
+  ///
+  /// In es, this message translates to:
+  /// **'Máximo de personas en lista'**
+  String get waitlistSettingsMaxEntries;
+
+  /// No description provided for @waitlistOfferChip.
+  ///
+  /// In es, this message translates to:
+  /// **'Oferta'**
+  String get waitlistOfferChip;
+
+  /// No description provided for @notifTypeWaitlist.
+  ///
+  /// In es, this message translates to:
+  /// **'Lista de espera'**
+  String get notifTypeWaitlist;
+
+  /// No description provided for @errorWaitlistDisabled.
+  ///
+  /// In es, this message translates to:
+  /// **'La lista de espera no está disponible.'**
+  String get errorWaitlistDisabled;
+
+  /// No description provided for @errorWaitlistNotNeeded.
+  ///
+  /// In es, this message translates to:
+  /// **'Hay cupo disponible: puedes reservar ahora.'**
+  String get errorWaitlistNotNeeded;
+
+  /// No description provided for @errorWaitlistExists.
+  ///
+  /// In es, this message translates to:
+  /// **'Esa placa ya está en la lista de espera.'**
+  String get errorWaitlistExists;
+
+  /// No description provided for @errorWaitlistLimit.
+  ///
+  /// In es, this message translates to:
+  /// **'Este celular ya tiene dos turnos en la lista.'**
+  String get errorWaitlistLimit;
+
+  /// No description provided for @errorWaitlistFull.
+  ///
+  /// In es, this message translates to:
+  /// **'La lista de espera está llena.'**
+  String get errorWaitlistFull;
+
+  /// No description provided for @errorWaitlistWindow.
+  ///
+  /// In es, this message translates to:
+  /// **'Elige un tiempo de espera válido.'**
+  String get errorWaitlistWindow;
+
+  /// No description provided for @errorWaitlistNotFound.
+  ///
+  /// In es, this message translates to:
+  /// **'No encontramos ese turno.'**
+  String get errorWaitlistNotFound;
+
+  /// No description provided for @errorWaitlistNotOffered.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no hay un cupo para ti.'**
+  String get errorWaitlistNotOffered;
+
+  /// No description provided for @errorOfferGone.
+  ///
+  /// In es, this message translates to:
+  /// **'La oferta ya no está disponible.'**
+  String get errorOfferGone;
+
+  /// No description provided for @reportWaitlistTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Lista de espera'**
+  String get reportWaitlistTitle;
+
+  /// No description provided for @reportWaitlistJoined.
+  ///
+  /// In es, this message translates to:
+  /// **'Anotados'**
+  String get reportWaitlistJoined;
+
+  /// No description provided for @reportWaitlistOffered.
+  ///
+  /// In es, this message translates to:
+  /// **'Ofertas'**
+  String get reportWaitlistOffered;
+
+  /// No description provided for @reportWaitlistClaimed.
+  ///
+  /// In es, this message translates to:
+  /// **'Reclamadas'**
+  String get reportWaitlistClaimed;
+
   /// No description provided for @syncQueued.
   ///
   /// In es, this message translates to:

@@ -26,4 +26,31 @@ void main() {
     expect(report.hasData, isTrue);
     expect(ReservationReport.empty.hasData, isFalse);
   });
+
+  test('Success: the waitlist block parses', () {
+    final report = ReservationReport.fromJson({
+      'total': 3,
+      'waitlist': {
+        'joined': 9,
+        'offered': 4,
+        'claimed': 3,
+        'expired': 1,
+        'left': 2,
+        'cancelled': 0,
+        'waiting': 3,
+      },
+    });
+
+    expect(report.waitlist.joined, 9);
+    expect(report.waitlist.conversion, 75);
+    expect(report.waitlist.hasData, isTrue);
+  });
+
+  test('Success: a database without the waitlist block parses as zeros', () {
+    final report = ReservationReport.fromJson({'total': 1});
+
+    expect(report.waitlist, WaitlistReport.empty);
+    expect(report.waitlist.conversion, isNull);
+    expect(report.waitlist.hasData, isFalse);
+  });
 }
