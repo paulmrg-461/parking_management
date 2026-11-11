@@ -589,8 +589,11 @@ Last updated: 2026-11-11 (period comparison reports).
   loads them and exposes `resolve(key, choice)`, and the `SyncBadge` shows a
   merge icon with the count and a dialog offering keep-mine / keep-theirs.
   The field-by-field merge and the per-field dialog are still pending.
-- Pending (3.3, 4.2, 6.1-6.3, 6.5): replayer `Future<int?>`, field-by-field merge
-  in `resolve`, and the full resolution dialog.
+- `MutationReplayer.replay` returns `Future<int?>`: entity replayers return the
+  version the server assigned (check-in/check-out return `null`, they rely on
+  idempotency instead).
+- Pending (4.2, 6.1-6.3, 6.5): field-by-field merge in `resolve` and the full
+  resolution dialog.
 
 ## Period comparison reports (2026-11-11, `0104`)
 

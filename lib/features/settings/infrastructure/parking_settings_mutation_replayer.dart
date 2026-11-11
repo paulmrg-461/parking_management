@@ -19,7 +19,7 @@ class ParkingSettingsMutationReplayer extends MutationReplayer {
   MutationEntity get entity => MutationEntity.settings;
 
   @override
-  Future<void> replay(PendingMutation mutation) async {
+  Future<int?> replay(PendingMutation mutation) async {
     final fields = mutation.decodePayload();
     final lotId = fields.remove('lot_id') as int?;
     final saved = await _remote.patch(
@@ -28,6 +28,7 @@ class ParkingSettingsMutationReplayer extends MutationReplayer {
       baseVersion: mutation.baseVersion,
     );
     await _local.upsert(saved, lotId: lotId);
+    return saved.version;
   }
 
   @override

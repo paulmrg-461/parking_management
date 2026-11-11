@@ -42,6 +42,7 @@ class _FakeRemote implements CategoryRemoteDataSource {
       id: id,
       name: payload['name'] as String? ?? 'x',
       capacity: payload['capacity'] as int? ?? 0,
+      version: 8,
     );
   }
 
@@ -101,14 +102,15 @@ void main() {
     expect(local.upserted.single.name, 'bus');
   });
 
-  test('Success: delete replays the delete', () async {
+  test('Success: delete replays the delete and returns no version', () async {
     final remote = _FakeRemote();
 
-    await CategoryMutationReplayer(
+    final version = await CategoryMutationReplayer(
       remote,
       _FakeLocal(),
     ).replay(_mutation(MutationOperation.delete, null));
 
+    expect(version, isNull);
     expect(remote.deletedId, 2);
   });
 
@@ -116,7 +118,7 @@ void main() {
     final remote = _FakeRemote();
     final local = _FakeLocal();
 
-    await CategoryMutationReplayer(remote, local).replay(
+    final version = await CategoryMutationReplayer(remote, local).replay(
       _mutation(
         MutationOperation.update,
         '{"name":"bus","capacity":12}',
@@ -124,6 +126,7 @@ void main() {
       ),
     );
 
+    expect(version, 8);
     expect(remote.sentBaseVersion, 4);
     expect(remote.patched, {'name': 'bus', 'capacity': 12});
     expect(local.upserted.single.capacity, 12);

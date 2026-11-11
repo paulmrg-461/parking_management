@@ -104,12 +104,13 @@ void main() {
     () async {
       final remote = _FakeRemote();
 
-      await CheckOutMutationReplayer(remote).replay(
+      final version = await CheckOutMutationReplayer(remote).replay(
         _queued(
           '{"client_exit_time":"2026-01-01T10:00:00.000","client_ref":"k1","payment_method":"card","discount_amount":1000,"discount_reason":"cortesia"}',
         ),
       );
 
+      expect(version, isNull);
       expect(remote.sessionId, 5);
       expect(remote.clientExitTime, DateTime.parse('2026-01-01T10:00:00.000'));
       expect(remote.idempotencyKey, 'k1');

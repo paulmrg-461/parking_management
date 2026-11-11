@@ -37,13 +37,14 @@ class _FakeReplayer extends MutationReplayer {
   Completer<void>? gate;
 
   @override
-  Future<void> replay(PendingMutation mutation) async {
+  Future<int?> replay(PendingMutation mutation) async {
     replayed.add(mutation);
     await gate?.future;
     final outcome = _outcomes.isEmpty ? null : _outcomes.removeAt(0);
     if (outcome != null) {
       throw outcome;
     }
+    return 8;
   }
 
   final List<Map<String, dynamic>?> adopted = [];

@@ -351,11 +351,12 @@ void main() {
         await local.upsert(const ParkingSettings(name: 'Lot Two'));
         final remote = _FakeRemote();
 
-        await ParkingSettingsMutationReplayer(
+        final version = await ParkingSettingsMutationReplayer(
           remote,
           local,
         ).replay(_settingsMutation('{"name":"Lot One edited","lot_id":1}'));
 
+        expect(version, remote.settings.version);
         expect(remote.lastPatchLot, 1);
         expect(remote.lastPatch, isNot(contains('lot_id')));
         expect((await local.read())?.name, 'Lot Two');

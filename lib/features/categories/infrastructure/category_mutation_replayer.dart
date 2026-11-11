@@ -15,21 +15,21 @@ class CategoryMutationReplayer extends MutationReplayer {
   MutationEntity get entity => MutationEntity.category;
 
   @override
-  Future<void> replay(PendingMutation mutation) async {
+  Future<int?> replay(PendingMutation mutation) async {
     final id = mutation.entityId!;
     if (mutation.operation == MutationOperation.delete) {
       await _remote.delete(id, baseVersion: mutation.baseVersion);
-      return;
+      return null;
     }
     // The repository queues the whole row (name + capacity) so replaying a
     // rename never drops a queued capacity change, and vice versa.
-    await _local.upsert(
-      await _remote.patch(
-        id,
-        mutation.decodePayload(),
-        baseVersion: mutation.baseVersion,
-      ),
+    final updated = await _remote.patch(
+      id,
+      mutation.decodePayload(),
+      baseVersion: mutation.baseVersion,
     );
+    await _local.upsert(updated);
+    return updated.version;
   }
 
   @override

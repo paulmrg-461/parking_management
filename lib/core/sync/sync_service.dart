@@ -152,7 +152,7 @@ class SyncService {
     }
   }
 
-  Future<void> _replay(PendingMutation mutation) {
+  Future<int?> _replay(PendingMutation mutation) {
     final replayer = _replayers[mutation.entityType];
     if (replayer == null) {
       throw StateError('No replayer for ${mutation.entityType.name}');

@@ -15,19 +15,19 @@ class VehicleMutationReplayer extends MutationReplayer {
   MutationEntity get entity => MutationEntity.vehicle;
 
   @override
-  Future<void> replay(PendingMutation mutation) async {
+  Future<int?> replay(PendingMutation mutation) async {
     final id = mutation.entityId!;
     if (mutation.operation == MutationOperation.delete) {
       await _remote.delete(id, baseVersion: mutation.baseVersion);
-      return;
+      return null;
     }
-    await _local.upsert(
-      await _remote.update(
-        id,
-        mutation.decodePayload(),
-        baseVersion: mutation.baseVersion,
-      ),
+    final updated = await _remote.update(
+      id,
+      mutation.decodePayload(),
+      baseVersion: mutation.baseVersion,
     );
+    await _local.upsert(updated);
+    return updated.version;
   }
 
   @override
