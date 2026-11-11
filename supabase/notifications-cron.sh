@@ -30,6 +30,13 @@ docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
 # Same jobs pg_cron schedules when the extension is available; harmless here.
 docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
   "select public.expire_reservations(24);" >/dev/null
+# Waitlist: expire offers and stale turns, serve the queue, purge old turns.
+docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
+  "select public.waitlist_expire();" >/dev/null
+docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
+  "select public.waitlist_dispatch_all();" >/dev/null
+docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
+  "select public.purge_waitlist(30);" >/dev/null
 docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
   "select public.purge_stale_notifications(90);" >/dev/null
 docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \

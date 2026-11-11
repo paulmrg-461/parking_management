@@ -37,6 +37,11 @@ while true; do
   run notify_expiring_reservations
   run renew_monthly_passes
   run expire_reservations
+  # Waitlist: reconcile/expire offers, then serve the queue (and the trigger
+  # kicks a freed space left behind), and purge old terminal turns.
+  run waitlist_expire
+  run waitlist_dispatch_all
+  run purge_waitlist
   run purge_expired_idempotency
   run purge_stale_notifications
   run purge_client_error_reports

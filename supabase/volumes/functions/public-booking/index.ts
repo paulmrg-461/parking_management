@@ -18,6 +18,11 @@
 //
 // The caller only needs the anon key. Customer data (name, phone) is never
 // logged.
+//
+// `action` (top level, optional) selects the operation: absent or `book`
+// creates a hold, `waitlist_join` joins the booking waitlist through
+// `rpc/public_join_waitlist_verified` (again service-role only) with the same
+// captcha rule. Anything else is `InvalidDataError`.
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -35,14 +40,21 @@ const CORS = {
 }
 
 type Booking = {
+  action?: unknown
   lot_id?: unknown
   plate?: unknown
   category_id?: unknown
   until?: unknown
+  wait_until?: unknown
+  hold_minutes?: unknown
   name?: unknown
   phone?: unknown
   captcha_token?: unknown
 }
+
+type Action = 'book' | 'waitlist_join'
+
+const ACTIONS: readonly Action[] = ['book', 'waitlist_join']
 
 type Verdict = 'ok' | 'expired' | 'failed' | 'unavailable'
 
@@ -85,7 +97,39 @@ async function verify(token: string, ip: string): Promise<Verdict> {
   }
 }
 
-async function book(rpc: string, key: string, booking: Booking) {
+// Each action names the RPC and the parameters it takes; nothing else about
+// the request changes.
+function call(action: Action, booking: Booking) {
+  const common = {
+    p_lot_id: booking.lot_id,
+    p_plate: booking.plate,
+    p_category_id: booking.category_id,
+    p_customer_name: booking.name,
+    p_customer_phone: booking.phone,
+  }
+  if (action === 'waitlist_join') {
+    return {
+      anonymous: 'public_join_waitlist',
+      verified: 'public_join_waitlist_verified',
+      params: {
+        ...common,
+        p_wait_until: booking.wait_until,
+        p_hold_minutes: booking.hold_minutes,
+      },
+    }
+  }
+  return {
+    anonymous: 'public_create_reservation',
+    verified: 'public_create_reservation_verified',
+    params: { ...common, p_until: booking.until },
+  }
+}
+
+async function book(
+  rpc: string,
+  key: string,
+  params: Record<string, unknown>,
+) {
   const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${rpc}`, {
     method: 'POST',
     headers: {
@@ -93,14 +137,7 @@ async function book(rpc: string, key: string, booking: Booking) {
       Authorization: `Bearer ${key}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      p_lot_id: booking.lot_id,
-      p_plate: booking.plate,
-      p_category_id: booking.category_id,
-      p_until: booking.until,
-      p_customer_name: booking.name,
-      p_customer_phone: booking.phone,
-    }),
+    body: JSON.stringify(params),
   })
   const text = await response.text()
   let body: unknown = null
@@ -131,12 +168,14 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
 
   let lot: unknown = null
+  let action: Action = 'book'
   const done = (body: Record<string, unknown>, status = 200) => {
     console.log(JSON.stringify({
       fn: 'public-booking',
       status,
       ms: Date.now() - started,
       lot,
+      action,
       captcha: SECRET !== '',
       outcome: status === 200 ? 'booked' : body.message,
     }))
@@ -150,7 +189,14 @@ Deno.serve(async (req) => {
   }
   lot = Number.isInteger(booking.lot_id) ? booking.lot_id : null
 
-  let rpc = 'public_create_reservation'
+  const requested = booking.action ?? 'book'
+  if (typeof requested !== 'string' || !ACTIONS.includes(requested as Action)) {
+    return done({ message: 'InvalidDataError' }, 400)
+  }
+  action = requested as Action
+  const target = call(action, booking)
+
+  let rpc = target.anonymous
   let key = ANON_KEY
   if (SECRET) {
     const token = typeof booking.captcha_token === 'string'
@@ -165,11 +211,11 @@ Deno.serve(async (req) => {
     if (verdict === 'unavailable') {
       return done({ message: 'CaptchaUnavailableError' }, 503)
     }
-    rpc = 'public_create_reservation_verified'
+    rpc = target.verified
     key = SERVICE_KEY
   }
 
-  const result = await book(rpc, key, booking)
+  const result = await book(rpc, key, target.params)
   if (!result.ok) {
     const { message, status } = refusal(result.status, result.body)
     return done({ message }, status)

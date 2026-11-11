@@ -18,6 +18,9 @@ volumes/functions/push-dispatch/**
 !volumes/functions/public-booking/
 volumes/functions/public-booking/**
 !volumes/functions/public-booking/index.ts
+!volumes/functions/whatsapp-dispatch/
+volumes/functions/whatsapp-dispatch/**
+!volumes/functions/whatsapp-dispatch/index.ts
 .env
 test.http
 docker-compose.override.yml
