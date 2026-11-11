@@ -154,13 +154,24 @@ Deployment: [`setup-cloud.md`](setup-cloud.md) (single VM + TLS proxy) and
 - **Beta Flutter SDK pinned**; analyzer output is limited to SDK deprecation
   infos until the pin moves to stable.
 
+## 7.1 Offline conflicts (implemented)
+
+Reference entities (`vehicles`, `tariffs`, `categories`, `parking_settings`)
+carry a `version` column. Queued edits send the version they were based on, so
+a concurrent change is a conflict instead of an overwrite: disjoint field
+edits merge automatically, overlapping ones are parked for the operator, who
+resolves them per field from the sync badge (keep mine, keep theirs, or pick a
+value for each field). Deletes are covered too (delete vs edit, edit vs
+delete). Check-in and check-out are safe by idempotency, not by version. The
+guard that refuses version-unaware clients is off by default and is switched
+on per site with `set_row_version_policy(true)` once `min_app_version` is set.
+
 ## 8. Possible next steps (not planned work)
 
 - Real FCM/Meta/VAPID credentials for production push and automated WhatsApp.
 - Cold-storage archival for evidence files (currently deleted after retention).
 - iOS target if required.
 - Template management UI for automated WhatsApp.
-- Conflict resolution for offline reference-data edits (last-write-wins today).
 
 ## 9. Documentation map
 

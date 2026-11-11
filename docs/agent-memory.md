@@ -543,6 +543,20 @@ Last updated: 2026-11-11 (period comparison reports).
   because the helper builds it) and `updateVersioned`/`deleteVersioned`
   (`version=eq.<base>` filter, zero rows decides conflict vs permission vs
   legacy not-found). Four ARB keys map the new codes.
+- Queue mechanics: `enqueue` coalesces patches of the same row keeping the
+  **old** base (and refuses to coalesce into a conflict/dead letter; check-in
+  and check-out are never coalesced; settings coalesce per `lot_id`), success
+  settles instead of removing (an edit coalesced during the replay survives),
+  and a parked conflict is serialised with `deadLettered: true` so an older
+  build skips it, while reading it back with `needsResolution: true` wins.
+- Legacy entries (no `baseVersion`) replay with no version filter: that single
+  edit stays last-write-wins. The client sends `x-versioned-write: 1` on every
+  request, so turning `set_row_version_policy(true)` on does not lock out this
+  build. Procedure to enforce: set `min_app_version` in Ajustes, then
+  `select set_row_version_policy(true)` as a lot admin.
+- `mapSupabaseError` passes an already typed `Failure` through unchanged; without
+  that, every remote data source flattened `VersionConflictFailure` into
+  `ServerFailure`.
 - `PendingMutation` now carries `baseVersion`, `baseSnapshotJson`,
   `needsResolution`, `conflictKind` and `serverJson`, with `state`
   (pending/conflict/deadLetter), `asConflict` and `rebased`; legacy JSON loads
@@ -555,8 +569,8 @@ Last updated: 2026-11-11 (period comparison reports).
   disjoint fields auto-apply and rebase the entry (max 3 rounds), a server that
   already has mine removes it and adopts the row, overlapping fields or an
   edit/delete mismatch park a conflict, `delete` of a vanished row succeeds.
-  `resolve(key, keepMine|keepTheirs)` rebases on the server version or adopts
-  and removes. Nothing exercises this yet: the features do not send versions.
+  `resolve(key, ConflictResolution)` (see below) rebases on the server version
+  or adopts and removes.
 - Vehicles are wired: `Vehicle.version` (entity, DTO and Hive adapter), the
   remote update/delete send it through the versioned helpers, the repository
   refuses an edit while the row has a parked conflict (`ConflictPendingError`)
@@ -610,6 +624,17 @@ Last updated: 2026-11-11 (period comparison reports).
 - End-to-end flow test `test/features/vehicles/offline_conflict_flow_test.dart`:
   a disjoint change merges silently, keep mine wins through the real dialog, keep
   theirs adopts the server row, a parked conflict is never replayed blindly.
+- Gatekeeper after the change (2026-11-11): `flutter analyze` clean,
+  **1295 tests** green, coverage 80.8% global (application 91.8%,
+  infrastructure 46.7%), `dart run tool/check_coverage.dart` green,
+  `supabase/tests/run.sh` green over migrations `0001`–`0105` (scratch
+  `postgres:17-alpine` needs `create role anon/authenticated/service_role`
+  before the suite, the CI image already has them), web release rebuilt with
+  `--no-web-resources-cdn` and republished (`/reserve` 200), release APK built
+  (no device attached: not installed).
+- Task 7.3 (two-browser manual smoke) was not run: no second session was
+  available. The same paths are covered by the end-to-end widget test above and
+  by the SQL stale-base blocks.
 
 ## Period comparison reports (2026-11-11, `0104`)
 

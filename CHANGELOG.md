@@ -49,6 +49,24 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Added
 
+- **Offline edits never overwrite each other silently**
+  (`0105`, `openspec/changes/add-offline-conflict-resolution`).
+  `vehicles`, `tariffs`, `categories` and `parking_settings` carry a `version`
+  column bumped by a trigger only when the row really changes. Every client
+  edit sends the version it was based on (and the `x-versioned-write` header
+  the guard requires), so a concurrent change becomes a **conflict** instead of
+  a last-write-wins overwrite:
+  - Disjoint field edits **auto-merge** without asking (three-way merge on the
+    cached base row, up to three rounds).
+  - Overlapping fields are **parked** in the outbox and never replayed until
+    the operator decides, from the sync badge: *Resolver conflicto* shows the
+    before / mine / server values per field with keep-mine, keep-theirs and
+    per-field selection. Deletes are covered too (delete vs edit, edit vs
+    delete).
+  - Settings save only the fields that actually changed, so a text edit cannot
+    clobber a logo someone else uploaded.
+  - `set_row_version_policy(true)` (after setting `min_app_version`) refuses
+    version-unaware clients for a site; it is off by default.
 - **Bot protection on the public booking page** (`0103`,
   `openspec/changes/add-public-booking-captcha`). Two controls per lot:
   - *Hourly ceiling*, no credentials needed: at most
