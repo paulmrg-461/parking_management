@@ -194,6 +194,14 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - **The board refreshes after check-in**: coming back from "Registrar entrada"
   reloads the list, so the hold that just turned into a stay disappears
   instead of lingering until a manual refresh.
+- **Month-over-month and year-over-year reports**: the reports screen has a
+  "Comparación por periodo" section (6 or 12 months) with the month, the month
+  before it and the same month last year — revenue, entries, exits, average
+  ticket and stay, pass revenue and reservations. A running month is compared
+  against the same elapsed days and labelled partial; a delta chip only shows
+  when the base existed, had activity and is comparable. CSV and PDF export
+  include it. New `report_period_comparison` RPC plus the missing
+  `(lot_id, exit_time)` index.
 - **Reservations CSV**: the board has "Copiar CSV" (visible rows, filters
   included) with the code, plate, category, ISO expiry, customer, phone,
   source, status and grace flag, escaped for Excel — reception can print the

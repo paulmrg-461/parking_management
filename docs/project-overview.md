@@ -69,7 +69,7 @@ the main data it touches.
 | `categories` / `tariffs` | Reference data per site, capacity | `categories`, `tariffs` |
 | `monthly_passes` | Passes, charges, collection, expiry notices | `monthly_passes`, `monthly_pass_payments`, `register_pass_payment` |
 | `shifts` | Open/close with expected-vs-counted and a denomination counter, movements, history filters, corrections, PDF | `shifts`, `cash_movements`, `shift_adjustments`, `list_shifts`, `adjust_shift` |
-| `reports` | Revenue, occupancy, site comparison, hourly traffic, WhatsApp metrics, PDF | `report_revenue(_all)`, `report_occupancy`, `report_hourly_traffic`, `report_whatsapp` |
+| `reports` | Revenue, occupancy, site comparison, hourly traffic, period comparison, WhatsApp metrics, PDF | `report_revenue(_all)`, `report_occupancy`, `report_hourly_traffic`, `report_period_comparison`, `report_whatsapp` |
 | `notifications` | Inbox, bell, deep links, browser push toggle | `notifications`, `web_push_subscriptions` |
 | `settings` | Per-site identity, branding, currency (COP/USD), retention, WhatsApp mode, police quadrant | `parking_settings`, `set_branding_logo` |
 | `emergency` | One-tap call to the nearest police quadrant (123 fallback) | `parking_settings.police_phone` |
@@ -158,8 +158,6 @@ Deployment: [`setup-cloud.md`](setup-cloud.md) (single VM + TLS proxy) and
 
 - Real FCM/Meta/VAPID credentials for production push and automated WhatsApp.
 - Cold-storage archival for evidence files (currently deleted after retention).
-- Longer trend analysis: the home shows the last 7 days and reports cover the
-  selected range, but there is no month-over-month or year-over-year view.
 - iOS target if required.
 - Template management UI for automated WhatsApp.
 - Conflict resolution for offline reference-data edits (last-write-wins today).

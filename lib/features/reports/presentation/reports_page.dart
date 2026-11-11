@@ -126,6 +126,7 @@ class _ReportsPageState extends State<ReportsPage> {
         previousTotal: state.previousTotal,
         deltaPercent: state.deltaPercent,
         hourly: state.hourly,
+        comparison: state.comparison,
       );
       if (!context.mounted) {
         return;
@@ -154,6 +155,7 @@ class _ReportsPageState extends State<ReportsPage> {
           previousTotal: state.previousTotal,
           deltaPercent: state.deltaPercent,
           hourly: state.hourly,
+          comparison: state.comparison,
         ),
       ),
     );

@@ -4,15 +4,15 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-11-10 (public booking bot protection).
+Last updated: 2026-11-11 (period comparison reports).
 
 ## Where we are
 
 - Stack: Flutter (android + web) + self-hosted Supabase only. No FastAPI,
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
-- `supabase/migrations/0001..0102` are the schema owner (applied by
+- `supabase/migrations/0001..0104` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 1153 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 1200 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -522,6 +522,23 @@ Last updated: 2026-11-10 (public booking bot protection).
 - Not verified: the real Turnstile iframe in a browser and the function inside
   the edge-runtime container (it was exercised with Deno against mocks).
 - Test count: 1172; schema `0001..0103`.
+
+## Period comparison reports (2026-11-11, `0104`)
+
+- `report_period_comparison(months, as_of)` returns the trailing 1..24 calendar
+  months, each with `current`, `previous_month` and `previous_year`: revenue,
+  entries, exits, `avg_ticket`, `avg_stay_minutes`, `pass_revenue`,
+  reservations/used. The running month is cut to the elapsed days
+  (`is_partial`), every window says `covered` (the lot's first session is on or
+  before it) and `p_as_of` makes the tests deterministic without faking clock.
+- Deltas are a Dart rule (`periodDelta`): no chip on a zero, uncovered or
+  shorter base, mirroring `TrendCard`. The section keeps its own
+  loading/error/empty state and never fails the page; `loadComparison` switches
+  6/12 months without emitting `ReportsLoading`.
+- CSV/PDF export raw integers and Latin-1 text (no em dash). New indexes:
+  `ix_sessions_lot_exit_closed`, `ix_pass_payments_lot_paid`,
+  `ix_reservations_lot_from`; the `(lot_id, exit_time)` one was missing.
+- Test count: 1200; schema `0001..0104`.
 
 ## Owner contact data (2026-11-05)
 

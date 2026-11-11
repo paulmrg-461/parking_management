@@ -8,6 +8,7 @@ import '../../../core/receipt/pdf_table.dart';
 import '../../../core/utils/cop_formatter.dart';
 import '../../../core/utils/formatters.dart';
 import '../domain/entities/hourly_traffic.dart';
+import '../domain/entities/period_comparison.dart';
 import '../domain/entities/revenue_report.dart';
 
 /// Builds the shareable PDF for the revenue report (active lot, or every site
@@ -20,6 +21,7 @@ Future<Uint8List> buildRevenueReportPdf({
   int? previousTotal,
   int? deltaPercent,
   HourlyTraffic? hourly,
+  PeriodComparison? comparison,
 }) {
   final doc = pw.Document();
   final hourlyRows = hourly == null
@@ -90,6 +92,16 @@ Future<Uint8List> buildRevenueReportPdf({
                 CopFormatter.format(day.amount),
               ),
           ]),
+          if (comparison != null && comparison.hasData)
+            PdfDocumentBuilder.section(l10n.reportsPeriodTitle, [
+              buildPeriodBarChart(comparison),
+              pw.SizedBox(height: 6),
+              for (final row in reportPeriodRows(
+                l10n: l10n,
+                comparison: comparison,
+              ))
+                PdfDocumentBuilder.row(row.label, row.value),
+            ]),
           if (hourlyRows.isNotEmpty)
             PdfDocumentBuilder.section(l10n.reportsHourlyTitle, [
               if (hourly != null) ...[
@@ -286,3 +298,101 @@ List<({String label, String value})> reportHourlyRows({
         value: l10n.reportsHourlyPair(point.entries, point.exits),
       ),
 ];
+
+/// Bar heights for [values] scaled to [height]; the tallest fills it and a
+/// zero stays flat (no invisible minimum that would look like activity).
+List<double> periodBarHeights(List<int> values, {double height = 68}) {
+  final peak = values.fold<int>(0, (max, value) => value > max ? value : max);
+  if (peak <= 0) {
+    return List<double>.filled(values.length, 0);
+  }
+  return [for (final value in values) height * value / peak];
+}
+
+/// Revenue bars for the monthly comparison: the month and the same month a
+/// year earlier, one pair per bucket.
+pw.Widget buildPeriodBarChart(
+  PeriodComparison comparison, {
+  double height = 68,
+}) {
+  if (comparison.buckets.isEmpty) {
+    return pw.SizedBox();
+  }
+  final current = periodBarHeights([
+    for (final bucket in comparison.buckets) bucket.current.revenue,
+  ], height: height);
+  final previous = periodBarHeights([
+    for (final bucket in comparison.buckets) bucket.previousYear.revenue,
+  ], height: height);
+  final now = PdfColor.fromHex('#1BAF7A');
+  final before = PdfColor.fromHex('#C7CDD4');
+  return pw.SizedBox(
+    height: height,
+    child: pw.Row(
+      crossAxisAlignment: pw.CrossAxisAlignment.end,
+      children: [
+        for (var i = 0; i < comparison.buckets.length; i++)
+          pw.Expanded(
+            child: pw.Padding(
+              padding: const pw.EdgeInsets.symmetric(horizontal: 2),
+              child: pw.Row(
+                crossAxisAlignment: pw.CrossAxisAlignment.end,
+                children: [
+                  pw.Expanded(
+                    child: pw.Container(height: current[i], color: now),
+                  ),
+                  pw.SizedBox(width: 1),
+                  pw.Expanded(
+                    child: pw.Container(height: previous[i], color: before),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    ),
+  );
+}
+
+/// One line per month: money, month-over-month and year-over-year (or `n/d`).
+/// ASCII only: the built-in PDF font has no em dash.
+List<({String label, String value})> reportPeriodRows({
+  required AppLocalizations l10n,
+  required PeriodComparison comparison,
+}) => [
+  for (final bucket in comparison.buckets.reversed)
+    (
+      label: bucket.isPartial
+          ? l10n.reportsPeriodPdfPartial(
+              _pdfMonth(bucket.month),
+              '1-${bucket.current.days}',
+            )
+          : _pdfMonth(bucket.month),
+      value:
+          '${CopFormatter.format(bucket.current.revenue)} · '
+          '${_pdfDelta(bucket.deltaVsMonth(PeriodMetric.revenue), l10n)} · '
+          '${_pdfDelta(bucket.deltaVsYear(PeriodMetric.revenue), l10n)}',
+    ),
+];
+
+String _pdfMonth(DateTime month) {
+  const names = [
+    'jan',
+    'feb',
+    'mar',
+    'apr',
+    'may',
+    'jun',
+    'jul',
+    'aug',
+    'sep',
+    'oct',
+    'nov',
+    'dec',
+  ];
+  return '${names[month.month - 1]} ${month.year}';
+}
+
+String _pdfDelta(int? delta, AppLocalizations l10n) => delta == null
+    ? l10n.reportsPeriodPdfNoBase
+    : '${delta > 0 ? '+' : ''}$delta %';

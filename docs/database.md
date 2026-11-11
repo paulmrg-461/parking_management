@@ -146,6 +146,15 @@ hold with a phone and automated WhatsApp, queues `reservation_cancelled`.
 WhatsApp for public holds ending inside the window (default 60 min) when the
 lot has automated WhatsApp on, and stamps `reminder_sent_at` (idempotent).
 
+**Period comparison**
+`report_period_comparison(months, as_of)` (admin, lot-scoped, business
+timezone): the trailing 1..24 calendar months, each with `current`,
+`previous_month` and `previous_year` windows (revenue, entries, exits,
+`avg_ticket`, `avg_stay_minutes`, `pass_revenue`, reservations/used), plus
+`is_partial` for the running month and `covered` per window (the lot existed
+before it). Indexes `ix_sessions_lot_exit_closed`, `ix_pass_payments_lot_paid`
+and `ix_reservations_lot_from` back it.
+
 **Reservations report**
 `report_reservations(from, to)`: holds created in the window (business
 timezone), split by `source` (`public`/`app`) and `status`, plus
