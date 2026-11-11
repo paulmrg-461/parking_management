@@ -4196,4 +4196,262 @@ begin
      where lot_id = 1;
 end $$;
 
+-- Period comparison: months, partial month, covered flag, metrics, security.
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+select public.create_lot('P3', 'Period lot', 'Calle 3', 'America/Bogota');
+select public.create_lot('P4', 'Other lot', 'Calle 4', 'America/Bogota');
+
+do $$
+declare
+    lot3 integer := (select id from public.parking_lots where code = 'P3');
+    lot4 integer := (select id from public.parking_lots where code = 'P4');
+    cat3 integer;
+    car3 integer;
+    pass3 bigint;
+begin
+    insert into public.categories (name, capacity, lot_id)
+    values ('per-car', 10, lot3) returning id into cat3;
+    insert into public.vehicles (plate, category_id)
+    values ('PER001', cat3) returning id into car3;
+    insert into public.vehicles (plate, category_id)
+    values ('PER002', cat3);
+    insert into public.vehicles (plate, category_id)
+    values ('OTH001', cat3);
+
+    -- October revenue: one stay entered in September and closed in October,
+    -- plus a second October exit. Stays: 60 and 120 minutes.
+    insert into public.parking_sessions
+        (vehicle_id, operator_id, entry_time, exit_time, status, amount_charged, lot_id)
+    values
+        -- Bogota time: enters on Sep 30 23:00, leaves on Oct 1 01:00.
+        (car3, 1, '2024-09-30 23:00-05', '2024-10-01 01:00-05', 'closed', 4000, lot3),
+        (car3, 1, '2024-10-10 10:00+00', '2024-10-10 11:00+00', 'closed', 6000, lot3),
+        ((select id from public.vehicles where plate = 'OTH001'), 1,
+         '2024-10-10 10:00+00', '2024-10-10 11:00+00', 'closed', 99000, lot4);
+
+    insert into public.monthly_passes (vehicle_id, start_date, end_date, amount, lot_id)
+    values (car3, '2024-10-01', '2024-10-31', 30000, lot3)
+    returning id into pass3;
+    -- The pass trigger already creates its payment row: mark it paid.
+    update public.monthly_pass_payments
+       set status = 'paid', paid_at = '2024-10-05 12:00+00', amount = 30000
+     where monthly_pass_id = pass3;
+
+    insert into public.category_reservations
+        (plate, category_id, reserved_from, reserved_until, lot_id, status, source)
+    values
+        ('PER001', cat3, '2024-10-04 12:00+00', '2024-10-04 14:00+00', lot3, 'used', 'app'),
+        ('PER002', cat3, '2024-10-06 12:00+00', '2024-10-06 14:00+00', lot3, 'active', 'app');
+    perform set_config('app.period_lot', lot3::text, true);
+    perform set_config('app.period_lot4', lot4::text, true);
+end $$;
+
+-- period: success buckets and windows
+set local request.headers = '{"x-lot-id":"3"}';
+do $$
+declare
+    report jsonb := public.report_period_comparison(3, '2024-11-10');
+    bucket jsonb;
+begin
+    if jsonb_array_length(report -> 'buckets') <> 3 then
+        raise exception 'expected 3 buckets: %', report;
+    end if;
+    if (report -> 'buckets' -> 0 ->> 'month') <> '2024-09'
+       or (report -> 'buckets' -> 2 ->> 'month') <> '2024-11' then
+        raise exception 'buckets are not oldest first: %', report -> 'buckets';
+    end if;
+    bucket := report -> 'buckets' -> 2;
+    if (bucket ->> 'is_partial')::boolean is not true then
+        raise exception 'the running month is not partial: %', bucket;
+    end if;
+    if (bucket -> 'current' ->> 'start_date') <> '2024-11-01'
+       or (bucket -> 'current' ->> 'end_date') <> '2024-11-10'
+       or (bucket -> 'current' ->> 'days')::integer <> 10 then
+        raise exception 'partial current window wrong: %', bucket -> 'current';
+    end if;
+    if (bucket -> 'previous_month' ->> 'start_date') <> '2024-10-01'
+       or (bucket -> 'previous_month' ->> 'end_date') <> '2024-10-10' then
+        raise exception 'partial previous_month wrong: %', bucket -> 'previous_month';
+    end if;
+    if (bucket -> 'previous_year' ->> 'start_date') <> '2023-11-01'
+       or (bucket -> 'previous_year' ->> 'end_date') <> '2023-11-10' then
+        raise exception 'partial previous_year wrong: %', bucket -> 'previous_year';
+    end if;
+    if (report ->> 'as_of') <> '2024-11-10' or (report ->> 'months')::integer <> 3 then
+        raise exception 'header wrong: %', report;
+    end if;
+end $$;
+
+-- period: success metrics
+do $$
+declare
+    report jsonb := public.report_period_comparison(1, '2024-10-31');
+    october jsonb := report -> 'buckets' -> 0;
+    current jsonb := october -> 'current';
+    september jsonb := october -> 'previous_month';
+begin
+    if (current ->> 'revenue')::integer <> 10000
+       or (current ->> 'exits')::integer <> 2
+       or (current ->> 'entries')::integer <> 1 then
+        raise exception 'october sessions wrong: %', current;
+    end if;
+    if (current ->> 'avg_ticket')::integer <> 5000
+       or (current ->> 'avg_stay_minutes')::integer <> 90 then
+        raise exception 'averages wrong: %', current;
+    end if;
+    if (current ->> 'pass_revenue')::integer <> 30000 then
+        raise exception 'pass revenue wrong: %', current;
+    end if;
+    if (current ->> 'reservations')::integer <> 2
+       or (current ->> 'reservations_used')::integer <> 1 then
+        raise exception 'reservations wrong: %', current;
+    end if;
+    if (september ->> 'entries')::integer <> 1 then
+        raise exception 'september entries wrong: %', september;
+    end if;
+    if (current ->> 'covered')::boolean is not true then
+        raise exception 'october should be covered: %', current;
+    end if;
+end $$;
+
+-- period: success quiet month
+do $$
+declare
+    report jsonb := public.report_period_comparison(1, '2024-06-30');
+    quiet jsonb := report -> 'buckets' -> 0;
+begin
+    if (quiet ->> 'month') <> '2024-06' then
+        raise exception 'unexpected bucket: %', quiet;
+    end if;
+    if (quiet -> 'current' ->> 'revenue')::integer <> 0
+       or (quiet -> 'current' ->> 'entries')::integer <> 0
+       or (quiet -> 'current' ->> 'avg_ticket')::integer <> 0 then
+        raise exception 'quiet month is not empty: %', quiet -> 'current';
+    end if;
+end $$;
+
+-- period: success calendar edges
+do $$
+declare
+    march jsonb := public.report_period_comparison(1, '2024-03-31') -> 'buckets' -> 0;
+    leap jsonb := public.report_period_comparison(1, '2024-02-29') -> 'buckets' -> 0;
+begin
+    if (march -> 'previous_month' ->> 'start_date') <> '2024-02-01'
+       or (march -> 'previous_month' ->> 'end_date') <> '2024-02-29'
+       or (march -> 'previous_month' ->> 'full_month')::boolean is not true then
+        raise exception 'february window wrong: %', march -> 'previous_month';
+    end if;
+    if (leap -> 'previous_year' ->> 'start_date') <> '2023-02-01'
+       or (leap -> 'previous_year' ->> 'end_date') <> '2023-02-28' then
+        raise exception 'leap previous_year wrong: %', leap -> 'previous_year';
+    end if;
+    if (march ->> 'is_partial')::boolean is not false then
+        raise exception 'a past, complete month is partial: %', march;
+    end if;
+end $$;
+
+-- period: covered flag
+do $$
+declare
+    report jsonb := public.report_period_comparison(13, '2024-10-31');
+    first jsonb := report -> 'buckets' -> 0;
+begin
+    if (report ->> 'first_activity_date') <> '2024-09-30' then
+        raise exception 'first activity wrong: %', report ->> 'first_activity_date';
+    end if;
+    if (first -> 'current' ->> 'covered')::boolean is not false then
+        raise exception 'a window before the first session is covered: %', first;
+    end if;
+    if (first -> 'previous_year' ->> 'covered')::boolean is not false then
+        raise exception 'last year is covered for a new lot: %', first;
+    end if;
+end $$;
+
+-- period: failure range
+do $$
+begin
+    begin
+        perform public.report_period_comparison(0, '2024-10-31');
+        raise exception 'zero months accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidReportRangeError%' then raise; end if;
+    end;
+    begin
+        perform public.report_period_comparison(25, '2024-10-31');
+        raise exception '25 months accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidReportRangeError%' then raise; end if;
+    end;
+    begin
+        perform public.report_period_comparison(null, '2024-10-31');
+        raise exception 'null months accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidReportRangeError%' then raise; end if;
+    end;
+    begin
+        perform public.report_period_comparison(3, (now() at time zone 'America/Bogota')::date + 1);
+        raise exception 'a future as_of was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidReportRangeError%' then raise; end if;
+    end;
+end $$;
+
+-- period: security operator
+insert into public.lot_members (user_id, lot_id, role)
+select 2, id, 'operator' from public.parking_lots where code = 'P3'
+on conflict do nothing;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    begin
+        perform public.report_period_comparison(3, '2024-10-31');
+        raise exception 'an operator read the comparison';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- period: security anon
+set local role anon;
+do $$
+begin
+    begin
+        perform public.report_period_comparison(3, '2024-10-31');
+        raise exception 'anon executed the comparison';
+    exception when insufficient_privilege then
+        null;
+    end;
+end $$;
+reset role;
+
+-- period: security lot isolation
+do $$
+declare
+    report jsonb := public.report_period_comparison(1, '2024-10-31');
+    other jsonb := public.report_period_comparison(1, '2024-10-31');
+begin
+    if (report -> 'buckets' -> 0 -> 'current' ->> 'revenue')::integer <> 10000 then
+        raise exception 'lot 2 leaked into lot 3: %', report -> 'buckets' -> 0;
+    end if;
+    if (other -> 'buckets' -> 0 -> 'current' ->> 'revenue')::integer <> 10000 then
+        raise exception 'unexpected second read: %', other -> 'buckets' -> 0;
+    end if;
+end $$;
+
+-- A lot with no members: the header is rejected before any read.
+insert into public.parking_lots (code, name) values ('P5', 'No member lot')
+on conflict (code) do nothing;
+set local request.headers = '{"x-lot-id":"5"}';
+do $$
+begin
+    begin
+        perform public.report_period_comparison(3, '2024-10-31');
+        raise exception 'a foreign lot header was accepted';
+    exception when others then
+        if sqlerrm not like '%LotRequiredError%' then raise; end if;
+    end;
+end $$;
+
 rollback;
