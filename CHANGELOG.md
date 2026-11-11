@@ -49,6 +49,26 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Added
 
+- **Booking waitlist** (`0106`, `0107`,
+  `openspec/changes/add-booking-waitlist`). When every category is full the
+  public page used to say "call us" and the customer left. Now they can join a
+  queue with name, mobile, plate, how long they can wait and how long they want
+  the space held:
+  - An offer is a **real hold** (`category_reservations.source = 'waitlist'`)
+    created through the same capacity check as any other hold, so an offer can
+    never overbook. Claiming extends it and flips it to a normal web booking.
+  - FIFO per group; the dispatch runs inside the capacity-freeing transaction
+    (check-out, released hold, repaired bay, raised capacity) with a try-lock so
+    it can never block or break the original write. A missed dispatch lands in
+    `waitlist_kicks` and the job drains it.
+  - Limits: one active turn per plate, two per mobile, `waitlist_max_entries`
+    per lot, the booking hourly ceiling and the same captcha gate.
+  - Desk: "Lista de espera" section on `/reservations` (call, give the space,
+    remove) and an admin dialog for the three settings. Lot members get
+    notifications; the offer queues a `waitlist_offer` WhatsApp template.
+  - Reports: `report_reservations` excludes unclaimed offers from the booking
+    counts and adds a waitlist block.
+  - Off by default (`waitlist_enabled`), and every waitlist call is online only.
 - **Offline edits never overwrite each other silently**
   (`0105`, `openspec/changes/add-offline-conflict-resolution`).
   `vehicles`, `tariffs`, `categories` and `parking_settings` carry a `version`

@@ -154,6 +154,19 @@ Deployment: [`setup-cloud.md`](setup-cloud.md) (single VM + TLS proxy) and
 - **Beta Flutter SDK pinned**; analyzer output is limited to SDK deprecation
   infos until the pin moves to stable.
 
+## 7.0 Booking waitlist (implemented)
+
+When a category is full the public page offers the waitlist instead of a dead
+end: the customer leaves name, mobile, plate, how long they can wait and how
+long they want the space held. When capacity frees, the oldest turn of the
+group gets a **real hold** (`source = 'waitlist'`), so the queue can never
+overbook; claiming extends it and turns it into a normal web booking. The desk
+sees the queue on the reservations board and can call, give the space or remove
+a turn. Limits mirror the booking ones (captcha, hourly ceiling, one turn per
+plate, two per mobile, a per-lot maximum). It is off per site
+(`parking_settings.waitlist_enabled`), and WhatsApp notices are optional
+(`waitlist_offer` template; without it the page polls and the desk calls).
+
 ## 7.1 Offline conflicts (implemented)
 
 Reference entities (`vehicles`, `tariffs`, `categories`, `parking_settings`)

@@ -523,6 +523,54 @@ Last updated: 2026-11-11 (period comparison reports).
   the edge-runtime container (it was exercised with Deno against mocks).
 - Test count: 1172; schema `0001..0103`.
 
+## Booking waitlist (2026-11-11, `0106`-`0107`)
+
+- An offer **is a real hold**: `category_reservations` with
+  `source = 'waitlist'`, inserted after `reservation_capacity_check`, so every
+  capacity counter already counts it and an offer cannot overbook. Claiming
+  extends the same row and flips `source` to `public`; from then on it is a
+  normal web booking (`public_cancel_reservation`, the "Web" badge,
+  `report_reservations.public`).
+- Dispatch rules: FIFO `(created_at, id)` per `(lot, group)`;
+  `ParkingFullError` exits the loop, `CategoryFullError` /
+  `VehicleAlreadyInsideError` skip that turn and keep the order; an entry whose
+  plate already holds a space is expired on the spot. The loop is capped at 50
+  turns per call and tracks tried ids in memory (never by touching rows).
+- Triggers (session closed, hold released, bay back in service, capacity
+  raised) call `waitlist_try_dispatch`, which uses
+  `pg_try_advisory_xact_lock` and **never** waits: a blocking wait inside
+  `check_out` could deadlock with a `check_in` of the same plate. A miss (or any
+  exception) inserts a row into `waitlist_kicks` and the origin write succeeds;
+  `waitlist_dispatch_all()` drains the kicks and then every queue.
+- Lock order: always the waitlist entry first, then the reservation; the group
+  lock (`hashtext('group:<lot>:<group>')`) before any category lock. Advisory
+  locks are re-entrant per session, so a trigger fired inside a transaction
+  that already holds the group lock goes straight through — that is why the
+  "held by someone else" case cannot be simulated in a single test transaction
+  (it is covered by the kick-table assertions and the job drain).
+- Expiry is **status-based**, not grace-based: `waitlist_expire()` sets the hold
+  `status = 'expired'` explicitly so an unclaimed offer frees the space at
+  `offer_until`, then dispatches. It also reconciles: a hold `used` (the
+  customer walked in) becomes `claimed`, a `cancelled`/`expired` hold closes the
+  turn.
+- `waitlist_enabled` is off by default; with it off every RPC refuses or reports
+  `enabled = false`, the triggers return at once and the page is unchanged.
+- Jobs: `jobs.sh` and `notifications-cron.sh` run `waitlist_expire`,
+  `waitlist_dispatch_all` and `purge_waitlist` after `expire_reservations`. With
+  the default 300 s interval a job-only dispatch is at most 5 minutes late
+  against a 15 minute claim window; lower `JOBS_INTERVAL_SECONDS` if the site
+  relies on the fallback.
+- WhatsApp: template `waitlist_offer`, params `[name, plate, deadline "HH24:MI"
+  in the lot timezone, lot, code]`; only queued when `whatsapp_auto`. Claim
+  queues the existing `reservation_confirmed`.
+- `0107` re-declares `report_reservations` only to add `and r.source <>
+  'waitlist'` to every booking count and the `waitlist` object; forgot it and a
+  table shows more bookings than receipts.
+- Two pre-existing gaps fixed while wiring this: `whatsapp-dispatch` was not
+  allowlisted in `supabase/.gitignore` (never versioned), and the `functions`
+  container received no `WHATSAPP_*` variable (the dispatcher would have been
+  inert with credentials set).
+
 ## Offline conflict resolution, database half (2026-11-11, `0105`)
 
 - `vehicles`, `tariffs`, `categories` and `parking_settings` have `version`
@@ -632,6 +680,12 @@ Last updated: 2026-11-11 (period comparison reports).
   before the suite, the CI image already has them), web release rebuilt with
   `--no-web-resources-cdn` and republished (`/reserve` 200), release APK built
   (no device attached: not installed).
+- Waitlist gatekeeper (2026-11-11): migrations `0106`-`0107` applied live,
+  `public_waitlist_info(1)` answers `enabled: false` as shipped;
+  **1333 tests** green, coverage 80.1% (application 91.9%, infrastructure
+  44.7%), `flutter analyze` clean, SQL suite green over `0001`-`0107`, web
+  release rebuilt and republished (`/reserve` 200), release APK rebuilt. The
+  manual two-session smoke was not run (see below).
 - Task 7.3 (two-browser manual smoke) was not run: no second session was
   available. The same paths are covered by the end-to-end widget test above and
   by the SQL stale-base blocks.

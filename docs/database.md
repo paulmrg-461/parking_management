@@ -146,6 +146,22 @@ hold with a phone and automated WhatsApp, queues `reservation_cancelled`.
 WhatsApp for public holds ending inside the window (default 60 min) when the
 lot has automated WhatsApp on, and stamps `reminder_sent_at` (idempotent).
 
+**Booking waitlist** (`0106`, `0107`)
+`reservation_waitlist` holds the turns (`status` waiting/offered/claimed/
+expired/left/cancelled, `wait_until`, `hold_minutes`, `offer_until`,
+`reservation_id`) with a partial unique index per plate and lot and a FIFO
+index; `waitlist_kicks` records a group whose dispatch could not take its lock
+and is drained by `waitlist_dispatch_all()`. An offer is a normal
+`category_reservations` row with `source = 'waitlist'`; claiming flips it to
+`public`. RPCs: `public_waitlist_info`, `public_join_waitlist`(+`_verified`),
+`public_waitlist_lookup`, `public_claim_waitlist`, `public_leave_waitlist`,
+`list_waitlist`, `desk_claim_waitlist`, `desk_remove_waitlist`,
+`set_waitlist_settings`, and the jobs `waitlist_expire`,
+`waitlist_dispatch_all`, `purge_waitlist`. Triggers on session closed, hold
+released, bay back in service and capacity raised call the try-lock dispatch.
+`report_reservations` counts the queue in a `waitlist` block and excludes
+unclaimed offers from the booking counts.
+
 **Row versions (offline conflict resolution)**
 `vehicles`, `tariffs`, `categories` and `parking_settings` carry `version`
 (bumped by `row_version_guard()` only when the row really changes).
