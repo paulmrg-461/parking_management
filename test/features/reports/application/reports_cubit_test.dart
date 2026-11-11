@@ -140,11 +140,11 @@ void main() {
           revenueToReturn: revenue,
           occupancyToReturn: occupancy,
         )
-        ..hourlyToReturn = HourlyTraffic(
+        ..hourlyToReturn = const HourlyTraffic(
           timezone: 'America/Bogota',
           hours: [
-            const HourlyTrafficPoint(hour: 8, entries: 4, exits: 2),
-            const HourlyTrafficPoint(hour: 9, entries: 1, exits: 3),
+            HourlyTrafficPoint(hour: 8, entries: 4, exits: 2),
+            HourlyTrafficPoint(hour: 9, entries: 1, exits: 3),
           ],
         ),
     );

@@ -121,12 +121,10 @@ final class DashboardFailure extends DashboardState {
 class DashboardCubit extends ResilientCubit<DashboardState> {
   DashboardCubit(
     this._sessions, {
-    int? Function()? activeLot,
-    DashboardCache? cache,
+    this._activeLot,
+    this._cache,
     DateTime Function()? clock,
-  }) : _activeLot = activeLot,
-       _cache = cache,
-       _clock = clock ?? DateTime.now,
+  }) : _clock = clock ?? DateTime.now,
        super(const DashboardLoading());
 
   final CheckOutRepository _sessions;

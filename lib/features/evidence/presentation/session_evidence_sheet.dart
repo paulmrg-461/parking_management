@@ -153,17 +153,17 @@ class _EvidenceSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => SkeletonPulse(
     child: GridView.count(
-      physics: NeverScrollableScrollPhysics(),
+      physics: const NeverScrollableScrollPhysics(),
       crossAxisCount: 3,
       mainAxisSpacing: Space.sm,
       crossAxisSpacing: Space.sm,
       children: [
-        SkeletonBox(height: 96, radius: Radii.sm),
-        SkeletonBox(height: 96, radius: Radii.sm),
-        SkeletonBox(height: 96, radius: Radii.sm),
-        SkeletonBox(height: 96, radius: Radii.sm),
-        SkeletonBox(height: 96, radius: Radii.sm),
-        SkeletonBox(height: 96, radius: Radii.sm),
+        const SkeletonBox(height: 96, radius: Radii.sm),
+        const SkeletonBox(height: 96, radius: Radii.sm),
+        const SkeletonBox(height: 96, radius: Radii.sm),
+        const SkeletonBox(height: 96, radius: Radii.sm),
+        const SkeletonBox(height: 96, radius: Radii.sm),
+        const SkeletonBox(height: 96, radius: Radii.sm),
       ],
     ),
   );

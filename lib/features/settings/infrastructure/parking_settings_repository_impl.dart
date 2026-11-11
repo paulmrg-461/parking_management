@@ -91,6 +91,7 @@ class ParkingSettingsRepositoryImpl implements ParkingSettingsRepository {
     return saved;
   }
 
+  @override
   Future<ParkingSettings> uploadLogo(Uint8List bytes) async {
     // Connectivity is required by design: logo bytes are never queued, so a
     // failure here propagates and the cached logo stays untouched.

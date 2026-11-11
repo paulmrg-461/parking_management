@@ -129,7 +129,7 @@ PublicBookingAvailability sampleAvailability({
       hourlyAmount: 5000,
       available: unlimited ? null : (full ? 0 : available),
     ),
-    PublicCategoryAvailability(
+    const PublicCategoryAvailability(
       id: 3,
       name: 'moto',
       group: 'moto',
