@@ -132,7 +132,8 @@ class _FakeVehicleRepository implements VehicleRepository {
       throw UnimplementedError();
 
   @override
-  Future<void> delete(int id) => throw UnimplementedError();
+  Future<void> delete(int id, {int? baseVersion}) =>
+      throw UnimplementedError();
 }
 
 class _FakeCategoryRepository implements CategoryRepository {
@@ -152,14 +153,19 @@ class _FakeCategoryRepository implements CategoryRepository {
   Future<Category> create(String name) => throw UnimplementedError();
 
   @override
-  Future<Category> update(int id, String name) => throw UnimplementedError();
-
-  @override
-  Future<Category> setCapacity(int id, int capacity) =>
+  Future<Category> update(int id, String name, {int? baseVersion}) =>
       throw UnimplementedError();
 
   @override
-  Future<void> delete(int id) => throw UnimplementedError();
+  Future<Category> setCapacity(
+    int id,
+    int capacity, {
+    int? baseVersion,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<void> delete(int id, {int? baseVersion}) =>
+      throw UnimplementedError();
 }
 
 class _FakeCapture implements PlateImageCapture {

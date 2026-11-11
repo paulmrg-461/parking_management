@@ -43,7 +43,7 @@ types:
         index: 1
   Category:
     typeId: 4
-    nextIndex: 3
+    nextIndex: 4
     fields:
       id:
         index: 0
@@ -51,9 +51,11 @@ types:
         index: 1
       capacity:
         index: 2
+      version:
+        index: 3
   Tariff:
     typeId: 5
-    nextIndex: 7
+    nextIndex: 8
     fields:
       id:
         index: 0
@@ -69,6 +71,8 @@ types:
         index: 5
       active:
         index: 6
+      version:
+        index: 7
   TariffType:
     typeId: 6
     nextIndex: 4

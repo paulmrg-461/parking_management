@@ -568,13 +568,18 @@ Last updated: 2026-11-11 (period comparison reports).
   (`command.baseVersion` when the editor has it), parks an online conflict with
   the server row, refuses edits while it is pending, stores the base and the
   snapshot offline, and the replayer adopts the server row.
+- Categories are wired too (5.3): `Category.version` in entity/DTO/Hive, a
+  public `patch(id, fields, {baseVersion})` on the remote (with `update` and
+  `setCapacity` as thin wrappers), a single repository `_patch` that sends the
+  cached base, parks conflicts, guards pending ones, and queues the **whole
+  row** offline so a rename never drops a queued capacity change. The replayer
+  replays that whole payload with the base and adopts the server row.
 - Conflicts are visible: `SyncStatus` carries the parked conflicts, the cubit
   loads them and exposes `resolve(key, choice)`, and the `SyncBadge` shows a
   merge icon with the count and a dialog offering keep-mine / keep-theirs.
   The field-by-field merge and the per-field dialog are still pending.
-- Pending (3.3, 4.2, 5.2-5.4, 6.1-6.3, 6.5): replayer `Future<int?>`,
-  field-by-field merge in `resolve`, tariffs/categories/settings and the full
-  resolution dialog.
+- Pending (3.3, 4.2, 5.4, 6.1-6.3, 6.5): replayer `Future<int?>`, field-by-field
+  merge in `resolve`, settings and the full resolution dialog.
 
 ## Period comparison reports (2026-11-11, `0104`)
 

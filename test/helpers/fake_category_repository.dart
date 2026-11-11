@@ -29,7 +29,7 @@ class FakeCategoryRepository implements CategoryRepository {
   }
 
   @override
-  Future<Category> update(int id, String name) async {
+  Future<Category> update(int id, String name, {int? baseVersion}) async {
     _throwIfWriteFails();
     final updated = Category(id: id, name: name);
     categories = [for (final c in categories) c.id == id ? updated : c];
@@ -37,7 +37,11 @@ class FakeCategoryRepository implements CategoryRepository {
   }
 
   @override
-  Future<Category> setCapacity(int id, int capacity) async {
+  Future<Category> setCapacity(
+    int id,
+    int capacity, {
+    int? baseVersion,
+  }) async {
     _throwIfWriteFails();
     final existing = categories.firstWhere((c) => c.id == id);
     final updated = Category(id: id, name: existing.name, capacity: capacity);
@@ -46,7 +50,7 @@ class FakeCategoryRepository implements CategoryRepository {
   }
 
   @override
-  Future<void> delete(int id) async {
+  Future<void> delete(int id, {int? baseVersion}) async {
     _throwIfWriteFails();
     categories.removeWhere((c) => c.id == id);
   }

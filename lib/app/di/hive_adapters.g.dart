@@ -174,19 +174,22 @@ class CategoryAdapter extends TypeAdapter<Category> {
       id: (fields[0] as num?)?.toInt(),
       name: fields[1] as String,
       capacity: fields[2] == null ? 0 : (fields[2] as num).toInt(),
+      version: fields[3] == null ? 0 : (fields[3] as num).toInt(),
     );
   }
 
   @override
   void write(BinaryWriter writer, Category obj) {
     writer
-      ..writeByte(3)
+      ..writeByte(4)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
       ..write(obj.name)
       ..writeByte(2)
-      ..write(obj.capacity);
+      ..write(obj.capacity)
+      ..writeByte(3)
+      ..write(obj.version);
   }
 
   @override
@@ -218,13 +221,14 @@ class TariffAdapter extends TypeAdapter<Tariff> {
       startTime: fields[4] as String?,
       endTime: fields[5] as String?,
       active: fields[6] == null ? true : fields[6] as bool,
+      version: fields[7] == null ? 0 : (fields[7] as num).toInt(),
     );
   }
 
   @override
   void write(BinaryWriter writer, Tariff obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(8)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -238,7 +242,9 @@ class TariffAdapter extends TypeAdapter<Tariff> {
       ..writeByte(5)
       ..write(obj.endTime)
       ..writeByte(6)
-      ..write(obj.active);
+      ..write(obj.active)
+      ..writeByte(7)
+      ..write(obj.version);
   }
 
   @override
