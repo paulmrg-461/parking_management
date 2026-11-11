@@ -24,11 +24,8 @@ class SyncStatus extends Equatable {
 /// Exposes the outbox size (pending + dead letters) for the `SyncBadge`
 /// and lets the operator discard a dead letter.
 class SyncStatusCubit extends ResilientCubit<SyncStatus> {
-  SyncStatusCubit(
-    this._outbox,
-    this._discard, [
-    this._flush,
-  ]) : super(const SyncStatus()) {
+  SyncStatusCubit(this._outbox, this._discard, [this._flush])
+    : super(const SyncStatus()) {
     _subscription = _outbox.watch().listen((_) => load());
   }
 

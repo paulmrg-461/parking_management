@@ -6,11 +6,12 @@
 
 ## 2. Flutter core: failure, helpers, merge engine (pure Dart first)
 
-Status: sections 1 and 2 are implemented on `feature/supabase` (migration
-`0105`, merge plan, version conflicts and the versioned write helpers). The
-database half is additive and inert: the app does not send versions yet and the
-enforcement policy is off. Sections 3-6 (outbox fields, SyncService resolution,
-the four features and the UI) are the next slice.
+Status: sections 1 and 2 plus task 3.1 are implemented on `feature/supabase`
+(migration `0105`, merge plan, version conflicts, versioned write helpers and
+the outbox entry shape). The database half is additive and inert: the app does
+not send versions yet and the enforcement policy is off. Tasks 3.2-3.3 (outbox
+API, replayer signature) and sections 4-6 (SyncService resolution, the four
+features and the UI) are the next slice.
 
 - [x] 2.1 Write tests first in `test/core/sync/conflict/three_way_merge_test.dart`: `disjoint fields auto apply` (Success), `same field both changed differently conflicts` (Failure), `theirs already equals mine drops the field`, `unknown base treats differing fields as conflicts`, `null equals empty string for text`, `ints compare numerically`, `serverAlreadyHasMine when nothing left`, `fields only theirs changed are untouched`. Create `lib/core/sync/conflict/three_way_merge.dart` per design §3. Acceptance: `flutter test test/core/sync/conflict`. DoD: green; every function ≤ 20 lines.
 - [x] 2.2 Write tests first in `test/core/error/failure_test.dart` (create if missing): `VersionConflictFailure carries server row and code` , `is not a ValidationFailure` (Security-ish: guarantees it is matched before validation in the switch). Add `VersionConflictFailure` and `ClientFailureCodes.conflictPending = 'ConflictPendingError'` to `lib/core/error/failure.dart`. Acceptance: `flutter test test/core/error`. DoD: green.
@@ -19,7 +20,7 @@ the four features and the UI) are the next slice.
 
 ## 3. Flutter core: persisted outbox format and states
 
-- [ ] 3.1 Write tests first in `test/core/sync/pending_mutation_test.dart` (extend): `round trips new fields` (Success), `old json without new keys loads as legacy` (backward compatibility: `baseVersion` null, `needsResolution` false), `conflict entry is written with deadLettered true for older builds` (toJson), `conflict entry reads back as conflict not dead letter`, `state getter pending conflict deadLetter`, `recordFailure and withPayload keep base fields` (Failure guard against the hand-copy bug), `asConflict and rebased`. Edit `lib/core/sync/pending_mutation.dart` per design §3 (fields, `state`, `asConflict`, `rebased`, `_copy`/`withPayload`). DoD: green.
+- [x] 3.1 Write tests first in `test/core/sync/pending_mutation_test.dart` (extend): `round trips new fields` (Success), `old json without new keys loads as legacy` (backward compatibility: `baseVersion` null, `needsResolution` false), `conflict entry is written with deadLettered true for older builds` (toJson), `conflict entry reads back as conflict not dead letter`, `state getter pending conflict deadLetter`, `recordFailure and withPayload keep base fields` (Failure guard against the hand-copy bug), `asConflict and rebased`. Edit `lib/core/sync/pending_mutation.dart` per design §3 (fields, `state`, `asConflict`, `rebased`, `_copy`/`withPayload`). DoD: green.
 - [ ] 3.2 Write tests first in `test/core/sync/sync_outbox_test.dart` (extend; uses Hive in a temp dir like the existing tests): `listConflicts excludes pending and dead letters`, `listPending excludes conflicts`, `listDeadLetters excludes conflicts`, `enqueue coalesces patches of the same row keeping the old base`, `enqueue delete replaces a pending update keeping base`, `enqueue does not coalesce into conflict or dead letter entries`, `check-in and check-out are never coalesced`, `settings coalesce per lot_id`, `settle removes an unchanged entry`, `settle keeps and rebases an entry changed in flight` (Failure/race), `corrupt entry still skipped`. Edit `lib/core/sync/sync_outbox.dart` (port + `HiveSyncOutbox` with the in-process lock), `lib/core/sync/notifying_sync_outbox.dart` (delegate; `onEnqueued` only on `enqueue`; add a test in `notifying_sync_outbox_test.dart`: `settle and listConflicts delegate without notifying`) and `test/helpers/fake_sync_outbox.dart` (same semantics). DoD: green.
 - [ ] 3.3 Change `MutationReplayer` to `Future<int?> replay(...)` plus `adoptServer`, and update the six replayers' signatures only (no behaviour yet): `vehicle_mutation_replayer.dart`, `tariff_mutation_replayer.dart`, `category_mutation_replayer.dart`, `parking_settings_mutation_replayer.dart`, `check_in_mutation_replayer.dart`, `check_out_mutation_replayer.dart` (check-in/out return `null`). Update their existing tests to `expect(await replay(...), isNull)` where relevant. Acceptance: `flutter test test/features test/core/sync`. DoD: green.
 

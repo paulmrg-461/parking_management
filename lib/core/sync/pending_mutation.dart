@@ -29,6 +29,11 @@ class PendingMutation extends Equatable {
     this.lastError,
     this.nextAttemptAt,
     this.deadLettered = false,
+    this.baseVersion,
+    this.baseSnapshotJson,
+    this.needsResolution = false,
+    this.conflictKind,
+    this.serverJson,
   });
 
   final MutationEntity entityType;
@@ -47,8 +52,71 @@ class PendingMutation extends Equatable {
   /// Earliest time the next replay may run (exponential backoff).
   final DateTime? nextAttemptAt;
 
-  /// Parked for the operator to resolve; never replayed automatically.
+  /// An unrecoverable failure: shown, never retried.
   final bool deadLettered;
+
+  /// The row version the edit was based on (`null` for a legacy entry).
+  final int? baseVersion;
+
+  /// The cached row (JSON) at the moment of the edit, for the merge.
+  final String? baseSnapshotJson;
+
+  /// Parked for the operator: never replayed until they choose.
+  final bool needsResolution;
+
+  /// `edited` (someone changed a field we also changed) or `deleted`.
+  final String? conflictKind;
+
+  /// The row the server had when the conflict was detected.
+  final String? serverJson;
+
+  /// `pending`, `conflict` or `deadLetter` (the only three shapes a queue
+  /// entry can have).
+  String get state => needsResolution
+      ? 'conflict'
+      : deadLettered
+      ? 'deadLetter'
+      : 'pending';
+
+  Map<String, dynamic>? decodeBaseSnapshot() => baseSnapshotJson == null
+      ? null
+      : jsonDecode(baseSnapshotJson!) as Map<String, dynamic>;
+
+  Map<String, dynamic>? decodeServerRow() => serverJson == null
+      ? null
+      : jsonDecode(serverJson!) as Map<String, dynamic>;
+
+  /// Parks this entry as a conflict (the operator decides what to keep).
+  PendingMutation asConflict({
+    required String kind,
+    Map<String, dynamic>? serverRow,
+  }) => _copy(
+    attempts: attempts,
+    lastError: lastError,
+    nextAttemptAt: null,
+    deadLettered: false,
+    baseVersion: baseVersion,
+    baseSnapshotJson: baseSnapshotJson,
+    needsResolution: true,
+    conflictKind: kind,
+    serverJson: serverRow == null ? null : jsonEncode(serverRow),
+  );
+
+  /// Sends the merged fields from a newer base (after an auto-merge or a
+  /// "keep mine" choice).
+  PendingMutation rebased({
+    required int baseVersion,
+    required String payloadJson,
+    required String baseSnapshotJson,
+  }) => PendingMutation(
+    entityType: entityType,
+    operation: operation,
+    entityId: entityId,
+    payloadJson: payloadJson,
+    enqueuedAt: enqueuedAt,
+    baseVersion: baseVersion,
+    baseSnapshotJson: baseSnapshotJson,
+  );
 
   /// The decoded payload map (empty for payload-less mutations).
   Map<String, dynamic> decodePayload() => payloadJson == null
@@ -68,33 +136,41 @@ class PendingMutation extends Equatable {
   );
 
   /// Returns a copy whose payload is replaced by [payloadJson].
-  PendingMutation withPayload(String payloadJson) => PendingMutation(
-    entityType: entityType,
-    operation: operation,
-    entityId: entityId,
-    payloadJson: payloadJson,
-    enqueuedAt: enqueuedAt,
+  PendingMutation withPayload(String payloadJson) => _copy(
     attempts: attempts,
     lastError: lastError,
     nextAttemptAt: nextAttemptAt,
     deadLettered: deadLettered,
+    payloadJson: payloadJson,
   );
 
   PendingMutation _copy({
     required int attempts,
-    required String lastError,
+    required String? lastError,
     required DateTime? nextAttemptAt,
     required bool deadLettered,
+    String? payloadJson,
+    int? baseVersion,
+    bool clearBaseVersion = false,
+    String? baseSnapshotJson,
+    bool? needsResolution,
+    String? conflictKind,
+    String? serverJson,
   }) => PendingMutation(
     entityType: entityType,
     operation: operation,
     entityId: entityId,
-    payloadJson: payloadJson,
+    payloadJson: payloadJson ?? this.payloadJson,
     enqueuedAt: enqueuedAt,
     attempts: attempts,
     lastError: lastError,
     nextAttemptAt: nextAttemptAt,
     deadLettered: deadLettered,
+    baseVersion: clearBaseVersion ? null : (baseVersion ?? this.baseVersion),
+    baseSnapshotJson: baseSnapshotJson ?? this.baseSnapshotJson,
+    needsResolution: needsResolution ?? this.needsResolution,
+    conflictKind: conflictKind ?? this.conflictKind,
+    serverJson: serverJson ?? this.serverJson,
   );
 
   Map<String, dynamic> toJson() => {
@@ -106,7 +182,14 @@ class PendingMutation extends Equatable {
     'attempts': attempts,
     'lastError': lastError,
     'nextAttemptAt': nextAttemptAt?.toIso8601String(),
-    'deadLettered': deadLettered,
+    // An older build ignores the conflict fields; writing `deadLettered` for
+    // a parked conflict keeps it from replaying blindly.
+    'deadLettered': deadLettered || needsResolution,
+    'baseVersion': baseVersion,
+    'baseSnapshotJson': baseSnapshotJson,
+    'needsResolution': needsResolution,
+    'conflictKind': conflictKind,
+    'serverJson': serverJson,
   };
 
   factory PendingMutation.fromJson(Map<String, dynamic> json) =>
@@ -119,7 +202,16 @@ class PendingMutation extends Equatable {
         attempts: json['attempts'] as int? ?? 0,
         lastError: json['lastError'] as String?,
         nextAttemptAt: _parseDate(json['nextAttemptAt']),
-        deadLettered: json['deadLettered'] as bool? ?? false,
+        // An entry parked as a conflict is not a dead letter, even though its
+        // JSON says so for older builds.
+        deadLettered:
+            (json['deadLettered'] as bool? ?? false) &&
+            !(json['needsResolution'] as bool? ?? false),
+        baseVersion: json['baseVersion'] as int?,
+        baseSnapshotJson: json['baseSnapshotJson'] as String?,
+        needsResolution: json['needsResolution'] as bool? ?? false,
+        conflictKind: json['conflictKind'] as String?,
+        serverJson: json['serverJson'] as String?,
       );
 
   static T _parse<T extends Enum>(List<T> values, Object? raw) {
@@ -144,5 +236,10 @@ class PendingMutation extends Equatable {
     lastError,
     nextAttemptAt,
     deadLettered,
+    baseVersion,
+    baseSnapshotJson,
+    needsResolution,
+    conflictKind,
+    serverJson,
   ];
 }

@@ -543,9 +543,15 @@ Last updated: 2026-11-11 (period comparison reports).
   because the helper builds it) and `updateVersioned`/`deleteVersioned`
   (`version=eq.<base>` filter, zero rows decides conflict vs permission vs
   legacy not-found). Four ARB keys map the new codes.
-- Pending (sections 3-6 of the change): `baseVersion` in the outbox, SyncService
-  auto-merge/park/resolve, versioned writes in the four features, badge and
-  dialog.
+- `PendingMutation` now carries `baseVersion`, `baseSnapshotJson`,
+  `needsResolution`, `conflictKind` and `serverJson`, with `state`
+  (pending/conflict/deadLetter), `asConflict` and `rebased`; legacy JSON loads
+  as a pending entry and a conflict is written as `deadLettered` for older
+  builds but read back as a conflict.
+- Pending (tasks 3.2-3.3 and sections 4-6): outbox `listConflicts`/`settle` and
+  base-preserving coalescing, replayer `Future<int?>` + `adoptServer`,
+  SyncService auto-merge/park/resolve, versioned writes in the four features,
+  badge and dialog.
 
 ## Period comparison reports (2026-11-11, `0104`)
 
