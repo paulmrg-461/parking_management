@@ -15,7 +15,7 @@ out of order silently reverts the previous body.
 | 1 — no keys, no hardware | `add-offline-conflict-resolution`, `add-period-comparison-reports`, `add-booking-waitlist`, `add-occupancy-forecast`, `add-cash-anomaly-detection` | Pure SQL + Flutter. They close limitations already written in `docs/project-overview.md` §8. |
 | 2 — AI | `add-report-assistant` → `add-ai-damage-comparison` | The second imports `_shared/ai/*` and `ai_features` from the first. |
 | 3 — hardware | `add-device-gateway` → `add-lpr-camera-gate` → `add-barrier-control` and `add-bay-sensors` | The gateway ships the registry, key auth, replay protection and the route table the other three extend. `edge/common/device_core` is created by whichever firmware change lands first. |
-| 4 — money | `add-online-payments` → `add-pass-auto-renewal` → `add-merchant-validations` | Pass renewal consumes the intent table and webhook; merchant benefits must be applied after the online split exists so `fare_quote` composes both. |
+| 4 — money | `add-online-payments` → `add-pass-auto-renewal` → `add-merchant-validations` → `add-loyalty-rewards` and `add-dynamic-pricing` (either order) | Pass renewal consumes the intent table and webhook; merchant benefits must be applied after the online split exists so `fare_quote` composes both. |
 | 5 — legal | `add-electronic-invoicing` | Blocked on the accountant confirming the `ASSUMPTION` rules; it consumes the payment split of wave 4. |
 
 Within a wave any order works **unless** the merge table below says otherwise.
@@ -32,11 +32,12 @@ clones.
 | Object | Changes that touch it | Protocol |
 | --- | --- | --- |
 | `public.check_out` | `add-online-payments`, `add-merchant-validations` | Online payments first. Merchant validation then re-declares it on top of the online body: the amount owed is `gross − automatic adjustments − discount`, and the online part is still deducted for the desk balance. |
+| `public.fare_quote`, `fare_pricing_step`, `fare_reward_step` | `add-merchant-validations` (creates `fare_quote` and the two no-op hooks), `add-dynamic-pricing` (replaces `fare_pricing_step`), `add-loyalty-rewards` (replaces `fare_reward_step`) | Merchants first. Pricing and loyalty replace only their own hook and never re-declare `fare_quote`. |
 | `public.check_out_preview` | `add-online-payments`, `add-merchant-validations` | Same as `check_out`: the preview must list the online paid amount **and** the adjustment lines. |
 | `public.public_session_summary` | `add-online-payments`, `add-merchant-validations` | Same order; the JSON keeps `online_paid_amount` and adds `adjustments[]`. |
 | `public.vehicle_history` | `add-merchant-validations` | Re-declares the latest body only (no other change touches it). |
 | `public.report_reservations` | `add-booking-waitlist` | Re-declares the latest body (from wave 0/1) and only appends waitlist counters. |
-| `public.public_availability` | `add-occupancy-forecast` | Renames the latest body to `public_availability_base` and wraps it; it never copies the body, so wave-1 edits are safe. |
+| `public.public_availability` | `add-occupancy-forecast`, `add-dynamic-pricing` | Renames the latest body to `public_availability_base` and wraps it; it never copies the body, so wave-1 edits are safe. Pricing adds the price fields: if the forecast landed first, edit `public_availability_base`; otherwise edit the current body and the forecast's first task renames that body. |
 | `public.create_reservation` / `public_create_reservation` | `add-booking-waitlist` (offers), `add-occupancy-forecast` (none) | Offers call `reservation_capacity_check`; they do not re-declare the create RPC. |
 | `supabase/volumes/functions/whatsapp-dispatch/index.ts` | `add-pass-auto-renewal`, `add-booking-waitlist`, `add-lpr-camera-gate` | Each adds one entry to `TEMPLATES` and the matching env key; the later change keeps the earlier entries. |
 | `supabase/jobs.sh` / `supabase/notifications-cron.sh` | every change that schedules a job | Append one `run` line per function; never reorder or rewrite the list. Restart `supabase-jobs` after editing. |
