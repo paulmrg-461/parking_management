@@ -252,9 +252,12 @@ class SyncService {
     }
   }
 
-  /// Resolves a parked conflict: keep the server's row or re-send mine on top
-  /// of it. `keepMine` leaves the entry pending so the next drain replays it.
-  Future<void> resolve(int key, ConflictChoice choice) async {
+  /// Applies the operator's decision to a parked conflict.
+  ///
+  /// Every path either re-sends what the operator chose (rebased on the row
+  /// the server has now) or adopts the server row, so nothing is dropped
+  /// without an explicit choice.
+  Future<void> resolve(int key, ConflictResolution resolution) async {
     final entries = await _outbox.listConflicts();
     final entry = entries
         .where((candidate) => candidate.key == key)
@@ -265,16 +268,102 @@ class SyncService {
     final mutation = entry.value;
     final server = mutation.decodeServerRow();
     _mergeRounds.remove(key);
-    if (choice == ConflictChoice.keepTheirs || server == null) {
-      await _adopt(mutation, server);
-      await _outbox.remove(key);
-      return;
+
+    if (mutation.conflictKind == 'deleted') {
+      return _resolveDeletion(entry, resolution);
     }
+    if (mutation.operation == MutationOperation.delete) {
+      return _resolveDelete(entry, resolution);
+    }
+    return _resolveEdit(entry, resolution, server);
+  }
+
+  /// Mine: edit. Theirs: deleted. Only accepting the deletion is valid.
+  Future<void> _resolveDeletion(
+    OutboxEntry entry,
+    ConflictResolution resolution,
+  ) async {
+    if (resolution is! AcceptDeletion) {
+      throw StateError('A deleted row can only be accepted as deleted');
+    }
+    await _adopt(entry.value, null);
+    await _outbox.remove(entry.key);
+  }
+
+  /// Mine: delete. Theirs: edited. Either keep their row or delete anyway.
+  Future<void> _resolveDelete(
+    OutboxEntry entry,
+    ConflictResolution resolution,
+  ) async {
+    final mutation = entry.value;
+    final server = mutation.decodeServerRow()!;
+    switch (resolution) {
+      case KeepTheirs():
+        await _adopt(mutation, server);
+        await _outbox.remove(entry.key);
+      case KeepDelete():
+        await _rebased(entry, mutation, server, null);
+      default:
+        throw StateError('A conflict on a delete cannot merge fields');
+    }
+  }
+
+  /// Mine: edit. Theirs: edited (or the row is gone).
+  Future<void> _resolveEdit(
+    OutboxEntry entry,
+    ConflictResolution resolution,
+    Map<String, dynamic>? server,
+  ) async {
+    final mutation = entry.value;
+    if (server == null) {
+      return _resolveDeletion(entry, resolution);
+    }
+    final mine = mutation.decodePayload();
+    final plan = planMerge(
+      base: mutation.decodeBaseSnapshot(),
+      mine: mine,
+      theirs: server,
+    );
+    switch (resolution) {
+      case KeepTheirs():
+        await _adopt(mutation, server);
+        await _outbox.remove(entry.key);
+      case KeepMine():
+        await _rebased(entry, mutation, server, {
+          ...plan.autoApply,
+          for (final conflict in plan.conflicts)
+            conflict.field: mine[conflict.field],
+        });
+      case MergeFields(:final mineFields):
+        final patch = {
+          ...plan.autoApply,
+          for (final conflict in plan.conflicts)
+            if (mineFields.contains(conflict.field))
+              conflict.field: mine[conflict.field],
+        };
+        if (patch.isEmpty) {
+          await _adopt(mutation, server);
+          await _outbox.remove(entry.key);
+          return;
+        }
+        await _rebased(entry, mutation, server, patch);
+      default:
+        throw StateError('An edited row cannot be removed silently');
+    }
+  }
+
+  /// Turns the parked entry back into a pending one on top of [server].
+  Future<void> _rebased(
+    OutboxEntry entry,
+    PendingMutation mutation,
+    Map<String, dynamic> server,
+    Map<String, dynamic>? patch,
+  ) async {
     await _outbox.replace(
-      key,
+      entry.key,
       mutation.rebased(
         baseVersion: (server['version'] as num?)?.toInt() ?? 0,
-        payloadJson: jsonEncode(mutation.decodePayload()),
+        payloadJson: patch == null ? null : jsonEncode(patch),
         baseSnapshotJson: jsonEncode(server),
       ),
     );

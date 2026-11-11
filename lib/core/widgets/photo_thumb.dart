@@ -23,8 +23,8 @@ class PhotoThumb extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cacheWidth = (Layout.thumbnail * MediaQuery.devicePixelRatioOf(context))
-        .round();
+    final cacheWidth =
+        (Layout.thumbnail * MediaQuery.devicePixelRatioOf(context)).round();
     return SizedBox.square(
       dimension: Layout.thumbnail,
       child: Stack(

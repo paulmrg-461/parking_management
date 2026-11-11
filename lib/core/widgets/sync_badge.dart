@@ -146,7 +146,7 @@ class _ConflictTile extends StatelessWidget {
   }
 
   Future<void> _resolve(BuildContext context, PendingMutation mutation) async {
-    final choice = await showDialog<ConflictChoice>(
+    final resolution = await showDialog<ConflictResolution>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text(context.l10n.syncConflictTitle),
@@ -154,20 +154,19 @@ class _ConflictTile extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () =>
-                Navigator.of(dialogContext).pop(ConflictChoice.keepTheirs),
+                Navigator.of(dialogContext).pop(const KeepTheirs()),
             child: Text(context.l10n.syncKeepTheirs),
           ),
           FilledButton(
             key: const Key('sync-keep-mine'),
-            onPressed: () =>
-                Navigator.of(dialogContext).pop(ConflictChoice.keepMine),
+            onPressed: () => Navigator.of(dialogContext).pop(const KeepMine()),
             child: Text(context.l10n.syncKeepMine),
           ),
         ],
       ),
     );
-    if (choice != null && context.mounted) {
-      await context.read<SyncStatusCubit>().resolve(entry.key, choice);
+    if (resolution != null && context.mounted) {
+      await context.read<SyncStatusCubit>().resolve(entry.key, resolution);
     }
   }
 }

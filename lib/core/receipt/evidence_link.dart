@@ -10,10 +10,7 @@ const policiesPath = '/policies';
 /// reachable link.
 const _appUrl = String.fromEnvironment('APP_URL');
 
-Uri? publicEvidenceUri(
-  int sessionId, {
-  String? base,
-}) {
+Uri? publicEvidenceUri(int sessionId, {String? base}) {
   final raw = (base ?? _appUrl).trim();
   final fallback = raw.isEmpty && kIsWeb ? Uri.base.origin : '';
   final root = raw.isNotEmpty ? raw : fallback;

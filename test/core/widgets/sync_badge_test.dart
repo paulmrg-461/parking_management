@@ -22,7 +22,7 @@ PendingMutation _mutation({bool dead = false}) => PendingMutation(
 Future<SyncStatusCubit> _pump(
   WidgetTester tester,
   FakeSyncOutbox outbox, {
-  List<(int, ConflictChoice)>? resolved,
+  List<(int, ConflictResolution)>? resolved,
 }) async {
   final cubit = SyncStatusCubit(
     outbox,
@@ -30,8 +30,8 @@ Future<SyncStatusCubit> _pump(
     null,
     resolved == null
         ? null
-        : (key, choice) async {
-            resolved.add((key, choice));
+        : (key, resolution) async {
+            resolved.add((key, resolution));
             await outbox.remove(key);
           },
   );
@@ -103,7 +103,7 @@ void main() {
         serverRow: {'id': 5, 'version': 9},
       ),
     );
-    final resolved = <(int, ConflictChoice)>[];
+    final resolved = <(int, ConflictResolution)>[];
 
     await _pump(tester, outbox, resolved: resolved);
 
@@ -120,7 +120,7 @@ void main() {
     await tester.tap(find.byKey(const Key('sync-keep-mine')));
     await tester.pumpAndSettle();
 
-    expect(resolved.single.$2, ConflictChoice.keepMine);
+    expect(resolved.single.$2, isA<KeepMine>());
     expect(await outbox.listConflicts(), isEmpty);
   });
 }

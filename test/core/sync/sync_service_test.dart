@@ -221,7 +221,7 @@ void main() {
         await h.service.flush();
         final key = (await h.outbox.listConflicts()).single.key;
 
-        await h.service.resolve(key, ConflictChoice.keepTheirs);
+        await h.service.resolve(key, const KeepTheirs());
 
         expect(h.outbox.all, isEmpty);
         expect(vehicles.adopted.single?['color'], 'green');
@@ -240,7 +240,7 @@ void main() {
         await h.service.flush();
         final key = (await h.outbox.listConflicts()).single.key;
 
-        await h.service.resolve(key, ConflictChoice.keepMine);
+        await h.service.resolve(key, const KeepMine());
         await h.service.flush();
 
         expect(vehicles.replayed.last.baseVersion, 9);
@@ -248,6 +248,166 @@ void main() {
         expect(h.outbox.all, isEmpty);
       },
     );
+  });
+
+  group('SyncService.resolve', () {
+    /// Parks a vehicle edit whose color clashes, with `brand` merging cleanly.
+    Future<(_Harness, _FakeReplayer, int)> parkClash({
+      Map<String, dynamic> payload = const {'color': 'blue'},
+      Map<String, dynamic> baseRow = const {'color': 'red', 'brand': 'Kia'},
+      Map<String, dynamic> server = const {
+        'id': 1,
+        'version': 9,
+        'color': 'green',
+        'brand': 'Kia',
+      },
+    }) async {
+      final vehicles = _FakeReplayer(MutationEntity.vehicle, [
+        VersionConflictFailure(server),
+      ]);
+      final h = _Harness(replayers: [vehicles]);
+      await h.outbox.enqueue(
+        _versionedUpdate(1, payload: payload, baseRow: baseRow),
+      );
+      await h.service.flush();
+      return (h, vehicles, (await h.outbox.listConflicts()).single.key);
+    }
+
+    test(
+      'Success: merge fields sends the auto-apply plus the chosen ones',
+      () async {
+        final (h, vehicles, key) = await parkClash(
+          payload: const {'color': 'blue', 'brand': 'Toyota'},
+        );
+
+        await h.service.resolve(key, const MergeFields({'color'}));
+
+        final entry = h.outbox.all.single;
+        expect(entry.needsResolution, isFalse);
+        expect(entry.baseVersion, 9);
+        expect(entry.decodePayload(), {'brand': 'Toyota', 'color': 'blue'});
+        // Flushing re-sends only the patch, not the whole row.
+        vehicles.replayed.clear();
+        await h.service.flush();
+        expect(vehicles.replayed.single.decodePayload(), {
+          'brand': 'Toyota',
+          'color': 'blue',
+        });
+      },
+    );
+
+    test(
+      'Success: merge fields keeps the server value for unchosen fields',
+      () async {
+        final (h, vehicles, key) = await parkClash(
+          payload: const {'color': 'blue', 'brand': 'Toyota'},
+        );
+
+        await h.service.resolve(key, const MergeFields({}));
+
+        expect(h.outbox.all.single.decodePayload(), {'brand': 'Toyota'});
+        vehicles.replayed.clear();
+        await h.service.flush();
+        expect(vehicles.replayed.single.decodePayload(), {'brand': 'Toyota'});
+      },
+    );
+
+    test(
+      'Success: merge fields with nothing to send behaves as keep theirs',
+      () async {
+        final (h, vehicles, key) = await parkClash();
+
+        await h.service.resolve(key, const MergeFields({}));
+
+        expect(h.outbox.all, isEmpty);
+        expect(vehicles.adopted.single?['color'], 'green');
+      },
+    );
+
+    test(
+      'Failure: keep mine the server changed again returns to a conflict',
+      () async {
+        final (h, vehicles, key) = await parkClash();
+        vehicles._outcomes.add(
+          VersionConflictFailure({
+            'id': 1,
+            'version': 10,
+            'color': 'black',
+            'brand': 'Kia',
+          }),
+        );
+
+        await h.service.resolve(key, const KeepMine());
+        await h.service.flush();
+
+        final entry = h.outbox.all.single;
+        expect(entry.needsResolution, isTrue);
+        expect(entry.decodeServerRow()?['version'], 10);
+      },
+    );
+
+    test(
+      'Success: keep delete rebases the delete on the server version',
+      () async {
+        final vehicles = _FakeReplayer(MutationEntity.vehicle, [
+          VersionConflictFailure({'id': 1, 'version': 9, 'color': 'green'}),
+        ]);
+        final h = _Harness(replayers: [vehicles]);
+        await h.outbox.enqueue(
+          _versionedUpdate(1, operation: MutationOperation.delete),
+        );
+        await h.service.flush();
+        final key = (await h.outbox.listConflicts()).single.key;
+
+        await h.service.resolve(key, const KeepDelete());
+
+        final entry = h.outbox.all.single;
+        expect(entry.needsResolution, isFalse);
+        expect(entry.operation, MutationOperation.delete);
+        expect(entry.baseVersion, 9);
+        expect(entry.payloadJson, isNull);
+      },
+    );
+
+    test('Success: accept deletion drops my edit and the cache row', () async {
+      final vehicles = _FakeReplayer(MutationEntity.vehicle, [
+        const VersionConflictFailure(null),
+      ]);
+      final h = _Harness(replayers: [vehicles]);
+      await h.outbox.enqueue(_versionedUpdate(1));
+      await h.service.flush();
+      final parked = (await h.outbox.listConflicts()).single;
+      expect(parked.value.conflictKind, 'deleted');
+
+      await h.service.resolve(parked.key, const AcceptDeletion());
+
+      expect(h.outbox.all, isEmpty);
+      expect(vehicles.adopted.single, isNull);
+    });
+
+    test('Security: an invalid resolution for the kind throws', () async {
+      final vehicles = _FakeReplayer(MutationEntity.vehicle, [
+        const VersionConflictFailure(null),
+      ]);
+      final h = _Harness(replayers: [vehicles]);
+      await h.outbox.enqueue(_versionedUpdate(1));
+      await h.service.flush();
+      final key = (await h.outbox.listConflicts()).single.key;
+
+      await expectLater(
+        h.service.resolve(key, const KeepMine()),
+        throwsA(isA<StateError>()),
+      );
+      expect(h.outbox.all, isNotEmpty);
+    });
+
+    test('Security: resolving an unknown key is a no-op', () async {
+      final h = _Harness(replayers: [_FakeReplayer(MutationEntity.vehicle)]);
+
+      await h.service.resolve(999, const KeepTheirs());
+
+      expect(h.outbox.all, isEmpty);
+    });
   });
 
   group('SyncService.flush', () {

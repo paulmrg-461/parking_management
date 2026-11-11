@@ -1,8 +1,5 @@
 class AppSettings {
-  AppSettings({
-    this.deviceId = '',
-    this.lastSyncAt,
-  });
+  AppSettings({this.deviceId = '', this.lastSyncAt});
 
   final String deviceId;
 

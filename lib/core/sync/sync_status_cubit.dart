@@ -7,7 +7,10 @@ import 'sync_outbox.dart';
 import '../state/resilient_cubit.dart';
 
 typedef DeadLetterDiscarder = Future<void> Function(int key);
-typedef ConflictResolver = Future<void> Function(int key, ConflictChoice choice);
+typedef ConflictResolver = Future<void> Function(
+  int key,
+  ConflictResolution resolution,
+);
 
 class SyncStatus extends Equatable {
   const SyncStatus({
@@ -34,12 +37,8 @@ class SyncStatus extends Equatable {
 /// Exposes the outbox size (pending + dead letters) for the `SyncBadge`
 /// and lets the operator discard a dead letter.
 class SyncStatusCubit extends ResilientCubit<SyncStatus> {
-  SyncStatusCubit(
-    this._outbox,
-    this._discard, [
-    this._flush,
-    this._resolve,
-  ]) : super(const SyncStatus()) {
+  SyncStatusCubit(this._outbox, this._discard, [this._flush, this._resolve])
+    : super(const SyncStatus()) {
     _subscription = _outbox.watch().listen((_) => load());
   }
 
@@ -65,8 +64,8 @@ class SyncStatusCubit extends ResilientCubit<SyncStatus> {
   }
 
   /// Applies the operator's choice to a parked conflict and reloads.
-  Future<void> resolve(int key, ConflictChoice choice) async {
-    await _resolve?.call(key, choice);
+  Future<void> resolve(int key, ConflictResolution resolution) async {
+    await _resolve?.call(key, resolution);
     await load();
   }
 

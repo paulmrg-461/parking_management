@@ -106,7 +106,7 @@ class PendingMutation extends Equatable {
   /// "keep mine" choice).
   PendingMutation rebased({
     required int baseVersion,
-    required String payloadJson,
+    required String? payloadJson,
     required String baseSnapshotJson,
   }) => PendingMutation(
     entityType: entityType,

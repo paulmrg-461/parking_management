@@ -20,8 +20,7 @@ class ConfirmDialog extends StatelessWidget {
 
   /// `true` only when the user explicitly confirmed.
   static Future<bool> show(BuildContext context, ConfirmDialog dialog) async =>
-      await showDialog<bool>(context: context, builder: (_) => dialog) ??
-      false;
+      await showDialog<bool>(context: context, builder: (_) => dialog) ?? false;
 
   @override
   Widget build(BuildContext context) {

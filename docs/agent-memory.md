@@ -592,8 +592,13 @@ Last updated: 2026-11-11 (period comparison reports).
 - `MutationReplayer.replay` returns `Future<int?>`: entity replayers return the
   version the server assigned (check-in/check-out return `null`, they rely on
   idempotency instead).
-- Pending (4.2, 6.1-6.3, 6.5): field-by-field merge in `resolve` and the full
-  resolution dialog.
+- `SyncService.resolve(key, ConflictResolution)` takes the sealed model
+  (`KeepTheirs`, `KeepMine`, `MergeFields(mineFields)`, `KeepDelete`,
+  `AcceptDeletion`), recomputes `planMerge` from the stored base/server rows at
+  resolve time, and rebases only `autoApply ∪ chosen conflicting fields`.
+  Invalid combinations throw `StateError`; nothing is dropped silently.
+- Pending (6.1-6.3, 6.5): the full per-field dialog, its cubit and the
+  end-to-end flow test. The badge still offers keep-mine / keep-theirs.
 
 ## Period comparison reports (2026-11-11, `0104`)
 
