@@ -1275,6 +1275,20 @@ class AppLocalizationsEn extends AppLocalizations {
       'WhatsApp could not be opened on this device';
 
   @override
+  String get errorVersionConflict =>
+      'Someone else changed this record. Review the conflict from the sync icon.';
+
+  @override
+  String get errorConflictPending =>
+      'Resolve the pending conflict for this record first.';
+
+  @override
+  String get errorVersionRequired => 'Update the app to edit this record.';
+
+  @override
+  String get errorMinVersionRequired => 'Set the minimum app version first.';
+
+  @override
   String get errorMapsUnavailable => 'Maps could not be opened on this device';
 
   @override

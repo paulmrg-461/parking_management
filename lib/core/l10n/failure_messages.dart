@@ -31,6 +31,10 @@ extension FailureMessages on AppLocalizations {
   String? _byCode(String? code) => switch (code) {
     null => null,
     'InvalidCredentialsError' => errorAuth,
+    'VersionConflictError' => errorVersionConflict,
+    'ConflictPendingError' => errorConflictPending,
+    'VersionRequiredError' => errorVersionRequired,
+    'MinVersionRequiredError' => errorMinVersionRequired,
     'InvalidTokenError' => errorSessionExpired,
     'AdminRequiredError' || 'PermissionDeniedError' => errorForbidden,
     'VehicleNotFoundError' => errorVehicleNotFound,

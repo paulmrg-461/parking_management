@@ -537,8 +537,15 @@ Last updated: 2026-11-11 (period comparison reports).
   locked out). Off by default.
 - `request.path` was verified as a PostgREST GUC in the suite by setting it
   explicitly; with an empty path the guard does nothing.
-- Pending (sections 2-6 of the change): `baseVersion` in the outbox, three-way
-  merge, conflict UI, versioned writes in the four features.
+- Client core ready: `planMerge` (three-way merge; `null`/`''` and numeric
+  equality, fields the server already has are dropped), `VersionConflictFailure`
+  (extends `Failure`, carries the server row; the code is not in `_domainCodes`
+  because the helper builds it) and `updateVersioned`/`deleteVersioned`
+  (`version=eq.<base>` filter, zero rows decides conflict vs permission vs
+  legacy not-found). Four ARB keys map the new codes.
+- Pending (sections 3-6 of the change): `baseVersion` in the outbox, SyncService
+  auto-merge/park/resolve, versioned writes in the four features, badge and
+  dialog.
 
 ## Period comparison reports (2026-11-11, `0104`)
 

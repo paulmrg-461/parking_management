@@ -1282,6 +1282,22 @@ class AppLocalizationsEs extends AppLocalizations {
       'No se pudo abrir WhatsApp en este dispositivo';
 
   @override
+  String get errorVersionConflict =>
+      'Otra persona cambió este registro. Revisa el conflicto desde el ícono de sincronización.';
+
+  @override
+  String get errorConflictPending =>
+      'Resuelve primero el conflicto pendiente de este registro.';
+
+  @override
+  String get errorVersionRequired =>
+      'Actualiza la aplicación para editar este registro.';
+
+  @override
+  String get errorMinVersionRequired =>
+      'Define primero la versión mínima de la app.';
+
+  @override
   String get errorMapsUnavailable =>
       'No se pudo abrir el mapa en este dispositivo';
 

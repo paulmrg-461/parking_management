@@ -2348,6 +2348,30 @@ abstract class AppLocalizations {
   /// **'No se pudo abrir WhatsApp en este dispositivo'**
   String get errorWhatsappUnavailable;
 
+  /// No description provided for @errorVersionConflict.
+  ///
+  /// In es, this message translates to:
+  /// **'Otra persona cambió este registro. Revisa el conflicto desde el ícono de sincronización.'**
+  String get errorVersionConflict;
+
+  /// No description provided for @errorConflictPending.
+  ///
+  /// In es, this message translates to:
+  /// **'Resuelve primero el conflicto pendiente de este registro.'**
+  String get errorConflictPending;
+
+  /// No description provided for @errorVersionRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'Actualiza la aplicación para editar este registro.'**
+  String get errorVersionRequired;
+
+  /// No description provided for @errorMinVersionRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'Define primero la versión mínima de la app.'**
+  String get errorMinVersionRequired;
+
   /// No description provided for @errorMapsUnavailable.
   ///
   /// In es, this message translates to:
