@@ -4626,4 +4626,170 @@ begin
     update public.parking_settings set min_app_version = '' where lot_id = 1;
 end $$;
 
+-- 0106 booking waitlist: schema defaults, RLS and constraints.
+do $$
+begin
+    if (select waitlist_enabled from public.parking_settings where lot_id = 1) then
+        raise exception 'the waitlist started enabled';
+    end if;
+    if (select waitlist_claim_minutes from public.parking_settings where lot_id = 1) <> 15
+       or (select waitlist_max_entries from public.parking_settings where lot_id = 1) <> 30 then
+        raise exception 'the waitlist defaults changed (15 minutes, 30 entries)';
+    end if;
+    begin
+        update public.parking_settings set waitlist_claim_minutes = 4 where lot_id = 1;
+        raise exception 'a four minute claim window was accepted';
+    exception when check_violation then null;
+    end;
+    begin
+        update public.parking_settings set waitlist_max_entries = 0 where lot_id = 1;
+        raise exception 'a zero maximum was accepted';
+    exception when check_violation then null;
+    end;
+    update public.parking_settings
+       set waitlist_claim_minutes = 15, waitlist_max_entries = 30
+     where lot_id = 1;
+end $$;
+
+-- waitlist: anon cannot select reservation_waitlist
+set local role anon;
+do $$
+begin
+    begin
+        perform 1 from public.reservation_waitlist limit 1;
+        raise exception 'anon read the waitlist table';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform 1 from public.waitlist_kicks limit 1;
+        raise exception 'anon read the kick table';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
+-- waitlist: member sees own lot only
+do $$
+declare
+    cat_two integer;
+    entry_one bigint;
+    entry_two bigint;
+    visible integer;
+begin
+    select c.id into cat_two from public.categories c where c.lot_id = 2 limit 1;
+    insert into public.reservation_waitlist (
+        lot_id, category_id, group_name, plate, customer_name, customer_phone,
+        wait_until, hold_minutes
+    )
+    values (2, cat_two, 'car', 'WLONLY2', 'Sofia', '3009990002',
+            now() + interval '2 hours', 60)
+    returning id into entry_two;
+
+    insert into public.reservation_waitlist (
+        lot_id, category_id, group_name, plate, customer_name, customer_phone,
+        wait_until, hold_minutes
+    )
+    select 1, c.id, 'car', 'WLONLY1', 'Ana', '3009990001',
+           now() + interval '2 hours', 60
+      from public.categories c where c.lot_id = 1 limit 1
+    returning id into entry_one;
+
+    perform set_config('app.wl_entry_one', entry_one::text, true);
+    perform set_config('app.wl_entry_two', entry_two::text, true);
+    if (select count(*) from public.reservation_waitlist) <> 2 then
+        raise exception 'the fixture entries were not created';
+    end if;
+end $$;
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+declare
+    visible integer;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    select count(*) into visible from public.reservation_waitlist;
+    if visible <> 1 then
+        raise exception 'the member saw % entries (expected only its lot)', visible;
+    end if;
+    if exists (
+        select 1 from public.reservation_waitlist
+         where id = current_setting('app.wl_entry_two')::bigint
+    ) then
+        raise exception 'the member read another lot entry';
+    end if;
+end $$;
+reset role;
+do $$
+declare
+    visible integer;
+begin
+    select count(*) into visible from public.reservation_waitlist;
+    if visible <> 2 then
+        raise exception 'the waitlist fixture was not visible as owner';
+    end if;
+end $$;
+
+-- waitlist: unique active plate
+do $$
+declare
+    cat integer;
+    first_id bigint;
+begin
+    select c.id into cat from public.categories c where c.lot_id = 1 limit 1;
+    insert into public.reservation_waitlist (
+        lot_id, category_id, group_name, plate, customer_name, customer_phone,
+        wait_until, hold_minutes
+    )
+    values (1, cat, 'car', 'WLDUP1', 'Ana', '3009990003',
+            now() + interval '2 hours', 60)
+    returning id into first_id;
+    begin
+        insert into public.reservation_waitlist (
+            lot_id, category_id, group_name, plate, customer_name, customer_phone,
+            wait_until, hold_minutes
+        )
+        values (1, cat, 'car', 'WLDUP1', 'Ana', '3009990003',
+                now() + interval '2 hours', 60);
+        raise exception 'a second active entry for the plate was accepted';
+    exception when unique_violation then null;
+    end;
+    update public.reservation_waitlist set status = 'left' where id = first_id;
+    insert into public.reservation_waitlist (
+        lot_id, category_id, group_name, plate, customer_name, customer_phone,
+        wait_until, hold_minutes
+    )
+    values (1, cat, 'car', 'WLDUP1', 'Ana', '3009990003',
+            now() + interval '2 hours', 60);
+    if (select count(*) from public.reservation_waitlist
+         where plate = 'WLDUP1' and status in ('waiting', 'offered')) <> 1 then
+        raise exception 'the plate could not rejoin after leaving';
+    end if;
+end $$;
+
+-- waitlist: source waitlist needs contact
+do $$
+declare
+    cat integer;
+begin
+    select c.id into cat from public.categories c where c.lot_id = 1 limit 1;
+    begin
+        insert into public.category_reservations (
+            plate, category_id, reserved_until, lot_id, source, customer_name,
+            customer_phone
+        )
+        values ('WLSRC1', cat, now() + interval '1 hour', 1, 'waitlist', 'Ana', null);
+        raise exception 'a waitlist hold without a phone was accepted';
+    exception when check_violation then null;
+    end;
+    begin
+        insert into public.category_reservations (
+            plate, category_id, reserved_until, lot_id, source
+        )
+        values ('WLSRC2', cat, now() + interval '1 hour', 1, 'bogus');
+        raise exception 'an unknown hold source was accepted';
+    exception when check_violation then null;
+    end;
+end $$;
+
 rollback;
