@@ -315,13 +315,14 @@ class VehicleAdapter extends TypeAdapter<Vehicle> {
       brand: fields[4] as String?,
       ownerPhone: fields[5] as String?,
       ownerName: fields[6] as String?,
+      version: fields[7] == null ? 0 : (fields[7] as num).toInt(),
     );
   }
 
   @override
   void write(BinaryWriter writer, Vehicle obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(8)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -335,7 +336,9 @@ class VehicleAdapter extends TypeAdapter<Vehicle> {
       ..writeByte(5)
       ..write(obj.ownerPhone)
       ..writeByte(6)
-      ..write(obj.ownerName);
+      ..write(obj.ownerName)
+      ..writeByte(7)
+      ..write(obj.version);
   }
 
   @override

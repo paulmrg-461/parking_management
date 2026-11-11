@@ -78,6 +78,13 @@ Future<void> _initSupabase(AppConfig config) async {
     ),
   );
   serviceLocator.registerSingleton<SupabaseClient>(supabase.client);
+  // This build sends row versions on table writes, so a lot that turns on
+  // `row_version_required` keeps working. Set before the lot header so both
+  // survive the map rebuild below.
+  supabase.client.headers = {
+    ...supabase.client.headers,
+    'x-versioned-write': '1',
+  };
   // The active lot travels as a header on every request; the client validates
   // membership server-side, so a stale value only fails closed.
   final lotContext = serviceLocator<LotContext>();

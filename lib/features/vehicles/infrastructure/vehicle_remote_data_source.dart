@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/network/supabase_error_mapper.dart';
+import '../../../core/network/versioned_write.dart';
 import '../../../core/pagination/paged_result.dart';
 import '../domain/entities/vehicle.dart';
 import 'models/vehicle_dto.dart';
@@ -27,9 +28,13 @@ abstract class VehicleRemoteDataSource {
 
   Future<Vehicle> create(Map<String, dynamic> payload);
 
-  Future<Vehicle> update(int id, Map<String, dynamic> payload);
+  Future<Vehicle> update(
+    int id,
+    Map<String, dynamic> payload, {
+    int? baseVersion,
+  });
 
-  Future<void> delete(int id);
+  Future<void> delete(int id, {int? baseVersion});
 }
 
 class SupabaseVehicleRemoteDataSource implements VehicleRemoteDataSource {
@@ -101,14 +106,19 @@ class SupabaseVehicleRemoteDataSource implements VehicleRemoteDataSource {
   }
 
   @override
-  Future<Vehicle> update(int id, Map<String, dynamic> payload) async {
+  Future<Vehicle> update(
+    int id,
+    Map<String, dynamic> payload, {
+    int? baseVersion,
+  }) async {
     try {
-      final row = await _client
-          .from(_table)
-          .update(payload)
-          .eq('id', id)
-          .select()
-          .single();
+      final row = await updateVersioned(
+        _client,
+        _table,
+        payload: payload,
+        match: {'id': id},
+        baseVersion: baseVersion,
+      );
       return VehicleDto.fromJson(row).toDomain();
     } catch (error) {
       throw mapSupabaseError(error);
@@ -116,9 +126,14 @@ class SupabaseVehicleRemoteDataSource implements VehicleRemoteDataSource {
   }
 
   @override
-  Future<void> delete(int id) async {
+  Future<void> delete(int id, {int? baseVersion}) async {
     try {
-      await _client.from(_table).delete().eq('id', id);
+      await deleteVersioned(
+        _client,
+        _table,
+        match: {'id': id},
+        baseVersion: baseVersion,
+      );
     } catch (error) {
       throw mapSupabaseError(error);
     }

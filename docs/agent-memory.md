@@ -557,9 +557,15 @@ Last updated: 2026-11-11 (period comparison reports).
   edit/delete mismatch park a conflict, `delete` of a vanished row succeeds.
   `resolve(key, keepMine|keepTheirs)` rebases on the server version or adopts
   and removes. Nothing exercises this yet: the features do not send versions.
-- Pending (3.3, 4.2, 4.3, 5, 6): replayer `Future<int?>`, field-by-field merge
-  in `resolve`, status cubit, versioned writes in the four features, badge and
-  dialog.
+- Vehicles are wired: `Vehicle.version` (entity, DTO and Hive adapter), the
+  remote update/delete send it through the versioned helpers, the repository
+  refuses an edit while the row has a parked conflict (`ConflictPendingError`)
+  and parks an online conflict with the server row, the replayer sends the base
+  and implements `adoptServer`, and the edit dialog passes
+  `existing.version`. The client also sends the `x-versioned-write` header.
+- Pending (3.3, 4.2, 4.3, 5.2-5.4, 6): replayer `Future<int?>`, field-by-field
+  merge in `resolve`, status cubit with conflicts, tariffs/categories/settings,
+  badge and dialog.
 
 ## Period comparison reports (2026-11-11, `0104`)
 
