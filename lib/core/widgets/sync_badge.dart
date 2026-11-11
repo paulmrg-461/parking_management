@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../l10n/l10n.dart';
+import '../sync/conflict/conflict_resolution.dart';
 import '../sync/pending_mutation.dart';
 import '../theme/tokens.dart';
 import '../sync/sync_outbox.dart';
@@ -26,15 +27,22 @@ class SyncBadge extends StatelessWidget {
           return const SizedBox.shrink();
         }
         final hasErrors = status.deadLetters.isNotEmpty;
+        final hasConflicts = status.conflicts.isNotEmpty;
         return IconButton(
           tooltip: _tooltip(context.l10n, status),
           onPressed: () => _showDetails(context, cubit),
           icon: Badge(
             label: Text('${status.total}'),
-            backgroundColor: hasErrors
+            backgroundColor: hasErrors || hasConflicts
                 ? Theme.of(context).colorScheme.error
                 : null,
-            child: Icon(hasErrors ? Icons.sync_problem : Icons.sync),
+            child: Icon(
+              hasErrors
+                  ? Icons.sync_problem
+                  : hasConflicts
+                  ? Icons.merge_type
+                  : Icons.sync,
+            ),
           ),
         );
       },
@@ -52,7 +60,12 @@ class SyncBadge extends StatelessWidget {
   String _tooltip(AppLocalizations l10n, SyncStatus status) {
     final base = l10n.syncPendingTooltip(status.total);
     final errors = status.deadLetters.length;
-    return errors == 0 ? base : l10n.syncPendingWithErrors(base, errors);
+    final withErrors = errors == 0
+        ? base
+        : l10n.syncPendingWithErrors(base, errors);
+    return status.conflicts.isEmpty
+        ? withErrors
+        : '$withErrors · ${l10n.syncConflicts(status.conflicts.length)}';
   }
 
   void _showDetails(BuildContext context, SyncStatusCubit cubit) {
@@ -91,11 +104,71 @@ class _SyncDetailsSheet extends StatelessWidget {
                 ),
               ),
             Text(context.l10n.syncQueued(status.pendingCount)),
+            if (status.conflicts.isNotEmpty) ...[
+              const SizedBox(height: Space.sm),
+              Text(
+                context.l10n.syncConflicts(status.conflicts.length),
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              for (final entry in status.conflicts) _ConflictTile(entry),
+            ],
             for (final entry in status.deadLetters) _DeadLetterTile(entry),
           ],
         ),
       ),
     );
+  }
+}
+
+/// A parked conflict: the operator picks which side wins.
+class _ConflictTile extends StatelessWidget {
+  const _ConflictTile(this.entry);
+
+  final OutboxEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final mutation = entry.value;
+    final id = mutation.entityId == null ? '' : ' #${mutation.entityId}';
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: const Icon(Icons.merge_type),
+      title: Text(
+        '${_DeadLetterTile._label(context.l10n, mutation.entityType)}$id',
+      ),
+      subtitle: Text(context.l10n.syncConflictHint),
+      trailing: TextButton(
+        key: Key('sync-resolve-${entry.key}'),
+        onPressed: () => _resolve(context, mutation),
+        child: Text(context.l10n.syncConflictTitle),
+      ),
+    );
+  }
+
+  Future<void> _resolve(BuildContext context, PendingMutation mutation) async {
+    final choice = await showDialog<ConflictChoice>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(context.l10n.syncConflictTitle),
+        content: Text(context.l10n.syncConflictHint),
+        actions: [
+          TextButton(
+            onPressed: () =>
+                Navigator.of(dialogContext).pop(ConflictChoice.keepTheirs),
+            child: Text(context.l10n.syncKeepTheirs),
+          ),
+          FilledButton(
+            key: const Key('sync-keep-mine'),
+            onPressed: () =>
+                Navigator.of(dialogContext).pop(ConflictChoice.keepMine),
+            child: Text(context.l10n.syncKeepMine),
+          ),
+        ],
+      ),
+    );
+    if (choice != null && context.mounted) {
+      await context.read<SyncStatusCubit>().resolve(entry.key, choice);
+    }
   }
 }
 

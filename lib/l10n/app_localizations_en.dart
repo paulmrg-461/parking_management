@@ -550,6 +550,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get syncNow => 'Retry now';
 
   @override
+  String syncConflicts(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count conflicts to resolve',
+      one: '1 conflict to resolve',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get syncConflictTitle => 'Conflicting change';
+
+  @override
+  String get syncConflictHint =>
+      'Someone else changed this record while you were editing it.';
+
+  @override
+  String get syncKeepMine => 'Keep my change';
+
+  @override
+  String get syncKeepTheirs => 'Keep the server\'s';
+
+  @override
   String syncQueued(int count) {
     return '$count queued, retried automatically.';
   }

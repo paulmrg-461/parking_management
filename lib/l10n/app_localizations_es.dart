@@ -555,6 +555,30 @@ class AppLocalizationsEs extends AppLocalizations {
   String get syncNow => 'Reintentar ahora';
 
   @override
+  String syncConflicts(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count conflictos por resolver',
+      one: '1 conflicto por resolver',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get syncConflictTitle => 'Cambio en conflicto';
+
+  @override
+  String get syncConflictHint =>
+      'Otra persona cambió este registro mientras lo editabas.';
+
+  @override
+  String get syncKeepMine => 'Quedarme con lo mío';
+
+  @override
+  String get syncKeepTheirs => 'Quedarme con lo del servidor';
+
+  @override
   String syncQueued(int count) {
     return '$count en cola, se reintentarán solos.';
   }

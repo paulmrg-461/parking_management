@@ -1022,6 +1022,36 @@ abstract class AppLocalizations {
   /// **'Reintentar ahora'**
   String get syncNow;
 
+  /// No description provided for @syncConflicts.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 conflicto por resolver} other{{count} conflictos por resolver}}'**
+  String syncConflicts(int count);
+
+  /// No description provided for @syncConflictTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Cambio en conflicto'**
+  String get syncConflictTitle;
+
+  /// No description provided for @syncConflictHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Otra persona cambió este registro mientras lo editabas.'**
+  String get syncConflictHint;
+
+  /// No description provided for @syncKeepMine.
+  ///
+  /// In es, this message translates to:
+  /// **'Quedarme con lo mío'**
+  String get syncKeepMine;
+
+  /// No description provided for @syncKeepTheirs.
+  ///
+  /// In es, this message translates to:
+  /// **'Quedarme con lo del servidor'**
+  String get syncKeepTheirs;
+
   /// No description provided for @syncQueued.
   ///
   /// In es, this message translates to:

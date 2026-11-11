@@ -563,9 +563,13 @@ Last updated: 2026-11-11 (period comparison reports).
   and parks an online conflict with the server row, the replayer sends the base
   and implements `adoptServer`, and the edit dialog passes
   `existing.version`. The client also sends the `x-versioned-write` header.
-- Pending (3.3, 4.2, 4.3, 5.2-5.4, 6): replayer `Future<int?>`, field-by-field
-  merge in `resolve`, status cubit with conflicts, tariffs/categories/settings,
-  badge and dialog.
+- Conflicts are visible: `SyncStatus` carries the parked conflicts, the cubit
+  loads them and exposes `resolve(key, choice)`, and the `SyncBadge` shows a
+  merge icon with the count and a dialog offering keep-mine / keep-theirs.
+  The field-by-field merge and the per-field dialog are still pending.
+- Pending (3.3, 4.2, 5.2-5.4, 6.1-6.3, 6.5): replayer `Future<int?>`,
+  field-by-field merge in `resolve`, tariffs/categories/settings and the full
+  resolution dialog.
 
 ## Period comparison reports (2026-11-11, `0104`)
 
