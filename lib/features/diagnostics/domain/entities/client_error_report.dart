@@ -37,6 +37,14 @@ class ClientErrorReport extends Equatable {
       );
 
   @override
-  List<Object?> get props =>
-      [id, platform, message, createdAt, stack, context, appVersion, actor];
+  List<Object?> get props => [
+    id,
+    platform,
+    message,
+    createdAt,
+    stack,
+    context,
+    appVersion,
+    actor,
+  ];
 }

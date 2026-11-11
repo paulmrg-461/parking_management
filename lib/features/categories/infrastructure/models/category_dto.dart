@@ -23,10 +23,6 @@ class CategoryDto {
 
   Map<String, dynamic> toJson() => _$CategoryDtoToJson(this);
 
-  Category toDomain() => Category(
-    id: id,
-    name: name,
-    capacity: capacity,
-    version: version,
-  );
+  Category toDomain() =>
+      Category(id: id, name: name, capacity: capacity, version: version);
 }

@@ -1052,6 +1052,132 @@ abstract class AppLocalizations {
   /// **'Quedarme con lo del servidor'**
   String get syncKeepTheirs;
 
+  /// No description provided for @conflictTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Resolver conflicto'**
+  String get conflictTitle;
+
+  /// No description provided for @syncConflictSection.
+  ///
+  /// In es, this message translates to:
+  /// **'Requieren tu decisión'**
+  String get syncConflictSection;
+
+  /// No description provided for @syncConflictTileSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Otra persona cambió este registro.'**
+  String get syncConflictTileSubtitle;
+
+  /// No description provided for @conflictIntro.
+  ///
+  /// In es, this message translates to:
+  /// **'Tus cambios sin conexión chocan con cambios de otra persona.'**
+  String get conflictIntro;
+
+  /// No description provided for @conflictColumnBase.
+  ///
+  /// In es, this message translates to:
+  /// **'Antes'**
+  String get conflictColumnBase;
+
+  /// No description provided for @conflictColumnMine.
+  ///
+  /// In es, this message translates to:
+  /// **'Mío'**
+  String get conflictColumnMine;
+
+  /// No description provided for @conflictColumnTheirs.
+  ///
+  /// In es, this message translates to:
+  /// **'Del servidor'**
+  String get conflictColumnTheirs;
+
+  /// No description provided for @conflictAutoMerged.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =0{} =1{1 cambio sin choque se aplicará solo.} other{{count} cambios sin choque se aplicarán solos.}}'**
+  String conflictAutoMerged(int count);
+
+  /// No description provided for @conflictPickEach.
+  ///
+  /// In es, this message translates to:
+  /// **'Elige un valor para cada campo.'**
+  String get conflictPickEach;
+
+  /// No description provided for @conflictApply.
+  ///
+  /// In es, this message translates to:
+  /// **'Aplicar selección'**
+  String get conflictApply;
+
+  /// No description provided for @conflictDeletedTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Otra persona eliminó este registro.'**
+  String get conflictDeletedTitle;
+
+  /// No description provided for @conflictDeletedBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Tus cambios no se pueden aplicar. Puedes aceptar la eliminación y volver a ingresarlos si hace falta.'**
+  String get conflictDeletedBody;
+
+  /// No description provided for @conflictAcceptDeletion.
+  ///
+  /// In es, this message translates to:
+  /// **'Aceptar la eliminación'**
+  String get conflictAcceptDeletion;
+
+  /// No description provided for @conflictEditedTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Otra persona editó este registro mientras lo eliminabas.'**
+  String get conflictEditedTitle;
+
+  /// No description provided for @conflictKeepDelete.
+  ///
+  /// In es, this message translates to:
+  /// **'Eliminar de todos modos'**
+  String get conflictKeepDelete;
+
+  /// No description provided for @conflictKeepRecord.
+  ///
+  /// In es, this message translates to:
+  /// **'Conservar el registro'**
+  String get conflictKeepRecord;
+
+  /// No description provided for @conflictAgain.
+  ///
+  /// In es, this message translates to:
+  /// **'El registro cambió de nuevo. Revisa los valores actuales.'**
+  String get conflictAgain;
+
+  /// No description provided for @conflictEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay conflictos pendientes.'**
+  String get conflictEmpty;
+
+  /// No description provided for @conflictNone.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin valor'**
+  String get conflictNone;
+
+  /// No description provided for @cfYes.
+  ///
+  /// In es, this message translates to:
+  /// **'Sí'**
+  String get cfYes;
+
+  /// No description provided for @cfNo.
+  ///
+  /// In es, this message translates to:
+  /// **'No'**
+  String get cfNo;
+
   /// No description provided for @syncQueued.
   ///
   /// In es, this message translates to:

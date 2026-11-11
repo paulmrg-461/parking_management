@@ -32,7 +32,10 @@ class PoliciesCubit extends ResilientCubit<PoliciesState> {
       emit(
         const PoliciesState(
           status: PoliciesStatus.failure,
-          failure: ValidationFailure('Policy not available', 'PolicyNotFoundError'),
+          failure: ValidationFailure(
+            'Policy not available',
+            'PolicyNotFoundError',
+          ),
         ),
       );
       return;

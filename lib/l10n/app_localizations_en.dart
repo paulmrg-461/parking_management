@@ -574,6 +574,82 @@ class AppLocalizationsEn extends AppLocalizations {
   String get syncKeepTheirs => 'Keep the server\'s';
 
   @override
+  String get conflictTitle => 'Resolve conflict';
+
+  @override
+  String get syncConflictSection => 'Need your decision';
+
+  @override
+  String get syncConflictTileSubtitle => 'Someone else changed this record.';
+
+  @override
+  String get conflictIntro =>
+      'Your offline changes clash with someone else\'s changes.';
+
+  @override
+  String get conflictColumnBase => 'Before';
+
+  @override
+  String get conflictColumnMine => 'Mine';
+
+  @override
+  String get conflictColumnTheirs => 'Server';
+
+  @override
+  String conflictAutoMerged(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count non-clashing changes will apply on their own.',
+      one: '1 non-clashing change will apply on its own.',
+      zero: '',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get conflictPickEach => 'Pick a value for each field.';
+
+  @override
+  String get conflictApply => 'Apply selection';
+
+  @override
+  String get conflictDeletedTitle => 'Someone else deleted this record.';
+
+  @override
+  String get conflictDeletedBody =>
+      'Your changes cannot be applied. You can accept the deletion and re-enter them if needed.';
+
+  @override
+  String get conflictAcceptDeletion => 'Accept the deletion';
+
+  @override
+  String get conflictEditedTitle =>
+      'Someone else edited this record while you deleted it.';
+
+  @override
+  String get conflictKeepDelete => 'Delete anyway';
+
+  @override
+  String get conflictKeepRecord => 'Keep the record';
+
+  @override
+  String get conflictAgain =>
+      'The record changed again. Review the current values.';
+
+  @override
+  String get conflictEmpty => 'No pending conflicts.';
+
+  @override
+  String get conflictNone => 'No value';
+
+  @override
+  String get cfYes => 'Yes';
+
+  @override
+  String get cfNo => 'No';
+
+  @override
   String syncQueued(int count) {
     return '$count queued, retried automatically.';
   }

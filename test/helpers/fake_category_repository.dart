@@ -37,11 +37,7 @@ class FakeCategoryRepository implements CategoryRepository {
   }
 
   @override
-  Future<Category> setCapacity(
-    int id,
-    int capacity, {
-    int? baseVersion,
-  }) async {
+  Future<Category> setCapacity(int id, int capacity, {int? baseVersion}) async {
     _throwIfWriteFails();
     final existing = categories.firstWhere((c) => c.id == id);
     final updated = Category(id: id, name: existing.name, capacity: capacity);

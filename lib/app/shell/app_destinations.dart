@@ -69,12 +69,7 @@ const managementDestinations = [
     Icons.directions_car_outlined,
     Icons.directions_car,
   ),
-  AppDestination(
-    '/tariffs',
-    _tariffs,
-    Icons.payments_outlined,
-    Icons.payments,
-  ),
+  AppDestination('/tariffs', _tariffs, Icons.payments_outlined, Icons.payments),
   AppDestination(
     '/categories',
     _categories,
@@ -87,12 +82,7 @@ const managementDestinations = [
     Icons.monitor_heart_outlined,
     Icons.monitor_heart,
   ),
-  AppDestination(
-    '/audit',
-    _audit,
-    Icons.history_outlined,
-    Icons.history,
-  ),
+  AppDestination('/audit', _audit, Icons.history_outlined, Icons.history),
   AppDestination(
     '/lots',
     _lots,

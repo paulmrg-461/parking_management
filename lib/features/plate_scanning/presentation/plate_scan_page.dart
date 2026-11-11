@@ -44,9 +44,8 @@ class _PlateScanPageState extends State<PlateScanPage> {
     try {
       Navigator.of(context).pop(normalizePlate(_plateController.text));
     } on ValidationFailure {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.scanEmpty)),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(context.l10n.scanEmpty)));
     }
   }
 

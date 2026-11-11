@@ -43,13 +43,13 @@ class MonthlyPassDto {
   Map<String, dynamic> toJson() => _$MonthlyPassDtoToJson(this);
 
   MonthlyPass toDomain() => MonthlyPass(
-        id: id,
-        vehicleId: vehicleId,
-        startDate: startDate,
-        endDate: endDate,
-        amount: amount,
-        active: active,
-        autoRenew: autoRenew,
-        autoRenewPaymentMethod: autoRenewPaymentMethod,
-      );
+    id: id,
+    vehicleId: vehicleId,
+    startDate: startDate,
+    endDate: endDate,
+    amount: amount,
+    active: active,
+    autoRenew: autoRenew,
+    autoRenewPaymentMethod: autoRenewPaymentMethod,
+  );
 }

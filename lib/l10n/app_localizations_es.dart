@@ -579,6 +579,82 @@ class AppLocalizationsEs extends AppLocalizations {
   String get syncKeepTheirs => 'Quedarme con lo del servidor';
 
   @override
+  String get conflictTitle => 'Resolver conflicto';
+
+  @override
+  String get syncConflictSection => 'Requieren tu decisión';
+
+  @override
+  String get syncConflictTileSubtitle => 'Otra persona cambió este registro.';
+
+  @override
+  String get conflictIntro =>
+      'Tus cambios sin conexión chocan con cambios de otra persona.';
+
+  @override
+  String get conflictColumnBase => 'Antes';
+
+  @override
+  String get conflictColumnMine => 'Mío';
+
+  @override
+  String get conflictColumnTheirs => 'Del servidor';
+
+  @override
+  String conflictAutoMerged(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count cambios sin choque se aplicarán solos.',
+      one: '1 cambio sin choque se aplicará solo.',
+      zero: '',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get conflictPickEach => 'Elige un valor para cada campo.';
+
+  @override
+  String get conflictApply => 'Aplicar selección';
+
+  @override
+  String get conflictDeletedTitle => 'Otra persona eliminó este registro.';
+
+  @override
+  String get conflictDeletedBody =>
+      'Tus cambios no se pueden aplicar. Puedes aceptar la eliminación y volver a ingresarlos si hace falta.';
+
+  @override
+  String get conflictAcceptDeletion => 'Aceptar la eliminación';
+
+  @override
+  String get conflictEditedTitle =>
+      'Otra persona editó este registro mientras lo eliminabas.';
+
+  @override
+  String get conflictKeepDelete => 'Eliminar de todos modos';
+
+  @override
+  String get conflictKeepRecord => 'Conservar el registro';
+
+  @override
+  String get conflictAgain =>
+      'El registro cambió de nuevo. Revisa los valores actuales.';
+
+  @override
+  String get conflictEmpty => 'No hay conflictos pendientes.';
+
+  @override
+  String get conflictNone => 'Sin valor';
+
+  @override
+  String get cfYes => 'Sí';
+
+  @override
+  String get cfNo => 'No';
+
+  @override
   String syncQueued(int count) {
     return '$count en cola, se reintentarán solos.';
   }

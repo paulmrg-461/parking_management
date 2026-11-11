@@ -131,11 +131,7 @@ class SupabaseLotsRemoteDataSource implements LotsRemoteDataSource {
     try {
       await _client.rpc(
         'set_lot_member',
-        params: {
-          'p_user_id': userId,
-          'p_lot_id': lotId,
-          'p_role': role,
-        },
+        params: {'p_user_id': userId, 'p_lot_id': lotId, 'p_role': role},
       );
     } catch (error) {
       throw mapSupabaseError(error);

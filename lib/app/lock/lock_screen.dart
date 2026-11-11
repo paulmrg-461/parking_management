@@ -134,8 +134,10 @@ class _LockScreenState extends State<LockScreen> {
                           const SizedBox(height: Space.sm),
                           Center(
                             child: Chip(
-                              avatar: const Icon(Icons.person_outline,
-                                  size: 18),
+                              avatar: const Icon(
+                                Icons.person_outline,
+                                size: 18,
+                              ),
                               label: Text(widget.username),
                             ),
                           ),

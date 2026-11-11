@@ -110,14 +110,11 @@ void main() {
     expect(find.byIcon(Icons.merge_type), findsOneWidget);
     await tester.tap(find.byIcon(Icons.merge_type));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Cambio en conflicto'));
+    expect(find.text('Requieren tu decisión'), findsOneWidget);
+    await tester.tap(find.text('Otra persona cambió este registro.'));
     await tester.pumpAndSettle();
-    expect(
-      find.text('Otra persona cambió este registro mientras lo editabas.'),
-      // The tile and the dialog both show the explanation.
-      findsWidgets,
-    );
-    await tester.tap(find.byKey(const Key('sync-keep-mine')));
+    expect(find.text('Resolver conflicto'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('conflict-keep-mine')));
     await tester.pumpAndSettle();
 
     expect(resolved.single.$2, isA<KeepMine>());

@@ -11,7 +11,7 @@ abstract class TextRecognizerClient {
 /// [TextRecognizer] (Latin script).
 class MlKitTextRecognizerClient implements TextRecognizerClient {
   MlKitTextRecognizerClient()
-      : _recognizer = TextRecognizer(script: TextRecognitionScript.latin);
+    : _recognizer = TextRecognizer(script: TextRecognitionScript.latin);
 
   final TextRecognizer _recognizer;
 

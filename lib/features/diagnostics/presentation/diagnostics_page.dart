@@ -167,20 +167,14 @@ class _Body extends StatelessWidget {
               l10n.diagnosticsReservations,
               '${snapshot.activeReservations}',
             ),
-            _Metric(
-              l10n.diagnosticsIdempotency,
-              '${snapshot.idempotencyKeys}',
-            ),
+            _Metric(l10n.diagnosticsIdempotency, '${snapshot.idempotencyKeys}'),
           ],
         ),
         _Section(
           title: l10n.diagnosticsNotifications,
           icon: Icons.notifications_outlined,
           rows: [
-            _Metric(
-              l10n.diagnosticsPendingPush,
-              '${snapshot.pendingPush}',
-            ),
+            _Metric(l10n.diagnosticsPendingPush, '${snapshot.pendingPush}'),
             _Metric(
               l10n.diagnosticsDeadPush,
               '${snapshot.deadPush}',
@@ -248,10 +242,7 @@ class _Body extends StatelessWidget {
               '${NetworkMetrics.timeouts}',
               warning: NetworkMetrics.timeouts > 0,
             ),
-            _Metric(
-              l10n.diagnosticsRetries,
-              '${NetworkMetrics.retries}',
-            ),
+            _Metric(l10n.diagnosticsRetries, '${NetworkMetrics.retries}'),
             _Metric(
               l10n.diagnosticsFailedRequests,
               '${NetworkMetrics.failed}',
@@ -295,7 +286,9 @@ class _HealthBanner extends StatelessWidget {
       child: Row(
         children: [
           Icon(
-            ok ? Icons.health_and_safety_outlined : Icons.report_problem_outlined,
+            ok
+                ? Icons.health_and_safety_outlined
+                : Icons.report_problem_outlined,
             color: foreground,
           ),
           const SizedBox(width: Space.sm),
@@ -331,11 +324,7 @@ class _HealthBanner extends StatelessWidget {
 }
 
 class _Section extends StatelessWidget {
-  const _Section({
-    required this.title,
-    required this.icon,
-    required this.rows,
-  });
+  const _Section({required this.title, required this.icon, required this.rows});
 
   final String title;
   final IconData icon;
@@ -430,7 +419,8 @@ class _WhatsappTile extends StatelessWidget {
       if (message.actor != null) message.actor!,
       if (message.lot != null) message.lot!,
       Formatters.dateTime(message.createdAt),
-      if (message.attempts > 0) l10n.diagnosticsWhatsappAttempts(message.attempts),
+      if (message.attempts > 0)
+        l10n.diagnosticsWhatsappAttempts(message.attempts),
     ].join(' · ');
     final scheme = Theme.of(context).colorScheme;
     final failed = message.status == 'failed';

@@ -597,8 +597,19 @@ Last updated: 2026-11-11 (period comparison reports).
   `AcceptDeletion`), recomputes `planMerge` from the stored base/server rows at
   resolve time, and rebases only `autoApply ∪ chosen conflicting fields`.
   Invalid combinations throw `StateError`; nothing is dropped silently.
-- Pending (6.1-6.3, 6.5): the full per-field dialog, its cubit and the
-  end-to-end flow test. The badge still offers keep-mine / keep-theirs.
+- The conflict UI is complete: `entity_fields.dart` maps every conflictable
+  payload key to the label the edit form already uses (`amount` via `Money`,
+  times as `HH:mm`, `true`/`false` as `cfYes`/`cfNo`), the
+  `ConflictResolutionCubit` tracks a per-field choice (`choices: {field: mine?}`,
+  so "theirs" is a choice, not the absence of one) with idle/submitting/done/
+  failed states and retry, and `ConflictResolutionDialog` renders the
+  base/mine/theirs columns, the auto-merged count, the "changed again" banner
+  and the deleted / edited-while-deleting variants. The badge sheet lists the
+  conflicts under "Requieren tu decisión" and opens the dialog, remembering the
+  server version it showed per entry to detect a re-edit.
+- End-to-end flow test `test/features/vehicles/offline_conflict_flow_test.dart`:
+  a disjoint change merges silently, keep mine wins through the real dialog, keep
+  theirs adopts the server row, a parked conflict is never replayed blindly.
 
 ## Period comparison reports (2026-11-11, `0104`)
 

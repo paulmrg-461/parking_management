@@ -67,10 +67,7 @@ class SupabaseNotificationRemoteDataSource
   @override
   Future<void> unregisterDeviceToken(String token) async {
     try {
-      await _client.rpc(
-        'unregister_device_token',
-        params: {'p_token': token},
-      );
+      await _client.rpc('unregister_device_token', params: {'p_token': token});
     } catch (error) {
       throw mapSupabaseError(error);
     }
@@ -80,25 +77,27 @@ class SupabaseNotificationRemoteDataSource
   Stream<AppNotification> watch(int? userId) {
     final controller = StreamController<AppNotification>.broadcast();
     final channel = _client.channel('notifications:${userId ?? 'me'}');
-    channel.onPostgresChanges(
-      event: PostgresChangeEvent.insert,
-      schema: 'public',
-      table: _table,
-      filter: userId == null
-          ? null
-          : PostgresChangeFilter(
-              type: PostgresChangeFilterType.eq,
-              column: 'user_id',
-              value: userId,
-            ),
-      callback: (payload) {
-        try {
-          controller.add(AppNotification.fromJson(payload.newRecord));
-        } catch (error) {
-          controller.addError(error);
-        }
-      },
-    ).subscribe();
+    channel
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: _table,
+          filter: userId == null
+              ? null
+              : PostgresChangeFilter(
+                  type: PostgresChangeFilterType.eq,
+                  column: 'user_id',
+                  value: userId,
+                ),
+          callback: (payload) {
+            try {
+              controller.add(AppNotification.fromJson(payload.newRecord));
+            } catch (error) {
+              controller.addError(error);
+            }
+          },
+        )
+        .subscribe();
     controller.onCancel = () async {
       await _client.removeChannel(channel);
     };

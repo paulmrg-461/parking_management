@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../l10n/l10n.dart';
-import '../sync/conflict/conflict_resolution.dart';
 import '../sync/pending_mutation.dart';
 import '../theme/tokens.dart';
 import '../sync/sync_outbox.dart';
 import '../sync/sync_status_cubit.dart';
+import 'conflict_resolution_dialog.dart';
 
 /// AppBar action showing how many offline changes are waiting to sync.
 /// Hidden when the queue is empty (or no [SyncStatusCubit] is provided, e.g.
@@ -78,8 +78,17 @@ class SyncBadge extends StatelessWidget {
   }
 }
 
-class _SyncDetailsSheet extends StatelessWidget {
+class _SyncDetailsSheet extends StatefulWidget {
   const _SyncDetailsSheet();
+
+  @override
+  State<_SyncDetailsSheet> createState() => _SyncDetailsSheetState();
+}
+
+class _SyncDetailsSheetState extends State<_SyncDetailsSheet> {
+  /// The server version each conflict showed the last time it was opened, so
+  /// a record that changed again can say so.
+  final Map<int, int> _seenVersions = {};
 
   @override
   Widget build(BuildContext context) {
@@ -107,10 +116,14 @@ class _SyncDetailsSheet extends StatelessWidget {
             if (status.conflicts.isNotEmpty) ...[
               const SizedBox(height: Space.sm),
               Text(
-                context.l10n.syncConflicts(status.conflicts.length),
+                context.l10n.syncConflictSection,
                 style: Theme.of(context).textTheme.titleSmall,
               ),
-              for (final entry in status.conflicts) _ConflictTile(entry),
+              for (final entry in status.conflicts)
+                _ConflictTile(
+                  entry,
+                  onTap: () => _openConflict(context, entry),
+                ),
             ],
             for (final entry in status.deadLetters) _DeadLetterTile(entry),
           ],
@@ -118,56 +131,50 @@ class _SyncDetailsSheet extends StatelessWidget {
       ),
     );
   }
+
+  Future<void> _openConflict(BuildContext context, OutboxEntry entry) async {
+    final cubit = context.read<SyncStatusCubit>();
+    final version = entry.value.decodeServerRow()?['version'];
+    final seen = _seenVersions[entry.key];
+    if (version is num) {
+      _seenVersions[entry.key] = version.toInt();
+    }
+    await showDialog<bool>(
+      context: context,
+      builder: (_) => ConflictResolutionDialog(
+        entry: entry,
+        apply: cubit.resolve,
+        seenVersion: seen,
+      ),
+    );
+    if (mounted) {
+      await cubit.load();
+    }
+  }
 }
 
-/// A parked conflict: the operator picks which side wins.
+/// A parked conflict: tapping opens the field-by-field resolution dialog.
 class _ConflictTile extends StatelessWidget {
-  const _ConflictTile(this.entry);
+  const _ConflictTile(this.entry, {required this.onTap});
 
   final OutboxEntry entry;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final mutation = entry.value;
     final id = mutation.entityId == null ? '' : ' #${mutation.entityId}';
     return ListTile(
+      key: Key('sync-resolve-${entry.key}'),
       contentPadding: EdgeInsets.zero,
       leading: const Icon(Icons.merge_type),
       title: Text(
         '${_DeadLetterTile._label(context.l10n, mutation.entityType)}$id',
       ),
-      subtitle: Text(context.l10n.syncConflictHint),
-      trailing: TextButton(
-        key: Key('sync-resolve-${entry.key}'),
-        onPressed: () => _resolve(context, mutation),
-        child: Text(context.l10n.syncConflictTitle),
-      ),
+      subtitle: Text(context.l10n.syncConflictTileSubtitle),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: onTap,
     );
-  }
-
-  Future<void> _resolve(BuildContext context, PendingMutation mutation) async {
-    final resolution = await showDialog<ConflictResolution>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(context.l10n.syncConflictTitle),
-        content: Text(context.l10n.syncConflictHint),
-        actions: [
-          TextButton(
-            onPressed: () =>
-                Navigator.of(dialogContext).pop(const KeepTheirs()),
-            child: Text(context.l10n.syncKeepTheirs),
-          ),
-          FilledButton(
-            key: const Key('sync-keep-mine'),
-            onPressed: () => Navigator.of(dialogContext).pop(const KeepMine()),
-            child: Text(context.l10n.syncKeepMine),
-          ),
-        ],
-      ),
-    );
-    if (resolution != null && context.mounted) {
-      await context.read<SyncStatusCubit>().resolve(entry.key, resolution);
-    }
   }
 }
 

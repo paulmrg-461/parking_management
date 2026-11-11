@@ -90,7 +90,11 @@ class EscPosGenerator {
     }
 
     if (data.isCheckOut && !data.pendingSync && data.paymentMethod != null) {
-      _row(bytes, labels.payment, labels.paymentMethod(data.paymentMethod!, data.cardType));
+      _row(
+        bytes,
+        labels.payment,
+        labels.paymentMethod(data.paymentMethod!, data.cardType),
+      );
     }
 
     if (data.isCheckOut && !data.pendingSync && data.cashReceived != null) {
@@ -117,7 +121,11 @@ class EscPosGenerator {
       _rule(bytes);
     }
 
-    _text(bytes, '${labels.generatedOn} ${_dateTime(DateTime.now())}', align: 1);
+    _text(
+      bytes,
+      '${labels.generatedOn} ${_dateTime(DateTime.now())}',
+      align: 1,
+    );
     _text(bytes, labels.thanks, align: 1);
     _footer(bytes, settings);
     _feed(bytes, 2);
@@ -135,9 +143,11 @@ class EscPosGenerator {
     if (settings == null) {
       return;
     }
-    final lines = [settings.address, settings.schedule, settings.phone]
-        .map((line) => line.trim())
-        .where((line) => line.isNotEmpty);
+    final lines = [
+      settings.address,
+      settings.schedule,
+      settings.phone,
+    ].map((line) => line.trim()).where((line) => line.isNotEmpty);
     for (final line in lines) {
       _text(out, line, align: 1);
     }

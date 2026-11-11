@@ -68,10 +68,7 @@ class CategoryRepositoryImpl implements CategoryRepository {
       await _local.upsert(optimistic);
       // Send the whole row so a name edit does not drop the capacity change
       // that was queued before it (and vice versa).
-      final full = {
-        'name': optimistic.name,
-        'capacity': optimistic.capacity,
-      };
+      final full = {'name': optimistic.name, 'capacity': optimistic.capacity};
       await _outbox.enqueue(
         PendingMutation(
           entityType: MutationEntity.category,

@@ -5,12 +5,7 @@ import 'auth_local_data_source.dart';
 import 'auth_remote_data_source.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
-  AuthRepositoryImpl(
-    this._remote,
-    this._local, [
-    this._caches,
-    this._signOut,
-  ]);
+  AuthRepositoryImpl(this._remote, this._local, [this._caches, this._signOut]);
 
   final AuthRemoteDataSource _remote;
   final AuthLocalDataSource _local;
