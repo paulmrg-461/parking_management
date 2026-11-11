@@ -5185,4 +5185,1007 @@ begin
 end $$;
 reset role;
 
+-- 0106 booking waitlist: dispatch, FIFO and the capacity proof.
+-- The seeded `car` and `camioneta` categories belong to the `car` group; their
+-- capacity is set per test (0 = no limit) and restored at the end.
+do $$
+begin
+    delete from public.reservation_waitlist;
+    delete from public.waitlist_kicks;
+    delete from public.parking_spots where lot_id = 1;
+    delete from public.whatsapp_messages where lot_id = 1;
+    update public.parking_settings
+       set waitlist_enabled = true, waitlist_claim_minutes = 15,
+           waitlist_max_entries = 30, whatsapp_auto = false,
+           car_capacity = 0, moto_capacity = 0,
+           car_out_of_service = 0, moto_out_of_service = 0
+     where lot_id = 1;
+    -- Earlier sections leave open sessions in the seeded `car` category; close
+    -- them so this block controls the occupancy it measures.
+    update public.parking_sessions set status = 'closed'
+     where status = 'open' and lot_id in (1, 2);
+    update public.category_reservations set status = 'cancelled' where status = 'active';
+    perform set_config(
+        'app.wld_cat',
+        (select id from public.categories where lot_id = 1 and name = 'car')::text,
+        true
+    );
+    perform set_config(
+        'app.wld_van',
+        (select id from public.categories where lot_id = 1 and name = 'camioneta')::text,
+        true
+    );
+end $$;
+
+-- waitlist: check-out offers the space
+do $$
+declare
+    cat integer := current_setting('app.wld_cat')::integer;
+    vehicle integer;
+    session_id integer;
+    entry_id bigint;
+    offered public.reservation_waitlist%rowtype;
+    hold public.category_reservations%rowtype;
+begin
+    update public.categories set capacity = 2 where id = cat;
+    -- Two spaces: one open session and one active hold fill the category.
+    insert into public.vehicles (plate, category_id)
+    values ('WLCO1', cat)
+    returning id into vehicle;
+    insert into public.parking_sessions (vehicle_id, operator_id, status, lot_id)
+    values (vehicle, 2, 'open', 1)
+    returning id into session_id;
+    insert into public.category_reservations (
+        plate, category_id, reserved_until, lot_id, source
+    )
+    values ('WLCO2', cat, now() + interval '2 hours', 1, 'app');
+
+    entry_id := (public.public_join_waitlist(
+        1, 'WLCO3', cat, now() + interval '3 hours', 60, 'Ana', '3102220001'
+    ) ->> 'id')::bigint;
+
+    -- check_out closes the session; the trigger offers the freed space.
+    update public.parking_sessions set status = 'closed' where id = session_id;
+
+    select * into offered from public.reservation_waitlist where id = entry_id;
+    if offered.status <> 'offered'
+       or offered.offer_until is null
+       or offered.reservation_id is null then
+        raise exception 'the freed space was not offered: %', offered;
+    end if;
+    select * into hold
+      from public.category_reservations where id = offered.reservation_id;
+    if hold.source <> 'waitlist' or hold.status <> 'active'
+       or hold.customer_phone <> '3102220001' then
+        raise exception 'the offer is not a waitlist hold: %', hold;
+    end if;
+    -- The offer fills the space again.
+    if not exists (
+        select 1
+          from jsonb_array_elements(public.public_availability(1) -> 'categories') item
+         where (item ->> 'id')::integer = cat and (item ->> 'is_full')::boolean
+    ) then
+        raise exception 'the offer did not fill the category again';
+    end if;
+    perform set_config('app.wld_entry', entry_id::text, true);
+end $$;
+
+-- waitlist: fifo
+do $$
+declare
+    cat integer := current_setting('app.wld_cat')::integer;
+    first_id bigint;
+    second_id bigint;
+    first public.reservation_waitlist%rowtype;
+    second public.reservation_waitlist%rowtype;
+begin
+    delete from public.reservation_waitlist;
+    update public.category_reservations set status = 'cancelled'
+     where category_id = cat and status = 'active';
+    update public.categories set capacity = 2 where id = cat;
+    -- Full again: two active holds.
+    insert into public.category_reservations (plate, category_id, reserved_until, lot_id, source)
+    values ('WLF1', cat, now() + interval '2 hours', 1, 'app'),
+           ('WLF2', cat, now() + interval '2 hours', 1, 'app');
+
+    first_id := (public.public_join_waitlist(
+        1, 'WLQ1', cat, now() + interval '3 hours', 60, 'Ana', '3102220002'
+    ) ->> 'id')::bigint;
+    second_id := (public.public_join_waitlist(
+        1, 'WLQ2', cat, now() + interval '3 hours', 60, 'Luis', '3102220003'
+    ) ->> 'id')::bigint;
+
+    update public.category_reservations set status = 'cancelled' where plate = 'WLF1';
+
+    select * into first from public.reservation_waitlist where id = first_id;
+    select * into second from public.reservation_waitlist where id = second_id;
+    if first.status <> 'offered' or second.status <> 'waiting' then
+        raise exception 'FIFO broke: first=% second=%', first.status, second.status;
+    end if;
+end $$;
+
+-- waitlist: two spaces two offers
+do $$
+declare
+    cat integer := current_setting('app.wld_cat')::integer;
+    waiting integer;
+begin
+    -- Clear the queue before releasing holds: otherwise the release would
+    -- serve turns left behind by the previous test and consume the space.
+    delete from public.reservation_waitlist;
+    update public.category_reservations set status = 'cancelled'
+     where category_id = cat and status = 'active';
+    update public.categories set capacity = 2 where id = cat;
+    insert into public.category_reservations (plate, category_id, reserved_until, lot_id, source)
+    values ('WLG1', cat, now() + interval '2 hours', 1, 'app'),
+           ('WLG2', cat, now() + interval '2 hours', 1, 'app');
+    perform public.public_join_waitlist(
+        1, 'WLT1', cat, now() + interval '3 hours', 60, 'Ana', '3102220004'
+    );
+    perform public.public_join_waitlist(
+        1, 'WLT2', cat, now() + interval '3 hours', 60, 'Luis', '3102220005'
+    );
+    update public.category_reservations set status = 'cancelled'
+     where plate in ('WLG1', 'WLG2');
+    select count(*) into waiting
+      from public.reservation_waitlist where status = 'waiting';
+    if waiting <> 0 then
+        raise exception 'two freed spaces left % entries waiting', waiting;
+    end if;
+    if (select count(*) from public.reservation_waitlist where status = 'offered') <> 2 then
+        raise exception 'the second freed space was not offered';
+    end if;
+end $$;
+
+-- waitlist: category full skipped
+do $$
+declare
+    cat_a integer := current_setting('app.wld_cat')::integer;
+    cat_b integer := current_setting('app.wld_van')::integer;
+    entry_a bigint;
+    entry_b bigint;
+begin
+    delete from public.reservation_waitlist;
+    update public.category_reservations set status = 'cancelled' where status = 'active';
+    update public.categories set capacity = 1 where id in (cat_a, cat_b);
+    -- A stays full with its own hold; B is full too, with one hold that frees.
+    insert into public.category_reservations (plate, category_id, reserved_until, lot_id, source)
+    values ('WLA1', cat_a, now() + interval '2 hours', 1, 'app'),
+           ('WLB1', cat_b, now() + interval '2 hours', 1, 'app');
+    entry_a := (public.public_join_waitlist(
+        1, 'WLSA1', cat_a, now() + interval '3 hours', 60, 'Ana', '3102220006'
+    ) ->> 'id')::bigint;
+    entry_b := (public.public_join_waitlist(
+        1, 'WLSB1', cat_b, now() + interval '3 hours', 60, 'Luis', '3102220007'
+    ) ->> 'id')::bigint;
+
+    update public.category_reservations set status = 'cancelled' where plate = 'WLB1';
+
+    if (select status from public.reservation_waitlist where id = entry_a) <> 'waiting' then
+        raise exception 'the entry of the full category was offered';
+    end if;
+    if (select status from public.reservation_waitlist where id = entry_b) <> 'offered' then
+        raise exception 'the entry with free capacity was not offered';
+    end if;
+    update public.categories set capacity = 0 where id in (cat_a, cat_b);
+end $$;
+
+-- waitlist: never overbooks
+do $$
+declare
+    capacity integer;
+    used integer;
+begin
+    update public.categories set capacity = 2
+     where id = current_setting('app.wld_cat')::integer;
+    select c.capacity into capacity
+      from public.categories c where c.id = current_setting('app.wld_cat')::integer;
+    select count(*) into used
+      from public.parking_sessions s
+      join public.vehicles v on v.id = s.vehicle_id
+     where s.status = 'open'
+       and v.category_id = current_setting('app.wld_cat')::integer;
+    select used + count(*) into used
+      from public.category_reservations r
+     where r.category_id = current_setting('app.wld_cat')::integer
+       and r.status = 'active'
+       and r.reserved_until + public.reservation_grace(1) > now();
+    if used > capacity then
+        raise exception 'the queue overbooked: % of %', used, capacity;
+    end if;
+    update public.categories set capacity = 0
+     where id = current_setting('app.wld_cat')::integer;
+end $$;
+
+-- waitlist: hold cancelled cascades
+do $$
+declare
+    cat integer := current_setting('app.wld_cat')::integer;
+    first_id bigint;
+    second_id bigint;
+    offered public.reservation_waitlist%rowtype;
+begin
+    delete from public.reservation_waitlist;
+    update public.category_reservations set status = 'cancelled' where status = 'active';
+    update public.categories set capacity = 2 where id = cat;
+    insert into public.category_reservations (plate, category_id, reserved_until, lot_id, source)
+    values ('WLC1', cat, now() + interval '2 hours', 1, 'app'),
+           ('WLC2', cat, now() + interval '2 hours', 1, 'app');
+    first_id := (public.public_join_waitlist(
+        1, 'WLCC1', cat, now() + interval '3 hours', 60, 'Ana', '3102220008'
+    ) ->> 'id')::bigint;
+    second_id := (public.public_join_waitlist(
+        1, 'WLCC2', cat, now() + interval '3 hours', 60, 'Luis', '3102220009'
+    ) ->> 'id')::bigint;
+    update public.category_reservations set status = 'cancelled' where plate = 'WLC1';
+    select * into offered from public.reservation_waitlist where id = first_id;
+    if offered.status <> 'offered' then
+        raise exception 'the first turn was not offered';
+    end if;
+    -- Releasing the offer (as a desk cancel would) hands it to the next turn.
+    update public.category_reservations set status = 'cancelled'
+     where id = offered.reservation_id;
+    perform public.waitlist_expire();
+    if (select status from public.reservation_waitlist where id = second_id) <> 'offered' then
+        raise exception 'the second turn did not get the released offer';
+    end if;
+end $$;
+
+-- waitlist: bay back in service offers
+do $$
+declare
+    cat integer := current_setting('app.wld_cat')::integer;
+    entry_id bigint;
+begin
+    delete from public.reservation_waitlist;
+    update public.category_reservations set status = 'cancelled' where status = 'active';
+    update public.categories set capacity = 0 where id = cat;
+    -- One usable bay and one in maintenance: the group holds a single car.
+    insert into public.parking_spots (lot_id, code, group_name, grid_row, grid_col, status)
+    values (1, 'WLS1', 'car', 60, 1, 'active'),
+           (1, 'WLS2', 'car', 60, 2, 'out_of_service');
+    insert into public.category_reservations (plate, category_id, reserved_until, lot_id, source)
+    values ('WLSP1', cat, now() + interval '2 hours', 1, 'app');
+    entry_id := (public.public_join_waitlist(
+        1, 'WLSP2', cat, now() + interval '3 hours', 60, 'Ana', '3102220010'
+    ) ->> 'id')::bigint;
+
+    update public.parking_spots set status = 'active' where code = 'WLS2' and lot_id = 1;
+
+    if (select status from public.reservation_waitlist where id = entry_id) <> 'offered' then
+        raise exception 'the repaired bay did not trigger an offer';
+    end if;
+    update public.category_reservations set status = 'cancelled' where plate = 'WLSP1';
+    delete from public.parking_spots where lot_id = 1;
+end $$;
+
+-- waitlist: capacity raised offers
+do $$
+declare
+    cat integer := current_setting('app.wld_cat')::integer;
+    entry_id bigint;
+begin
+    delete from public.reservation_waitlist;
+    update public.category_reservations set status = 'cancelled' where status = 'active';
+    delete from public.parking_spots where lot_id = 1;
+    update public.categories set capacity = 0 where id = cat;
+    update public.parking_settings set car_capacity = 1 where lot_id = 1;
+    insert into public.category_reservations (plate, category_id, reserved_until, lot_id, source)
+    values ('WLCAP2', cat, now() + interval '2 hours', 1, 'app');
+    entry_id := (public.public_join_waitlist(
+        1, 'WLCAP3', cat, now() + interval '3 hours', 60, 'Ana', '3102220011'
+    ) ->> 'id')::bigint;
+
+    update public.parking_settings set car_capacity = 2 where lot_id = 1;
+
+    if (select status from public.reservation_waitlist where id = entry_id) <> 'offered' then
+        raise exception 'a raised group capacity did not trigger an offer';
+    end if;
+    update public.parking_settings set car_capacity = 0 where lot_id = 1;
+    update public.category_reservations set status = 'cancelled' where plate = 'WLCAP2';
+end $$;
+
+-- waitlist: category capacity raised offers
+do $$
+declare
+    cat integer := current_setting('app.wld_cat')::integer;
+    entry_id bigint;
+begin
+    delete from public.reservation_waitlist;
+    update public.category_reservations set status = 'cancelled' where status = 'active';
+    update public.categories set capacity = 1 where id = cat;
+    insert into public.category_reservations (plate, category_id, reserved_until, lot_id, source)
+    values ('WLCC3', cat, now() + interval '2 hours', 1, 'app');
+    entry_id := (public.public_join_waitlist(
+        1, 'WLCC4', cat, now() + interval '3 hours', 60, 'Ana', '3102220012'
+    ) ->> 'id')::bigint;
+
+    update public.categories set capacity = 2 where id = cat;
+
+    if (select status from public.reservation_waitlist where id = entry_id) <> 'offered' then
+        raise exception 'a raised category capacity did not trigger an offer';
+    end if;
+    update public.category_reservations set status = 'cancelled' where plate = 'WLCC3';
+    update public.categories set capacity = 0 where id = cat;
+end $$;
+
+-- waitlist: trigger never breaks the origin write
+do $$
+begin
+    delete from public.waitlist_kicks;
+    -- The wrapper never raises, whatever it is handed: the write that caused
+    -- the dispatch must not fail because the queue could not be served.
+    perform public.waitlist_try_dispatch(999, 'car');
+    perform public.waitlist_try_dispatch(null, 'car');
+    perform public.waitlist_try_dispatch(1, 'bogus-group');
+    perform public.waitlist_try_dispatch(1, 'car');
+    if exists (select 1 from public.waitlist_kicks) then
+        raise exception 'a healthy dispatch queued a kick';
+    end if;
+    -- The kick table accepts a retry row once per (lot, group).
+    insert into public.waitlist_kicks (lot_id, group_name) values (1, 'car');
+    insert into public.waitlist_kicks (lot_id, group_name) values (1, 'car')
+    on conflict do nothing;
+    if (select count(*) from public.waitlist_kicks) <> 1 then
+        raise exception 'the kick table did not keep a single row per group';
+    end if;
+    -- The job drains it (see the expiry test below).
+    perform public.waitlist_dispatch_all();
+    if exists (select 1 from public.waitlist_kicks) then
+        raise exception 'the job did not drain the kicks';
+    end if;
+end $$;
+
+-- waitlist: offer notifies desk and queues whatsapp
+do $$
+declare
+    cat integer := current_setting('app.wld_cat')::integer;
+    entry_id bigint;
+    members integer;
+    notified integer;
+    message public.whatsapp_messages%rowtype;
+begin
+    delete from public.reservation_waitlist;
+    delete from public.notifications where type = 'waitlist_offer';
+    delete from public.whatsapp_messages where lot_id = 1;
+    update public.category_reservations set status = 'cancelled' where status = 'active';
+    update public.categories set capacity = 2 where id = cat;
+    update public.parking_settings set whatsapp_auto = true where lot_id = 1;
+    insert into public.category_reservations (plate, category_id, reserved_until, lot_id, source)
+    values ('WLW1', cat, now() + interval '2 hours', 1, 'app'),
+           ('WLW2', cat, now() + interval '2 hours', 1, 'app');
+    entry_id := (public.public_join_waitlist(
+        1, 'WLW3', cat, now() + interval '3 hours', 60, 'Ana Maria', '3102220013'
+    ) ->> 'id')::bigint;
+
+    update public.category_reservations set status = 'cancelled' where plate = 'WLW1';
+
+    select count(*) into members
+      from public.lot_members lm join public.users u on u.id = lm.user_id
+     where lm.lot_id = 1 and u.is_active;
+    select count(*) into notified
+      from public.notifications n
+     where n.type = 'waitlist_offer' and n.data ->> 'entry_id' = entry_id::text;
+    if notified <> members then
+        raise exception 'the offer notified % of % members', notified, members;
+    end if;
+
+    select * into message
+      from public.whatsapp_messages
+     where lot_id = 1 and template = 'waitlist_offer';
+    if not found then
+        raise exception 'no whatsapp row was queued for the offer';
+    end if;
+    if jsonb_array_length(message.params) <> 5
+       or message.params ->> 0 <> 'Ana Maria'
+       or message.params ->> 1 <> 'WLW3'
+       or message.params ->> 4 <> entry_id::text then
+        raise exception 'the whatsapp params are wrong: %', message.params;
+    end if;
+    update public.parking_settings set whatsapp_auto = false where lot_id = 1;
+    update public.categories set capacity = 0 where id = cat;
+end $$;
+
+-- waitlist: no whatsapp when off
+do $$
+declare
+    cat integer := current_setting('app.wld_cat')::integer;
+    entry_id bigint;
+begin
+    delete from public.reservation_waitlist;
+    delete from public.whatsapp_messages where lot_id = 1;
+    update public.category_reservations set status = 'cancelled' where status = 'active';
+    update public.categories set capacity = 2 where id = cat;
+    update public.parking_settings set whatsapp_auto = false where lot_id = 1;
+    insert into public.category_reservations (plate, category_id, reserved_until, lot_id, source)
+    values ('WLN1', cat, now() + interval '2 hours', 1, 'app'),
+           ('WLN2', cat, now() + interval '2 hours', 1, 'app');
+    entry_id := (public.public_join_waitlist(
+        1, 'WLN3', cat, now() + interval '3 hours', 60, 'Ana', '3102220014'
+    ) ->> 'id')::bigint;
+    update public.category_reservations set status = 'cancelled' where plate = 'WLN1';
+    if exists (select 1 from public.whatsapp_messages where lot_id = 1) then
+        raise exception 'a whatsapp row was queued with the channel off';
+    end if;
+    perform set_config('app.wld_offer_entry', entry_id::text, true);
+    update public.categories set capacity = 0 where id = cat;
+end $$;
+
+-- 0106 booking waitlist: claim, leave, desk, settings and expiry.
+create or replace function pg_temp.wl_reset(p_capacity integer) returns void
+language plpgsql as $$
+begin
+    delete from public.reservation_waitlist;
+    update public.category_reservations set status = 'cancelled'
+     where status = 'active';
+    update public.categories set capacity = p_capacity
+     where lot_id = 1 and name = 'car';
+    update public.parking_settings
+       set waitlist_enabled = true, waitlist_claim_minutes = 15,
+           waitlist_max_entries = 30, whatsapp_auto = false,
+           car_capacity = 0, car_out_of_service = 0
+     where lot_id = 1;
+end $$;
+
+create or replace function pg_temp.wl_join(p_plate text, p_phone text)
+returns bigint
+language plpgsql as $$
+declare
+    entry bigint;
+    cat integer;
+begin
+    select id into cat from public.categories where lot_id = 1 and name = 'car';
+    entry := (public.public_join_waitlist(
+        1, p_plate, cat, now() + interval '3 hours', 60, 'Ana', p_phone
+    ) ->> 'id')::bigint;
+    return entry;
+end $$;
+
+create or replace function pg_temp.wl_release(p_plate text) returns void
+language plpgsql as $$
+begin
+    update public.category_reservations set status = 'cancelled'
+     where lot_id = 1 and plate = p_plate and status = 'active';
+end $$;
+
+create or replace function pg_temp.wl_hold(p_plate text) returns void
+language plpgsql as $$
+begin
+    insert into public.category_reservations (
+        plate, category_id, reserved_until, lot_id, source
+    )
+    select p_plate, c.id, now() + interval '2 hours', 1, 'app'
+      from public.categories c where c.lot_id = 1 and c.name = 'car';
+end $$;
+
+-- waitlist: claim in time
+do $$
+declare
+    entry_id bigint;
+    claim jsonb;
+    hold public.category_reservations%rowtype;
+begin
+    perform pg_temp.wl_reset(1);
+    perform pg_temp.wl_hold('WLKEEP');
+    entry_id := pg_temp.wl_join('WLCLAIM1', '3103330001');
+    perform pg_temp.wl_release('WLKEEP');
+    update public.parking_settings set whatsapp_auto = true where lot_id = 1;
+
+    claim := public.public_claim_waitlist(1, entry_id, '3103330001');
+
+    if claim ->> 'entry_id' <> entry_id::text
+       or claim ->> 'status' <> 'active'
+       or claim ->> 'plate' <> 'WLCLAIM1' then
+        raise exception 'the claim answer is wrong: %', claim;
+    end if;
+    select * into hold
+      from public.category_reservations where id = (claim ->> 'id')::bigint;
+    if hold.source <> 'public'
+       or hold.reserved_until < now() + interval '50 minutes' then
+        raise exception 'the claim did not extend and flip the hold: %', hold;
+    end if;
+    if (select status from public.reservation_waitlist where id = entry_id) <> 'claimed' then
+        raise exception 'the entry was not marked claimed';
+    end if;
+    if not exists (
+        select 1 from public.whatsapp_messages
+         where lot_id = 1 and template = 'reservation_confirmed'
+    ) then
+        raise exception 'the claim did not queue the confirmation';
+    end if;
+    update public.parking_settings set whatsapp_auto = false where lot_id = 1;
+    perform set_config('app.wl_claimed_entry', entry_id::text, true);
+end $$;
+
+-- waitlist: claim idempotent
+do $$
+declare
+    entry_id bigint := current_setting('app.wl_claimed_entry')::bigint;
+    first_id bigint;
+    again jsonb;
+begin
+    select reservation_id into first_id
+      from public.reservation_waitlist where id = entry_id;
+    again := public.public_claim_waitlist(1, entry_id, '3103330001');
+    if (again ->> 'id')::bigint <> first_id then
+        raise exception 'a second claim answered another reservation: %', again;
+    end if;
+end $$;
+
+-- waitlist: claim while waiting
+do $$
+declare
+    entry_id bigint;
+begin
+    perform pg_temp.wl_reset(1);
+    perform pg_temp.wl_hold('WLWAIT');
+    entry_id := pg_temp.wl_join('WLWAIT1', '3103330002');
+    begin
+        perform public.public_claim_waitlist(1, entry_id, '3103330002');
+        raise exception 'a waiting entry was claimed';
+    exception when others then
+        if sqlerrm not like '%WaitlistNotOfferedError%' then raise; end if;
+    end;
+end $$;
+
+-- waitlist: claim expired
+do $$
+declare
+    entry_id bigint;
+begin
+    perform pg_temp.wl_reset(1);
+    perform pg_temp.wl_hold('WLEXP');
+    entry_id := pg_temp.wl_join('WLEXP1', '3103330003');
+    perform pg_temp.wl_release('WLEXP');
+    update public.reservation_waitlist
+       set offer_until = now() - interval '1 minute',
+           offered_at = now() - interval '20 minutes'
+     where id = entry_id;
+    begin
+        perform public.public_claim_waitlist(1, entry_id, '3103330003');
+        raise exception 'an expired offer was claimed';
+    exception when others then
+        if sqlerrm not like '%OfferNoLongerAvailableError%' then raise; end if;
+    end;
+end $$;
+
+-- waitlist: claim wrong phone
+do $$
+declare
+    entry_id bigint;
+begin
+    perform pg_temp.wl_reset(1);
+    perform pg_temp.wl_hold('WLWRONG');
+    entry_id := pg_temp.wl_join('WLWRONG1', '3103330004');
+    perform pg_temp.wl_release('WLWRONG');
+    begin
+        perform public.public_claim_waitlist(1, entry_id, '3109999999');
+        raise exception 'a claim with another phone worked';
+    exception when others then
+        if sqlerrm not like '%WaitlistEntryNotFoundError%' then raise; end if;
+    end;
+end $$;
+
+-- waitlist: leave offered cancels hold and cascades
+do $$
+declare
+    first_id bigint;
+    second_id bigint;
+    hold_id bigint;
+begin
+    perform pg_temp.wl_reset(2);
+    perform pg_temp.wl_hold('WLL1');
+    perform pg_temp.wl_hold('WLL2');
+    first_id := pg_temp.wl_join('WLL3', '3103330005');
+    second_id := pg_temp.wl_join('WLL4', '3103330006');
+    perform pg_temp.wl_release('WLL1');
+    select reservation_id into hold_id
+      from public.reservation_waitlist where id = first_id;
+    if (select status from public.reservation_waitlist where id = first_id) <> 'offered' then
+        raise exception 'the first turn was not offered';
+    end if;
+
+    perform public.public_leave_waitlist(1, first_id, '3103330005');
+
+    if (select status from public.reservation_waitlist where id = first_id) <> 'left' then
+        raise exception 'leaving an offer did not mark it left';
+    end if;
+    if (select status from public.category_reservations where id = hold_id) <> 'cancelled' then
+        raise exception 'leaving an offer did not release its hold';
+    end if;
+    if (select status from public.reservation_waitlist where id = second_id) <> 'offered' then
+        raise exception 'the released offer did not cascade to the next turn';
+    end if;
+end $$;
+
+-- waitlist: desk claim
+do $$
+declare
+    entry_id bigint;
+begin
+    perform pg_temp.wl_reset(1);
+    perform pg_temp.wl_hold('WLDK');
+    entry_id := pg_temp.wl_join('WLDK1', '3103330007');
+    perform pg_temp.wl_release('WLDK');
+    perform set_config('app.wl_desk_entry', entry_id::text, true);
+    if (select status from public.reservation_waitlist where id = entry_id) <> 'offered' then
+        raise exception 'the desk claim fixture was not offered';
+    end if;
+end $$;
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+declare
+    entry_id bigint := current_setting('app.wl_desk_entry')::bigint;
+    claim jsonb;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    claim := public.desk_claim_waitlist(entry_id);
+    if claim ->> 'status' <> 'active' or claim ->> 'plate' <> 'WLDK1' then
+        raise exception 'the desk claim failed: %', claim;
+    end if;
+    if (select status from public.reservation_waitlist where id = entry_id) <> 'claimed' then
+        raise exception 'the desk claim did not mark the entry';
+    end if;
+end $$;
+reset role;
+
+-- waitlist: desk remove
+do $$
+declare
+    entry_id bigint;
+    hold_id bigint;
+begin
+    perform pg_temp.wl_reset(1);
+    perform pg_temp.wl_hold('WLRM');
+    entry_id := pg_temp.wl_join('WLRM1', '3103330008');
+    perform pg_temp.wl_release('WLRM');
+    select reservation_id into hold_id
+      from public.reservation_waitlist where id = entry_id;
+    perform set_config('app.wl_remove_entry', entry_id::text, true);
+    if (select status from public.reservation_waitlist where id = entry_id) <> 'offered' then
+        raise exception 'the entry was not offered before the desk removal';
+    end if;
+end $$;
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+declare
+    entry_id bigint := current_setting('app.wl_remove_entry')::bigint;
+    hold_id bigint;
+    answer jsonb;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    select reservation_id into hold_id
+      from public.reservation_waitlist where id = entry_id;
+    answer := public.desk_remove_waitlist(entry_id);
+    if answer ->> 'status' <> 'cancelled' then
+        raise exception 'the desk removal answered %', answer;
+    end if;
+    if (select status from public.category_reservations where id = hold_id) <> 'cancelled' then
+        raise exception 'the desk removal did not release the hold';
+    end if;
+    begin
+        perform public.desk_remove_waitlist(entry_id);
+        raise exception 'a terminal entry was removed twice';
+    exception when others then
+        if sqlerrm not like '%OfferNoLongerAvailableError%' then raise; end if;
+    end;
+end $$;
+reset role;
+
+-- waitlist: desk other lot
+do $$
+declare
+    cat_two integer;
+    entry_two bigint;
+begin
+    select id into cat_two from public.categories where lot_id = 2 limit 1;
+    insert into public.reservation_waitlist (
+        lot_id, category_id, group_name, plate, customer_name, customer_phone,
+        wait_until, hold_minutes
+    )
+    values (2, cat_two, 'car', 'WLLOT2', 'Sofia', '3103330009',
+            now() + interval '2 hours', 60)
+    returning id into entry_two;
+    perform set_config('app.wl_other_entry', entry_two::text, true);
+end $$;
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    begin
+        perform public.desk_remove_waitlist(current_setting('app.wl_other_entry')::bigint);
+        raise exception 'the desk removed another lot entry';
+    exception when others then
+        if sqlerrm not like '%LotRequiredError%' then raise; end if;
+    end;
+end $$;
+reset role;
+
+-- waitlist: settings admin only
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+set local role authenticated;
+do $$
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    begin
+        perform public.set_waitlist_settings(true, null, null);
+        raise exception 'an operator changed the waitlist settings';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+declare
+    saved jsonb;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    begin
+        perform public.set_waitlist_settings(null, 4, null);
+        raise exception 'an out of range window was stored';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+    saved := public.set_waitlist_settings(true, 20, 10);
+    if not (saved ->> 'enabled')::boolean
+       or (saved ->> 'claim_minutes')::integer <> 20
+       or (saved ->> 'max_entries')::integer <> 10 then
+        raise exception 'the settings answer is wrong: %', saved;
+    end if;
+    perform public.set_waitlist_settings(true, 15, 30);
+end $$;
+reset role;
+
+-- waitlist: list_waitlist positions
+do $$
+begin
+    perform pg_temp.wl_reset(1);
+    perform pg_temp.wl_hold('WLLI1');
+    perform pg_temp.wl_join('WLLI2', '3103330010');
+    perform pg_temp.wl_join('WLLI3', '3103330011');
+end $$;
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+declare
+    rows integer;
+    first_position integer;
+    second_position integer;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    select count(*) into rows from public.list_waitlist();
+    if rows <> 2 then
+        raise exception 'the desk list returned % rows', rows;
+    end if;
+    select "position" into first_position from public.list_waitlist()
+     where plate = 'WLLI2';
+    select "position" into second_position from public.list_waitlist()
+     where plate = 'WLLI3';
+    if first_position <> 1 or second_position <> 2 then
+        raise exception 'the positions are % and %', first_position, second_position;
+    end if;
+end $$;
+reset role;
+
+-- waitlist: expire offer and cascade
+do $$
+declare
+    first_id bigint;
+    second_id bigint;
+    hold_id bigint;
+    expired_count integer;
+begin
+    perform pg_temp.wl_reset(2);
+    perform pg_temp.wl_hold('WLE1');
+    perform pg_temp.wl_hold('WLE2');
+    first_id := pg_temp.wl_join('WLE3', '3103330012');
+    second_id := pg_temp.wl_join('WLE4', '3103330013');
+    perform pg_temp.wl_release('WLE1');
+    select reservation_id into hold_id
+      from public.reservation_waitlist where id = first_id;
+    update public.reservation_waitlist
+       set offer_until = now() - interval '1 minute'
+     where id = first_id;
+
+    expired_count := public.waitlist_expire();
+
+    if expired_count < 1 then
+        raise exception 'the expiry changed nothing';
+    end if;
+    if (select status from public.category_reservations where id = hold_id) <> 'expired' then
+        raise exception 'the expired offer kept its hold';
+    end if;
+    if (select status from public.reservation_waitlist where id = first_id) <> 'expired' then
+        raise exception 'the expired offer kept its turn';
+    end if;
+    if (select status from public.reservation_waitlist where id = second_id) <> 'offered' then
+        raise exception 'the freed space did not cascade to the next turn';
+    end if;
+end $$;
+
+-- waitlist: expire waiting entry
+do $$
+declare
+    entry_id bigint;
+begin
+    perform pg_temp.wl_reset(1);
+    perform pg_temp.wl_hold('WLX');
+    entry_id := pg_temp.wl_join('WLX1', '3103330014');
+    update public.reservation_waitlist
+       set wait_until = now() - interval '1 minute'
+     where id = entry_id;
+    perform public.waitlist_expire();
+    if (select status from public.reservation_waitlist where id = entry_id) <> 'expired' then
+        raise exception 'a stale waiting entry was not expired';
+    end if;
+end $$;
+
+-- waitlist: check-in before expiry reconciles to claimed
+do $$
+declare
+    entry_id bigint;
+    hold_id bigint;
+begin
+    perform pg_temp.wl_reset(1);
+    perform pg_temp.wl_hold('WLCI');
+    entry_id := pg_temp.wl_join('WLCI1', '3103330015');
+    perform pg_temp.wl_release('WLCI');
+    select reservation_id into hold_id
+      from public.reservation_waitlist where id = entry_id;
+    -- What check_in does when the customer walks in inside the grace window.
+    update public.category_reservations set status = 'used' where id = hold_id;
+    perform public.waitlist_expire();
+    if (select status from public.reservation_waitlist where id = entry_id) <> 'claimed' then
+        raise exception 'the arrived customer was not reconciled to claimed';
+    end if;
+end $$;
+
+-- waitlist: job functions are service role only
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+begin
+    begin
+        perform public.waitlist_expire();
+        raise exception 'an operator ran the expiry job';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform public.waitlist_dispatch_all();
+        raise exception 'an operator ran the dispatch job';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform public.purge_waitlist(30);
+        raise exception 'an operator ran the purge job';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
+-- waitlist: purge keeps non-terminal
+do $$
+declare
+    removed integer;
+begin
+    perform pg_temp.wl_reset(1);
+    insert into public.reservation_waitlist (
+        lot_id, category_id, group_name, plate, customer_name, customer_phone,
+        status, wait_until, hold_minutes, created_at
+    )
+    select 1, c.id, 'car', p.plate, 'Ana', p.phone, p.status,
+           now() + interval '2 hours', 60, now() - interval '60 days'
+      from public.categories c,
+           (values ('WLPOLD1', '3103330016', 'left'),
+                   ('WLPOLD2', '3103330017', 'expired'),
+                   ('WLPOLD3', '3103330018', 'waiting')) as p(plate, phone, status)
+     where c.lot_id = 1 and c.name = 'car';
+    removed := public.purge_waitlist(30);
+    if removed <> 2 then
+        raise exception 'the purge removed % rows', removed;
+    end if;
+    if not exists (
+        select 1 from public.reservation_waitlist where plate = 'WLPOLD3'
+    ) then
+        raise exception 'the purge removed a pending turn';
+    end if;
+end $$;
+
+-- waitlist: report counts (0107)
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    perform set_config(
+        'app.wl_report_before',
+        public.report_reservations(
+            (now() at time zone 'America/Bogota')::date,
+            (now() at time zone 'America/Bogota')::date
+        )::text,
+        true
+    );
+end $$;
+reset role;
+
+do $$
+declare
+    cat integer;
+    offer_hold integer;
+begin
+    select id into cat from public.categories where lot_id = 1 and name = 'car';
+    -- One unclaimed offer hold: a hold, not a booking.
+    insert into public.category_reservations (
+        plate, category_id, reserved_until, lot_id, source, customer_name,
+        customer_phone
+    )
+    values ('WLREP1', cat, now() + interval '1 hour', 1, 'waitlist', 'Ana', '3104440001')
+    returning id into offer_hold;
+    insert into public.reservation_waitlist (
+        lot_id, category_id, group_name, plate, customer_name, customer_phone,
+        status, wait_until, hold_minutes, offered_at, offer_until,
+        reservation_id, claimed_at
+    )
+    values (1, cat, 'car', 'WLREP1', 'Ana', '3104440001', 'claimed',
+            now() + interval '2 hours', 60, now(), now() + interval '1 hour',
+            offer_hold, now()),
+           (1, cat, 'car', 'WLREP2', 'Luis', '3104440002', 'waiting',
+            now() + interval '2 hours', 60, null, null, null, null);
+end $$;
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+declare
+    day date := (now() at time zone 'America/Bogota')::date;
+    before_report jsonb := current_setting('app.wl_report_before')::jsonb;
+    after_report jsonb;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    after_report := public.report_reservations(day, day);
+
+    if (after_report ->> 'total')::integer <> (before_report ->> 'total')::integer
+       or (after_report ->> 'public')::integer <> (before_report ->> 'public')::integer then
+        raise exception 'an unclaimed offer was counted as a booking: % vs %',
+            before_report, after_report;
+    end if;
+    if (after_report -> 'waitlist' ->> 'joined')::integer
+           < (before_report -> 'waitlist' ->> 'joined')::integer + 2
+       or (after_report -> 'waitlist' ->> 'claimed')::integer
+           < (before_report -> 'waitlist' ->> 'claimed')::integer + 1
+       or (after_report -> 'waitlist' ->> 'waiting')::integer
+           < (before_report -> 'waitlist' ->> 'waiting')::integer + 1 then
+        raise exception 'the waitlist block did not count the turns: %', after_report;
+    end if;
+end $$;
+reset role;
+
+-- waitlist: report admin only
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+set local role authenticated;
+do $$
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    begin
+        perform public.report_reservations(
+            (now() at time zone 'America/Bogota')::date,
+            (now() at time zone 'America/Bogota')::date
+        );
+        raise exception 'an operator read the reservation report';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
 rollback;
