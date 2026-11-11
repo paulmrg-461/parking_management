@@ -8,6 +8,7 @@ class UpdateTariffCommand {
     this.startTime,
     this.endTime,
     this.active,
+    this.baseVersion,
   });
 
   final int id;
@@ -16,4 +17,7 @@ class UpdateTariffCommand {
   final String? startTime;
   final String? endTime;
   final bool? active;
+
+  /// The row version the editor opened (`null` = use the cached one).
+  final int? baseVersion;
 }

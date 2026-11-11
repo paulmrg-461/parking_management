@@ -14,7 +14,11 @@ class _FakeRemote implements TariffRemoteDataSource {
   int? deletedId;
 
   @override
-  Future<Tariff> update(int id, Map<String, dynamic> payload) async {
+  Future<Tariff> update(
+    int id,
+    Map<String, dynamic> payload, {
+    int? baseVersion,
+  }) async {
     if (error != null) {
       throw error!;
     }
@@ -23,7 +27,7 @@ class _FakeRemote implements TariffRemoteDataSource {
   }
 
   @override
-  Future<void> delete(int id) async => deletedId = id;
+  Future<void> delete(int id, {int? baseVersion}) async => deletedId = id;
 
   @override
   Future<Tariff> create(Map<String, dynamic> payload) async =>

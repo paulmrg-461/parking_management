@@ -1,5 +1,6 @@
 import '../../../core/sync/mutation_replayer.dart';
 import '../../../core/sync/pending_mutation.dart';
+import 'models/tariff_dto.dart';
 import 'tariff_local_data_source.dart';
 import 'tariff_remote_data_source.dart';
 
@@ -17,8 +18,26 @@ class TariffMutationReplayer extends MutationReplayer {
   Future<void> replay(PendingMutation mutation) async {
     final id = mutation.entityId!;
     if (mutation.operation == MutationOperation.delete) {
-      return _remote.delete(id);
+      await _remote.delete(id, baseVersion: mutation.baseVersion);
+      return;
     }
-    await _local.upsert(await _remote.update(id, mutation.decodePayload()));
+    await _local.upsert(
+      await _remote.update(
+        id,
+        mutation.decodePayload(),
+        baseVersion: mutation.baseVersion,
+      ),
+    );
+  }
+
+  @override
+  Future<void> adoptServer(Map<String, dynamic>? row) async {
+    if (row == null) {
+      return;
+    }
+    final tariff = TariffDto.fromJson(row).toDomain();
+    if (tariff.id != null) {
+      await _local.upsert(tariff);
+    }
   }
 }

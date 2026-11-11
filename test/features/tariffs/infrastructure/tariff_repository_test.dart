@@ -19,6 +19,8 @@ class _FakeRemote implements TariffRemoteDataSource {
 
   final bool failWithNetwork;
   int deleteCalls = 0;
+  int? sentBaseVersion;
+  VersionConflictFailure? conflict;
 
   @override
   Future<List<Tariff>> list() async {
@@ -26,7 +28,13 @@ class _FakeRemote implements TariffRemoteDataSource {
       throw const NetworkFailure('offline');
     }
     return const [
-      Tariff(id: 1, categoryId: 1, type: TariffType.hourly, amount: 3000),
+      Tariff(
+        id: 1,
+        categoryId: 1,
+        type: TariffType.hourly,
+        amount: 3000,
+        version: 2,
+      ),
     ];
   }
 
@@ -36,7 +44,16 @@ class _FakeRemote implements TariffRemoteDataSource {
   }
 
   @override
-  Future<Tariff> update(int id, Map<String, dynamic> payload) async {
+  Future<Tariff> update(
+    int id,
+    Map<String, dynamic> payload, {
+    int? baseVersion,
+  }) async {
+    sentBaseVersion = baseVersion;
+    final error = conflict;
+    if (error != null) {
+      throw error;
+    }
     if (failWithNetwork) {
       throw const NetworkFailure('offline');
     }
@@ -51,7 +68,7 @@ class _FakeRemote implements TariffRemoteDataSource {
   }
 
   @override
-  Future<void> delete(int id) async {
+  Future<void> delete(int id, {int? baseVersion}) async {
     if (failWithNetwork) {
       throw const NetworkFailure('offline');
     }
@@ -186,6 +203,32 @@ void main() {
         throwsA(isA<NetworkFailure>()),
       );
       expect(await local.readAll(), isEmpty);
+    },
+  );
+
+  test(
+    'Success: an edit sends the cached version and parks a conflict',
+    () async {
+      final local = HiveTariffLocalDataSource(LotSession());
+      final remote = _FakeRemote();
+      final repository = TariffRepositoryImpl(remote, local, outbox);
+      await repository.list();
+
+      await repository.update(const UpdateTariffCommand(id: 1, amount: 5000));
+      expect(remote.sentBaseVersion, 2);
+
+      remote.conflict = VersionConflictFailure({
+        'id': 1,
+        'category_id': 1,
+        'type': 'hourly',
+        'amount': 4000,
+        'version': 3,
+      });
+      await expectLater(
+        repository.update(const UpdateTariffCommand(id: 1, amount: 6000)),
+        throwsA(isA<VersionConflictFailure>()),
+      );
+      expect((await outbox.listConflicts()).single.value.entityId, 1);
     },
   );
 }

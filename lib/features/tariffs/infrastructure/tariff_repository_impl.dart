@@ -36,10 +36,20 @@ class TariffRepositoryImpl implements TariffRepository {
   @override
   Future<Tariff> update(UpdateTariffCommand command) async {
     final payload = _toUpdatePayload(command);
+    final cached = await _cachedById(command.id);
+    await _guardPendingConflict(command.id);
+    final base = command.baseVersion ?? cached?.version;
     try {
-      final updated = await _remote.update(command.id, payload);
+      final updated = await _remote.update(
+        command.id,
+        payload,
+        baseVersion: (base ?? 0) > 0 ? base : null,
+      );
       await _local.upsert(updated);
       return updated;
+    } on VersionConflictFailure catch (failure) {
+      await _parkConflict(command.id, payload, cached, failure);
+      rethrow;
     } on NetworkFailure {
       final optimistic = await _applyUpdate(command);
       if (optimistic == null) {
@@ -52,6 +62,8 @@ class TariffRepositoryImpl implements TariffRepository {
           entityId: command.id,
           payloadJson: jsonEncode(payload),
           enqueuedAt: DateTime.now(),
+          baseVersion: (base ?? 0) > 0 ? base : null,
+          baseSnapshotJson: cached == null ? null : jsonEncode(_toRow(cached)),
         ),
       );
       return optimistic;
@@ -60,9 +72,15 @@ class TariffRepositoryImpl implements TariffRepository {
 
   @override
   Future<void> delete(int id) async {
+    final cached = await _cachedById(id);
+    await _guardPendingConflict(id);
+    final base = cached?.version;
     try {
-      await _remote.delete(id);
+      await _remote.delete(id, baseVersion: (base ?? 0) > 0 ? base : null);
       await _local.remove(id);
+    } on VersionConflictFailure catch (failure) {
+      await _parkConflict(id, null, cached, failure);
+      rethrow;
     } on NetworkFailure {
       await _local.remove(id);
       await _outbox.enqueue(
@@ -72,10 +90,62 @@ class TariffRepositoryImpl implements TariffRepository {
           entityId: id,
           payloadJson: null,
           enqueuedAt: DateTime.now(),
+          baseVersion: (base ?? 0) > 0 ? base : null,
+          baseSnapshotJson: cached == null ? null : jsonEncode(_toRow(cached)),
         ),
       );
     }
   }
+
+  Future<void> _guardPendingConflict(int id) async {
+    final conflicts = await _outbox.listConflicts();
+    if (conflicts.any(
+      (entry) =>
+          entry.value.entityType == MutationEntity.tariff &&
+          entry.value.entityId == id,
+    )) {
+      throw const ValidationFailure(
+        'Conflict pending',
+        ClientFailureCodes.conflictPending,
+      );
+    }
+  }
+
+  Future<void> _parkConflict(
+    int id,
+    Map<String, dynamic>? payload,
+    Tariff? cached,
+    VersionConflictFailure failure,
+  ) async {
+    final entry = PendingMutation(
+      entityType: MutationEntity.tariff,
+      operation: payload == null
+          ? MutationOperation.delete
+          : MutationOperation.update,
+      entityId: id,
+      payloadJson: payload == null ? null : jsonEncode(payload),
+      enqueuedAt: DateTime.now(),
+      baseVersion: cached?.version,
+      baseSnapshotJson: cached == null ? null : jsonEncode(_toRow(cached)),
+    );
+    await _outbox.enqueue(
+      entry.asConflict(
+        kind: failure.serverRow == null ? 'deleted' : 'edited',
+        serverRow: failure.serverRow,
+      ),
+    );
+  }
+
+  Map<String, dynamic> _toRow(Tariff tariff) => {
+    'id': tariff.id,
+    'category_id': tariff.categoryId,
+    'type': tariff.type.name,
+    'amount': tariff.amount,
+    'start_time': tariff.startTime,
+    'end_time': tariff.endTime,
+    'active': tariff.active,
+    'version': tariff.version,
+  };
 
   /// Merges [command]'s patch fields onto the cached tariff client-side
   /// (mirroring the backend's patch-merge shape) so the caller can show an
@@ -94,6 +164,7 @@ class TariffRepositoryImpl implements TariffRepository {
       startTime: command.startTime ?? existing.startTime,
       endTime: command.endTime ?? existing.endTime,
       active: command.active ?? existing.active,
+      version: existing.version,
     );
     await _local.upsert(merged);
     return merged;

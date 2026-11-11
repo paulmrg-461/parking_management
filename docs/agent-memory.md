@@ -563,6 +563,11 @@ Last updated: 2026-11-11 (period comparison reports).
   and parks an online conflict with the server row, the replayer sends the base
   and implements `adoptServer`, and the edit dialog passes
   `existing.version`. The client also sends the `x-versioned-write` header.
+- Tariffs are wired like vehicles: `Tariff.version` in entity/DTO/Hive, the
+  remote update/delete send it, the repository sends the cached version
+  (`command.baseVersion` when the editor has it), parks an online conflict with
+  the server row, refuses edits while it is pending, stores the base and the
+  snapshot offline, and the replayer adopts the server row.
 - Conflicts are visible: `SyncStatus` carries the parked conflicts, the cubit
   loads them and exposes `resolve(key, choice)`, and the `SyncBadge` shows a
   merge icon with the count and a dialog offering keep-mine / keep-theirs.
