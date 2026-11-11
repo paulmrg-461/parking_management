@@ -1,5 +1,6 @@
 import '../domain/entities/hourly_traffic.dart';
 import '../domain/entities/occupancy_report.dart';
+import '../domain/entities/period_comparison.dart';
 import '../domain/entities/reservation_report.dart';
 import '../domain/entities/revenue_report.dart';
 import '../domain/entities/whatsapp_report.dart';
@@ -38,6 +39,10 @@ class ReportRepositoryImpl implements ReportRepository {
   }) async {
     return _remote.getWhatsappReport(startDate: startDate, endDate: endDate);
   }
+
+  @override
+  Future<PeriodComparison> getPeriodComparison({int months = 6}) =>
+      _remote.getPeriodComparison(months: months);
 
   @override
   Future<ReservationReport> getReservationReport({

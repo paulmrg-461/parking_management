@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/features/reports/domain/entities/hourly_traffic.dart';
 import 'package:parking_management/features/reports/domain/entities/occupancy_report.dart';
+import 'package:parking_management/features/reports/domain/entities/period_comparison.dart';
 import 'package:parking_management/features/reports/domain/entities/reservation_report.dart';
 import 'package:parking_management/features/reports/domain/entities/revenue_report.dart';
 import 'package:parking_management/features/reports/domain/entities/whatsapp_report.dart';
@@ -14,6 +15,7 @@ class _FakeRemote implements ReportRemoteDataSource {
   final RevenueReport? revenueToReturn;
   final OccupancyReport? occupancyToReturn;
   final Failure? error;
+  PeriodComparison comparisonToReturn = PeriodComparison.empty;
 
   @override
   Future<RevenueReport> getRevenueReport({
@@ -33,6 +35,10 @@ class _FakeRemote implements ReportRemoteDataSource {
     required DateTime startDate,
     required DateTime endDate,
   }) async => WhatsappReport.empty;
+
+  @override
+  Future<PeriodComparison> getPeriodComparison({int months = 6}) async =>
+      comparisonToReturn;
 
   @override
   Future<ReservationReport> getReservationReport({

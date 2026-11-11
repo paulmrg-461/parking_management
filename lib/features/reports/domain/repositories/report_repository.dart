@@ -1,5 +1,6 @@
 import '../entities/hourly_traffic.dart';
 import '../entities/occupancy_report.dart';
+import '../entities/period_comparison.dart';
 import '../entities/reservation_report.dart';
 import '../entities/revenue_report.dart';
 import '../entities/whatsapp_report.dart';
@@ -19,6 +20,10 @@ abstract class ReportRepository {
     required DateTime startDate,
     required DateTime endDate,
   });
+
+  /// Trailing [months] calendar months of the active lot, each with the month
+  /// before and the same month last year (`rpc/report_period_comparison`).
+  Future<PeriodComparison> getPeriodComparison({int months = 6});
 
   /// Holds created in the range, by origin and outcome.
   Future<ReservationReport> getReservationReport({

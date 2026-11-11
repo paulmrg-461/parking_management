@@ -6,6 +6,7 @@ import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/core/theme/contrast.dart';
 import 'package:parking_management/features/reports/application/reports_cubit.dart';
 import 'package:parking_management/features/reports/domain/entities/hourly_traffic.dart';
+import 'package:parking_management/features/reports/domain/entities/period_comparison.dart';
 import 'package:parking_management/features/reports/domain/entities/reservation_report.dart';
 import 'package:parking_management/features/reports/domain/entities/occupancy_report.dart';
 import 'package:parking_management/features/reports/domain/entities/revenue_report.dart';
@@ -36,8 +37,16 @@ class _FakeReportRepository implements ReportRepository {
 
   HourlyTraffic hourly = HourlyTraffic.empty;
   ReservationReport reservations = ReservationReport.empty;
+  PeriodComparison comparison = PeriodComparison.empty;
+  int? comparisonMonthsRequested;
 
   int _revenueCalls = 0;
+
+  @override
+  Future<PeriodComparison> getPeriodComparison({int months = 6}) async {
+    comparisonMonthsRequested = months;
+    return comparison;
+  }
 
   @override
   Future<ReservationReport> getReservationReport({

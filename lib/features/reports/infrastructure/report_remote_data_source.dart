@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/network/supabase_error_mapper.dart';
 import '../domain/entities/hourly_traffic.dart';
 import '../domain/entities/occupancy_report.dart';
+import '../domain/entities/period_comparison.dart';
 import '../domain/entities/reservation_report.dart';
 import '../domain/entities/revenue_report.dart';
 import '../domain/entities/whatsapp_report.dart';
@@ -22,6 +23,8 @@ abstract class ReportRemoteDataSource {
     required DateTime startDate,
     required DateTime endDate,
   });
+
+  Future<PeriodComparison> getPeriodComparison({int months = 6});
 
   Future<ReservationReport> getReservationReport({
     required DateTime startDate,
@@ -67,6 +70,21 @@ class SupabaseReportRemoteDataSource implements ReportRemoteDataSource {
       return OccupancyReportDto.fromJson(
         Map<String, dynamic>.from(result as Map),
       ).toDomain();
+    } catch (error) {
+      throw mapSupabaseError(error);
+    }
+  }
+
+  @override
+  Future<PeriodComparison> getPeriodComparison({int months = 6}) async {
+    try {
+      final result = await _client.rpc(
+        'report_period_comparison',
+        params: {'p_months': months},
+      );
+      return PeriodComparison.fromJson(
+        Map<String, dynamic>.from(result as Map),
+      );
     } catch (error) {
       throw mapSupabaseError(error);
     }
