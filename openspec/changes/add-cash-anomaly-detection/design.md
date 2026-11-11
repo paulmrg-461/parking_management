@@ -173,7 +173,7 @@ revoke all on function public.anomaly_zero_charge_excluded(integer)
     from public, anon, authenticated;
 ```
 
-`add-loyalty-rewards` and `add-merchant-validations` redefine it with `create or replace` (same signature) to return true for sessions whose zero charge is explained by a reward redemption or a merchant validation. Nothing else in this change changes when they land.
+`add-merchant-validations` redefines it with `create or replace` (same signature) to return true for sessions whose zero charge is explained by a merchant benefit; a future loyalty change would do the same. Nothing else in this change changes when they land.
 
 ### Rules
 

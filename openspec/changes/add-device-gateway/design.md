@@ -1,6 +1,6 @@
 ## Context
 
-Facts verified in the code on `feature/supabase` (migration head `0102`; `0103` belongs to `add-public-booking-captcha`):
+Facts verified in the code on `feature/supabase` (migration head `0103`: `add-public-booking-captcha` is merged; take the next free number at implementation time):
 
 - Every business RPC derives the actor with `public.require_app_user()` → `public.current_app_user_id()` → `public.users.auth_user_id = auth.uid()`, and the lot with `public.current_lot_id()` (reads `request.headers ->> 'x-lot-id'` through `public.lot_from_header()` and checks `public.lot_members`). A caller without a GoTrue user gets `InvalidTokenError`. Devices therefore cannot call any existing RPC, by design.
 - The pattern for "a privilege the client cannot obtain" already exists in `0103_public_booking_protection.sql`: the body lives in a function granted to `service_role` only (`revoke all ... from public, anon, authenticated` — the revoke must name `anon, authenticated` because Supabase default privileges grant new functions to them) and an Edge Function holding `SUPABASE_SERVICE_ROLE_KEY` calls it over `${SUPABASE_URL}/rest/v1/rpc/<name>` (`supabase/volumes/functions/public-booking/index.ts`).

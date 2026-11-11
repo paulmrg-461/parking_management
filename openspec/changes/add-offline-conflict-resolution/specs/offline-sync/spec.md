@@ -58,3 +58,72 @@ The system SHALL send the whole queued category patch (name and capacity) on rep
 #### Scenario: Name and capacity together
 - **WHEN** a queued category patch holds both `name` and `capacity`
 - **THEN** both are applied on the server
+
+## MODIFIED Requirements
+
+### Requirement: Queue an update or delete while offline
+When `update` or `delete` on a vehicle, tariff, category or a lot setting
+fails with a network failure, the system SHALL apply the change to the local
+cache and queue it for later replay instead of failing the operation. The
+queued mutation SHALL carry the row version it was edited from and a snapshot
+of the fields it changed, so a replay can prove the base it was written
+against.
+
+#### Scenario: Update a vehicle while offline
+- **WHEN** an admin updates a vehicle's color while the device has no
+  connectivity
+- **THEN** the system updates the local cache with the merged result, queues
+  the mutation with the row's base version and the changed fields, and returns
+  the merged vehicle without raising an error
+
+#### Scenario: Update a lot setting while offline
+- **WHEN** an admin changes the evidence retention while offline
+- **THEN** only the changed settings fields are queued, with the settings row's
+  base version
+
+### Requirement: Replay queued mutations on reconnect
+The system SHALL replay every queued mutation against the backend once
+connectivity is restored, sending the base version as the write filter and
+removing each one from the queue only after it succeeds. WHEN the row changed
+on the server since that base, THE SYSTEM SHALL NOT overwrite it: a
+non-overlapping edit is merged and replayed automatically, an overlapping one
+moves the mutation to the needs-resolution state and notifies the operator
+through the sync badge.
+
+#### Scenario: Connectivity restored
+- **WHEN** the device regains connectivity after queuing an update
+- **THEN** the system sends the queued update with its version filter and
+  removes it from the queue on success
+
+#### Scenario: Stale base with a disjoint change
+- **WHEN** another admin edited a different field of the same row while this
+  device was offline
+- **THEN** the system merges the two edits, replays the mutation and clears it
+
+#### Scenario: Stale base with an overlapping change
+- **WHEN** another admin edited the same field with a different value
+- **THEN** the mutation is kept in the needs-resolution state with both values
+  and nothing is written until the operator chooses
+
+### Requirement: Scope limited to update/delete on reference data
+Only `update` and `delete` mutations on vehicles, tariffs, categories and lot
+settings SHALL be queued. Check-in, check-out, monthly passes and every
+`create` mutation SHALL remain unaffected (remote-only, unchanged failure
+behavior). A direct table write that does not send the expected version filter
+SHALL be refused once the lot turns on `row_version_required`.
+
+#### Scenario: Check-out stays remote-only
+- **WHEN** an operator attempts to check out a vehicle while offline
+- **THEN** the system rejects the request immediately (no queuing), since
+  `exit_time` must be captured at the moment of closing
+
+#### Scenario: Vehicle creation stays remote-only
+- **WHEN** an admin attempts to create a new vehicle while offline
+- **THEN** the system rejects the request immediately (no queuing), since a
+  create requires a server-assigned id
+
+#### Scenario: Unversioned write after the policy is on
+- **WHEN** a client that does not send `version=eq.<n>` patches a tariff and the
+  lot has `row_version_required = true`
+- **THEN** the database refuses the write (`VersionRequiredError`) instead of
+  applying a silent overwrite

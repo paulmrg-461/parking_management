@@ -32,7 +32,8 @@ When every category is full, the public booking page (`/reserve?lot=<id>`) rende
 - **Flutter**: `lib/features/waitlist/**` (NEW), `lib/features/public_booking/presentation/public_booking_page.dart`, `lib/features/reservations/presentation/reservations_page.dart`, `lib/features/reservations/domain/entities/reservation.dart`, `lib/features/reports/**` (`ReservationReport`), `lib/features/notifications/presentation/notification_routes.dart` and `notifications_page.dart`, `lib/app/router/app_router.dart`, `lib/app/di/injection.dart` + NEW `lib/app/di/modules/waitlist_module.dart`, `lib/core/l10n/failure_messages.dart`, ARB files.
 - **Config**: `.env.example` gains `WHATSAPP_TEMPLATE_WAITLIST_OFFER`.
 - **Dependencies**: none added.
-- **Depends on**: `add-public-booking-captcha` (must be merged first: this change reuses `parking_settings.public_booking_captcha`, `parking_settings.public_booking_hourly_limit`, the advisory lock `hashtext('public_booking_throttle')` and the `public-booking` Edge Function). `add-dynamic-pricing` precedes it in the global order but shares no object with it.
+- **Depends on**: `add-public-booking-captcha` (must be merged first: this change reuses `parking_settings.public_booking_captcha`, `parking_settings.public_booking_hourly_limit`, the advisory lock `hashtext('public_booking_throttle')` and the `public-booking` Edge Function).
+- **Order and merge protocol:** wave 1 in `openspec/IMPLEMENTATION-ORDER.md` (it re-declares `report_reservations`).
 - **Breaking**: none. `waitlist_enabled` defaults to false; with it off every new RPC refuses with `WaitlistDisabledError` or reports `enabled = false`, the triggers return at once and the page looks as it does today.
 
 ## Non-Goals

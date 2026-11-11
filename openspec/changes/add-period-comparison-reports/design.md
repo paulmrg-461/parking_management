@@ -42,7 +42,7 @@ Verified against the code on `feature/supabase` (schema head `0103`):
 
 ## Database
 
-Migration file: `supabase/migrations/<NEXT>_report_period_comparison.sql` — **use the next free number at implementation time** (`0103` is taken by `add-public-booking-captcha`). One file, no table or column changes.
+Migration file: `supabase/migrations/<NEXT>_report_period_comparison.sql` — **use the next free number at implementation time** (`0103` is `add-public-booking-captcha`, already merged; the head is `0103`). One file, no table or column changes.
 
 ### Indexes
 

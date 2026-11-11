@@ -24,6 +24,8 @@ Every stay is paid at the desk today: `check_out` (latest body in `supabase/migr
 - `payments`: a closed session can store `online`; revenue by payment method separates online from desk money.
 - `check-out`: check-out of a session that was paid online (inside and outside the grace window, with a balance, offline replay).
 - `shifts`: shift totals separate online collections from the cash drawer.
+- `reports`: the revenue report separates the online gateway money from the
+  desk methods and keeps counting each session once.
 
 ## Impact
 
@@ -37,6 +39,7 @@ Every stay is paid at the desk today: `check_out` (latest body in `supabase/migr
 - **Flutter:** new feature `lib/features/online_payments/`; changes in `lib/features/evidence` (public page + summary entity), `check_out` (entities, DTO, dialog, page), `shifts` (entity, page, PDF), `settings` (entity, DTO, Hive adapter, page), `reports`, `notifications`, `lib/core/receipt`, `lib/core/widgets/receipt_card.dart`, `receipt_printing`, `lib/core/network/supabase_error_mapper.dart`, `lib/core/l10n/failure_messages.dart`, `lib/app/di`, ARB files.
 - **Docs:** `CHANGELOG.md`, `docs/project-overview.md`, `docs/database.md`, `docs/architecture.md`, `docs/agent-memory.md`, `.env.example`, `docs/runbook-secrets.md`.
 - **Dependencies:** none added (`url_launcher` is already in `pubspec.yaml`; the functions use Web Crypto).
+- **Order and merge protocol:** `openspec/IMPLEMENTATION-ORDER.md`. This change re-declares `check_out`, `check_out_preview` and `public_session_summary`; `add-merchant-validations` is implemented after it and must keep these keys.
 
 ## Non-Goals
 

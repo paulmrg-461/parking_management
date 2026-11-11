@@ -24,7 +24,7 @@
 
 ## Impact
 
-- **Database:** one migration, `<NEXT>_report_period_comparison.sql` (use the next free number at implementation time; `add-public-booking-captcha` holds `0103`). It creates `ix_sessions_lot_exit_closed`, `ix_pass_payments_lot_paid`, `ix_reservations_lot_from` and the function `public.report_period_comparison(integer, date)`. No table or column changes. Tests appended to `supabase/tests/rpc_test.sql`.
+- **Database:** one migration, `<NEXT>_report_period_comparison.sql` (use the next free number at implementation time; the head is `0103`, `add-public-booking-captcha`, already merged). It creates `ix_sessions_lot_exit_closed`, `ix_pass_payments_lot_paid`, `ix_reservations_lot_from` and the function `public.report_period_comparison(integer, date)`. No table or column changes. Tests appended to `supabase/tests/rpc_test.sql`.
 - **Flutter (`lib/features/reports`)**: new entity `PeriodComparison` (+ `PeriodBucket`, `PeriodWindow`, `PeriodMetric`), `ReportRepository.getPeriodComparison`, `ReportRemoteDataSource.getPeriodComparison`, `ReportsLoaded.comparison` / `comparisonMonths` / `comparisonFailed` / `comparisonLoading`, `ReportsCubit.loadComparison`, widget `PeriodComparisonSection`, `reportCsv` and `buildRevenueReportPdf` parameters, ARB strings (ES/EN).
 - **Docs:** `CHANGELOG.md`, `docs/project-overview.md` (§3 module map, §8), `docs/database.md` (§3 RPC catalog), `docs/agent-memory.md`.
 - **Dependencies:** none added.

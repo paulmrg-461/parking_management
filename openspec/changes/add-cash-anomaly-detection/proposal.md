@@ -11,7 +11,7 @@ Cash and operator control is manual today. The only signals an admin gets are th
 - **RPCs (admin only):** `list_cash_anomalies`, `resolve_cash_anomaly` (acknowledge or dismiss, with a note; a dismissal requires one), `get_anomaly_settings`, `set_anomaly_settings`.
 - **Audit:** `cash_anomalies` and `anomaly_settings` get the existing `record_audit()` trigger, so every acknowledge, dismissal and threshold change is in `audit_log` with the actor.
 - **Flutter:** new feature `lib/features/anomalies` with an admin-only "Anomalías" page (list, filters by status, rule and severity, acknowledge/dismiss with note, threshold sheet, links to the audit trail, the shift list and the vehicle history), a nav entry, notification label/icon/deep link, and `AuditPage` accepting an initial table/search so the link lands filtered.
-- **Extension point for later changes:** `public.anomaly_zero_charge_excluded(p_session_id integer)` returns `false` today; `add-loyalty-rewards` and `add-merchant-validations` redefine it so a legitimate free exit is not flagged. The rules work without them.
+- **Extension point for later changes:** `public.anomaly_zero_charge_excluded(p_session_id integer)` returns `false` today; `add-merchant-validations` redefines it so a session whose zero charge is explained by a merchant benefit is not flagged (a future loyalty change would do the same). The rules work without it.
 
 ## Capabilities
 

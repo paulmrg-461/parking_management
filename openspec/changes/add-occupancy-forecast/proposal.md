@@ -29,6 +29,7 @@ The home dashboard and the public booking page tell people how full the lot is *
 - **Flutter:** `lib/features/check_out` (entity, port, data source, impl: `occupancyForecast()`), `lib/features/home` (`DashboardCubit`, `OccupancyForecastCard`), `lib/features/reports` (backtest entity, port, section), `lib/features/public_booking` (entity field and strip), l10n. No new route and no DI registration.
 - **Docs:** `CHANGELOG.md`, `docs/project-overview.md`, `docs/database.md`, `docs/agent-memory.md`.
 - **Breaking:** none. `public_availability` keeps its signature, grants and every existing key.
+- **Order and merge protocol:** `openspec/IMPLEMENTATION-ORDER.md`; the wrapper approach is what keeps its `public_availability` edit safe in any wave-1 order.
 
 ## Non-Goals
 

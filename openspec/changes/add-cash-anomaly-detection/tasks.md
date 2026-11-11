@@ -51,7 +51,7 @@ Order: after `add-public-booking-captcha` and `add-period-comparison-reports`. M
 
 ## 5. Documentation
 
-- [ ] 5.1 `CHANGELOG.md` (Added: cash anomaly detection, rules, `/anomalies`, jobs). 5.2 `docs/project-overview.md` (§2 status row "Cash anomaly detection", §3 module `anomalies`, §6 jobs mention). 5.3 `docs/database.md` (tables `cash_anomalies`, `anomaly_settings`, the RPC catalog, RLS). 5.4 `docs/agent-memory.md` (section "Cash anomalies": rules and dedupe keys, the three Findings, the `anomaly_zero_charge_excluded` extension point for rewards/validations, jobs wiring, thresholds table kept admin-only, test count and schema number, "Last updated"). Also add the extension point to the task lists of `add-loyalty-rewards` and `add-merchant-validations` when those are written (cross-reference only).
+- [ ] 5.1 `CHANGELOG.md` (Added: cash anomaly detection, rules, `/anomalies`, jobs). 5.2 `docs/project-overview.md` (§2 status row "Cash anomaly detection", §3 module `anomalies`, §6 jobs mention). 5.3 `docs/database.md` (tables `cash_anomalies`, `anomaly_settings`, the RPC catalog, RLS). 5.4 `docs/agent-memory.md` (section "Cash anomalies": rules and dedupe keys, the three Findings, the `anomaly_zero_charge_excluded` extension point for rewards/validations, jobs wiring, thresholds table kept admin-only, test count and schema number, "Last updated"). Cross-reference only: `add-merchant-validations` already lists the redefinition of `anomaly_zero_charge_excluded`.
 
 ## 6. Gatekeeper (AGENTS §6)
 
