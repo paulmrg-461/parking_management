@@ -548,10 +548,18 @@ Last updated: 2026-11-11 (period comparison reports).
   (pending/conflict/deadLetter), `asConflict` and `rebased`; legacy JSON loads
   as a pending entry and a conflict is written as `deadLettered` for older
   builds but read back as a conflict.
-- Pending (tasks 3.2-3.3 and sections 4-6): outbox `listConflicts`/`settle` and
-  base-preserving coalescing, replayer `Future<int?>` + `adoptServer`,
-  SyncService auto-merge/park/resolve, versioned writes in the four features,
-  badge and dialog.
+- Outbox: `listConflicts()` and `settle(key, expected)` (removes only an
+  unchanged entry, so a coalesced edit survives); pending and dead letters
+  exclude conflicts. `MutationReplayer.adoptServer` (no-op by default).
+- `SyncService`: `VersionConflictFailure` is handled before validation —
+  disjoint fields auto-apply and rebase the entry (max 3 rounds), a server that
+  already has mine removes it and adopts the row, overlapping fields or an
+  edit/delete mismatch park a conflict, `delete` of a vanished row succeeds.
+  `resolve(key, keepMine|keepTheirs)` rebases on the server version or adopts
+  and removes. Nothing exercises this yet: the features do not send versions.
+- Pending (3.3, 4.2, 4.3, 5, 6): replayer `Future<int?>`, field-by-field merge
+  in `resolve`, status cubit, versioned writes in the four features, badge and
+  dialog.
 
 ## Period comparison reports (2026-11-11, `0104`)
 

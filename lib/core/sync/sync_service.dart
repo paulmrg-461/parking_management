@@ -7,6 +7,8 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 import '../error/failure.dart';
 import '../network/connectivity_service.dart';
 import 'client_ref.dart';
+import 'conflict/conflict_resolution.dart';
+import 'conflict/three_way_merge.dart';
 import 'mutation_replayer.dart';
 import 'pending_mutation.dart';
 import 'sync_outbox.dart';
@@ -39,6 +41,10 @@ class SyncService {
        _clock = clock ?? DateTime.now;
 
   static const maxAttempts = 5;
+
+  /// Automatic merge rounds per entry; the next conflict is parked for the
+  /// operator instead of looping.
+  static const maxMergeRounds = 3;
   static const maxBackoff = Duration(minutes: 5);
   static const stallBase = Duration(seconds: 15);
   static const maxStallBackoff = Duration(seconds: 60);
@@ -52,6 +58,7 @@ class SyncService {
   Timer? _retryTimer;
   Future<void>? _inFlight;
   Duration? _retryDelay;
+  final Map<int, int> _mergeRounds = {};
   int _stalls = 0;
   bool _stalled = false;
 
@@ -132,7 +139,10 @@ class SyncService {
   Future<bool> _attempt(OutboxEntry entry) async {
     try {
       await _replay(entry.value);
-      await _outbox.remove(entry.key);
+      // Settle, not remove: an edit coalesced while the replay was in flight
+      // must survive.
+      await _outbox.settle(entry.key, entry.value);
+      _mergeRounds.remove(entry.key);
       return true;
     } on Failure catch (failure) {
       return _onFailure(entry, failure);
@@ -159,12 +169,116 @@ class SyncService {
         return false;
       case AuthenticationFailure():
         return false;
+      case VersionConflictFailure():
+        return _onConflict(entry, failure);
       case ValidationFailure():
         await _park(entry, failure.message);
       default:
         await _retryLater(entry, failure.message);
     }
     return true;
+  }
+
+  Future<bool> _onConflict(
+    OutboxEntry entry,
+    VersionConflictFailure failure,
+  ) async {
+    final mutation = entry.value;
+    final server = failure.serverRow;
+
+    if (mutation.operation == MutationOperation.delete) {
+      if (server == null) {
+        // Already gone: the intent holds.
+        await _outbox.settle(entry.key, mutation);
+        return true;
+      }
+      return _parkConflict(entry, 'edited', server);
+    }
+
+    if (server == null) {
+      return _parkConflict(entry, 'deleted', null);
+    }
+
+    final plan = planMerge(
+      base: mutation.decodeBaseSnapshot(),
+      mine: mutation.decodePayload(),
+      theirs: server,
+    );
+    if (plan.serverAlreadyHasMine) {
+      await _adopt(mutation, server);
+      await _outbox.settle(entry.key, mutation);
+      return true;
+    }
+
+    final rounds = _mergeRounds[entry.key] ?? 0;
+    if (plan.conflicts.isEmpty && plan.autoApply.isNotEmpty) {
+      if (rounds < maxMergeRounds) {
+        _mergeRounds[entry.key] = rounds + 1;
+        await _outbox.replace(
+          entry.key,
+          mutation.rebased(
+            baseVersion: (server['version'] as num?)?.toInt() ?? 0,
+            payloadJson: jsonEncode(plan.autoApply),
+            baseSnapshotJson: jsonEncode(server),
+          ),
+        );
+        return true;
+      }
+    }
+    return _parkConflict(entry, 'edited', server);
+  }
+
+  Future<bool> _parkConflict(
+    OutboxEntry entry,
+    String kind,
+    Map<String, dynamic>? server,
+  ) async {
+    await _outbox.replace(
+      entry.key,
+      entry.value.asConflict(kind: kind, serverRow: server),
+    );
+    return true;
+  }
+
+  Future<void> _adopt(
+    PendingMutation mutation,
+    Map<String, dynamic>? row,
+  ) async {
+    final replayer = _replayers[mutation.entityType];
+    try {
+      await replayer?.adoptServer(row);
+    } on Object {
+      // The queue is already in a good state; a cache refresh is best effort.
+    }
+  }
+
+  /// Resolves a parked conflict: keep the server's row or re-send mine on top
+  /// of it. `keepMine` leaves the entry pending so the next drain replays it.
+  Future<void> resolve(int key, ConflictChoice choice) async {
+    final entries = await _outbox.listConflicts();
+    final entry = entries
+        .where((candidate) => candidate.key == key)
+        .firstOrNull;
+    if (entry == null) {
+      return;
+    }
+    final mutation = entry.value;
+    final server = mutation.decodeServerRow();
+    _mergeRounds.remove(key);
+    if (choice == ConflictChoice.keepTheirs || server == null) {
+      await _adopt(mutation, server);
+      await _outbox.remove(key);
+      return;
+    }
+    await _outbox.replace(
+      key,
+      mutation.rebased(
+        baseVersion: (server['version'] as num?)?.toInt() ?? 0,
+        payloadJson: jsonEncode(mutation.decodePayload()),
+        baseSnapshotJson: jsonEncode(server),
+      ),
+    );
+    _kick();
   }
 
   Future<void> _retryLater(OutboxEntry entry, String message) async {
