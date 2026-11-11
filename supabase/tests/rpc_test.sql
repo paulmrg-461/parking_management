@@ -4792,4 +4792,397 @@ begin
     end;
 end $$;
 
+-- 0106 booking waitlist: the anonymous customer surface.
+do $$
+declare
+    cat integer;
+    roomy integer;
+begin
+    update public.parking_settings
+       set waitlist_enabled = true,
+           waitlist_claim_minutes = 15,
+           waitlist_max_entries = 30,
+           whatsapp_auto = false,
+           car_capacity = 0,
+           moto_capacity = 0,
+           car_out_of_service = 0,
+           moto_out_of_service = 0,
+           reservation_grace_minutes = 15,
+           public_booking_captcha = false,
+           public_booking_hourly_limit = 20
+     where lot_id in (1, 2);
+    delete from public.reservation_waitlist;
+    delete from public.notifications where type in ('waitlist_joined', 'waitlist_offer');
+    insert into public.categories (name, capacity, lot_id)
+    values ('wl-car', 1, 1)
+    returning id into cat;
+    insert into public.categories (name, capacity, lot_id)
+    values ('wl-roomy', 50, 1)
+    returning id into roomy;
+    perform set_config('app.wl_cat', cat::text, true);
+    perform set_config('app.wl_roomy', roomy::text, true);
+    -- Full: one active staff hold counts against the single space.
+    insert into public.category_reservations (
+        plate, category_id, reserved_until, lot_id, source
+    )
+    values ('WLFULL1', cat, now() + interval '3 hours', 1, 'app');
+end $$;
+
+-- waitlist: info reports enabled and channel
+set local role anon;
+do $$
+declare
+    info jsonb;
+begin
+    info := public.public_waitlist_info(1);
+    if not (info ->> 'enabled')::boolean then
+        raise exception 'the waitlist info says disabled: %', info;
+    end if;
+    if (info ->> 'claim_minutes')::integer <> 15
+       or (info ->> 'max_hold_minutes')::integer <> 1440 then
+        raise exception 'the waitlist info windows changed: %', info;
+    end if;
+    if info ->> 'notify_channel' <> 'screen' then
+        raise exception 'whatsapp auto off should be the screen channel: %', info;
+    end if;
+    if public.public_waitlist_info(999) is not null then
+        raise exception 'a missing lot returned info';
+    end if;
+end $$;
+reset role;
+
+-- waitlist: join while full
+set local role anon;
+do $$
+declare
+    cat integer := current_setting('app.wl_cat')::integer;
+    joined jsonb;
+begin
+    joined := public.public_join_waitlist(
+        1, 'WLJOIN1', cat, now() + interval '3 hours', 60, 'Ana', '3101110001'
+    );
+    if joined ->> 'status' <> 'waiting'
+       or (joined ->> 'position')::integer <> 1
+       or joined ->> 'notify_channel' <> 'screen'
+       or (joined ->> 'claim_minutes')::integer <> 15 then
+        raise exception 'the join answer is wrong: %', joined;
+    end if;
+    if joined -> 'lot' ->> 'name' is null then
+        raise exception 'the join answer has no lot: %', joined;
+    end if;
+    perform set_config('app.wl_entry', joined ->> 'id', true);
+end $$;
+reset role;
+
+update public.parking_settings set whatsapp_auto = true where lot_id = 1;
+set local role anon;
+do $$
+declare
+    cat integer := current_setting('app.wl_cat')::integer;
+    later jsonb;
+begin
+    later := public.public_join_waitlist(
+        1, 'WLJOIN2', cat, now() + interval '3 hours', 30, 'Luis', '3101110002'
+    );
+    if later ->> 'notify_channel' <> 'whatsapp' then
+        raise exception 'whatsapp auto on should be the whatsapp channel: %', later;
+    end if;
+end $$;
+reset role;
+update public.parking_settings set whatsapp_auto = false where lot_id = 1;
+
+-- waitlist: join desk notification once per member
+do $$
+declare
+    entry_id bigint := current_setting('app.wl_entry')::bigint;
+    members integer;
+    notified integer;
+begin
+    select count(*) into members
+      from public.lot_members lm join public.users u on u.id = lm.user_id
+     where lm.lot_id = 1 and u.is_active;
+    select count(*) into notified
+      from public.notifications n
+     where n.type = 'waitlist_joined'
+       and n.data ->> 'entry_id' = entry_id::text;
+    if notified <> members then
+        raise exception 'the join notified % of % members', notified, members;
+    end if;
+end $$;
+
+-- waitlist: join not needed
+set local role anon;
+do $$
+declare
+    roomy integer := current_setting('app.wl_roomy')::integer;
+begin
+    begin
+        perform public.public_join_waitlist(
+            1, 'WLNOTNEED', roomy, now() + interval '2 hours', 60, 'Ana', '3101110003'
+        );
+        raise exception 'joined although a space was free';
+    exception when others then
+        if sqlerrm not like '%WaitlistNotNeededError%' then raise; end if;
+    end;
+end $$;
+reset role;
+
+-- waitlist: join disabled
+update public.parking_settings set waitlist_enabled = false where lot_id = 1;
+set local role anon;
+do $$
+declare
+    cat integer := current_setting('app.wl_cat')::integer;
+begin
+    begin
+        perform public.public_join_waitlist(
+            1, 'WLOFF1', cat, now() + interval '2 hours', 60, 'Ana', '3101110004'
+        );
+        raise exception 'joined with the waitlist disabled';
+    exception when others then
+        if sqlerrm not like '%WaitlistDisabledError%' then raise; end if;
+    end;
+end $$;
+reset role;
+update public.parking_settings set waitlist_enabled = true where lot_id = 1;
+
+-- waitlist: join validation and duplicates
+set local role anon;
+do $$
+declare
+    cat integer := current_setting('app.wl_cat')::integer;
+begin
+    begin
+        perform public.public_join_waitlist(
+            1, 'X', cat, now() + interval '2 hours', 60, 'Ana', '3101110005'
+        );
+        raise exception 'an invalid plate was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidPlateError%' then raise; end if;
+    end;
+    begin
+        perform public.public_join_waitlist(
+            1, 'WLVALID1', cat, now() + interval '2 hours', 60, '', '3101110005'
+        );
+        raise exception 'an empty name was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidNameError%' then raise; end if;
+    end;
+    begin
+        perform public.public_join_waitlist(
+            1, 'WLVALID1', cat, now() + interval '2 hours', 60, 'Ana', '12345'
+        );
+        raise exception 'an invalid phone was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidPhoneError%' then raise; end if;
+    end;
+    begin
+        perform public.public_join_waitlist(
+            1, 'WLVALID1', cat, now() + interval '5 minutes', 5, 'Ana', '3101110005'
+        );
+        raise exception 'a five minute window was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidWaitWindowError%' then raise; end if;
+    end;
+    begin
+        perform public.public_join_waitlist(
+            1, 'WLJOIN1', cat, now() + interval '2 hours', 60, 'Ana', '3101110001'
+        );
+        raise exception 'a duplicated plate joined twice';
+    exception when others then
+        if sqlerrm not like '%WaitlistExistsError%' then raise; end if;
+    end;
+    perform public.public_join_waitlist(
+        1, 'WLPHONE1', cat, now() + interval '2 hours', 60, 'Ana', '3101110006'
+    );
+    perform public.public_join_waitlist(
+        1, 'WLPHONE2', cat, now() + interval '2 hours', 60, 'Ana', '3101110006'
+    );
+    begin
+        perform public.public_join_waitlist(
+            1, 'WLPHONE3', cat, now() + interval '2 hours', 60, 'Ana', '3101110006'
+        );
+        raise exception 'a third entry for the same phone was accepted';
+    exception when others then
+        if sqlerrm not like '%WaitlistLimitError%' then raise; end if;
+    end;
+    begin
+        perform public.public_join_waitlist(
+            1, 'WLFULL1', cat, now() + interval '2 hours', 60, 'Ana', '3101110008'
+        );
+        raise exception 'a plate with an active hold joined';
+    exception when others then
+        if sqlerrm not like '%ReservationExistsError%' then raise; end if;
+    end;
+end $$;
+reset role;
+delete from public.reservation_waitlist where plate like 'WLPHONE%';
+
+-- waitlist: join lot cap
+update public.parking_settings set waitlist_max_entries = 1 where lot_id = 1;
+set local role anon;
+do $$
+declare
+    cat integer := current_setting('app.wl_cat')::integer;
+begin
+    begin
+        perform public.public_join_waitlist(
+            1, 'WLCAP1', cat, now() + interval '2 hours', 60, 'Ana', '3101110007'
+        );
+        raise exception 'the lot cap was not enforced';
+    exception when others then
+        if sqlerrm not like '%WaitlistFullError%' then raise; end if;
+    end;
+end $$;
+reset role;
+update public.parking_settings set waitlist_max_entries = 30 where lot_id = 1;
+
+-- waitlist: captcha gate and the verified twin
+update public.parking_settings set public_booking_captcha = true where lot_id = 1;
+set local role anon;
+do $$
+declare
+    cat integer := current_setting('app.wl_cat')::integer;
+begin
+    begin
+        perform public.public_join_waitlist(
+            1, 'WLCAPTCHA', cat, now() + interval '2 hours', 60, 'Ana', '3101110009'
+        );
+        raise exception 'anon joined past the captcha';
+    exception when others then
+        if sqlerrm not like '%CaptchaRequiredError%' then raise; end if;
+    end;
+    begin
+        perform public.public_join_waitlist_verified(
+            1, 'WLCAPTCHA', cat, now() + interval '2 hours', 60, 'Ana', '3101110009'
+        );
+        raise exception 'anon called the verified twin';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+declare
+    cat integer := current_setting('app.wl_cat')::integer;
+begin
+    begin
+        perform public.public_join_waitlist(
+            1, 'WLCAPTCHA', cat, now() + interval '2 hours', 60, 'Ana', '3101110009'
+        );
+        raise exception 'an authenticated caller joined past the captcha';
+    exception when others then
+        if sqlerrm not like '%CaptchaRequiredError%' then raise; end if;
+    end;
+    begin
+        perform public.public_join_waitlist_verified(
+            1, 'WLCAPTCHA', cat, now() + interval '2 hours', 60, 'Ana', '3101110009'
+        );
+        raise exception 'an authenticated caller used the verified twin';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+set local role service_role;
+do $$
+declare
+    cat integer := current_setting('app.wl_cat')::integer;
+    joined jsonb;
+begin
+    joined := public.public_join_waitlist_verified(
+        1, 'WLVERIF1', cat, now() + interval '2 hours', 60, 'Ana', '3101110010'
+    );
+    if joined ->> 'status' <> 'waiting' then
+        raise exception 'the service role could not join: %', joined;
+    end if;
+end $$;
+reset role;
+delete from public.reservation_waitlist where plate = 'WLVERIF1';
+update public.parking_settings set public_booking_captcha = false where lot_id = 1;
+
+-- waitlist: hourly ceiling counts left entries
+update public.parking_settings set public_booking_hourly_limit = 1 where lot_id = 1;
+delete from public.reservation_waitlist where status in ('left', 'cancelled', 'expired');
+set local role anon;
+do $$
+declare
+    cat integer := current_setting('app.wl_cat')::integer;
+begin
+    begin
+        perform public.public_join_waitlist(
+            1, 'WLTHROT1', cat, now() + interval '2 hours', 60, 'Ana', '3101110011'
+        );
+        raise exception 'the ceiling did not count the earlier joins';
+    exception when others then
+        if sqlerrm not like '%BookingThrottledError%' then raise; end if;
+    end;
+end $$;
+reset role;
+-- Age the window: the ceiling must stop counting old entries, not count less.
+update public.reservation_waitlist set created_at = now() - interval '2 hours';
+set local role anon;
+do $$
+declare
+    cat integer := current_setting('app.wl_cat')::integer;
+begin
+    perform public.public_join_waitlist(
+        1, 'WLTHROT2', cat, now() + interval '2 hours', 60, 'Ana', '3101110012'
+    );
+end $$;
+reset role;
+update public.parking_settings set public_booking_hourly_limit = 20 where lot_id = 1;
+
+-- waitlist: lookup and leave
+set local role anon;
+do $$
+declare
+    found jsonb;
+begin
+    found := public.public_waitlist_lookup(
+        1, current_setting('app.wl_entry')::bigint, '3101110001'
+    );
+    if found is null or found ->> 'status' <> 'waiting' then
+        raise exception 'the lookup did not find the entry: %', found;
+    end if;
+    if (found ->> 'position')::integer < 1
+       or found ->> 'category_name' <> 'wl-car' then
+        raise exception 'the lookup answer is wrong: %', found;
+    end if;
+    if public.public_waitlist_lookup(
+        1, current_setting('app.wl_entry')::bigint, '3109999999'
+    ) is not null then
+        raise exception 'the lookup answered for a wrong phone';
+    end if;
+    if public.public_waitlist_lookup(
+        2, current_setting('app.wl_entry')::bigint, '3101110001'
+    ) is not null then
+        raise exception 'the lookup answered for a wrong lot';
+    end if;
+end $$;
+
+do $$
+declare
+    entry_id bigint := current_setting('app.wl_entry')::bigint;
+    left_answer jsonb;
+begin
+    begin
+        perform public.public_leave_waitlist(1, entry_id, '3109999999');
+        raise exception 'leaving with a wrong phone worked';
+    exception when others then
+        if sqlerrm not like '%WaitlistEntryNotFoundError%' then raise; end if;
+    end;
+    left_answer := public.public_leave_waitlist(1, entry_id, '3101110001');
+    if left_answer ->> 'status' <> 'left' then
+        raise exception 'leaving did not mark the entry: %', left_answer;
+    end if;
+    begin
+        perform public.public_leave_waitlist(1, entry_id, '3101110001');
+        raise exception 'leaving twice worked';
+    exception when others then
+        if sqlerrm not like '%WaitlistEntryNotFoundError%' then raise; end if;
+    end;
+end $$;
+reset role;
+
 rollback;
