@@ -523,6 +523,54 @@ Last updated: 2026-11-11 (period comparison reports).
   the edge-runtime container (it was exercised with Deno against mocks).
 - Test count: 1172; schema `0001..0103`.
 
+## Occupancy forecast (2026-11-12, `0109`)
+
+- Algorithm in five lines: `occupancy_grid` rebuilds the hourly net occupancy
+  per group from `entry_time`/`exit_time` (a stay is capped at **72 h** so one
+  forgotten gate cannot poison the profile); `refresh_occupancy_profile` stores
+  `percentile_cont(0.5)` per (group, weekday, hour) over the last K
+  same-weekday days, skipping dates before the lot's first session;
+  `forecast_compute` adds `(live - profile_now) * w^hours_ahead` (w = decay/100,
+  default 0.85), clamps to capacity and reports the first crossing as `full_at`;
+  confidence comes from the smallest sample count used; below `min_samples` the
+  group is omitted and the status says `insufficient_history`.
+- `forecast_compute(p_lot, p_horizon, p_now)` takes `p_now` explicitly because
+  `now()` is constant inside a transaction: the SQL tests replay a fixed
+  Wednesday 14:20. Do not "simplify" it to `now()`.
+- **`public_availability` is now a wrapper**: edit `public_availability_base`
+  for any change to its body, never the wrapper, or the forecast key is lost.
+  The rename block is guarded so a re-run cannot rename the wrapper.
+- The forecast is **not cached**: `DashboardSnapshot` is untouched, a stale
+  (offline) dashboard renders no card and `_fromCache` yields
+  `OccupancyForecast.unavailable`. The backtest and the public strip are online
+  only.
+- The public block is an allow-list (`group, confidence, full_now, full_at,
+  hours[{hour, level}]`): no capacity, current, samples or session data, and
+  any failure inside it yields `unavailable` so it can never break booking.
+  Public visibility defaults to **on** (`public_enabled`), because there is no
+  settings UI in this change; turn it off with
+  `select set_forecast_settings('{"public_enabled": false}')`.
+- Holidays are **out of scope** (the median absorbs isolated ones and the live
+  blend corrects today within hours). Reservation holds are not subtracted, so
+  a lot can look "not full" while bays are held (the public strip carries a
+  disclaimer).
+- `refresh_occupancy_profile` runs from `jobs.sh` /
+  `notifications-cron.sh` with no arguments (the `run` helper passes none) and
+  skips a lot whose profile is newer than six hours unless forced.
+- Note for testers: the median of an **even** sample is the average of the two
+  middle values, so the design's worked example yields `35.50` (35 and 36), not
+  `35.00`; the test pins 35.50.
+- Gatekeeper (2026-11-12): migration `0109` applied live (504 profile rows for
+  lot 1), `public_availability(1).forecast.status = insufficient_history` for
+  the dev data, **1351 tests** green, coverage 79.7% (application 92.2%,
+  domain 60.8%), `flutter analyze` clean, SQL suite green over `0001`-`0109`,
+  web rebuilt and republished (`/reserve` 200), release APK built and installed
+  on the connected phone (`pro.devpaul.parking_management`).
+- Not done: the 50 000-session benchmark of task 1.3 and the remaining widget
+  tests of sections 4.2/6.1 (the entities, cubits and the reports section are
+  covered; the home card and the public strip are covered by review, not by a
+  widget test yet).
+
 ## Booking waitlist (2026-11-11, `0106`-`0107`)
 
 - An offer **is a real hold**: `category_reservations` with

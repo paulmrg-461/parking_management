@@ -146,6 +146,18 @@ hold with a phone and automated WhatsApp, queues `reservation_cancelled`.
 WhatsApp for public holds ending inside the window (default 60 min) when the
 lot has automated WhatsApp on, and stamps `reminder_sent_at` (idempotent).
 
+**Occupancy forecast** (`0109`)
+`occupancy_profile` (lot, group, weekday, hour → median + samples + computed_at)
+and `forecast_settings` (enabled, history weeks, minimum samples, decay, full
+threshold, public visibility; audited). Helpers: `group_capacity`,
+`occupancy_grid` (hourly net occupancy from sessions, 72 h cap),
+`refresh_occupancy_profile` (median per cell, six-hour throttle, job entry
+point), `forecast_compute` (blend + clamp + `full_at` + confidence) and
+`public_forecast_block` (aggregates only). Public RPCs: `occupancy_forecast`
+(any member), `occupancy_forecast_backtest` and `get/set_forecast_settings`
+(lot admin). `public_availability` is a wrapper over `public_availability_base`
+that adds the `forecast` key.
+
 **Booking waitlist** (`0106`, `0107`)
 `reservation_waitlist` holds the turns (`status` waiting/offered/claimed/
 expired/left/cancelled, `wait_until`, `hold_minutes`, `offer_until`,

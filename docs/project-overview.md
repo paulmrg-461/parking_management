@@ -167,6 +167,19 @@ plate, two per mobile, a per-lot maximum). It is off per site
 (`parking_settings.waitlist_enabled`), and WhatsApp notices are optional
 (`waitlist_offer` template; without it the page polls and the desk calls).
 
+## 7.05 Occupancy forecast (implemented)
+
+"Will it be full at 6 pm?" is answered from the lot's own history: per group,
+weekday and hour the system keeps the **median** of the last K same-weekday
+days and blends it with today's live deviation (the deviation fades 15 % per
+hour), clamped to capacity. The home dashboard shows the next 12 hours with the
+estimated "full at" time and a confidence label; the public page shows an
+aggregate strip (levels, time, confidence) that never exposes counts; the
+reports screen can replay the algorithm over past weeks to see whether the live
+blend beats the profile alone. Below the minimum history the forecast is not
+shown instead of guessed. Holidays are out of scope, reservation holds are not
+subtracted, and the forecast is never cached (it is time-sensitive).
+
 ## 7.1 Offline conflicts (implemented)
 
 Reference entities (`vehicles`, `tariffs`, `categories`, `parking_settings`)

@@ -59,6 +59,24 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Added
 
+- **Occupancy forecast** (`0109`, `openspec/changes/add-occupancy-forecast`).
+  The home dashboard and the public page could only say how full the lot is
+  *now*. The system now answers "will it be full at 6 pm?":
+  - `occupancy_profile` stores, per lot, group, weekday and hour, the **median**
+    of the last K same-weekday days, rebuilt by the job runner (six-hour
+    throttle); `occupancy_grid` rebuilds the hourly net occupancy from the
+    entry/exit timestamps and caps a stuck-open session at 72 h.
+  - `occupancy_forecast` blends the profile with today's live deviation (fading
+    15 % per hour), clamps to capacity, reports the first crossing as `full_at`
+    and labels confidence from the sample count. Below the minimum history it
+    says so instead of guessing.
+  - The public page gets an aggregate-only strip ("¿Cuándo se llena?") through a
+    new `forecast` key: levels, deadline and confidence, never counts or plates.
+    `public_availability` is now a thin wrapper around
+    `public_availability_base`, so later changes edit the base function.
+  - `occupancy_forecast_backtest` replays the algorithm over past weeks and
+    compares it with the profile alone ("Precisión del pronóstico" in reports).
+  - Six per-lot settings through `get/set_forecast_settings` (RPC only).
 - **Booking waitlist** (`0106`, `0107`,
   `openspec/changes/add-booking-waitlist`). When every category is full the
   public page used to say "call us" and the customer left. Now they can join a
