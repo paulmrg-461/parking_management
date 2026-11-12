@@ -42,10 +42,7 @@ class _WaitlistSettingsDialogState extends State<WaitlistSettingsDialog> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return AlertDialog(
-      title: DialogHeader(
-        icon: Icons.tune,
-        title: l10n.waitlistSettingsTitle,
-      ),
+      title: DialogHeader(icon: Icons.tune, title: l10n.waitlistSettingsTitle),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -124,17 +121,14 @@ class _WaitlistSettingsDialogState extends State<WaitlistSettingsDialog> {
       _error = null;
     });
     await context.read<WaitlistCubit>().saveSettings(
-      WaitlistSettings(
-        enabled: _enabled,
-        claimMinutes: claim,
-        maxEntries: max,
-      ),
+      WaitlistSettings(enabled: _enabled, claimMinutes: claim, maxEntries: max),
     );
     if (!mounted) {
       return;
     }
     final state = context.read<WaitlistCubit>().state;
-    final failed = state is WaitlistLoaded && state.submission is SubmissionFailed;
+    final failed =
+        state is WaitlistLoaded && state.submission is SubmissionFailed;
     if (failed) {
       final submission = state.submission;
       setState(() {

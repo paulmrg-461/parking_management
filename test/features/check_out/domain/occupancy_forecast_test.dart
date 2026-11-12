@@ -50,10 +50,7 @@ void main() {
     final forecast = OccupancyForecast.fromJson(_payload(fullNow: true));
 
     expect(forecast.firstToFill?.fullNow, isTrue);
-    expect(
-      OccupancyForecast.fromJson(_payload()).firstToFill?.fullAt,
-      '17:30',
-    );
+    expect(OccupancyForecast.fromJson(_payload()).firstToFill?.fullAt, '17:30');
     expect(
       OccupancyForecast.fromJson(_payload(fullAt: null)).firstToFill,
       isNull,
@@ -81,7 +78,11 @@ void main() {
       'groups': [
         {
           'group': 'car',
-          'hours': [1, 'x', {'hour': 7, 'expected': 3, 'level': 'free'}],
+          'hours': [
+            1,
+            'x',
+            {'hour': 7, 'expected': 3, 'level': 'free'},
+          ],
         },
       ],
     });

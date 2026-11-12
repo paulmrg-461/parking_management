@@ -54,7 +54,10 @@ void main() {
     await _pump(tester, FakeWaitlistRepository());
 
     expect(find.text('Nadie en lista de espera'), findsOneWidget);
-    expect(find.textContaining('Cuando el parqueadero se llene'), findsOneWidget);
+    expect(
+      find.textContaining('Cuando el parqueadero se llene'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('Success: lists entries with position and contact', (
@@ -73,12 +76,15 @@ void main() {
   testWidgets('Success: an offered entry shows its deadline and claim button', (
     tester,
   ) async {
-    final repository = FakeWaitlistRepository()..entries = [_entry(3, status: 'offered')];
+    final repository = FakeWaitlistRepository()
+      ..entries = [_entry(3, status: 'offered')];
     await _pump(tester, repository);
 
     expect(find.textContaining('Oferta hasta'), findsOneWidget);
-    expect(find.text('Llamar: el cliente no tiene WhatsApp automático'),
-        findsOneWidget);
+    expect(
+      find.text('Llamar: el cliente no tiene WhatsApp automático'),
+      findsOneWidget,
+    );
     await tester.tap(find.byKey(const Key('waitlist-claim-3')));
     await tester.pumpAndSettle();
 

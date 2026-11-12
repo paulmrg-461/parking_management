@@ -20,8 +20,7 @@ class WaitlistSettings extends Equatable {
 
   factory WaitlistSettings.fromJson(Map<String, dynamic> json) =>
       WaitlistSettings(
-        enabled: json['enabled'] == true ||
-            json['waitlist_enabled'] == true,
+        enabled: json['enabled'] == true || json['waitlist_enabled'] == true,
         claimMinutes:
             (json['claim_minutes'] as num?)?.toInt() ??
             (json['waitlist_claim_minutes'] as num?)?.toInt() ??

@@ -17,12 +17,7 @@ Future<AnomaliesCubit> _pump(
   addTearDown(cubit.close);
   await tester.runAsync(cubit.load);
   await tester.pumpWidget(
-    testApp(
-      BlocProvider.value(
-        value: cubit,
-        child: const AnomaliesPage(),
-      ),
-    ),
+    testApp(BlocProvider.value(value: cubit, child: const AnomaliesPage())),
   );
   await tester.pumpAndSettle();
   return cubit;

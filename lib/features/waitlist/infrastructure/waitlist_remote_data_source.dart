@@ -76,9 +76,7 @@ class SupabaseWaitlistRemoteDataSource implements WaitlistRemoteDataSource {
       if (rows.isEmpty) {
         return WaitlistSettings.defaults;
       }
-      return WaitlistSettings.fromJson(
-        Map<String, dynamic>.from(rows.first),
-      );
+      return WaitlistSettings.fromJson(Map<String, dynamic>.from(rows.first));
     } catch (error) {
       throw mapSupabaseError(error);
     }

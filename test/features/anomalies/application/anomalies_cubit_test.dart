@@ -6,22 +6,25 @@ import 'package:parking_management/features/anomalies/domain/entities/cash_anoma
 import '../../../helpers/fake_anomaly_repository.dart';
 
 void main() {
-  test('Success: load emits loading then loaded with the open filter', () async {
-    final repository = FakeAnomalyRepository()
-      ..listToReturn = AnomalyList(items: [anomaly()], openCount: 1);
-    final cubit = AnomaliesCubit(repository);
-    final states = <AnomaliesState>[];
-    cubit.stream.listen(states.add);
+  test(
+    'Success: load emits loading then loaded with the open filter',
+    () async {
+      final repository = FakeAnomalyRepository()
+        ..listToReturn = AnomalyList(items: [anomaly()], openCount: 1);
+      final cubit = AnomaliesCubit(repository);
+      final states = <AnomaliesState>[];
+      cubit.stream.listen(states.add);
 
-    await cubit.load();
-    await Future<void>.delayed(Duration.zero);
+      await cubit.load();
+      await Future<void>.delayed(Duration.zero);
 
-    expect(states.first, isA<AnomaliesLoading>());
-    final loaded = states.last as AnomaliesLoaded;
-    expect(loaded.list.items, hasLength(1));
-    expect(loaded.status, AnomalyStatus.open);
-    expect(repository.statuses.single, AnomalyStatus.open);
-  });
+      expect(states.first, isA<AnomaliesLoading>());
+      final loaded = states.last as AnomaliesLoaded;
+      expect(loaded.list.items, hasLength(1));
+      expect(loaded.status, AnomalyStatus.open);
+      expect(repository.statuses.single, AnomalyStatus.open);
+    },
+  );
 
   test('Success: an empty list is a loaded state', () async {
     final cubit = AnomaliesCubit(FakeAnomalyRepository());
@@ -32,19 +35,22 @@ void main() {
     expect(loaded.list.isEmpty, isTrue);
   });
 
-  test('Success: filters persist across loads and clearFilters resets', () async {
-    final repository = FakeAnomalyRepository();
-    final cubit = AnomaliesCubit(repository);
+  test(
+    'Success: filters persist across loads and clearFilters resets',
+    () async {
+      final repository = FakeAnomalyRepository();
+      final cubit = AnomaliesCubit(repository);
 
-    await cubit.load(severity: AnomalySeverity.high);
-    await cubit.load();
-    expect((cubit.state as AnomaliesLoaded).severity, AnomalySeverity.high);
+      await cubit.load(severity: AnomalySeverity.high);
+      await cubit.load();
+      expect((cubit.state as AnomaliesLoaded).severity, AnomalySeverity.high);
 
-    await cubit.load(clearFilters: true);
-    final reset = cubit.state as AnomaliesLoaded;
-    expect(reset.severity, isNull);
-    expect(reset.rule, isNull);
-  });
+      await cubit.load(clearFilters: true);
+      final reset = cubit.state as AnomaliesLoaded;
+      expect(reset.severity, isNull);
+      expect(reset.rule, isNull);
+    },
+  );
 
   test('Success: resolve reloads with the same filters', () async {
     final repository = FakeAnomalyRepository()
@@ -86,17 +92,23 @@ void main() {
     expect(loaded.resolvingId, isNull);
   });
 
-  test('Security: AdminRequiredError becomes a failure with its code', () async {
-    final cubit = AnomaliesCubit(
-      FakeAnomalyRepository()
-        ..listError = const ValidationFailure(
-          'AdminRequiredError',
-          'AdminRequiredError',
-        ),
-    );
+  test(
+    'Security: AdminRequiredError becomes a failure with its code',
+    () async {
+      final cubit = AnomaliesCubit(
+        FakeAnomalyRepository()
+          ..listError = const ValidationFailure(
+            'AdminRequiredError',
+            'AdminRequiredError',
+          ),
+      );
 
-    await cubit.load();
+      await cubit.load();
 
-    expect((cubit.state as AnomaliesFailure).failure.code, 'AdminRequiredError');
-  });
+      expect(
+        (cubit.state as AnomaliesFailure).failure.code,
+        'AdminRequiredError',
+      );
+    },
+  );
 }

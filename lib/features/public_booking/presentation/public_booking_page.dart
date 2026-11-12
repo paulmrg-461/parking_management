@@ -1538,7 +1538,6 @@ String _errorText(AppLocalizations l10n, Failure? failure) {
   };
 }
 
-
 /// "¿Cuándo se llena?" — the aggregate forecast, never a count or a plate.
 class _ForecastCard extends StatelessWidget {
   const _ForecastCard({required this.forecast});
@@ -1610,7 +1609,9 @@ class _ForecastCard extends StatelessWidget {
                             size: 18,
                             color: switch (hour.level) {
                               ForecastLevel.full => scheme.error,
-                              ForecastLevel.busy => StatusColors.of(context).warning,
+                              ForecastLevel.busy => StatusColors.of(
+                                context,
+                              ).warning,
                               ForecastLevel.free => scheme.primary,
                             },
                           ),

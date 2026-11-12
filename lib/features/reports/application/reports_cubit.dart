@@ -256,12 +256,7 @@ class ReportsCubit extends ResilientCubit<ReportsState> {
       if (isClosed || latest is! ReportsLoaded) {
         return;
       }
-      emit(
-        latest.copyWith(
-          backtestFailed: true,
-          backtestLoading: false,
-        ),
-      );
+      emit(latest.copyWith(backtestFailed: true, backtestLoading: false));
     }
   }
 

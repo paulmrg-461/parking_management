@@ -86,10 +86,7 @@ class _AnomalySettingsSheetState extends State<AnomalySettingsSheet> {
           : ListView(
               shrinkWrap: true,
               children: [
-                DialogHeader(
-                  icon: Icons.tune,
-                  title: l10n.anomaliesSettings,
-                ),
+                DialogHeader(icon: Icons.tune, title: l10n.anomaliesSettings),
                 SwitchListTile(
                   key: const Key('anomaly-settings-enabled'),
                   contentPadding: EdgeInsets.zero,
@@ -215,30 +212,24 @@ class _AnomalySettingsSheetState extends State<AnomalySettingsSheet> {
     );
   }
 
-  Widget _number(
-    BuildContext context,
-    String key,
-    String label,
-    int value,
-  ) => Padding(
-    padding: const EdgeInsets.only(bottom: Space.sm),
-    child: TextField(
-      key: Key('anomaly-settings-$key'),
-      controller: _controller(key, value),
-      keyboardType: TextInputType.number,
-      decoration: InputDecoration(labelText: label),
-    ),
-  );
+  Widget _number(BuildContext context, String key, String label, int value) =>
+      Padding(
+        padding: const EdgeInsets.only(bottom: Space.sm),
+        child: TextField(
+          key: Key('anomaly-settings-$key'),
+          controller: _controller(key, value),
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(labelText: label),
+        ),
+      );
 
   Future<void> _save(AnomalySettings base) async {
     final l10n = context.l10n;
     int? value(String key) => int.tryParse(_fields[key]?.text.trim() ?? '');
     final next = base.copyWith(
       windowDays: value('window_days') ?? base.windowDays,
-      shortageMinAmount:
-          value('shortage_min_amount') ?? base.shortageMinAmount,
-      shortageMinShifts:
-          value('shortage_min_shifts') ?? base.shortageMinShifts,
+      shortageMinAmount: value('shortage_min_amount') ?? base.shortageMinAmount,
+      shortageMinShifts: value('shortage_min_shifts') ?? base.shortageMinShifts,
       lostTicketMinClosed:
           value('lost_ticket_min_closed') ?? base.lostTicketMinClosed,
       lostTicketMinRatePct:
@@ -247,8 +238,7 @@ class _AnomalySettingsSheetState extends State<AnomalySettingsSheet> {
           value('lost_ticket_factor_pct') ?? base.lostTicketFactorPct,
       adjustmentMinAmount:
           value('adjustment_min_amount') ?? base.adjustmentMinAmount,
-      shortStayMinutes:
-          value('short_stay_minutes') ?? base.shortStayMinutes,
+      shortStayMinutes: value('short_stay_minutes') ?? base.shortStayMinutes,
       discountMinCount: value('discount_min_count') ?? base.discountMinCount,
       discountSharePct: value('discount_share_pct') ?? base.discountSharePct,
       shiftOpenHours: value('shift_open_hours') ?? base.shiftOpenHours,
@@ -262,9 +252,8 @@ class _AnomalySettingsSheetState extends State<AnomalySettingsSheet> {
       await context.read<AnomaliesCubit>().saveSettings(next);
       if (mounted) {
         Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.anomaliesSettingsSaved)),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(l10n.anomaliesSettingsSaved)));
       }
     } on Failure catch (failure) {
       if (mounted) {

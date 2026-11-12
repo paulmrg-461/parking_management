@@ -39,7 +39,10 @@ void main() {
   });
 
   test('Failure: unknown status is hidden', () {
-    final forecast = PublicForecast.fromJson({'status': 'someday', 'groups': []});
+    final forecast = PublicForecast.fromJson({
+      'status': 'someday',
+      'groups': [],
+    });
 
     expect(forecast.isVisible, isFalse);
   });

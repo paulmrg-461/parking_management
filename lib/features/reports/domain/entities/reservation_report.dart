@@ -94,7 +94,8 @@ class WaitlistReport extends Equatable {
   bool get hasData => joined > 0 || waiting > 0;
 
   /// Share of the offers that were claimed (`0..100`), or null without offers.
-  int? get conversion => offered == 0 ? null : (claimed * 100 / offered).round();
+  int? get conversion =>
+      offered == 0 ? null : (claimed * 100 / offered).round();
 
   factory WaitlistReport.fromJson(Map<String, dynamic> json) {
     int value(Object? raw) => (raw as num?)?.toInt() ?? 0;

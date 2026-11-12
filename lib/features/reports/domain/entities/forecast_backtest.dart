@@ -41,7 +41,13 @@ class ForecastBacktest extends Equatable {
   }
 
   @override
-  List<Object?> get props => [weeks, historyWeeks, decayPct, issueHours, groups];
+  List<Object?> get props => [
+    weeks,
+    historyWeeks,
+    decayPct,
+    issueHours,
+    groups,
+  ];
 }
 
 class BacktestGroup extends Equatable {
@@ -65,7 +71,8 @@ class BacktestGroup extends Equatable {
   final double bias;
   final List<BacktestLead> byLead;
 
-  bool get isBetter => mae != null && maePriorOnly != null && mae! < maePriorOnly!;
+  bool get isBetter =>
+      mae != null && maePriorOnly != null && mae! < maePriorOnly!;
 
   /// How much better than the profile alone, in percent (`null` when it is not).
   int? get improvement {

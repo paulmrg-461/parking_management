@@ -61,9 +61,7 @@ class SupabasePublicWaitlistRemoteDataSource
       if (result is! Map) {
         return null;
       }
-      return PublicWaitlistInfo.fromJson(
-        Map<String, dynamic>.from(result),
-      );
+      return PublicWaitlistInfo.fromJson(Map<String, dynamic>.from(result));
     } catch (error) {
       throw mapSupabaseError(error);
     }
@@ -153,9 +151,7 @@ class SupabasePublicWaitlistRemoteDataSource
       if (result is! Map) {
         return null;
       }
-      return PublicWaitlistEntry.fromJson(
-        Map<String, dynamic>.from(result),
-      );
+      return PublicWaitlistEntry.fromJson(Map<String, dynamic>.from(result));
     } catch (error) {
       throw mapSupabaseError(error);
     }

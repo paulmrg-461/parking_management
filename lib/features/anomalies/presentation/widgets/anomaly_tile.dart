@@ -48,8 +48,9 @@ class AnomalyTile extends StatelessWidget {
                 Expanded(
                   child: Text(
                     anomalyRuleLabel(context, anomaly.rule),
-                    style: theme.textTheme.titleSmall
-                        ?.copyWith(fontWeight: FontWeight.w700),
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
                 Text(

@@ -6,7 +6,6 @@ import 'package:parking_management/core/money/money.dart';
 import 'package:parking_management/core/sync/conflict/entity_fields.dart';
 import 'package:parking_management/core/sync/pending_mutation.dart';
 
-
 /// The conflict granularity of each entity (design §5). A payload key without
 /// a spec would render as an unlabeled row, so this test fails loudly instead.
 const _catalog = {

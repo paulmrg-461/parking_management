@@ -66,7 +66,14 @@ final class AnomaliesLoaded extends AnomaliesState {
   );
 
   @override
-  List<Object?> get props => [list, status, rule, severity, resolvingId, notice];
+  List<Object?> get props => [
+    list,
+    status,
+    rule,
+    severity,
+    resolvingId,
+    notice,
+  ];
 }
 
 final class AnomaliesFailure extends AnomaliesState {

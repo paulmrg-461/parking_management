@@ -68,7 +68,8 @@ class AnomalySettings extends Equatable {
           ? const {}
           : {
               for (final item in rawRules)
-                if (AnomalyRule.tryParse(item.toString()) case final rule?) rule,
+                if (AnomalyRule.tryParse(item.toString()) case final rule?)
+                  rule,
             },
       windowDays: value('window_days', 14),
       shortageMinAmount: value('shortage_min_amount', 5000),

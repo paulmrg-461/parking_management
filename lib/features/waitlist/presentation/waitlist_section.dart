@@ -80,15 +80,15 @@ class WaitlistSection extends StatelessWidget {
           )
         else
           for (final entry in loaded.entries)
-            _WaitlistTile(entry: entry, submitting: loaded.submission.isInProgress),
+            _WaitlistTile(
+              entry: entry,
+              submitting: loaded.submission.isInProgress,
+            ),
       ],
     );
   }
 
-  Future<void> _openSettings(
-    BuildContext context,
-    dynamic settings,
-  ) async {
+  Future<void> _openSettings(BuildContext context, dynamic settings) async {
     final saved = await showDialog<bool>(
       context: context,
       builder: (_) => WaitlistSettingsDialog(initial: settings),

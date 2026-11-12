@@ -69,7 +69,10 @@ void main() {
   test('Failure: a failing removal keeps the rows and reports it', () async {
     final repository = FakeWaitlistRepository()
       ..entries = [_entry(1), _entry(2)]
-      ..actionError = const ValidationFailure('Forbidden', 'AdminRequiredError');
+      ..actionError = const ValidationFailure(
+        'Forbidden',
+        'AdminRequiredError',
+      );
     final cubit = WaitlistCubit(repository);
     await cubit.load();
 

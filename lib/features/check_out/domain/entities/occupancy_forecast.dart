@@ -1,7 +1,13 @@
 import 'package:equatable/equatable.dart';
 
 /// How the forecast ended: a usable projection or why it is not shown.
-enum ForecastStatus { ok, disabled, insufficientHistory, noCapacity, unavailable }
+enum ForecastStatus {
+  ok,
+  disabled,
+  insufficientHistory,
+  noCapacity,
+  unavailable,
+}
 
 ForecastStatus forecastStatusFrom(String? value) => switch (value) {
   'ok' => ForecastStatus.ok,
@@ -72,8 +78,9 @@ class ForecastGroup extends Equatable {
   final List<ForecastHour> hours;
 
   /// The highest expected occupancy of the horizon.
-  int get peakExpected =>
-      hours.isEmpty ? 0 : hours.map((hour) => hour.expected).reduce((a, b) => a > b ? a : b);
+  int get peakExpected => hours.isEmpty
+      ? 0
+      : hours.map((hour) => hour.expected).reduce((a, b) => a > b ? a : b);
 
   factory ForecastGroup.fromJson(Map<String, dynamic> json) {
     final rawHours = json['hours'];
@@ -172,7 +179,8 @@ class OccupancyForecast extends Equatable {
       generatedAt: _date(json['generated_at']),
       groups: [
         for (final item in rawGroups)
-          if (item is Map) ForecastGroup.fromJson(Map<String, dynamic>.from(item)),
+          if (item is Map)
+            ForecastGroup.fromJson(Map<String, dynamic>.from(item)),
       ],
     );
   }

@@ -26,10 +26,7 @@ Map<String, dynamic> _row({
 void main() {
   test('Success: parses every status', () {
     for (final status in WaitlistStatus.values) {
-      expect(
-        WaitlistEntry.fromJson(_row(status: status.name)).status,
-        status,
-      );
+      expect(WaitlistEntry.fromJson(_row(status: status.name)).status, status);
     }
   });
 
@@ -41,10 +38,7 @@ void main() {
   });
 
   test('Success: contact line joins name and phone', () {
-    expect(
-      WaitlistEntry.fromJson(_row()).contactLine,
-      'Ana · 3001112233',
-    );
+    expect(WaitlistEntry.fromJson(_row()).contactLine, 'Ana · 3001112233');
     expect(
       WaitlistEntry.fromJson(_row()..['customer_name'] = '').contactLine,
       '3001112233',

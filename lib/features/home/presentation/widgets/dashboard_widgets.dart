@@ -1542,14 +1542,18 @@ class _OccupancyForecastCardState extends State<OccupancyForecastCard> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(l10n.homeForecastTitle, style: textTheme.titleSmall),
+                          Text(
+                            l10n.homeForecastTitle,
+                            style: textTheme.titleSmall,
+                          ),
                           Text(
                             l10n.homeForecastHint,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: textTheme.bodySmall?.copyWith(
-                              color:
-                                  Theme.of(context).colorScheme.onSurfaceVariant,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
                             ),
                           ),
                         ],
@@ -1585,8 +1589,7 @@ class _OccupancyForecastCardState extends State<OccupancyForecastCard> {
   List<Widget> _content(BuildContext context, OccupancyForecast forecast) {
     final l10n = context.l10n;
     final theme = Theme.of(context);
-    final selected =
-        forecast.groupOf(_group ?? '') ?? forecast.groups.first;
+    final selected = forecast.groupOf(_group ?? '') ?? forecast.groups.first;
     final first = forecast.firstToFill;
     final headline = first == null
         ? l10n.homeForecastNotFull
@@ -1677,10 +1680,15 @@ class _ForecastBars extends StatelessWidget {
                         child: Align(
                           alignment: Alignment.bottomCenter,
                           child: FractionallySizedBox(
-                            heightFactor: (group.hours[index].expected / capacity)
-                                .clamp(0.04, 1.0),
+                            heightFactor:
+                                (group.hours[index].expected / capacity).clamp(
+                                  0.04,
+                                  1.0,
+                                ),
                             child: Container(
-                              key: Key('forecast-bar-${group.hours[index].hour}'),
+                              key: Key(
+                                'forecast-bar-${group.hours[index].hour}',
+                              ),
                               decoration: BoxDecoration(
                                 color: switch (group.hours[index].level) {
                                   ForecastLevel.full => scheme.error,

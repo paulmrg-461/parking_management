@@ -143,8 +143,10 @@ void main() {
 
     await cubit.leave();
 
-    expect((cubit.state as PublicWaitlistReady).entry?.status,
-        WaitlistStatus.left);
+    expect(
+      (cubit.state as PublicWaitlistReady).entry?.status,
+      WaitlistStatus.left,
+    );
   });
 
   test('Success: polling refreshes the turn', () async {

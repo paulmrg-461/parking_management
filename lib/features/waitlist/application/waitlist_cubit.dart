@@ -46,8 +46,7 @@ final class WaitlistLoaded extends WaitlistState {
 final class WaitlistFailure extends WaitlistState {
   const WaitlistFailure(this.message, {this.failure});
 
-  WaitlistFailure.of(Failure failure)
-    : this(failure.message, failure: failure);
+  WaitlistFailure.of(Failure failure) : this(failure.message, failure: failure);
 
   final String message;
   final Failure? failure;
@@ -74,7 +73,8 @@ class WaitlistCubit extends ResilientCubit<WaitlistState> {
   }
 
   /// Gives the offered space to the customer; the board reloads after.
-  Future<PublicReservation?> claim(int id) => _submit(() => _repository.claim(id));
+  Future<PublicReservation?> claim(int id) =>
+      _submit(() => _repository.claim(id));
 
   Future<void> remove(int id) => _submit(() => _repository.remove(id));
 

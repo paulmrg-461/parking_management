@@ -24,9 +24,7 @@ void registerWaitlistModule(GetIt sl) {
       () => WaitlistRepositoryImpl(sl<WaitlistRemoteDataSource>()),
     )
     ..registerLazySingleton<PublicWaitlistRepository>(
-      () => PublicWaitlistRepositoryImpl(
-        sl<PublicWaitlistRemoteDataSource>(),
-      ),
+      () => PublicWaitlistRepositoryImpl(sl<PublicWaitlistRemoteDataSource>()),
     )
     ..registerFactory<WaitlistCubit>(
       () => WaitlistCubit(sl<WaitlistRepository>()),

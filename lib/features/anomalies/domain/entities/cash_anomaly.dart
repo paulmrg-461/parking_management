@@ -109,7 +109,8 @@ class CashAnomaly extends Equatable {
     final details = json['details'];
     return CashAnomaly(
       id: (json['id'] as num?)?.toInt() ?? 0,
-      rule: AnomalyRule.tryParse(json['rule'] as String?) ??
+      rule:
+          AnomalyRule.tryParse(json['rule'] as String?) ??
           AnomalyRule.zeroCharge,
       severity: AnomalySeverity.parse(json['severity'] as String?),
       status: AnomalyStatus.parse(json['status'] as String?),
@@ -119,9 +120,7 @@ class CashAnomaly extends Equatable {
       shiftId: (json['shift_id'] as num?)?.toInt(),
       sessionId: (json['session_id'] as num?)?.toInt(),
       plate: json['plate'] as String?,
-      details: details is Map
-          ? Map<String, dynamic>.from(details)
-          : const {},
+      details: details is Map ? Map<String, dynamic>.from(details) : const {},
       resolvedAt: date(json['resolved_at']),
       resolvedByName: json['resolved_by_name'] as String?,
       note: json['note'] as String?,
@@ -161,15 +160,14 @@ class AnomalyList extends Equatable {
   factory AnomalyList.fromJson(Map<String, dynamic> json) {
     final raw = json['items'];
     if (raw is! List) {
-      return AnomalyList(
-        openCount: (json['open_count'] as num?)?.toInt() ?? 0,
-      );
+      return AnomalyList(openCount: (json['open_count'] as num?)?.toInt() ?? 0);
     }
     return AnomalyList(
       openCount: (json['open_count'] as num?)?.toInt() ?? 0,
       items: [
         for (final item in raw)
-          if (item is Map) CashAnomaly.fromJson(Map<String, dynamic>.from(item)),
+          if (item is Map)
+            CashAnomaly.fromJson(Map<String, dynamic>.from(item)),
       ],
     );
   }

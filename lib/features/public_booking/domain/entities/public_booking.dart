@@ -105,9 +105,7 @@ class PublicForecast extends Equatable {
           : [
               for (final item in groups)
                 if (item is Map)
-                  PublicForecastGroup.fromJson(
-                    Map<String, dynamic>.from(item),
-                  ),
+                  PublicForecastGroup.fromJson(Map<String, dynamic>.from(item)),
             ],
     );
   }

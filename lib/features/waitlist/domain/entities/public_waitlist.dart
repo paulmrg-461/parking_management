@@ -43,7 +43,12 @@ class PublicWaitlistInfo extends Equatable {
   }
 
   @override
-  List<Object?> get props => [enabled, claimMinutes, notifyChannel, waitingByCategory];
+  List<Object?> get props => [
+    enabled,
+    claimMinutes,
+    notifyChannel,
+    waitingByCategory,
+  ];
 }
 
 /// The customer's own turn: the join answer plus the live status.

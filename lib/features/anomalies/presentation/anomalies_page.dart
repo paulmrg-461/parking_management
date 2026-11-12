@@ -96,9 +96,8 @@ class _AnomaliesPageState extends State<AnomaliesPage> {
                       key: Key('anomalies-status-${status.wire}'),
                       label: Text(_statusLabel(context, status)),
                       selected: loaded.status == status,
-                      onSelected: (_) => context
-                          .read<AnomaliesCubit>()
-                          .load(status: status),
+                      onSelected: (_) =>
+                          context.read<AnomaliesCubit>().load(status: status),
                     ),
                 ],
               ),
@@ -125,7 +124,9 @@ class _AnomaliesPageState extends State<AnomaliesPage> {
                           ),
                       ],
                       onChanged: (rule) => rule == null
-                          ? context.read<AnomaliesCubit>().load(clearFilters: true)
+                          ? context.read<AnomaliesCubit>().load(
+                              clearFilters: true,
+                            )
                           : context.read<AnomaliesCubit>().load(rule: rule),
                     ),
                   ),
@@ -146,14 +147,18 @@ class _AnomaliesPageState extends State<AnomaliesPage> {
                         for (final severity in AnomalySeverity.values)
                           DropdownMenuItem(
                             value: severity,
-                            child: Text(anomalySeverityLabel(context, severity)),
+                            child: Text(
+                              anomalySeverityLabel(context, severity),
+                            ),
                           ),
                       ],
                       onChanged: (severity) => severity == null
-                          ? context.read<AnomaliesCubit>().load(clearFilters: true)
-                          : context
-                                .read<AnomaliesCubit>()
-                                .load(severity: severity),
+                          ? context.read<AnomaliesCubit>().load(
+                              clearFilters: true,
+                            )
+                          : context.read<AnomaliesCubit>().load(
+                              severity: severity,
+                            ),
                     ),
                   ),
                 ],
@@ -176,8 +181,9 @@ class _AnomaliesPageState extends State<AnomaliesPage> {
               message: l10n.anomaliesEmpty,
               action: loaded.isFiltered
                   ? OutlinedButton(
-                      onPressed: () =>
-                          context.read<AnomaliesCubit>().load(clearFilters: true),
+                      onPressed: () => context.read<AnomaliesCubit>().load(
+                        clearFilters: true,
+                      ),
                       child: Text(l10n.anomaliesClearFilters),
                     )
                   : null,

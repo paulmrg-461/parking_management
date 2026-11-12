@@ -67,7 +67,6 @@ class FakeReportRepository implements ReportRepository {
   @override
   Future<PeriodComparison> getPeriodComparison({int months = 6}) async =>
       PeriodComparison.empty;
-
 }
 
 ForecastBacktest _backtest() => ForecastBacktest.fromJson({
@@ -86,7 +85,10 @@ ForecastBacktest _backtest() => ForecastBacktest.fromJson({
   ],
 });
 
-Future<ReportsCubit> _pump(WidgetTester tester, FakeReportRepository repository) async {
+Future<ReportsCubit> _pump(
+  WidgetTester tester,
+  FakeReportRepository repository,
+) async {
   final cubit = ReportsCubit(repository);
   addTearDown(cubit.close);
   final today = DateTime(2026, 11, 12);
