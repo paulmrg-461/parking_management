@@ -6245,4 +6245,804 @@ end $$;
 reset role;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
 
+-- 0108 Occupancy forecast.
+do $$
+declare
+    cat integer;
+    i integer;
+begin
+    -- A clean slate for the lot: no sessions, holds or bays leak in. Evidence
+    -- photos of earlier sections pin their session, so they go first.
+    delete from public.evidence_photos
+     where session_id in (select id from public.parking_sessions where lot_id = 1);
+    delete from public.parking_sessions where lot_id = 1;
+    delete from public.category_reservations where lot_id = 1;
+    -- The waitlist dispatch runs on capacity changes; an empty queue keeps the
+    -- forecast fixtures free of offers.
+    delete from public.reservation_waitlist;
+    delete from public.parking_spots where lot_id = 1;
+    delete from public.occupancy_profile;
+    delete from public.vehicles where plate like 'FC%';
+    update public.parking_settings
+       set car_capacity = 40, moto_capacity = 0, car_out_of_service = 0,
+           moto_out_of_service = 0, business_timezone = 'America/Bogota'
+     where lot_id = 1;
+    update public.forecast_settings
+       set enabled = true, history_weeks = 8, min_samples = 4,
+           blend_decay_pct = 85, full_threshold_pct = 100, public_enabled = true
+     where lot_id = 1;
+    select id into cat from public.categories where lot_id = 1 and name = 'car';
+    if cat is null then
+        insert into public.categories (name, capacity, lot_id)
+        values ('car', 0, 1) returning id into cat;
+    end if;
+    -- Earlier sections cap this category; the forecast measures the group.
+    update public.categories set capacity = 0 where id = cat;
+    perform set_config('app.fc_cat', cat::text, true);
+    -- 60 spare vehicles for the fixtures below.
+    for i in 1 .. 60 loop
+        insert into public.vehicles (plate, category_id)
+        values ('FC' || lpad(i::text, 3, '0'), cat);
+    end loop;
+end $$;
+
+-- forecast: success grid net occupancy
+do $$
+declare
+    vehicle integer;
+    open_vehicle integer;
+    long_vehicle integer;
+    tz text := 'America/Bogota';
+    yesterday date := date '2026-11-03';
+    occupancy integer;
+    last_hour integer := extract(hour from (now() at time zone 'America/Bogota'))::integer;
+begin
+    select id into vehicle from public.vehicles where plate = 'FC001';
+    insert into public.parking_sessions (vehicle_id, operator_id, status, lot_id,
+                                         entry_time, exit_time)
+    values (vehicle, 2, 'closed', 1,
+            timestamp '2026-11-03 09:30' at time zone tz,
+            timestamp '2026-11-03 11:10' at time zone tz);
+
+    select g.occupancy into occupancy from public.occupancy_grid(1, yesterday, yesterday) g
+     where g.group_name = 'car' and g.day = yesterday and g.hour = 10;
+    if occupancy <> 1 then
+        raise exception '10:00 should be 1, got %', occupancy;
+    end if;
+    select g.occupancy into occupancy from public.occupancy_grid(1, yesterday, yesterday) g
+     where g.group_name = 'car' and g.day = yesterday and g.hour = 11;
+    if occupancy <> 1 then
+        raise exception '11:00 should be 1, got %', occupancy;
+    end if;
+    select g.occupancy into occupancy from public.occupancy_grid(1, yesterday, yesterday) g
+     where g.group_name = 'car' and g.day = yesterday and g.hour = 9;
+    if occupancy <> 0 then
+        raise exception '09:00 should be 0, got %', occupancy;
+    end if;
+    select g.occupancy into occupancy from public.occupancy_grid(1, yesterday, yesterday) g
+     where g.group_name = 'car' and g.day = yesterday and g.hour = 12;
+    if occupancy <> 0 then
+        raise exception '12:00 should be 0, got %', occupancy;
+    end if;
+
+    -- An open session counts up to the last full hour.
+    select id into open_vehicle from public.vehicles where plate = 'FC002';
+    insert into public.parking_sessions (vehicle_id, operator_id, status, lot_id, entry_time)
+    values (open_vehicle, 2, 'open', 1, now() - interval '2 hours');
+    select g.occupancy into occupancy
+      from public.occupancy_grid(1, (now() at time zone tz)::date,
+                                 (now() at time zone tz)::date) g
+     where g.group_name = 'car' and g.day = (now() at time zone tz)::date
+       and g.hour = last_hour - 1;
+    if occupancy < 1 then
+        raise exception 'the open session did not count in the last hour';
+    end if;
+
+    -- A 10 day open session only contributes its first 72 hours.
+    select id into long_vehicle from public.vehicles where plate = 'FC003';
+    insert into public.parking_sessions (vehicle_id, operator_id, status, lot_id, entry_time)
+    values (long_vehicle, 2, 'open', 1, now() - interval '10 days');
+    select g.occupancy into occupancy
+      from public.occupancy_grid(1, (now() at time zone tz)::date - 4,
+                                 (now() at time zone tz)::date - 4) g
+     where g.group_name = 'car' and g.day = (now() at time zone tz)::date - 4
+       and g.hour = 12;
+    if occupancy <> 0 then
+        raise exception 'a 10 day session still counted after 72 hours: %', occupancy;
+    end if;
+
+    delete from public.parking_sessions where lot_id = 1;
+end $$;
+
+-- forecast: success profile median robust
+do $$
+declare
+    week integer;
+    n integer;
+    values integer[] := array[33, 35, 36, 38, 31, 35, 39, 60];
+    median numeric;
+    samples integer;
+    wed_dow integer := extract(dow from date '2026-11-04')::integer;
+begin
+    delete from public.occupancy_profile;
+    for week in 1 .. 8 loop
+        n := values[week];
+        insert into public.parking_sessions (
+            vehicle_id, operator_id, status, lot_id, entry_time, exit_time
+        )
+        -- The eight Wednesdays that end yesterday (yesterday is a Wednesday
+        -- in this fixture), so every one of them has a sample.
+        select v.id, 2, 'closed', 1,
+               (date '2026-11-11' - 7 * (week - 1))::timestamp + interval '17 hours',
+               (date '2026-11-11' - 7 * (week - 1))::timestamp + interval '18 hours'
+          from public.vehicles v
+         where v.category_id = current_setting('app.fc_cat')::integer
+         order by v.id
+         limit n;
+    end loop;
+
+    perform public.refresh_occupancy_profile(true);
+
+    select p.median_occupancy, p.samples into median, samples
+      from public.occupancy_profile p
+     where p.lot_id = 1 and p.group_name = 'car' and p.dow = wed_dow and p.hour = 17;
+    if median is null then
+        raise exception 'the 17:00 cell was not written';
+    end if;
+    -- 33, 35, 36, 38, 31, 35, 39, 60 sorted: 31, 33, 35, 35, 36, 38, 39, 60.
+    -- The even sample's median is the average of the two middle values
+    -- (35 and 36), which is what percentile_cont(0.5) returns.
+    if median <> 35.50 then
+        raise exception 'the median should be 35.50, got %', median;
+    end if;
+    if samples <> 8 then
+        raise exception 'the cell should have 8 samples, got %', samples;
+    end if;
+    delete from public.parking_sessions where lot_id = 1;
+end $$;
+
+-- forecast: success refresh throttle
+do $$
+declare
+    first_run integer;
+    second_run integer;
+    forced integer;
+    before_ts timestamptz;
+    after_ts timestamptz;
+begin
+    select min(p.computed_at) into before_ts from public.occupancy_profile p where p.lot_id = 1;
+    second_run := public.refresh_occupancy_profile();
+    select min(p.computed_at) into after_ts from public.occupancy_profile p where p.lot_id = 1;
+    if second_run <> 0 then
+        raise exception 'a throttled refresh rewrote % rows', second_run;
+    end if;
+    if after_ts is distinct from before_ts then
+        raise exception 'a throttled refresh touched computed_at';
+    end if;
+    first_run := public.refresh_occupancy_profile(true);
+    if first_run = 0 then
+        raise exception 'a forced refresh wrote nothing';
+    end if;
+end $$;
+
+-- forecast: failure first session date (insufficient samples)
+do $$
+declare
+    result jsonb;
+begin
+    -- A lot whose first session is 16 days old has three Wednesdays in the
+    -- window: Oct 28, Nov 4 and Nov 11. Everything before that date is
+    -- excluded by the grid filter.
+    delete from public.parking_sessions where lot_id = 1;
+    insert into public.parking_sessions (vehicle_id, operator_id, status, lot_id, entry_time, exit_time)
+    select v.id, 2, 'closed', 1,
+           (now() at time zone 'America/Bogota') - interval '16 days',
+           (now() at time zone 'America/Bogota') - interval '16 days' + interval '1 hour'
+      from public.vehicles v
+     where v.plate = 'FC001';
+    perform public.refresh_occupancy_profile(true);
+    result := public.forecast_compute(1, 12, timestamp '2026-11-04 14:20' at time zone 'America/Bogota');
+    if result ->> 'status' <> 'insufficient_history' then
+        raise exception 'three samples should be insufficient: %', result;
+    end if;
+    if jsonb_array_length(result -> 'groups') <> 0 then
+        raise exception 'an insufficient group was returned';
+    end if;
+end $$;
+
+-- forecast: success worked example
+do $$
+declare
+    tz text := 'America/Bogota';
+    result jsonb;
+    grp jsonb;
+    expected jsonb;
+    levels jsonb;
+    v integer;
+    i integer;
+    profile numeric[] := array[24, 27, 31, 35, 38, 36, 30, 22, 15, 10, 7, 6, 5];
+    hours integer[] := array[14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 0, 1, 2];
+    dow_wed integer := extract(dow from date '2026-11-04')::integer;
+    dow_thu integer := extract(dow from date '2026-11-05')::integer;
+begin
+    delete from public.parking_sessions where lot_id = 1;
+    delete from public.occupancy_profile;
+    for i in 1 .. 13 loop
+        insert into public.occupancy_profile
+               (lot_id, group_name, dow, hour, median_occupancy, samples, computed_at)
+        values (1, 'car',
+                case when hours[i] >= 14 then dow_wed else dow_thu end,
+                hours[i], profile[i], 8, now());
+    end loop;
+    -- 31 cars inside: 31 open sessions.
+    insert into public.parking_sessions (vehicle_id, operator_id, status, lot_id, entry_time)
+    select v.id, 2, 'open', 1, timestamp '2026-11-04 13:00' at time zone tz
+      from public.vehicles v
+     where v.category_id = current_setting('app.fc_cat')::integer
+     order by v.id
+     limit 31;
+
+    result := public.forecast_compute(
+        1, 12, timestamp '2026-11-04 14:20' at time zone tz
+    );
+    if result ->> 'status' <> 'ok' then
+        raise exception 'the worked example should be ok: %', result;
+    end if;
+    grp := result -> 'groups' -> 0;
+    expected := jsonb_path_query_array(grp -> 'hours', '$[*].expected');
+    if expected::text <> '[32, 36, 39, 40, 39, 32, 24, 17, 11, 8, 7, 6]' then
+        raise exception 'expected levels are wrong: %', expected;
+    end if;
+    if grp ->> 'full_at' <> '17:30' then
+        raise exception 'full_at should be 17:30, got %', grp ->> 'full_at';
+    end if;
+    if (grp ->> 'full_now')::boolean then
+        raise exception 'full_now should be false';
+    end if;
+    if (grp ->> 'capacity')::integer <> 40 or (grp ->> 'current')::integer <> 31 then
+        raise exception 'capacity/current are wrong: %', grp;
+    end if;
+    if grp ->> 'confidence' <> 'high' or (grp ->> 'samples')::integer <> 8 then
+        raise exception 'confidence should be high/8: %', grp;
+    end if;
+    select h into levels from jsonb_array_elements(grp -> 'hours') h
+     where (h ->> 'hour')::integer = 18;
+    if levels ->> 'level' <> 'full' then
+        raise exception '18:00 should be full: %', levels;
+    end if;
+end $$;
+
+-- forecast: success not full / full now / low confidence / midnight
+do $$
+declare
+    tz text := 'America/Bogota';
+    result jsonb;
+    grp jsonb;
+    v integer;
+begin
+    -- Capacity 80: no crossing in the horizon.
+    update public.parking_settings set car_capacity = 80 where lot_id = 1;
+    result := public.forecast_compute(1, 12, timestamp '2026-11-04 14:20' at time zone tz);
+    grp := result -> 'groups' -> 0;
+    if grp -> 'full_at' <> 'null'::jsonb then
+        raise exception 'full_at should be null with capacity 80: %', grp;
+    end if;
+
+    -- Full now: 40 of 40.
+    update public.parking_settings set car_capacity = 40 where lot_id = 1;
+    delete from public.parking_sessions where lot_id = 1;
+    insert into public.parking_sessions (vehicle_id, operator_id, status, lot_id, entry_time)
+    select v.id, 2, 'open', 1, timestamp '2026-11-04 13:00' at time zone tz
+      from public.vehicles v
+     where v.category_id = current_setting('app.fc_cat')::integer
+     order by v.id
+     limit 40;
+    result := public.forecast_compute(1, 12, timestamp '2026-11-04 14:20' at time zone tz);
+    grp := result -> 'groups' -> 0;
+    if not (grp ->> 'full_now')::boolean then
+        raise exception '40 of 40 should be full now: %', grp;
+    end if;
+
+    -- Low confidence with four samples, medium with six.
+    update public.occupancy_profile set samples = 4 where lot_id = 1;
+    result := public.forecast_compute(1, 12, timestamp '2026-11-04 14:20' at time zone tz);
+    if (result -> 'groups' -> 0 ->> 'confidence') <> 'low' then
+        raise exception 'four samples should be low confidence';
+    end if;
+    update public.occupancy_profile set samples = 6 where lot_id = 1;
+    result := public.forecast_compute(1, 12, timestamp '2026-11-04 14:20' at time zone tz);
+    if (result -> 'groups' -> 0 ->> 'confidence') <> 'medium' then
+        raise exception 'six samples should be medium confidence';
+    end if;
+    update public.occupancy_profile set samples = 8 where lot_id = 1;
+
+    -- Midnight: horizon 6 from 22:30 needs the Thursday cells.
+    insert into public.occupancy_profile
+           (lot_id, group_name, dow, hour, median_occupancy, samples, computed_at)
+    select 1, 'car', extract(dow from date '2026-11-05')::integer, h, 5, 8, now()
+      from generate_series(3, 5) h
+    on conflict (lot_id, group_name, dow, hour) do update
+       set median_occupancy = excluded.median_occupancy;
+    delete from public.parking_sessions where lot_id = 1;
+    result := public.forecast_compute(1, 6, timestamp '2026-11-04 22:30' at time zone tz);
+    grp := result -> 'groups' -> 0;
+    if grp is null then
+        raise exception 'the midnight horizon returned no group: % (profile: %)', result,
+            (select jsonb_agg(jsonb_build_object('dow', p.dow, 'hour', p.hour, 'v', p.median_occupancy))
+               from public.occupancy_profile p where p.lot_id = 1 and p.group_name = 'car'
+                and p.hour in (22, 23, 0, 1, 2, 3, 4));
+    end if;
+    if (grp -> 'hours' -> 0 ->> 'hour')::integer <> 23
+       or (grp -> 'hours' -> 1 ->> 'hour')::integer <> 0 then
+        raise exception 'the midnight hours are wrong: %', grp -> 'hours';
+    end if;
+end $$;
+
+-- forecast: failure no capacity and disabled
+do $$
+declare
+    result jsonb;
+begin
+    update public.parking_settings set car_capacity = 0, moto_capacity = 0 where lot_id = 1;
+    result := public.forecast_compute(1, 12, timestamp '2026-11-04 14:20' at time zone 'America/Bogota');
+    if result ->> 'status' <> 'no_capacity' then
+        raise exception 'no capacity should be reported: %', result;
+    end if;
+    update public.parking_settings set car_capacity = 40 where lot_id = 1;
+    update public.forecast_settings set enabled = false where lot_id = 1;
+    result := public.forecast_compute(1, 12, timestamp '2026-11-04 14:20' at time zone 'America/Bogota');
+    if result ->> 'status' <> 'disabled' then
+        raise exception 'disabled should be reported: %', result;
+    end if;
+    update public.forecast_settings set enabled = true where lot_id = 1;
+end $$;
+
+-- forecast: failure horizon
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    begin
+        perform public.occupancy_forecast(0);
+        raise exception 'a zero horizon was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidForecastHorizonError%' then raise; end if;
+    end;
+    begin
+        perform public.occupancy_forecast(25);
+        raise exception 'a 25 hour horizon was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidForecastHorizonError%' then raise; end if;
+    end;
+    if (public.occupancy_forecast(12) ->> 'status') is null then
+        raise exception 'the staff RPC returned no status';
+    end if;
+end $$;
+reset role;
+
+-- forecast: success group_capacity
+do $$
+declare
+    active integer;
+begin
+    if public.group_capacity(1, 'car') <> 40 then
+        raise exception 'settings capacity should be 40';
+    end if;
+    insert into public.parking_spots (lot_id, code, group_name, grid_row, grid_col, status)
+    values (1, 'FCB1', 'car', 70, 1, 'active'),
+           (1, 'FCB2', 'car', 70, 2, 'active'),
+           (1, 'FCB3', 'car', 70, 3, 'out_of_service');
+    if public.group_capacity(1, 'car') <> 2 then
+        raise exception 'active bays should win: %', public.group_capacity(1, 'car');
+    end if;
+    delete from public.parking_spots where lot_id = 1;
+    if public.group_capacity(1, 'moto') <> 0 then
+        raise exception 'moto capacity should be 0';
+    end if;
+    if public.group_capacity(1, 'heavy') <> 0 then
+        raise exception 'heavy has no capacity';
+    end if;
+    update public.parking_settings set car_capacity = 10, car_out_of_service = 3 where lot_id = 1;
+    if public.group_capacity(1, 'car') <> 7 then
+        raise exception 'out of service bays should be subtracted: %', public.group_capacity(1, 'car');
+    end if;
+    update public.parking_settings set car_capacity = 40, car_out_of_service = 0 where lot_id = 1;
+end $$;
+
+-- forecast: success public block
+do $$
+declare
+    payload jsonb;
+    fc jsonb;
+    grp jsonb;
+    hour jsonb;
+begin
+    -- Rebuild the worked-example profile for the public payload.
+    delete from public.parking_sessions where lot_id = 1;
+    delete from public.occupancy_profile;
+    insert into public.occupancy_profile
+           (lot_id, group_name, dow, hour, median_occupancy, samples, computed_at)
+    select 1, 'car', extract(dow from date '2026-11-04' + (h / 24) * interval '1 day')::integer,
+           h % 24, 20, 8, now()
+      from generate_series(14, 37) h;
+    update public.forecast_settings set public_enabled = true where lot_id = 1;
+
+    payload := public.public_availability(1);
+    fc := payload -> 'forecast';
+    if fc is null then
+        raise exception 'public_availability lost the forecast block';
+    end if;
+    if payload -> 'lot' is null or payload -> 'categories' is null
+       or payload -> 'max_reservation_hours' is null then
+        raise exception 'the wrapper lost existing keys: %', payload;
+    end if;
+    if fc ->> 'status' not in ('ok', 'insufficient_history') then
+        raise exception 'unexpected public status: %', fc;
+    end if;
+    if jsonb_array_length(fc -> 'groups') > 0 then
+        grp := fc -> 'groups' -> 0;
+        if (select array_agg(k order by k) from jsonb_object_keys(grp) k)
+           <> array['confidence', 'full_at', 'full_now', 'group', 'hours'] then
+            raise exception 'the public group leaks keys: %', grp;
+        end if;
+        hour := grp -> 'hours' -> 0;
+        if (select array_agg(k order by k) from jsonb_object_keys(hour) k)
+           <> array['hour', 'level'] then
+            raise exception 'the public hour leaks keys: %', hour;
+        end if;
+        if grp ? 'capacity' or grp ? 'current' or grp ? 'samples'
+           or hour ? 'expected' then
+            raise exception 'the public block leaked a count';
+        end if;
+    end if;
+end $$;
+
+-- forecast: success public hidden and unknown lot
+do $$
+declare
+    payload jsonb;
+begin
+    update public.forecast_settings set public_enabled = false where lot_id = 1;
+    if public.public_forecast_block(1) ->> 'status' <> 'hidden' then
+        raise exception 'public_enabled false did not hide the block';
+    end if;
+    update public.forecast_settings set public_enabled = true where lot_id = 1;
+    if public.public_forecast_block(999999) ->> 'status' <> 'hidden' then
+        raise exception 'an unknown lot should be hidden';
+    end if;
+    if public.public_availability(999999) is not null then
+        raise exception 'an unknown lot returned availability';
+    end if;
+end $$;
+
+-- forecast: security staff rpc
+set local role anon;
+do $$
+begin
+    begin
+        perform public.occupancy_forecast(12);
+        raise exception 'anon read the staff forecast';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+set local role authenticated;
+do $$
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    if (public.occupancy_forecast(12) ->> 'lot_id')::integer <> 1 then
+        raise exception 'the operator forecast answered another lot';
+    end if;
+    perform set_config('request.headers', '{"x-lot-id":"999999"}', true);
+    begin
+        perform public.occupancy_forecast(12);
+        raise exception 'a foreign lot header was accepted';
+    exception when others then
+        if sqlerrm not like '%LotRequiredError%' then raise; end if;
+    end;
+end $$;
+reset role;
+
+-- forecast: security internals
+set local role authenticated;
+do $$
+begin
+    begin
+        perform public.forecast_compute(1, 12, now());
+        raise exception 'authenticated called an internal helper';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform public.public_forecast_block(1);
+        raise exception 'authenticated called the public block';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform public.public_availability_base(1);
+        raise exception 'authenticated called the base availability';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform public.refresh_occupancy_profile(true);
+        raise exception 'authenticated refreshed the profile';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+set local role anon;
+do $$
+begin
+    begin
+        perform public.occupancy_grid(1, current_date - 1, current_date - 1);
+        raise exception 'anon read the grid';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform public.group_capacity(1, 'car');
+        raise exception 'anon read the capacity helper';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
+-- forecast: security rls
+do $$
+begin
+    insert into public.occupancy_profile
+           (lot_id, group_name, dow, hour, median_occupancy, samples)
+    values (2, 'car', 3, 10, 12, 8)
+    on conflict (lot_id, group_name, dow, hour) do nothing;
+end $$;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+set local role authenticated;
+do $$
+declare
+    settings_rows integer;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    if exists (select 1 from public.occupancy_profile p where p.lot_id <> 1) then
+        raise exception 'the operator saw another lot profile';
+    end if;
+    select count(*) into settings_rows from public.forecast_settings;
+    if settings_rows <> 0 then
+        raise exception 'a non-admin read the forecast settings';
+    end if;
+end $$;
+reset role;
+set local role anon;
+do $$
+begin
+    begin
+        perform 1 from public.occupancy_profile limit 1;
+        raise exception 'anon read the profile table';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform 1 from public.forecast_settings limit 1;
+        raise exception 'anon read the settings table';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- forecast: success backtest
+do $$
+declare
+    result jsonb;
+    grp jsonb;
+    first_day date;
+begin
+    delete from public.parking_sessions where lot_id = 1;
+    delete from public.occupancy_profile;
+    -- One old session gives the lot a first day; everything else stays quiet,
+    -- so every point has 0 error.
+    insert into public.parking_sessions (vehicle_id, operator_id, status, lot_id, entry_time, exit_time)
+    select v.id, 2, 'closed', 1,
+           (now() at time zone 'America/Bogota') - interval '70 days',
+           (now() at time zone 'America/Bogota') - interval '70 days' + interval '1 hour'
+      from public.vehicles v
+     where v.plate = 'FC001';
+    result := public.occupancy_forecast_backtest(4);
+    grp := result -> 'groups' -> 0;
+    if grp is null then
+        raise exception 'the backtest returned no group: %', result;
+    end if;
+    if (grp ->> 'points')::integer <= 0 then
+        raise exception 'the backtest evaluated no points: %', grp;
+    end if;
+    if (grp ->> 'mae')::numeric <> 0 then
+        raise exception 'a constant occupancy should give mae 0: %', grp;
+    end if;
+    if jsonb_array_length(grp -> 'by_lead') = 0 then
+        raise exception 'the backtest returned no leads: %', grp;
+    end if;
+end $$;
+
+-- forecast: failure backtest range and admin only, no history
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+set local role authenticated;
+do $$
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    begin
+        perform public.occupancy_forecast_backtest(4);
+        raise exception 'an operator ran the backtest';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    begin
+        perform public.occupancy_forecast_backtest(0);
+        raise exception 'a zero week backtest was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidReportRangeError%' then raise; end if;
+    end;
+    begin
+        perform public.occupancy_forecast_backtest(13);
+        raise exception 'a 13 week backtest was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidReportRangeError%' then raise; end if;
+    end;
+end $$;
+reset role;
+
+-- forecast: failure backtest no history
+do $$
+declare
+    result jsonb;
+begin
+    delete from public.parking_sessions where lot_id = 1;
+    result := public.occupancy_forecast_backtest(4);
+    if jsonb_array_length(result -> 'groups') <> 0 then
+        raise exception 'a lot without history returned groups: %', result;
+    end if;
+end $$;
+
+-- forecast: success settings
+do $$
+begin
+    -- The default-row path is exercised by removing it as the owner.
+    delete from public.forecast_settings where lot_id = 1;
+end $$;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+declare
+    defaults jsonb;
+    saved jsonb;
+    profile_rows integer;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    defaults := public.get_forecast_settings();
+    if (defaults ->> 'history_weeks')::integer <> 8
+       or not (defaults ->> 'enabled')::boolean then
+        raise exception 'the settings defaults changed: %', defaults;
+    end if;
+    saved := public.set_forecast_settings('{"history_weeks": 6}');
+    if (saved ->> 'history_weeks')::integer <> 6
+       or (saved ->> 'min_samples')::integer <> 4 then
+        raise exception 'a partial update failed: %', saved;
+    end if;
+    perform public.set_forecast_settings('{"history_weeks": 8}');
+end $$;
+reset role;
+
+-- Changing a setting invalidates the stored profile (checked as the owner).
+do $$
+declare
+    profile_rows integer;
+begin
+    insert into public.occupancy_profile
+           (lot_id, group_name, dow, hour, median_occupancy, samples)
+    values (1, 'car', 1, 1, 5, 5)
+    on conflict (lot_id, group_name, dow, hour) do nothing;
+    perform set_config('app.fc_profile_seeded', '1', true);
+end $$;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    perform public.set_forecast_settings('{"history_weeks": 7}');
+    perform public.set_forecast_settings('{"history_weeks": 8}');
+end $$;
+reset role;
+do $$
+declare
+    profile_rows integer;
+begin
+    select count(*) into profile_rows from public.occupancy_profile where lot_id = 1;
+    if profile_rows <> 0 then
+        raise exception 'changing the history did not invalidate the profile';
+    end if;
+end $$;
+
+-- forecast: failure settings
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    begin
+        perform public.set_forecast_settings('{"history_weeks": 4, "min_samples": 8}');
+        raise exception 'min_samples > history_weeks was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidForecastSettingError%' then raise; end if;
+    end;
+    begin
+        perform public.set_forecast_settings('{"bogus": 1}');
+        raise exception 'an unknown setting was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidForecastSettingError%' then raise; end if;
+    end;
+    begin
+        perform public.set_forecast_settings('{"history_weeks": "eight"}');
+        raise exception 'a string for an integer was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidForecastSettingError%'
+           and sqlerrm not like '%invalid input syntax%' then raise; end if;
+    end;
+    begin
+        perform public.set_forecast_settings('{"blend_decay_pct": 100}');
+        raise exception 'a 100 percent decay was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidForecastSettingError%' then raise; end if;
+    end;
+end $$;
+reset role;
+
+-- forecast: security settings (operator only)
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+set local role authenticated;
+do $$
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    begin
+        perform public.set_forecast_settings('{"enabled": false}');
+        raise exception 'an operator changed the forecast settings';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- forecast: success audit
+set local role authenticated;
+do $$
+declare
+    rows integer;
+    diff jsonb;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    perform public.set_forecast_settings('{"full_threshold_pct": 95}');
+    select count(*) into rows
+      from public.audit_log a
+     where a.table_name = 'forecast_settings'
+       and a.lot_id = 1
+       and a.actor_id = 1;
+    if rows = 0 then
+        raise exception 'the settings change was not audited';
+    end if;
+    select a.after into diff
+      from public.audit_log a
+     where a.table_name = 'forecast_settings' and a.lot_id = 1
+     order by a.id desc limit 1;
+    if diff ->> 'full_threshold_pct' <> '95' then
+        raise exception 'the audit row has no changed column: %', diff;
+    end if;
+    perform public.set_forecast_settings('{"full_threshold_pct": 100}');
+end $$;
+reset role;
+
+
 rollback;
