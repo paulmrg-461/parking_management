@@ -13,6 +13,7 @@ import 'package:parking_management/features/check_out/domain/entities/slot_board
 import 'package:parking_management/features/check_out/domain/entities/today_summary.dart';
 import 'package:parking_management/features/check_out/domain/entities/dashboard_trend.dart';
 import 'package:parking_management/features/check_out/domain/entities/lot_setup_status.dart';
+import 'package:parking_management/features/check_out/domain/entities/occupancy_forecast.dart';
 import 'package:parking_management/features/check_out/domain/repositories/check_out_repository.dart';
 
 class _FakeCheckOutRepository implements CheckOutRepository {
@@ -37,6 +38,10 @@ class _FakeCheckOutRepository implements CheckOutRepository {
 
   @override
   Future<LotSetupStatus> lotSetup() async => LotSetupStatus.unknown;
+
+  @override
+  Future<OccupancyForecast> occupancyForecast({int horizon = 12}) async =>
+      OccupancyForecast.unavailable;
 
   @override
   Future<SlotBoard> slotBoard() async => SlotBoard.empty;

@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/features/reports/application/reports_cubit.dart';
 import 'package:parking_management/features/reports/domain/entities/hourly_traffic.dart';
+import 'package:parking_management/features/reports/domain/entities/forecast_backtest.dart';
 import 'package:parking_management/features/reports/domain/entities/period_comparison.dart';
 import 'package:parking_management/features/reports/domain/entities/reservation_report.dart';
 import 'package:parking_management/features/reports/domain/entities/occupancy_report.dart';
@@ -10,6 +11,8 @@ import 'package:parking_management/features/reports/domain/entities/whatsapp_rep
 import 'package:parking_management/features/reports/domain/repositories/report_repository.dart';
 
 class _FakeReportRepository implements ReportRepository {
+  ForecastBacktest backtestToReturn = ForecastBacktest.empty;
+  bool failBacktest = false;
   _FakeReportRepository({
     this.revenueToReturn,
     this.previousRevenue,
@@ -58,6 +61,13 @@ class _FakeReportRepository implements ReportRepository {
   }) async => WhatsappReport.empty;
 
   @override
+  Future<ForecastBacktest> getForecastBacktest({int weeks = 4}) async {
+    if (failBacktest) {
+      throw const NetworkFailure('offline');
+    }
+    return backtestToReturn;
+  }
+
   Future<PeriodComparison> getPeriodComparison({int months = 6}) async {
     comparisonMonthsRequested = months;
     final error = failComparison;

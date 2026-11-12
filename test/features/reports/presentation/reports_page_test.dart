@@ -6,6 +6,7 @@ import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/core/theme/contrast.dart';
 import 'package:parking_management/features/reports/application/reports_cubit.dart';
 import 'package:parking_management/features/reports/domain/entities/hourly_traffic.dart';
+import 'package:parking_management/features/reports/domain/entities/forecast_backtest.dart';
 import 'package:parking_management/features/reports/domain/entities/period_comparison.dart';
 import 'package:parking_management/features/reports/domain/entities/reservation_report.dart';
 import 'package:parking_management/features/reports/domain/entities/occupancy_report.dart';
@@ -19,6 +20,8 @@ import 'package:parking_management/features/reports/presentation/reports_page.da
 import '../../../helpers/test_app.dart';
 
 class _FakeReportRepository implements ReportRepository {
+  ForecastBacktest backtestToReturn = ForecastBacktest.empty;
+  bool failBacktest = false;
   _FakeReportRepository(this.revenue, this.occupancy);
 
   final RevenueReport revenue;
@@ -43,6 +46,13 @@ class _FakeReportRepository implements ReportRepository {
   int _revenueCalls = 0;
 
   @override
+  Future<ForecastBacktest> getForecastBacktest({int weeks = 4}) async {
+    if (failBacktest) {
+      throw const NetworkFailure('offline');
+    }
+    return backtestToReturn;
+  }
+
   Future<PeriodComparison> getPeriodComparison({int months = 6}) async {
     comparisonMonthsRequested = months;
     return comparison;

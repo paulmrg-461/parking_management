@@ -42,6 +42,8 @@ while true; do
   run waitlist_expire
   run waitlist_dispatch_all
   run purge_waitlist
+  # Rebuilds the occupancy profile when it is older than six hours.
+  run refresh_occupancy_profile
   run purge_expired_idempotency
   run purge_stale_notifications
   run purge_client_error_reports

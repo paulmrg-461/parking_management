@@ -1,5 +1,6 @@
 import '../entities/hourly_traffic.dart';
 import '../entities/occupancy_report.dart';
+import '../entities/forecast_backtest.dart';
 import '../entities/period_comparison.dart';
 import '../entities/reservation_report.dart';
 import '../entities/revenue_report.dart';
@@ -24,6 +25,9 @@ abstract class ReportRepository {
   /// Trailing [months] calendar months of the active lot, each with the month
   /// before and the same month last year (`rpc/report_period_comparison`).
   Future<PeriodComparison> getPeriodComparison({int months = 6});
+
+  /// Forecast accuracy replayed over the last [weeks] weeks.
+  Future<ForecastBacktest> getForecastBacktest({int weeks = 4});
 
   /// Holds created in the range, by origin and outcome.
   Future<ReservationReport> getReservationReport({

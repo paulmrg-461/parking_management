@@ -7,6 +7,7 @@ import 'package:parking_management/features/check_out/domain/entities/today_summ
 import 'package:parking_management/features/check_out/domain/entities/capacity_snapshot.dart';
 import 'package:parking_management/features/check_out/domain/entities/dashboard_trend.dart';
 import 'package:parking_management/features/check_out/domain/entities/lot_setup_status.dart';
+import 'package:parking_management/features/check_out/domain/entities/occupancy_forecast.dart';
 import 'package:parking_management/features/check_out/domain/entities/slot_board.dart';
 import 'package:parking_management/features/home/application/dashboard_cubit.dart';
 
@@ -347,5 +348,64 @@ void main() {
       final state = cubit.state as DashboardLoaded;
       expect(state.sessions.map(state.plateOf), ['PLT1', 'PLT2', 'PLT3']);
     });
+  });
+
+  test('Success: the forecast lands in DashboardLoaded', () async {
+    final repository = FakeCheckOutRepository(sessions: _sessions(1))
+      ..forecastToReturn = OccupancyForecast.fromJson({
+        'status': 'ok',
+        'groups': [
+          {
+            'group': 'car',
+            'capacity': 40,
+            'current': 31,
+            'confidence': 'high',
+            'samples': 8,
+            'full_now': false,
+            'full_at': '17:30',
+            'hours': [
+              {'hour': 15, 'expected': 32, 'level': 'busy'},
+            ],
+          },
+        ],
+      });
+    final cubit = DashboardCubit(repository);
+
+    await cubit.load();
+
+    final state = cubit.state as DashboardLoaded;
+    expect(state.forecast.hasForecast, isTrue);
+    expect(state.forecast.firstToFill?.fullAt, '17:30');
+    expect(repository.forecastCalls, 1);
+  });
+
+  test('Failure: a failing forecast degrades to unavailable', () async {
+    final repository = FakeCheckOutRepository(sessions: _sessions(1))
+      ..forecastError = const NetworkFailure('offline');
+    final cubit = DashboardCubit(repository);
+
+    await cubit.load();
+
+    final state = cubit.state as DashboardLoaded;
+    expect(state.forecast, OccupancyForecast.unavailable);
+    expect(state.openSessions, 1);
+  });
+
+  test('Success: the forecast is never written to the cache', () async {
+    final repository = FakeCheckOutRepository(sessions: _sessions(2))
+      ..forecastToReturn = OccupancyForecast.fromJson({
+        'status': 'ok',
+        'groups': [
+          {'group': 'car', 'capacity': 10, 'current': 1, 'hours': []},
+        ],
+      });
+    final cache = FakeDashboardCache();
+    final cubit = DashboardCubit(repository, cache: cache);
+
+    await cubit.load();
+
+    expect(cache.writes, 1);
+    // The cached snapshot has no forecast: an offline load shows none.
+    expect(cache.snapshot?.occupancy.totalOpen, 2);
   });
 }

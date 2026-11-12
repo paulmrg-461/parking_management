@@ -8,6 +8,7 @@ import '../../check_out/domain/entities/capacity_snapshot.dart';
 import '../../check_out/domain/entities/check_out_preview.dart';
 import '../../check_out/domain/entities/dashboard_trend.dart';
 import '../../check_out/domain/entities/lot_setup_status.dart';
+import '../../check_out/domain/entities/occupancy_forecast.dart';
 import '../../check_out/domain/entities/occupancy_snapshot.dart';
 import '../../check_out/domain/entities/open_session.dart';
 import '../../check_out/domain/entities/slot_board.dart';
@@ -38,6 +39,7 @@ final class DashboardLoaded extends DashboardState {
     this.sessions = const [],
     this.slotBoard = SlotBoard.empty,
     this.setup = LotSetupStatus.unknown,
+    this.forecast = OccupancyForecast.unavailable,
     this.cachedAt,
   });
 
@@ -62,6 +64,9 @@ final class DashboardLoaded extends DashboardState {
   /// First-steps checklist of the active site (unknown when it failed).
   final LotSetupStatus setup;
 
+  /// Next 12 hours (unavailable when the RPC failed; never cached).
+  final OccupancyForecast forecast;
+
   /// When this came from the offline cache: the state is stale, the board and
   /// the inside list are intentionally empty.
   final DateTime? cachedAt;
@@ -82,6 +87,7 @@ final class DashboardLoaded extends DashboardState {
     sessions: sessions,
     slotBoard: slotBoard,
     setup: setup,
+    forecast: forecast,
     cachedAt: cachedAt,
   );
 
@@ -176,7 +182,7 @@ class DashboardCubit extends ResilientCubit<DashboardState> {
     // the whole dashboard). `complete` is false when one of the cached KPIs
     // failed, so a degraded load never overwrites a good cached snapshot.
     var complete = true;
-    final (today, trend, capacity, slotBoard, inside, setup) = await (
+    final (today, trend, capacity, slotBoard, inside, setup, forecast) = await (
       _sessions.todaySummary().catchError((Object _) {
         complete = false;
         return TodaySummary.empty;
@@ -192,6 +198,10 @@ class DashboardCubit extends ResilientCubit<DashboardState> {
       _sessions.slotBoard().catchError((Object _) => SlotBoard.empty),
       _inside(),
       _sessions.lotSetup().catchError((Object _) => LotSetupStatus.unknown),
+      // Not part of the cache: a failure here must not block the snapshot.
+      _sessions.occupancyForecast().catchError(
+        (Object _) => OccupancyForecast.unavailable,
+      ),
     ).wait;
     return (
       DashboardLoaded(
@@ -204,6 +214,7 @@ class DashboardCubit extends ResilientCubit<DashboardState> {
         sessions: inside,
         slotBoard: slotBoard,
         setup: setup,
+        forecast: forecast,
       ),
       complete,
     );

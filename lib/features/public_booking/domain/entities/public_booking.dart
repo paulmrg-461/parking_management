@@ -1,5 +1,7 @@
 import 'package:equatable/equatable.dart';
 
+import '../../../check_out/domain/entities/occupancy_forecast.dart';
+
 /// One vehicle category with its public availability (`rpc/public_availability`).
 class PublicCategoryAvailability extends Equatable {
   const PublicCategoryAvailability({
@@ -74,6 +76,95 @@ class PublicCategoryAvailability extends Equatable {
 }
 
 /// Site identity + categories shown on the public booking page.
+/// "When does it fill up?" for the public page: aggregates only (levels,
+/// deadline, confidence), never counts, capacities or sessions.
+class PublicForecast extends Equatable {
+  const PublicForecast({required this.status, this.groups = const []});
+
+  final ForecastStatus status;
+  final List<PublicForecastGroup> groups;
+
+  static const hidden = PublicForecast(status: ForecastStatus.unavailable);
+
+  bool get isVisible => status == ForecastStatus.ok && groups.isNotEmpty;
+
+  factory PublicForecast.fromJson(Object? raw) {
+    if (raw is! Map) {
+      return PublicForecast.hidden;
+    }
+    final json = Map<String, dynamic>.from(raw);
+    final status = forecastStatusFrom(json['status'] as String?);
+    if (status != ForecastStatus.ok) {
+      return PublicForecast(status: status);
+    }
+    final groups = json['groups'];
+    return PublicForecast(
+      status: status,
+      groups: groups is! List
+          ? const []
+          : [
+              for (final item in groups)
+                if (item is Map)
+                  PublicForecastGroup.fromJson(
+                    Map<String, dynamic>.from(item),
+                  ),
+            ],
+    );
+  }
+
+  @override
+  List<Object?> get props => [status, groups];
+}
+
+class PublicForecastGroup extends Equatable {
+  const PublicForecastGroup({
+    required this.group,
+    required this.confidence,
+    required this.fullNow,
+    required this.hours,
+    this.fullAt,
+  });
+
+  final String group;
+  final ForecastConfidence confidence;
+  final bool fullNow;
+  final String? fullAt;
+  final List<PublicForecastHour> hours;
+
+  factory PublicForecastGroup.fromJson(Map<String, dynamic> json) {
+    final hours = json['hours'];
+    return PublicForecastGroup(
+      group: json['group'] as String? ?? '',
+      confidence: forecastConfidenceFrom(json['confidence'] as String?),
+      fullNow: json['full_now'] == true,
+      fullAt: json['full_at'] as String?,
+      hours: hours is! List
+          ? const []
+          : [
+              for (final item in hours)
+                if (item is Map)
+                  PublicForecastHour(
+                    hour: (item['hour'] as num?)?.toInt() ?? 0,
+                    level: forecastLevelFrom(item['level'] as String?),
+                  ),
+            ],
+    );
+  }
+
+  @override
+  List<Object?> get props => [group, confidence, fullNow, fullAt, hours];
+}
+
+class PublicForecastHour extends Equatable {
+  const PublicForecastHour({required this.hour, required this.level});
+
+  final int hour;
+  final ForecastLevel level;
+
+  @override
+  List<Object?> get props => [hour, level];
+}
+
 class PublicBookingAvailability extends Equatable {
   const PublicBookingAvailability({
     required this.lotId,
@@ -88,6 +179,7 @@ class PublicBookingAvailability extends Equatable {
     this.currency = 'COP',
     this.maxReservationHours = 24,
     this.categories = const [],
+    this.forecast = PublicForecast.hidden,
   });
 
   final int lotId;
@@ -104,6 +196,9 @@ class PublicBookingAvailability extends Equatable {
   final String currency;
   final int maxReservationHours;
   final List<PublicCategoryAvailability> categories;
+
+  /// "When does it fill up?" (aggregates only, `hidden` on older backends).
+  final PublicForecast forecast;
 
   bool get hasAvailability => categories.any((category) => !category.isFull);
 
@@ -134,6 +229,7 @@ class PublicBookingAvailability extends Equatable {
             Map<String, dynamic>.from(item as Map),
           ),
       ],
+      forecast: PublicForecast.fromJson(json['forecast']),
     );
   }
 
@@ -151,6 +247,7 @@ class PublicBookingAvailability extends Equatable {
     currency,
     maxReservationHours,
     categories,
+    forecast,
   ];
 }
 

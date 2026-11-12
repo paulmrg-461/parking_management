@@ -11,6 +11,7 @@ import '../domain/entities/check_out_preview.dart';
 import '../domain/entities/check_out_receipt.dart';
 import '../domain/entities/dashboard_trend.dart';
 import '../domain/entities/lot_setup_status.dart';
+import '../domain/entities/occupancy_forecast.dart';
 import '../domain/entities/occupancy_snapshot.dart';
 import '../domain/entities/slot_board.dart';
 import '../domain/entities/open_session.dart';
@@ -55,6 +56,10 @@ class CheckOutRepositoryImpl implements CheckOutRepository {
 
   @override
   Future<LotSetupStatus> lotSetup() => _remote.lotSetup();
+
+  @override
+  Future<OccupancyForecast> occupancyForecast({int horizon = 12}) =>
+      _remote.occupancyForecast(horizon: horizon);
 
   @override
   Future<CheckOutPreview> preview(int sessionId) => _remote.preview(sessionId);

@@ -24,6 +24,7 @@ import 'report_pdf.dart';
 import 'widgets/category_bar_list.dart';
 import 'widgets/hourly_traffic_chart.dart';
 import 'widgets/lot_comparison.dart';
+import 'widgets/forecast_accuracy_section.dart';
 import 'widgets/period_comparison_section.dart';
 import 'widgets/revenue_by_day_chart.dart';
 
@@ -462,6 +463,8 @@ class _ReportsBody extends StatelessWidget {
           _WaitlistMetrics(report: loaded.reservations.waitlist),
         ],
         const SizedBox(height: Space.lg),
+        const SizedBox(height: Space.lg),
+        const ForecastAccuracySection(),
         SectionHeader(
           icon: Icons.category_outlined,
           title: l10n.reportsRevenueByCategory,

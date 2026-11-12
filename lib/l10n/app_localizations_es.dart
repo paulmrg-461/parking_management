@@ -832,6 +832,129 @@ class AppLocalizationsEs extends AppLocalizations {
   String get reportWaitlistClaimed => 'Reclamadas';
 
   @override
+  String get homeForecastTitle => 'Pronóstico de ocupación';
+
+  @override
+  String get homeForecastHint => 'Próximas 12 horas según el historial';
+
+  @override
+  String homeForecastFullAt(String group, String time) {
+    return '$group: se llenaría cerca de las $time';
+  }
+
+  @override
+  String homeForecastFullNow(String group) {
+    return '$group: ya está lleno';
+  }
+
+  @override
+  String get homeForecastNotFull =>
+      'No se prevé que se llene en las próximas 12 horas';
+
+  @override
+  String get homeForecastGroupCar => 'Autos';
+
+  @override
+  String get homeForecastGroupMoto => 'Motos';
+
+  @override
+  String get homeForecastConfidenceHigh => 'Confianza alta';
+
+  @override
+  String get homeForecastConfidenceMedium => 'Confianza media';
+
+  @override
+  String get homeForecastConfidenceLow => 'Confianza baja';
+
+  @override
+  String homeForecastBarSemantics(int hour, int expected, int capacity) {
+    return '$hour:00, se esperan $expected de $capacity';
+  }
+
+  @override
+  String get homeForecastInsufficient =>
+      'Aún reunimos historial para pronosticar';
+
+  @override
+  String get homeForecastNoCapacity =>
+      'Configura la capacidad para ver el pronóstico';
+
+  @override
+  String get homeForecastDisabled => 'El pronóstico está desactivado';
+
+  @override
+  String get homeForecastUnavailable => 'Pronóstico no disponible';
+
+  @override
+  String get reportsForecastTitle => 'Precisión del pronóstico';
+
+  @override
+  String get reportsForecastSubtitle =>
+      'Error medio al repetir el pronóstico sobre las últimas semanas';
+
+  @override
+  String get reportsForecastRun => 'Calcular precisión';
+
+  @override
+  String reportsForecastMae(String value) {
+    return 'Error medio: $value vehículos';
+  }
+
+  @override
+  String reportsForecastPriorOnly(String value) {
+    return 'Solo con el historial: $value';
+  }
+
+  @override
+  String reportsForecastBetter(int percent) {
+    return '$percent % mejor con datos en vivo';
+  }
+
+  @override
+  String reportsForecastLead(int hours, String value) {
+    return 'A $hours h: $value';
+  }
+
+  @override
+  String get reportsForecastEmpty => 'Aún no hay historial suficiente';
+
+  @override
+  String get reportsForecastUnavailable => 'No se pudo calcular la precisión';
+
+  @override
+  String get publicForecastTitle => '¿Cuándo se llena?';
+
+  @override
+  String publicForecastFullAt(String time) {
+    return 'Suele llenarse cerca de las $time';
+  }
+
+  @override
+  String get publicForecastFullNow => 'Ahora está lleno';
+
+  @override
+  String get publicForecastNotFull => 'No suele llenarse en las próximas horas';
+
+  @override
+  String get publicForecastGroupCar => 'Autos';
+
+  @override
+  String get publicForecastGroupMoto => 'Motos';
+
+  @override
+  String get publicForecastLevelFree => 'Con espacio';
+
+  @override
+  String get publicForecastLevelBusy => 'Concurrido';
+
+  @override
+  String get publicForecastLevelFull => 'Lleno';
+
+  @override
+  String get publicForecastDisclaimer =>
+      'Estimación según días anteriores; puede variar.';
+
+  @override
   String syncQueued(int count) {
     return '$count en cola, se reintentarán solos.';
   }

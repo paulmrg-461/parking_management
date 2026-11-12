@@ -11,6 +11,7 @@ import '../../../../core/theme/tokens.dart';
 import '../../../../core/utils/elapsed.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/app_icon_button.dart';
+import '../../../check_out/domain/entities/occupancy_forecast.dart';
 import '../../../../core/widgets/money_text.dart';
 import '../../../../core/widgets/plate_text.dart';
 import '../../../../core/widgets/status_chip.dart';
@@ -1496,5 +1497,246 @@ bool _isAdmin(BuildContext context) {
     };
   } on ProviderNotFoundException {
     return false;
+  }
+}
+
+/// "Will it be full at 6 pm?" — the next 12 hours from the profile blended with
+/// today's live occupancy. Never cached: while the dashboard is stale (offline)
+/// the card is not rendered at all (the page hides it).
+class OccupancyForecastCard extends StatefulWidget {
+  const OccupancyForecastCard({super.key});
+
+  @override
+  State<OccupancyForecastCard> createState() => _OccupancyForecastCardState();
+}
+
+class _OccupancyForecastCardState extends State<OccupancyForecastCard> {
+  String? _group;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final textTheme = Theme.of(context).textTheme;
+    return BlocBuilder<DashboardCubit, DashboardState>(
+      buildWhen: (previous, current) =>
+          previous is! DashboardLoaded ||
+          current is! DashboardLoaded ||
+          previous.forecast != current.forecast ||
+          (previous is DashboardLoading) != (current is DashboardLoading),
+      builder: (context, state) {
+        final loading = state is DashboardLoading;
+        final forecast = state is DashboardLoaded
+            ? state.forecast
+            : OccupancyForecast.unavailable;
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(Space.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    const _KpiIcon(icon: Icons.insights_outlined),
+                    const SizedBox(width: Space.sm),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(l10n.homeForecastTitle, style: textTheme.titleSmall),
+                          Text(
+                            l10n.homeForecastHint,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: textTheme.bodySmall?.copyWith(
+                              color:
+                                  Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: Space.md),
+                if (loading)
+                  const _ForecastSkeleton()
+                else if (!forecast.hasForecast)
+                  _TrendQuiet(message: _quietMessage(context, forecast.status))
+                else
+                  ..._content(context, forecast),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  String _quietMessage(BuildContext context, ForecastStatus status) {
+    final l10n = context.l10n;
+    return switch (status) {
+      ForecastStatus.disabled => l10n.homeForecastDisabled,
+      ForecastStatus.insufficientHistory => l10n.homeForecastInsufficient,
+      ForecastStatus.noCapacity => l10n.homeForecastNoCapacity,
+      _ => l10n.homeForecastUnavailable,
+    };
+  }
+
+  List<Widget> _content(BuildContext context, OccupancyForecast forecast) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final selected =
+        forecast.groupOf(_group ?? '') ?? forecast.groups.first;
+    final first = forecast.firstToFill;
+    final headline = first == null
+        ? l10n.homeForecastNotFull
+        : first.fullNow
+        ? l10n.homeForecastFullNow(_groupLabel(context, first.group))
+        : l10n.homeForecastFullAt(
+            _groupLabel(context, first.group),
+            first.fullAt ?? '',
+          );
+    return [
+      Text(
+        headline,
+        style: theme.textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      if (forecast.groups.length > 1) ...[
+        const SizedBox(height: Space.sm),
+        Wrap(
+          spacing: Space.xs,
+          children: [
+            for (final group in forecast.groups)
+              ChoiceChip(
+                key: Key('forecast-group-${group.group}'),
+                label: Text(_groupLabel(context, group.group)),
+                selected: group.group == selected.group,
+                onSelected: (_) => setState(() => _group = group.group),
+              ),
+          ],
+        ),
+      ],
+      const SizedBox(height: Space.md),
+      _ForecastBars(group: selected),
+      const SizedBox(height: Space.sm),
+      Align(
+        alignment: Alignment.centerLeft,
+        child: StatusChip(
+          label: switch (selected.confidence) {
+            ForecastConfidence.high => l10n.homeForecastConfidenceHigh,
+            ForecastConfidence.medium => l10n.homeForecastConfidenceMedium,
+            ForecastConfidence.low => l10n.homeForecastConfidenceLow,
+          },
+          tone: switch (selected.confidence) {
+            ForecastConfidence.high => StatusTone.success,
+            ForecastConfidence.medium => StatusTone.neutral,
+            ForecastConfidence.low => StatusTone.pending,
+          },
+        ),
+      ),
+    ];
+  }
+
+  String _groupLabel(BuildContext context, String group) => group == 'moto'
+      ? context.l10n.homeForecastGroupMoto
+      : context.l10n.homeForecastGroupCar;
+}
+
+class _ForecastBars extends StatelessWidget {
+  const _ForecastBars({required this.group});
+
+  final ForecastGroup group;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final scheme = Theme.of(context).colorScheme;
+    final status = StatusColors.of(context);
+    final capacity = group.capacity <= 0 ? 1 : group.capacity;
+    return SizedBox(
+      height: 96,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          for (var index = 0; index < group.hours.length; index++)
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 1),
+                child: Semantics(
+                  label: l10n.homeForecastBarSemantics(
+                    group.hours[index].hour,
+                    group.hours[index].expected,
+                    capacity,
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Expanded(
+                        child: Align(
+                          alignment: Alignment.bottomCenter,
+                          child: FractionallySizedBox(
+                            heightFactor: (group.hours[index].expected / capacity)
+                                .clamp(0.04, 1.0),
+                            child: Container(
+                              key: Key('forecast-bar-${group.hours[index].hour}'),
+                              decoration: BoxDecoration(
+                                color: switch (group.hours[index].level) {
+                                  ForecastLevel.full => scheme.error,
+                                  ForecastLevel.busy => status.warning,
+                                  ForecastLevel.free => scheme.primary,
+                                },
+                                borderRadius: BorderRadius.circular(Radii.sm),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      if (index % 3 == 0)
+                        Text(
+                          '${group.hours[index].hour}',
+                          style: Theme.of(context).textTheme.labelSmall,
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ForecastSkeleton extends StatelessWidget {
+  const _ForecastSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final width in const [180.0, 240.0])
+          Container(
+            width: width,
+            height: 12,
+            margin: const EdgeInsets.only(bottom: Space.sm),
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(Radii.sm),
+            ),
+          ),
+        const SizedBox(height: Space.sm),
+        Container(
+          height: 64,
+          decoration: BoxDecoration(
+            color: scheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(Radii.sm),
+          ),
+        ),
+      ],
+    );
   }
 }

@@ -14,6 +14,7 @@ import 'package:parking_management/features/check_out/domain/entities/slot_board
 import 'package:parking_management/features/check_out/domain/entities/today_summary.dart';
 import 'package:parking_management/features/check_out/domain/entities/dashboard_trend.dart';
 import 'package:parking_management/features/check_out/domain/entities/lot_setup_status.dart';
+import 'package:parking_management/features/check_out/domain/entities/occupancy_forecast.dart';
 import 'package:parking_management/features/check_out/infrastructure/check_out_remote_data_source.dart';
 import 'package:parking_management/features/check_out/infrastructure/check_out_repository_impl.dart';
 
@@ -39,6 +40,10 @@ class _FakeRemote implements CheckOutRemoteDataSource {
 
   @override
   Future<LotSetupStatus> lotSetup() async => LotSetupStatus.unknown;
+
+  @override
+  Future<OccupancyForecast> occupancyForecast({int horizon = 12}) async =>
+      OccupancyForecast.unavailable;
 
   @override
   Future<SlotBoard> slotBoard() async => SlotBoard.empty;

@@ -829,10 +829,15 @@ grant execute on function public.set_forecast_settings(jsonb) to authenticated;
 
 do $$
 begin
+    -- Idempotent: only the first run renames the original body.
     if exists (
         select 1 from pg_proc p
           join pg_namespace n on n.oid = p.pronamespace
          where n.nspname = 'public' and p.proname = 'public_availability'
+    ) and not exists (
+        select 1 from pg_proc p
+          join pg_namespace n on n.oid = p.pronamespace
+         where n.nspname = 'public' and p.proname = 'public_availability_base'
     ) then
         execute 'alter function public.public_availability(integer) '
              || 'rename to public_availability_base';

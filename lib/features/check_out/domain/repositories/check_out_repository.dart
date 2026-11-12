@@ -4,6 +4,7 @@ import '../entities/check_out_preview.dart';
 import '../entities/check_out_receipt.dart';
 import '../entities/dashboard_trend.dart';
 import '../entities/lot_setup_status.dart';
+import '../entities/occupancy_forecast.dart';
 import '../entities/occupancy_snapshot.dart';
 import '../entities/slot_board.dart';
 import '../entities/open_session.dart';
@@ -54,4 +55,7 @@ abstract class CheckOutRepository {
 
   /// First-steps checklist of the active site (home onboarding card).
   Future<LotSetupStatus> lotSetup();
+
+  /// "Will it be full at 6 pm?" for the next [horizon] hours.
+  Future<OccupancyForecast> occupancyForecast({int horizon = 12});
 }

@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/features/reports/domain/entities/hourly_traffic.dart';
 import 'package:parking_management/features/reports/domain/entities/occupancy_report.dart';
+import 'package:parking_management/features/reports/domain/entities/forecast_backtest.dart';
 import 'package:parking_management/features/reports/domain/entities/period_comparison.dart';
 import 'package:parking_management/features/reports/domain/entities/reservation_report.dart';
 import 'package:parking_management/features/reports/domain/entities/revenue_report.dart';
@@ -37,6 +38,9 @@ class _FakeRemote implements ReportRemoteDataSource {
   }) async => WhatsappReport.empty;
 
   @override
+  Future<ForecastBacktest> getForecastBacktest({int weeks = 4}) async =>
+      ForecastBacktest.empty;
+
   Future<PeriodComparison> getPeriodComparison({int months = 6}) async =>
       comparisonToReturn;
 

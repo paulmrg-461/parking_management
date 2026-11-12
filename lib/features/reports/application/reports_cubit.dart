@@ -3,6 +3,7 @@ import 'package:equatable/equatable.dart';
 import '../../../core/error/failure.dart';
 import '../domain/entities/hourly_traffic.dart';
 import '../domain/entities/occupancy_report.dart';
+import '../domain/entities/forecast_backtest.dart';
 import '../domain/entities/period_comparison.dart';
 import '../domain/entities/reservation_report.dart';
 import '../domain/entities/revenue_report.dart';
@@ -36,6 +37,9 @@ class ReportsLoaded extends ReportsState {
     this.comparisonMonths = 6,
     this.comparisonFailed = false,
     this.comparisonLoading = false,
+    this.backtest = ForecastBacktest.empty,
+    this.backtestFailed = false,
+    this.backtestLoading = false,
     this.allLots = false,
     this.previousTotal,
     this.previousStart,
@@ -62,11 +66,19 @@ class ReportsLoaded extends ReportsState {
   /// A months switch or a retry is in flight (the section shows a skeleton).
   final bool comparisonLoading;
 
+  /// Forecast accuracy, computed on demand (the heaviest read).
+  final ForecastBacktest backtest;
+  final bool backtestFailed;
+  final bool backtestLoading;
+
   ReportsLoaded copyWith({
     PeriodComparison? comparison,
     int? comparisonMonths,
     bool? comparisonFailed,
     bool? comparisonLoading,
+    ForecastBacktest? backtest,
+    bool? backtestFailed,
+    bool? backtestLoading,
   }) => ReportsLoaded(
     revenue,
     occupancy,
@@ -77,6 +89,9 @@ class ReportsLoaded extends ReportsState {
     comparisonMonths: comparisonMonths ?? this.comparisonMonths,
     comparisonFailed: comparisonFailed ?? this.comparisonFailed,
     comparisonLoading: comparisonLoading ?? this.comparisonLoading,
+    backtest: backtest ?? this.backtest,
+    backtestFailed: backtestFailed ?? this.backtestFailed,
+    backtestLoading: backtestLoading ?? this.backtestLoading,
     allLots: allLots,
     previousTotal: previousTotal,
     previousStart: previousStart,
@@ -111,6 +126,9 @@ class ReportsLoaded extends ReportsState {
     comparisonMonths,
     comparisonFailed,
     comparisonLoading,
+    backtest,
+    backtestFailed,
+    backtestLoading,
     allLots,
     previousTotal,
     previousStart,
@@ -212,6 +230,41 @@ class ReportsCubit extends ResilientCubit<ReportsState> {
   /// Switches the comparison between 6 and 12 months (or retries it) without
   /// flashing the page: it stays on [ReportsLoaded] and never emits the
   /// loading or failure state of the whole report.
+  /// Replays the forecast over the last [weeks] weeks. Never replaces the
+  /// report: it only toggles its own loading/failed flags.
+  Future<void> loadBacktest({int weeks = 4}) async {
+    final current = state;
+    if (current is! ReportsLoaded) {
+      return;
+    }
+    emit(current.copyWith(backtestLoading: true));
+    try {
+      final result = await _repository.getForecastBacktest(weeks: weeks);
+      final latest = state;
+      if (isClosed || latest is! ReportsLoaded) {
+        return;
+      }
+      emit(
+        latest.copyWith(
+          backtest: result,
+          backtestFailed: false,
+          backtestLoading: false,
+        ),
+      );
+    } on Failure {
+      final latest = state;
+      if (isClosed || latest is! ReportsLoaded) {
+        return;
+      }
+      emit(
+        latest.copyWith(
+          backtestFailed: true,
+          backtestLoading: false,
+        ),
+      );
+    }
+  }
+
   Future<void> loadComparison({required int months}) async {
     final current = state;
     if (current is! ReportsLoaded) {

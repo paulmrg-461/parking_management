@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/core/pagination/paged_result.dart';
 import 'package:parking_management/features/check_out/domain/entities/check_out_preview.dart';
@@ -9,10 +11,16 @@ import 'package:parking_management/features/check_out/domain/entities/capacity_s
 import 'package:parking_management/features/check_out/domain/entities/occupancy_snapshot.dart';
 import 'package:parking_management/features/check_out/domain/entities/slot_board.dart';
 import 'package:parking_management/features/check_out/domain/entities/today_summary.dart';
+import 'package:parking_management/features/check_out/domain/entities/occupancy_forecast.dart';
 import 'package:parking_management/features/check_out/domain/repositories/check_out_repository.dart';
 
 /// Open sessions held in memory; [listError] makes the list fail.
 class FakeCheckOutRepository implements CheckOutRepository {
+  OccupancyForecast forecastToReturn = OccupancyForecast.unavailable;
+  Failure? forecastError;
+  Completer<void>? forecastGate;
+  int forecastCalls = 0;
+
   FakeCheckOutRepository({
     this.sessions = const [],
     this.listError,
@@ -74,6 +82,20 @@ class FakeCheckOutRepository implements CheckOutRepository {
   Failure? setupError;
 
   @override
+  @override
+  Future<OccupancyForecast> occupancyForecast({int horizon = 12}) async {
+    forecastCalls += 1;
+    final gate = forecastGate;
+    if (gate != null) {
+      await gate.future;
+    }
+    final error = forecastError;
+    if (error != null) {
+      throw error;
+    }
+    return forecastToReturn;
+  }
+
   Future<LotSetupStatus> lotSetup() async {
     final error = setupError;
     if (error != null) {

@@ -37,6 +37,9 @@ docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
   "select public.waitlist_dispatch_all();" >/dev/null
 docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
   "select public.purge_waitlist(30);" >/dev/null
+# Rebuilds the occupancy profile when it is older than six hours.
+docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
+  "select public.refresh_occupancy_profile();" >/dev/null
 docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
   "select public.purge_stale_notifications(90);" >/dev/null
 docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \

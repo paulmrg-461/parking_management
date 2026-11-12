@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/network/supabase_error_mapper.dart';
 import '../domain/entities/hourly_traffic.dart';
 import '../domain/entities/occupancy_report.dart';
+import '../domain/entities/forecast_backtest.dart';
 import '../domain/entities/period_comparison.dart';
 import '../domain/entities/reservation_report.dart';
 import '../domain/entities/revenue_report.dart';
@@ -25,6 +26,8 @@ abstract class ReportRemoteDataSource {
   });
 
   Future<PeriodComparison> getPeriodComparison({int months = 6});
+
+  Future<ForecastBacktest> getForecastBacktest({int weeks = 4});
 
   Future<ReservationReport> getReservationReport({
     required DateTime startDate,
@@ -112,6 +115,21 @@ class SupabaseReportRemoteDataSource implements ReportRemoteDataSource {
   }
 
   @override
+  Future<ForecastBacktest> getForecastBacktest({int weeks = 4}) async {
+    try {
+      final result = await _client.rpc(
+        'occupancy_forecast_backtest',
+        params: {'p_weeks': weeks},
+      );
+      if (result is! Map) {
+        return ForecastBacktest.empty;
+      }
+      return ForecastBacktest.fromJson(Map<String, dynamic>.from(result));
+    } catch (error) {
+      throw mapSupabaseError(error);
+    }
+  }
+
   Future<HourlyTraffic> getHourlyTraffic({
     required DateTime startDate,
     required DateTime endDate,

@@ -1466,6 +1466,210 @@ abstract class AppLocalizations {
   /// **'Reclamadas'**
   String get reportWaitlistClaimed;
 
+  /// No description provided for @homeForecastTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Pronóstico de ocupación'**
+  String get homeForecastTitle;
+
+  /// No description provided for @homeForecastHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Próximas 12 horas según el historial'**
+  String get homeForecastHint;
+
+  /// No description provided for @homeForecastFullAt.
+  ///
+  /// In es, this message translates to:
+  /// **'{group}: se llenaría cerca de las {time}'**
+  String homeForecastFullAt(String group, String time);
+
+  /// No description provided for @homeForecastFullNow.
+  ///
+  /// In es, this message translates to:
+  /// **'{group}: ya está lleno'**
+  String homeForecastFullNow(String group);
+
+  /// No description provided for @homeForecastNotFull.
+  ///
+  /// In es, this message translates to:
+  /// **'No se prevé que se llene en las próximas 12 horas'**
+  String get homeForecastNotFull;
+
+  /// No description provided for @homeForecastGroupCar.
+  ///
+  /// In es, this message translates to:
+  /// **'Autos'**
+  String get homeForecastGroupCar;
+
+  /// No description provided for @homeForecastGroupMoto.
+  ///
+  /// In es, this message translates to:
+  /// **'Motos'**
+  String get homeForecastGroupMoto;
+
+  /// No description provided for @homeForecastConfidenceHigh.
+  ///
+  /// In es, this message translates to:
+  /// **'Confianza alta'**
+  String get homeForecastConfidenceHigh;
+
+  /// No description provided for @homeForecastConfidenceMedium.
+  ///
+  /// In es, this message translates to:
+  /// **'Confianza media'**
+  String get homeForecastConfidenceMedium;
+
+  /// No description provided for @homeForecastConfidenceLow.
+  ///
+  /// In es, this message translates to:
+  /// **'Confianza baja'**
+  String get homeForecastConfidenceLow;
+
+  /// No description provided for @homeForecastBarSemantics.
+  ///
+  /// In es, this message translates to:
+  /// **'{hour}:00, se esperan {expected} de {capacity}'**
+  String homeForecastBarSemantics(int hour, int expected, int capacity);
+
+  /// No description provided for @homeForecastInsufficient.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún reunimos historial para pronosticar'**
+  String get homeForecastInsufficient;
+
+  /// No description provided for @homeForecastNoCapacity.
+  ///
+  /// In es, this message translates to:
+  /// **'Configura la capacidad para ver el pronóstico'**
+  String get homeForecastNoCapacity;
+
+  /// No description provided for @homeForecastDisabled.
+  ///
+  /// In es, this message translates to:
+  /// **'El pronóstico está desactivado'**
+  String get homeForecastDisabled;
+
+  /// No description provided for @homeForecastUnavailable.
+  ///
+  /// In es, this message translates to:
+  /// **'Pronóstico no disponible'**
+  String get homeForecastUnavailable;
+
+  /// No description provided for @reportsForecastTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Precisión del pronóstico'**
+  String get reportsForecastTitle;
+
+  /// No description provided for @reportsForecastSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Error medio al repetir el pronóstico sobre las últimas semanas'**
+  String get reportsForecastSubtitle;
+
+  /// No description provided for @reportsForecastRun.
+  ///
+  /// In es, this message translates to:
+  /// **'Calcular precisión'**
+  String get reportsForecastRun;
+
+  /// No description provided for @reportsForecastMae.
+  ///
+  /// In es, this message translates to:
+  /// **'Error medio: {value} vehículos'**
+  String reportsForecastMae(String value);
+
+  /// No description provided for @reportsForecastPriorOnly.
+  ///
+  /// In es, this message translates to:
+  /// **'Solo con el historial: {value}'**
+  String reportsForecastPriorOnly(String value);
+
+  /// No description provided for @reportsForecastBetter.
+  ///
+  /// In es, this message translates to:
+  /// **'{percent} % mejor con datos en vivo'**
+  String reportsForecastBetter(int percent);
+
+  /// No description provided for @reportsForecastLead.
+  ///
+  /// In es, this message translates to:
+  /// **'A {hours} h: {value}'**
+  String reportsForecastLead(int hours, String value);
+
+  /// No description provided for @reportsForecastEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no hay historial suficiente'**
+  String get reportsForecastEmpty;
+
+  /// No description provided for @reportsForecastUnavailable.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo calcular la precisión'**
+  String get reportsForecastUnavailable;
+
+  /// No description provided for @publicForecastTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Cuándo se llena?'**
+  String get publicForecastTitle;
+
+  /// No description provided for @publicForecastFullAt.
+  ///
+  /// In es, this message translates to:
+  /// **'Suele llenarse cerca de las {time}'**
+  String publicForecastFullAt(String time);
+
+  /// No description provided for @publicForecastFullNow.
+  ///
+  /// In es, this message translates to:
+  /// **'Ahora está lleno'**
+  String get publicForecastFullNow;
+
+  /// No description provided for @publicForecastNotFull.
+  ///
+  /// In es, this message translates to:
+  /// **'No suele llenarse en las próximas horas'**
+  String get publicForecastNotFull;
+
+  /// No description provided for @publicForecastGroupCar.
+  ///
+  /// In es, this message translates to:
+  /// **'Autos'**
+  String get publicForecastGroupCar;
+
+  /// No description provided for @publicForecastGroupMoto.
+  ///
+  /// In es, this message translates to:
+  /// **'Motos'**
+  String get publicForecastGroupMoto;
+
+  /// No description provided for @publicForecastLevelFree.
+  ///
+  /// In es, this message translates to:
+  /// **'Con espacio'**
+  String get publicForecastLevelFree;
+
+  /// No description provided for @publicForecastLevelBusy.
+  ///
+  /// In es, this message translates to:
+  /// **'Concurrido'**
+  String get publicForecastLevelBusy;
+
+  /// No description provided for @publicForecastLevelFull.
+  ///
+  /// In es, this message translates to:
+  /// **'Lleno'**
+  String get publicForecastLevelFull;
+
+  /// No description provided for @publicForecastDisclaimer.
+  ///
+  /// In es, this message translates to:
+  /// **'Estimación según días anteriores; puede variar.'**
+  String get publicForecastDisclaimer;
+
   /// No description provided for @syncQueued.
   ///
   /// In es, this message translates to:

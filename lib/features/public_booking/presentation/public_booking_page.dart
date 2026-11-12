@@ -24,6 +24,7 @@ import '../../settings/domain/whatsapp_url.dart';
 import '../application/public_booking_cubit.dart';
 import '../domain/entities/public_booking.dart';
 import '../domain/phone_rules.dart';
+import '../../check_out/domain/entities/occupancy_forecast.dart';
 import '../../waitlist/presentation/public_waitlist_card.dart';
 import 'captcha/booking_captcha_field.dart';
 import 'captcha/captcha_request.dart';
@@ -325,6 +326,10 @@ class _PublicBookingPageState extends State<PublicBookingPage> {
                   );
                 },
               ),
+            if (availability.forecast.isVisible) ...[
+              const SizedBox(height: Space.lg),
+              _ForecastCard(forecast: availability.forecast),
+            ],
             if (!availability.hasAvailability) ...[
               const SizedBox(height: Space.lg),
               _NoSpace(availability: availability),
@@ -1531,4 +1536,105 @@ String _errorText(AppLocalizations l10n, Failure? failure) {
     'BookingUnavailableError' => l10n.bookingCaptchaUnavailable,
     _ => l10n.failure(failure),
   };
+}
+
+
+/// "¿Cuándo se llena?" — the aggregate forecast, never a count or a plate.
+class _ForecastCard extends StatelessWidget {
+  const _ForecastCard({required this.forecast});
+
+  final PublicForecast forecast;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(Space.md),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(Radii.lg),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.insights_outlined, color: scheme.primary),
+              const SizedBox(width: Space.sm),
+              Text(
+                l10n.publicForecastTitle,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: Space.sm),
+          for (final group in forecast.groups)
+            Padding(
+              padding: const EdgeInsets.only(bottom: Space.sm),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    group.group == 'moto'
+                        ? l10n.publicForecastGroupMoto
+                        : l10n.publicForecastGroupCar,
+                    style: theme.textTheme.labelLarge,
+                  ),
+                  Text(
+                    group.fullNow
+                        ? l10n.publicForecastFullNow
+                        : group.fullAt == null
+                        ? l10n.publicForecastNotFull
+                        : l10n.publicForecastFullAt(group.fullAt!),
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: Space.xs),
+                  Wrap(
+                    spacing: Space.xs,
+                    children: [
+                      for (final hour in group.hours)
+                        Semantics(
+                          label:
+                              '${hour.hour}:00 ${_levelLabel(context, hour.level)}',
+                          child: Icon(
+                            switch (hour.level) {
+                              ForecastLevel.full => Icons.block,
+                              ForecastLevel.busy => Icons.timelapse,
+                              ForecastLevel.free => Icons.check_circle_outline,
+                            },
+                            size: 18,
+                            color: switch (hour.level) {
+                              ForecastLevel.full => scheme.error,
+                              ForecastLevel.busy => StatusColors.of(context).warning,
+                              ForecastLevel.free => scheme.primary,
+                            },
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          Text(
+            l10n.publicForecastDisclaimer,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _levelLabel(BuildContext context, ForecastLevel level) =>
+      switch (level) {
+        ForecastLevel.full => context.l10n.publicForecastLevelFull,
+        ForecastLevel.busy => context.l10n.publicForecastLevelBusy,
+        ForecastLevel.free => context.l10n.publicForecastLevelFree,
+      };
 }

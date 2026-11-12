@@ -825,6 +825,126 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportWaitlistClaimed => 'Claimed';
 
   @override
+  String get homeForecastTitle => 'Occupancy forecast';
+
+  @override
+  String get homeForecastHint => 'Next 12 hours from past weeks';
+
+  @override
+  String homeForecastFullAt(String group, String time) {
+    return '$group: expected to fill around $time';
+  }
+
+  @override
+  String homeForecastFullNow(String group) {
+    return '$group: already full';
+  }
+
+  @override
+  String get homeForecastNotFull => 'Not expected to fill in the next 12 hours';
+
+  @override
+  String get homeForecastGroupCar => 'Cars';
+
+  @override
+  String get homeForecastGroupMoto => 'Motorcycles';
+
+  @override
+  String get homeForecastConfidenceHigh => 'High confidence';
+
+  @override
+  String get homeForecastConfidenceMedium => 'Medium confidence';
+
+  @override
+  String get homeForecastConfidenceLow => 'Low confidence';
+
+  @override
+  String homeForecastBarSemantics(int hour, int expected, int capacity) {
+    return '$hour:00, $expected of $capacity expected';
+  }
+
+  @override
+  String get homeForecastInsufficient => 'Still collecting history to forecast';
+
+  @override
+  String get homeForecastNoCapacity => 'Set the capacity to see the forecast';
+
+  @override
+  String get homeForecastDisabled => 'The forecast is turned off';
+
+  @override
+  String get homeForecastUnavailable => 'Forecast unavailable';
+
+  @override
+  String get reportsForecastTitle => 'Forecast accuracy';
+
+  @override
+  String get reportsForecastSubtitle =>
+      'Mean error when replaying the forecast over recent weeks';
+
+  @override
+  String get reportsForecastRun => 'Compute accuracy';
+
+  @override
+  String reportsForecastMae(String value) {
+    return 'Mean error: $value vehicles';
+  }
+
+  @override
+  String reportsForecastPriorOnly(String value) {
+    return 'History only: $value';
+  }
+
+  @override
+  String reportsForecastBetter(int percent) {
+    return '$percent% better with live data';
+  }
+
+  @override
+  String reportsForecastLead(int hours, String value) {
+    return 'At $hours h: $value';
+  }
+
+  @override
+  String get reportsForecastEmpty => 'Not enough history yet';
+
+  @override
+  String get reportsForecastUnavailable => 'The accuracy could not be computed';
+
+  @override
+  String get publicForecastTitle => 'When does it fill up?';
+
+  @override
+  String publicForecastFullAt(String time) {
+    return 'Usually fills up around $time';
+  }
+
+  @override
+  String get publicForecastFullNow => 'Full right now';
+
+  @override
+  String get publicForecastNotFull => 'Usually not full in the coming hours';
+
+  @override
+  String get publicForecastGroupCar => 'Cars';
+
+  @override
+  String get publicForecastGroupMoto => 'Motorcycles';
+
+  @override
+  String get publicForecastLevelFree => 'Spaces free';
+
+  @override
+  String get publicForecastLevelBusy => 'Busy';
+
+  @override
+  String get publicForecastLevelFull => 'Full';
+
+  @override
+  String get publicForecastDisclaimer =>
+      'Estimate based on previous days; it may vary.';
+
+  @override
   String syncQueued(int count) {
     return '$count queued, retried automatically.';
   }

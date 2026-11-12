@@ -168,6 +168,8 @@ class _Dashboard extends StatelessWidget {
           ),
           const SizedBox(height: Space.md),
           const TrendCard(),
+          const SizedBox(height: Space.md),
+          if (stale == null) const OccupancyForecastCard(),
           if (stale == null) ...[
             const SizedBox(height: Space.md),
             SlotBoardCard(reservations: reservations),
