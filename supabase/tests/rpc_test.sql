@@ -7045,4 +7045,635 @@ end $$;
 reset role;
 
 
+-- 0110 Cash anomaly detection.
+do $$
+declare
+    cat integer;
+begin
+    delete from public.cash_anomalies;
+    delete from public.notifications where type = 'cash_anomaly';
+    delete from public.shift_adjustments where shift_id in
+        (select id from public.shifts where lot_id = 1);
+    delete from public.evidence_photos where session_id in
+        (select id from public.parking_sessions where lot_id = 1);
+    delete from public.parking_sessions where lot_id = 1;
+    delete from public.shifts where lot_id = 1;
+    delete from public.monthly_passes where lot_id = 1;
+    delete from public.vehicles where plate like 'AN%';
+    update public.anomaly_settings
+       set enabled = true, disabled_rules = '{}',
+           window_days = 14, shortage_min_amount = 5000,
+           shortage_min_shifts = 3, lost_ticket_min_closed = 10,
+           lost_ticket_min_rate_pct = 10, lost_ticket_factor_pct = 200,
+           adjustment_min_amount = 1000, short_stay_minutes = 30,
+           discount_min_count = 3, discount_share_pct = 10,
+           shift_open_hours = 16, session_open_days = 7
+     where lot_id in (1, 2);
+    select id into cat from public.categories where lot_id = 1 and name = 'car';
+    if cat is null then
+        insert into public.categories (name, capacity, lot_id)
+        values ('car', 0, 1) returning id into cat;
+    end if;
+    update public.categories set capacity = 0 where id = cat;
+    perform set_config('app.an_cat', cat::text, true);
+end $$;
+
+-- anomaly: success shift_shortage
+do $$
+declare
+    created integer;
+    rows integer;
+    detail jsonb;
+begin
+    insert into public.shifts (operator_id, opened_at, closed_at, difference, lot_id)
+    values (2, now() - interval '3 days', now() - interval '3 days' + interval '6 hours', -6000, 1),
+           (2, now() - interval '2 days', now() - interval '2 days' + interval '6 hours', -5500, 1),
+           (2, now() - interval '2 days 12 hours', now() - interval '2 days' + interval '8 hours', 0, 1),
+           (2, now() - interval '1 day', now() - interval '1 day' + interval '6 hours', -8000, 1),
+           (2, now() - interval '1 day 2 hours', now() - interval '1 day' + interval '7 hours', -200, 1);
+    created := public.detect_cash_anomalies();
+    select count(*), (array_agg(a.details))[1] into rows, detail
+      from public.cash_anomalies a
+     where a.lot_id = 1 and a.rule = 'shift_shortage';
+    if rows <> 1 then
+        raise exception 'expected one shortage anomaly, got %', rows;
+    end if;
+    if (detail ->> 'total_shortage')::integer <> 19500 then
+        raise exception 'total_shortage should be 19500: %', detail;
+    end if;
+    if (select a.severity from public.cash_anomalies a
+         where a.lot_id = 1 and a.rule = 'shift_shortage') <> 'medium' then
+        raise exception 'three short shifts should be medium';
+    end if;
+    -- Six qualifying shifts become high.
+    insert into public.shifts (operator_id, opened_at, closed_at, difference, lot_id)
+    values (2, now() - interval '5 days', now() - interval '5 days' + interval '6 hours', -6000, 1),
+           (2, now() - interval '6 days', now() - interval '6 days' + interval '6 hours', -7000, 1),
+           (2, now() - interval '7 days', now() - interval '7 days' + interval '6 hours', -6500, 1);
+    perform public.detect_cash_anomalies();
+    if (select a.severity from public.cash_anomalies a
+         where a.lot_id = 1 and a.rule = 'shift_shortage'
+         order by a.id desc limit 1) <> 'high' then
+        raise exception 'six short shifts should be high';
+    end if;
+end $$;
+
+-- anomaly: success dedupe and disabled rule
+do $$
+declare
+    created integer;
+    rows integer;
+begin
+    insert into public.shifts (operator_id, opened_at, closed_at, difference, lot_id)
+    values (2, now() - interval '10 days', now() - interval '10 days' + interval '6 hours', -6000, 1);
+    perform public.detect_cash_anomalies();
+    created := public.detect_cash_anomalies();
+    if created <> 0 then
+        raise exception 'a second run created % rows', created;
+    end if;
+    -- A dismissed row is not recreated.
+    update public.cash_anomalies set status = 'dismissed', resolved_at = now(),
+           resolved_by = 1, note = 'revisado'
+     where lot_id = 1 and rule = 'shift_shortage';
+    perform public.detect_cash_anomalies();
+    select count(*) into rows from public.cash_anomalies
+     where lot_id = 1 and rule = 'shift_shortage' and status = 'open';
+    if rows <> 0 then
+        raise exception 'a dismissed anomaly came back';
+    end if;
+    -- Disabling the rule stops new rows.
+    delete from public.shifts where lot_id = 1 and difference < 0;
+    insert into public.shifts (operator_id, opened_at, closed_at, difference, lot_id)
+    values (2, now() - interval '4 days', now() - interval '4 days' + interval '6 hours', -9000, 1),
+           (2, now() - interval '4 days 8 hours', now() - interval '4 days' + interval '10 hours', -9000, 1),
+           (2, now() - interval '4 days 12 hours', now() - interval '4 days' + interval '14 hours', -9000, 1);
+    update public.anomaly_settings set disabled_rules = '{shift_shortage}' where lot_id = 1;
+    perform public.detect_cash_anomalies();
+    select count(*) into rows from public.cash_anomalies
+     where lot_id = 1 and rule = 'shift_shortage' and status = 'open';
+    if rows <> 0 then
+        raise exception 'a disabled rule created rows';
+    end if;
+    update public.anomaly_settings set disabled_rules = '{}' where lot_id = 1;
+    update public.anomaly_settings set enabled = false where lot_id = 1;
+    perform public.detect_cash_anomalies();
+    update public.anomaly_settings set enabled = true where lot_id = 1;
+end $$;
+
+-- anomaly: success zero_charge, pass exemption and extension point
+do $$
+declare
+    cat integer := current_setting('app.an_cat')::integer;
+    vehicle integer;
+    pass_vehicle integer;
+    session_id integer;
+    excluded_id integer;
+    rows integer;
+begin
+    delete from public.cash_anomalies;
+    insert into public.vehicles (plate, category_id) values ('ANZERO', cat)
+    returning id into vehicle;
+    insert into public.vehicles (plate, category_id) values ('ANPASS', cat)
+    returning id into pass_vehicle;
+    insert into public.parking_sessions (
+        vehicle_id, operator_id, status, lot_id, entry_time, exit_time,
+        amount_charged, payment_method
+    )
+    values (vehicle, 2, 'closed', 1, now() - interval '2 hours', now() - interval '1 hour', 0, 'exempt')
+    returning id into session_id;
+    insert into public.parking_sessions (
+        vehicle_id, operator_id, status, lot_id, entry_time, exit_time,
+        amount_charged, payment_method
+    )
+    values (pass_vehicle, 2, 'closed', 1, now() - interval '3 hours', now() - interval '2 hours', 0, 'monthly_pass');
+    perform public.detect_cash_anomalies();
+    select count(*) into rows from public.cash_anomalies
+     where lot_id = 1 and rule = 'zero_charge';
+    if rows <> 1 then
+        raise exception 'expected one zero charge, got %', rows;
+    end if;
+    if (select severity from public.cash_anomalies
+         where lot_id = 1 and rule = 'zero_charge') <> 'medium' then
+        raise exception 'an exempt zero should be medium';
+    end if;
+    -- The extension point explains a session away.
+    insert into public.parking_sessions (
+        vehicle_id, operator_id, status, lot_id, entry_time, exit_time,
+        amount_charged, payment_method
+    )
+    values (vehicle, 2, 'closed', 1, now() - interval '5 hours', now() - interval '4 hours', 0, 'cash')
+    returning id into excluded_id;
+    create or replace function public.anomaly_zero_charge_excluded(p_session_id integer)
+    returns boolean language sql stable set search_path = public as $fn$ select true $fn$;
+    perform public.detect_cash_anomalies();
+    create or replace function public.anomaly_zero_charge_excluded(p_session_id integer)
+    returns boolean language sql stable set search_path = public as $fn$ select false $fn$;
+    if exists (select 1 from public.cash_anomalies a
+                where a.lot_id = 1 and a.rule = 'zero_charge'
+                  and a.session_id = excluded_id) then
+        raise exception 'the extension point did not exclude the session';
+    end if;
+    delete from public.parking_sessions where vehicle_id in (vehicle, pass_vehicle);
+    delete from public.vehicles where plate in ('ANZERO', 'ANPASS');
+end $$;
+
+-- anomaly: success short_lost_ticket and discount_rate
+do $$
+declare
+    cat integer := current_setting('app.an_cat')::integer;
+    vehicle integer;
+    admin integer := 1;
+    i integer;
+begin
+    delete from public.cash_anomalies;
+    insert into public.vehicles (plate, category_id) values ('ANLOST', cat)
+    returning id into vehicle;
+    insert into public.parking_sessions (
+        vehicle_id, operator_id, status, lot_id, entry_time, exit_time,
+        amount_charged, lost_ticket, payment_method
+    )
+    values (vehicle, 2, 'closed', 1, now() - interval '10 minutes', now() - interval '6 minutes',
+            2000, true, 'cash');
+    -- 30 discounts out of 200 closed sessions by admin 1.
+    insert into public.vehicles (plate, category_id)
+    select 'ANDISC' || lpad(g::text, 3, '0'), cat from generate_series(1, 200) g;
+    insert into public.parking_sessions (
+        vehicle_id, operator_id, status, lot_id, entry_time, exit_time,
+        amount_charged, discount_amount, discount_reason, discount_by, payment_method
+    )
+    select v.id, 2, 'closed', 1, now() - interval '5 hours', now() - interval '4 hours',
+           case when v.plate <= 'ANDISC030' then 1000 else 4000 end,
+           case when v.plate <= 'ANDISC030' then 500 else 0 end,
+           case when v.plate <= 'ANDISC030' then 'cortesia' else null end,
+           case when v.plate <= 'ANDISC030' then admin else null end,
+           'cash'
+      from public.vehicles v
+     where v.plate like 'ANDISC%';
+    perform public.detect_cash_anomalies();
+    if not exists (select 1 from public.cash_anomalies
+                    where lot_id = 1 and rule = 'short_lost_ticket' and severity = 'high') then
+        raise exception 'the short lost ticket was not flagged';
+    end if;
+    if not exists (select 1 from public.cash_anomalies
+                    where lot_id = 1 and rule = 'discount_rate') then
+        raise exception 'the discount rate was not flagged';
+    end if;
+    if (select severity from public.cash_anomalies
+         where lot_id = 1 and rule = 'discount_rate') <> 'medium' then
+        raise exception '15 percent should be medium';
+    end if;
+    delete from public.parking_sessions where vehicle_id in
+        (select id from public.vehicles where plate like 'ANDISC%' or plate = 'ANLOST');
+    delete from public.vehicles where plate like 'ANDISC%' or plate = 'ANLOST';
+end $$;
+
+-- anomaly: success lost_ticket_rate
+do $$
+declare
+    cat integer := current_setting('app.an_cat')::integer;
+    shift_b bigint;
+    shift_a bigint;
+    v integer;
+begin
+    delete from public.cash_anomalies;
+    insert into public.vehicles (plate, category_id)
+    select 'ANLT' || g, cat from generate_series(1, 2) g;
+    insert into public.shifts (operator_id, opened_at, closed_at, difference, lot_id)
+    values (2, now() - interval '1 day', now() - interval '1 day' + interval '8 hours', 0, 1)
+    returning id into shift_b;
+    insert into public.shifts (operator_id, opened_at, closed_at, difference, lot_id)
+    values (3, now() - interval '1 day', now() - interval '1 day' + interval '8 hours', 0, 1)
+    returning id into shift_a;
+    -- B: 40 closed, 8 lost. A: 160 closed, 8 lost.
+    insert into public.parking_sessions (
+        vehicle_id, operator_id, status, lot_id, entry_time, exit_time,
+        amount_charged, lost_ticket, shift_id, payment_method
+    )
+    select (select id from public.vehicles where plate = 'ANLT1'),
+           2, 'closed', 1, now() - interval '20 hours', now() - interval '19 hours',
+           2000, g <= 8, shift_b, 'cash'
+      from generate_series(1, 40) g;
+    insert into public.parking_sessions (
+        vehicle_id, operator_id, status, lot_id, entry_time, exit_time,
+        amount_charged, lost_ticket, shift_id, payment_method
+    )
+    select (select id from public.vehicles where plate = 'ANLT2'),
+           3, 'closed', 1, now() - interval '20 hours', now() - interval '19 hours',
+           2000, g <= 8, shift_a, 'cash'
+      from generate_series(1, 160) g;
+    perform public.detect_cash_anomalies();
+    if not exists (
+        select 1 from public.cash_anomalies
+         where lot_id = 1 and rule = 'lost_ticket_rate'
+           and subject_user_id = 2 and severity = 'high'
+    ) then
+        raise exception 'operator B should be a high lost-ticket rate: %',
+            (select jsonb_agg(a) from public.cash_anomalies a where a.rule = 'lost_ticket_rate');
+    end if;
+    delete from public.parking_sessions s where s.shift_id in (shift_a, shift_b);
+    delete from public.shifts where id in (shift_a, shift_b);
+    delete from public.vehicles where plate like 'ANLT%';
+end $$;
+
+-- anomaly: success post_close_adjustment
+do $$
+declare
+    v_shift bigint;
+begin
+    delete from public.cash_anomalies;
+    insert into public.shifts (operator_id, opened_at, closed_at, difference, lot_id)
+    values (2, now() - interval '2 days', now() - interval '2 days' + interval '6 hours', -6000, 1)
+    returning id into v_shift;
+    insert into public.shift_adjustments (
+        shift_id, old_counted, new_counted, old_difference, new_difference, reason, adjusted_by
+    )
+    values (v_shift, 1000, 6500, -6000, -500, 'conteo revisado', 1);
+    perform public.detect_cash_anomalies();
+    if not exists (select 1 from public.cash_anomalies
+                    where lot_id = 1 and rule = 'post_close_adjustment' and severity = 'high') then
+        raise exception 'the adjustment was not flagged as high';
+    end if;
+    delete from public.shift_adjustments sa where sa.shift_id = v_shift;
+    delete from public.shifts where id = v_shift;
+end $$;
+
+-- anomaly: success shift_open_long and session_open_long
+do $$
+declare
+    cat integer := current_setting('app.an_cat')::integer;
+    vehicle integer;
+begin
+    delete from public.cash_anomalies;
+    insert into public.shifts (operator_id, opened_at, lot_id)
+    values (2, now() - interval '20 hours', 1);
+    insert into public.vehicles (plate, category_id) values ('ANOPEN', cat)
+    returning id into vehicle;
+    insert into public.parking_sessions (vehicle_id, operator_id, status, lot_id, entry_time)
+    values (vehicle, 2, 'open', 1, now() - interval '9 days');
+    perform public.detect_cash_anomalies();
+    if (select severity from public.cash_anomalies
+         where lot_id = 1 and rule = 'shift_open_long') <> 'medium' then
+        raise exception 'a 20 hour shift should be medium';
+    end if;
+    if (select severity from public.cash_anomalies
+         where lot_id = 1 and rule = 'session_open_long') <> 'low' then
+        raise exception 'a 9 day session should be low';
+    end if;
+    -- An active pass explains a long stay.
+    insert into public.monthly_passes (vehicle_id, start_date, end_date, amount, lot_id)
+    values (vehicle, current_date - 10, current_date + 10, 50000, 1);
+    delete from public.cash_anomalies where rule = 'session_open_long';
+    perform public.detect_cash_anomalies();
+    if exists (select 1 from public.cash_anomalies where rule = 'session_open_long') then
+        raise exception 'a session with an active pass was flagged';
+    end if;
+    delete from public.monthly_passes where vehicle_id = vehicle;
+    delete from public.parking_sessions where vehicle_id = vehicle;
+    delete from public.vehicles where id = vehicle;
+    delete from public.shifts where lot_id = 1 and closed_at is null;
+end $$;
+
+-- anomaly: success notification to admins only
+do $$
+declare
+    cat integer := current_setting('app.an_cat')::integer;
+    vehicle integer;
+begin
+    delete from public.cash_anomalies;
+    delete from public.notifications where type = 'cash_anomaly';
+    insert into public.vehicles (plate, category_id) values ('ANNOT', cat)
+    returning id into vehicle;
+    insert into public.parking_sessions (
+        vehicle_id, operator_id, status, lot_id, entry_time, exit_time,
+        amount_charged, payment_method
+    )
+    values (vehicle, 2, 'closed', 1, now() - interval '2 hours', now() - interval '1 hour', 0, 'cash');
+    perform public.detect_cash_anomalies();
+    if not exists (
+        select 1 from public.notifications n
+         where n.type = 'cash_anomaly' and n.user_id = 1 and n.lot_id = 1
+    ) then
+        raise exception 'the admin was not notified';
+    end if;
+    if exists (select 1 from public.notifications n
+                where n.type = 'cash_anomaly' and n.user_id = 2) then
+        raise exception 'the operator was notified';
+    end if;
+    if (select count(*) from public.notifications
+         where type = 'cash_anomaly') <> 1 then
+        raise exception 'the notification was duplicated';
+    end if;
+    perform public.detect_cash_anomalies();
+    if (select count(*) from public.notifications where type = 'cash_anomaly') <> 1 then
+        raise exception 'a second run notified again';
+    end if;
+    delete from public.parking_sessions where vehicle_id = vehicle;
+    delete from public.vehicles where id = vehicle;
+end $$;
+
+-- anomaly: security rls, rpc and job functions
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+set local role authenticated;
+do $$
+declare
+    visible integer;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    select count(*) into visible from public.cash_anomalies;
+    if visible <> 0 then
+        raise exception 'the operator saw % anomalies', visible;
+    end if;
+    select count(*) into visible from public.anomaly_settings;
+    if visible <> 0 then
+        raise exception 'the operator read the thresholds';
+    end if;
+    begin
+        perform public.list_cash_anomalies();
+        raise exception 'the operator listed anomalies';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+    begin
+        perform public.resolve_cash_anomaly(1, 'acknowledged');
+        raise exception 'the operator resolved an anomaly';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+    begin
+        perform public.get_anomaly_settings();
+        raise exception 'the operator read the settings';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+    begin
+        perform public.detect_cash_anomalies();
+        raise exception 'the operator ran the detector';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+set local role anon;
+do $$
+begin
+    begin
+        perform 1 from public.cash_anomalies limit 1;
+        raise exception 'anon read the anomalies';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform public.detect_cash_anomalies();
+        raise exception 'anon ran the detector';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- anomaly: success review
+set local role authenticated;
+do $$
+declare
+    listed jsonb;
+    resolved jsonb;
+    missing jsonb;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    listed := public.list_cash_anomalies('open', null, null, 10);
+    if (listed ->> 'open_count')::integer < 1 then
+        raise exception 'the review fixture has no open anomalies: %', listed;
+    end if;
+    perform set_config(
+        'app.an_id', (listed -> 'items' -> 0 ->> 'id'), true
+    );
+    resolved := public.resolve_cash_anomaly(
+        (listed -> 'items' -> 0 ->> 'id')::bigint, 'acknowledged', null
+    );
+    if resolved ->> 'status' <> 'acknowledged'
+       or resolved ->> 'resolved_at' is null
+       or (resolved ->> 'resolved_by_name') is null then
+        raise exception 'the acknowledge did not stick: %', resolved;
+    end if;
+    begin
+        perform public.resolve_cash_anomaly(
+            (listed -> 'items' -> 0 ->> 'id')::bigint, 'acknowledged', null
+        );
+        raise exception 'an anomaly was resolved twice';
+    exception when others then
+        if sqlerrm not like '%AnomalyAlreadyResolvedError%' then raise; end if;
+    end;
+    begin
+        perform public.resolve_cash_anomaly(
+            (listed -> 'items' -> 0 ->> 'id')::bigint, 'dismissed', '  '
+        );
+        raise exception 'a dismissal without a note was accepted';
+    exception when others then
+        if sqlerrm not like '%AnomalyNoteRequiredError%' then raise; end if;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- anomaly: failure review inputs
+set local role authenticated;
+do $$
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    begin
+        perform public.list_cash_anomalies('someday');
+        raise exception 'an invalid status filter was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+    begin
+        perform public.list_cash_anomalies(null, 'bogus-rule');
+        raise exception 'an invalid rule filter was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+    begin
+        perform public.resolve_cash_anomaly(999999999, 'open');
+        raise exception 'an invalid status was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidAnomalyStatusError%' then raise; end if;
+    end;
+    begin
+        perform public.resolve_cash_anomaly(999999999, 'acknowledged');
+        raise exception 'an unknown anomaly was resolved';
+    exception when others then
+        if sqlerrm not like '%AnomalyNotFoundError%' then raise; end if;
+    end;
+end $$;
+reset role;
+
+-- anomaly: success and failure settings
+set local role authenticated;
+do $$
+declare
+    defaults jsonb;
+    saved jsonb;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    defaults := public.get_anomaly_settings();
+    if (defaults ->> 'window_days')::integer <> 14
+       or (defaults ->> 'shortage_min_shifts')::integer <> 3 then
+        raise exception 'the anomaly defaults changed: %', defaults;
+    end if;
+    saved := public.set_anomaly_settings('{"window_days": 21, "disabled_rules": ["zero_charge"]}');
+    if (saved ->> 'window_days')::integer <> 21
+       or not (saved -> 'disabled_rules' @> '["zero_charge"]'::jsonb) then
+        raise exception 'the partial update failed: %', saved;
+    end if;
+    begin
+        perform public.set_anomaly_settings('{"window_days": 1000}');
+        raise exception 'an out of range window was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidAnomalySettingError%' then raise; end if;
+    end;
+    begin
+        perform public.set_anomaly_settings('{"bogus": 1}');
+        raise exception 'an unknown key was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidAnomalySettingError%' then raise; end if;
+    end;
+    begin
+        perform public.set_anomaly_settings('{"window_days": "many"}');
+        raise exception 'a string for an integer was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidAnomalySettingError%'
+           and sqlerrm not like '%invalid input syntax%' then raise; end if;
+    end;
+    begin
+        perform public.set_anomaly_settings('{"disabled_rules": ["bogus"]}');
+        raise exception 'an unknown rule was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidAnomalySettingError%' then raise; end if;
+    end;
+    perform public.set_anomaly_settings('{"window_days": 14, "disabled_rules": []}');
+end $$;
+reset role;
+
+-- anomaly: success audit and purge
+set local role authenticated;
+do $$
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    perform public.set_anomaly_settings('{"short_stay_minutes": 45}');
+end $$;
+reset role;
+do $$
+declare
+    audits integer;
+    purged integer;
+begin
+    select count(*) into audits
+      from public.audit_log a
+     where a.table_name = 'anomaly_settings' and a.lot_id = 1;
+    if audits = 0 then
+        raise exception 'the settings change was not audited';
+    end if;
+    select count(*) into audits
+      from public.audit_log a
+     where a.table_name = 'cash_anomalies' and a.lot_id = 1 and a.action = 'update';
+    if audits = 0 then
+        raise exception 'the review was not audited';
+    end if;
+    -- Purge: a resolved row older than the window goes, an open row stays.
+    update public.cash_anomalies
+       set resolved_at = now() - interval '400 days'
+     where lot_id = 1 and status <> 'open';
+    purged := public.purge_cash_anomalies(365);
+    if purged < 1 then
+        raise exception 'the purge removed nothing';
+    end if;
+    if exists (select 1 from public.cash_anomalies a
+                where a.lot_id = 1 and a.status <> 'open'
+                  and a.resolved_at < now() - interval '365 days') then
+        raise exception 'an old resolved anomaly survived the purge';
+    end if;
+end $$;
+
+-- anomaly: success job entrypoints and lot isolation
+do $$
+declare
+    created integer;
+    lot2 integer;
+begin
+    created := public.detect_cash_anomalies();
+    perform public.purge_cash_anomalies();
+    -- Lot 2 is invisible through the lot 1 header; a foreign id is not found.
+    select id into lot2 from public.parking_lots where id = 2;
+    insert into public.cash_anomalies (lot_id, rule, severity, dedupe_key, details)
+    values (lot2, 'zero_charge', 'low', 'test:lot2', '{}'::jsonb);
+    perform set_config('app.an_lot2', (select max(id) from public.cash_anomalies
+                                        where lot_id = lot2)::text, true);
+end $$;
+set local role authenticated;
+do $$
+declare
+    visible integer;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    if exists (select 1 from public.cash_anomalies a where a.lot_id <> 1) then
+        raise exception 'the admin saw another lot anomaly';
+    end if;
+    begin
+        perform public.resolve_cash_anomaly(
+            current_setting('app.an_lot2')::bigint, 'acknowledged'
+        );
+        raise exception 'a lot 1 admin resolved a lot 2 anomaly';
+    exception when others then
+        if sqlerrm not like '%AnomalyNotFoundError%' then raise; end if;
+    end;
+    perform set_config('request.headers', '{"x-lot-id":"999999"}', true);
+    begin
+        perform public.list_cash_anomalies();
+        raise exception 'a foreign lot header was accepted';
+    exception when others then
+        if sqlerrm not like '%LotRequiredError%' then raise; end if;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+
 rollback;

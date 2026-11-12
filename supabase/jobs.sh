@@ -35,6 +35,8 @@ while true; do
   run notify_expiring_monthly_passes
   run notify_overstays
   run notify_expiring_reservations
+  # Cash anomaly rules over the last window; idempotent per subject.
+  run detect_cash_anomalies
   run renew_monthly_passes
   run expire_reservations
   # Waitlist: reconcile/expire offers, then serve the queue (and the trigger
@@ -49,6 +51,7 @@ while true; do
   run purge_client_error_reports
   run purge_audit_log
   run purge_whatsapp_messages
+  run purge_cash_anomalies
   # Both are no-ops until their credentials are configured.
   dispatch "${API_URL}/functions/v1/push-dispatch"
   dispatch "${API_URL}/functions/v1/whatsapp-dispatch"

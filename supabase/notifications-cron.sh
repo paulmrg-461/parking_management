@@ -48,6 +48,11 @@ docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
   "select public.purge_audit_log(365);" >/dev/null
 docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
   "select public.purge_whatsapp_messages(90);" >/dev/null
+# Cash anomaly detection and retention.
+docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
+  "select public.detect_cash_anomalies();" >/dev/null
+docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
+  "select public.purge_cash_anomalies(365);" >/dev/null
 
 curl -fsS -X POST "${API_URL:-http://localhost:8000}/functions/v1/push-dispatch" \
   -H "Authorization: Bearer ${SERVICE_KEY}" >/dev/null
