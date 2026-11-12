@@ -238,4 +238,23 @@ void main() {
     await expectLater(tester, meetsGuideline(textContrastGuideline));
     handle.dispose();
   });
+  testWidgets('A11y: the field-by-field dialog fits 360 dp with large text', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    tester.platformDispatcher.textScaleFactorTestValue = 1.6;
+    addTearDown(tester.view.reset);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+    await _pump(
+      tester,
+      entry: _vehicleEdit(
+        payload: const {'color': 'blue', 'brand': 'Chevrolet Spark GT'},
+      ),
+    );
+
+    expect(tester.takeException(), isNull);
+    expect(find.byType(ConflictResolutionDialog), findsOneWidget);
+  });
 }
