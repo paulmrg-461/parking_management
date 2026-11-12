@@ -469,6 +469,21 @@ services:
       VERIFY_JWT: "${FUNCTIONS_VERIFY_JWT}"
       # Optional: FCM service-account JSON for background push delivery.
       FCM_SERVICE_ACCOUNT_JSON: ${FCM_SERVICE_ACCOUNT_JSON:-}
+      # Optional: Cloudflare Turnstile secret for the public-booking function.
+      # Empty keeps the function inert (it forwards to the anonymous RPC).
+      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:-}
+      # Optional: WhatsApp Cloud API, drained by whatsapp-dispatch. Empty keeps
+      # the function inert (it answers {configured:false} and rows stay queued).
+      WHATSAPP_TOKEN: ${WHATSAPP_TOKEN:-}
+      WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID:-}
+      WHATSAPP_API_VERSION: ${WHATSAPP_API_VERSION:-v21.0}
+      WHATSAPP_TEMPLATE_RECEIPT: ${WHATSAPP_TEMPLATE_RECEIPT:-receipt}
+      WHATSAPP_TEMPLATE_PASS: ${WHATSAPP_TEMPLATE_PASS:-pass_expiry}
+      WHATSAPP_TEMPLATE_READY: ${WHATSAPP_TEMPLATE_READY:-vehicle_ready}
+      WHATSAPP_TEMPLATE_RESERVATION: ${WHATSAPP_TEMPLATE_RESERVATION:-reservation_confirmed}
+      WHATSAPP_TEMPLATE_REMINDER: ${WHATSAPP_TEMPLATE_REMINDER:-reservation_reminder}
+      WHATSAPP_TEMPLATE_CANCELLED: ${WHATSAPP_TEMPLATE_CANCELLED:-reservation_cancelled}
+      WHATSAPP_TEMPLATE_WAITLIST_OFFER: ${WHATSAPP_TEMPLATE_WAITLIST_OFFER:-waitlist_offer}
     command:
       [
         "start",

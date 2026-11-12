@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/features/vehicle_history/domain/entities/vehicle_history.dart';
 import 'package:parking_management/features/vehicle_history/domain/repositories/vehicle_history_repository.dart';
@@ -8,6 +10,9 @@ class FakeVehicleHistoryRepository implements VehicleHistoryRepository {
   VehicleHistory? history;
   Failure? error;
   Failure? flagsError;
+
+  /// When set, [lookup] waits for it so a test can observe the loading state.
+  Completer<void>? lookupGate;
   final List<String> lookups = [];
   bool? lastBlacklisted;
   String? lastNotes;
@@ -17,6 +22,7 @@ class FakeVehicleHistoryRepository implements VehicleHistoryRepository {
   @override
   Future<VehicleHistory> lookup(String plate) async {
     lookups.add(plate);
+    await lookupGate?.future;
     final error = this.error;
     if (error != null) {
       throw error;
@@ -66,6 +72,7 @@ VehicleHistory sampleHistory({
   String? ownerPhone,
   String? ownerName,
   bool withOpenSession = false,
+  int photos = 0,
 }) => VehicleHistory(
   plate: plate,
   vehicleId: 1,
@@ -74,7 +81,7 @@ VehicleHistory sampleHistory({
   brand: 'Mazda',
   visits: 2,
   totalSpent: 12000,
-  openSessions: 0,
+  openSessions: withOpenSession ? 1 : 0,
   currentLotVisits: 1,
   ownerPhone: ownerPhone,
   ownerName: ownerName,
@@ -101,6 +108,7 @@ VehicleHistory sampleHistory({
       lotName: 'Central',
       discountAmount: 1000,
       discountReason: 'cortesia',
+      photoCount: photos,
     ),
     VehicleHistorySession(
       id: 1,

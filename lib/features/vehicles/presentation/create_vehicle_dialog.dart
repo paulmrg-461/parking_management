@@ -48,9 +48,7 @@ class _CreateVehicleDialogState extends State<CreateVehicleDialog> {
 
   String? _validateOwnerName(AppLocalizations l10n, String? value) {
     final name = (value ?? '').trim();
-    return name.isEmpty || name.length >= 2
-        ? null
-        : l10n.errorInvalidOwnerName;
+    return name.isEmpty || name.length >= 2 ? null : l10n.errorInvalidOwnerName;
   }
 
   String? _validatePhone(AppLocalizations l10n, String? value) {
@@ -81,7 +79,10 @@ class _CreateVehicleDialogState extends State<CreateVehicleDialog> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return AlertDialog(
-      title: DialogHeader(icon: Icons.directions_car_outlined, title: l10n.vehicleNew),
+      title: DialogHeader(
+        icon: Icons.directions_car_outlined,
+        title: l10n.vehicleNew,
+      ),
       content: Form(
         key: _formKey,
         child: SingleChildScrollView(
@@ -140,6 +141,7 @@ class _CreateVehicleDialogState extends State<CreateVehicleDialog> {
   }
 
   Widget _categoryField(AppLocalizations l10n) => DropdownButtonFormField<int>(
+    isExpanded: true,
     initialValue: _categoryId,
     items: [
       for (final category in widget.categories)

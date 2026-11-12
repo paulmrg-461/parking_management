@@ -4,9 +4,8 @@ import 'package:parking_management/core/receipt/receipt_labels.dart';
 import 'package:parking_management/features/receipt_printing/infrastructure/esc_pos_generator.dart';
 import 'package:parking_management/features/settings/domain/entities/parking_settings.dart';
 
-String _decode(List<int> bytes) => String.fromCharCodes(
-  bytes.where((b) => b >= 0x20 && b < 0x7F),
-);
+String _decode(List<int> bytes) =>
+    String.fromCharCodes(bytes.where((b) => b >= 0x20 && b < 0x7F));
 
 const _configured = ParkingSettings(
   name: 'Parqueadero Central',

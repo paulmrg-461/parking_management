@@ -14,6 +14,7 @@ import '../../../core/widgets/empty_state.dart';
 import '../../emergency/presentation/emergency_action.dart';
 import '../../../core/widgets/error_state.dart';
 import '../../../core/widgets/filter_bar.dart';
+import '../../../core/widgets/search_field.dart';
 import '../../../core/widgets/skeleton.dart';
 import '../../../core/widgets/status_chip.dart';
 import '../application/audit_cubit.dart';
@@ -22,13 +23,20 @@ import 'audit_export.dart';
 
 /// Admin audit trail: who changed which reference data, when and where.
 class AuditPage extends StatefulWidget {
-  const AuditPage({super.key});
+  const AuditPage({super.key, this.initialTable, this.initialSearch});
+
+  /// Pre-filters set by a deep link (`/audit?table=...&search=...`).
+  final String? initialTable;
+  final String? initialSearch;
 
   @override
   State<AuditPage> createState() => _AuditPageState();
 }
 
 class _AuditPageState extends State<AuditPage> {
+  late final TextEditingController _search = TextEditingController();
+  Timer? _searchTimer;
+
   static const _tables = [
     'users',
     'categories',
@@ -38,12 +46,38 @@ class _AuditPageState extends State<AuditPage> {
     'parking_settings',
     'parking_lots',
     'lot_members',
+    'cash_anomalies',
+    'anomaly_settings',
   ];
 
   @override
   void initState() {
     super.initState();
-    unawaited(context.read<AuditCubit>().load());
+    if (widget.initialSearch case final initial?) {
+      _search.text = initial;
+    }
+    unawaited(
+      context.read<AuditCubit>().load(
+        table: widget.initialTable,
+        search: widget.initialSearch,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _searchTimer?.cancel();
+    _search.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String term) {
+    _searchTimer?.cancel();
+    _searchTimer = Timer(const Duration(milliseconds: 300), () {
+      if (mounted) {
+        unawaited(context.read<AuditCubit>().load(search: term));
+      }
+    });
   }
 
   Future<void> _pickRange(BuildContext context, AuditState state) async {
@@ -58,10 +92,7 @@ class _AuditPageState extends State<AuditPage> {
           : DateTimeRange(start: loaded!.from!, end: loaded.to!),
     );
     if (picked != null && context.mounted) {
-      await context.read<AuditCubit>().load(
-        from: picked.start,
-        to: picked.end,
-      );
+      await context.read<AuditCubit>().load(from: picked.start, to: picked.end);
     }
   }
 
@@ -75,6 +106,7 @@ class _AuditPageState extends State<AuditPage> {
       subtitle: [
         if (state.table != null) state.table!,
         if (state.actor != null) state.actor!,
+        if (state.search?.isNotEmpty ?? false) '"${state.search}"',
       ].join(' · '),
     );
     if (!context.mounted) {
@@ -93,9 +125,8 @@ class _AuditPageState extends State<AuditPage> {
     }
     await Clipboard.setData(ClipboardData(text: auditCsv(state.entries)));
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.auditCopied)),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(context.l10n.auditCopied)));
     }
   }
 
@@ -114,14 +145,8 @@ class _AuditPageState extends State<AuditPage> {
                   ? _exportPdf(context, state)
                   : _copyCsv(context, state),
               itemBuilder: (_) => [
-                PopupMenuItem(
-                  value: 'pdf',
-                  child: Text(l10n.auditExportPdf),
-                ),
-                PopupMenuItem(
-                  value: 'csv',
-                  child: Text(l10n.auditExportCsv),
-                ),
+                PopupMenuItem(value: 'pdf', child: Text(l10n.auditExportPdf)),
+                PopupMenuItem(value: 'csv', child: Text(l10n.auditExportCsv)),
               ],
             ),
           ),
@@ -142,7 +167,8 @@ class _AuditPageState extends State<AuditPage> {
               loaded != null &&
               (loaded.from != null ||
                   loaded.table != null ||
-                  loaded.actor != null);
+                  loaded.actor != null ||
+                  (loaded.search?.isNotEmpty ?? false));
           return Column(
             children: [
               Padding(
@@ -152,12 +178,29 @@ class _AuditPageState extends State<AuditPage> {
                       ? null
                       : l10n.auditCount(loaded.entries.length),
                   onClear: filtered
-                      ? () => context
-                            .read<AuditCubit>()
-                            .load(clearFilters: true)
+                      ? () {
+                          _search.clear();
+                          context.read<AuditCubit>().load(clearFilters: true);
+                        }
                       : null,
                   clearLabel: l10n.actionClearFilters,
                   children: [
+                    SizedBox(
+                      width: 240,
+                      child: SearchField(
+                        label: l10n.auditSearch,
+                        hint: l10n.auditSearchHint,
+                        controller: _search,
+                        textCapitalization: TextCapitalization.none,
+                        onChanged: _onSearchChanged,
+                        onSubmitted: (value) {
+                          _searchTimer?.cancel();
+                          unawaited(
+                            context.read<AuditCubit>().load(search: value),
+                          );
+                        },
+                      ),
+                    ),
                     SizedBox(
                       width: 200,
                       child: DropdownButtonFormField<String?>(
@@ -200,9 +243,8 @@ class _AuditPageState extends State<AuditPage> {
                                 child: Text(actor),
                               ),
                           ],
-                          onChanged: (value) => context
-                              .read<AuditCubit>()
-                              .load(actor: value),
+                          onChanged: (value) =>
+                              context.read<AuditCubit>().load(actor: value),
                         ),
                       ),
                     ConstrainedBox(
@@ -230,36 +272,39 @@ class _AuditPageState extends State<AuditPage> {
                     message: context.l10n.errorText(message, failure),
                     onRetry: () => context.read<AuditCubit>().load(),
                   ),
-                  final AuditLoaded loaded => loaded.entries.isEmpty
-                      ? EmptyState(
-                          icon: filtered
-                              ? Icons.filter_alt_off_outlined
-                              : Icons.history,
-                          title: filtered
-                              ? l10n.auditEmptyFiltered
-                              : l10n.auditEmpty,
-                          message: filtered
-                              ? l10n.auditEmptyFilteredHint
-                              : l10n.auditEmptyHint,
-                          action: filtered
-                              ? FilledButton.tonalIcon(
-                                  onPressed: () => context
-                                      .read<AuditCubit>()
-                                      .load(clearFilters: true),
-                                  icon: const Icon(Icons.filter_alt_off_outlined),
-                                  label: Text(l10n.actionClearFilters),
-                                )
-                              : null,
-                        )
-                      : RefreshIndicator(
-                          onRefresh: () => context.read<AuditCubit>().load(),
-                          child: ListView.builder(
-                            padding: const EdgeInsets.only(bottom: Space.xl),
-                            itemCount: loaded.entries.length,
-                            itemBuilder: (context, index) =>
-                                _AuditTile(entry: loaded.entries[index]),
+                  final AuditLoaded loaded =>
+                    loaded.entries.isEmpty
+                        ? EmptyState(
+                            icon: filtered
+                                ? Icons.filter_alt_off_outlined
+                                : Icons.history,
+                            title: filtered
+                                ? l10n.auditEmptyFiltered
+                                : l10n.auditEmpty,
+                            message: filtered
+                                ? l10n.auditEmptyFilteredHint
+                                : l10n.auditEmptyHint,
+                            action: filtered
+                                ? FilledButton.tonalIcon(
+                                    onPressed: () => context
+                                        .read<AuditCubit>()
+                                        .load(clearFilters: true),
+                                    icon: const Icon(
+                                      Icons.filter_alt_off_outlined,
+                                    ),
+                                    label: Text(l10n.actionClearFilters),
+                                  )
+                                : null,
+                          )
+                        : RefreshIndicator(
+                            onRefresh: () => context.read<AuditCubit>().load(),
+                            child: ListView.builder(
+                              padding: const EdgeInsets.only(bottom: Space.xl),
+                              itemCount: loaded.entries.length,
+                              itemBuilder: (context, index) =>
+                                  _AuditTile(entry: loaded.entries[index]),
+                            ),
                           ),
-                        ),
                 },
               ),
             ],
@@ -366,10 +411,7 @@ class _ChangesBody extends StatelessWidget {
   }
 
   List<String> get _fields {
-    final keys = <String>{
-      ...?entry.before?.keys,
-      ...?entry.after?.keys,
-    };
+    final keys = <String>{...?entry.before?.keys, ...?entry.after?.keys};
     return keys.toList()..sort();
   }
 
@@ -442,9 +484,7 @@ class _ValueRow extends StatelessWidget {
         Expanded(
           child: SelectableText(
             value,
-            style: theme.textTheme.bodySmall?.copyWith(
-              fontFamily: 'monospace',
-            ),
+            style: theme.textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
           ),
         ),
       ],

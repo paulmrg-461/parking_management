@@ -76,6 +76,40 @@ final class MonthlyPassesLoaded extends MonthlyPassesState {
   String plateOf(MonthlyPass pass) =>
       plates[pass.vehicleId] ?? 'Vehicle ${pass.vehicleId}';
 
+  /// True when the pass matches the registry search (plate, owner or phone).
+  bool matchesPass(MonthlyPass pass, String query) =>
+      _matchesText(plateOf(pass), ownerNameOf(pass), phoneOf(pass), query);
+
+  /// Same search for a pending charge (it only carries the plate, so the
+  /// owner data is resolved through the loaded vehicles).
+  bool matchesPayment(MonthlyPassPayment payment, String query) {
+    String? name;
+    String? phone;
+    for (final vehicle in vehicles) {
+      if (vehicle.plate == payment.plate) {
+        name = vehicle.ownerName;
+        phone = vehicle.ownerPhone;
+        break;
+      }
+    }
+    return _matchesText(payment.plate, name, phone, query);
+  }
+
+  static bool _matchesText(
+    String plate,
+    String? ownerName,
+    String? ownerPhone,
+    String query,
+  ) {
+    final term = query.trim().toLowerCase();
+    if (term.isEmpty) {
+      return true;
+    }
+    return plate.toLowerCase().contains(term) ||
+        (ownerName?.toLowerCase().contains(term) ?? false) ||
+        (ownerPhone?.contains(term) ?? false);
+  }
+
   /// Owner name of the pass' vehicle, when known.
   String? ownerNameOf(MonthlyPass pass) {
     for (final vehicle in vehicles) {
@@ -148,13 +182,17 @@ class MonthlyPassesCubit extends ResilientCubit<MonthlyPassesState> {
 
   Future<void> load({int? vehicleId}) async {
     emit(const MonthlyPassesLoading());
-    final vehicles = _loadVehicles();
-    final tariffs = _loadTariffs();
     try {
-      final passes = await _repository.list(vehicleId: vehicleId);
-      final pending = await _repository.pendingPayments();
-      final loadedVehicles = await vehicles;
-      final loadedTariffs = await tariffs;
+      final results = await Future.wait<Object>([
+        _repository.list(vehicleId: vehicleId),
+        _repository.pendingPayments(),
+        _loadVehicles(),
+        _loadTariffs(),
+      ]);
+      final passes = results[0] as List<MonthlyPass>;
+      final pending = results[1] as List<MonthlyPassPayment>;
+      final loadedVehicles = results[2] as List<Vehicle>;
+      final loadedTariffs = results[3] as List<Tariff>;
       emit(
         MonthlyPassesLoaded(
           monthlyPasses: sortMonthlyPasses(passes),
@@ -168,7 +206,6 @@ class MonthlyPassesCubit extends ResilientCubit<MonthlyPassesState> {
         ),
       );
     } on Failure catch (failure) {
-      vehicles.ignore();
       emit(MonthlyPassesFailure.of(failure));
     }
   }

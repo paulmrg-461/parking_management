@@ -12,7 +12,10 @@ class ParkingSettings extends Equatable {
     this.website = '',
     this.whatsapp = '',
     this.logoVersion = 0,
+    this.coverPath = '',
+    this.coverVersion = 0,
     this.evidenceRetentionDays = 0,
+    this.reservationGraceMinutes = 15,
     this.whatsappAuto = false,
     this.carCapacity = 0,
     this.motoCapacity = 0,
@@ -23,6 +26,7 @@ class ParkingSettings extends Equatable {
     this.currency = 'COP',
     this.minAppVersion = '',
     this.policePhone = '',
+    this.version = 0,
   });
 
   final String name;
@@ -35,9 +39,19 @@ class ParkingSettings extends Equatable {
   /// Server-side counter (`0` = no logo); doubles as the logo cache key.
   final int logoVersion;
 
+  /// Storage path of the wide cover shown on the public page ('' = none).
+  final String coverPath;
+  final int coverVersion;
+
+  bool get hasCover => coverPath.isNotEmpty;
+
   /// Evidence photos older than this are deleted by `evidence-archive`.
   /// `0` keeps them forever (default).
   final int evidenceRetentionDays;
+
+  /// Minutes after a hold's expiry where it still counts (and check-in
+  /// consumes it). `0` means the hold stops counting exactly on time.
+  final int reservationGraceMinutes;
 
   /// When true, customer messages are queued for the WhatsApp dispatcher
   /// instead of opening `wa.me` on the device.
@@ -71,6 +85,10 @@ class ParkingSettings extends Equatable {
   /// Nearest police quadrant for the emergency action ('' = use 123).
   final String policePhone;
 
+  /// Row version from the server (`0` when unknown); an edit sends it so a
+  /// concurrent change is a conflict, not an overwrite.
+  final int version;
+
   /// The never-configured record (mirrors the backend default).
   static ParkingSettings defaults() => const ParkingSettings();
 
@@ -82,7 +100,10 @@ class ParkingSettings extends Equatable {
     String? website,
     String? whatsapp,
     int? logoVersion,
+    String? coverPath,
+    int? coverVersion,
     int? evidenceRetentionDays,
+    int? reservationGraceMinutes,
     bool? whatsappAuto,
     int? carCapacity,
     int? motoCapacity,
@@ -93,6 +114,7 @@ class ParkingSettings extends Equatable {
     String? currency,
     String? minAppVersion,
     String? policePhone,
+    int? version,
   }) => ParkingSettings(
     name: name ?? this.name,
     address: address ?? this.address,
@@ -101,7 +123,11 @@ class ParkingSettings extends Equatable {
     website: website ?? this.website,
     whatsapp: whatsapp ?? this.whatsapp,
     logoVersion: logoVersion ?? this.logoVersion,
+    coverPath: coverPath ?? this.coverPath,
+    coverVersion: coverVersion ?? this.coverVersion,
     evidenceRetentionDays: evidenceRetentionDays ?? this.evidenceRetentionDays,
+    reservationGraceMinutes:
+        reservationGraceMinutes ?? this.reservationGraceMinutes,
     whatsappAuto: whatsappAuto ?? this.whatsappAuto,
     carCapacity: carCapacity ?? this.carCapacity,
     motoCapacity: motoCapacity ?? this.motoCapacity,
@@ -112,6 +138,7 @@ class ParkingSettings extends Equatable {
     currency: currency ?? this.currency,
     minAppVersion: minAppVersion ?? this.minAppVersion,
     policePhone: policePhone ?? this.policePhone,
+    version: version ?? this.version,
   );
 
   /// Editable fields (metadata excluded).
@@ -123,6 +150,7 @@ class ParkingSettings extends Equatable {
     'website': website,
     'whatsapp': whatsapp,
     'evidence_retention_days': evidenceRetentionDays,
+    'reservation_grace_minutes': reservationGraceMinutes,
     'whatsapp_auto': whatsappAuto,
     'car_capacity': carCapacity,
     'moto_capacity': motoCapacity,
@@ -144,7 +172,10 @@ class ParkingSettings extends Equatable {
     website,
     whatsapp,
     logoVersion,
+    coverPath,
+    coverVersion,
     evidenceRetentionDays,
+    reservationGraceMinutes,
     whatsappAuto,
     carCapacity,
     motoCapacity,
@@ -155,5 +186,6 @@ class ParkingSettings extends Equatable {
     currency,
     minAppVersion,
     policePhone,
+    version,
   ];
 }

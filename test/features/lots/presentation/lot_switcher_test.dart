@@ -11,10 +11,7 @@ import '../../../helpers/fake_lots_repository.dart';
 import '../../../helpers/test_app.dart';
 
 void main() {
-  Future<LotsCubit> pumpBar(
-    WidgetTester tester,
-    List<dynamic> lots,
-  ) async {
+  Future<LotsCubit> pumpBar(WidgetTester tester, List<dynamic> lots) async {
     final cubit = LotsCubit(
       FakeLotsRepository([for (final lot in lots) lot]),
       LotContext(FakeKeyValueStore(), LotSession()),

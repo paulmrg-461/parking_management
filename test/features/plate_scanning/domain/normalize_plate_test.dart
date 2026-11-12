@@ -8,13 +8,13 @@ void main() {
   });
 
   test('Failure: rejects an empty plate with ValidationFailure', () {
-    expect(
-      () => normalizePlate('   '),
-      throwsA(isA<ValidationFailure>()),
-    );
+    expect(() => normalizePlate('   '), throwsA(isA<ValidationFailure>()));
   });
 
-  test('Security: strips whitespace so injected plate cannot bypass checks', () {
-    expect(normalizePlate('\t A B C 1 2 3 \n'), 'ABC123');
-  });
+  test(
+    'Security: strips whitespace so injected plate cannot bypass checks',
+    () {
+      expect(normalizePlate('\t A B C 1 2 3 \n'), 'ABC123');
+    },
+  );
 }

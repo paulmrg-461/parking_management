@@ -10,6 +10,7 @@ CategoryDto _$CategoryDtoFromJson(Map<String, dynamic> json) => CategoryDto(
   id: (json['id'] as num?)?.toInt(),
   name: json['name'] as String,
   capacity: (json['capacity'] as num?)?.toInt() ?? 0,
+  version: (json['version'] as num?)?.toInt() ?? 0,
 );
 
 Map<String, dynamic> _$CategoryDtoToJson(CategoryDto instance) =>
@@ -17,4 +18,5 @@ Map<String, dynamic> _$CategoryDtoToJson(CategoryDto instance) =>
       'id': instance.id,
       'name': instance.name,
       'capacity': instance.capacity,
+      'version': instance.version,
     };

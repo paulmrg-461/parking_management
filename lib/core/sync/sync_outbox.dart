@@ -18,6 +18,13 @@ abstract class SyncOutbox {
   /// Entries parked after exhausting retries or a non-retryable rejection.
   Future<List<OutboxEntry>> listDeadLetters();
 
+  /// Entries waiting for the operator to resolve a version conflict.
+  Future<List<OutboxEntry>> listConflicts();
+
+  /// Removes the entry at [key] only if it still holds [expected]: a coalesced
+  /// edit written while the replay was in flight must survive.
+  Future<void> settle(int key, PendingMutation expected);
+
   /// Overwrites the entry at [key] (retry metadata, dead-letter flag...).
   Future<void> replace(int key, PendingMutation mutation);
 
@@ -48,12 +55,27 @@ class HiveSyncOutbox implements SyncOutbox {
   }
 
   @override
-  Future<List<OutboxEntry>> listPending() async =>
-      (await _readAll()).where((e) => !e.value.deadLettered).toList();
+  Future<List<OutboxEntry>> listPending() async => (await _readAll())
+      .where((e) => !e.value.deadLettered && !e.value.needsResolution)
+      .toList();
 
   @override
-  Future<List<OutboxEntry>> listDeadLetters() async =>
-      (await _readAll()).where((e) => e.value.deadLettered).toList();
+  Future<List<OutboxEntry>> listDeadLetters() async => (await _readAll())
+      .where((e) => e.value.deadLettered && !e.value.needsResolution)
+      .toList();
+
+  @override
+  Future<List<OutboxEntry>> listConflicts() async =>
+      (await _readAll()).where((e) => e.value.needsResolution).toList();
+
+  @override
+  Future<void> settle(int key, PendingMutation expected) async {
+    final box = await _box();
+    final current = _decode(box.get(key));
+    if (current == expected) {
+      await box.delete(key);
+    }
+  }
 
   @override
   Future<void> replace(int key, PendingMutation mutation) async {

@@ -19,7 +19,8 @@ abstract class MonthlyPassRemoteDataSource {
   Future<MonthlyPassPayment> registerPayment(int id, String method);
 }
 
-class SupabaseMonthlyPassRemoteDataSource implements MonthlyPassRemoteDataSource {
+class SupabaseMonthlyPassRemoteDataSource
+    implements MonthlyPassRemoteDataSource {
   SupabaseMonthlyPassRemoteDataSource(this._client);
 
   final SupabaseClient _client;
@@ -45,11 +46,7 @@ class SupabaseMonthlyPassRemoteDataSource implements MonthlyPassRemoteDataSource
   @override
   Future<MonthlyPass> create(Map<String, dynamic> payload) async {
     try {
-      final row = await _client
-          .from(_table)
-          .insert(payload)
-          .select()
-          .single();
+      final row = await _client.from(_table).insert(payload).select().single();
       return MonthlyPassDto.fromJson(row).toDomain();
     } catch (error) {
       throw mapSupabaseError(error);

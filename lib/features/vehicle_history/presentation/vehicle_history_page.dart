@@ -23,19 +23,34 @@ import '../../../core/widgets/money_text.dart';
 import '../../../core/widgets/receipt_card.dart';
 import '../../../core/widgets/metric_card.dart';
 import '../../../core/widgets/section_header.dart';
+import '../../../core/widgets/skeleton.dart';
 import '../../../core/widgets/status_chip.dart';
 import '../../emergency/presentation/emergency_action.dart';
+import '../../evidence/domain/repositories/session_evidence_repository.dart';
+import '../../evidence/presentation/session_evidence_sheet.dart';
 import '../../receipt_printing/presentation/receipt_print_sheet.dart';
 import '../application/vehicle_history_cubit.dart';
 import '../domain/entities/vehicle_history.dart';
 import 'customer_message.dart';
 
 class VehicleHistoryPage extends StatefulWidget {
-  const VehicleHistoryPage({super.key, this.initialPlate, this.onCharge});
+  const VehicleHistoryPage({
+    super.key,
+    this.initialPlate,
+    this.onCharge,
+    this.onCheckIn,
+    this.evidenceRepository,
+  });
 
   /// Opens check-out filtered by the plate. Injectable so a widget test can
   /// record it without a router.
   final void Function(BuildContext context, String plate)? onCharge;
+
+  /// Opens check-in for a vehicle that is not inside. Injectable for tests.
+  final void Function(BuildContext context, String plate)? onCheckIn;
+
+  /// Injectable for widget tests; production resolves it from the locator.
+  final SessionEvidenceRepository? evidenceRepository;
 
   final String? initialPlate;
 
@@ -131,9 +146,7 @@ class _VehicleHistoryPageState extends State<VehicleHistoryPage> {
                   VehicleHistoryStatus.initial => _Hint(
                     message: l10n.vehicleHistoryPrompt,
                   ),
-                  VehicleHistoryStatus.loading => const Center(
-                    child: CircularProgressIndicator(),
-                  ),
+                  VehicleHistoryStatus.loading => const SkeletonList(),
                   VehicleHistoryStatus.failure => ErrorState(
                     message: state.failure == null
                         ? l10n.errorUnknown
@@ -145,6 +158,8 @@ class _VehicleHistoryPageState extends State<VehicleHistoryPage> {
                     history: state.history!,
                     canManage: _canManage(context),
                     onCharge: widget.onCharge ?? _chargeInCheckOut,
+                    onCheckIn: widget.onCheckIn ?? _checkInWithPlate,
+                    evidenceRepository: widget.evidenceRepository,
                   ),
                 },
               ),
@@ -186,17 +201,24 @@ class _Hint extends StatelessWidget {
 void _chargeInCheckOut(BuildContext context, String plate) =>
     context.push('/check-out?plate=${Uri.encodeQueryComponent(plate)}');
 
+void _checkInWithPlate(BuildContext context, String plate) =>
+    context.push('/check-in?plate=${Uri.encodeQueryComponent(plate)}');
+
 class _HistoryBody extends StatefulWidget {
   const _HistoryBody({
     super.key,
     required this.history,
     required this.canManage,
     required this.onCharge,
+    required this.onCheckIn,
+    this.evidenceRepository,
   });
 
   final VehicleHistory history;
   final bool canManage;
   final void Function(BuildContext context, String plate) onCharge;
+  final void Function(BuildContext context, String plate) onCheckIn;
+  final SessionEvidenceRepository? evidenceRepository;
 
   @override
   State<_HistoryBody> createState() => _HistoryBodyState();
@@ -423,6 +445,12 @@ class _HistoryBodyState extends State<_HistoryBody> {
                       : l10n.vehicleEditNotes,
                 ),
               ),
+              if (history.openSessions == 0)
+                TextButton.icon(
+                  onPressed: () => widget.onCheckIn(context, history.plate),
+                  icon: const Icon(Icons.login),
+                  label: Text(l10n.vehicleCheckInAction),
+                ),
               if (canManage)
                 TextButton.icon(
                   onPressed: () => _toggleBlacklist(context),
@@ -486,6 +514,7 @@ class _HistoryBodyState extends State<_HistoryBody> {
                 plate: history.plate,
                 phone: history.ownerPhone,
                 onCharge: widget.onCharge,
+                evidenceRepository: widget.evidenceRepository,
               ),
             ),
       ],
@@ -551,12 +580,14 @@ class _SessionTile extends StatelessWidget {
     required this.plate,
     required this.onCharge,
     this.phone,
+    this.evidenceRepository,
   });
 
   final VehicleHistorySession session;
   final String plate;
   final void Function(BuildContext context, String plate) onCharge;
   final String? phone;
+  final SessionEvidenceRepository? evidenceRepository;
 
   ReceiptData get _receipt => ReceiptData(
     kind: ReceiptKind.checkOut,
@@ -755,6 +786,22 @@ class _SessionTile extends StatelessWidget {
                 ],
               ),
             ],
+            if (session.photoCount > 0) ...[
+              const SizedBox(height: Space.xs),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () => showSessionEvidence(
+                    context,
+                    sessionId: session.id,
+                    plate: plate,
+                    repository: evidenceRepository,
+                  ),
+                  icon: const Icon(Icons.photo_library_outlined, size: 18),
+                  label: Text(l10n.vehicleEvidenceAction(session.photoCount)),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -786,9 +833,7 @@ class _OwnerDialogState extends State<_OwnerDialog> {
 
   String? _validateName(AppLocalizations l10n, String? value) {
     final name = (value ?? '').trim();
-    return name.isEmpty || name.length >= 2
-        ? null
-        : l10n.errorInvalidOwnerName;
+    return name.isEmpty || name.length >= 2 ? null : l10n.errorInvalidOwnerName;
   }
 
   String? _validatePhone(AppLocalizations l10n, String? value) {
@@ -850,10 +895,8 @@ class _OwnerDialogState extends State<_OwnerDialog> {
         FilledButton(
           onPressed: () {
             if (_formKey.currentState!.validate()) {
-              Navigator.of(context).pop((
-                name: _name.text.trim(),
-                phone: _phone.text.trim(),
-              ));
+              Navigator.of(context)
+                  .pop((name: _name.text.trim(), phone: _phone.text.trim()));
             }
           },
           child: Text(l10n.actionSave),

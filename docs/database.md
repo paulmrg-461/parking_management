@@ -17,6 +17,9 @@ erDiagram
   parking_lots ||--o{ shifts : "hosts"
   parking_lots ||--o{ monthly_passes : "hosts"
   parking_lots ||--o{ category_reservations : "holds"
+  parking_lots ||--o{ parking_spots : "maps"
+  parking_spots ||--o{ parking_spot_events : "logged in"
+  users ||--o{ parking_spot_events : "changes"
 
   categories ||--o{ tariffs : "priced by"
   categories ||--o{ vehicles : "classifies"
@@ -57,7 +60,9 @@ erDiagram
 | `shift_adjustments` | Audit of admin corrections to a closed shift. | via shift |
 | `monthly_passes` | Pass period/amount, auto-renew flag, renewal link. | yes |
 | `monthly_pass_payments` | Exactly one charge per pass (`pending`/`paid`/`waived`), collected into a shift. | yes |
-| `category_reservations` | Capacity hold for a plate (`active`/`used`/`cancelled`/`expired`). | yes |
+| `category_reservations` | Capacity hold for a plate (`active`/`used`/`cancelled`/`expired`), with the public customer name/phone and `source` when created from `/reserve`. | yes |
+| `parking_spots` | Physical bay per site: code, group (`car`/`moto`/`heavy`), grid cell and `active`/`out_of_service`; unique code and cell per lot. | yes |
+| `parking_spot_events` | Maintenance history of a bay: status transition, optional reason, actor and timestamp; written by `save_parking_spot`, lot-scoped RLS. | yes |
 | `parking_settings` (`car_capacity`, `moto_capacity`, `key_capacity`) | Per-site branding (name, address, schedule, contacts, police quadrant, logo version/path) + `business_timezone`, `overstay_hours`, `lost_ticket_fee`, `evidence_retention_days`. | yes |
 | `notifications` | Per-user inbox rows (type, title, body, data, read/pushed state, dedupe key). | optional |
 | `device_tokens` | FCM tokens per user/device. | no |
@@ -101,8 +106,10 @@ there).
 
 **Physical map**
 `parking_spots` (`code`, `group_name`, `grid_row`, `grid_col`, `status`;
-unique code and cell per lot), `parking_sessions.spot_id` (one open session per
-bay), `save_parking_spot`, `delete_parking_spot`, `assign_session_spot`,
+unique code and cell per lot), `parking_spot_events` (status transitions with
+actor, reason and timestamp; lot-scoped RLS, written by `save_parking_spot`),
+`parking_sessions.spot_id` (one open session per bay), `save_parking_spot`,
+`delete_parking_spot`, `assign_session_spot`, `list_spot_events`,
 `category_group(name)`, `spot_target_capacity(lot, group)`; a group with spots
 limits check-ins and holds to its active bays, and `save/delete_parking_spot`
 keep the drawn bays equal to the configured capacity (`0` = no limit).
@@ -112,7 +119,8 @@ settings) beside the derived `car_capacity`/`moto_capacity`.
 **Billing and reports**
 `report_revenue` (active lot), `report_revenue_all` (platform admins),
 `report_occupancy`, `occupancy_snapshot`, `dashboard_today` (home KPIs),
-`report_whatsapp` (customer message delivery).
+`dashboard_trend` (home 7-day series), `report_hourly_traffic` (entries/exits
+per hour), `report_whatsapp` (customer message delivery).
 
 **Legal policy**
 `parking_settings.legal_policy` (template), `default_legal_policy()`,
@@ -124,10 +132,112 @@ identity, contact, policy).
 returns 1-hour signed URLs for that session's photos/videos (no login; the
 plate is the key).
 
+**Branding**
+`set_branding_logo(path)` / `set_branding_cover(path)` (lot admin) store the
+logo and the wide cover of the public page; `public_availability` ships
+`logo_path` and `cover_path` to the anonymous page (public `branding` bucket).
+
+**Reservation notices**
+`cancel_reservation(id)` (operator) marks the hold cancelled and, for a public
+hold with a phone and automated WhatsApp, queues `reservation_cancelled`.
+
+**Reservation reminders**
+`notify_expiring_reservations(window)` queues a `reservation_reminder`
+WhatsApp for public holds ending inside the window (default 60 min) when the
+lot has automated WhatsApp on, and stamps `reminder_sent_at` (idempotent).
+
+**Cash anomalies** (`0110`)
+`cash_anomalies` (rule, severity, dedupe key, subject/shift/session, details,
+open/acknowledged/dismissed, resolver and note) and `anomaly_settings` (the
+thresholds, admin-only RLS). Rules: `anomaly_rule_shift_shortage`,
+`lost_ticket_rate`, `post_close_adjustment`, `zero_charge`,
+`short_lost_ticket`, `discount_rate`, `shift_open_long`, `session_open_long`,
+all revoked from the API roles and driven by `detect_cash_anomalies()` (summary
+notification to admins) and `purge_cash_anomalies(p_days)`. Review RPCs:
+`list_cash_anomalies`, `resolve_cash_anomaly`, `get_anomaly_settings`,
+`set_anomaly_settings` (lot admin). `anomaly_zero_charge_excluded(session)` is
+the extension point later changes redefine to explain a zero charge.
+
+**Occupancy forecast** (`0109`)
+`occupancy_profile` (lot, group, weekday, hour → median + samples + computed_at)
+and `forecast_settings` (enabled, history weeks, minimum samples, decay, full
+threshold, public visibility; audited). Helpers: `group_capacity`,
+`occupancy_grid` (hourly net occupancy from sessions, 72 h cap),
+`refresh_occupancy_profile` (median per cell, six-hour throttle, job entry
+point), `forecast_compute` (blend + clamp + `full_at` + confidence) and
+`public_forecast_block` (aggregates only). Public RPCs: `occupancy_forecast`
+(any member), `occupancy_forecast_backtest` and `get/set_forecast_settings`
+(lot admin). `public_availability` is a wrapper over `public_availability_base`
+that adds the `forecast` key.
+
+**Booking waitlist** (`0106`, `0107`)
+`reservation_waitlist` holds the turns (`status` waiting/offered/claimed/
+expired/left/cancelled, `wait_until`, `hold_minutes`, `offer_until`,
+`reservation_id`) with a partial unique index per plate and lot and a FIFO
+index; `waitlist_kicks` records a group whose dispatch could not take its lock
+and is drained by `waitlist_dispatch_all()`. An offer is a normal
+`category_reservations` row with `source = 'waitlist'`; claiming flips it to
+`public`. RPCs: `public_waitlist_info`, `public_join_waitlist`(+`_verified`),
+`public_waitlist_lookup`, `public_claim_waitlist`, `public_leave_waitlist`,
+`list_waitlist`, `desk_claim_waitlist`, `desk_remove_waitlist`,
+`set_waitlist_settings`, and the jobs `waitlist_expire`,
+`waitlist_dispatch_all`, `purge_waitlist`. Triggers on session closed, hold
+released, bay back in service and capacity raised call the try-lock dispatch.
+`report_reservations` counts the queue in a `waitlist` block and excludes
+unclaimed offers from the booking counts.
+
+**Row versions (offline conflict resolution)**
+`vehicles`, `tariffs`, `categories` and `parking_settings` carry `version`
+(bumped by `row_version_guard()` only when the row really changes).
+`set_row_version_policy(required)` (lot admin, needs `min_app_version`) turns on
+`row_version_enforcement`: a direct table write without the `x-versioned-write`
+header is refused with `VersionRequiredError`; `/rpc/*` paths are exempt.
+
+**Period comparison**
+`report_period_comparison(months, as_of)` (admin, lot-scoped, business
+timezone): the trailing 1..24 calendar months, each with `current`,
+`previous_month` and `previous_year` windows (revenue, entries, exits,
+`avg_ticket`, `avg_stay_minutes`, `pass_revenue`, reservations/used), plus
+`is_partial` for the running month and `covered` per window (the lot existed
+before it). Indexes `ix_sessions_lot_exit_closed`, `ix_pass_payments_lot_paid`
+and `ix_reservations_lot_from` back it.
+
+**Reservations report**
+`report_reservations(from, to)`: holds created in the window (business
+timezone), split by `source` (`public`/`app`) and `status`, plus
+`used_public` for the web conversion.
+
+**Public booking**
+`public_availability(lot_id)` (anon: identity + per-category availability and
+hourly tariff, no plates), `public_create_reservation(lot, plate, category, until, name,
+phone)` (anon: name required, phone must be a Colombian mobile — 10 digits
+starting with 3, optional +57 —, 10-min..24-h window, one active hold per
+plate, two per phone, shared capacity check) and
+`reservation_capacity_check(lot, category, plate)`,
+`public_cancel_reservation(lot, reservation_id, plate, phone)` (anon: only
+public holds, all three values must match, sets `status = 'cancelled'`) and
+`public_reservation_lookup(lot, reservation_id, phone)` (anon: the active
+public hold for that code + mobile, or `null`) and
+`list_active_reservations()` (authenticated: the lot's active holds with the
+category name and an `in_grace` flag; it applies `reservation_grace()`, so the
+app never re-implements the window)
+(shared by the operator and public paths; holds count until
+`reserved_until + reservation_grace(lot)`, the `parking_settings
+.reservation_grace_minutes` value — 0..120, default 15, `0` disables it). `category_reservations` also stores
+`customer_name`, `customer_phone` and `source` (`app`/`public`); the constraint
+`category_reservations_public_contact_check` keeps public rows from existing
+without a name and a 10-digit mobile. A public hold also inserts a
+`public_reservation` notification for every active member of the lot
+(`user_id`, `lot_id`, `data.reservation_id`), deduplicated per reservation,
+and — when `parking_settings.whatsapp_auto` is on — a `reservation_confirmed`
+row in `whatsapp_messages` (params: name, plate, until, lot) for
+`whatsapp-dispatch` to send.
+
 **Records**
 `session_records(plate, limit, offset, from, to)`: lot-scoped session log
-(entry, exit, duration, amount, status) with a partial plate filter, an
-inclusive business-date range and a total; powers `/records` and its exports.
+(entry, exit, duration, amount, status, evidence count) with a partial plate
+filter, an inclusive business-date range and a total; powers `/records` and
+its exports.
 
 **Shifts and cash**
 `open_shift`, `current_shift`, `close_shift`, `add_cash_movement`,
@@ -143,13 +253,14 @@ inclusive business-date range and a total; powers `/records` and its exports.
 
 **Sites and users**
 `my_lots`, `list_lots`, `create_lot`, `update_lot`, `set_lot_member`,
-`list_lot_members`, `set_branding_logo`.
+`list_lot_members`, `set_branding_logo`, `lot_setup_status` (home checklist:
+categories, active tariffs, capacity/bays, address + phone).
 
 **Audit**
-`list_audit_log` (filters: limit, date range, table, actor username),
-`purge_audit_log`,
-`record_audit` (trigger on categories, tariffs, vehicles, monthly passes,
-settings, lots and memberships).
+`list_audit_log` (filters: limit, date range, table, actor username and
+free-text search over entity, table, actor, plate and name; filters run
+before the limit), `purge_audit_log`, `record_audit` (trigger on categories,
+tariffs, vehicles, monthly passes, settings, lots and memberships).
 
 **Customer messages**
 `enqueue_whatsapp_message` (operators, only when the site enabled

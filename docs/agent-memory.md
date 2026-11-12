@@ -4,16 +4,15 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-11-05 (owner contact data, emergency action, monthly-pass
-tariff, device preferences, QR contact/summary). Branch `feature/supabase`.
+Last updated: 2026-11-11 (period comparison reports).
 
 ## Where we are
 
 - Stack: Flutter (android + web) + self-hosted Supabase only. No FastAPI,
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
-- `supabase/migrations/0001..0079` are the schema owner (applied by
+- `supabase/migrations/0001..0104` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 993 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 1200 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
@@ -74,6 +73,728 @@ tariff, device preferences, QR contact/summary). Branch `feature/supabase`.
   configured number, the 123 fallback and the settings shortcut; the settings,
   shell, SQL and repository tests cover the rest. Test count: 993, schema
   `0001..0079`.
+
+## Home weekly trend (2026-11-06)
+
+- `0080_dashboard_trend` adds `dashboard_trend(p_days default 7, allowed
+  1..31)`: `security definer`, `require_app_user()`, lot-scoped through
+  `current_lot_id()`, business timezone. It returns
+  `{lot_id, start_date, end_date, days:[{date, revenue, entries, exits}]}` and
+  uses `generate_series`, so quiet days are zero rows (the client never fills
+  gaps). Operators may call it (unlike `report_revenue`); an out-of-range
+  `p_days` raises `InvalidTrendRangeError`.
+- `CheckOutRepository.dashboardTrend()` feeds `DashboardLoaded.trend`; a failed
+  trend degrades to `DashboardTrend.empty` without hiding the rest of the home
+  (same rule as `todaySummary`). `TrendCard` in
+  `home/presentation/widgets/dashboard_widgets.dart` paints the bars scaled to
+  the peak day (today in `tertiary`), the weekly revenue/entries/exits totals,
+  a skeleton while loading and a quiet-week message; admins get a reports
+  shortcut, operators do not.
+- Tests: entity parsing, cubit degradation, card totals/quiet/failure and the
+  admin-only shortcut; SQL covers the contiguous 7-day series, today's revenue,
+  invalid ranges and lot isolation. Test count: 1013; schema `0001..0080`.
+- The new 400 px + 1.6 text-scale test exposed a pre-existing overflow in
+  `_CapacityRow` (home capacity card): its label is now clamped to two lines
+  and the counter is a flexible, ellipsized `Text`. Keep the test; it guards
+  both cards.
+
+### Home trend comparison + parallel load (2026-11-09)
+
+- The dashboard asks for `dashboard_trend(days: 14)`. `TrendCard` paints the
+  last 7 (`window(7)`) and compares them with `window(7, skip: 7)`: success
+  chip when revenue grows, warning when it drops, neutral "same as last week"
+  when flat, and no chip when the previous window is incomplete or earned
+  nothing (a zero base would divide by zero).
+- `DashboardCubit._fetch` awaits occupancy first, then runs today / trend /
+  capacity / board / inside with the record `.wait` (concurrent, each with its
+  own `catchError`). `FakeCheckOutRepository.todayGate` + `pumpEventQueue`
+  prove the extras start before the gated one finishes.
+- The KPI grid shows `SkeletonPulse` + four `SkeletonCard`s while the first
+  load is in flight. `SkeletonPulse`/`SkeletonCard` are public in
+  `core/widgets/skeleton.dart` (`SkeletonCardList` reuses them).
+- Gotcha: never `pumpAndSettle` while the dashboard is still loading — the
+  skeleton pulse repeats forever. Use `pump()` and complete the gate first.
+
+### Bay maintenance history (2026-11-09)
+
+- `0081` adds `parking_spot_events` (lot, spot, spot_code, status, reason,
+  actor, created_at; RLS `lot_id = current_lot_id()`, select grant only). The
+  RPC `save_parking_spot` gained a trailing `p_reason text default null` and
+  logs a row on real status transitions (a bay created already out of service,
+  or an update that changes the status). A no-op save does not pollute it.
+- The 6-argument `save_parking_spot` overload is **dropped on purpose**: with
+  the trailing default, keeping both makes 6-argument calls ambiguous (same
+  trap as `check_in`). Positional test calls still work.
+- `list_spot_events(p_spot_id, p_limit default 20)` returns newest first and
+  must order by `created_at desc, id desc`: `now()` is constant inside a
+  transaction, so the id is the tiebreaker between two transitions made in the
+  same RPC/test.
+- UI: turning a bay off reveals an optional reason (3..200 characters or
+  empty; shorter values are blocked client-side), "Ver historial" opens a
+  dialog with skeleton/empty/error+retry, and the editor refreshes
+  `DashboardCubit` whenever the map changes so the home board is not stale.
+  Operators can read the history; only admins can change a bay.
+- Live smoke (PostgREST): took bay S1 out with "prueba de humo", the event came
+  back with actor Admin and the reason, then restored it and deleted the two
+  smoke rows. Test count: 1022; schema `0001..0081`.
+
+### Offline dashboard cache (2026-11-09)
+
+- `DashboardSnapshot` (`home/domain/entities`) serializes occupancy, today,
+  trend and capacity + `cachedAt` as versioned JSON. `DashboardCache` is the
+  port; `HiveDashboardCache` stores it in the `cache` box under
+  `dashboard_<lot>` so switching sites never shows another site's numbers.
+  `HiveKeyValueStore.init()` opens `cache` for the same cold-start reason as
+  `preferences` (`get` is synchronous and only sees open boxes).
+- `DashboardCubit` writes the cache only after a **complete** load (occupancy
+  plus today/trend/capacity all succeeded); a degraded load never overwrites a
+  good snapshot. On a failed initial/lot-switch load it reads the cache and
+  emits `DashboardLoaded(cachedAt: ...)` (`isStale`); without a cache it still
+  emits `DashboardFailure`. Cache read/write errors are ignored.
+- The stale state carries only the KPIs: the space board and inside list stay
+  empty and `HomePage` hides them (including the wide side panel), showing
+  `_StaleDashboardNotice` above the summary with the capture time and a retry.
+  The shell `OfflineBanner` still reports connectivity separately.
+- Coverage floors raised with the new domain tests: global 79 (79.2 measured),
+  application 90 (90.7), domain 52 (53.3), infrastructure 40 (40.3).
+  Test count: 1030; schema `0001..0081`.
+
+### Hourly traffic reports (2026-11-09)
+
+- `0082_report_hourly_traffic.sql`: `report_hourly_traffic(date, date)` is
+  admin-only (`require_admin()`), lot-scoped, and returns
+  `{start_date, end_date, timezone, hours:[{hour, entries, exits}]}` for all
+  24 business-day hours (quiet hours included). Entries count `entry_time`;
+  exits count closed `exit_time`; the 0069 lot/entry and lot/exit indexes cover
+  both.
+- `HourlyTraffic`/`HourlyTrafficPoint` sort the buckets; `ReportsCubit` loads
+  it in the same `Future.wait` as the other reports and **degrades to empty**
+  when the RPC fails, so the page never fails because of the chart.
+  `HourlyTrafficChart` is a 4/6/8-column grid scaled to the peak entry hour,
+  with a peak-hour summary, per-cell tooltip/semantics (entries + exits), an
+  empty state and a legend.
+- The new 400 px test exposed a pre-existing overflow in `_DeltaRow` ("vs
+  previous period"): it now uses a `Wrap`, so it flows to a second line instead
+  of overflowing the summary card.
+- Coverage: global 79 (79.3), application 90 (90.7), domain 53 (54.2),
+  infrastructure 40 (40.2). Test count: 1036; schema `0001..0082`.
+- Live smoke: `report_hourly_traffic(2026-11-03, 2026-11-09)` returned 24
+  buckets with the expected entries/exits and `America/Bogota`.
+- Follow-up: the report presets added **Este mes / Mes anterior** (calendar
+  boundaries) and moved from a `SegmentedButton` to `ChoiceChip`s inside the
+  `FilterBar`, so they wrap on phones. `reportCsv` gains
+  `hourly_entries`/`hourly_exits` raw rows and `buildRevenueReportPdf` a
+  "Tráfico por hora" table via `reportHourlyRows`; both include only hours
+  with movement. Test count: 1039.
+
+### Audit search (2026-11-09)
+
+- `0083_audit_search.sql` drops/recreates `list_audit_log` with a trailing
+  `p_search text default null` (the 5-arg overload must stay dropped: with the
+  default, leaving both makes 5-arg calls ambiguous). It also fixes a real bug:
+  the old version limited the newest N rows **before** filtering by actor, so
+  selecting an actor only searched that page. Filters now run in the scan and
+  the limit applies last.
+- Search is case-insensitive over `entity_id`, `table_name`, actor
+  username/display name, and `after`/`before` `plate`/`name`; an empty term
+  means no filter and it composes with table/actor/date. JSONB text is not
+  searched wholesale (avoids matching timestamps/keys by accident).
+- Flutter: `AuditLoaded.search` + `AuditCubit.load(search:)`; the page adds a
+  300 ms debounced `SearchField`, clears it with "Limpiar filtros", and the PDF
+  subtitle includes the term. Tests cover search persistence, clearing and the
+  debounced reload. Test count: 1041; schema `0001..0083`.
+- Live smoke: `list_audit_log` with `p_search=LCR481` returned the vehicle row
+  (`entity_id 34`).
+
+### In-app evidence viewer (2026-11-09)
+
+- `0084_vehicle_history_evidence.sql` redefines `vehicle_history` with a
+  per-session `photo_count`, scoped to `current_lot_id()`: the history lists
+  sessions from every site, but evidence viewing (and its count) follows the
+  active lot, matching the evidence RLS policy.
+- `SessionEvidenceRepository` lists `evidence_photos` and signs each object for
+  one hour. A refused signature keeps the row with `url = null` (the tile shows
+  a cloud-off placeholder instead of hiding that evidence exists); list errors
+  map to a `Failure` and the sheet offers retry.
+- The history tile shows "Ver evidencias (N)" when `photo_count > 0`, below the
+  amount so the action row never overflows a 360 dp phone. The bottom sheet has
+  a photo grid (tap → black `InteractiveViewer` dialog) and video tiles (tap →
+  external player), with skeleton/empty/error states.
+- Tests: SQL photo_count, entity parsing, remote signing/denied/list-failure
+  with a MockClient, repository delegation, sheet states and the history
+  action. Test count: 1051; schema `0001..0084`.
+- Follow-up: the check-out row also shows an "Evidencias (N)" `ActionChip`
+  when the session has photos, using the same sheet (`CheckOutPage`'s
+  `evidenceRepository` is the test seam). It wraps with the status chips, so
+  the 400 px row stays overflow-free. Test count: 1052.
+- Live smoke: `vehicle_history('LCR481')` returned session 48 with
+  `photo_count: 2` (session 43 has 0).
+
+### Site setup checklist (2026-11-09)
+
+- `0085_lot_setup_status.sql` adds `lot_setup_status()` (any lot member):
+  category count, active tariffs, car/moto capacity, active bays and
+  address/phone flags. `complete` requires categories, tariffs and
+  capacity-or-bays plus address and phone. It is `security definer` and reads
+  `current_lot_id()`.
+- `CheckOutRepository.lotSetup()` feeds `DashboardLoaded.setup` (unknown on
+  failure, never a false "unconfigured"). `SetupChecklistCard` on the home is
+  admin-only, hidden when complete/unknown, and shows 4 steps with a progress
+  bar and links (`/categories`, `/tariffs`, `/settings`). Operators never see
+  it; the card is the onboarding fix for the "new lot without categories"
+  gotcha.
+- Tests: SQL flags against `parking_settings` and an incomplete lot, entity
+  step math, cubit fallback to unknown, and home visibility for admin/
+  operator/complete. Coverage floor: domain 54 (55.0 measured). Test count:
+  1058; schema `0001..0085`.
+- Live smoke: `lot_setup_status()` for lot 1 returned
+  `complete: true` (5 categories, 7 active tariffs, capacity 20/10,
+  address/phone set).
+
+### Evidence from records (2026-11-09)
+
+- `0086_session_records_evidence.sql` recreates `session_records` with a
+  `photo_count` per row (the query is already lot-scoped, so no extra filter is
+  needed). The activity log shows "Evidencias (N)" under the times when the
+  count is positive and opens the shared evidence sheet; the log row still
+  opens the vehicle history when tapped elsewhere.
+- `SessionRecord.photoCount` + `RecordsPage(evidenceRepository:)` (test seam).
+  Tests cover the SQL count, the parser and the log action; no evidence is
+  queried until the operator taps the action. Test count: 1059; schema
+  `0001..0086`.
+- Live smoke: `session_records` for `LCR481` returned session 48 with
+  `photo_count: 2` (session 43 with 0), matching `vehicle_history`.
+
+### Revenue chart in the PDF (2026-11-09)
+
+- `buildRevenueReportPdf` now draws a compact bar chart above the by-day table:
+  `revenueBarHeights` (pure, tested) scales the best day to 68 pt and zero days
+  to 0; `buildRevenueBarChart` renders it with the first/last dates underneath
+  and no per-bar labels (the table below keeps the exact numbers). An empty
+  range skips the chart, and quiet periods keep flat bars.
+- No new SQL. Test count: 1061; schema `0001..0086`.
+
+### Parallel page loads (2026-11-09)
+
+- `ShiftCubit.load` runs `current()` and the admin `history()` in one
+  `Future.wait`; `ReservationsCubit.load` runs active reservations and
+  categories together; `MonthlyPassesCubit.load` starts passes, pending
+  payments, vehicles and tariffs together (`Future.wait<Object>` + casts,
+  still wrapped in the `on Failure` handler so list failures keep their
+  screen-level state). Each page saves one or more sequential round trips.
+- Tests use gates on the first fake call (`currentGate`, `activeGate`,
+  `listGate`) and `pumpEventQueue` to assert the second call already started.
+  Test count: 1064; schema `0001..0086`.
+
+### Hourly chart in the PDF (2026-11-09)
+
+- The hourly section of the revenue PDF now draws 24 bars (`buildHourlyBarChart`)
+  scaled to the busiest entry hour, with 00/06/12/18/23 labels; the table below
+  keeps exact entries/exits. `hourlyBarHeights` is pure and tested (busiest =
+  68 pt, zero hours = 0). No new SQL. Test count: 1066.
+
+### Startup splash (2026-11-09)
+
+- `main()` now `runApp`s a minimal `_BootstrapSplash` (logo + loading, theme
+  and locale from the cubits) **before** `await authCubit.restore()`. The real
+  `ParkingApp` replaces it once the restore (Hive session + lot memberships +
+  `x-lot-id`) resolves, so a slow network no longer leaves a blank screen.
+  `initialLocation` stays `homePath`, so deep links/bookmarks are unaffected.
+- `AuthCubit.restore` catches local-storage errors and emits
+  `AuthUnauthenticated` (a corrupt cache lands on login, never a stuck splash).
+  `SyncService.start()` still runs after the restore so queued writes never
+  fire token-less.
+- `SplashPage` test covers the brand + progress; test count: 1067.
+
+### Check-in first paint (2026-11-09)
+
+- Known-plate suggestions no longer download `listPage(limit: 200)` on open:
+  `_loadKnownPlates` starts on the second typed character, guards against
+  concurrent loads, and marks a failed attempt as done so typing does not
+  hammer a failing endpoint (a successful check-in still refreshes it).
+- When the shell already has a `DashboardLoaded` state, the check-in page
+  refreshes only the space snapshot (`DashboardCubit.refreshCapacity`, one
+  request) instead of `load()` (occupancy + today + trend + capacity + board +
+  inside + setup). A successful entry still does the full refresh so the home
+  counters stay fresh.
+- Tests: `vehicle.listPageCalls` stays 0 for one letter and becomes 1 on the
+  second; a preloaded dashboard does one occupancy read and one extra capacity
+  read on open (`occupancyCalls == 1`, `capacityCalls == 2`). Test count: 1069.
+
+### PDF fonts and the em dash (2026-11-09)
+
+- The `pdf` package uses built-in Helvetica, which has **no em/en dash
+  glyphs**: the report and records PDFs were drawing a missing glyph for
+  `—`. PDF date ranges now go through `Formatters.pdfDateRange` (ASCII
+  hyphen) and the shift/records separators use the same ASCII hyphen. The
+  middle dot `·` and Spanish accents are fine (Latin-1).
+- On-screen labels may keep the typographic dash; only PDF text must stay
+  ASCII/Latin-1. A test guards `pdfDateRange` against `—`/`–`, and the PDF
+  suite no longer logs "Unable to find a font to draw". Test count: 1070.
+
+### Vehicle search by owner (2026-11-09)
+
+- `VehicleRepository.listPage(plate:)` became `query:` (interface, remote,
+  repository, fakes): the remote builds
+  `vehicleSearchFilter(query)` → `plate.ilike."%term%",owner_name.ilike...,
+  owner_phone.ilike...` (values quoted so names with spaces/commas do not break
+  the PostgREST `or` expression). Empty/blank → no filter.
+- The offline cache filter mirrors plate/owner-name/owner-phone; the page label
+  is "Buscar placa o propietario" with a "Placa, nombre o teléfono" hint.
+  No schema/RLS change: owner data already exists and vehicles are global.
+- Tests: filter builder (including quote safety), cubit search by name and
+  phone, plus the existing paging/offline tests. Live PostgREST check: the
+  quoted `or` filter found `LCR481` by plate, by "Samuel" (owner name) and by
+  "310428" (owner phone). Test count: 1074.
+- Follow-up: monthly passes apply the same owner search client-side
+  (`MonthlyPassesLoaded.matchesPass/matchesPayment` over plate, owner name and
+  phone; pending charges resolve the owner through the loaded vehicles). The
+  page label/hint say "Buscar placa o propietario". Test count: 1075.
+- Follow-up: each registry row has a "Ver historial" action → `/history?plate=…`
+  (`VehiclesPage(onHistory:)` is the test seam); the row still fits 400 px with
+  three actions. l10n gotcha: `vehicleHistoryOpen` was already the "in progress"
+  label, so the action key is `vehicleHistoryAction` (a duplicate key silently
+  wins in gen-l10n). Test count: 1077.
+- Follow-up: a vehicle with no open session offers "Registrar entrada" from
+  its history (`/check-in?plate=`, `onCheckIn` injectable); a vehicle already
+  inside keeps the charge action. Fixing the sample fixture's `openSessions`
+  exposed the guard in tests. Test count: 1153.
+
+### Public booking page (2026-11-09)
+
+- `0087_public_booking.sql` adds `customer_name`, `customer_phone` and
+  `source` (`app`/`public`) to `category_reservations`, a shared
+  `reservation_capacity_check(lot, category, plate)` (same locks/order as
+  check-in; `create_reservation` now delegates to it), anon
+  `public_availability(lot)` (identity + per-category availability, **no
+  plates**) and anon `public_create_reservation(...)` with guards: 10 min..24 h
+  window, one active hold per plate/lot, two active public holds per phone,
+  plate/phone validation and the full category/group refusal. Anon has no
+  SELECT grant on the reservation table. Public holds carry the customer
+  name/phone and `source='public'`.
+- Flutter `features/public_booking`: entities/cubit/repository + a mobile-first
+  page at `/reserve?lot=<id>` (public in `authRedirect`). Hero with lot
+  identity/logo/contact, live category cards (available/full/no limit, progress
+  bar), plate/phone/name + hourly duration chips, submit, and a confirmation
+  with code, until, call/WhatsApp and "Hacer otra reserva". Loading skeleton,
+  empty, error+retry and inline submit errors. Linked from the public policy
+  page and the evidence page; DI registers the repository/cubit.
+- Live smoke: `public_availability(1)` returned the lot and categories; anon
+  `public_create_reservation` created `WEBTEST1` (`source=public`, phone
+  stored), then the row was deleted. A full booking through the deployed page
+  (headless Chrome, 420 px) created reservation #2 and rendered the
+  confirmation; the row was deleted afterwards.
+- **Deep links were broken on web** (found while testing the page on the
+  phone): the bootstrap splash's `MaterialApp` pushes its own route to the
+  browser history, so by the time the router was built the engine reported `/`
+  and `/reserve`, `/policies` and `/evidence` all redirected to `/login`.
+  Fix: `initialRouteFrom(Uri.base)` (pure, unit-tested) is captured in
+  `main()` **before** the first `runApp` and passed to `buildRouter` through
+  `ParkingApp.initialLocation`; mobile keeps home. Do not move that capture
+  after `runApp` — the history is already rewritten by then.
+- Abuse note: there is no captcha/proof-of-work; the per-plate/phone limits and
+  capacity guard are the only controls. Add a captcha at the edge if the page
+  is exposed to the open internet.
+- `0088_public_booking_contact.sql` makes the name required and the phone a
+  Colombian mobile (10 digits starting with 3, optional +57, stored as the
+  10-digit local form so the per-phone guard still counts one customer). The
+  check is duplicated in a table constraint (`source = 'public'` rows need
+  name + `^3[0-9]{9}$`), so a direct insert cannot bypass it. The Flutter rule
+  lives in `features/public_booking/domain/phone_rules.dart`
+  (`normalizeMobilePhone`, shared by the form validator and the submit).
+- `0089_public_booking_notification.sql`: a public hold inserts a
+  `public_reservation` notification for the lot's active admins (dedupe
+  `public_reservation:<id>:user:<uid>`), body with the customer, category and
+  expiry in the lot timezone. Flutter maps the type to "Reserva web" with an
+  event icon and routes the tap to `/reservations`; it is also in the inbox
+  filter.
+- The reservations board shows `customer_name`/`customer_phone`/`source` (a
+  "Web" badge) with call/WhatsApp actions, and its search matches plate, name
+  or phone. `openDialer` lives in `core/utils/dialer.dart`.
+- **Operators now run the board** (decision taken 2026-11-09): `/reservations`
+  is in `operatorRoutes`, the home "Ver reservas" shortcut is not admin-only,
+  and the management section on Home lists only the sections the role may use.
+  `0090` widens the `public_reservation` alert to every active lot member
+  (admins + operators); the SQL test checks one row per active member and none
+  duplicated. If this is ever reversed, restore the allowlist entry, the home
+  guard and the audience in the RPC together.
+- `0091_public_cancel_reservation.sql`: the customer cancels with code +
+  plate + phone (anon); only `source = 'public'` and `status = 'active'` rows
+  are updated, anything else raises `ReservationNotFoundError`. The page keeps
+  the plate/phone in the cubit after submitting so the confirmation can cancel
+  without asking again, and shows a "Reserva cancelada" screen. Cancelling is
+  only reachable from the confirmation screen today — a "cancel with my code"
+  lookup is the natural follow-up.
+- `0092_public_reservation_lookup.sql`: code + mobile returns the active
+  public hold (`null` when nothing matches, so "no encontramos" is an answer
+  and not an error), used by the "¿Ya reservaste?" card at the bottom of
+  `/reserve`. The card reuses the same RPC for the plate, so cancelling from
+  the lookup still sends code + plate + phone.
+- `0093_public_availability_prices.sql`: `public_availability` per-category
+  `hourly_amount` from `tariffs` (`type='hourly'`, active, first row; `0` when
+  unset). The card shows `Money.formatAs(currency, amount)` and falls back to
+  "Tarifa en recepción" for `0`, so a missing tariff never looks free.
+- Public page polish: "Cómo llegar" (`core/utils/maps_launcher.dart`,
+  `mapsUrl` is pure and tested) opens a Google Maps search for the lot address;
+  `PublicBookingPage.refreshInterval` (1 min, `null` disables it in tests) calls
+  `PublicBookingCubit.refresh`, which re-reads availability without emitting
+  the loading state, so the form never flashes.
+- The reservations board has a "Solo web" filter (`isPublic`) beside "por
+  vencer"; `_clear` resets both.
+- **Scheduled jobs**: `supabase-jobs` (docker-compose) runs
+  `supabase/jobs.sh` every `JOBS_INTERVAL_SECONDS` (default 300) inside the
+  network: monthly-pass/overstay alerts, renewals, `expire_reservations`,
+  purges and the push/WhatsApp dispatch via busybox `wget` to
+  `http://api-gw:8000`. Why: the stock image has no pg_cron and this host has
+  no `crontab`, so nothing expired holds or dispatched push. Verified by
+  inserting an active hold that ended 30 h ago and restarting the service: it
+  became `expired` within seconds, and `push-dispatch` answered
+  `{"configured":false}`. `supabase/notifications-cron.sh` still works from
+  host cron; both are idempotent.
+- The reservations board shows `#<id> · Hasta …` on every card and its search
+  matches a 1..6 digit code exactly (`_matches`), so the customer's "code #7"
+  is usable at reception; check-in is still the one-tap action on the card.
+- `0094_reservation_grace.sql`: `reservation_grace()` = 15 min, used by the
+  shared capacity check, `public_availability` and `check_in` (which now marks
+  a late hold `used`). Dart mirrors it as `Reservation.graceWindow`, the board
+  queries `reserved_until > now - grace` and flags those cards "En tolerancia".
+  If the window changes, update the SQL function and the Dart constant together.
+- `0095_public_booking_whatsapp.sql`: `public_create_reservation` queues a
+  `reservation_confirmed` row (params: name, plate, "DD/MM HH24:MI", lot) when
+  `whatsapp_auto` is on; the Edge Function maps the template with
+  `WHATSAPP_TEMPLATE_RESERVATION` (default `reservation_confirmed`). Live
+  smoke: reservation `WAMSG1` queued
+  `["Ana Wa","WAMSG1","10/11 10:40","Parqueadero"]`; row removed afterwards.
+  Reminder: the live lot has `whatsapp_auto = true`, so every new web booking
+  queues a message — approval of the Meta template is what makes it send.
+- `0096_whatsapp_purge_pending.sql`: the purge drops rows older than 90 days
+  regardless of status, so a queue that cannot drain does not grow.
+- `/reserve` when everything is full: `availability.hasAvailability` false
+  renders `_NoSpace` (message + phone/WhatsApp) instead of `_FormCard`; the
+  lookup card stays and the 1-minute refresh restores the form by itself.
+- Test count: 1153; schema `0001..0096`.
+
+### Public booking bot protection (2026-11-10)
+
+- `0103_public_booking_protection.sql`: the booking body lives in
+  `public_create_reservation_verified` (**service_role only**; the revoke
+  names `anon, authenticated` because Supabase default privileges grant new
+  functions to them). `public_create_reservation` keeps its 6-arg signature
+  and anon grant as a gate: `CaptchaRequiredError` when
+  `parking_settings.public_booking_captcha` is on, else it calls the verified
+  body. No parameter was added on purpose (no overload). When the booking
+  rules change, edit the **verified** function, not the gate.
+- Throttle: `public_booking_hourly_limit` (1..1000, default 20) = public holds
+  created per lot in the last hour, any status, counted under
+  `pg_advisory_xact_lock(hashtext('public_booking_throttle'), lot)` taken
+  before the capacity locks. `source = 'app'` holds are outside it.
+  `BookingThrottledError`.
+- `set_public_booking_protection(p_captcha, p_hourly_limit)` (lot admin, null
+  keeps the value). There is no UI for it yet.
+- Edge Function `public-booking`: verifies Turnstile with
+  `TURNSTILE_SECRET_KEY`, then calls the verified RPC with the service key.
+  No secret → forwards to the anonymous RPC with the anon key (inert, never
+  permissive). Errors travel as `{"message": "<Name>Error"}`
+  (`CaptchaRequiredError`/`CaptchaExpiredError`/`CaptchaFailedError`/
+  `CaptchaUnavailableError`, throttle as 429). `TURNSTILE_VERIFY_URL` exists
+  only to point it at a mock.
+- Three switches must agree to protect a lot: secret in `.env` (+ restart
+  `functions`), `--dart-define=TURNSTILE_SITE_KEY` in the web build, and the
+  lot switch. Turn the lot switch on last; on without keys = online booking
+  refused for that lot.
+- Flutter: the client picks the path by the token — no token → RPC (today's
+  request), token → `functions.invoke('public-booking')`. The page takes
+  `captchaSiteKey` + an injectable `captchaBuilder`; `presentation/captcha/`
+  has the Turnstile web view behind a conditional export (stub elsewhere, so
+  mobile shows no widget). Tokens are single use: the page drops the token and
+  re-renders the challenge after every submit.
+- Gotcha: a new Edge Function must be allowlisted in `supabase/.gitignore`
+  (`volumes/functions/**` is ignored) and any new function env var must be
+  added to the `functions` service in `supabase/docker-compose.yml`.
+  `public-evidence`, `whatsapp-dispatch` and `evidence-archive` are **not**
+  allowlisted (untracked), and `WHATSAPP_*`/`VAPID_*` are not passed to the
+  container — both predate this change and are still open.
+- Gotcha: `supabase/tests/run.sh` fails at "anon read the reservation table"
+  on the image's pre-initialized database (`POSTGRES_DB`, where Supabase
+  default privileges give anon table access) — also at `17b454e`, before this
+  change. It passes on a plain `create database` scratch database, which is
+  what the documented command uses.
+- Not verified: the real Turnstile iframe in a browser and the function inside
+  the edge-runtime container (it was exercised with Deno against mocks).
+- Test count: 1172; schema `0001..0103`.
+
+## Cash anomalies (2026-11-12, `0110`)
+
+- Eight rules, one row per finding, dedupe key chosen so a legitimate
+  recurrence is new and a review is final: `shift_shortage:<operator>:<max id>`,
+  `lost_ticket_rate:<operator>:<ISO week>`, `post_close_adjustment:<adj id>`,
+  `zero_charge:<session id>`, `short_lost_ticket:<session id>`,
+  `discount_rate:<admin>:<ISO week>`, `shift_open_long:<shift id>`,
+  `session_open_long:<session id>`. A dismissed row stays in the table, so it is
+  never raised again (the job inserts `on conflict do nothing`).
+- Thresholds live in `anomaly_settings`, **not** `parking_settings`: every lot
+  member can read the latter, which would tell operators exactly how much they
+  can get away with. The table policy requires `is_lot_admin(lot_id)` and the
+  active lot; operators get 0 rows and `AdminRequiredError` from the RPCs.
+- `detect_cash_anomalies()` runs under `pg_try_advisory_xact_lock`, so the host
+  cron and the jobs container overlapping is a no-op, and notifies once per lot
+  and run: the "not yet notified" state is the `notified_at` column, not job
+  memory. Low-severity findings never notify.
+- Findings explained by later changes: `anomaly_zero_charge_excluded(session)`
+  returns false today; `add-merchant-validations` (and a future loyalty change)
+  redefine it with `create or replace` to return true for an explained zero.
+  Nothing else has to change when they land.
+- Attribution gap: the closing operator is `parking_sessions.shift_id ->
+  shifts.operator_id`; a session closed without an open shift is invisible to
+  the per-operator rules (it still feeds the session-based ones). Adjustments
+  and discounts are reported to admins about admins: the audit log is the second
+  line of review, there is no role above lot admin.
+- `exempt` is a zero charge any operator can pick, so it is flagged `medium`
+  (not high); a monthly pass is excluded. A shift with `difference is null` is
+  ignored (it is open).
+- Jobs: `run detect_cash_anomalies` and `run purge_cash_anomalies` in
+  `jobs.sh` (and the equivalent psql lines in `notifications-cron.sh`). Live
+  run: the first pass created 2 findings, the second 0 (idempotent) with one
+  settings row per lot.
+- Gatekeeper (2026-11-12): migration `0110` applied live, **1379 tests** green,
+  coverage 79.6% (application 92.3%, domain 60.5%), `flutter analyze` clean,
+  SQL suite over `0001`-`0110`, web rebuilt and republished (`/reserve` 200),
+  release APK installed and launched on the connected phone.
+- Left open: the widget tests listed for the settings sheet edge cases and the
+  audit deep-link navigation are covered only by review; `flutter test -d linux`
+  was not run.
+
+## Occupancy forecast (2026-11-12, `0109`)
+
+- Algorithm in five lines: `occupancy_grid` rebuilds the hourly net occupancy
+  per group from `entry_time`/`exit_time` (a stay is capped at **72 h** so one
+  forgotten gate cannot poison the profile); `refresh_occupancy_profile` stores
+  `percentile_cont(0.5)` per (group, weekday, hour) over the last K
+  same-weekday days, skipping dates before the lot's first session;
+  `forecast_compute` adds `(live - profile_now) * w^hours_ahead` (w = decay/100,
+  default 0.85), clamps to capacity and reports the first crossing as `full_at`;
+  confidence comes from the smallest sample count used; below `min_samples` the
+  group is omitted and the status says `insufficient_history`.
+- `forecast_compute(p_lot, p_horizon, p_now)` takes `p_now` explicitly because
+  `now()` is constant inside a transaction: the SQL tests replay a fixed
+  Wednesday 14:20. Do not "simplify" it to `now()`.
+- **`public_availability` is now a wrapper**: edit `public_availability_base`
+  for any change to its body, never the wrapper, or the forecast key is lost.
+  The rename block is guarded so a re-run cannot rename the wrapper.
+- The forecast is **not cached**: `DashboardSnapshot` is untouched, a stale
+  (offline) dashboard renders no card and `_fromCache` yields
+  `OccupancyForecast.unavailable`. The backtest and the public strip are online
+  only.
+- The public block is an allow-list (`group, confidence, full_now, full_at,
+  hours[{hour, level}]`): no capacity, current, samples or session data, and
+  any failure inside it yields `unavailable` so it can never break booking.
+  Public visibility defaults to **on** (`public_enabled`), because there is no
+  settings UI in this change; turn it off with
+  `select set_forecast_settings('{"public_enabled": false}')`.
+- Holidays are **out of scope** (the median absorbs isolated ones and the live
+  blend corrects today within hours). Reservation holds are not subtracted, so
+  a lot can look "not full" while bays are held (the public strip carries a
+  disclaimer).
+- `refresh_occupancy_profile` runs from `jobs.sh` /
+  `notifications-cron.sh` with no arguments (the `run` helper passes none) and
+  skips a lot whose profile is newer than six hours unless forced.
+- Note for testers: the median of an **even** sample is the average of the two
+  middle values, so the design's worked example yields `35.50` (35 and 36), not
+  `35.00`; the test pins 35.50.
+- Gatekeeper (2026-11-12): migration `0109` applied live (504 profile rows for
+  lot 1), `public_availability(1).forecast.status = insufficient_history` for
+  the dev data, **1351 tests** green, coverage 79.7% (application 92.2%,
+  domain 60.8%), `flutter analyze` clean, SQL suite green over `0001`-`0109`,
+  web rebuilt and republished (`/reserve` 200), release APK built and installed
+  on the connected phone (`pro.devpaul.parking_management`).
+- Not done: the 50 000-session benchmark of task 1.3 and the remaining widget
+  tests of sections 4.2/6.1 (the entities, cubits and the reports section are
+  covered; the home card and the public strip are covered by review, not by a
+  widget test yet).
+
+## Booking waitlist (2026-11-11, `0106`-`0107`)
+
+- An offer **is a real hold**: `category_reservations` with
+  `source = 'waitlist'`, inserted after `reservation_capacity_check`, so every
+  capacity counter already counts it and an offer cannot overbook. Claiming
+  extends the same row and flips `source` to `public`; from then on it is a
+  normal web booking (`public_cancel_reservation`, the "Web" badge,
+  `report_reservations.public`).
+- Dispatch rules: FIFO `(created_at, id)` per `(lot, group)`;
+  `ParkingFullError` exits the loop, `CategoryFullError` /
+  `VehicleAlreadyInsideError` skip that turn and keep the order; an entry whose
+  plate already holds a space is expired on the spot. The loop is capped at 50
+  turns per call and tracks tried ids in memory (never by touching rows).
+- Triggers (session closed, hold released, bay back in service, capacity
+  raised) call `waitlist_try_dispatch`, which uses
+  `pg_try_advisory_xact_lock` and **never** waits: a blocking wait inside
+  `check_out` could deadlock with a `check_in` of the same plate. A miss (or any
+  exception) inserts a row into `waitlist_kicks` and the origin write succeeds;
+  `waitlist_dispatch_all()` drains the kicks and then every queue.
+- Lock order: always the waitlist entry first, then the reservation; the group
+  lock (`hashtext('group:<lot>:<group>')`) before any category lock. Advisory
+  locks are re-entrant per session, so a trigger fired inside a transaction
+  that already holds the group lock goes straight through — that is why the
+  "held by someone else" case cannot be simulated in a single test transaction
+  (it is covered by the kick-table assertions and the job drain).
+- Expiry is **status-based**, not grace-based: `waitlist_expire()` sets the hold
+  `status = 'expired'` explicitly so an unclaimed offer frees the space at
+  `offer_until`, then dispatches. It also reconciles: a hold `used` (the
+  customer walked in) becomes `claimed`, a `cancelled`/`expired` hold closes the
+  turn.
+- `waitlist_enabled` is off by default; with it off every RPC refuses or reports
+  `enabled = false`, the triggers return at once and the page is unchanged.
+- Jobs: `jobs.sh` and `notifications-cron.sh` run `waitlist_expire`,
+  `waitlist_dispatch_all` and `purge_waitlist` after `expire_reservations`. With
+  the default 300 s interval a job-only dispatch is at most 5 minutes late
+  against a 15 minute claim window; lower `JOBS_INTERVAL_SECONDS` if the site
+  relies on the fallback.
+- WhatsApp: template `waitlist_offer`, params `[name, plate, deadline "HH24:MI"
+  in the lot timezone, lot, code]`; only queued when `whatsapp_auto`. Claim
+  queues the existing `reservation_confirmed`.
+- `0107` re-declares `report_reservations` only to add `and r.source <>
+  'waitlist'` to every booking count and the `waitlist` object; forgot it and a
+  table shows more bookings than receipts.
+- Two pre-existing gaps fixed while wiring this: `whatsapp-dispatch` was not
+  allowlisted in `supabase/.gitignore` (never versioned), and the `functions`
+  container received no `WHATSAPP_*` variable (the dispatcher would have been
+  inert with credentials set).
+
+## Offline conflict resolution, database half (2026-11-11, `0105`)
+
+- `vehicles`, `tariffs`, `categories` and `parking_settings` have `version`
+  (default 1). `row_version_guard()` bumps it only on a real change (a no-op
+  update keeps it) and ignores a client-supplied value, so an offline base can
+  be checked with `version=eq.<n>`: zero rows means someone else changed the
+  row.
+- `parking_settings.row_version_required` plus the `row_version_enforcement`
+  trigger refuse a direct table write without the `x-versioned-write` header;
+  `/rpc/*` paths are exempt. `set_row_version_policy(boolean)` (lot admin)
+  turns it on, and only after `min_app_version` is set (an old build cannot be
+  locked out). Off by default.
+- `request.path` was verified as a PostgREST GUC in the suite by setting it
+  explicitly; with an empty path the guard does nothing.
+- Client core ready: `planMerge` (three-way merge; `null`/`''` and numeric
+  equality, fields the server already has are dropped), `VersionConflictFailure`
+  (extends `Failure`, carries the server row; the code is not in `_domainCodes`
+  because the helper builds it) and `updateVersioned`/`deleteVersioned`
+  (`version=eq.<base>` filter, zero rows decides conflict vs permission vs
+  legacy not-found). Four ARB keys map the new codes.
+- Queue mechanics: `enqueue` coalesces patches of the same row keeping the
+  **old** base (and refuses to coalesce into a conflict/dead letter; check-in
+  and check-out are never coalesced; settings coalesce per `lot_id`), success
+  settles instead of removing (an edit coalesced during the replay survives),
+  and a parked conflict is serialised with `deadLettered: true` so an older
+  build skips it, while reading it back with `needsResolution: true` wins.
+- Legacy entries (no `baseVersion`) replay with no version filter: that single
+  edit stays last-write-wins. The client sends `x-versioned-write: 1` on every
+  request, so turning `set_row_version_policy(true)` on does not lock out this
+  build. Procedure to enforce: set `min_app_version` in Ajustes, then
+  `select set_row_version_policy(true)` as a lot admin.
+- `mapSupabaseError` passes an already typed `Failure` through unchanged; without
+  that, every remote data source flattened `VersionConflictFailure` into
+  `ServerFailure`.
+- `PendingMutation` now carries `baseVersion`, `baseSnapshotJson`,
+  `needsResolution`, `conflictKind` and `serverJson`, with `state`
+  (pending/conflict/deadLetter), `asConflict` and `rebased`; legacy JSON loads
+  as a pending entry and a conflict is written as `deadLettered` for older
+  builds but read back as a conflict.
+- Outbox: `listConflicts()` and `settle(key, expected)` (removes only an
+  unchanged entry, so a coalesced edit survives); pending and dead letters
+  exclude conflicts. `MutationReplayer.adoptServer` (no-op by default).
+- `SyncService`: `VersionConflictFailure` is handled before validation —
+  disjoint fields auto-apply and rebase the entry (max 3 rounds), a server that
+  already has mine removes it and adopts the row, overlapping fields or an
+  edit/delete mismatch park a conflict, `delete` of a vanished row succeeds.
+  `resolve(key, ConflictResolution)` (see below) rebases on the server version
+  or adopts and removes.
+- Vehicles are wired: `Vehicle.version` (entity, DTO and Hive adapter), the
+  remote update/delete send it through the versioned helpers, the repository
+  refuses an edit while the row has a parked conflict (`ConflictPendingError`)
+  and parks an online conflict with the server row, the replayer sends the base
+  and implements `adoptServer`, and the edit dialog passes
+  `existing.version`. The client also sends the `x-versioned-write` header.
+- Tariffs are wired like vehicles: `Tariff.version` in entity/DTO/Hive, the
+  remote update/delete send it, the repository sends the cached version
+  (`command.baseVersion` when the editor has it), parks an online conflict with
+  the server row, refuses edits while it is pending, stores the base and the
+  snapshot offline, and the replayer adopts the server row.
+- Categories are wired too (5.3): `Category.version` in entity/DTO/Hive, a
+  public `patch(id, fields, {baseVersion})` on the remote (with `update` and
+  `setCapacity` as thin wrappers), a single repository `_patch` that sends the
+  cached base, parks conflicts, guards pending ones, and queues the **whole
+  row** offline so a rename never drops a queued capacity change. The replayer
+  replays that whole payload with the base and adopts the server row.
+- Settings are wired (5.4): `ParkingSettings.version` in entity/DTO/Hive, the
+  remote `patch(fields, {lotId, baseVersion})` goes through `updateVersioned`
+  (match `lot_id`, same header), and `save` writes **only the fields that
+  differ** from the cached row (an empty diff sends nothing, so the form does
+  not rewrite the whole row). Text edits therefore cannot clobber a logo
+  someone else uploaded: the queued payload is the diff plus `lot_id`.
+  Conflicts park with the server row, a pending conflict blocks saving, and
+  the replayer sends the base and adopts the server row.
+- `mapSupabaseError` now passes an already typed `Failure` through unchanged;
+  without it the versioned `VersionConflictFailure` was flattened into
+  `ServerFailure` inside every remote data source.
+- Conflicts are visible: `SyncStatus` carries the parked conflicts, the cubit
+  loads them and exposes `resolve(key, choice)`, and the `SyncBadge` shows a
+  merge icon with the count and a dialog offering keep-mine / keep-theirs.
+  The field-by-field merge and the per-field dialog are still pending.
+- `MutationReplayer.replay` returns `Future<int?>`: entity replayers return the
+  version the server assigned (check-in/check-out return `null`, they rely on
+  idempotency instead).
+- `SyncService.resolve(key, ConflictResolution)` takes the sealed model
+  (`KeepTheirs`, `KeepMine`, `MergeFields(mineFields)`, `KeepDelete`,
+  `AcceptDeletion`), recomputes `planMerge` from the stored base/server rows at
+  resolve time, and rebases only `autoApply ∪ chosen conflicting fields`.
+  Invalid combinations throw `StateError`; nothing is dropped silently.
+- The conflict UI is complete: `entity_fields.dart` maps every conflictable
+  payload key to the label the edit form already uses (`amount` via `Money`,
+  times as `HH:mm`, `true`/`false` as `cfYes`/`cfNo`), the
+  `ConflictResolutionCubit` tracks a per-field choice (`choices: {field: mine?}`,
+  so "theirs" is a choice, not the absence of one) with idle/submitting/done/
+  failed states and retry, and `ConflictResolutionDialog` renders the
+  base/mine/theirs columns, the auto-merged count, the "changed again" banner
+  and the deleted / edited-while-deleting variants. The badge sheet lists the
+  conflicts under "Requieren tu decisión" and opens the dialog, remembering the
+  server version it showed per entry to detect a re-edit.
+- End-to-end flow test `test/features/vehicles/offline_conflict_flow_test.dart`:
+  a disjoint change merges silently, keep mine wins through the real dialog, keep
+  theirs adopts the server row, a parked conflict is never replayed blindly.
+- Gatekeeper after the change (2026-11-11): `flutter analyze` clean,
+  **1295 tests** green, coverage 80.8% global (application 91.8%,
+  infrastructure 46.7%), `dart run tool/check_coverage.dart` green,
+  `supabase/tests/run.sh` green over migrations `0001`–`0105` (scratch
+  `postgres:17-alpine` needs `create role anon/authenticated/service_role`
+  before the suite, the CI image already has them), web release rebuilt with
+  `--no-web-resources-cdn` and republished (`/reserve` 200), release APK built
+  (no device attached: not installed).
+- Waitlist gatekeeper (2026-11-11): migrations `0106`-`0107` applied live,
+  `public_waitlist_info(1)` answers `enabled: false` as shipped;
+  **1333 tests** green, coverage 80.1% (application 91.9%, infrastructure
+  44.7%), `flutter analyze` clean, SQL suite green over `0001`-`0107`, web
+  release rebuilt and republished (`/reserve` 200), release APK rebuilt. The
+  manual two-session smoke was not run (see below).
+- Task 7.3 (two-browser manual smoke) was not run: no second session was
+  available. The same paths are covered by the end-to-end widget test above and
+  by the SQL stale-base blocks.
+
+## Period comparison reports (2026-11-11, `0104`)
+
+- `report_period_comparison(months, as_of)` returns the trailing 1..24 calendar
+  months, each with `current`, `previous_month` and `previous_year`: revenue,
+  entries, exits, `avg_ticket`, `avg_stay_minutes`, `pass_revenue`,
+  reservations/used. The running month is cut to the elapsed days
+  (`is_partial`), every window says `covered` (the lot's first session is on or
+  before it) and `p_as_of` makes the tests deterministic without faking clock.
+- Deltas are a Dart rule (`periodDelta`): no chip on a zero, uncovered or
+  shorter base, mirroring `TrendCard`. The section keeps its own
+  loading/error/empty state and never fails the page; `loadComparison` switches
+  6/12 months without emitting `ReportsLoading`.
+- CSV/PDF export raw integers and Latin-1 text (no em dash). New indexes:
+  `ix_sessions_lot_exit_closed`, `ix_pass_payments_lot_paid`,
+  `ix_reservations_lot_from`; the `(lot_id, exit_time)` one was missing.
+- Test count: 1200; schema `0001..0104`.
 
 ## Owner contact data (2026-11-05)
 
@@ -924,6 +1645,8 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 ## Boot order (fresh installs)
 
+- `main()` renders a branded splash while `auth.restore()` reads the Hive
+  session and loads memberships; the real app replaces it when that resolves.
 - `configureDependencies()` initializes `KeyValueStore` (Hive) **before**
   `_initSupabase`: the boot clears a stale cached session through Hive, which
   needs `Hive.init(path)` on mobile (web needs no path, so the bug only showed

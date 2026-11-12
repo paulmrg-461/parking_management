@@ -16,27 +16,21 @@ abstract class ReservationRemoteDataSource {
   Future<void> cancel(int id);
 }
 
-class SupabaseReservationRemoteDataSource implements ReservationRemoteDataSource {
+class SupabaseReservationRemoteDataSource
+    implements ReservationRemoteDataSource {
   SupabaseReservationRemoteDataSource(this._client);
 
   final SupabaseClient _client;
 
-  static const _table = 'category_reservations';
-
   @override
   Future<List<Reservation>> listActive() async {
     try {
-      final rows = await _client
-          .from(_table)
-          .select(
-            'id, plate, category_id, reserved_until, status, notes, '
-            'categories(name)',
-          )
-          .eq('status', 'active')
-          .gt('reserved_until', DateTime.now().toUtc().toIso8601String())
-          .order('reserved_until');
+      // The RPC applies `reservation_grace()` and returns `in_grace`, so the
+      // app never re-implements the window (see 0097).
+      final rows = await _client.rpc('list_active_reservations');
       return [
-        for (final row in rows) Reservation.fromJson(row),
+        for (final row in rows as List<dynamic>)
+          Reservation.fromJson(Map<String, dynamic>.from(row as Map)),
       ];
     } catch (error) {
       throw mapSupabaseError(error);

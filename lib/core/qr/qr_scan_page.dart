@@ -8,9 +8,8 @@ import '../theme/tokens.dart';
 /// Opens a live camera preview and returns the first QR payload scanned.
 /// The caller validates the payload (a plate or a `?plate=` URL).
 Future<String?> scanQrWithCamera(BuildContext context) {
-  return Navigator.of(context).push<String>(
-    MaterialPageRoute(builder: (_) => const _QrScanPage()),
-  );
+  return Navigator.of(context)
+      .push<String>(MaterialPageRoute(builder: (_) => const _QrScanPage()));
 }
 
 class _QrScanPage extends StatefulWidget {
@@ -71,9 +70,8 @@ class _QrScanPageState extends State<_QrScanPage> {
           MobileScanner(
             controller: _controller,
             onDetect: _onDetect,
-            errorBuilder: (context, error) => _CameraError(
-              message: l10n.scanQrCameraError,
-            ),
+            errorBuilder: (context, error) =>
+                _CameraError(message: l10n.scanQrCameraError),
           ),
           Align(
             alignment: Alignment.bottomCenter,

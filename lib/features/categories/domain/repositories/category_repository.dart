@@ -5,9 +5,9 @@ abstract class CategoryRepository {
 
   Future<Category> create(String name);
 
-  Future<Category> update(int id, String name);
+  Future<Category> update(int id, String name, {int? baseVersion});
 
-  Future<Category> setCapacity(int id, int capacity);
+  Future<Category> setCapacity(int id, int capacity, {int? baseVersion});
 
-  Future<void> delete(int id);
+  Future<void> delete(int id, {int? baseVersion});
 }

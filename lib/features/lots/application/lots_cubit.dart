@@ -124,10 +124,12 @@ class LotsCubit extends ResilientCubit<LotsState> {
         name: name,
         address: address,
       );
-      emit(current.copyWith(
-        lots: [...current.lots, lot],
-        submission: const SubmissionSucceeded<ParkingLot?>(null),
-      ));
+      emit(
+        current.copyWith(
+          lots: [...current.lots, lot],
+          submission: const SubmissionSucceeded<ParkingLot?>(null),
+        ),
+      );
     } on Failure catch (failure) {
       emit(current.copyWith(submission: SubmissionFailed.of(failure)));
     }
@@ -156,13 +158,15 @@ class LotsCubit extends ResilientCubit<LotsState> {
     emit(current.copyWith(submission: const SubmissionInProgress()));
     try {
       final updated = await _repository.update(id: lot.id, active: active);
-      emit(current.copyWith(
-        lots: [
-          for (final item in current.lots)
-            item.id == updated.id ? updated : item,
-        ],
-        submission: const SubmissionSucceeded<ParkingLot?>(null),
-      ));
+      emit(
+        current.copyWith(
+          lots: [
+            for (final item in current.lots)
+              item.id == updated.id ? updated : item,
+          ],
+          submission: const SubmissionSucceeded<ParkingLot?>(null),
+        ),
+      );
     } on Failure catch (failure) {
       emit(current.copyWith(submission: SubmissionFailed.of(failure)));
     }

@@ -67,8 +67,14 @@ class FoundVehicleCard extends StatelessWidget {
               label: l10n.fieldCategory,
               value: categoryName ?? '#${vehicle.categoryId}',
             ),
-            _InfoRow(label: l10n.fieldColor, value: vehicle.color ?? l10n.notAvailable),
-            _InfoRow(label: l10n.fieldBrand, value: vehicle.brand ?? l10n.notAvailable),
+            _InfoRow(
+              label: l10n.fieldColor,
+              value: vehicle.color ?? l10n.notAvailable,
+            ),
+            _InfoRow(
+              label: l10n.fieldBrand,
+              value: vehicle.brand ?? l10n.notAvailable,
+            ),
           ],
         ),
       ),

@@ -10,6 +10,9 @@ import 'package:parking_management/features/check_out/domain/entities/capacity_s
 import 'package:parking_management/features/check_out/domain/entities/occupancy_snapshot.dart';
 import 'package:parking_management/features/check_out/domain/entities/slot_board.dart';
 import 'package:parking_management/features/check_out/domain/entities/today_summary.dart';
+import 'package:parking_management/features/check_out/domain/entities/dashboard_trend.dart';
+import 'package:parking_management/features/check_out/domain/entities/lot_setup_status.dart';
+import 'package:parking_management/features/check_out/domain/entities/occupancy_forecast.dart';
 import 'package:parking_management/features/check_out/infrastructure/check_out_remote_data_source.dart';
 
 class _FakeRemote implements CheckOutRemoteDataSource {
@@ -25,6 +28,17 @@ class _FakeRemote implements CheckOutRemoteDataSource {
 
   @override
   Future<TodaySummary> todaySummary() async => TodaySummary.empty;
+
+  @override
+  Future<DashboardTrend> dashboardTrend({int days = 7}) async =>
+      DashboardTrend.empty;
+
+  @override
+  Future<LotSetupStatus> lotSetup() async => LotSetupStatus.unknown;
+
+  @override
+  Future<OccupancyForecast> occupancyForecast({int horizon = 12}) async =>
+      OccupancyForecast.unavailable;
 
   @override
   Future<SlotBoard> slotBoard() async => SlotBoard.empty;
@@ -95,12 +109,13 @@ void main() {
     () async {
       final remote = _FakeRemote();
 
-      await CheckOutMutationReplayer(remote).replay(
+      final version = await CheckOutMutationReplayer(remote).replay(
         _queued(
           '{"client_exit_time":"2026-01-01T10:00:00.000","client_ref":"k1","payment_method":"card","discount_amount":1000,"discount_reason":"cortesia"}',
         ),
       );
 
+      expect(version, isNull);
       expect(remote.sessionId, 5);
       expect(remote.clientExitTime, DateTime.parse('2026-01-01T10:00:00.000'));
       expect(remote.idempotencyKey, 'k1');

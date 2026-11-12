@@ -13,6 +13,7 @@ class SessionRecord extends Equatable {
     this.ticketNumber,
     this.paymentMethod,
     this.durationSeconds = 0,
+    this.photoCount = 0,
   });
 
   final int id;
@@ -25,6 +26,9 @@ class SessionRecord extends Equatable {
   final String? ticketNumber;
   final String? paymentMethod;
   final int durationSeconds;
+
+  /// Evidence files captured for this session in the active lot.
+  final int photoCount;
 
   bool get isOpen => status == 'open';
 
@@ -43,6 +47,7 @@ class SessionRecord extends Equatable {
     ticketNumber: json['ticket_number'] as String?,
     paymentMethod: json['payment_method'] as String?,
     durationSeconds: (json['duration_seconds'] as num?)?.toInt() ?? 0,
+    photoCount: (json['photo_count'] as num?)?.toInt() ?? 0,
   );
 
   @override
@@ -57,6 +62,7 @@ class SessionRecord extends Equatable {
     ticketNumber,
     paymentMethod,
     durationSeconds,
+    photoCount,
   ];
 }
 

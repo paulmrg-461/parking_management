@@ -8,7 +8,9 @@ import '../../../app/shell/app_destinations.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../reservations/domain/repositories/reservation_repository.dart';
 import '../../../core/theme/tokens.dart';
+import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/section_header.dart';
+import '../../../core/widgets/skeleton.dart';
 import '../../../core/widgets/sync_badge.dart';
 import '../../auth/application/auth_cubit.dart';
 import '../../auth/domain/entities/auth_session.dart';
@@ -34,7 +36,6 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-
 class _HomePageState extends State<HomePage> {
   @override
   void initState() {
@@ -55,11 +56,7 @@ class _HomePageState extends State<HomePage> {
                   (c) => c.state.titleFor(l10n),
                 ),
         ),
-        actions: const [
-          NotificationBell(),
-          EmergencyAction(),
-          SyncBadge(),
-        ],
+        actions: const [NotificationBell(), EmergencyAction(), SyncBadge()],
       ),
       body: BlocBuilder<AuthCubit, AuthState>(
         builder: (context, state) => switch (state) {
@@ -90,6 +87,12 @@ class _Dashboard extends StatelessWidget {
         .where(managementDestinations.contains)
         .toList();
     final split = MediaQuery.sizeOf(context).width >= Layout.homeSplit;
+    final stale = context.select<DashboardCubit, DateTime?>(
+      (cubit) => switch (cubit.state) {
+        DashboardLoaded(:final cachedAt) => cachedAt,
+        _ => null,
+      },
+    );
     final list = RefreshIndicator(
       onRefresh: context.read<DashboardCubit>().load,
       child: ListView(
@@ -138,19 +141,41 @@ class _Dashboard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: Space.lg),
+          const SetupChecklistCard(),
           SectionHeader(
             icon: Icons.insights_outlined,
             title: l10n.homeSummary,
             subtitle: l10n.homeSummaryHint,
           ),
           const SizedBox(height: Space.sm),
-          const _SummaryGrid(
-            cards: [OccupancyCard(), CapacityCard(), TodayCard(), ShiftCard()],
+          if (stale != null) ...[
+            _StaleDashboardNotice(cachedAt: stale),
+            const SizedBox(height: Space.sm),
+          ],
+          BlocBuilder<DashboardCubit, DashboardState>(
+            buildWhen: (previous, current) =>
+                (previous is DashboardLoading) != (current is DashboardLoading),
+            builder: (context, state) => state is DashboardLoading
+                ? const _SummarySkeleton()
+                : const _SummaryGrid(
+                    cards: [
+                      OccupancyCard(),
+                      CapacityCard(),
+                      TodayCard(),
+                      ShiftCard(),
+                    ],
+                  ),
           ),
           const SizedBox(height: Space.md),
-          SlotBoardCard(reservations: reservations),
+          const TrendCard(),
           const SizedBox(height: Space.md),
-          if (!split) const InsideCard(),
+          if (stale == null) const OccupancyForecastCard(),
+          if (stale == null) ...[
+            const SizedBox(height: Space.md),
+            SlotBoardCard(reservations: reservations),
+            const SizedBox(height: Space.md),
+            if (!split) const InsideCard(),
+          ],
           // The sidebar already lists every management section on desktop.
           if (management.isNotEmpty &&
               MediaQuery.sizeOf(context).width < Layout.railBreakpoint) ...[
@@ -161,6 +186,10 @@ class _Dashboard extends StatelessWidget {
       ),
     );
     if (!split) {
+      return list;
+    }
+    if (stale != null) {
+      // No live board/inside data offline: keep the KPI list full width.
       return list;
     }
     return Row(
@@ -181,6 +210,68 @@ class _Dashboard extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Offline notice shown above the KPIs when they come from the device cache:
+/// it names the time they were captured and offers a retry.
+class _StaleDashboardNotice extends StatelessWidget {
+  const _StaleDashboardNotice({required this.cachedAt});
+
+  final DateTime cachedAt;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(
+        Space.md,
+        Space.xs,
+        Space.xs,
+        Space.xs,
+      ),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(Radii.md),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.cloud_off_outlined,
+            size: 18,
+            color: scheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: Space.sm),
+          Expanded(
+            child: Text(
+              l10n.homeStaleData(Formatters.time(cachedAt)),
+              style: theme.textTheme.bodySmall,
+            ),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+            onPressed: context.read<DashboardCubit>().load,
+            child: Text(l10n.actionRetry),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Placeholder with the same geometry as the four KPI cards, so the first
+/// paint of the home is stable while the dashboard request is in flight.
+class _SummarySkeleton extends StatelessWidget {
+  const _SummarySkeleton();
+
+  @override
+  Widget build(BuildContext context) => const SkeletonPulse(
+    child: _SummaryGrid(
+      cards: [SkeletonCard(), SkeletonCard(), SkeletonCard(), SkeletonCard()],
+    ),
+  );
 }
 
 /// Two KPI columns on wide content, one on phones; equal-height rows so the
@@ -233,7 +324,6 @@ class _SummaryGrid extends StatelessWidget {
     );
   }
 }
-
 
 /// Compact secondary shortcut (records, shift): a tonal icon and a label on a
 /// bordered surface, with a 48 dp minimum target.

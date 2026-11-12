@@ -36,9 +36,7 @@ class AppNotification extends Equatable {
         type: json['type'] as String,
         title: json['title'] as String,
         body: json['body'] as String,
-        data: Map<String, dynamic>.from(
-          (json['data'] as Map?) ?? const {},
-        ),
+        data: Map<String, dynamic>.from((json['data'] as Map?) ?? const {}),
         createdAt: DateTime.parse(json['created_at'] as String),
         isRead: json['read_at'] != null,
       );

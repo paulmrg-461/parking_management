@@ -15,8 +15,12 @@ ParkingSettingsDto _$ParkingSettingsDtoFromJson(Map<String, dynamic> json) =>
       website: json['website'] as String,
       whatsapp: json['whatsapp'] as String,
       logoVersion: (json['logo_version'] as num?)?.toInt() ?? 0,
+      coverPath: json['cover_path'] as String? ?? '',
+      coverVersion: (json['cover_version'] as num?)?.toInt() ?? 0,
       evidenceRetentionDays:
           (json['evidence_retention_days'] as num?)?.toInt() ?? 0,
+      reservationGraceMinutes:
+          (json['reservation_grace_minutes'] as num?)?.toInt() ?? 15,
       whatsappAuto: json['whatsapp_auto'] as bool? ?? false,
       carCapacity: (json['car_capacity'] as num?)?.toInt() ?? 0,
       motoCapacity: (json['moto_capacity'] as num?)?.toInt() ?? 0,
@@ -27,6 +31,7 @@ ParkingSettingsDto _$ParkingSettingsDtoFromJson(Map<String, dynamic> json) =>
       currency: json['currency'] as String? ?? 'COP',
       minAppVersion: json['min_app_version'] as String? ?? '',
       policePhone: json['police_phone'] as String? ?? '',
+      version: (json['version'] as num?)?.toInt() ?? 0,
     );
 
 Map<String, dynamic> _$ParkingSettingsDtoToJson(ParkingSettingsDto instance) =>
@@ -38,7 +43,10 @@ Map<String, dynamic> _$ParkingSettingsDtoToJson(ParkingSettingsDto instance) =>
       'website': instance.website,
       'whatsapp': instance.whatsapp,
       'logo_version': instance.logoVersion,
+      'cover_path': instance.coverPath,
+      'cover_version': instance.coverVersion,
       'evidence_retention_days': instance.evidenceRetentionDays,
+      'reservation_grace_minutes': instance.reservationGraceMinutes,
       'whatsapp_auto': instance.whatsappAuto,
       'car_capacity': instance.carCapacity,
       'moto_capacity': instance.motoCapacity,
@@ -49,4 +57,5 @@ Map<String, dynamic> _$ParkingSettingsDtoToJson(ParkingSettingsDto instance) =>
       'currency': instance.currency,
       'min_app_version': instance.minAppVersion,
       'police_phone': instance.policePhone,
+      'version': instance.version,
     };

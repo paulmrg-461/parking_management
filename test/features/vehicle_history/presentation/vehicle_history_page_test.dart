@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/error/failure.dart';
+import 'package:parking_management/core/widgets/skeleton.dart';
 import 'package:parking_management/features/auth/application/auth_cubit.dart';
 import 'package:parking_management/features/auth/domain/entities/user.dart';
 import 'package:parking_management/features/vehicle_history/application/vehicle_history_cubit.dart';
@@ -10,6 +13,7 @@ import 'package:parking_management/features/vehicle_history/presentation/vehicle
 
 import '../../../helpers/app_harness.dart';
 import '../../../helpers/fake_auth_repository.dart';
+import '../../../helpers/fake_session_evidence_repository.dart';
 import '../../../helpers/fake_vehicle_history_repository.dart';
 import '../../../helpers/test_app.dart';
 
@@ -35,6 +39,106 @@ void main() {
     expect(find.text('TCK-000002'), findsOneWidget);
     expect(find.text('Tarjeta'), findsOneWidget);
     expect(repository.lookups, ['ABC123']);
+  });
+
+  testWidgets('Success: a vehicle that is not inside offers check-in', (
+    tester,
+  ) async {
+    String? requested;
+    final repository = FakeVehicleHistoryRepository(history: sampleHistory());
+    final cubit = VehicleHistoryCubit(repository);
+    addTearDown(cubit.close);
+    await tester.pumpWidget(
+      testApp(
+        BlocProvider.value(
+          value: cubit,
+          child: VehicleHistoryPage(onCheckIn: (_, plate) => requested = plate),
+        ),
+      ),
+    );
+
+    await tester.enterText(find.byType(TextField), 'ABC123');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+
+    final action = find.text('Registrar entrada');
+    expect(action, findsOneWidget);
+    await tester.ensureVisible(action);
+    await tester.pumpAndSettle();
+    await tester.tap(action);
+    expect(requested, 'ABC123');
+  });
+
+  testWidgets('Security: a vehicle already inside does not offer check-in', (
+    tester,
+  ) async {
+    final repository = FakeVehicleHistoryRepository(
+      history: sampleHistory(withOpenSession: true),
+    );
+    final cubit = VehicleHistoryCubit(repository);
+    addTearDown(cubit.close);
+    await tester.pumpWidget(
+      testApp(
+        BlocProvider.value(value: cubit, child: const VehicleHistoryPage()),
+      ),
+    );
+
+    await tester.enterText(find.byType(TextField), 'ABC123');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Registrar entrada'), findsNothing);
+  });
+
+  testWidgets('Success: a session with evidence opens the viewer', (
+    tester,
+  ) async {
+    final repository = FakeVehicleHistoryRepository(
+      history: sampleHistory(photos: 2),
+    );
+    final evidence = FakeSessionEvidenceRepository();
+    final cubit = VehicleHistoryCubit(repository);
+    addTearDown(cubit.close);
+    await tester.pumpWidget(
+      testApp(
+        BlocProvider.value(
+          value: cubit,
+          child: VehicleHistoryPage(evidenceRepository: evidence),
+        ),
+      ),
+    );
+
+    await tester.enterText(find.byType(TextField), 'ABC123');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ver evidencias (2)'), findsOneWidget);
+    await tester.ensureVisible(find.text('Ver evidencias (2)'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Ver evidencias (2)'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Evidencias de ABC123'), findsOneWidget);
+    expect(evidence.calls, 1);
+  });
+
+  testWidgets('Security: a session without evidence hides the viewer action', (
+    tester,
+  ) async {
+    final repository = FakeVehicleHistoryRepository(history: sampleHistory());
+    final cubit = VehicleHistoryCubit(repository);
+    addTearDown(cubit.close);
+    await tester.pumpWidget(
+      testApp(
+        BlocProvider.value(value: cubit, child: const VehicleHistoryPage()),
+      ),
+    );
+
+    await tester.enterText(find.byType(TextField), 'ABC123');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Ver evidencias'), findsNothing);
   });
 
   testWidgets('Failure: an unknown plate shows the localized error', (
@@ -260,10 +364,7 @@ void main() {
 
     await tester.tap(find.text('Agregar propietario'));
     await tester.pumpAndSettle();
-    await tester.enterText(
-      find.byKey(const Key('owner_name')),
-      'Paul Realpe',
-    );
+    await tester.enterText(find.byKey(const Key('owner_name')), 'Paul Realpe');
     await tester.enterText(
       find.byKey(const Key('owner_phone')),
       '+57 300 111 2233',
@@ -296,7 +397,10 @@ void main() {
     await tester.tap(find.text('Guardar'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Escribe un teléfono válido (7 a 15 dígitos)'), findsOneWidget);
+    expect(
+      find.text('Escribe un teléfono válido (7 a 15 dígitos)'),
+      findsOneWidget,
+    );
     expect(repository.lastOwnerPhone, isNull);
   });
 
@@ -458,5 +562,30 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.byTooltip('Cobrar en caja'), findsOneWidget);
+  });
+  testWidgets('Loading: the lookup paints a skeleton, not a spinner', (
+    tester,
+  ) async {
+    final gate = Completer<void>();
+    final repository = FakeVehicleHistoryRepository(history: sampleHistory())
+      ..lookupGate = gate;
+    final cubit = VehicleHistoryCubit(repository);
+    addTearDown(cubit.close);
+    await tester.pumpWidget(
+      testApp(
+        BlocProvider.value(value: cubit, child: const VehicleHistoryPage()),
+      ),
+    );
+
+    await tester.enterText(find.byType(TextField), 'abc 123');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pump();
+
+    expect(find.byType(SkeletonPulse), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(find.text('TCK-000002'), findsOneWidget);
   });
 }

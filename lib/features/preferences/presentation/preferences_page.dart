@@ -60,9 +60,7 @@ class PreferencesPage extends StatelessWidget {
                           ListTile(
                             leading: Icon(_themeIcon(themeCubit.state)),
                             title: Text(l10n.themeMode),
-                            subtitle: Text(
-                              _themeName(l10n, themeCubit.state),
-                            ),
+                            subtitle: Text(_themeName(l10n, themeCubit.state)),
                             trailing: const Icon(Icons.chevron_right),
                             onTap: () => _pickTheme(context, themeCubit),
                           ),

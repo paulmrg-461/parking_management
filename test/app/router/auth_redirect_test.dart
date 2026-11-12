@@ -5,11 +5,11 @@ import 'package:parking_management/features/auth/domain/entities/auth_session.da
 import 'package:parking_management/features/auth/domain/entities/user.dart';
 
 AuthAuthenticated _as(UserRole role) => AuthAuthenticated(
-      AuthSession(
-        user: User(id: 1, username: 'u', displayName: 'U', role: role),
-        token: 't',
-      ),
-    );
+  AuthSession(
+    user: User(id: 1, username: 'u', displayName: 'U', role: role),
+    token: 't',
+  ),
+);
 
 const _adminOnly = [
   '/users',
@@ -46,6 +46,19 @@ void main() {
       expect(authRedirect(const AuthUnauthenticated(), '/login'), isNull);
     });
 
+    test('Success: operators run the reservations board', () {
+      expect(authRedirect(_as(UserRole.operator), '/reservations'), isNull);
+      expect(canAccess(UserRole.operator, '/reservations'), isTrue);
+    });
+
+    test('Success: the public booking page needs no session', () {
+      expect(authRedirect(const AuthUnauthenticated(), reservePath), isNull);
+      expect(
+        authRedirect(const AuthUnauthenticated(), '/reserve?lot=1'),
+        isNull,
+      );
+    });
+
     test('Security: the evidence page is public (plate-keyed link)', () {
       expect(authRedirect(const AuthUnauthenticated(), '/evidence'), isNull);
       expect(
@@ -77,15 +90,59 @@ void main() {
     test('Security: operators are bounced from every admin-only route', () {
       for (final route in _adminOnly) {
         expect(authRedirect(_as(UserRole.operator), route), '/', reason: route);
-        expect(authRedirect(_as(UserRole.operator), '$route/'), '/', reason: route);
-        expect(authRedirect(_as(UserRole.operator), '$route/5'), '/', reason: route);
+        expect(
+          authRedirect(_as(UserRole.operator), '$route/'),
+          '/',
+          reason: route,
+        );
+        expect(
+          authRedirect(_as(UserRole.operator), '$route/5'),
+          '/',
+          reason: route,
+        );
       }
     });
 
-    test('Security: operator access is an allowlist (unknown routes denied)', () {
-      expect(authRedirect(_as(UserRole.operator), '/something-new'), '/');
-      expect(canAccess(UserRole.operator, '/check-in'), isTrue);
-      expect(canAccess(UserRole.operator, '/check-inx'), isFalse);
+    test(
+      'Security: operator access is an allowlist (unknown routes denied)',
+      () {
+        expect(authRedirect(_as(UserRole.operator), '/something-new'), '/');
+        expect(canAccess(UserRole.operator, '/check-in'), isTrue);
+        expect(canAccess(UserRole.operator, '/check-inx'), isFalse);
+      },
+    );
+  });
+
+  group('initialRouteFrom', () {
+    test('Success: web keeps the deep link and its query', () {
+      expect(
+        initialRouteFrom(Uri.parse('http://host/reserve?lot=1'), web: true),
+        '/reserve?lot=1',
+      );
+      expect(
+        initialRouteFrom(
+          Uri.parse('http://host/evidence?session=4&plate=ABC123'),
+          web: true,
+        ),
+        '/evidence?session=4&plate=ABC123',
+      );
+      expect(
+        initialRouteFrom(Uri.parse('http://host/policies/?lot=1'), web: true),
+        '/policies?lot=1',
+      );
+    });
+
+    test('Success: web at the root starts home', () {
+      expect(initialRouteFrom(Uri.parse('http://host/'), web: true), '/');
+      expect(initialRouteFrom(Uri.parse('http://host'), web: true), '/');
+    });
+
+    test('Success: mobile uses the engine launch route (home)', () {
+      expect(
+        initialRouteFrom(Uri.parse('http://host/reserve?lot=1')),
+        '/',
+        reason: 'kIsWeb is false outside a browser',
+      );
     });
   });
 }

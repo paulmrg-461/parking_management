@@ -43,7 +43,7 @@ WhatsApp (manual or automated).
 | Secrets / PIN operations | Complete (scripts + runbook) | PIN rotation verified live |
 | E2E and CI | Complete (API + Flutter client, real stack) | CI job `supabase-e2e` |
 
-Quality snapshot (2026-10-28, local stack): **993 Flutter tests + 1 integration
+Quality snapshot (2026-11-09, local stack): **1153 Flutter tests + 1 integration
 test**, SQL/RLS suite green, web build green, analyzer with **0 errors and 0
 warnings** (only SDK deprecation infos from the pinned beta channel), restore
 drill green.
@@ -57,25 +57,26 @@ the main data it touches.
 | Module (`lib/features/…`) | Responsibility | Backing data / RPCs |
 |---|---|---|
 | `auth` | PIN login, session restore, logout | GoTrue, `users`, `lot_members` |
-| `home` | Dashboard: occupancy + radial, space board (physical map), today KPIs, shift card, shortcuts | `occupancy_snapshot`, `dashboard_today`, `slot_board` |
-| `spots` | Admin drag & drop map editor and bay layout | `parking_spots`, `save/delete_parking_spot` |
+| `home` | Dashboard: occupancy + radial, space board (physical map), today KPIs, 7-day trend with week-over-week comparison, admin setup checklist, shift card, shortcuts; last KPIs cached on the device for offline | `occupancy_snapshot`, `dashboard_today`, `dashboard_trend`, `slot_board`, `lot_setup_status` |
+| `spots` | Admin drag & drop map editor and bay layout, with a maintenance history per bay | `parking_spots`, `parking_spot_events`, `save/delete_parking_spot`, `list_spot_events` |
 | `check_in` | Plate lookup, evidence photos, offline queue | `check_in`, `vehicles`, Storage `evidence` |
 | `check_out` | Open sessions (paged), payment, receipt | `check_out`, `calculate_fare`, `open_sessions_view` |
-| `records` | Site activity log with a plate filter and paging | `session_records` |
+| `records` | Site activity log with a plate/date filter, paging and evidence access | `session_records` |
 | `policies` | Public legal policy / service contract | `public_lot_profile`, `reset_legal_policy` |
-| `vehicle_history` | Timeline, notes, blacklist, owner name/phone, reprint, WhatsApp | `vehicle_history`, `update_vehicle_flags` |
+| `public_booking` | Public availability and anonymous reservations (`/reserve?lot=`) | `public_availability`, `public_create_reservation` |
+| `vehicle_history` | Timeline, notes, blacklist, owner name/phone, evidence viewer, reprint, WhatsApp | `vehicle_history`, `update_vehicle_flags` |
 | `vehicles` | Registry CRUD and paging | `vehicles` |
 | `categories` / `tariffs` | Reference data per site, capacity | `categories`, `tariffs` |
 | `monthly_passes` | Passes, charges, collection, expiry notices | `monthly_passes`, `monthly_pass_payments`, `register_pass_payment` |
 | `shifts` | Open/close with expected-vs-counted and a denomination counter, movements, history filters, corrections, PDF | `shifts`, `cash_movements`, `shift_adjustments`, `list_shifts`, `adjust_shift` |
-| `reports` | Revenue, occupancy, site comparison, WhatsApp metrics, PDF | `report_revenue(_all)`, `report_occupancy`, `report_whatsapp` |
+| `reports` | Revenue, occupancy, site comparison, hourly traffic, period comparison, WhatsApp metrics, PDF | `report_revenue(_all)`, `report_occupancy`, `report_hourly_traffic`, `report_period_comparison`, `report_whatsapp` |
 | `notifications` | Inbox, bell, deep links, browser push toggle | `notifications`, `web_push_subscriptions` |
 | `settings` | Per-site identity, branding, currency (COP/USD), retention, WhatsApp mode, police quadrant | `parking_settings`, `set_branding_logo` |
 | `emergency` | One-tap call to the nearest police quadrant (123 fallback) | `parking_settings.police_phone` |
 | `users` | Admin user management | `admin-users` Edge Function |
 | `lots` | Sites and membership | `my_lots`, `create_lot`, `set_lot_member`, `list_lot_members` |
 | `reservations` | Capacity holds | `category_reservations`, `create/cancel_reservation` |
-| `audit` | Admin audit trail and exports | `audit_log`, `list_audit_log` |
+| `audit` | Admin audit trail with free-text search and exports | `audit_log`, `list_audit_log` |
 | `diagnostics` | Operational counters, client errors, WhatsApp queue | `diagnostics_snapshot`, `list_*` |
 | `customer_messages` | Queue customer WhatsApp templates | `whatsapp_messages`, `enqueue_whatsapp_message` |
 | `plate_scanning` | On-device OCR (Android) | ML Kit |
@@ -142,19 +143,73 @@ Deployment: [`setup-cloud.md`](setup-cloud.md) (single VM + TLS proxy) and
 - **Physical bays are optional.** Without a map the board paints virtual
   capacity cells and capacity comes from Ajustes; with a map the bays define the
   capacity. Bicycles are not modelled.
+- **Public booking captcha is opt-in.** `/reserve` always enforces one active
+  hold per plate, two per phone, capacity and a per-lot ceiling of public
+  holds per hour (default 20). The Cloudflare Turnstile check only protects a
+  lot when the operator provides the keys (`TURNSTILE_SECRET_KEY`,
+  `--dart-define=TURNSTILE_SITE_KEY`) **and** turns the requirement on for
+  that lot (`set_public_booking_protection(true, null)`; there is no toggle in
+  Ajustes yet). Without that, a caller who rotates plates and phones is
+  stopped only by the hourly ceiling. There is no per-IP limit.
 - **Beta Flutter SDK pinned**; analyzer output is limited to SDK deprecation
   infos until the pin moves to stable.
+
+## 7.0 Booking waitlist (implemented)
+
+When a category is full the public page offers the waitlist instead of a dead
+end: the customer leaves name, mobile, plate, how long they can wait and how
+long they want the space held. When capacity frees, the oldest turn of the
+group gets a **real hold** (`source = 'waitlist'`), so the queue can never
+overbook; claiming extends it and turns it into a normal web booking. The desk
+sees the queue on the reservations board and can call, give the space or remove
+a turn. Limits mirror the booking ones (captcha, hourly ceiling, one turn per
+plate, two per mobile, a per-lot maximum). It is off per site
+(`parking_settings.waitlist_enabled`), and WhatsApp notices are optional
+(`waitlist_offer` template; without it the page polls and the desk calls).
+
+## 7.03 Cash anomaly detection (implemented)
+
+The admin no longer has to find cash leaks by browsing. Eight deterministic
+rules run on a schedule over the lot's own rows: repeated shift shortages per
+operator, a lost-ticket rate above the lot baseline, adjustments made after a
+shift closed, zero-charge check-outs that are not monthly passes, a lost-ticket
+fee on a very short stay, an admin's discount share, shifts left open and
+vehicles inside for many days. Each finding is stored once (deduped per lot and
+subject), can be acknowledged or dismissed with a note (audited), and one
+summary notification per run reaches the lot's admins. Thresholds are
+per-lot and admin-only; detection and retention run from the jobs container.
+
+## 7.05 Occupancy forecast (implemented)
+
+"Will it be full at 6 pm?" is answered from the lot's own history: per group,
+weekday and hour the system keeps the **median** of the last K same-weekday
+days and blends it with today's live deviation (the deviation fades 15 % per
+hour), clamped to capacity. The home dashboard shows the next 12 hours with the
+estimated "full at" time and a confidence label; the public page shows an
+aggregate strip (levels, time, confidence) that never exposes counts; the
+reports screen can replay the algorithm over past weeks to see whether the live
+blend beats the profile alone. Below the minimum history the forecast is not
+shown instead of guessed. Holidays are out of scope, reservation holds are not
+subtracted, and the forecast is never cached (it is time-sensitive).
+
+## 7.1 Offline conflicts (implemented)
+
+Reference entities (`vehicles`, `tariffs`, `categories`, `parking_settings`)
+carry a `version` column. Queued edits send the version they were based on, so
+a concurrent change is a conflict instead of an overwrite: disjoint field
+edits merge automatically, overlapping ones are parked for the operator, who
+resolves them per field from the sync badge (keep mine, keep theirs, or pick a
+value for each field). Deletes are covered too (delete vs edit, edit vs
+delete). Check-in and check-out are safe by idempotency, not by version. The
+guard that refuses version-unaware clients is off by default and is switched
+on per site with `set_row_version_policy(true)` once `min_app_version` is set.
 
 ## 8. Possible next steps (not planned work)
 
 - Real FCM/Meta/VAPID credentials for production push and automated WhatsApp.
 - Cold-storage archival for evidence files (currently deleted after retention).
-- Historical per-site metrics dashboard (today's KPIs exist; trends do not).
-- Physical bays with per-bay out-of-service state (the current state is a
-  per-group count).
 - iOS target if required.
 - Template management UI for automated WhatsApp.
-- Conflict resolution for offline reference-data edits (last-write-wins today).
 
 ## 9. Documentation map
 

@@ -20,12 +20,30 @@ class FakeSyncOutbox implements SyncOutbox {
   }
 
   @override
-  Future<List<OutboxEntry>> listPending() async =>
-      _entries.entries.where((entry) => !entry.value.deadLettered).toList();
+  Future<List<OutboxEntry>> listPending() async => _entries.entries
+      .where(
+        (entry) => !entry.value.deadLettered && !entry.value.needsResolution,
+      )
+      .toList();
 
   @override
-  Future<List<OutboxEntry>> listDeadLetters() async =>
-      _entries.entries.where((entry) => entry.value.deadLettered).toList();
+  Future<List<OutboxEntry>> listDeadLetters() async => _entries.entries
+      .where(
+        (entry) => entry.value.deadLettered && !entry.value.needsResolution,
+      )
+      .toList();
+
+  @override
+  Future<List<OutboxEntry>> listConflicts() async =>
+      _entries.entries.where((entry) => entry.value.needsResolution).toList();
+
+  @override
+  Future<void> settle(int key, PendingMutation expected) async {
+    if (_entries[key] == expected) {
+      _entries.remove(key);
+      _changes.add(null);
+    }
+  }
 
   @override
   Future<void> replace(int key, PendingMutation mutation) async {

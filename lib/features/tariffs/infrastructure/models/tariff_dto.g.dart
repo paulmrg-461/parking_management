@@ -14,6 +14,7 @@ TariffDto _$TariffDtoFromJson(Map<String, dynamic> json) => TariffDto(
   startTime: json['start_time'] as String?,
   endTime: json['end_time'] as String?,
   active: json['active'] as bool? ?? true,
+  version: (json['version'] as num?)?.toInt() ?? 0,
 );
 
 Map<String, dynamic> _$TariffDtoToJson(TariffDto instance) => <String, dynamic>{
@@ -24,4 +25,5 @@ Map<String, dynamic> _$TariffDtoToJson(TariffDto instance) => <String, dynamic>{
   'start_time': instance.startTime,
   'end_time': instance.endTime,
   'active': instance.active,
+  'version': instance.version,
 };

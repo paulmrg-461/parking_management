@@ -107,9 +107,17 @@ class SystemDialogReceiptPrinter implements ReceiptPrinter {
             '-${CopFormatter.format(data.discountAmount)}',
           ),
         if (data.isCheckOut && !data.pendingSync && data.paymentMethod != null)
-          _row(context, labels.payment, labels.paymentMethod(data.paymentMethod!, data.cardType)),
+          _row(
+            context,
+            labels.payment,
+            labels.paymentMethod(data.paymentMethod!, data.cardType),
+          ),
         if (data.isCheckOut && !data.pendingSync && data.cashReceived != null)
-          _row(context, labels.received, CopFormatter.format(data.cashReceived!)),
+          _row(
+            context,
+            labels.received,
+            CopFormatter.format(data.cashReceived!),
+          ),
         if (data.isCheckOut && !data.pendingSync && data.cashChange != null)
           _row(context, labels.change, CopFormatter.format(data.cashChange!)),
         if (data.isCheckOut && !data.pendingSync && data.ticketNumber != null)
@@ -185,23 +193,34 @@ class SystemDialogReceiptPrinter implements ReceiptPrinter {
     if (settings == null) {
       return const [];
     }
-    final lines = [settings.address, settings.schedule, settings.phone]
-        .map((line) => line.trim())
-        .where((line) => line.isNotEmpty);
+    final lines = [
+      settings.address,
+      settings.schedule,
+      settings.phone,
+    ].map((line) => line.trim()).where((line) => line.isNotEmpty);
     return [
-      for (final line in lines)
-        pw.Text(line, textAlign: pw.TextAlign.center),
+      for (final line in lines) pw.Text(line, textAlign: pw.TextAlign.center),
     ];
   }
 
-  pw.Widget _row(pw.Context context, String label, String value, {bool bold = false}) {
+  pw.Widget _row(
+    pw.Context context,
+    String label,
+    String value, {
+    bool bold = false,
+  }) {
     return pw.Padding(
       padding: const pw.EdgeInsets.symmetric(vertical: 2),
       child: pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: [
           pw.Text(label),
-          pw.Text(value, style: bold ? const pw.TextStyle(fontWeight: pw.FontWeight.bold) : null),
+          pw.Text(
+            value,
+            style: bold
+                ? const pw.TextStyle(fontWeight: pw.FontWeight.bold)
+                : null,
+          ),
         ],
       ),
     );

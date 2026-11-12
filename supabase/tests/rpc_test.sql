@@ -567,9 +567,11 @@ begin
     end;
 end $$;
 
--- Audit log filters: by actor, and the unfiltered call still works.
+-- Audit log filters: by actor, by free text, and the unfiltered call works.
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
 do $$
+declare
+    marker jsonb;
 begin
     if jsonb_array_length(
            public.list_audit_log(50, null, null, null, 'admin')
@@ -581,7 +583,78 @@ begin
        ) <> 0 then
         raise exception 'audit actor filter ignored the name';
     end if;
+
+    -- Free-text search over the entity, plate, name and actor.
+    insert into public.vehicles (plate, category_id) values ('SRCH01', 2);
+    marker := public.list_audit_log(50, null, null, null, null, 'srch01');
+    if jsonb_array_length(marker) < 1
+       or (marker -> 0 ->> 'table_name') <> 'vehicles' then
+        raise exception 'audit search did not find the vehicle: %', marker;
+    end if;
+    if jsonb_array_length(
+           public.list_audit_log(50, null, null, 'vehicles', null, 'SRCH01')
+       ) < 1 then
+        raise exception 'audit search ignored the table filter';
+    end if;
+    if jsonb_array_length(
+           public.list_audit_log(50, null, null, null, 'admin', 'SRCH01')
+       ) < 1 then
+        raise exception 'audit search broke the actor filter';
+    end if;
+    if jsonb_array_length(
+           public.list_audit_log(50, null, null, null, 'ghost', 'SRCH01')
+       ) <> 0 then
+        raise exception 'audit search ignored the actor';
+    end if;
+    if jsonb_array_length(
+           public.list_audit_log(50, null, null, null, null, 'no-such-value')
+       ) <> 0 then
+        raise exception 'audit search matched a missing term';
+    end if;
+    if jsonb_array_length(
+           public.list_audit_log(1, null, null, null, null, 'SRCH01')
+       ) > 1 then
+        raise exception 'audit search ignored the page limit';
+    end if;
 end $$;
+
+-- Setup checklist: flags match the site's reference data and identity.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+declare
+    setup jsonb := public.lot_setup_status();
+begin
+    if (setup ->> 'categories')::integer < 1 then
+        raise exception 'setup lost the categories: %', setup;
+    end if;
+    if (setup ->> 'tariffs')::integer < 1 then
+        raise exception 'setup lost the active tariffs: %', setup;
+    end if;
+    if (setup ->> 'car_capacity')::integer
+       <> (select coalesce(car_capacity, 0) from public.parking_settings where lot_id = 1) then
+        raise exception 'setup reported a different capacity: %', setup;
+    end if;
+    if (setup ? 'complete') is not true then
+        raise exception 'setup omitted the complete flag: %', setup;
+    end if;
+end $$;
+
+set local request.headers = '{"x-lot-id":"2"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    setup jsonb := public.lot_setup_status();
+begin
+    -- Lot 2 has no phone configured, so it cannot be complete.
+    if (setup ->> 'complete')::boolean then
+        raise exception 'an incomplete site reported complete: %', setup;
+    end if;
+    if (setup ->> 'categories')::integer < 1 then
+        raise exception 'setup lost lot 2 categories: %', setup;
+    end if;
+end $$;
+set local request.headers = '{"x-lot-id":"1"}';
 
 -- Today's dashboard summary reflects the check-outs and entries of the lot.
 set local request.headers = '{"x-lot-id":"1"}';
@@ -600,6 +673,59 @@ begin
         raise exception 'dashboard summary ignored today entries';
     end if;
 end $$;
+
+-- Weekly trend: a contiguous series that ends today and stays lot-scoped.
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+declare
+    trend jsonb := public.dashboard_trend(7);
+    days jsonb := trend -> 'days';
+    today_entry jsonb;
+begin
+    if jsonb_array_length(days) <> 7 then
+        raise exception 'trend did not return one row per day';
+    end if;
+    if jsonb_array_length(public.dashboard_trend(14) -> 'days') <> 14 then
+        raise exception 'trend ignored the requested window length';
+    end if;
+    if trend ->> 'end_date' <> to_char(current_date, 'YYYY-MM-DD') then
+        raise exception 'trend did not end on the business day';
+    end if;
+    select item into today_entry
+      from jsonb_array_elements(days) item
+     where item ->> 'date' = to_char(current_date, 'YYYY-MM-DD');
+    if today_entry is null then
+        raise exception 'trend omitted today';
+    end if;
+    if (today_entry ->> 'revenue')::integer < 1 then
+        raise exception 'trend ignored today revenue';
+    end if;
+    begin
+        perform public.dashboard_trend(0);
+        raise exception 'trend accepted an invalid range';
+    exception when others then
+        if sqlerrm not like '%InvalidTrendRangeError%' then
+            raise;
+        end if;
+    end;
+end $$;
+
+set local request.headers = '{"x-lot-id":"2"}';
+do $$
+declare
+    trend jsonb := public.dashboard_trend(7);
+    total bigint;
+begin
+    if (trend ->> 'lot_id')::integer <> 2 then
+        raise exception 'trend used the wrong lot';
+    end if;
+    select coalesce(sum((item ->> 'revenue')::bigint), 0) into total
+      from jsonb_array_elements(trend -> 'days') item;
+    if total <> 0 then
+        raise exception 'trend leaked revenue from another lot';
+    end if;
+end $$;
+set local request.headers = '{"x-lot-id":"1"}';
 
 -- Consolidated report exposes per-site revenue, tickets and average ticket.
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
@@ -1761,6 +1887,119 @@ begin
     end if;
 end $$;
 
+-- Per-bay maintenance history: transitions are logged with actor and reason.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    spot_id integer;
+    events jsonb;
+    first_event jsonb;
+    refused boolean;
+begin
+    update public.parking_settings
+       set car_capacity = 0, moto_capacity = 0
+     where lot_id = 1;
+    spot_id := (public.save_parking_spot('M1', 'car', 0, 0) ->> 'id')::integer;
+
+    -- Saving the same status again must not pollute the history.
+    perform public.save_parking_spot('M1', 'car', 0, 0, spot_id, true);
+    if jsonb_array_length(public.list_spot_events(spot_id)) <> 0 then
+        raise exception 'a no-op save created a maintenance event';
+    end if;
+
+    perform public.save_parking_spot(
+        'M1', 'car', 0, 0, spot_id, false, 'fuga de aceite'
+    );
+    events := public.list_spot_events(spot_id);
+    if jsonb_array_length(events) <> 1 then
+        raise exception 'the maintenance event was not logged';
+    end if;
+    first_event := events -> 0;
+    if first_event ->> 'status' <> 'out_of_service'
+       or first_event ->> 'reason' <> 'fuga de aceite' then
+        raise exception 'maintenance event lost its status/reason: %', first_event;
+    end if;
+    if coalesce(first_event ->> 'actor_name', '') = '' then
+        raise exception 'maintenance event lost its actor';
+    end if;
+
+    perform public.save_parking_spot('M1', 'car', 0, 0, spot_id, true);
+    events := public.list_spot_events(spot_id);
+    if jsonb_array_length(events) <> 2
+       or (events -> 0 ->> 'status') <> 'active' then
+        raise exception 'the return to service was not logged newest first';
+    end if;
+
+    refused := false;
+    begin
+        perform public.save_parking_spot(
+            'M1', 'car', 0, 0, spot_id, false, 'ab'
+        );
+        raise exception 'a too-short reason was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidSpotReasonError%' then
+            raise;
+        end if;
+        refused := true;
+    end;
+    if not refused then
+        raise exception 'the bay accepted a 2-character reason';
+    end if;
+
+    refused := false;
+    begin
+        perform public.list_spot_events(spot_id, 0);
+        raise exception 'an invalid event limit was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidSpotEventLimitError%' then
+            raise;
+        end if;
+        refused := true;
+    end;
+    if not refused then
+        raise exception 'the bay history accepted limit 0';
+    end if;
+end $$;
+
+-- Operators can read the history but never change a bay status.
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+declare
+    spot_id integer := (
+        select id from public.parking_spots where lot_id = 1 and code = 'M1'
+    );
+begin
+    begin
+        perform public.save_parking_spot(
+            'M1', 'car', 0, 0, spot_id, false, 'prueba'
+        );
+        raise exception 'an operator changed a bay status';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then
+            raise;
+        end if;
+    end;
+    if (select count(*) from public.parking_spot_events where lot_id = 1) < 2 then
+        raise exception 'an operator could not read the maintenance history';
+    end if;
+end $$;
+
+-- The maintenance history is lot-scoped through RLS.
+set local role authenticated;
+set local request.headers = '{"x-lot-id":"2"}';
+do $$
+begin
+    if exists (select 1 from public.parking_spot_events) then
+        raise exception 'maintenance history leaked across lots';
+    end if;
+end $$;
+reset role;
+set local request.headers = '{"x-lot-id":"1"}';
+
+-- Leave the map as the next blocks expect it (no drawn car bays).
+delete from public.parking_spots where lot_id = 1 and code = 'M1';
+
 -- Records log: lot-scoped, plate filter, totals and paging.
 set local request.headers = '{"x-lot-id":"1"}';
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
@@ -1867,6 +2106,8 @@ declare
     entry jsonb;
     vid_session integer;
     board jsonb;
+    hist jsonb;
+    records jsonb;
 begin
     select id into car_cat
       from public.categories
@@ -1900,6 +2141,24 @@ begin
            and (item ->> 'video_count')::integer = 1
     ) then
         raise exception 'board lost the video count: %', board;
+    end if;
+
+    hist := public.vehicle_history('VID001');
+    if not exists (
+        select 1 from jsonb_array_elements(hist -> 'sessions') item
+         where (item ->> 'id')::integer = vid_session
+           and (item ->> 'photo_count')::integer = 1
+    ) then
+        raise exception 'vehicle history lost the evidence count: %', hist;
+    end if;
+
+    records := public.session_records('VID001', 10, 0);
+    if not exists (
+        select 1 from jsonb_array_elements(records -> 'records') item
+         where (item ->> 'id')::integer = vid_session
+           and (item ->> 'photo_count')::integer = 1
+    ) then
+        raise exception 'records lost the evidence count: %', records;
     end if;
 
     perform public.check_out(vid_session, null, null, 'cash');
@@ -2327,16 +2586,21 @@ begin
     end if;
 end $$;
 
--- Fix 4: create_reservation locks the group key before the category key,
--- exactly like check_in -> enforce_category_capacity.
+-- Fix 4: the capacity helper locks the group key before the category key,
+-- exactly like check_in -> enforce_category_capacity, and create_reservation
+-- delegates to it.
 do $$
 declare
-    src text := pg_get_functiondef('public.create_reservation(text,integer,timestamptz,text)'::regprocedure);
+    res_src text := pg_get_functiondef('public.create_reservation(text,integer,timestamptz,text)'::regprocedure);
+    check_src text := pg_get_functiondef('public.reservation_capacity_check(integer,integer,text)'::regprocedure);
 begin
-    if position('''group:''' in src) = 0
-       or position('''category:''' in src) = 0
-       or position('''group:''' in src) > position('''category:''' in src)
-       or src not like '%category_group(category_name)%' then
+    if res_src not like '%reservation_capacity_check%' then
+        raise exception 'fix4: create_reservation does not use the shared capacity check';
+    end if;
+    if position('''group:''' in check_src) = 0
+       or position('''category:''' in check_src) = 0
+       or position('''group:''' in check_src) > position('''category:''' in check_src)
+       or check_src not like '%category_group(category_name)%' then
         raise exception 'fix4: reservation lock keys/order differ from check_in';
     end if;
 end $$;
@@ -2853,5 +3117,4563 @@ begin
         raise exception 'empty police phone did not clear the field';
     end if;
 end $$;
+
+-- Hourly traffic: entries/exits land in their business-day hour bucket.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    cat integer;
+    v1 integer;
+    v2 integer;
+    v3 integer;
+    result jsonb;
+    h8 jsonb;
+    h9 jsonb;
+    h10 jsonb;
+    h14 jsonb;
+begin
+    update public.parking_settings
+       set car_capacity = 0, moto_capacity = 0, key_capacity = 0
+     where lot_id = 1;
+    delete from public.parking_spots where lot_id = 1;
+
+    insert into public.categories (name, capacity, lot_id)
+    values ('hourly-traffic', 0, 1)
+    returning id into cat;
+    insert into public.vehicles (plate, category_id) values ('HT001', cat)
+    returning id into v1;
+    insert into public.vehicles (plate, category_id) values ('HT002', cat)
+    returning id into v2;
+    insert into public.vehicles (plate, category_id) values ('HT003', cat)
+    returning id into v3;
+
+    insert into public.parking_sessions (
+        vehicle_id, operator_id, entry_time, exit_time, status,
+        amount_charged, ticket_number, lot_id
+    ) values
+        (v1, 1, '2026-11-02 08:15-05', '2026-11-02 09:20-05', 'closed',
+         1000, 'HOUR1', 1),
+        (v2, 1, '2026-11-02 08:45-05', '2026-11-02 10:05-05', 'closed',
+         1000, 'HOUR2', 1),
+        (v3, 1, '2026-11-03 14:10-05', '2026-11-03 15:00-05', 'closed',
+         1000, 'HOUR3', 1);
+
+    result := public.report_hourly_traffic('2026-11-02', '2026-11-02');
+    if jsonb_array_length(result -> 'hours') <> 24 then
+        raise exception 'hourly traffic did not return 24 buckets';
+    end if;
+    if coalesce(result ->> 'timezone', '') = '' then
+        raise exception 'hourly traffic lost the business timezone';
+    end if;
+
+    select item into h8
+      from jsonb_array_elements(result -> 'hours') item
+     where (item ->> 'hour')::integer = 8;
+    select item into h9
+      from jsonb_array_elements(result -> 'hours') item
+     where (item ->> 'hour')::integer = 9;
+    select item into h10
+      from jsonb_array_elements(result -> 'hours') item
+     where (item ->> 'hour')::integer = 10;
+    if (h8 ->> 'entries')::integer <> 2 or (h8 ->> 'exits')::integer <> 0 then
+        raise exception 'hour 8 bucket is wrong: %', h8;
+    end if;
+    if (h9 ->> 'exits')::integer <> 1 then
+        raise exception 'hour 9 exit bucket is wrong: %', h9;
+    end if;
+    if (h10 ->> 'exits')::integer <> 1 then
+        raise exception 'hour 10 exit bucket is wrong: %', h10;
+    end if;
+
+    result := public.report_hourly_traffic('2026-11-02', '2026-11-03');
+    select item into h14
+      from jsonb_array_elements(result -> 'hours') item
+     where (item ->> 'hour')::integer = 14;
+    if (h14 ->> 'entries')::integer <> 1 then
+        raise exception 'the multi-day range lost hour 14: %', h14;
+    end if;
+
+    begin
+        perform public.report_hourly_traffic('2026-11-03', '2026-11-02');
+        raise exception 'an inverted hourly range was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidReportRangeError%' then
+            raise;
+        end if;
+    end;
+end $$;
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    begin
+        perform public.report_hourly_traffic('2026-11-02', '2026-11-02');
+        raise exception 'an operator read the hourly traffic report';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then
+            raise;
+        end if;
+    end;
+end $$;
+
+-- Public booking: anon sees availability, creates guarded holds and cannot read
+-- the reservation table directly.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    cat integer;
+begin
+    update public.parking_settings
+       set car_capacity = 0, moto_capacity = 0, key_capacity = 0
+     where lot_id = 1;
+    delete from public.parking_spots where lot_id = 1;
+    insert into public.categories (name, capacity, lot_id)
+    values ('public-car', 10, 1)
+    returning id into cat;
+    insert into public.tariffs (category_id, type, amount)
+    values (cat, 'hourly', 6500);
+    perform set_config('app.public_cat', cat::text, true);
+end $$;
+
+set local role anon;
+do $$
+declare
+    avail jsonb;
+    first jsonb;
+begin
+    avail := public.public_availability(1);
+    if avail is null or jsonb_array_length(avail -> 'categories') < 1 then
+        raise exception 'public availability is empty: %', avail;
+    end if;
+    if (avail ->> 'max_reservation_hours')::integer <> 24 then
+        raise exception 'public availability lost the window cap';
+    end if;
+    if (avail::text like '%"plate"%') then
+        raise exception 'public availability leaked plates: %', avail;
+    end if;
+    if (
+        select (item ->> 'hourly_amount')::integer
+          from jsonb_array_elements(avail -> 'categories') item
+         where (item ->> 'id')::integer = current_setting('app.public_cat')::integer
+    ) <> 6500 then
+        raise exception 'public availability lost the hourly tariff: %', avail;
+    end if;
+    if (avail -> 'lot' ->> 'cover_path') is distinct from '' then
+        raise exception 'public availability invented a cover: %', avail -> 'lot';
+    end if;
+    if public.public_availability(999999) is not null then
+        raise exception 'an unknown lot returned availability';
+    end if;
+
+    first := public.public_create_reservation(
+        1, 'PUB001', current_setting('app.public_cat')::integer,
+        now() + interval '2 hours', 'Ana', '3001112233'
+    );
+    if first ->> 'plate' <> 'PUB001' or (first ->> 'id')::integer < 1 then
+        raise exception 'public reservation was not created: %', first;
+    end if;
+
+    -- The country code is optional and never stored.
+    perform public.public_create_reservation(
+        1, 'PUB002', current_setting('app.public_cat')::integer,
+        now() + interval '2 hours', 'Ana', '+57 300 111 2233'
+    );
+
+    begin
+        perform public.public_create_reservation(
+            1, 'PUBNAME', current_setting('app.public_cat')::integer,
+            now() + interval '2 hours', '   ', '3005556677'
+        );
+        raise exception 'a reservation without a name was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidNameError%' then
+            raise;
+        end if;
+    end;
+
+    begin
+        perform public.public_create_reservation(
+            1, 'PUBLAND', current_setting('app.public_cat')::integer,
+            now() + interval '2 hours', 'Ana', '6011234567'
+        );
+        raise exception 'a landline was accepted as a mobile';
+    exception when others then
+        if sqlerrm not like '%InvalidPhoneError%' then
+            raise;
+        end if;
+    end;
+
+    begin
+        perform public.public_create_reservation(
+            1, 'PUB002', current_setting('app.public_cat')::integer,
+            now() + interval '2 hours', 'Ana', '3001112233'
+        );
+        raise exception 'a duplicate plate was accepted';
+    exception when others then
+        if sqlerrm not like '%ReservationExistsError%' then
+            raise;
+        end if;
+    end;
+
+    begin
+        perform public.public_create_reservation(
+            1, 'PUB003', current_setting('app.public_cat')::integer,
+            now() + interval '2 hours', 'Ana', '3001112233'
+        );
+        raise exception 'the phone limit was ignored';
+    exception when others then
+        if sqlerrm not like '%ReservationLimitError%' then
+            raise;
+        end if;
+    end;
+
+    begin
+        perform public.public_create_reservation(
+            1, 'PUB004', current_setting('app.public_cat')::integer,
+            now() + interval '5 minutes', 'Ana', '3002223344'
+        );
+        raise exception 'a too-short window was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidReservationWindowError%' then
+            raise;
+        end if;
+    end;
+
+    begin
+        perform public.public_create_reservation(
+            1, 'PUB005', current_setting('app.public_cat')::integer,
+            now() + interval '2 hours', 'Ana', '123'
+        );
+        raise exception 'an invalid phone was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidPhoneError%' then
+            raise;
+        end if;
+    end;
+
+    avail := public.public_availability(1);
+    if (
+        select (item ->> 'available')::integer
+          from jsonb_array_elements(avail -> 'categories') item
+         where (item ->> 'id')::integer = current_setting('app.public_cat')::integer
+    ) <> 8 then
+        raise exception 'public availability ignored the holds: %', avail;
+    end if;
+
+    -- The customer can come back with the code and the mobile.
+    if (
+        public.public_reservation_lookup(
+            1, (first ->> 'id')::integer, '+57 300 111 2233'
+        ) ->> 'plate'
+    ) is distinct from 'PUB001' then
+        raise exception 'the lookup did not find the active hold';
+    end if;
+    if public.public_reservation_lookup(
+        1, (first ->> 'id')::integer, '3000000000'
+    ) is not null then
+        raise exception 'the lookup answered a wrong phone';
+    end if;
+    if public.public_reservation_lookup(
+        1, 999999, '3001112233'
+    ) is not null then
+        raise exception 'the lookup answered an unknown code';
+    end if;
+
+    begin
+        perform public.public_cancel_reservation(
+            1, (first ->> 'id')::integer, 'PUB001', '3000000000'
+        );
+        raise exception 'a wrong phone cancelled the hold';
+    exception when others then
+        if sqlerrm not like '%ReservationNotFoundError%' then
+            raise;
+        end if;
+    end;
+
+    begin
+        perform public.public_cancel_reservation(
+            1, (first ->> 'id')::integer, 'OTHER1', '3001112233'
+        );
+        raise exception 'a wrong plate cancelled the hold';
+    exception when others then
+        if sqlerrm not like '%ReservationNotFoundError%' then
+            raise;
+        end if;
+    end;
+
+    perform public.public_cancel_reservation(
+        1, (first ->> 'id')::integer, 'PUB001', '3001112233'
+    );
+
+    avail := public.public_availability(1);
+    if (
+        select (item ->> 'available')::integer
+          from jsonb_array_elements(avail -> 'categories') item
+         where (item ->> 'id')::integer = current_setting('app.public_cat')::integer
+    ) <> 9 then
+        raise exception 'cancelling did not free the space: %', avail;
+    end if;
+
+    begin
+        perform public.public_cancel_reservation(
+            1, (first ->> 'id')::integer, 'PUB001', '3001112233'
+        );
+        raise exception 'a cancelled hold was cancelled again';
+    exception when others then
+        if sqlerrm not like '%ReservationNotFoundError%' then
+            raise;
+        end if;
+    end;
+
+    if public.public_reservation_lookup(
+        1, (first ->> 'id')::integer, '3001112233'
+    ) is not null then
+        raise exception 'the lookup answered a cancelled hold';
+    end if;
+
+    -- Supabase's default privileges grant anon ALL on new public tables, so
+    -- RLS (no anon policy) is what hides the rows; a bare privilege error
+    -- only happens on a database without those defaults. Accept either, but
+    -- anon must never see a row.
+    begin
+        if exists (select 1 from public.category_reservations) then
+            raise exception 'anon read the reservation table';
+        end if;
+    exception when insufficient_privilege then
+        null;
+    end;
+end $$;
+reset role;
+
+do $$
+begin
+    if (
+        select count(*)
+          from public.category_reservations
+         where source = 'public' and plate like 'PUB%'
+    ) <> 2 then
+        raise exception 'public reservations were not stamped';
+    end if;
+    if (
+        select customer_phone
+          from public.category_reservations
+         where plate = 'PUB002'
+    ) is distinct from '3001112233' then
+        raise exception 'the country code was not stripped from the public phone';
+    end if;
+    if (
+        select status
+          from public.category_reservations
+         where plate = 'PUB001'
+    ) is distinct from 'cancelled' then
+        raise exception 'the customer cancellation was not stored';
+    end if;
+    begin
+        insert into public.category_reservations (
+            plate, category_id, reserved_until, lot_id, source
+        )
+        values (
+            'PUBBAD', current_setting('app.public_cat')::integer,
+            now() + interval '1 hour', 1, 'public'
+        );
+        raise exception 'a public reservation without contact data was stored';
+    exception when check_violation then
+        null;
+    end;
+end $$;
+
+-- Everyone who works the lot hears about the booking (the board is theirs).
+do $$
+begin
+    if (
+        select count(*)
+          from public.notifications n
+         where n.type = 'public_reservation'
+           and n.data ->> 'plate' = 'PUB001'
+    ) <> (
+        select count(*)
+          from public.lot_members lm
+          join public.users u on u.id = lm.user_id
+         where lm.lot_id = 1
+           and u.is_active
+    ) then
+        raise exception 'the public booking did not reach every active member';
+    end if;
+    if exists (
+        select 1
+          from public.notifications n
+         where n.type = 'public_reservation'
+           and n.data ->> 'plate' = 'PUB001'
+         group by n.user_id
+        having count(*) > 1
+    ) then
+        raise exception 'the public booking notified someone twice';
+    end if;
+    if not exists (
+        select 1
+          from public.notifications n
+          join public.users u on u.id = n.user_id
+         where n.type = 'public_reservation'
+           and n.data ->> 'plate' = 'PUB001'
+           and u.role = 'operator'
+    ) then
+        raise exception 'the front desk did not hear about the booking';
+    end if;
+end $$;
+
+-- The front desk sees who booked, and only its own lot's holds.
+set local role authenticated;
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    contact text;
+begin
+    select customer_name || '|' || customer_phone || '|' || source
+      into contact
+      from public.category_reservations
+     where plate = 'PUB002';
+    if contact is distinct from 'Ana|3001112233|public' then
+        raise exception 'the front desk cannot see the public booking contact: %', contact;
+    end if;
+end $$;
+
+set local request.headers = '{"x-lot-id":"2"}';
+do $$
+begin
+    if exists (
+        select 1 from public.category_reservations where plate = 'PUB002'
+    ) then
+        raise exception 'a reservation leaked to another lot';
+    end if;
+end $$;
+reset role;
+
+-- Grace window: a customer who is a few minutes late keeps the slot, and
+-- check-in turns that hold into an occupied one.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    cat integer;
+    available_now integer;
+begin
+    delete from public.parking_spots where lot_id = 1;
+    update public.parking_settings
+       set car_capacity = 0, moto_capacity = 0, key_capacity = 0
+     where lot_id = 1;
+    insert into public.categories (name, capacity, lot_id)
+    values ('grace-car', 3, 1)
+    returning id into cat;
+    perform set_config('app.grace_cat', cat::text, true);
+
+    insert into public.category_reservations (
+        plate, category_id, reserved_from, reserved_until, lot_id, status, source
+    )
+    values (
+        'LATE01', cat, now() - interval '2 hours', now() - interval '5 minutes',
+        1, 'active', 'app'
+    );
+    insert into public.category_reservations (
+        plate, category_id, reserved_from, reserved_until, lot_id, status, source
+    )
+    values (
+        'GONE01', cat, now() - interval '3 hours', now() - interval '20 minutes',
+        1, 'active', 'app'
+    );
+
+    select (item ->> 'available')::integer into available_now
+      from jsonb_array_elements(public.public_availability(1) -> 'categories') item
+     where (item ->> 'id')::integer = cat;
+    if available_now <> 2 then
+        raise exception 'the grace window did not count the late hold: %', available_now;
+    end if;
+
+    -- The window is a setting: 0 turns it off and the hold stops counting.
+    update public.parking_settings
+       set reservation_grace_minutes = 0
+     where lot_id = 1;
+    select (item ->> 'available')::integer into available_now
+      from jsonb_array_elements(public.public_availability(1) -> 'categories') item
+     where (item ->> 'id')::integer = cat;
+    if available_now <> 3 then
+        raise exception 'a zero grace window still counted the hold: %', available_now;
+    end if;
+
+    begin
+        update public.parking_settings
+           set reservation_grace_minutes = 500
+         where lot_id = 1;
+        raise exception 'an out-of-range grace window was accepted';
+    exception when check_violation then
+        null;
+    end;
+    update public.parking_settings
+       set reservation_grace_minutes = 15
+     where lot_id = 1;
+end $$;
+
+-- The board reads the same rule from the server, flag included.
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    late jsonb;
+    gone integer;
+begin
+    select to_jsonb(row) into late
+      from public.list_active_reservations() row
+     where row.plate = 'LATE01';
+    if late is null or (late ->> 'in_grace')::boolean is not true then
+        raise exception 'the board did not flag the late hold: %', late;
+    end if;
+    if (late ->> 'customer_name') is not null then
+        raise exception 'the board invented a customer for an operator hold';
+    end if;
+    select count(*) into gone
+      from public.list_active_reservations() row
+     where row.plate = 'GONE01';
+    if gone <> 0 then
+        raise exception 'the board listed a hold outside the grace window';
+    end if;
+end $$;
+
+do $$
+declare
+    cat integer := current_setting('app.grace_cat')::integer;
+    session_json jsonb;
+begin
+    session_json := public.check_in('LATE01', cat, null, null, '[]'::jsonb, null, null);
+    if session_json ->> 'plate' <> 'LATE01' then
+        raise exception 'a late customer could not check in: %', session_json;
+    end if;
+    if (
+        select status from public.category_reservations where plate = 'LATE01'
+    ) <> 'used' then
+        raise exception 'check-in did not consume the late hold';
+    end if;
+    if (
+        select status from public.category_reservations where plate = 'GONE01'
+    ) <> 'active' then
+        raise exception 'check-in touched a hold outside the grace window';
+    end if;
+end $$;
+
+-- A queue that never drains must not grow forever: pending rows age out.
+do $$
+declare
+    fresh integer;
+begin
+    insert into public.whatsapp_messages (to_phone, template, params, created_at)
+    values ('3001112299', 'receipt', '[]'::jsonb, now() - interval '100 days');
+    select count(*) into fresh
+      from public.whatsapp_messages
+     where created_at > now() - interval '90 days';
+    perform public.purge_whatsapp_messages(90);
+    if exists (
+        select 1 from public.whatsapp_messages where to_phone = '3001112299'
+    ) then
+        raise exception 'a stale pending message survived the purge';
+    end if;
+    if (
+        select count(*)
+          from public.whatsapp_messages
+         where created_at > now() - interval '90 days'
+    ) <> fresh then
+        raise exception 'the purge removed a fresh message';
+    end if;
+end $$;
+
+-- WhatsApp confirmation: queued only when the lot enables automatic messages.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    cat integer;
+begin
+    delete from public.parking_spots where lot_id = 1;
+    update public.parking_settings
+       set car_capacity = 0, moto_capacity = 0, key_capacity = 0,
+           whatsapp_auto = false
+     where lot_id = 1;
+    insert into public.categories (name, capacity, lot_id)
+    values ('wa-car', 5, 1)
+    returning id into cat;
+    perform set_config('app.wa_cat', cat::text, true);
+end $$;
+
+set local role anon;
+do $$
+declare
+    cat integer := current_setting('app.wa_cat')::integer;
+begin
+    perform public.public_create_reservation(
+        1, 'WAOFF1', cat, now() + interval '2 hours', 'Ana', '3004445566'
+    );
+end $$;
+reset role;
+
+do $$
+begin
+    if exists (
+        select 1 from public.whatsapp_messages where to_phone = '3004445566'
+    ) then
+        raise exception 'a message was queued with whatsapp_auto off';
+    end if;
+end $$;
+
+update public.parking_settings set whatsapp_auto = true where lot_id = 1;
+
+set local role anon;
+do $$
+declare
+    cat integer := current_setting('app.wa_cat')::integer;
+begin
+    perform public.public_create_reservation(
+        1, 'WAON01', cat, now() + interval '2 hours', 'Ana', '3004445577'
+    );
+end $$;
+reset role;
+
+do $$
+declare
+    queued public.whatsapp_messages%rowtype;
+begin
+    select * into queued
+      from public.whatsapp_messages
+     where to_phone = '3004445577';
+    if not found then
+        raise exception 'the confirmation was not queued';
+    end if;
+    if queued.template <> 'reservation_confirmed' then
+        raise exception 'wrong template: %', queued.template;
+    end if;
+    if queued.lot_id <> 1 or queued.status <> 'pending' then
+        raise exception 'the queued message is not pending for the lot: %', queued;
+    end if;
+    if jsonb_array_length(queued.params) <> 4
+       or queued.params ->> 0 <> 'Ana'
+       or queued.params ->> 1 <> 'WAON01' then
+        raise exception 'unexpected params: %', queued.params;
+    end if;
+end $$;
+
+-- Reservations report: origin and outcome for the web bookings.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    cat integer := (select id from public.categories where lot_id = 1 order by id limit 1);
+    report jsonb;
+begin
+    insert into public.category_reservations (
+        plate, category_id, reserved_from, reserved_until, lot_id, status,
+        source, customer_name, customer_phone
+    )
+    values
+        ('RPT-WEB1', cat, '2020-03-10 10:00+00', '2020-03-10 12:00+00', 1,
+         'used', 'public', 'Ana', '3001112233'),
+        ('RPT-WEB2', cat, '2020-03-10 11:00+00', '2020-03-10 13:00+00', 1,
+         'cancelled', 'public', 'Ana', '3001112233'),
+        ('RPT-WEB3', cat, '2020-03-10 12:00+00', '2020-03-10 14:00+00', 1,
+         'active', 'public', 'Ana', '3001112233'),
+        ('RPT-APP1', cat, '2020-03-11 09:00+00', '2020-03-11 11:00+00', 1,
+         'used', 'app', null, null),
+        ('RPT-OLD1', cat, '2020-02-01 09:00+00', '2020-02-01 11:00+00', 1,
+         'used', 'app', null, null);
+
+    report := public.report_reservations('2020-03-10', '2020-03-11');
+    if (report ->> 'total')::integer <> 4
+       or (report ->> 'public')::integer <> 3
+       or (report ->> 'app')::integer <> 1 then
+        raise exception 'reservation report mixed the sources: %', report;
+    end if;
+    if (report ->> 'used')::integer <> 2
+       or (report ->> 'used_public')::integer <> 1
+       or (report ->> 'cancelled')::integer <> 1
+       or (report ->> 'active')::integer <> 1
+       or (report ->> 'expired')::integer <> 0 then
+        raise exception 'reservation report mixed the outcomes: %', report;
+    end if;
+    begin
+        perform public.report_reservations('2020-03-11', '2020-03-10');
+        raise exception 'an inverted range was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidReportRangeError%' then
+            raise;
+        end if;
+    end;
+end $$;
+
+-- Reservation reminder: one message per hold, an hour before it lapses.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    cat integer;
+    queued integer;
+begin
+    delete from public.parking_spots where lot_id = 1;
+    update public.parking_settings
+       set car_capacity = 0, moto_capacity = 0, key_capacity = 0,
+           whatsapp_auto = true
+     where lot_id = 1;
+    insert into public.categories (name, capacity, lot_id)
+    values ('rem-car', 5, 1)
+    returning id into cat;
+
+    insert into public.category_reservations (
+        plate, category_id, reserved_from, reserved_until, lot_id, status,
+        source, customer_name, customer_phone
+    )
+    values
+        ('REM-SOON', cat, now() - interval '30 minutes',
+         now() + interval '30 minutes', 1, 'active', 'public',
+         'Ana', '3002221133'),
+        ('REM-LATE', cat, now() - interval '30 minutes',
+         now() + interval '3 hours', 1, 'active', 'public',
+         'Ana', '3002221144');
+
+    queued := public.notify_expiring_reservations(60);
+    if queued <> 1 then
+        raise exception 'the reminder fired for % holds', queued;
+    end if;
+    if not exists (
+        select 1 from public.whatsapp_messages
+         where to_phone = '3002221133'
+           and template = 'reservation_reminder'
+           and jsonb_array_length(params) = 4
+    ) then
+        raise exception 'the reminder was not queued';
+    end if;
+    if exists (
+        select 1 from public.whatsapp_messages where to_phone = '3002221144'
+    ) then
+        raise exception 'a hold outside the window was reminded';
+    end if;
+    if (
+        select reminder_sent_at from public.category_reservations
+         where plate = 'REM-SOON'
+    ) is null then
+        raise exception 'the hold was not stamped as reminded';
+    end if;
+    if public.notify_expiring_reservations(60) <> 0 then
+        raise exception 'the reminder was sent twice';
+    end if;
+    update public.parking_settings set whatsapp_auto = false where lot_id = 1;
+end $$;
+
+-- Cover photo: the lot admin sets it and the public page receives the path.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    updated public.parking_settings%rowtype;
+    avail jsonb;
+begin
+    updated := public.set_branding_cover('cover_1.jpg');
+    if updated.cover_path <> 'cover_1.jpg' or updated.cover_version < 1 then
+        raise exception 'the cover was not stored: %', updated.cover_path;
+    end if;
+    avail := public.public_availability(1);
+    if (avail -> 'lot' ->> 'cover_path') <> 'cover_1.jpg' then
+        raise exception 'the public page did not get the cover: %', avail -> 'lot';
+    end if;
+    begin
+        perform public.set_branding_cover('   ');
+        raise exception 'an empty cover path was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then
+            raise;
+        end if;
+    end;
+end $$;
+
+-- Cancelling a web hold tells the customer; an operator hold has no phone.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    cat integer;
+    web_id bigint;
+    app_id bigint;
+begin
+    update public.parking_settings set whatsapp_auto = true where lot_id = 1;
+    insert into public.categories (name, capacity, lot_id)
+    values ('cancel-car', 5, 1)
+    returning id into cat;
+
+    insert into public.category_reservations (
+        plate, category_id, reserved_from, reserved_until, lot_id, status,
+        source, customer_name, customer_phone
+    )
+    values ('CAN-WEB', cat, now(), now() + interval '2 hours', 1, 'active',
+            'public', 'Ana', '3007778899')
+    returning id into web_id;
+    insert into public.category_reservations (
+        plate, category_id, reserved_from, reserved_until, lot_id, status, source
+    )
+    values ('CAN-APP', cat, now(), now() + interval '2 hours', 1, 'active', 'app')
+    returning id into app_id;
+
+    perform public.cancel_reservation(web_id);
+    perform public.cancel_reservation(app_id);
+
+    if not exists (
+        select 1 from public.whatsapp_messages
+         where to_phone = '3007778899'
+           and template = 'reservation_cancelled'
+           and jsonb_array_length(params) = 3
+    ) then
+        raise exception 'the customer was not told about the cancellation';
+    end if;
+    if (
+        select count(*) from public.whatsapp_messages
+         where template = 'reservation_cancelled'
+    ) <> 1 then
+        raise exception 'an operator hold tried to message a customer';
+    end if;
+    update public.parking_settings set whatsapp_auto = false where lot_id = 1;
+end $$;
+
+-- 0103: bot protection on the public booking. A per-lot hourly ceiling on
+-- public holds (staff holds are free of it), and a captcha switch that closes
+-- the anonymous RPC so only the service-role twin (Edge Function) can book.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    cat integer;
+    cat_two integer;
+    protection jsonb;
+begin
+    update public.parking_settings
+       set car_capacity = 0, moto_capacity = 0, key_capacity = 0,
+           whatsapp_auto = false
+     where lot_id in (1, 2);
+    delete from public.parking_spots where lot_id in (1, 2);
+    -- Earlier sections booked in this same transaction; age those rows so the
+    -- window starts empty (and prove that old holds stop counting).
+    update public.category_reservations
+       set created_at = now() - interval '2 hours'
+     where source = 'public';
+    insert into public.categories (name, capacity, lot_id)
+    values ('guard-car', 50, 1)
+    returning id into cat;
+    insert into public.categories (name, capacity, lot_id)
+    values ('guard-car-two', 50, 2)
+    returning id into cat_two;
+    perform set_config('app.guard_cat', cat::text, true);
+    perform set_config('app.guard_cat_two', cat_two::text, true);
+
+    if (select public_booking_captcha from public.parking_settings where lot_id = 1)
+       or (select public_booking_hourly_limit from public.parking_settings where lot_id = 1) <> 20 then
+        raise exception 'the protection defaults changed (captcha off, 20 per hour)';
+    end if;
+
+    protection := public.set_public_booking_protection(null, 2);
+    if (protection ->> 'hourly_limit')::integer <> 2
+       or (protection ->> 'captcha')::boolean then
+        raise exception 'the hourly limit was not stored: %', protection;
+    end if;
+    if (select public_booking_hourly_limit from public.parking_settings where lot_id = 2) <> 20 then
+        raise exception 'the limit of another lot was changed';
+    end if;
+    begin
+        perform public.set_public_booking_protection(null, 0);
+        raise exception 'a zero hourly limit was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then
+            raise;
+        end if;
+    end;
+end $$;
+
+-- Only a lot admin tunes the protection.
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+set local role authenticated;
+do $$
+begin
+    begin
+        perform public.set_public_booking_protection(true, 500);
+        raise exception 'an operator changed the booking protection';
+    exception when others then
+        if sqlerrm like '%an operator changed%' then
+            raise;
+        end if;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+do $$
+begin
+    if (select public_booking_captcha from public.parking_settings where lot_id = 1)
+       or (select public_booking_hourly_limit from public.parking_settings where lot_id = 1) <> 2 then
+        raise exception 'the operator call leaked into the settings';
+    end if;
+end $$;
+
+set local role anon;
+do $$
+declare
+    cat integer := current_setting('app.guard_cat')::integer;
+    cat_two integer := current_setting('app.guard_cat_two')::integer;
+    booked jsonb;
+begin
+    -- Success: captcha off, under the ceiling, the anonymous RPC still books.
+    booked := public.public_create_reservation(
+        1, 'GUARD1', cat, now() + interval '2 hours', 'Ana', '3101110001'
+    );
+    if booked ->> 'plate' <> 'GUARD1' then
+        raise exception 'the guarded booking failed: %', booked;
+    end if;
+    perform public.public_create_reservation(
+        1, 'GUARD2', cat, now() + interval '2 hours', 'Luis', '3101110002'
+    );
+
+    -- Throttled: the third hold of the hour is refused with a typed error.
+    begin
+        perform public.public_create_reservation(
+            1, 'GUARD3', cat, now() + interval '2 hours', 'Eva', '3101110003'
+        );
+        raise exception 'the hourly ceiling was ignored';
+    exception when others then
+        if sqlerrm not like '%BookingThrottledError%' then
+            raise;
+        end if;
+    end;
+
+    -- Lot isolation: lot 1 being throttled does not close lot 2.
+    perform public.public_create_reservation(
+        2, 'GUARD4', cat_two, now() + interval '2 hours', 'Eva', '3101110003'
+    );
+
+    -- The verified twin is not callable by anon, whatever the settings say.
+    begin
+        perform public.public_create_reservation_verified(
+            2, 'GUARD5', cat_two, now() + interval '2 hours', 'Eva', '3101110004'
+        );
+        raise exception 'anon executed the service-role booking';
+    exception when insufficient_privilege then
+        null;
+    end;
+end $$;
+reset role;
+
+-- Cancelling does not hand the slot back to the window, and staff holds are
+-- outside it: the desk keeps reserving while the public page is throttled.
+update public.category_reservations
+   set status = 'cancelled'
+ where plate = 'GUARD2' and lot_id = 1;
+set local role anon;
+do $$
+begin
+    begin
+        perform public.public_create_reservation(
+            1, 'GUARD6', current_setting('app.guard_cat')::integer,
+            now() + interval '2 hours', 'Eva', '3101110003'
+        );
+        raise exception 'book-and-cancel reset the hourly ceiling';
+    exception when others then
+        if sqlerrm not like '%BookingThrottledError%' then
+            raise;
+        end if;
+    end;
+end $$;
+reset role;
+
+set local role authenticated;
+do $$
+begin
+    perform public.create_reservation(
+        'GUARDSTAFF', current_setting('app.guard_cat')::integer,
+        now() + interval '2 hours'
+    );
+end $$;
+reset role;
+
+do $$
+begin
+    if not exists (
+        select 1 from public.category_reservations
+         where plate = 'GUARDSTAFF' and source = 'app' and status = 'active'
+    ) then
+        raise exception 'a staff hold was blocked by the public throttle';
+    end if;
+    -- Staff holds never fill the public window either.
+    if (
+        select count(*) from public.category_reservations
+         where lot_id = 1 and source = 'public'
+           and created_at > now() - interval '1 hour'
+    ) <> 2 then
+        raise exception 'the public window counted something else';
+    end if;
+end $$;
+
+-- Captcha on: the anonymous RPC is closed for that lot only, and the
+-- service-role twin (what the Edge Function calls after Turnstile) books.
+do $$
+declare
+    protection jsonb;
+begin
+    protection := public.set_public_booking_protection(true, 100);
+    if not (protection ->> 'captcha')::boolean then
+        raise exception 'the captcha switch was not stored: %', protection;
+    end if;
+end $$;
+
+set local role anon;
+do $$
+declare
+    cat integer := current_setting('app.guard_cat')::integer;
+    cat_two integer := current_setting('app.guard_cat_two')::integer;
+begin
+    begin
+        perform public.public_create_reservation(
+            1, 'GUARD7', cat, now() + interval '2 hours', 'Eva', '3101110005'
+        );
+        raise exception 'anon bypassed the captcha with a direct call';
+    exception when others then
+        if sqlerrm not like '%CaptchaRequiredError%' then
+            raise;
+        end if;
+    end;
+    -- Lot 2 never asked for a captcha.
+    perform public.public_create_reservation(
+        2, 'GUARD8', cat_two, now() + interval '2 hours', 'Eva', '3101110005'
+    );
+end $$;
+reset role;
+
+set local role authenticated;
+do $$
+begin
+    begin
+        perform public.public_create_reservation(
+            1, 'GUARD7', current_setting('app.guard_cat')::integer,
+            now() + interval '2 hours', 'Eva', '3101110005'
+        );
+        raise exception 'a signed-in user bypassed the captcha';
+    exception when others then
+        if sqlerrm not like '%CaptchaRequiredError%' then
+            raise;
+        end if;
+    end;
+    begin
+        perform public.public_create_reservation_verified(
+            1, 'GUARD7', current_setting('app.guard_cat')::integer,
+            now() + interval '2 hours', 'Eva', '3101110005'
+        );
+        raise exception 'a signed-in user executed the service-role booking';
+    exception when insufficient_privilege then
+        null;
+    end;
+end $$;
+reset role;
+
+set local role service_role;
+do $$
+declare
+    booked jsonb;
+begin
+    booked := public.public_create_reservation_verified(
+        1, 'GUARD7', current_setting('app.guard_cat')::integer,
+        now() + interval '2 hours', 'Eva', '3101110005'
+    );
+    if booked ->> 'plate' <> 'GUARD7' then
+        raise exception 'the verified booking failed: %', booked;
+    end if;
+end $$;
+reset role;
+
+do $$
+begin
+    if not exists (
+        select 1 from public.category_reservations
+         where plate = 'GUARD7' and source = 'public' and lot_id = 1
+    ) then
+        raise exception 'the verified booking was not stored as a public hold';
+    end if;
+    update public.parking_settings
+       set public_booking_captcha = false, public_booking_hourly_limit = 20
+     where lot_id = 1;
+end $$;
+
+-- Period comparison: months, partial month, covered flag, metrics, security.
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+select public.create_lot('P3', 'Period lot', 'Calle 3', 'America/Bogota');
+select public.create_lot('P4', 'Other lot', 'Calle 4', 'America/Bogota');
+
+do $$
+declare
+    lot3 integer := (select id from public.parking_lots where code = 'P3');
+    lot4 integer := (select id from public.parking_lots where code = 'P4');
+    cat3 integer;
+    car3 integer;
+    pass3 bigint;
+begin
+    insert into public.categories (name, capacity, lot_id)
+    values ('per-car', 10, lot3) returning id into cat3;
+    insert into public.vehicles (plate, category_id)
+    values ('PER001', cat3) returning id into car3;
+    insert into public.vehicles (plate, category_id)
+    values ('PER002', cat3);
+    insert into public.vehicles (plate, category_id)
+    values ('OTH001', cat3);
+
+    -- October revenue: one stay entered in September and closed in October,
+    -- plus a second October exit. Stays: 60 and 120 minutes.
+    insert into public.parking_sessions
+        (vehicle_id, operator_id, entry_time, exit_time, status, amount_charged, lot_id)
+    values
+        -- Bogota time: enters on Sep 30 23:00, leaves on Oct 1 01:00.
+        (car3, 1, '2024-09-30 23:00-05', '2024-10-01 01:00-05', 'closed', 4000, lot3),
+        (car3, 1, '2024-10-10 10:00+00', '2024-10-10 11:00+00', 'closed', 6000, lot3),
+        ((select id from public.vehicles where plate = 'OTH001'), 1,
+         '2024-10-10 10:00+00', '2024-10-10 11:00+00', 'closed', 99000, lot4);
+
+    insert into public.monthly_passes (vehicle_id, start_date, end_date, amount, lot_id)
+    values (car3, '2024-10-01', '2024-10-31', 30000, lot3)
+    returning id into pass3;
+    -- The pass trigger already creates its payment row: mark it paid.
+    update public.monthly_pass_payments
+       set status = 'paid', paid_at = '2024-10-05 12:00+00', amount = 30000
+     where monthly_pass_id = pass3;
+
+    insert into public.category_reservations
+        (plate, category_id, reserved_from, reserved_until, lot_id, status, source)
+    values
+        ('PER001', cat3, '2024-10-04 12:00+00', '2024-10-04 14:00+00', lot3, 'used', 'app'),
+        ('PER002', cat3, '2024-10-06 12:00+00', '2024-10-06 14:00+00', lot3, 'active', 'app');
+    perform set_config('app.period_lot', lot3::text, true);
+    perform set_config('app.period_lot4', lot4::text, true);
+end $$;
+
+-- period: success buckets and windows
+set local request.headers = '{"x-lot-id":"3"}';
+do $$
+declare
+    report jsonb := public.report_period_comparison(3, '2024-11-10');
+    bucket jsonb;
+begin
+    if jsonb_array_length(report -> 'buckets') <> 3 then
+        raise exception 'expected 3 buckets: %', report;
+    end if;
+    if (report -> 'buckets' -> 0 ->> 'month') <> '2024-09'
+       or (report -> 'buckets' -> 2 ->> 'month') <> '2024-11' then
+        raise exception 'buckets are not oldest first: %', report -> 'buckets';
+    end if;
+    bucket := report -> 'buckets' -> 2;
+    if (bucket ->> 'is_partial')::boolean is not true then
+        raise exception 'the running month is not partial: %', bucket;
+    end if;
+    if (bucket -> 'current' ->> 'start_date') <> '2024-11-01'
+       or (bucket -> 'current' ->> 'end_date') <> '2024-11-10'
+       or (bucket -> 'current' ->> 'days')::integer <> 10 then
+        raise exception 'partial current window wrong: %', bucket -> 'current';
+    end if;
+    if (bucket -> 'previous_month' ->> 'start_date') <> '2024-10-01'
+       or (bucket -> 'previous_month' ->> 'end_date') <> '2024-10-10' then
+        raise exception 'partial previous_month wrong: %', bucket -> 'previous_month';
+    end if;
+    if (bucket -> 'previous_year' ->> 'start_date') <> '2023-11-01'
+       or (bucket -> 'previous_year' ->> 'end_date') <> '2023-11-10' then
+        raise exception 'partial previous_year wrong: %', bucket -> 'previous_year';
+    end if;
+    if (report ->> 'as_of') <> '2024-11-10' or (report ->> 'months')::integer <> 3 then
+        raise exception 'header wrong: %', report;
+    end if;
+end $$;
+
+-- period: success metrics
+do $$
+declare
+    report jsonb := public.report_period_comparison(1, '2024-10-31');
+    october jsonb := report -> 'buckets' -> 0;
+    current jsonb := october -> 'current';
+    september jsonb := october -> 'previous_month';
+begin
+    if (current ->> 'revenue')::integer <> 10000
+       or (current ->> 'exits')::integer <> 2
+       or (current ->> 'entries')::integer <> 1 then
+        raise exception 'october sessions wrong: %', current;
+    end if;
+    if (current ->> 'avg_ticket')::integer <> 5000
+       or (current ->> 'avg_stay_minutes')::integer <> 90 then
+        raise exception 'averages wrong: %', current;
+    end if;
+    if (current ->> 'pass_revenue')::integer <> 30000 then
+        raise exception 'pass revenue wrong: %', current;
+    end if;
+    if (current ->> 'reservations')::integer <> 2
+       or (current ->> 'reservations_used')::integer <> 1 then
+        raise exception 'reservations wrong: %', current;
+    end if;
+    if (september ->> 'entries')::integer <> 1 then
+        raise exception 'september entries wrong: %', september;
+    end if;
+    if (current ->> 'covered')::boolean is not true then
+        raise exception 'october should be covered: %', current;
+    end if;
+end $$;
+
+-- period: success quiet month
+do $$
+declare
+    report jsonb := public.report_period_comparison(1, '2024-06-30');
+    quiet jsonb := report -> 'buckets' -> 0;
+begin
+    if (quiet ->> 'month') <> '2024-06' then
+        raise exception 'unexpected bucket: %', quiet;
+    end if;
+    if (quiet -> 'current' ->> 'revenue')::integer <> 0
+       or (quiet -> 'current' ->> 'entries')::integer <> 0
+       or (quiet -> 'current' ->> 'avg_ticket')::integer <> 0 then
+        raise exception 'quiet month is not empty: %', quiet -> 'current';
+    end if;
+end $$;
+
+-- period: success calendar edges
+do $$
+declare
+    march jsonb := public.report_period_comparison(1, '2024-03-31') -> 'buckets' -> 0;
+    leap jsonb := public.report_period_comparison(1, '2024-02-29') -> 'buckets' -> 0;
+begin
+    if (march -> 'previous_month' ->> 'start_date') <> '2024-02-01'
+       or (march -> 'previous_month' ->> 'end_date') <> '2024-02-29'
+       or (march -> 'previous_month' ->> 'full_month')::boolean is not true then
+        raise exception 'february window wrong: %', march -> 'previous_month';
+    end if;
+    if (leap -> 'previous_year' ->> 'start_date') <> '2023-02-01'
+       or (leap -> 'previous_year' ->> 'end_date') <> '2023-02-28' then
+        raise exception 'leap previous_year wrong: %', leap -> 'previous_year';
+    end if;
+    if (march ->> 'is_partial')::boolean is not false then
+        raise exception 'a past, complete month is partial: %', march;
+    end if;
+end $$;
+
+-- period: covered flag
+do $$
+declare
+    report jsonb := public.report_period_comparison(13, '2024-10-31');
+    first jsonb := report -> 'buckets' -> 0;
+begin
+    if (report ->> 'first_activity_date') <> '2024-09-30' then
+        raise exception 'first activity wrong: %', report ->> 'first_activity_date';
+    end if;
+    if (first -> 'current' ->> 'covered')::boolean is not false then
+        raise exception 'a window before the first session is covered: %', first;
+    end if;
+    if (first -> 'previous_year' ->> 'covered')::boolean is not false then
+        raise exception 'last year is covered for a new lot: %', first;
+    end if;
+end $$;
+
+-- period: failure range
+do $$
+begin
+    begin
+        perform public.report_period_comparison(0, '2024-10-31');
+        raise exception 'zero months accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidReportRangeError%' then raise; end if;
+    end;
+    begin
+        perform public.report_period_comparison(25, '2024-10-31');
+        raise exception '25 months accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidReportRangeError%' then raise; end if;
+    end;
+    begin
+        perform public.report_period_comparison(null, '2024-10-31');
+        raise exception 'null months accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidReportRangeError%' then raise; end if;
+    end;
+    begin
+        perform public.report_period_comparison(3, (now() at time zone 'America/Bogota')::date + 1);
+        raise exception 'a future as_of was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidReportRangeError%' then raise; end if;
+    end;
+end $$;
+
+-- period: security operator
+insert into public.lot_members (user_id, lot_id, role)
+select 2, id, 'operator' from public.parking_lots where code = 'P3'
+on conflict do nothing;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    begin
+        perform public.report_period_comparison(3, '2024-10-31');
+        raise exception 'an operator read the comparison';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- period: security anon
+set local role anon;
+do $$
+begin
+    begin
+        perform public.report_period_comparison(3, '2024-10-31');
+        raise exception 'anon executed the comparison';
+    exception when insufficient_privilege then
+        null;
+    end;
+end $$;
+reset role;
+
+-- period: security lot isolation
+do $$
+declare
+    report jsonb := public.report_period_comparison(1, '2024-10-31');
+    other jsonb := public.report_period_comparison(1, '2024-10-31');
+begin
+    if (report -> 'buckets' -> 0 -> 'current' ->> 'revenue')::integer <> 10000 then
+        raise exception 'lot 2 leaked into lot 3: %', report -> 'buckets' -> 0;
+    end if;
+    if (other -> 'buckets' -> 0 -> 'current' ->> 'revenue')::integer <> 10000 then
+        raise exception 'unexpected second read: %', other -> 'buckets' -> 0;
+    end if;
+end $$;
+
+-- A lot with no members: the header is rejected before any read.
+insert into public.parking_lots (code, name) values ('P5', 'No member lot')
+on conflict (code) do nothing;
+set local request.headers = '{"x-lot-id":"5"}';
+do $$
+begin
+    begin
+        perform public.report_period_comparison(3, '2024-10-31');
+        raise exception 'a foreign lot header was accepted';
+    exception when others then
+        if sqlerrm not like '%LotRequiredError%' then raise; end if;
+    end;
+end $$;
+
+-- Row versions: the base an offline edit was written from.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- row versions: a fresh row starts at 1
+do $$
+declare
+    new_vehicle integer;
+begin
+    insert into public.vehicles (plate, category_id)
+    values ('VRNEW1', (select c.id from public.categories c where c.lot_id = 1 limit 1))
+    returning id into new_vehicle;
+    if (select v.version from public.vehicles v where v.id = new_vehicle) <> 1 then
+        raise exception 'a new row did not start at version 1';
+    end if;
+    delete from public.vehicles v where v.id = new_vehicle;
+end $$;
+
+-- row versions: real change bumps once
+do $$
+declare
+    row_id integer;
+    before_version integer;
+begin
+    select t.id, t.version into row_id, before_version
+      from public.tariffs t
+      join public.categories c on c.id = t.category_id
+     where c.lot_id = 1 limit 1;
+    update public.tariffs set amount = amount + 1 where tariffs.id = row_id;
+    if (select t.version from public.tariffs t where t.id = row_id) <> before_version + 1 then
+        raise exception 'a real change did not bump the version once';
+    end if;
+end $$;
+
+-- row versions: no-op update keeps version
+do $$
+declare
+    row_id integer;
+    before_version integer;
+begin
+    select v.id, v.version into row_id, before_version from public.vehicles v limit 1;
+    update public.vehicles set plate = plate where vehicles.id = row_id;
+    if (select v.version from public.vehicles v where v.id = row_id) <> before_version then
+        raise exception 'a no-op update bumped the version';
+    end if;
+end $$;
+
+-- row versions: client cannot forge version
+do $$
+declare
+    row_id integer;
+    before_version integer;
+begin
+    select t.id, t.version into row_id, before_version
+      from public.tariffs t
+      join public.categories c on c.id = t.category_id
+     where c.lot_id = 1 limit 1;
+    update public.tariffs set version = 99, amount = amount + 1
+     where tariffs.id = row_id;
+    if (select t.version from public.tariffs t where t.id = row_id) <> before_version + 1 then
+        raise exception 'the client forged the version';
+    end if;
+end $$;
+
+-- row versions: insert resets to 1
+do $$
+declare
+    new_category integer;
+begin
+    insert into public.categories (name, capacity, lot_id, version)
+    values ('versioned-insert', 1, 1, 50) returning id into new_category;
+    if (select c.version from public.categories c where c.id = new_category) <> 1 then
+        raise exception 'an insert kept a client version';
+    end if;
+end $$;
+
+-- row versions: stale base matches zero rows, current base updates one
+do $$
+declare
+    row_id integer;
+    current_version integer;
+    changed integer;
+begin
+    select t.id, t.version into row_id, current_version
+      from public.tariffs t
+      join public.categories c on c.id = t.category_id
+     where c.lot_id = 1 limit 1;
+    update public.tariffs set amount = amount + 1
+     where tariffs.id = row_id and version = current_version - 1;
+    get diagnostics changed = row_count;
+    if changed <> 0 then
+        raise exception 'a stale base updated a row';
+    end if;
+    update public.tariffs set amount = amount + 1
+     where tariffs.id = row_id and version = current_version;
+    get diagnostics changed = row_count;
+    if changed <> 1 then
+        raise exception 'the current base did not update the row';
+    end if;
+end $$;
+
+-- row versions: stale delete matches zero rows
+do $$
+declare
+    new_vehicle integer;
+    changed integer;
+begin
+    insert into public.vehicles (plate, category_id)
+    values ('VRDEL1', (select c.id from public.categories c where c.lot_id = 1 limit 1))
+    returning id into new_vehicle;
+    update public.vehicles set plate = 'VRDEL2' where vehicles.id = new_vehicle;
+    delete from public.vehicles where vehicles.id = new_vehicle and version = 1;
+    get diagnostics changed = row_count;
+    if changed <> 0 then
+        raise exception 'a stale delete removed the row';
+    end if;
+    delete from public.vehicles where vehicles.id = new_vehicle and version = 2;
+    get diagnostics changed = row_count;
+    if changed <> 1 then
+        raise exception 'the current base did not delete the row';
+    end if;
+end $$;
+
+-- row versions: policy needs min_app_version, admin only, on and off
+do $$
+begin
+    update public.parking_settings set min_app_version = '' where lot_id = 1;
+    begin
+        perform public.set_row_version_policy(true);
+        raise exception 'the policy turned on without a minimum version';
+    exception when others then
+        if sqlerrm not like '%MinVersionRequiredError%' then raise; end if;
+    end;
+    update public.parking_settings set min_app_version = '1.0.0' where lot_id = 1;
+    if public.set_row_version_policy(true) is not true then
+        raise exception 'the policy did not turn on';
+    end if;
+    if public.set_row_version_policy(false) is not false then
+        raise exception 'the policy did not turn off';
+    end if;
+    update public.parking_settings set min_app_version = '' where lot_id = 1;
+end $$;
+
+-- row versions: enforcement refuses an unaware table write, allows aware/rpc
+do $$
+declare
+    row_id integer;
+begin
+    select v.id into row_id from public.vehicles v limit 1;
+    update public.parking_settings set min_app_version = '1.0.0' where lot_id = 1;
+    perform public.set_row_version_policy(true);
+    perform set_config('request.path', '/vehicles', true);
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    begin
+        update public.vehicles set plate = plate where vehicles.id = row_id;
+        raise exception 'an unaware table write was accepted';
+    exception when others then
+        if sqlerrm not like '%VersionRequiredError%' then raise; end if;
+    end;
+    perform set_config(
+        'request.headers', '{"x-lot-id":"1","x-versioned-write":"1"}', true
+    );
+    update public.vehicles set plate = plate where vehicles.id = row_id;
+    perform set_config('request.path', '/rpc/check_in', true);
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    update public.vehicles set plate = plate where vehicles.id = row_id;
+    perform public.set_row_version_policy(false);
+    perform set_config('request.path', '', true);
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    update public.parking_settings set min_app_version = '' where lot_id = 1;
+end $$;
+
+-- 0106 booking waitlist: schema defaults, RLS and constraints.
+do $$
+begin
+    if (select waitlist_enabled from public.parking_settings where lot_id = 1) then
+        raise exception 'the waitlist started enabled';
+    end if;
+    if (select waitlist_claim_minutes from public.parking_settings where lot_id = 1) <> 15
+       or (select waitlist_max_entries from public.parking_settings where lot_id = 1) <> 30 then
+        raise exception 'the waitlist defaults changed (15 minutes, 30 entries)';
+    end if;
+    begin
+        update public.parking_settings set waitlist_claim_minutes = 4 where lot_id = 1;
+        raise exception 'a four minute claim window was accepted';
+    exception when check_violation then null;
+    end;
+    begin
+        update public.parking_settings set waitlist_max_entries = 0 where lot_id = 1;
+        raise exception 'a zero maximum was accepted';
+    exception when check_violation then null;
+    end;
+    update public.parking_settings
+       set waitlist_claim_minutes = 15, waitlist_max_entries = 30
+     where lot_id = 1;
+end $$;
+
+-- waitlist: anon cannot select reservation_waitlist
+set local role anon;
+do $$
+begin
+    begin
+        perform 1 from public.reservation_waitlist limit 1;
+        raise exception 'anon read the waitlist table';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform 1 from public.waitlist_kicks limit 1;
+        raise exception 'anon read the kick table';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
+-- waitlist: member sees own lot only
+do $$
+declare
+    cat_two integer;
+    entry_one bigint;
+    entry_two bigint;
+    visible integer;
+begin
+    select c.id into cat_two from public.categories c where c.lot_id = 2 limit 1;
+    insert into public.reservation_waitlist (
+        lot_id, category_id, group_name, plate, customer_name, customer_phone,
+        wait_until, hold_minutes
+    )
+    values (2, cat_two, 'car', 'WLONLY2', 'Sofia', '3009990002',
+            now() + interval '2 hours', 60)
+    returning id into entry_two;
+
+    insert into public.reservation_waitlist (
+        lot_id, category_id, group_name, plate, customer_name, customer_phone,
+        wait_until, hold_minutes
+    )
+    select 1, c.id, 'car', 'WLONLY1', 'Ana', '3009990001',
+           now() + interval '2 hours', 60
+      from public.categories c where c.lot_id = 1 limit 1
+    returning id into entry_one;
+
+    perform set_config('app.wl_entry_one', entry_one::text, true);
+    perform set_config('app.wl_entry_two', entry_two::text, true);
+    if (select count(*) from public.reservation_waitlist) <> 2 then
+        raise exception 'the fixture entries were not created';
+    end if;
+end $$;
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+declare
+    visible integer;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    select count(*) into visible from public.reservation_waitlist;
+    if visible <> 1 then
+        raise exception 'the member saw % entries (expected only its lot)', visible;
+    end if;
+    if exists (
+        select 1 from public.reservation_waitlist
+         where id = current_setting('app.wl_entry_two')::bigint
+    ) then
+        raise exception 'the member read another lot entry';
+    end if;
+end $$;
+reset role;
+do $$
+declare
+    visible integer;
+begin
+    select count(*) into visible from public.reservation_waitlist;
+    if visible <> 2 then
+        raise exception 'the waitlist fixture was not visible as owner';
+    end if;
+end $$;
+
+-- waitlist: unique active plate
+do $$
+declare
+    cat integer;
+    first_id bigint;
+begin
+    select c.id into cat from public.categories c where c.lot_id = 1 limit 1;
+    insert into public.reservation_waitlist (
+        lot_id, category_id, group_name, plate, customer_name, customer_phone,
+        wait_until, hold_minutes
+    )
+    values (1, cat, 'car', 'WLDUP1', 'Ana', '3009990003',
+            now() + interval '2 hours', 60)
+    returning id into first_id;
+    begin
+        insert into public.reservation_waitlist (
+            lot_id, category_id, group_name, plate, customer_name, customer_phone,
+            wait_until, hold_minutes
+        )
+        values (1, cat, 'car', 'WLDUP1', 'Ana', '3009990003',
+                now() + interval '2 hours', 60);
+        raise exception 'a second active entry for the plate was accepted';
+    exception when unique_violation then null;
+    end;
+    update public.reservation_waitlist set status = 'left' where id = first_id;
+    insert into public.reservation_waitlist (
+        lot_id, category_id, group_name, plate, customer_name, customer_phone,
+        wait_until, hold_minutes
+    )
+    values (1, cat, 'car', 'WLDUP1', 'Ana', '3009990003',
+            now() + interval '2 hours', 60);
+    if (select count(*) from public.reservation_waitlist
+         where plate = 'WLDUP1' and status in ('waiting', 'offered')) <> 1 then
+        raise exception 'the plate could not rejoin after leaving';
+    end if;
+end $$;
+
+-- waitlist: source waitlist needs contact
+do $$
+declare
+    cat integer;
+begin
+    select c.id into cat from public.categories c where c.lot_id = 1 limit 1;
+    begin
+        insert into public.category_reservations (
+            plate, category_id, reserved_until, lot_id, source, customer_name,
+            customer_phone
+        )
+        values ('WLSRC1', cat, now() + interval '1 hour', 1, 'waitlist', 'Ana', null);
+        raise exception 'a waitlist hold without a phone was accepted';
+    exception when check_violation then null;
+    end;
+    begin
+        insert into public.category_reservations (
+            plate, category_id, reserved_until, lot_id, source
+        )
+        values ('WLSRC2', cat, now() + interval '1 hour', 1, 'bogus');
+        raise exception 'an unknown hold source was accepted';
+    exception when check_violation then null;
+    end;
+end $$;
+
+-- 0106 booking waitlist: the anonymous customer surface.
+do $$
+declare
+    cat integer;
+    roomy integer;
+begin
+    update public.parking_settings
+       set waitlist_enabled = true,
+           waitlist_claim_minutes = 15,
+           waitlist_max_entries = 30,
+           whatsapp_auto = false,
+           car_capacity = 0,
+           moto_capacity = 0,
+           car_out_of_service = 0,
+           moto_out_of_service = 0,
+           reservation_grace_minutes = 15,
+           public_booking_captcha = false,
+           public_booking_hourly_limit = 20
+     where lot_id in (1, 2);
+    delete from public.reservation_waitlist;
+    delete from public.notifications where type in ('waitlist_joined', 'waitlist_offer');
+    insert into public.categories (name, capacity, lot_id)
+    values ('wl-car', 1, 1)
+    returning id into cat;
+    insert into public.categories (name, capacity, lot_id)
+    values ('wl-roomy', 50, 1)
+    returning id into roomy;
+    perform set_config('app.wl_cat', cat::text, true);
+    perform set_config('app.wl_roomy', roomy::text, true);
+    -- Full: one active staff hold counts against the single space.
+    insert into public.category_reservations (
+        plate, category_id, reserved_until, lot_id, source
+    )
+    values ('WLFULL1', cat, now() + interval '3 hours', 1, 'app');
+end $$;
+
+-- waitlist: info reports enabled and channel
+set local role anon;
+do $$
+declare
+    info jsonb;
+begin
+    info := public.public_waitlist_info(1);
+    if not (info ->> 'enabled')::boolean then
+        raise exception 'the waitlist info says disabled: %', info;
+    end if;
+    if (info ->> 'claim_minutes')::integer <> 15
+       or (info ->> 'max_hold_minutes')::integer <> 1440 then
+        raise exception 'the waitlist info windows changed: %', info;
+    end if;
+    if info ->> 'notify_channel' <> 'screen' then
+        raise exception 'whatsapp auto off should be the screen channel: %', info;
+    end if;
+    if public.public_waitlist_info(999) is not null then
+        raise exception 'a missing lot returned info';
+    end if;
+end $$;
+reset role;
+
+-- waitlist: join while full
+set local role anon;
+do $$
+declare
+    cat integer := current_setting('app.wl_cat')::integer;
+    joined jsonb;
+begin
+    joined := public.public_join_waitlist(
+        1, 'WLJOIN1', cat, now() + interval '3 hours', 60, 'Ana', '3101110001'
+    );
+    if joined ->> 'status' <> 'waiting'
+       or (joined ->> 'position')::integer <> 1
+       or joined ->> 'notify_channel' <> 'screen'
+       or (joined ->> 'claim_minutes')::integer <> 15 then
+        raise exception 'the join answer is wrong: %', joined;
+    end if;
+    if joined -> 'lot' ->> 'name' is null then
+        raise exception 'the join answer has no lot: %', joined;
+    end if;
+    perform set_config('app.wl_entry', joined ->> 'id', true);
+end $$;
+reset role;
+
+update public.parking_settings set whatsapp_auto = true where lot_id = 1;
+set local role anon;
+do $$
+declare
+    cat integer := current_setting('app.wl_cat')::integer;
+    later jsonb;
+begin
+    later := public.public_join_waitlist(
+        1, 'WLJOIN2', cat, now() + interval '3 hours', 30, 'Luis', '3101110002'
+    );
+    if later ->> 'notify_channel' <> 'whatsapp' then
+        raise exception 'whatsapp auto on should be the whatsapp channel: %', later;
+    end if;
+end $$;
+reset role;
+update public.parking_settings set whatsapp_auto = false where lot_id = 1;
+
+-- waitlist: join desk notification once per member
+do $$
+declare
+    entry_id bigint := current_setting('app.wl_entry')::bigint;
+    members integer;
+    notified integer;
+begin
+    select count(*) into members
+      from public.lot_members lm join public.users u on u.id = lm.user_id
+     where lm.lot_id = 1 and u.is_active;
+    select count(*) into notified
+      from public.notifications n
+     where n.type = 'waitlist_joined'
+       and n.data ->> 'entry_id' = entry_id::text;
+    if notified <> members then
+        raise exception 'the join notified % of % members', notified, members;
+    end if;
+end $$;
+
+-- waitlist: join not needed
+set local role anon;
+do $$
+declare
+    roomy integer := current_setting('app.wl_roomy')::integer;
+begin
+    begin
+        perform public.public_join_waitlist(
+            1, 'WLNOTNEED', roomy, now() + interval '2 hours', 60, 'Ana', '3101110003'
+        );
+        raise exception 'joined although a space was free';
+    exception when others then
+        if sqlerrm not like '%WaitlistNotNeededError%' then raise; end if;
+    end;
+end $$;
+reset role;
+
+-- waitlist: join disabled
+update public.parking_settings set waitlist_enabled = false where lot_id = 1;
+set local role anon;
+do $$
+declare
+    cat integer := current_setting('app.wl_cat')::integer;
+begin
+    begin
+        perform public.public_join_waitlist(
+            1, 'WLOFF1', cat, now() + interval '2 hours', 60, 'Ana', '3101110004'
+        );
+        raise exception 'joined with the waitlist disabled';
+    exception when others then
+        if sqlerrm not like '%WaitlistDisabledError%' then raise; end if;
+    end;
+end $$;
+reset role;
+update public.parking_settings set waitlist_enabled = true where lot_id = 1;
+
+-- waitlist: join validation and duplicates
+set local role anon;
+do $$
+declare
+    cat integer := current_setting('app.wl_cat')::integer;
+begin
+    begin
+        perform public.public_join_waitlist(
+            1, 'X', cat, now() + interval '2 hours', 60, 'Ana', '3101110005'
+        );
+        raise exception 'an invalid plate was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidPlateError%' then raise; end if;
+    end;
+    begin
+        perform public.public_join_waitlist(
+            1, 'WLVALID1', cat, now() + interval '2 hours', 60, '', '3101110005'
+        );
+        raise exception 'an empty name was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidNameError%' then raise; end if;
+    end;
+    begin
+        perform public.public_join_waitlist(
+            1, 'WLVALID1', cat, now() + interval '2 hours', 60, 'Ana', '12345'
+        );
+        raise exception 'an invalid phone was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidPhoneError%' then raise; end if;
+    end;
+    begin
+        perform public.public_join_waitlist(
+            1, 'WLVALID1', cat, now() + interval '5 minutes', 5, 'Ana', '3101110005'
+        );
+        raise exception 'a five minute window was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidWaitWindowError%' then raise; end if;
+    end;
+    begin
+        perform public.public_join_waitlist(
+            1, 'WLJOIN1', cat, now() + interval '2 hours', 60, 'Ana', '3101110001'
+        );
+        raise exception 'a duplicated plate joined twice';
+    exception when others then
+        if sqlerrm not like '%WaitlistExistsError%' then raise; end if;
+    end;
+    perform public.public_join_waitlist(
+        1, 'WLPHONE1', cat, now() + interval '2 hours', 60, 'Ana', '3101110006'
+    );
+    perform public.public_join_waitlist(
+        1, 'WLPHONE2', cat, now() + interval '2 hours', 60, 'Ana', '3101110006'
+    );
+    begin
+        perform public.public_join_waitlist(
+            1, 'WLPHONE3', cat, now() + interval '2 hours', 60, 'Ana', '3101110006'
+        );
+        raise exception 'a third entry for the same phone was accepted';
+    exception when others then
+        if sqlerrm not like '%WaitlistLimitError%' then raise; end if;
+    end;
+    begin
+        perform public.public_join_waitlist(
+            1, 'WLFULL1', cat, now() + interval '2 hours', 60, 'Ana', '3101110008'
+        );
+        raise exception 'a plate with an active hold joined';
+    exception when others then
+        if sqlerrm not like '%ReservationExistsError%' then raise; end if;
+    end;
+end $$;
+reset role;
+delete from public.reservation_waitlist where plate like 'WLPHONE%';
+
+-- waitlist: join lot cap
+update public.parking_settings set waitlist_max_entries = 1 where lot_id = 1;
+set local role anon;
+do $$
+declare
+    cat integer := current_setting('app.wl_cat')::integer;
+begin
+    begin
+        perform public.public_join_waitlist(
+            1, 'WLCAP1', cat, now() + interval '2 hours', 60, 'Ana', '3101110007'
+        );
+        raise exception 'the lot cap was not enforced';
+    exception when others then
+        if sqlerrm not like '%WaitlistFullError%' then raise; end if;
+    end;
+end $$;
+reset role;
+update public.parking_settings set waitlist_max_entries = 30 where lot_id = 1;
+
+-- waitlist: captcha gate and the verified twin
+update public.parking_settings set public_booking_captcha = true where lot_id = 1;
+set local role anon;
+do $$
+declare
+    cat integer := current_setting('app.wl_cat')::integer;
+begin
+    begin
+        perform public.public_join_waitlist(
+            1, 'WLCAPTCHA', cat, now() + interval '2 hours', 60, 'Ana', '3101110009'
+        );
+        raise exception 'anon joined past the captcha';
+    exception when others then
+        if sqlerrm not like '%CaptchaRequiredError%' then raise; end if;
+    end;
+    begin
+        perform public.public_join_waitlist_verified(
+            1, 'WLCAPTCHA', cat, now() + interval '2 hours', 60, 'Ana', '3101110009'
+        );
+        raise exception 'anon called the verified twin';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+declare
+    cat integer := current_setting('app.wl_cat')::integer;
+begin
+    begin
+        perform public.public_join_waitlist(
+            1, 'WLCAPTCHA', cat, now() + interval '2 hours', 60, 'Ana', '3101110009'
+        );
+        raise exception 'an authenticated caller joined past the captcha';
+    exception when others then
+        if sqlerrm not like '%CaptchaRequiredError%' then raise; end if;
+    end;
+    begin
+        perform public.public_join_waitlist_verified(
+            1, 'WLCAPTCHA', cat, now() + interval '2 hours', 60, 'Ana', '3101110009'
+        );
+        raise exception 'an authenticated caller used the verified twin';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+set local role service_role;
+do $$
+declare
+    cat integer := current_setting('app.wl_cat')::integer;
+    joined jsonb;
+begin
+    joined := public.public_join_waitlist_verified(
+        1, 'WLVERIF1', cat, now() + interval '2 hours', 60, 'Ana', '3101110010'
+    );
+    if joined ->> 'status' <> 'waiting' then
+        raise exception 'the service role could not join: %', joined;
+    end if;
+end $$;
+reset role;
+delete from public.reservation_waitlist where plate = 'WLVERIF1';
+update public.parking_settings set public_booking_captcha = false where lot_id = 1;
+
+-- waitlist: hourly ceiling counts left entries
+update public.parking_settings set public_booking_hourly_limit = 1 where lot_id = 1;
+delete from public.reservation_waitlist where status in ('left', 'cancelled', 'expired');
+set local role anon;
+do $$
+declare
+    cat integer := current_setting('app.wl_cat')::integer;
+begin
+    begin
+        perform public.public_join_waitlist(
+            1, 'WLTHROT1', cat, now() + interval '2 hours', 60, 'Ana', '3101110011'
+        );
+        raise exception 'the ceiling did not count the earlier joins';
+    exception when others then
+        if sqlerrm not like '%BookingThrottledError%' then raise; end if;
+    end;
+end $$;
+reset role;
+-- Age the window: the ceiling must stop counting old entries, not count less.
+update public.reservation_waitlist set created_at = now() - interval '2 hours';
+set local role anon;
+do $$
+declare
+    cat integer := current_setting('app.wl_cat')::integer;
+begin
+    perform public.public_join_waitlist(
+        1, 'WLTHROT2', cat, now() + interval '2 hours', 60, 'Ana', '3101110012'
+    );
+end $$;
+reset role;
+update public.parking_settings set public_booking_hourly_limit = 20 where lot_id = 1;
+
+-- waitlist: lookup and leave
+set local role anon;
+do $$
+declare
+    found jsonb;
+begin
+    found := public.public_waitlist_lookup(
+        1, current_setting('app.wl_entry')::bigint, '3101110001'
+    );
+    if found is null or found ->> 'status' <> 'waiting' then
+        raise exception 'the lookup did not find the entry: %', found;
+    end if;
+    if (found ->> 'position')::integer < 1
+       or found ->> 'category_name' <> 'wl-car' then
+        raise exception 'the lookup answer is wrong: %', found;
+    end if;
+    if public.public_waitlist_lookup(
+        1, current_setting('app.wl_entry')::bigint, '3109999999'
+    ) is not null then
+        raise exception 'the lookup answered for a wrong phone';
+    end if;
+    if public.public_waitlist_lookup(
+        2, current_setting('app.wl_entry')::bigint, '3101110001'
+    ) is not null then
+        raise exception 'the lookup answered for a wrong lot';
+    end if;
+end $$;
+
+do $$
+declare
+    entry_id bigint := current_setting('app.wl_entry')::bigint;
+    left_answer jsonb;
+begin
+    begin
+        perform public.public_leave_waitlist(1, entry_id, '3109999999');
+        raise exception 'leaving with a wrong phone worked';
+    exception when others then
+        if sqlerrm not like '%WaitlistEntryNotFoundError%' then raise; end if;
+    end;
+    left_answer := public.public_leave_waitlist(1, entry_id, '3101110001');
+    if left_answer ->> 'status' <> 'left' then
+        raise exception 'leaving did not mark the entry: %', left_answer;
+    end if;
+    begin
+        perform public.public_leave_waitlist(1, entry_id, '3101110001');
+        raise exception 'leaving twice worked';
+    exception when others then
+        if sqlerrm not like '%WaitlistEntryNotFoundError%' then raise; end if;
+    end;
+end $$;
+reset role;
+
+-- 0106 booking waitlist: dispatch, FIFO and the capacity proof.
+-- The seeded `car` and `camioneta` categories belong to the `car` group; their
+-- capacity is set per test (0 = no limit) and restored at the end.
+do $$
+begin
+    delete from public.reservation_waitlist;
+    delete from public.waitlist_kicks;
+    delete from public.parking_spots where lot_id = 1;
+    delete from public.whatsapp_messages where lot_id = 1;
+    update public.parking_settings
+       set waitlist_enabled = true, waitlist_claim_minutes = 15,
+           waitlist_max_entries = 30, whatsapp_auto = false,
+           car_capacity = 0, moto_capacity = 0,
+           car_out_of_service = 0, moto_out_of_service = 0
+     where lot_id = 1;
+    -- Earlier sections leave open sessions in the seeded `car` category; close
+    -- them so this block controls the occupancy it measures.
+    update public.parking_sessions set status = 'closed'
+     where status = 'open' and lot_id in (1, 2);
+    update public.category_reservations set status = 'cancelled' where status = 'active';
+    perform set_config(
+        'app.wld_cat',
+        (select id from public.categories where lot_id = 1 and name = 'car')::text,
+        true
+    );
+    perform set_config(
+        'app.wld_van',
+        (select id from public.categories where lot_id = 1 and name = 'camioneta')::text,
+        true
+    );
+end $$;
+
+-- waitlist: check-out offers the space
+do $$
+declare
+    cat integer := current_setting('app.wld_cat')::integer;
+    vehicle integer;
+    session_id integer;
+    entry_id bigint;
+    offered public.reservation_waitlist%rowtype;
+    hold public.category_reservations%rowtype;
+begin
+    update public.categories set capacity = 2 where id = cat;
+    -- Two spaces: one open session and one active hold fill the category.
+    insert into public.vehicles (plate, category_id)
+    values ('WLCO1', cat)
+    returning id into vehicle;
+    insert into public.parking_sessions (vehicle_id, operator_id, status, lot_id)
+    values (vehicle, 2, 'open', 1)
+    returning id into session_id;
+    insert into public.category_reservations (
+        plate, category_id, reserved_until, lot_id, source
+    )
+    values ('WLCO2', cat, now() + interval '2 hours', 1, 'app');
+
+    entry_id := (public.public_join_waitlist(
+        1, 'WLCO3', cat, now() + interval '3 hours', 60, 'Ana', '3102220001'
+    ) ->> 'id')::bigint;
+
+    -- check_out closes the session; the trigger offers the freed space.
+    update public.parking_sessions set status = 'closed' where id = session_id;
+
+    select * into offered from public.reservation_waitlist where id = entry_id;
+    if offered.status <> 'offered'
+       or offered.offer_until is null
+       or offered.reservation_id is null then
+        raise exception 'the freed space was not offered: %', offered;
+    end if;
+    select * into hold
+      from public.category_reservations where id = offered.reservation_id;
+    if hold.source <> 'waitlist' or hold.status <> 'active'
+       or hold.customer_phone <> '3102220001' then
+        raise exception 'the offer is not a waitlist hold: %', hold;
+    end if;
+    -- The offer fills the space again.
+    if not exists (
+        select 1
+          from jsonb_array_elements(public.public_availability(1) -> 'categories') item
+         where (item ->> 'id')::integer = cat and (item ->> 'is_full')::boolean
+    ) then
+        raise exception 'the offer did not fill the category again';
+    end if;
+    perform set_config('app.wld_entry', entry_id::text, true);
+end $$;
+
+-- waitlist: fifo
+do $$
+declare
+    cat integer := current_setting('app.wld_cat')::integer;
+    first_id bigint;
+    second_id bigint;
+    first public.reservation_waitlist%rowtype;
+    second public.reservation_waitlist%rowtype;
+begin
+    delete from public.reservation_waitlist;
+    update public.category_reservations set status = 'cancelled'
+     where category_id = cat and status = 'active';
+    update public.categories set capacity = 2 where id = cat;
+    -- Full again: two active holds.
+    insert into public.category_reservations (plate, category_id, reserved_until, lot_id, source)
+    values ('WLF1', cat, now() + interval '2 hours', 1, 'app'),
+           ('WLF2', cat, now() + interval '2 hours', 1, 'app');
+
+    first_id := (public.public_join_waitlist(
+        1, 'WLQ1', cat, now() + interval '3 hours', 60, 'Ana', '3102220002'
+    ) ->> 'id')::bigint;
+    second_id := (public.public_join_waitlist(
+        1, 'WLQ2', cat, now() + interval '3 hours', 60, 'Luis', '3102220003'
+    ) ->> 'id')::bigint;
+
+    update public.category_reservations set status = 'cancelled' where plate = 'WLF1';
+
+    select * into first from public.reservation_waitlist where id = first_id;
+    select * into second from public.reservation_waitlist where id = second_id;
+    if first.status <> 'offered' or second.status <> 'waiting' then
+        raise exception 'FIFO broke: first=% second=%', first.status, second.status;
+    end if;
+end $$;
+
+-- waitlist: two spaces two offers
+do $$
+declare
+    cat integer := current_setting('app.wld_cat')::integer;
+    waiting integer;
+begin
+    -- Clear the queue before releasing holds: otherwise the release would
+    -- serve turns left behind by the previous test and consume the space.
+    delete from public.reservation_waitlist;
+    update public.category_reservations set status = 'cancelled'
+     where category_id = cat and status = 'active';
+    update public.categories set capacity = 2 where id = cat;
+    insert into public.category_reservations (plate, category_id, reserved_until, lot_id, source)
+    values ('WLG1', cat, now() + interval '2 hours', 1, 'app'),
+           ('WLG2', cat, now() + interval '2 hours', 1, 'app');
+    perform public.public_join_waitlist(
+        1, 'WLT1', cat, now() + interval '3 hours', 60, 'Ana', '3102220004'
+    );
+    perform public.public_join_waitlist(
+        1, 'WLT2', cat, now() + interval '3 hours', 60, 'Luis', '3102220005'
+    );
+    update public.category_reservations set status = 'cancelled'
+     where plate in ('WLG1', 'WLG2');
+    select count(*) into waiting
+      from public.reservation_waitlist where status = 'waiting';
+    if waiting <> 0 then
+        raise exception 'two freed spaces left % entries waiting', waiting;
+    end if;
+    if (select count(*) from public.reservation_waitlist where status = 'offered') <> 2 then
+        raise exception 'the second freed space was not offered';
+    end if;
+end $$;
+
+-- waitlist: category full skipped
+do $$
+declare
+    cat_a integer := current_setting('app.wld_cat')::integer;
+    cat_b integer := current_setting('app.wld_van')::integer;
+    entry_a bigint;
+    entry_b bigint;
+begin
+    delete from public.reservation_waitlist;
+    update public.category_reservations set status = 'cancelled' where status = 'active';
+    update public.categories set capacity = 1 where id in (cat_a, cat_b);
+    -- A stays full with its own hold; B is full too, with one hold that frees.
+    insert into public.category_reservations (plate, category_id, reserved_until, lot_id, source)
+    values ('WLA1', cat_a, now() + interval '2 hours', 1, 'app'),
+           ('WLB1', cat_b, now() + interval '2 hours', 1, 'app');
+    entry_a := (public.public_join_waitlist(
+        1, 'WLSA1', cat_a, now() + interval '3 hours', 60, 'Ana', '3102220006'
+    ) ->> 'id')::bigint;
+    entry_b := (public.public_join_waitlist(
+        1, 'WLSB1', cat_b, now() + interval '3 hours', 60, 'Luis', '3102220007'
+    ) ->> 'id')::bigint;
+
+    update public.category_reservations set status = 'cancelled' where plate = 'WLB1';
+
+    if (select status from public.reservation_waitlist where id = entry_a) <> 'waiting' then
+        raise exception 'the entry of the full category was offered';
+    end if;
+    if (select status from public.reservation_waitlist where id = entry_b) <> 'offered' then
+        raise exception 'the entry with free capacity was not offered';
+    end if;
+    update public.categories set capacity = 0 where id in (cat_a, cat_b);
+end $$;
+
+-- waitlist: never overbooks
+do $$
+declare
+    capacity integer;
+    used integer;
+begin
+    update public.categories set capacity = 2
+     where id = current_setting('app.wld_cat')::integer;
+    select c.capacity into capacity
+      from public.categories c where c.id = current_setting('app.wld_cat')::integer;
+    select count(*) into used
+      from public.parking_sessions s
+      join public.vehicles v on v.id = s.vehicle_id
+     where s.status = 'open'
+       and v.category_id = current_setting('app.wld_cat')::integer;
+    select used + count(*) into used
+      from public.category_reservations r
+     where r.category_id = current_setting('app.wld_cat')::integer
+       and r.status = 'active'
+       and r.reserved_until + public.reservation_grace(1) > now();
+    if used > capacity then
+        raise exception 'the queue overbooked: % of %', used, capacity;
+    end if;
+    update public.categories set capacity = 0
+     where id = current_setting('app.wld_cat')::integer;
+end $$;
+
+-- waitlist: hold cancelled cascades
+do $$
+declare
+    cat integer := current_setting('app.wld_cat')::integer;
+    first_id bigint;
+    second_id bigint;
+    offered public.reservation_waitlist%rowtype;
+begin
+    delete from public.reservation_waitlist;
+    update public.category_reservations set status = 'cancelled' where status = 'active';
+    update public.categories set capacity = 2 where id = cat;
+    insert into public.category_reservations (plate, category_id, reserved_until, lot_id, source)
+    values ('WLC1', cat, now() + interval '2 hours', 1, 'app'),
+           ('WLC2', cat, now() + interval '2 hours', 1, 'app');
+    first_id := (public.public_join_waitlist(
+        1, 'WLCC1', cat, now() + interval '3 hours', 60, 'Ana', '3102220008'
+    ) ->> 'id')::bigint;
+    second_id := (public.public_join_waitlist(
+        1, 'WLCC2', cat, now() + interval '3 hours', 60, 'Luis', '3102220009'
+    ) ->> 'id')::bigint;
+    update public.category_reservations set status = 'cancelled' where plate = 'WLC1';
+    select * into offered from public.reservation_waitlist where id = first_id;
+    if offered.status <> 'offered' then
+        raise exception 'the first turn was not offered';
+    end if;
+    -- Releasing the offer (as a desk cancel would) hands it to the next turn.
+    update public.category_reservations set status = 'cancelled'
+     where id = offered.reservation_id;
+    perform public.waitlist_expire();
+    if (select status from public.reservation_waitlist where id = second_id) <> 'offered' then
+        raise exception 'the second turn did not get the released offer';
+    end if;
+end $$;
+
+-- waitlist: bay back in service offers
+do $$
+declare
+    cat integer := current_setting('app.wld_cat')::integer;
+    entry_id bigint;
+begin
+    delete from public.reservation_waitlist;
+    update public.category_reservations set status = 'cancelled' where status = 'active';
+    update public.categories set capacity = 0 where id = cat;
+    -- One usable bay and one in maintenance: the group holds a single car.
+    insert into public.parking_spots (lot_id, code, group_name, grid_row, grid_col, status)
+    values (1, 'WLS1', 'car', 60, 1, 'active'),
+           (1, 'WLS2', 'car', 60, 2, 'out_of_service');
+    insert into public.category_reservations (plate, category_id, reserved_until, lot_id, source)
+    values ('WLSP1', cat, now() + interval '2 hours', 1, 'app');
+    entry_id := (public.public_join_waitlist(
+        1, 'WLSP2', cat, now() + interval '3 hours', 60, 'Ana', '3102220010'
+    ) ->> 'id')::bigint;
+
+    update public.parking_spots set status = 'active' where code = 'WLS2' and lot_id = 1;
+
+    if (select status from public.reservation_waitlist where id = entry_id) <> 'offered' then
+        raise exception 'the repaired bay did not trigger an offer';
+    end if;
+    update public.category_reservations set status = 'cancelled' where plate = 'WLSP1';
+    delete from public.parking_spots where lot_id = 1;
+end $$;
+
+-- waitlist: capacity raised offers
+do $$
+declare
+    cat integer := current_setting('app.wld_cat')::integer;
+    entry_id bigint;
+begin
+    delete from public.reservation_waitlist;
+    update public.category_reservations set status = 'cancelled' where status = 'active';
+    delete from public.parking_spots where lot_id = 1;
+    update public.categories set capacity = 0 where id = cat;
+    update public.parking_settings set car_capacity = 1 where lot_id = 1;
+    insert into public.category_reservations (plate, category_id, reserved_until, lot_id, source)
+    values ('WLCAP2', cat, now() + interval '2 hours', 1, 'app');
+    entry_id := (public.public_join_waitlist(
+        1, 'WLCAP3', cat, now() + interval '3 hours', 60, 'Ana', '3102220011'
+    ) ->> 'id')::bigint;
+
+    update public.parking_settings set car_capacity = 2 where lot_id = 1;
+
+    if (select status from public.reservation_waitlist where id = entry_id) <> 'offered' then
+        raise exception 'a raised group capacity did not trigger an offer';
+    end if;
+    update public.parking_settings set car_capacity = 0 where lot_id = 1;
+    update public.category_reservations set status = 'cancelled' where plate = 'WLCAP2';
+end $$;
+
+-- waitlist: category capacity raised offers
+do $$
+declare
+    cat integer := current_setting('app.wld_cat')::integer;
+    entry_id bigint;
+begin
+    delete from public.reservation_waitlist;
+    update public.category_reservations set status = 'cancelled' where status = 'active';
+    update public.categories set capacity = 1 where id = cat;
+    insert into public.category_reservations (plate, category_id, reserved_until, lot_id, source)
+    values ('WLCC3', cat, now() + interval '2 hours', 1, 'app');
+    entry_id := (public.public_join_waitlist(
+        1, 'WLCC4', cat, now() + interval '3 hours', 60, 'Ana', '3102220012'
+    ) ->> 'id')::bigint;
+
+    update public.categories set capacity = 2 where id = cat;
+
+    if (select status from public.reservation_waitlist where id = entry_id) <> 'offered' then
+        raise exception 'a raised category capacity did not trigger an offer';
+    end if;
+    update public.category_reservations set status = 'cancelled' where plate = 'WLCC3';
+    update public.categories set capacity = 0 where id = cat;
+end $$;
+
+-- waitlist: trigger never breaks the origin write
+do $$
+begin
+    delete from public.waitlist_kicks;
+    -- The wrapper never raises, whatever it is handed: the write that caused
+    -- the dispatch must not fail because the queue could not be served.
+    perform public.waitlist_try_dispatch(999, 'car');
+    perform public.waitlist_try_dispatch(null, 'car');
+    perform public.waitlist_try_dispatch(1, 'bogus-group');
+    perform public.waitlist_try_dispatch(1, 'car');
+    if exists (select 1 from public.waitlist_kicks) then
+        raise exception 'a healthy dispatch queued a kick';
+    end if;
+    -- The kick table accepts a retry row once per (lot, group).
+    insert into public.waitlist_kicks (lot_id, group_name) values (1, 'car');
+    insert into public.waitlist_kicks (lot_id, group_name) values (1, 'car')
+    on conflict do nothing;
+    if (select count(*) from public.waitlist_kicks) <> 1 then
+        raise exception 'the kick table did not keep a single row per group';
+    end if;
+    -- The job drains it (see the expiry test below).
+    perform public.waitlist_dispatch_all();
+    if exists (select 1 from public.waitlist_kicks) then
+        raise exception 'the job did not drain the kicks';
+    end if;
+end $$;
+
+-- waitlist: offer notifies desk and queues whatsapp
+do $$
+declare
+    cat integer := current_setting('app.wld_cat')::integer;
+    entry_id bigint;
+    members integer;
+    notified integer;
+    message public.whatsapp_messages%rowtype;
+begin
+    delete from public.reservation_waitlist;
+    delete from public.notifications where type = 'waitlist_offer';
+    delete from public.whatsapp_messages where lot_id = 1;
+    update public.category_reservations set status = 'cancelled' where status = 'active';
+    update public.categories set capacity = 2 where id = cat;
+    update public.parking_settings set whatsapp_auto = true where lot_id = 1;
+    insert into public.category_reservations (plate, category_id, reserved_until, lot_id, source)
+    values ('WLW1', cat, now() + interval '2 hours', 1, 'app'),
+           ('WLW2', cat, now() + interval '2 hours', 1, 'app');
+    entry_id := (public.public_join_waitlist(
+        1, 'WLW3', cat, now() + interval '3 hours', 60, 'Ana Maria', '3102220013'
+    ) ->> 'id')::bigint;
+
+    update public.category_reservations set status = 'cancelled' where plate = 'WLW1';
+
+    select count(*) into members
+      from public.lot_members lm join public.users u on u.id = lm.user_id
+     where lm.lot_id = 1 and u.is_active;
+    select count(*) into notified
+      from public.notifications n
+     where n.type = 'waitlist_offer' and n.data ->> 'entry_id' = entry_id::text;
+    if notified <> members then
+        raise exception 'the offer notified % of % members', notified, members;
+    end if;
+
+    select * into message
+      from public.whatsapp_messages
+     where lot_id = 1 and template = 'waitlist_offer';
+    if not found then
+        raise exception 'no whatsapp row was queued for the offer';
+    end if;
+    if jsonb_array_length(message.params) <> 5
+       or message.params ->> 0 <> 'Ana Maria'
+       or message.params ->> 1 <> 'WLW3'
+       or message.params ->> 4 <> entry_id::text then
+        raise exception 'the whatsapp params are wrong: %', message.params;
+    end if;
+    update public.parking_settings set whatsapp_auto = false where lot_id = 1;
+    update public.categories set capacity = 0 where id = cat;
+end $$;
+
+-- waitlist: no whatsapp when off
+do $$
+declare
+    cat integer := current_setting('app.wld_cat')::integer;
+    entry_id bigint;
+begin
+    delete from public.reservation_waitlist;
+    delete from public.whatsapp_messages where lot_id = 1;
+    update public.category_reservations set status = 'cancelled' where status = 'active';
+    update public.categories set capacity = 2 where id = cat;
+    update public.parking_settings set whatsapp_auto = false where lot_id = 1;
+    insert into public.category_reservations (plate, category_id, reserved_until, lot_id, source)
+    values ('WLN1', cat, now() + interval '2 hours', 1, 'app'),
+           ('WLN2', cat, now() + interval '2 hours', 1, 'app');
+    entry_id := (public.public_join_waitlist(
+        1, 'WLN3', cat, now() + interval '3 hours', 60, 'Ana', '3102220014'
+    ) ->> 'id')::bigint;
+    update public.category_reservations set status = 'cancelled' where plate = 'WLN1';
+    if exists (select 1 from public.whatsapp_messages where lot_id = 1) then
+        raise exception 'a whatsapp row was queued with the channel off';
+    end if;
+    perform set_config('app.wld_offer_entry', entry_id::text, true);
+    update public.categories set capacity = 0 where id = cat;
+end $$;
+
+-- 0106 booking waitlist: claim, leave, desk, settings and expiry.
+create or replace function pg_temp.wl_reset(p_capacity integer) returns void
+language plpgsql as $$
+begin
+    delete from public.reservation_waitlist;
+    update public.category_reservations set status = 'cancelled'
+     where status = 'active';
+    update public.categories set capacity = p_capacity
+     where lot_id = 1 and name = 'car';
+    update public.parking_settings
+       set waitlist_enabled = true, waitlist_claim_minutes = 15,
+           waitlist_max_entries = 30, whatsapp_auto = false,
+           car_capacity = 0, car_out_of_service = 0
+     where lot_id = 1;
+end $$;
+
+create or replace function pg_temp.wl_join(p_plate text, p_phone text)
+returns bigint
+language plpgsql as $$
+declare
+    entry bigint;
+    cat integer;
+begin
+    select id into cat from public.categories where lot_id = 1 and name = 'car';
+    entry := (public.public_join_waitlist(
+        1, p_plate, cat, now() + interval '3 hours', 60, 'Ana', p_phone
+    ) ->> 'id')::bigint;
+    return entry;
+end $$;
+
+create or replace function pg_temp.wl_release(p_plate text) returns void
+language plpgsql as $$
+begin
+    update public.category_reservations set status = 'cancelled'
+     where lot_id = 1 and plate = p_plate and status = 'active';
+end $$;
+
+create or replace function pg_temp.wl_hold(p_plate text) returns void
+language plpgsql as $$
+begin
+    insert into public.category_reservations (
+        plate, category_id, reserved_until, lot_id, source
+    )
+    select p_plate, c.id, now() + interval '2 hours', 1, 'app'
+      from public.categories c where c.lot_id = 1 and c.name = 'car';
+end $$;
+
+-- waitlist: claim in time
+do $$
+declare
+    entry_id bigint;
+    claim jsonb;
+    hold public.category_reservations%rowtype;
+begin
+    perform pg_temp.wl_reset(1);
+    perform pg_temp.wl_hold('WLKEEP');
+    entry_id := pg_temp.wl_join('WLCLAIM1', '3103330001');
+    perform pg_temp.wl_release('WLKEEP');
+    update public.parking_settings set whatsapp_auto = true where lot_id = 1;
+
+    claim := public.public_claim_waitlist(1, entry_id, '3103330001');
+
+    if claim ->> 'entry_id' <> entry_id::text
+       or claim ->> 'status' <> 'active'
+       or claim ->> 'plate' <> 'WLCLAIM1' then
+        raise exception 'the claim answer is wrong: %', claim;
+    end if;
+    select * into hold
+      from public.category_reservations where id = (claim ->> 'id')::bigint;
+    if hold.source <> 'public'
+       or hold.reserved_until < now() + interval '50 minutes' then
+        raise exception 'the claim did not extend and flip the hold: %', hold;
+    end if;
+    if (select status from public.reservation_waitlist where id = entry_id) <> 'claimed' then
+        raise exception 'the entry was not marked claimed';
+    end if;
+    if not exists (
+        select 1 from public.whatsapp_messages
+         where lot_id = 1 and template = 'reservation_confirmed'
+    ) then
+        raise exception 'the claim did not queue the confirmation';
+    end if;
+    update public.parking_settings set whatsapp_auto = false where lot_id = 1;
+    perform set_config('app.wl_claimed_entry', entry_id::text, true);
+end $$;
+
+-- waitlist: claim idempotent
+do $$
+declare
+    entry_id bigint := current_setting('app.wl_claimed_entry')::bigint;
+    first_id bigint;
+    again jsonb;
+begin
+    select reservation_id into first_id
+      from public.reservation_waitlist where id = entry_id;
+    again := public.public_claim_waitlist(1, entry_id, '3103330001');
+    if (again ->> 'id')::bigint <> first_id then
+        raise exception 'a second claim answered another reservation: %', again;
+    end if;
+end $$;
+
+-- waitlist: claim while waiting
+do $$
+declare
+    entry_id bigint;
+begin
+    perform pg_temp.wl_reset(1);
+    perform pg_temp.wl_hold('WLWAIT');
+    entry_id := pg_temp.wl_join('WLWAIT1', '3103330002');
+    begin
+        perform public.public_claim_waitlist(1, entry_id, '3103330002');
+        raise exception 'a waiting entry was claimed';
+    exception when others then
+        if sqlerrm not like '%WaitlistNotOfferedError%' then raise; end if;
+    end;
+end $$;
+
+-- waitlist: claim expired
+do $$
+declare
+    entry_id bigint;
+begin
+    perform pg_temp.wl_reset(1);
+    perform pg_temp.wl_hold('WLEXP');
+    entry_id := pg_temp.wl_join('WLEXP1', '3103330003');
+    perform pg_temp.wl_release('WLEXP');
+    update public.reservation_waitlist
+       set offer_until = now() - interval '1 minute',
+           offered_at = now() - interval '20 minutes'
+     where id = entry_id;
+    begin
+        perform public.public_claim_waitlist(1, entry_id, '3103330003');
+        raise exception 'an expired offer was claimed';
+    exception when others then
+        if sqlerrm not like '%OfferNoLongerAvailableError%' then raise; end if;
+    end;
+end $$;
+
+-- waitlist: claim wrong phone
+do $$
+declare
+    entry_id bigint;
+begin
+    perform pg_temp.wl_reset(1);
+    perform pg_temp.wl_hold('WLWRONG');
+    entry_id := pg_temp.wl_join('WLWRONG1', '3103330004');
+    perform pg_temp.wl_release('WLWRONG');
+    begin
+        perform public.public_claim_waitlist(1, entry_id, '3109999999');
+        raise exception 'a claim with another phone worked';
+    exception when others then
+        if sqlerrm not like '%WaitlistEntryNotFoundError%' then raise; end if;
+    end;
+end $$;
+
+-- waitlist: leave offered cancels hold and cascades
+do $$
+declare
+    first_id bigint;
+    second_id bigint;
+    hold_id bigint;
+begin
+    perform pg_temp.wl_reset(2);
+    perform pg_temp.wl_hold('WLL1');
+    perform pg_temp.wl_hold('WLL2');
+    first_id := pg_temp.wl_join('WLL3', '3103330005');
+    second_id := pg_temp.wl_join('WLL4', '3103330006');
+    perform pg_temp.wl_release('WLL1');
+    select reservation_id into hold_id
+      from public.reservation_waitlist where id = first_id;
+    if (select status from public.reservation_waitlist where id = first_id) <> 'offered' then
+        raise exception 'the first turn was not offered';
+    end if;
+
+    perform public.public_leave_waitlist(1, first_id, '3103330005');
+
+    if (select status from public.reservation_waitlist where id = first_id) <> 'left' then
+        raise exception 'leaving an offer did not mark it left';
+    end if;
+    if (select status from public.category_reservations where id = hold_id) <> 'cancelled' then
+        raise exception 'leaving an offer did not release its hold';
+    end if;
+    if (select status from public.reservation_waitlist where id = second_id) <> 'offered' then
+        raise exception 'the released offer did not cascade to the next turn';
+    end if;
+end $$;
+
+-- waitlist: desk claim
+do $$
+declare
+    entry_id bigint;
+begin
+    perform pg_temp.wl_reset(1);
+    perform pg_temp.wl_hold('WLDK');
+    entry_id := pg_temp.wl_join('WLDK1', '3103330007');
+    perform pg_temp.wl_release('WLDK');
+    perform set_config('app.wl_desk_entry', entry_id::text, true);
+    if (select status from public.reservation_waitlist where id = entry_id) <> 'offered' then
+        raise exception 'the desk claim fixture was not offered';
+    end if;
+end $$;
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+declare
+    entry_id bigint := current_setting('app.wl_desk_entry')::bigint;
+    claim jsonb;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    claim := public.desk_claim_waitlist(entry_id);
+    if claim ->> 'status' <> 'active' or claim ->> 'plate' <> 'WLDK1' then
+        raise exception 'the desk claim failed: %', claim;
+    end if;
+    if (select status from public.reservation_waitlist where id = entry_id) <> 'claimed' then
+        raise exception 'the desk claim did not mark the entry';
+    end if;
+end $$;
+reset role;
+
+-- waitlist: desk remove
+do $$
+declare
+    entry_id bigint;
+    hold_id bigint;
+begin
+    perform pg_temp.wl_reset(1);
+    perform pg_temp.wl_hold('WLRM');
+    entry_id := pg_temp.wl_join('WLRM1', '3103330008');
+    perform pg_temp.wl_release('WLRM');
+    select reservation_id into hold_id
+      from public.reservation_waitlist where id = entry_id;
+    perform set_config('app.wl_remove_entry', entry_id::text, true);
+    if (select status from public.reservation_waitlist where id = entry_id) <> 'offered' then
+        raise exception 'the entry was not offered before the desk removal';
+    end if;
+end $$;
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+declare
+    entry_id bigint := current_setting('app.wl_remove_entry')::bigint;
+    hold_id bigint;
+    answer jsonb;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    select reservation_id into hold_id
+      from public.reservation_waitlist where id = entry_id;
+    answer := public.desk_remove_waitlist(entry_id);
+    if answer ->> 'status' <> 'cancelled' then
+        raise exception 'the desk removal answered %', answer;
+    end if;
+    if (select status from public.category_reservations where id = hold_id) <> 'cancelled' then
+        raise exception 'the desk removal did not release the hold';
+    end if;
+    begin
+        perform public.desk_remove_waitlist(entry_id);
+        raise exception 'a terminal entry was removed twice';
+    exception when others then
+        if sqlerrm not like '%OfferNoLongerAvailableError%' then raise; end if;
+    end;
+end $$;
+reset role;
+
+-- waitlist: desk other lot
+do $$
+declare
+    cat_two integer;
+    entry_two bigint;
+begin
+    select id into cat_two from public.categories where lot_id = 2 limit 1;
+    insert into public.reservation_waitlist (
+        lot_id, category_id, group_name, plate, customer_name, customer_phone,
+        wait_until, hold_minutes
+    )
+    values (2, cat_two, 'car', 'WLLOT2', 'Sofia', '3103330009',
+            now() + interval '2 hours', 60)
+    returning id into entry_two;
+    perform set_config('app.wl_other_entry', entry_two::text, true);
+end $$;
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    begin
+        perform public.desk_remove_waitlist(current_setting('app.wl_other_entry')::bigint);
+        raise exception 'the desk removed another lot entry';
+    exception when others then
+        if sqlerrm not like '%LotRequiredError%' then raise; end if;
+    end;
+end $$;
+reset role;
+
+-- waitlist: settings admin only
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+set local role authenticated;
+do $$
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    begin
+        perform public.set_waitlist_settings(true, null, null);
+        raise exception 'an operator changed the waitlist settings';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+declare
+    saved jsonb;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    begin
+        perform public.set_waitlist_settings(null, 4, null);
+        raise exception 'an out of range window was stored';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+    saved := public.set_waitlist_settings(true, 20, 10);
+    if not (saved ->> 'enabled')::boolean
+       or (saved ->> 'claim_minutes')::integer <> 20
+       or (saved ->> 'max_entries')::integer <> 10 then
+        raise exception 'the settings answer is wrong: %', saved;
+    end if;
+    perform public.set_waitlist_settings(true, 15, 30);
+end $$;
+reset role;
+
+-- waitlist: list_waitlist positions
+do $$
+begin
+    perform pg_temp.wl_reset(1);
+    perform pg_temp.wl_hold('WLLI1');
+    perform pg_temp.wl_join('WLLI2', '3103330010');
+    perform pg_temp.wl_join('WLLI3', '3103330011');
+end $$;
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+declare
+    rows integer;
+    first_position integer;
+    second_position integer;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    select count(*) into rows from public.list_waitlist();
+    if rows <> 2 then
+        raise exception 'the desk list returned % rows', rows;
+    end if;
+    select "position" into first_position from public.list_waitlist()
+     where plate = 'WLLI2';
+    select "position" into second_position from public.list_waitlist()
+     where plate = 'WLLI3';
+    if first_position <> 1 or second_position <> 2 then
+        raise exception 'the positions are % and %', first_position, second_position;
+    end if;
+end $$;
+reset role;
+
+-- waitlist: expire offer and cascade
+do $$
+declare
+    first_id bigint;
+    second_id bigint;
+    hold_id bigint;
+    expired_count integer;
+begin
+    perform pg_temp.wl_reset(2);
+    perform pg_temp.wl_hold('WLE1');
+    perform pg_temp.wl_hold('WLE2');
+    first_id := pg_temp.wl_join('WLE3', '3103330012');
+    second_id := pg_temp.wl_join('WLE4', '3103330013');
+    perform pg_temp.wl_release('WLE1');
+    select reservation_id into hold_id
+      from public.reservation_waitlist where id = first_id;
+    update public.reservation_waitlist
+       set offer_until = now() - interval '1 minute'
+     where id = first_id;
+
+    expired_count := public.waitlist_expire();
+
+    if expired_count < 1 then
+        raise exception 'the expiry changed nothing';
+    end if;
+    if (select status from public.category_reservations where id = hold_id) <> 'expired' then
+        raise exception 'the expired offer kept its hold';
+    end if;
+    if (select status from public.reservation_waitlist where id = first_id) <> 'expired' then
+        raise exception 'the expired offer kept its turn';
+    end if;
+    if (select status from public.reservation_waitlist where id = second_id) <> 'offered' then
+        raise exception 'the freed space did not cascade to the next turn';
+    end if;
+end $$;
+
+-- waitlist: expire waiting entry
+do $$
+declare
+    entry_id bigint;
+begin
+    perform pg_temp.wl_reset(1);
+    perform pg_temp.wl_hold('WLX');
+    entry_id := pg_temp.wl_join('WLX1', '3103330014');
+    update public.reservation_waitlist
+       set wait_until = now() - interval '1 minute'
+     where id = entry_id;
+    perform public.waitlist_expire();
+    if (select status from public.reservation_waitlist where id = entry_id) <> 'expired' then
+        raise exception 'a stale waiting entry was not expired';
+    end if;
+end $$;
+
+-- waitlist: check-in before expiry reconciles to claimed
+do $$
+declare
+    entry_id bigint;
+    hold_id bigint;
+begin
+    perform pg_temp.wl_reset(1);
+    perform pg_temp.wl_hold('WLCI');
+    entry_id := pg_temp.wl_join('WLCI1', '3103330015');
+    perform pg_temp.wl_release('WLCI');
+    select reservation_id into hold_id
+      from public.reservation_waitlist where id = entry_id;
+    -- What check_in does when the customer walks in inside the grace window.
+    update public.category_reservations set status = 'used' where id = hold_id;
+    perform public.waitlist_expire();
+    if (select status from public.reservation_waitlist where id = entry_id) <> 'claimed' then
+        raise exception 'the arrived customer was not reconciled to claimed';
+    end if;
+end $$;
+
+-- waitlist: job functions are service role only
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+begin
+    begin
+        perform public.waitlist_expire();
+        raise exception 'an operator ran the expiry job';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform public.waitlist_dispatch_all();
+        raise exception 'an operator ran the dispatch job';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform public.purge_waitlist(30);
+        raise exception 'an operator ran the purge job';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
+-- waitlist: purge keeps non-terminal
+do $$
+declare
+    removed integer;
+begin
+    perform pg_temp.wl_reset(1);
+    insert into public.reservation_waitlist (
+        lot_id, category_id, group_name, plate, customer_name, customer_phone,
+        status, wait_until, hold_minutes, created_at
+    )
+    select 1, c.id, 'car', p.plate, 'Ana', p.phone, p.status,
+           now() + interval '2 hours', 60, now() - interval '60 days'
+      from public.categories c,
+           (values ('WLPOLD1', '3103330016', 'left'),
+                   ('WLPOLD2', '3103330017', 'expired'),
+                   ('WLPOLD3', '3103330018', 'waiting')) as p(plate, phone, status)
+     where c.lot_id = 1 and c.name = 'car';
+    removed := public.purge_waitlist(30);
+    if removed <> 2 then
+        raise exception 'the purge removed % rows', removed;
+    end if;
+    if not exists (
+        select 1 from public.reservation_waitlist where plate = 'WLPOLD3'
+    ) then
+        raise exception 'the purge removed a pending turn';
+    end if;
+end $$;
+
+-- waitlist: report counts (0107)
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    perform set_config(
+        'app.wl_report_before',
+        public.report_reservations(
+            (now() at time zone 'America/Bogota')::date,
+            (now() at time zone 'America/Bogota')::date
+        )::text,
+        true
+    );
+end $$;
+reset role;
+
+do $$
+declare
+    cat integer;
+    offer_hold integer;
+begin
+    select id into cat from public.categories where lot_id = 1 and name = 'car';
+    -- One unclaimed offer hold: a hold, not a booking.
+    insert into public.category_reservations (
+        plate, category_id, reserved_until, lot_id, source, customer_name,
+        customer_phone
+    )
+    values ('WLREP1', cat, now() + interval '1 hour', 1, 'waitlist', 'Ana', '3104440001')
+    returning id into offer_hold;
+    insert into public.reservation_waitlist (
+        lot_id, category_id, group_name, plate, customer_name, customer_phone,
+        status, wait_until, hold_minutes, offered_at, offer_until,
+        reservation_id, claimed_at
+    )
+    values (1, cat, 'car', 'WLREP1', 'Ana', '3104440001', 'claimed',
+            now() + interval '2 hours', 60, now(), now() + interval '1 hour',
+            offer_hold, now()),
+           (1, cat, 'car', 'WLREP2', 'Luis', '3104440002', 'waiting',
+            now() + interval '2 hours', 60, null, null, null, null);
+end $$;
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+declare
+    day date := (now() at time zone 'America/Bogota')::date;
+    before_report jsonb := current_setting('app.wl_report_before')::jsonb;
+    after_report jsonb;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    after_report := public.report_reservations(day, day);
+
+    if (after_report ->> 'total')::integer <> (before_report ->> 'total')::integer
+       or (after_report ->> 'public')::integer <> (before_report ->> 'public')::integer then
+        raise exception 'an unclaimed offer was counted as a booking: % vs %',
+            before_report, after_report;
+    end if;
+    if (after_report -> 'waitlist' ->> 'joined')::integer
+           < (before_report -> 'waitlist' ->> 'joined')::integer + 2
+       or (after_report -> 'waitlist' ->> 'claimed')::integer
+           < (before_report -> 'waitlist' ->> 'claimed')::integer + 1
+       or (after_report -> 'waitlist' ->> 'waiting')::integer
+           < (before_report -> 'waitlist' ->> 'waiting')::integer + 1 then
+        raise exception 'the waitlist block did not count the turns: %', after_report;
+    end if;
+end $$;
+reset role;
+
+-- waitlist: report admin only
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+set local role authenticated;
+do $$
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    begin
+        perform public.report_reservations(
+            (now() at time zone 'America/Bogota')::date,
+            (now() at time zone 'America/Bogota')::date
+        );
+        raise exception 'an operator read the reservation report';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- report_revenue: pass income is scoped to the active lot (0108). Before the
+-- fix a lot admin saw the pass payments of every lot in their own report.
+do $$
+declare
+    cat integer := (select min(id) from public.categories);
+    v1 integer;
+    v2 integer;
+    p1 bigint;
+    p2 bigint;
+begin
+    insert into public.vehicles (plate, category_id) values ('PSL001', cat)
+    returning id into v1;
+    insert into public.vehicles (plate, category_id) values ('PSL002', cat)
+    returning id into v2;
+    insert into public.monthly_passes (vehicle_id, start_date, end_date, amount, lot_id)
+    values (v1, '2031-03-01', '2031-03-31', 70000, 1) returning id into p1;
+    insert into public.monthly_passes (vehicle_id, start_date, end_date, amount, lot_id)
+    values (v2, '2031-03-01', '2031-03-31', 30000, 2) returning id into p2;
+    update public.monthly_pass_payments
+       set status = 'paid', paid_at = '2031-03-05 12:00+00',
+           amount = 70000, lot_id = 1
+     where monthly_pass_id = p1;
+    update public.monthly_pass_payments
+       set status = 'paid', paid_at = '2031-03-05 12:00+00',
+           amount = 30000, lot_id = 2
+     where monthly_pass_id = p2;
+end $$;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+declare
+    mine jsonb;
+    other jsonb;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    mine := public.report_revenue('2031-03-01', '2031-03-31');
+    if (mine ->> 'pass_revenue')::bigint <> 70000 then
+        raise exception 'lot 1 pass revenue leaked another lot: %', mine ->> 'pass_revenue';
+    end if;
+    if (select coalesce(sum((i ->> 'amount')::bigint), 0)
+          from jsonb_array_elements(mine -> 'pass_by_payment') i) <> 70000 then
+        raise exception 'lot 1 pass_by_payment leaked another lot: %', mine -> 'pass_by_payment';
+    end if;
+    perform set_config('request.headers', '{"x-lot-id":"2"}', true);
+    other := public.report_revenue('2031-03-01', '2031-03-31');
+    if (other ->> 'pass_revenue')::bigint <> 30000 then
+        raise exception 'lot 2 pass revenue is wrong: %', other ->> 'pass_revenue';
+    end if;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- 0108 Occupancy forecast.
+do $$
+declare
+    cat integer;
+    i integer;
+begin
+    -- A clean slate for the lot: no sessions, holds or bays leak in. Evidence
+    -- photos of earlier sections pin their session, so they go first.
+    delete from public.evidence_photos
+     where session_id in (select id from public.parking_sessions where lot_id = 1);
+    delete from public.parking_sessions where lot_id = 1;
+    delete from public.category_reservations where lot_id = 1;
+    -- The waitlist dispatch runs on capacity changes; an empty queue keeps the
+    -- forecast fixtures free of offers.
+    delete from public.reservation_waitlist;
+    delete from public.parking_spots where lot_id = 1;
+    delete from public.occupancy_profile;
+    delete from public.vehicles where plate like 'FC%';
+    update public.parking_settings
+       set car_capacity = 40, moto_capacity = 0, car_out_of_service = 0,
+           moto_out_of_service = 0, business_timezone = 'America/Bogota'
+     where lot_id = 1;
+    update public.forecast_settings
+       set enabled = true, history_weeks = 8, min_samples = 4,
+           blend_decay_pct = 85, full_threshold_pct = 100, public_enabled = true
+     where lot_id = 1;
+    select id into cat from public.categories where lot_id = 1 and name = 'car';
+    if cat is null then
+        insert into public.categories (name, capacity, lot_id)
+        values ('car', 0, 1) returning id into cat;
+    end if;
+    -- Earlier sections cap this category; the forecast measures the group.
+    update public.categories set capacity = 0 where id = cat;
+    perform set_config('app.fc_cat', cat::text, true);
+    -- 60 spare vehicles for the fixtures below.
+    for i in 1 .. 60 loop
+        insert into public.vehicles (plate, category_id)
+        values ('FC' || lpad(i::text, 3, '0'), cat);
+    end loop;
+end $$;
+
+-- forecast: success grid net occupancy
+do $$
+declare
+    vehicle integer;
+    open_vehicle integer;
+    long_vehicle integer;
+    tz text := 'America/Bogota';
+    yesterday date := date '2026-11-03';
+    occupancy integer;
+    last_hour integer := extract(hour from (now() at time zone 'America/Bogota'))::integer;
+begin
+    select id into vehicle from public.vehicles where plate = 'FC001';
+    insert into public.parking_sessions (vehicle_id, operator_id, status, lot_id,
+                                         entry_time, exit_time)
+    values (vehicle, 2, 'closed', 1,
+            timestamp '2026-11-03 09:30' at time zone tz,
+            timestamp '2026-11-03 11:10' at time zone tz);
+
+    select g.occupancy into occupancy from public.occupancy_grid(1, yesterday, yesterday) g
+     where g.group_name = 'car' and g.day = yesterday and g.hour = 10;
+    if occupancy <> 1 then
+        raise exception '10:00 should be 1, got %', occupancy;
+    end if;
+    select g.occupancy into occupancy from public.occupancy_grid(1, yesterday, yesterday) g
+     where g.group_name = 'car' and g.day = yesterday and g.hour = 11;
+    if occupancy <> 1 then
+        raise exception '11:00 should be 1, got %', occupancy;
+    end if;
+    select g.occupancy into occupancy from public.occupancy_grid(1, yesterday, yesterday) g
+     where g.group_name = 'car' and g.day = yesterday and g.hour = 9;
+    if occupancy <> 0 then
+        raise exception '09:00 should be 0, got %', occupancy;
+    end if;
+    select g.occupancy into occupancy from public.occupancy_grid(1, yesterday, yesterday) g
+     where g.group_name = 'car' and g.day = yesterday and g.hour = 12;
+    if occupancy <> 0 then
+        raise exception '12:00 should be 0, got %', occupancy;
+    end if;
+
+    -- An open session counts up to the last full hour.
+    select id into open_vehicle from public.vehicles where plate = 'FC002';
+    insert into public.parking_sessions (vehicle_id, operator_id, status, lot_id, entry_time)
+    values (open_vehicle, 2, 'open', 1, now() - interval '2 hours');
+    select g.occupancy into occupancy
+      from public.occupancy_grid(1, (now() at time zone tz)::date,
+                                 (now() at time zone tz)::date) g
+     where g.group_name = 'car' and g.day = (now() at time zone tz)::date
+       and g.hour = last_hour - 1;
+    if occupancy < 1 then
+        raise exception 'the open session did not count in the last hour';
+    end if;
+
+    -- A 10 day open session only contributes its first 72 hours.
+    select id into long_vehicle from public.vehicles where plate = 'FC003';
+    insert into public.parking_sessions (vehicle_id, operator_id, status, lot_id, entry_time)
+    values (long_vehicle, 2, 'open', 1, now() - interval '10 days');
+    select g.occupancy into occupancy
+      from public.occupancy_grid(1, (now() at time zone tz)::date - 4,
+                                 (now() at time zone tz)::date - 4) g
+     where g.group_name = 'car' and g.day = (now() at time zone tz)::date - 4
+       and g.hour = 12;
+    if occupancy <> 0 then
+        raise exception 'a 10 day session still counted after 72 hours: %', occupancy;
+    end if;
+
+    delete from public.parking_sessions where lot_id = 1;
+end $$;
+
+-- forecast: success profile median robust
+do $$
+declare
+    week integer;
+    n integer;
+    values integer[] := array[33, 35, 36, 38, 31, 35, 39, 60];
+    median numeric;
+    samples integer;
+    wed_dow integer := extract(dow from date '2026-11-04')::integer;
+begin
+    delete from public.occupancy_profile;
+    for week in 1 .. 8 loop
+        n := values[week];
+        insert into public.parking_sessions (
+            vehicle_id, operator_id, status, lot_id, entry_time, exit_time
+        )
+        -- The eight Wednesdays that end yesterday (yesterday is a Wednesday
+        -- in this fixture), so every one of them has a sample.
+        select v.id, 2, 'closed', 1,
+               (date '2026-11-11' - 7 * (week - 1))::timestamp + interval '17 hours',
+               (date '2026-11-11' - 7 * (week - 1))::timestamp + interval '18 hours'
+          from public.vehicles v
+         where v.category_id = current_setting('app.fc_cat')::integer
+         order by v.id
+         limit n;
+    end loop;
+
+    perform public.refresh_occupancy_profile(true);
+
+    select p.median_occupancy, p.samples into median, samples
+      from public.occupancy_profile p
+     where p.lot_id = 1 and p.group_name = 'car' and p.dow = wed_dow and p.hour = 17;
+    if median is null then
+        raise exception 'the 17:00 cell was not written';
+    end if;
+    -- 33, 35, 36, 38, 31, 35, 39, 60 sorted: 31, 33, 35, 35, 36, 38, 39, 60.
+    -- The even sample's median is the average of the two middle values
+    -- (35 and 36), which is what percentile_cont(0.5) returns.
+    if median <> 35.50 then
+        raise exception 'the median should be 35.50, got %', median;
+    end if;
+    if samples <> 8 then
+        raise exception 'the cell should have 8 samples, got %', samples;
+    end if;
+    delete from public.parking_sessions where lot_id = 1;
+end $$;
+
+-- forecast: success refresh throttle
+do $$
+declare
+    first_run integer;
+    second_run integer;
+    forced integer;
+    before_ts timestamptz;
+    after_ts timestamptz;
+begin
+    select min(p.computed_at) into before_ts from public.occupancy_profile p where p.lot_id = 1;
+    second_run := public.refresh_occupancy_profile();
+    select min(p.computed_at) into after_ts from public.occupancy_profile p where p.lot_id = 1;
+    if second_run <> 0 then
+        raise exception 'a throttled refresh rewrote % rows', second_run;
+    end if;
+    if after_ts is distinct from before_ts then
+        raise exception 'a throttled refresh touched computed_at';
+    end if;
+    first_run := public.refresh_occupancy_profile(true);
+    if first_run = 0 then
+        raise exception 'a forced refresh wrote nothing';
+    end if;
+end $$;
+
+-- forecast: failure first session date (insufficient samples)
+do $$
+declare
+    result jsonb;
+begin
+    -- A lot whose first session is 16 days old has three Wednesdays in the
+    -- window: Oct 28, Nov 4 and Nov 11. Everything before that date is
+    -- excluded by the grid filter.
+    delete from public.parking_sessions where lot_id = 1;
+    insert into public.parking_sessions (vehicle_id, operator_id, status, lot_id, entry_time, exit_time)
+    select v.id, 2, 'closed', 1,
+           (now() at time zone 'America/Bogota') - interval '16 days',
+           (now() at time zone 'America/Bogota') - interval '16 days' + interval '1 hour'
+      from public.vehicles v
+     where v.plate = 'FC001';
+    perform public.refresh_occupancy_profile(true);
+    result := public.forecast_compute(1, 12, timestamp '2026-11-04 14:20' at time zone 'America/Bogota');
+    if result ->> 'status' <> 'insufficient_history' then
+        raise exception 'three samples should be insufficient: %', result;
+    end if;
+    if jsonb_array_length(result -> 'groups') <> 0 then
+        raise exception 'an insufficient group was returned';
+    end if;
+end $$;
+
+-- forecast: success worked example
+do $$
+declare
+    tz text := 'America/Bogota';
+    result jsonb;
+    grp jsonb;
+    expected jsonb;
+    levels jsonb;
+    v integer;
+    i integer;
+    profile numeric[] := array[24, 27, 31, 35, 38, 36, 30, 22, 15, 10, 7, 6, 5];
+    hours integer[] := array[14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 0, 1, 2];
+    dow_wed integer := extract(dow from date '2026-11-04')::integer;
+    dow_thu integer := extract(dow from date '2026-11-05')::integer;
+begin
+    delete from public.parking_sessions where lot_id = 1;
+    delete from public.occupancy_profile;
+    for i in 1 .. 13 loop
+        insert into public.occupancy_profile
+               (lot_id, group_name, dow, hour, median_occupancy, samples, computed_at)
+        values (1, 'car',
+                case when hours[i] >= 14 then dow_wed else dow_thu end,
+                hours[i], profile[i], 8, now());
+    end loop;
+    -- 31 cars inside: 31 open sessions.
+    insert into public.parking_sessions (vehicle_id, operator_id, status, lot_id, entry_time)
+    select v.id, 2, 'open', 1, timestamp '2026-11-04 13:00' at time zone tz
+      from public.vehicles v
+     where v.category_id = current_setting('app.fc_cat')::integer
+     order by v.id
+     limit 31;
+
+    result := public.forecast_compute(
+        1, 12, timestamp '2026-11-04 14:20' at time zone tz
+    );
+    if result ->> 'status' <> 'ok' then
+        raise exception 'the worked example should be ok: %', result;
+    end if;
+    grp := result -> 'groups' -> 0;
+    expected := jsonb_path_query_array(grp -> 'hours', '$[*].expected');
+    if expected::text <> '[32, 36, 39, 40, 39, 32, 24, 17, 11, 8, 7, 6]' then
+        raise exception 'expected levels are wrong: %', expected;
+    end if;
+    if grp ->> 'full_at' <> '17:30' then
+        raise exception 'full_at should be 17:30, got %', grp ->> 'full_at';
+    end if;
+    if (grp ->> 'full_now')::boolean then
+        raise exception 'full_now should be false';
+    end if;
+    if (grp ->> 'capacity')::integer <> 40 or (grp ->> 'current')::integer <> 31 then
+        raise exception 'capacity/current are wrong: %', grp;
+    end if;
+    if grp ->> 'confidence' <> 'high' or (grp ->> 'samples')::integer <> 8 then
+        raise exception 'confidence should be high/8: %', grp;
+    end if;
+    select h into levels from jsonb_array_elements(grp -> 'hours') h
+     where (h ->> 'hour')::integer = 18;
+    if levels ->> 'level' <> 'full' then
+        raise exception '18:00 should be full: %', levels;
+    end if;
+end $$;
+
+-- forecast: success not full / full now / low confidence / midnight
+do $$
+declare
+    tz text := 'America/Bogota';
+    result jsonb;
+    grp jsonb;
+    v integer;
+begin
+    -- Capacity 80: no crossing in the horizon.
+    update public.parking_settings set car_capacity = 80 where lot_id = 1;
+    result := public.forecast_compute(1, 12, timestamp '2026-11-04 14:20' at time zone tz);
+    grp := result -> 'groups' -> 0;
+    if grp -> 'full_at' <> 'null'::jsonb then
+        raise exception 'full_at should be null with capacity 80: %', grp;
+    end if;
+
+    -- Full now: 40 of 40.
+    update public.parking_settings set car_capacity = 40 where lot_id = 1;
+    delete from public.parking_sessions where lot_id = 1;
+    insert into public.parking_sessions (vehicle_id, operator_id, status, lot_id, entry_time)
+    select v.id, 2, 'open', 1, timestamp '2026-11-04 13:00' at time zone tz
+      from public.vehicles v
+     where v.category_id = current_setting('app.fc_cat')::integer
+     order by v.id
+     limit 40;
+    result := public.forecast_compute(1, 12, timestamp '2026-11-04 14:20' at time zone tz);
+    grp := result -> 'groups' -> 0;
+    if not (grp ->> 'full_now')::boolean then
+        raise exception '40 of 40 should be full now: %', grp;
+    end if;
+
+    -- Low confidence with four samples, medium with six.
+    update public.occupancy_profile set samples = 4 where lot_id = 1;
+    result := public.forecast_compute(1, 12, timestamp '2026-11-04 14:20' at time zone tz);
+    if (result -> 'groups' -> 0 ->> 'confidence') <> 'low' then
+        raise exception 'four samples should be low confidence';
+    end if;
+    update public.occupancy_profile set samples = 6 where lot_id = 1;
+    result := public.forecast_compute(1, 12, timestamp '2026-11-04 14:20' at time zone tz);
+    if (result -> 'groups' -> 0 ->> 'confidence') <> 'medium' then
+        raise exception 'six samples should be medium confidence';
+    end if;
+    update public.occupancy_profile set samples = 8 where lot_id = 1;
+
+    -- Midnight: horizon 6 from 22:30 needs the Thursday cells.
+    insert into public.occupancy_profile
+           (lot_id, group_name, dow, hour, median_occupancy, samples, computed_at)
+    select 1, 'car', extract(dow from date '2026-11-05')::integer, h, 5, 8, now()
+      from generate_series(3, 5) h
+    on conflict (lot_id, group_name, dow, hour) do update
+       set median_occupancy = excluded.median_occupancy;
+    delete from public.parking_sessions where lot_id = 1;
+    result := public.forecast_compute(1, 6, timestamp '2026-11-04 22:30' at time zone tz);
+    grp := result -> 'groups' -> 0;
+    if grp is null then
+        raise exception 'the midnight horizon returned no group: % (profile: %)', result,
+            (select jsonb_agg(jsonb_build_object('dow', p.dow, 'hour', p.hour, 'v', p.median_occupancy))
+               from public.occupancy_profile p where p.lot_id = 1 and p.group_name = 'car'
+                and p.hour in (22, 23, 0, 1, 2, 3, 4));
+    end if;
+    if (grp -> 'hours' -> 0 ->> 'hour')::integer <> 23
+       or (grp -> 'hours' -> 1 ->> 'hour')::integer <> 0 then
+        raise exception 'the midnight hours are wrong: %', grp -> 'hours';
+    end if;
+end $$;
+
+-- forecast: failure no capacity and disabled
+do $$
+declare
+    result jsonb;
+begin
+    update public.parking_settings set car_capacity = 0, moto_capacity = 0 where lot_id = 1;
+    result := public.forecast_compute(1, 12, timestamp '2026-11-04 14:20' at time zone 'America/Bogota');
+    if result ->> 'status' <> 'no_capacity' then
+        raise exception 'no capacity should be reported: %', result;
+    end if;
+    update public.parking_settings set car_capacity = 40 where lot_id = 1;
+    update public.forecast_settings set enabled = false where lot_id = 1;
+    result := public.forecast_compute(1, 12, timestamp '2026-11-04 14:20' at time zone 'America/Bogota');
+    if result ->> 'status' <> 'disabled' then
+        raise exception 'disabled should be reported: %', result;
+    end if;
+    update public.forecast_settings set enabled = true where lot_id = 1;
+end $$;
+
+-- forecast: failure horizon
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    begin
+        perform public.occupancy_forecast(0);
+        raise exception 'a zero horizon was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidForecastHorizonError%' then raise; end if;
+    end;
+    begin
+        perform public.occupancy_forecast(25);
+        raise exception 'a 25 hour horizon was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidForecastHorizonError%' then raise; end if;
+    end;
+    if (public.occupancy_forecast(12) ->> 'status') is null then
+        raise exception 'the staff RPC returned no status';
+    end if;
+end $$;
+reset role;
+
+-- forecast: success group_capacity
+do $$
+declare
+    active integer;
+begin
+    if public.group_capacity(1, 'car') <> 40 then
+        raise exception 'settings capacity should be 40';
+    end if;
+    insert into public.parking_spots (lot_id, code, group_name, grid_row, grid_col, status)
+    values (1, 'FCB1', 'car', 70, 1, 'active'),
+           (1, 'FCB2', 'car', 70, 2, 'active'),
+           (1, 'FCB3', 'car', 70, 3, 'out_of_service');
+    if public.group_capacity(1, 'car') <> 2 then
+        raise exception 'active bays should win: %', public.group_capacity(1, 'car');
+    end if;
+    delete from public.parking_spots where lot_id = 1;
+    if public.group_capacity(1, 'moto') <> 0 then
+        raise exception 'moto capacity should be 0';
+    end if;
+    if public.group_capacity(1, 'heavy') <> 0 then
+        raise exception 'heavy has no capacity';
+    end if;
+    update public.parking_settings set car_capacity = 10, car_out_of_service = 3 where lot_id = 1;
+    if public.group_capacity(1, 'car') <> 7 then
+        raise exception 'out of service bays should be subtracted: %', public.group_capacity(1, 'car');
+    end if;
+    update public.parking_settings set car_capacity = 40, car_out_of_service = 0 where lot_id = 1;
+end $$;
+
+-- forecast: success public block
+do $$
+declare
+    payload jsonb;
+    fc jsonb;
+    grp jsonb;
+    hour jsonb;
+begin
+    -- Rebuild the worked-example profile for the public payload.
+    delete from public.parking_sessions where lot_id = 1;
+    delete from public.occupancy_profile;
+    insert into public.occupancy_profile
+           (lot_id, group_name, dow, hour, median_occupancy, samples, computed_at)
+    select 1, 'car', extract(dow from date '2026-11-04' + (h / 24) * interval '1 day')::integer,
+           h % 24, 20, 8, now()
+      from generate_series(14, 37) h;
+    update public.forecast_settings set public_enabled = true where lot_id = 1;
+
+    payload := public.public_availability(1);
+    fc := payload -> 'forecast';
+    if fc is null then
+        raise exception 'public_availability lost the forecast block';
+    end if;
+    if payload -> 'lot' is null or payload -> 'categories' is null
+       or payload -> 'max_reservation_hours' is null then
+        raise exception 'the wrapper lost existing keys: %', payload;
+    end if;
+    if fc ->> 'status' not in ('ok', 'insufficient_history') then
+        raise exception 'unexpected public status: %', fc;
+    end if;
+    if jsonb_array_length(fc -> 'groups') > 0 then
+        grp := fc -> 'groups' -> 0;
+        if (select array_agg(k order by k) from jsonb_object_keys(grp) k)
+           <> array['confidence', 'full_at', 'full_now', 'group', 'hours'] then
+            raise exception 'the public group leaks keys: %', grp;
+        end if;
+        hour := grp -> 'hours' -> 0;
+        if (select array_agg(k order by k) from jsonb_object_keys(hour) k)
+           <> array['hour', 'level'] then
+            raise exception 'the public hour leaks keys: %', hour;
+        end if;
+        if grp ? 'capacity' or grp ? 'current' or grp ? 'samples'
+           or hour ? 'expected' then
+            raise exception 'the public block leaked a count';
+        end if;
+    end if;
+end $$;
+
+-- forecast: success public hidden and unknown lot
+do $$
+declare
+    payload jsonb;
+begin
+    update public.forecast_settings set public_enabled = false where lot_id = 1;
+    if public.public_forecast_block(1) ->> 'status' <> 'hidden' then
+        raise exception 'public_enabled false did not hide the block';
+    end if;
+    update public.forecast_settings set public_enabled = true where lot_id = 1;
+    if public.public_forecast_block(999999) ->> 'status' <> 'hidden' then
+        raise exception 'an unknown lot should be hidden';
+    end if;
+    if public.public_availability(999999) is not null then
+        raise exception 'an unknown lot returned availability';
+    end if;
+end $$;
+
+-- forecast: security staff rpc
+set local role anon;
+do $$
+begin
+    begin
+        perform public.occupancy_forecast(12);
+        raise exception 'anon read the staff forecast';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+set local role authenticated;
+do $$
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    if (public.occupancy_forecast(12) ->> 'lot_id')::integer <> 1 then
+        raise exception 'the operator forecast answered another lot';
+    end if;
+    perform set_config('request.headers', '{"x-lot-id":"999999"}', true);
+    begin
+        perform public.occupancy_forecast(12);
+        raise exception 'a foreign lot header was accepted';
+    exception when others then
+        if sqlerrm not like '%LotRequiredError%' then raise; end if;
+    end;
+end $$;
+reset role;
+
+-- forecast: security internals
+set local role authenticated;
+do $$
+begin
+    begin
+        perform public.forecast_compute(1, 12, now());
+        raise exception 'authenticated called an internal helper';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform public.public_forecast_block(1);
+        raise exception 'authenticated called the public block';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform public.public_availability_base(1);
+        raise exception 'authenticated called the base availability';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform public.refresh_occupancy_profile(true);
+        raise exception 'authenticated refreshed the profile';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+set local role anon;
+do $$
+begin
+    begin
+        perform public.occupancy_grid(1, current_date - 1, current_date - 1);
+        raise exception 'anon read the grid';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform public.group_capacity(1, 'car');
+        raise exception 'anon read the capacity helper';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
+-- forecast: security rls
+do $$
+begin
+    insert into public.occupancy_profile
+           (lot_id, group_name, dow, hour, median_occupancy, samples)
+    values (2, 'car', 3, 10, 12, 8)
+    on conflict (lot_id, group_name, dow, hour) do nothing;
+end $$;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+set local role authenticated;
+do $$
+declare
+    settings_rows integer;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    if exists (select 1 from public.occupancy_profile p where p.lot_id <> 1) then
+        raise exception 'the operator saw another lot profile';
+    end if;
+    select count(*) into settings_rows from public.forecast_settings;
+    if settings_rows <> 0 then
+        raise exception 'a non-admin read the forecast settings';
+    end if;
+end $$;
+reset role;
+set local role anon;
+do $$
+begin
+    begin
+        perform 1 from public.occupancy_profile limit 1;
+        raise exception 'anon read the profile table';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform 1 from public.forecast_settings limit 1;
+        raise exception 'anon read the settings table';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- forecast: success backtest
+do $$
+declare
+    result jsonb;
+    grp jsonb;
+    first_day date;
+begin
+    delete from public.parking_sessions where lot_id = 1;
+    delete from public.occupancy_profile;
+    -- One old session gives the lot a first day; everything else stays quiet,
+    -- so every point has 0 error.
+    insert into public.parking_sessions (vehicle_id, operator_id, status, lot_id, entry_time, exit_time)
+    select v.id, 2, 'closed', 1,
+           (now() at time zone 'America/Bogota') - interval '70 days',
+           (now() at time zone 'America/Bogota') - interval '70 days' + interval '1 hour'
+      from public.vehicles v
+     where v.plate = 'FC001';
+    result := public.occupancy_forecast_backtest(4);
+    grp := result -> 'groups' -> 0;
+    if grp is null then
+        raise exception 'the backtest returned no group: %', result;
+    end if;
+    if (grp ->> 'points')::integer <= 0 then
+        raise exception 'the backtest evaluated no points: %', grp;
+    end if;
+    if (grp ->> 'mae')::numeric <> 0 then
+        raise exception 'a constant occupancy should give mae 0: %', grp;
+    end if;
+    if jsonb_array_length(grp -> 'by_lead') = 0 then
+        raise exception 'the backtest returned no leads: %', grp;
+    end if;
+end $$;
+
+-- forecast: failure backtest range and admin only, no history
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+set local role authenticated;
+do $$
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    begin
+        perform public.occupancy_forecast_backtest(4);
+        raise exception 'an operator ran the backtest';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    begin
+        perform public.occupancy_forecast_backtest(0);
+        raise exception 'a zero week backtest was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidReportRangeError%' then raise; end if;
+    end;
+    begin
+        perform public.occupancy_forecast_backtest(13);
+        raise exception 'a 13 week backtest was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidReportRangeError%' then raise; end if;
+    end;
+end $$;
+reset role;
+
+-- forecast: failure backtest no history
+do $$
+declare
+    result jsonb;
+begin
+    delete from public.parking_sessions where lot_id = 1;
+    result := public.occupancy_forecast_backtest(4);
+    if jsonb_array_length(result -> 'groups') <> 0 then
+        raise exception 'a lot without history returned groups: %', result;
+    end if;
+end $$;
+
+-- forecast: success settings
+do $$
+begin
+    -- The default-row path is exercised by removing it as the owner.
+    delete from public.forecast_settings where lot_id = 1;
+end $$;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+declare
+    defaults jsonb;
+    saved jsonb;
+    profile_rows integer;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    defaults := public.get_forecast_settings();
+    if (defaults ->> 'history_weeks')::integer <> 8
+       or not (defaults ->> 'enabled')::boolean then
+        raise exception 'the settings defaults changed: %', defaults;
+    end if;
+    saved := public.set_forecast_settings('{"history_weeks": 6}');
+    if (saved ->> 'history_weeks')::integer <> 6
+       or (saved ->> 'min_samples')::integer <> 4 then
+        raise exception 'a partial update failed: %', saved;
+    end if;
+    perform public.set_forecast_settings('{"history_weeks": 8}');
+end $$;
+reset role;
+
+-- Changing a setting invalidates the stored profile (checked as the owner).
+do $$
+declare
+    profile_rows integer;
+begin
+    insert into public.occupancy_profile
+           (lot_id, group_name, dow, hour, median_occupancy, samples)
+    values (1, 'car', 1, 1, 5, 5)
+    on conflict (lot_id, group_name, dow, hour) do nothing;
+    perform set_config('app.fc_profile_seeded', '1', true);
+end $$;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    perform public.set_forecast_settings('{"history_weeks": 7}');
+    perform public.set_forecast_settings('{"history_weeks": 8}');
+end $$;
+reset role;
+do $$
+declare
+    profile_rows integer;
+begin
+    select count(*) into profile_rows from public.occupancy_profile where lot_id = 1;
+    if profile_rows <> 0 then
+        raise exception 'changing the history did not invalidate the profile';
+    end if;
+end $$;
+
+-- forecast: failure settings
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    begin
+        perform public.set_forecast_settings('{"history_weeks": 4, "min_samples": 8}');
+        raise exception 'min_samples > history_weeks was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidForecastSettingError%' then raise; end if;
+    end;
+    begin
+        perform public.set_forecast_settings('{"bogus": 1}');
+        raise exception 'an unknown setting was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidForecastSettingError%' then raise; end if;
+    end;
+    begin
+        perform public.set_forecast_settings('{"history_weeks": "eight"}');
+        raise exception 'a string for an integer was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidForecastSettingError%'
+           and sqlerrm not like '%invalid input syntax%' then raise; end if;
+    end;
+    begin
+        perform public.set_forecast_settings('{"blend_decay_pct": 100}');
+        raise exception 'a 100 percent decay was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidForecastSettingError%' then raise; end if;
+    end;
+end $$;
+reset role;
+
+-- forecast: security settings (operator only)
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+set local role authenticated;
+do $$
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    begin
+        perform public.set_forecast_settings('{"enabled": false}');
+        raise exception 'an operator changed the forecast settings';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- forecast: success audit
+set local role authenticated;
+do $$
+declare
+    rows integer;
+    diff jsonb;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    perform public.set_forecast_settings('{"full_threshold_pct": 95}');
+    select count(*) into rows
+      from public.audit_log a
+     where a.table_name = 'forecast_settings'
+       and a.lot_id = 1
+       and a.actor_id = 1;
+    if rows = 0 then
+        raise exception 'the settings change was not audited';
+    end if;
+    select a.after into diff
+      from public.audit_log a
+     where a.table_name = 'forecast_settings' and a.lot_id = 1
+     order by a.id desc limit 1;
+    if diff ->> 'full_threshold_pct' <> '95' then
+        raise exception 'the audit row has no changed column: %', diff;
+    end if;
+    perform public.set_forecast_settings('{"full_threshold_pct": 100}');
+end $$;
+reset role;
+
+
+-- 0110 Cash anomaly detection.
+do $$
+declare
+    cat integer;
+begin
+    delete from public.cash_anomalies;
+    delete from public.notifications where type = 'cash_anomaly';
+    delete from public.shift_adjustments where shift_id in
+        (select id from public.shifts where lot_id = 1);
+    delete from public.evidence_photos where session_id in
+        (select id from public.parking_sessions where lot_id = 1);
+    delete from public.parking_sessions where lot_id = 1;
+    delete from public.shifts where lot_id = 1;
+    delete from public.monthly_passes where lot_id = 1;
+    delete from public.vehicles where plate like 'AN%';
+    update public.anomaly_settings
+       set enabled = true, disabled_rules = '{}',
+           window_days = 14, shortage_min_amount = 5000,
+           shortage_min_shifts = 3, lost_ticket_min_closed = 10,
+           lost_ticket_min_rate_pct = 10, lost_ticket_factor_pct = 200,
+           adjustment_min_amount = 1000, short_stay_minutes = 30,
+           discount_min_count = 3, discount_share_pct = 10,
+           shift_open_hours = 16, session_open_days = 7
+     where lot_id in (1, 2);
+    select id into cat from public.categories where lot_id = 1 and name = 'car';
+    if cat is null then
+        insert into public.categories (name, capacity, lot_id)
+        values ('car', 0, 1) returning id into cat;
+    end if;
+    update public.categories set capacity = 0 where id = cat;
+    perform set_config('app.an_cat', cat::text, true);
+end $$;
+
+-- anomaly: success shift_shortage
+do $$
+declare
+    created integer;
+    rows integer;
+    detail jsonb;
+begin
+    insert into public.shifts (operator_id, opened_at, closed_at, difference, lot_id)
+    values (2, now() - interval '3 days', now() - interval '3 days' + interval '6 hours', -6000, 1),
+           (2, now() - interval '2 days', now() - interval '2 days' + interval '6 hours', -5500, 1),
+           (2, now() - interval '2 days 12 hours', now() - interval '2 days' + interval '8 hours', 0, 1),
+           (2, now() - interval '1 day', now() - interval '1 day' + interval '6 hours', -8000, 1),
+           (2, now() - interval '1 day 2 hours', now() - interval '1 day' + interval '7 hours', -200, 1);
+    created := public.detect_cash_anomalies();
+    select count(*), (array_agg(a.details))[1] into rows, detail
+      from public.cash_anomalies a
+     where a.lot_id = 1 and a.rule = 'shift_shortage';
+    if rows <> 1 then
+        raise exception 'expected one shortage anomaly, got %', rows;
+    end if;
+    if (detail ->> 'total_shortage')::integer <> 19500 then
+        raise exception 'total_shortage should be 19500: %', detail;
+    end if;
+    if (select a.severity from public.cash_anomalies a
+         where a.lot_id = 1 and a.rule = 'shift_shortage') <> 'medium' then
+        raise exception 'three short shifts should be medium';
+    end if;
+    -- Six qualifying shifts become high.
+    insert into public.shifts (operator_id, opened_at, closed_at, difference, lot_id)
+    values (2, now() - interval '5 days', now() - interval '5 days' + interval '6 hours', -6000, 1),
+           (2, now() - interval '6 days', now() - interval '6 days' + interval '6 hours', -7000, 1),
+           (2, now() - interval '7 days', now() - interval '7 days' + interval '6 hours', -6500, 1);
+    perform public.detect_cash_anomalies();
+    if (select a.severity from public.cash_anomalies a
+         where a.lot_id = 1 and a.rule = 'shift_shortage'
+         order by a.id desc limit 1) <> 'high' then
+        raise exception 'six short shifts should be high';
+    end if;
+end $$;
+
+-- anomaly: success dedupe and disabled rule
+do $$
+declare
+    created integer;
+    rows integer;
+begin
+    insert into public.shifts (operator_id, opened_at, closed_at, difference, lot_id)
+    values (2, now() - interval '10 days', now() - interval '10 days' + interval '6 hours', -6000, 1);
+    perform public.detect_cash_anomalies();
+    created := public.detect_cash_anomalies();
+    if created <> 0 then
+        raise exception 'a second run created % rows', created;
+    end if;
+    -- A dismissed row is not recreated.
+    update public.cash_anomalies set status = 'dismissed', resolved_at = now(),
+           resolved_by = 1, note = 'revisado'
+     where lot_id = 1 and rule = 'shift_shortage';
+    perform public.detect_cash_anomalies();
+    select count(*) into rows from public.cash_anomalies
+     where lot_id = 1 and rule = 'shift_shortage' and status = 'open';
+    if rows <> 0 then
+        raise exception 'a dismissed anomaly came back';
+    end if;
+    -- Disabling the rule stops new rows.
+    delete from public.shifts where lot_id = 1 and difference < 0;
+    insert into public.shifts (operator_id, opened_at, closed_at, difference, lot_id)
+    values (2, now() - interval '4 days', now() - interval '4 days' + interval '6 hours', -9000, 1),
+           (2, now() - interval '4 days 8 hours', now() - interval '4 days' + interval '10 hours', -9000, 1),
+           (2, now() - interval '4 days 12 hours', now() - interval '4 days' + interval '14 hours', -9000, 1);
+    update public.anomaly_settings set disabled_rules = '{shift_shortage}' where lot_id = 1;
+    perform public.detect_cash_anomalies();
+    select count(*) into rows from public.cash_anomalies
+     where lot_id = 1 and rule = 'shift_shortage' and status = 'open';
+    if rows <> 0 then
+        raise exception 'a disabled rule created rows';
+    end if;
+    update public.anomaly_settings set disabled_rules = '{}' where lot_id = 1;
+    update public.anomaly_settings set enabled = false where lot_id = 1;
+    perform public.detect_cash_anomalies();
+    update public.anomaly_settings set enabled = true where lot_id = 1;
+end $$;
+
+-- anomaly: success zero_charge, pass exemption and extension point
+do $$
+declare
+    cat integer := current_setting('app.an_cat')::integer;
+    vehicle integer;
+    pass_vehicle integer;
+    session_id integer;
+    excluded_id integer;
+    rows integer;
+begin
+    delete from public.cash_anomalies;
+    insert into public.vehicles (plate, category_id) values ('ANZERO', cat)
+    returning id into vehicle;
+    insert into public.vehicles (plate, category_id) values ('ANPASS', cat)
+    returning id into pass_vehicle;
+    insert into public.parking_sessions (
+        vehicle_id, operator_id, status, lot_id, entry_time, exit_time,
+        amount_charged, payment_method
+    )
+    values (vehicle, 2, 'closed', 1, now() - interval '2 hours', now() - interval '1 hour', 0, 'exempt')
+    returning id into session_id;
+    insert into public.parking_sessions (
+        vehicle_id, operator_id, status, lot_id, entry_time, exit_time,
+        amount_charged, payment_method
+    )
+    values (pass_vehicle, 2, 'closed', 1, now() - interval '3 hours', now() - interval '2 hours', 0, 'monthly_pass');
+    perform public.detect_cash_anomalies();
+    select count(*) into rows from public.cash_anomalies
+     where lot_id = 1 and rule = 'zero_charge';
+    if rows <> 1 then
+        raise exception 'expected one zero charge, got %', rows;
+    end if;
+    if (select severity from public.cash_anomalies
+         where lot_id = 1 and rule = 'zero_charge') <> 'medium' then
+        raise exception 'an exempt zero should be medium';
+    end if;
+    -- The extension point explains a session away.
+    insert into public.parking_sessions (
+        vehicle_id, operator_id, status, lot_id, entry_time, exit_time,
+        amount_charged, payment_method
+    )
+    values (vehicle, 2, 'closed', 1, now() - interval '5 hours', now() - interval '4 hours', 0, 'cash')
+    returning id into excluded_id;
+    create or replace function public.anomaly_zero_charge_excluded(p_session_id integer)
+    returns boolean language sql stable set search_path = public as $fn$ select true $fn$;
+    perform public.detect_cash_anomalies();
+    create or replace function public.anomaly_zero_charge_excluded(p_session_id integer)
+    returns boolean language sql stable set search_path = public as $fn$ select false $fn$;
+    if exists (select 1 from public.cash_anomalies a
+                where a.lot_id = 1 and a.rule = 'zero_charge'
+                  and a.session_id = excluded_id) then
+        raise exception 'the extension point did not exclude the session';
+    end if;
+    delete from public.parking_sessions where vehicle_id in (vehicle, pass_vehicle);
+    delete from public.vehicles where plate in ('ANZERO', 'ANPASS');
+end $$;
+
+-- anomaly: success short_lost_ticket and discount_rate
+do $$
+declare
+    cat integer := current_setting('app.an_cat')::integer;
+    vehicle integer;
+    admin integer := 1;
+    i integer;
+begin
+    delete from public.cash_anomalies;
+    insert into public.vehicles (plate, category_id) values ('ANLOST', cat)
+    returning id into vehicle;
+    insert into public.parking_sessions (
+        vehicle_id, operator_id, status, lot_id, entry_time, exit_time,
+        amount_charged, lost_ticket, payment_method
+    )
+    values (vehicle, 2, 'closed', 1, now() - interval '10 minutes', now() - interval '6 minutes',
+            2000, true, 'cash');
+    -- 30 discounts out of 200 closed sessions by admin 1.
+    insert into public.vehicles (plate, category_id)
+    select 'ANDISC' || lpad(g::text, 3, '0'), cat from generate_series(1, 200) g;
+    insert into public.parking_sessions (
+        vehicle_id, operator_id, status, lot_id, entry_time, exit_time,
+        amount_charged, discount_amount, discount_reason, discount_by, payment_method
+    )
+    select v.id, 2, 'closed', 1, now() - interval '5 hours', now() - interval '4 hours',
+           case when v.plate <= 'ANDISC030' then 1000 else 4000 end,
+           case when v.plate <= 'ANDISC030' then 500 else 0 end,
+           case when v.plate <= 'ANDISC030' then 'cortesia' else null end,
+           case when v.plate <= 'ANDISC030' then admin else null end,
+           'cash'
+      from public.vehicles v
+     where v.plate like 'ANDISC%';
+    perform public.detect_cash_anomalies();
+    if not exists (select 1 from public.cash_anomalies
+                    where lot_id = 1 and rule = 'short_lost_ticket' and severity = 'high') then
+        raise exception 'the short lost ticket was not flagged';
+    end if;
+    if not exists (select 1 from public.cash_anomalies
+                    where lot_id = 1 and rule = 'discount_rate') then
+        raise exception 'the discount rate was not flagged';
+    end if;
+    if (select severity from public.cash_anomalies
+         where lot_id = 1 and rule = 'discount_rate') <> 'medium' then
+        raise exception '15 percent should be medium';
+    end if;
+    delete from public.parking_sessions where vehicle_id in
+        (select id from public.vehicles where plate like 'ANDISC%' or plate = 'ANLOST');
+    delete from public.vehicles where plate like 'ANDISC%' or plate = 'ANLOST';
+end $$;
+
+-- anomaly: success lost_ticket_rate
+do $$
+declare
+    cat integer := current_setting('app.an_cat')::integer;
+    shift_b bigint;
+    shift_a bigint;
+    v integer;
+begin
+    delete from public.cash_anomalies;
+    insert into public.vehicles (plate, category_id)
+    select 'ANLT' || g, cat from generate_series(1, 2) g;
+    insert into public.shifts (operator_id, opened_at, closed_at, difference, lot_id)
+    values (2, now() - interval '1 day', now() - interval '1 day' + interval '8 hours', 0, 1)
+    returning id into shift_b;
+    insert into public.shifts (operator_id, opened_at, closed_at, difference, lot_id)
+    values (3, now() - interval '1 day', now() - interval '1 day' + interval '8 hours', 0, 1)
+    returning id into shift_a;
+    -- B: 40 closed, 8 lost. A: 160 closed, 8 lost.
+    insert into public.parking_sessions (
+        vehicle_id, operator_id, status, lot_id, entry_time, exit_time,
+        amount_charged, lost_ticket, shift_id, payment_method
+    )
+    select (select id from public.vehicles where plate = 'ANLT1'),
+           2, 'closed', 1, now() - interval '20 hours', now() - interval '19 hours',
+           2000, g <= 8, shift_b, 'cash'
+      from generate_series(1, 40) g;
+    insert into public.parking_sessions (
+        vehicle_id, operator_id, status, lot_id, entry_time, exit_time,
+        amount_charged, lost_ticket, shift_id, payment_method
+    )
+    select (select id from public.vehicles where plate = 'ANLT2'),
+           3, 'closed', 1, now() - interval '20 hours', now() - interval '19 hours',
+           2000, g <= 8, shift_a, 'cash'
+      from generate_series(1, 160) g;
+    perform public.detect_cash_anomalies();
+    if not exists (
+        select 1 from public.cash_anomalies
+         where lot_id = 1 and rule = 'lost_ticket_rate'
+           and subject_user_id = 2 and severity = 'high'
+    ) then
+        raise exception 'operator B should be a high lost-ticket rate: %',
+            (select jsonb_agg(a) from public.cash_anomalies a where a.rule = 'lost_ticket_rate');
+    end if;
+    delete from public.parking_sessions s where s.shift_id in (shift_a, shift_b);
+    delete from public.shifts where id in (shift_a, shift_b);
+    delete from public.vehicles where plate like 'ANLT%';
+end $$;
+
+-- anomaly: success post_close_adjustment
+do $$
+declare
+    v_shift bigint;
+begin
+    delete from public.cash_anomalies;
+    insert into public.shifts (operator_id, opened_at, closed_at, difference, lot_id)
+    values (2, now() - interval '2 days', now() - interval '2 days' + interval '6 hours', -6000, 1)
+    returning id into v_shift;
+    insert into public.shift_adjustments (
+        shift_id, old_counted, new_counted, old_difference, new_difference, reason, adjusted_by
+    )
+    values (v_shift, 1000, 6500, -6000, -500, 'conteo revisado', 1);
+    perform public.detect_cash_anomalies();
+    if not exists (select 1 from public.cash_anomalies
+                    where lot_id = 1 and rule = 'post_close_adjustment' and severity = 'high') then
+        raise exception 'the adjustment was not flagged as high';
+    end if;
+    delete from public.shift_adjustments sa where sa.shift_id = v_shift;
+    delete from public.shifts where id = v_shift;
+end $$;
+
+-- anomaly: success shift_open_long and session_open_long
+do $$
+declare
+    cat integer := current_setting('app.an_cat')::integer;
+    vehicle integer;
+begin
+    delete from public.cash_anomalies;
+    insert into public.shifts (operator_id, opened_at, lot_id)
+    values (2, now() - interval '20 hours', 1);
+    insert into public.vehicles (plate, category_id) values ('ANOPEN', cat)
+    returning id into vehicle;
+    insert into public.parking_sessions (vehicle_id, operator_id, status, lot_id, entry_time)
+    values (vehicle, 2, 'open', 1, now() - interval '9 days');
+    perform public.detect_cash_anomalies();
+    if (select severity from public.cash_anomalies
+         where lot_id = 1 and rule = 'shift_open_long') <> 'medium' then
+        raise exception 'a 20 hour shift should be medium';
+    end if;
+    if (select severity from public.cash_anomalies
+         where lot_id = 1 and rule = 'session_open_long') <> 'low' then
+        raise exception 'a 9 day session should be low';
+    end if;
+    -- An active pass explains a long stay.
+    insert into public.monthly_passes (vehicle_id, start_date, end_date, amount, lot_id)
+    values (vehicle, current_date - 10, current_date + 10, 50000, 1);
+    delete from public.cash_anomalies where rule = 'session_open_long';
+    perform public.detect_cash_anomalies();
+    if exists (select 1 from public.cash_anomalies where rule = 'session_open_long') then
+        raise exception 'a session with an active pass was flagged';
+    end if;
+    delete from public.monthly_passes where vehicle_id = vehicle;
+    delete from public.parking_sessions where vehicle_id = vehicle;
+    delete from public.vehicles where id = vehicle;
+    delete from public.shifts where lot_id = 1 and closed_at is null;
+end $$;
+
+-- anomaly: success notification to admins only
+do $$
+declare
+    cat integer := current_setting('app.an_cat')::integer;
+    vehicle integer;
+begin
+    delete from public.cash_anomalies;
+    delete from public.notifications where type = 'cash_anomaly';
+    insert into public.vehicles (plate, category_id) values ('ANNOT', cat)
+    returning id into vehicle;
+    insert into public.parking_sessions (
+        vehicle_id, operator_id, status, lot_id, entry_time, exit_time,
+        amount_charged, payment_method
+    )
+    values (vehicle, 2, 'closed', 1, now() - interval '2 hours', now() - interval '1 hour', 0, 'cash');
+    perform public.detect_cash_anomalies();
+    if not exists (
+        select 1 from public.notifications n
+         where n.type = 'cash_anomaly' and n.user_id = 1 and n.lot_id = 1
+    ) then
+        raise exception 'the admin was not notified';
+    end if;
+    if exists (select 1 from public.notifications n
+                where n.type = 'cash_anomaly' and n.user_id = 2) then
+        raise exception 'the operator was notified';
+    end if;
+    if (select count(*) from public.notifications
+         where type = 'cash_anomaly') <> 1 then
+        raise exception 'the notification was duplicated';
+    end if;
+    perform public.detect_cash_anomalies();
+    if (select count(*) from public.notifications where type = 'cash_anomaly') <> 1 then
+        raise exception 'a second run notified again';
+    end if;
+    delete from public.parking_sessions where vehicle_id = vehicle;
+    delete from public.vehicles where id = vehicle;
+end $$;
+
+-- anomaly: security rls, rpc and job functions
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+set local role authenticated;
+do $$
+declare
+    visible integer;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    select count(*) into visible from public.cash_anomalies;
+    if visible <> 0 then
+        raise exception 'the operator saw % anomalies', visible;
+    end if;
+    select count(*) into visible from public.anomaly_settings;
+    if visible <> 0 then
+        raise exception 'the operator read the thresholds';
+    end if;
+    begin
+        perform public.list_cash_anomalies();
+        raise exception 'the operator listed anomalies';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+    begin
+        perform public.resolve_cash_anomaly(1, 'acknowledged');
+        raise exception 'the operator resolved an anomaly';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+    begin
+        perform public.get_anomaly_settings();
+        raise exception 'the operator read the settings';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+    begin
+        perform public.detect_cash_anomalies();
+        raise exception 'the operator ran the detector';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+set local role anon;
+do $$
+begin
+    begin
+        perform 1 from public.cash_anomalies limit 1;
+        raise exception 'anon read the anomalies';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform public.detect_cash_anomalies();
+        raise exception 'anon ran the detector';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- anomaly: success review
+set local role authenticated;
+do $$
+declare
+    listed jsonb;
+    resolved jsonb;
+    missing jsonb;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    listed := public.list_cash_anomalies('open', null, null, 10);
+    if (listed ->> 'open_count')::integer < 1 then
+        raise exception 'the review fixture has no open anomalies: %', listed;
+    end if;
+    perform set_config(
+        'app.an_id', (listed -> 'items' -> 0 ->> 'id'), true
+    );
+    resolved := public.resolve_cash_anomaly(
+        (listed -> 'items' -> 0 ->> 'id')::bigint, 'acknowledged', null
+    );
+    if resolved ->> 'status' <> 'acknowledged'
+       or resolved ->> 'resolved_at' is null
+       or (resolved ->> 'resolved_by_name') is null then
+        raise exception 'the acknowledge did not stick: %', resolved;
+    end if;
+    begin
+        perform public.resolve_cash_anomaly(
+            (listed -> 'items' -> 0 ->> 'id')::bigint, 'acknowledged', null
+        );
+        raise exception 'an anomaly was resolved twice';
+    exception when others then
+        if sqlerrm not like '%AnomalyAlreadyResolvedError%' then raise; end if;
+    end;
+    begin
+        perform public.resolve_cash_anomaly(
+            (listed -> 'items' -> 0 ->> 'id')::bigint, 'dismissed', '  '
+        );
+        raise exception 'a dismissal without a note was accepted';
+    exception when others then
+        if sqlerrm not like '%AnomalyNoteRequiredError%' then raise; end if;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- anomaly: failure review inputs
+set local role authenticated;
+do $$
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    begin
+        perform public.list_cash_anomalies('someday');
+        raise exception 'an invalid status filter was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+    begin
+        perform public.list_cash_anomalies(null, 'bogus-rule');
+        raise exception 'an invalid rule filter was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+    begin
+        perform public.resolve_cash_anomaly(999999999, 'open');
+        raise exception 'an invalid status was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidAnomalyStatusError%' then raise; end if;
+    end;
+    begin
+        perform public.resolve_cash_anomaly(999999999, 'acknowledged');
+        raise exception 'an unknown anomaly was resolved';
+    exception when others then
+        if sqlerrm not like '%AnomalyNotFoundError%' then raise; end if;
+    end;
+end $$;
+reset role;
+
+-- anomaly: success and failure settings
+set local role authenticated;
+do $$
+declare
+    defaults jsonb;
+    saved jsonb;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    defaults := public.get_anomaly_settings();
+    if (defaults ->> 'window_days')::integer <> 14
+       or (defaults ->> 'shortage_min_shifts')::integer <> 3 then
+        raise exception 'the anomaly defaults changed: %', defaults;
+    end if;
+    saved := public.set_anomaly_settings('{"window_days": 21, "disabled_rules": ["zero_charge"]}');
+    if (saved ->> 'window_days')::integer <> 21
+       or not (saved -> 'disabled_rules' @> '["zero_charge"]'::jsonb) then
+        raise exception 'the partial update failed: %', saved;
+    end if;
+    begin
+        perform public.set_anomaly_settings('{"window_days": 1000}');
+        raise exception 'an out of range window was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidAnomalySettingError%' then raise; end if;
+    end;
+    begin
+        perform public.set_anomaly_settings('{"bogus": 1}');
+        raise exception 'an unknown key was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidAnomalySettingError%' then raise; end if;
+    end;
+    begin
+        perform public.set_anomaly_settings('{"window_days": "many"}');
+        raise exception 'a string for an integer was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidAnomalySettingError%'
+           and sqlerrm not like '%invalid input syntax%' then raise; end if;
+    end;
+    begin
+        perform public.set_anomaly_settings('{"disabled_rules": ["bogus"]}');
+        raise exception 'an unknown rule was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidAnomalySettingError%' then raise; end if;
+    end;
+    perform public.set_anomaly_settings('{"window_days": 14, "disabled_rules": []}');
+end $$;
+reset role;
+
+-- anomaly: success audit and purge
+set local role authenticated;
+do $$
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    perform public.set_anomaly_settings('{"short_stay_minutes": 45}');
+end $$;
+reset role;
+do $$
+declare
+    audits integer;
+    purged integer;
+begin
+    select count(*) into audits
+      from public.audit_log a
+     where a.table_name = 'anomaly_settings' and a.lot_id = 1;
+    if audits = 0 then
+        raise exception 'the settings change was not audited';
+    end if;
+    select count(*) into audits
+      from public.audit_log a
+     where a.table_name = 'cash_anomalies' and a.lot_id = 1 and a.action = 'update';
+    if audits = 0 then
+        raise exception 'the review was not audited';
+    end if;
+    -- Purge: a resolved row older than the window goes, an open row stays.
+    update public.cash_anomalies
+       set resolved_at = now() - interval '400 days'
+     where lot_id = 1 and status <> 'open';
+    purged := public.purge_cash_anomalies(365);
+    if purged < 1 then
+        raise exception 'the purge removed nothing';
+    end if;
+    if exists (select 1 from public.cash_anomalies a
+                where a.lot_id = 1 and a.status <> 'open'
+                  and a.resolved_at < now() - interval '365 days') then
+        raise exception 'an old resolved anomaly survived the purge';
+    end if;
+end $$;
+
+-- anomaly: success job entrypoints and lot isolation
+do $$
+declare
+    created integer;
+    lot2 integer;
+begin
+    created := public.detect_cash_anomalies();
+    perform public.purge_cash_anomalies();
+    -- Lot 2 is invisible through the lot 1 header; a foreign id is not found.
+    select id into lot2 from public.parking_lots where id = 2;
+    insert into public.cash_anomalies (lot_id, rule, severity, dedupe_key, details)
+    values (lot2, 'zero_charge', 'low', 'test:lot2', '{}'::jsonb);
+    perform set_config('app.an_lot2', (select max(id) from public.cash_anomalies
+                                        where lot_id = lot2)::text, true);
+end $$;
+set local role authenticated;
+do $$
+declare
+    visible integer;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    if exists (select 1 from public.cash_anomalies a where a.lot_id <> 1) then
+        raise exception 'the admin saw another lot anomaly';
+    end if;
+    begin
+        perform public.resolve_cash_anomaly(
+            current_setting('app.an_lot2')::bigint, 'acknowledged'
+        );
+        raise exception 'a lot 1 admin resolved a lot 2 anomaly';
+    exception when others then
+        if sqlerrm not like '%AnomalyNotFoundError%' then raise; end if;
+    end;
+    perform set_config('request.headers', '{"x-lot-id":"999999"}', true);
+    begin
+        perform public.list_cash_anomalies();
+        raise exception 'a foreign lot header was accepted';
+    exception when others then
+        if sqlerrm not like '%LotRequiredError%' then raise; end if;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
 
 rollback;

@@ -11,6 +11,7 @@ class AppConfig {
     this.firebaseStorageBucket = '',
     this.fcmVapidKey = '',
     this.webPushVapidKey = '',
+    this.turnstileSiteKey = '',
   });
 
   final String appName;
@@ -34,6 +35,10 @@ class AppConfig {
   /// notifications page hides its toggle.
   final String webPushVapidKey;
 
+  /// Cloudflare Turnstile site key (public) for the customer booking page.
+  /// Empty hides the captcha; the secret lives only in the Edge Function.
+  final String turnstileSiteKey;
+
   bool get supabaseAuthEnabled =>
       supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty;
 
@@ -52,11 +57,10 @@ class AppConfig {
         'FIREBASE_MESSAGING_SENDER_ID',
       ),
       firebaseProjectId: String.fromEnvironment('FIREBASE_PROJECT_ID'),
-      firebaseStorageBucket: String.fromEnvironment(
-        'FIREBASE_STORAGE_BUCKET',
-      ),
+      firebaseStorageBucket: String.fromEnvironment('FIREBASE_STORAGE_BUCKET'),
       fcmVapidKey: String.fromEnvironment('FCM_VAPID_KEY'),
       webPushVapidKey: String.fromEnvironment('WEB_PUSH_VAPID_PUBLIC_KEY'),
+      turnstileSiteKey: String.fromEnvironment('TURNSTILE_SITE_KEY'),
     );
   }
 }

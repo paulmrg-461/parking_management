@@ -10,6 +10,39 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 ## [Unreleased] — 2026-11 (app reliability and operator UX)
 
 ### Fixed
+- **Settings** no longer shows a bare spinner while loading or a plain text
+  with no way out when the load fails: it paints a skeleton and an
+  `ErrorState` with **Reintentar**. The vehicle history lookup also paints a
+  skeleton instead of a spinner.
+- Settings overflowed on a 360 dp phone with large text: the currency
+  selector and the logo card (image, text and **Elegir logo** in one row).
+  Every form dropdown now sets `isExpanded` (check-in, passes, reservations,
+  bays, tariffs, users, vehicles, waitlist) so long labels ellipsize instead
+  of overflowing.
+- **Pass income leaked across lots**: `report_revenue` summed monthly-pass
+  payments of every lot (`pass_revenue` and `pass_by_payment`) inside a
+  `security definer` function, so a lot admin saw other lots' pass income in
+  their own report. `0108` scopes both reads to the active lot; the SQL suite
+  asserts it with two lots. `report_revenue_all` stays cross-lot on purpose.
+- The SQL suite no longer fails on CI's database: Supabase's default
+  privileges give `anon` ALL on new public tables, so RLS (not a privilege
+  error) hides the reservation rows; the assertion now accepts either.
+- `public-evidence` and `evidence-archive` Edge Functions were ignored by
+  `supabase/.gitignore` and not in git; they are tracked now.
+- **Web deep links were lost**: the bootstrap splash pushed its own route to
+  the browser history before the router existed, so `/reserve?lot=1`,
+  `/policies?lot=1` and the receipt `/evidence?…` links all landed on
+  `/login`. `main()` now captures the browser URL (`initialRouteFrom`) before
+  the first frame and hands it to the router; mobile still starts home.
+- Exported PDFs no longer contain a missing glyph where the report/records
+  date range used an em dash: the built-in Helvetica font has no em/en dash,
+  so PDFs now use `Formatters.pdfDateRange` (ASCII hyphen). On-screen labels
+  keep the typographic dash.
+- Reports: the variation line ("vs previous period") now wraps on narrow
+  screens instead of overflowing its summary card.
+- Capacity rows (home capacity card) no longer overflow with large
+  accessibility text: the label clamps to two lines and the counter is
+  flexible and ellipsized.
 - Device preferences (auto-lock, language, appearance, sidebar state) were lost
   on a cold start: `HiveKeyValueStore.get` is synchronous and only reads open
   boxes, and the `preferences` box was opened only on the first `put`. `init()`
@@ -35,6 +68,322 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Added
 
+- **Cash anomaly detection** (`0110`,
+  `openspec/changes/add-cash-anomaly-detection`). Eight deterministic rules over
+  the rows the lot already has, so the admin stops finding the leak patterns by
+  browsing:
+  - Repeated shift shortages per operator, lost-ticket rate against the lot
+    baseline, adjustments after close, zero-charge check-outs that are not
+    passes, lost tickets on very short stays, discount share per admin, shifts
+    open too long and sessions open for many days.
+  - One row per anomaly (`cash_anomalies`), deduped per lot and subject so
+    nothing is raised twice; a dismissed anomaly never comes back.
+  - Thresholds live in `anomaly_settings`, **admin-only** (operators can read
+    `parking_settings`), tunable from the new "Anomalías" screen.
+  - Review workflow: acknowledge or dismiss with a note, audited with the actor.
+    One summary notification per lot and run goes to the admins (deep link to
+    `/anomalies`); low-severity findings stay in the page.
+  - Detection and retention run from the jobs container. Everything is
+    remote-only and read-mostly: nothing blocks or reverses a transaction.
+- **Occupancy forecast** (`0109`, `openspec/changes/add-occupancy-forecast`).
+  The home dashboard and the public page could only say how full the lot is
+  *now*. The system now answers "will it be full at 6 pm?":
+  - `occupancy_profile` stores, per lot, group, weekday and hour, the **median**
+    of the last K same-weekday days, rebuilt by the job runner (six-hour
+    throttle); `occupancy_grid` rebuilds the hourly net occupancy from the
+    entry/exit timestamps and caps a stuck-open session at 72 h.
+  - `occupancy_forecast` blends the profile with today's live deviation (fading
+    15 % per hour), clamps to capacity, reports the first crossing as `full_at`
+    and labels confidence from the sample count. Below the minimum history it
+    says so instead of guessing.
+  - The public page gets an aggregate-only strip ("¿Cuándo se llena?") through a
+    new `forecast` key: levels, deadline and confidence, never counts or plates.
+    `public_availability` is now a thin wrapper around
+    `public_availability_base`, so later changes edit the base function.
+  - `occupancy_forecast_backtest` replays the algorithm over past weeks and
+    compares it with the profile alone ("Precisión del pronóstico" in reports).
+  - Six per-lot settings through `get/set_forecast_settings` (RPC only).
+- **Booking waitlist** (`0106`, `0107`,
+  `openspec/changes/add-booking-waitlist`). When every category is full the
+  public page used to say "call us" and the customer left. Now they can join a
+  queue with name, mobile, plate, how long they can wait and how long they want
+  the space held:
+  - An offer is a **real hold** (`category_reservations.source = 'waitlist'`)
+    created through the same capacity check as any other hold, so an offer can
+    never overbook. Claiming extends it and flips it to a normal web booking.
+  - FIFO per group; the dispatch runs inside the capacity-freeing transaction
+    (check-out, released hold, repaired bay, raised capacity) with a try-lock so
+    it can never block or break the original write. A missed dispatch lands in
+    `waitlist_kicks` and the job drains it.
+  - Limits: one active turn per plate, two per mobile, `waitlist_max_entries`
+    per lot, the booking hourly ceiling and the same captcha gate.
+  - Desk: "Lista de espera" section on `/reservations` (call, give the space,
+    remove) and an admin dialog for the three settings. Lot members get
+    notifications; the offer queues a `waitlist_offer` WhatsApp template.
+  - Reports: `report_reservations` excludes unclaimed offers from the booking
+    counts and adds a waitlist block.
+  - Off by default (`waitlist_enabled`), and every waitlist call is online only.
+- **Offline edits never overwrite each other silently**
+  (`0105`, `openspec/changes/add-offline-conflict-resolution`).
+  `vehicles`, `tariffs`, `categories` and `parking_settings` carry a `version`
+  column bumped by a trigger only when the row really changes. Every client
+  edit sends the version it was based on (and the `x-versioned-write` header
+  the guard requires), so a concurrent change becomes a **conflict** instead of
+  a last-write-wins overwrite:
+  - Disjoint field edits **auto-merge** without asking (three-way merge on the
+    cached base row, up to three rounds).
+  - Overlapping fields are **parked** in the outbox and never replayed until
+    the operator decides, from the sync badge: *Resolver conflicto* shows the
+    before / mine / server values per field with keep-mine, keep-theirs and
+    per-field selection. Deletes are covered too (delete vs edit, edit vs
+    delete).
+  - Settings save only the fields that actually changed, so a text edit cannot
+    clobber a logo someone else uploaded.
+  - `set_row_version_policy(true)` (after setting `min_app_version`) refuses
+    version-unaware clients for a site; it is off by default.
+- **Bot protection on the public booking page** (`0103`,
+  `openspec/changes/add-public-booking-captcha`). Two controls per lot:
+  - *Hourly ceiling*, no credentials needed: at most
+    `parking_settings.public_booking_hourly_limit` public holds (default 20)
+    are created per lot in any hour; the next one gets `BookingThrottledError`
+    and a "try again in a few minutes or call" message. Cancelled holds still
+    count; staff reservations neither count nor are refused.
+  - *Cloudflare Turnstile*, inert without keys: the new `public-booking` Edge
+    Function verifies the token with `TURNSTILE_SECRET_KEY` and books through
+    `public_create_reservation_verified` (service role only). A lot with
+    `public_booking_captcha = true` refuses the anonymous RPC
+    (`CaptchaRequiredError`), so the captcha cannot be skipped with a direct
+    call. Lot admins switch it with
+    `set_public_booking_protection(p_captcha, p_hourly_limit)`.
+  The web form renders the widget when built with
+  `--dart-define=TURNSTILE_SITE_KEY=...`, blocks the submit until it is
+  solved, and recovers from expiry/failure with a retry (ES/EN). With no keys
+  and the switch off (default) the page books exactly as before, plus the
+  ceiling.
+
+- **Home trend card**: `0080_dashboard_trend` adds `dashboard_trend(p_days)`, a
+  lot-scoped, operator-callable daily series (revenue, entries, exits) in the
+  site's business timezone. Days without movement come back as zeroes, so the
+  home dashboard paints the last 7 days as bars scaled to the best day, with
+  weekly revenue/entries/exits totals, a quiet-week message, a loading skeleton
+  and an admin shortcut to reports.
+- **Week-over-week insight**: the home trend now loads fourteen days and
+  compares the current week with the previous one (`+18 %` in success tone,
+  warning tone when revenue drops, "same as last week" when flat). It is
+  hidden when the previous week has no revenue to compare against.
+- **Bay maintenance history**: taking a bay out of service (or bringing it
+  back) now asks for an optional reason (3–200 characters) and records who,
+  when and why in `parking_spot_events` (`0081`): lot-scoped RLS, written by
+  `save_parking_spot` in the same transaction that changes the status, so the
+  log cannot drift. The bay editor shows **Ver historial** with the last
+  transitions (skeleton, empty and retry states); operators can read it, only
+  admins can change a bay. Any map edit refreshes the home board.
+- **Offline dashboard**: the home keeps the last successful occupancy, today,
+  trend and capacity snapshot on the device (versioned JSON, one entry per
+  site). When a load fails the operator still sees those KPIs with a
+  "Sin conexión · datos guardados de las HH:mm" notice and a retry, instead of
+  an empty dashboard; the live space board and inside list are hidden because
+  they would be stale. A partial load (one RPC failed) never overwrites a
+  complete snapshot.
+- **Hourly traffic on reports**: `0082` adds `report_hourly_traffic(start,
+  end)` (admin, lot-scoped, business timezone) with entries and exits for all
+  24 hours. The reports screen renders a compact hour grid sized for the
+  screen (4/6/8 columns), scaled to the busiest entry hour, with a peak-hour
+  summary, per-hour tooltip/semantics, an empty state and a legend. A failed
+  hourly RPC degrades to the empty grid without failing the report.
+- **Month presets and hourly exports**: the report range now offers **Este
+  mes** and **Mes anterior** with calendar boundaries, shown as chips in the
+  filter bar (they wrap on phones instead of squeezing a segmented button).
+  The CSV gains `hourly_entries`/`hourly_exits` raw rows and the PDF a
+  "Tráfico por hora" table, both limited to hours with movement.
+- **Audit search**: the audit screen has a debounced free-text field matching
+  the entity id, table, actor (username/display name), plate and name — for
+  example a plate from a support call — combinable with the table, actor and
+  date filters. `0083` recreates `list_audit_log` with `p_search` and fixes the
+  old ordering bug where the page limit was applied before the actor filter.
+- **In-app evidence viewer**: `0084` exposes `photo_count` per session in
+  `vehicle_history` (scoped to the active lot). The vehicle history now offers
+  "Ver evidencias (N)" when a session has photos or videos; a bottom sheet
+  signs Storage URLs on demand and shows a photo grid (tap to zoom) and video
+  tiles with a play action, with loading, empty and error+retry states. Listing
+  stays protected by the lot RLS; a file whose signature fails is kept as an
+  unavailable tile instead of hiding the row.
+- **Evidence from check-out**: the open-session row shows an "Evidencias (N)"
+  chip when the car has photos/videos, so an operator can review the entry
+  evidence without leaving the exit flow. It opens the same viewer and wraps
+  with the other status chips on phones.
+- **Evidence from records**: `0086` adds the photo count to `session_records`,
+  so each activity-log row with evidence offers "Evidencias (N)" under its
+  times. The log reuses the same viewer (signed URLs, zoom, video, retry); the
+  evidence is only queried when the operator taps it.
+- **First-steps checklist**: `0085` adds `lot_setup_status()` with the active
+  site's categories, active tariffs, capacity/active bays and identity flags.
+  Admins of a new site see a **Primeros pasos** card on the home with a
+  4-step progress bar (categories, tariffs, capacity/map, address + phone) and
+  a shortcut to the screen that fixes each step; operators never see it and it
+  hides once the site is complete. A failed status call hides the card instead
+  of showing a false "not configured" state.
+- **Daily revenue chart in the PDF**: the exported report draws a compact bar
+  chart of revenue by day above the table (scaled to the best day, with the
+  first and last dates underneath), so the period's shape is visible without
+  reading every row. Quiet periods keep zero-height bars and an empty range
+  skips the chart.
+- **Hourly chart in the PDF**: the hourly section now also draws 24 bars
+  scaled to the busiest entry hour, with 00/06/12/18/23 labels above the
+  table. Exits stay in the table, so the chart answers "when is the gate
+  busiest?" at a glance.
+- **Branded startup**: the app shows a splash (logo + loading) for the first
+  frame while the session and lot memberships restore, instead of waiting on
+  the network before the first `runApp` (a blank screen on slow links). The
+  real app replaces the splash once the restore resolves; corrupt local
+  storage falls back to login instead of leaving the splash forever.
+- **Search vehicles by owner**: the registry search now matches the plate, the
+  owner name or the owner phone (`plate.ilike` OR `owner_name.ilike` OR
+  `owner_phone.ilike`, quoted so names with spaces/commas work), and the
+  offline cache filter mirrors it. The field label/hint say so; owner data was
+  already captured, so no schema change was needed.
+- **Owner search in monthly passes**: the passes search now also matches the
+  owner name or phone, for both passes and pending charges (resolved through
+  the loaded vehicles); the empty state and count follow the same filter.
+- **History from the registry**: each vehicle row has a "Ver historial"
+  action (48 dp) that opens `/history?plate=…`, so finding a car by owner name
+  or phone and reviewing its visits takes one tap. The row fits a 400 px phone
+  with the three actions.
+- **Check-in from the history**: a vehicle with no open session offers
+  "Registrar entrada" in its history, opening `/check-in?plate=…` with the
+  plate prefilled; a vehicle already inside keeps "Cobrar en caja".
+- **Public booking page**: `/reserve?lot=<id>` is a public, mobile-first page
+  served by the self-hosted web host. It shows the lot identity and real
+  availability per vehicle category (`public_availability`, anon), lets the
+  customer pick a category and duration (1/2/4/8 h), and creates a hold with
+  plate, **name** and **mobile phone** (`public_create_reservation`).
+  The confirmation carries the reservation code, until, lot contact, call and
+  WhatsApp actions. Guards: 10-minute minimum / 24-hour maximum window, one
+  active hold per plate, two active public holds per phone, invalid plates
+  rejected, the name is required and the phone has to be a Colombian mobile
+  (10 digits starting with 3, optional +57, stored without the country code),
+  and a full category/group is refused. The capacity rules are
+  shared with the operator path, and anon cannot read the reservation table.
+  The page is linked from the public policy page and the evidence page.
+- **Scheduled jobs actually run**: `docker-compose.yml` gains `supabase-jobs`,
+  a small container that calls the retention/notification functions every 5
+  minutes (expire unused holds, renew passes, overstay and expiring-pass
+  alerts, purge old notifications/audit/idempotency/WhatsApp rows) and
+  dispatches pending push/WhatsApp messages. Neither the stock Postgres image
+  (no pg_cron) nor this host (no cron daemon) ran them before, so stale holds
+  stayed `active` forever and push never left the queue.
+- **Directions and live numbers**: the `/reserve` hero offers "Cómo llegar"
+  (Google Maps search for the lot address, `core/utils/maps_launcher.dart`)
+  next to the phone and WhatsApp actions, and the availability re-reads itself
+  every minute without flashing the skeleton, so a customer deciding on the
+  page never reads stale numbers.
+- **Web login no longer hangs over plain HTTP**: the session was persisted with
+  `flutter_secure_storage`, whose browser backend needs a secure context
+  (HTTPS or localhost). On the LAN address the auth call succeeded but the
+  storage call never resolved, leaving the Sign in button spinning forever and
+  nothing in localStorage. The web build now uses GoTrue's localStorage store;
+  mobile keeps the Keychain/Keystore.
+- **The board refreshes after check-in**: coming back from "Registrar entrada"
+  reloads the list, so the hold that just turned into a stay disappears
+  instead of lingering until a manual refresh.
+- **Month-over-month and year-over-year reports**: the reports screen has a
+  "Comparación por periodo" section (6 or 12 months) with the month, the month
+  before it and the same month last year — revenue, entries, exits, average
+  ticket and stay, pass revenue and reservations. A running month is compared
+  against the same elapsed days and labelled partial; a delta chip only shows
+  when the base existed, had activity and is comparable. CSV and PDF export
+  include it. New `report_period_comparison` RPC plus the missing
+  `(lot_id, exit_time)` index.
+- **Reservations CSV**: the board has "Copiar CSV" (visible rows, filters
+  included) with the code, plate, category, ISO expiry, customer, phone,
+  source, status and grace flag, escaped for Excel — reception can print the
+  shift list or hand it to the accountant.
+- **The web no longer needs the internet**: the release build ships
+  CanvasKit inside the app (`--no-web-resources-cdn`), so a LAN without
+  outbound access still renders; verified with gstatic/googleapis blocked.
+- **The lot's cancellation reaches the customer**: when an operator cancels a
+  web hold, `cancel_reservation` queues a `reservation_cancelled` WhatsApp
+  (name, plate, lot) if automated messaging is on, so nobody travels for a
+  space that is gone. Operator holds are untouched (no phone was collected).
+- **Cover photo for the public page**: Ajustes has "Portada de la página
+  pública" (wide image, `branding/cover_<lot>`, lot-admin RPC
+  `set_branding_cover`); `/reserve` shows it as a 16:9 banner above the lot
+  identity, with the logo and a placeholder when there is no cover.
+- **Reminder before the hold lapses**: `notify_expiring_reservations()` queues
+  a `reservation_reminder` WhatsApp one hour before `reserved_until` (only
+  public holds with a mobile and automated WhatsApp on), stamped with
+  `reminder_sent_at` so the 5-minute job never repeats it. The jobs service
+  runs it every cycle.
+- **Check-in by reservation code**: the check-in screen lists the active holds
+  ("Buscar reserva (N)") with the code the customer shows (#7), the plate, the
+  customer and the expiry; picking one fills the plate and runs the lookup, so
+  reception does not have to ask for it.
+- **Did the web page bring cars in?**: the reports screen has a "Reservas de
+  cupo" section with the holds created in the period, how many came from
+  `/reserve`, the share that turned into a stay, and the cancelled/expired
+  count (`report_reservations`, admin, business-timezone window).
+- **The grace window is a setting**: "Tolerancia de reservas (min)" in Ajustes
+  (0..120, default 15) is the single value the capacity check, public
+  availability, check-in and the board read. `0` disables it: the hold stops
+  counting exactly on time.
+- **One owner for the grace window**: the reservations board now loads through
+  `list_active_reservations()`, which applies `reservation_grace()` and
+  returns an `in_grace` flag. The Dart copy of the 15 minutes (and the
+  PostgREST date arithmetic) is gone, so changing the window in SQL can no
+  longer disagree with the app.
+- **A full lot says so**: when every vehicle type is at capacity, `/reserve`
+  hides the booking form (a form nobody can submit is a dead end) and shows
+  "No hay cupo en este momento" with the call/WhatsApp actions; the code
+  lookup stays, so a returning customer can free their own hold and the
+  one-minute refresh brings the form back as soon as a spot opens.
+- **The customer gets the booking on WhatsApp**: with "automated WhatsApp" on,
+  a public hold queues a `reservation_confirmed` message (name, plate, time,
+  lot) that `whatsapp-dispatch` sends once the Meta token and the approved
+  template exist — nothing is sent while the switch is off. The queue now
+  ages out pending rows too (90 days), so a lot without credentials does not
+  accumulate them forever.
+- **Grace window for late customers**: `reservation_grace()` (15 minutes) is
+  honoured by the shared capacity check, `public_availability` and `check_in`,
+  so a customer who arrives a few minutes late still has the space: the hold
+  keeps counting until the window ends and check-in turns it into `used`
+  instead of leaving a stale row. The board keeps those holds visible with an
+  "En tolerancia" chip.
+- **The reservation code reaches reception**: each card on the reservations
+  board shows the code the customer was given (`#7 · Hasta 20:35`) and the
+  search matches it, so the front desk can act on the number printed on the
+  confirmation instead of asking for the plate. "Registrar entrada" on the
+  card still opens check-in with the plate prefilled.
+- **"Web only" filter**: the reservations board can show just the holds that
+  came from the public page, next to "por vencer", and the filter chip resets
+  with "limpiar filtros".
+- **Prices on the public page**: each vehicle card shows the lot's real
+  hourly tariff ("Desde $5.000/hora") from `tariffs` (`type='hourly'`,
+  active), formatted with the lot currency; a category without a tariff says
+  "Tarifa en recepción" instead of inventing a number.
+- **"Already booked?" lookup**: the public page ends with a code + mobile form
+  (`public_reservation_lookup`, anon) that retrieves the active hold and lets
+  the customer cancel it without the confirmation screen. It returns null for
+  a wrong code/phone, an expired hold or an operator hold, so only the
+  customer's own visible booking is exposed.
+- **Customers can give the space back**: the `/reserve` confirmation offers
+  "Cancelar reserva" (with a confirmation dialog) and ends on a
+  "Reserva cancelada" screen. `public_cancel_reservation(code, plate, phone)`
+  (anon) only cancels `source = 'public'` holds and needs all three values, so
+  a plate alone is not enough to free someone else's space; availability
+  refreshes right away. The hold is marked `cancelled` (history is kept).
+- **Operators run the reservations board**: `/reservations` joined the operator
+  allowlist (with its "Ver reservas" shortcut on the home dashboard), because
+  whoever is at the desk hands the web bookings to the customer. The management
+  section on Home now lists only the sections the signed-in role may use.
+- **Who booked from the web**: the reservations board now shows the customer's
+  name and mobile, a "Web" badge for holds created on `/reserve`, and one-tap
+  call/WhatsApp actions, so the front desk can reach the person before they
+  arrive. Search matches the plate, the name or the phone.
+- **Web bookings alert the lot**: every public hold leaves a
+  `public_reservation` notification for every active member of the lot (admins
+  and operators, who now work the board), with the plate, the customer and the
+  expiry in the lot's timezone; tapping it opens the reservations board.
+  Deduplicated per reservation and user.
 - **Emergency action**: a red police icon in every app bar (and an entry in the
   desktop sidebar footer and the phone drawer) opens a one-tap panel with the
   site location, the nearest police quadrant and a large **Call now** button.
@@ -97,6 +446,20 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Hardened
 
+- Check-in no longer downloads the 200-vehicle suggestion page on open: known
+  plates load when the operator types the second character (a failed attempt
+  is remembered so typing does not hammer the endpoint). On open it also
+  refreshes only the **capacity snapshot** when the shell already has the
+  dashboard loaded (one request instead of the six/seven KPI reads); a
+  successful entry still does the full refresh so home counters stay current.
+- Shift, reservations and monthly-pass screens load their independent reads
+  concurrently instead of chaining round trips: current shift + history,
+  active reservations + categories, and passes + pending payments + vehicles +
+  tariffs now start together (each keeping its own failure handling). Tests
+  gate the first call and assert the second already started.
+- Home dashboard reads are concurrent: occupancy first, then today, trend,
+  capacity, the space board and the inside list run together (each degrading on
+  its own), instead of six serial round trips.
 - Ops: optional `BACKUP_REMOTE` offsite copy with `rclone` (job fails if the
   copy fails), backup-age and disk warnings in `healthcheck.sh`, and systemd
   units/timers for healthcheck, cron and nightly backups
@@ -117,6 +480,9 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   release-only failures are caught before shipping.
 
 ### Changed (UX)
+- The home KPI grid paints `SkeletonCard` placeholders (shared pulse, static
+  under reduce motion) while the first dashboard load is in flight, instead of
+  mixing a progress bar with cards that appeared one by one.
 - Charge rows show a busy spinner, ignore double taps and are fully tappable.
 - Payment dialog: live total after discount, per-field errors, "Cobrar $X"
   button, "Exacto" and banknote shortcuts for cash received.

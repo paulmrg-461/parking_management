@@ -23,30 +23,44 @@ void main() {
     expect(state.entries.single.actor, 'admin');
   });
 
-  test('Success: filters reach the repository and are kept in the state',
-      () async {
-    final from = DateTime(2026, 10, 1);
-    final to = DateTime(2026, 10, 31);
+  test(
+    'Success: filters reach the repository and are kept in the state',
+    () async {
+      final from = DateTime(2026, 10, 1);
+      final to = DateTime(2026, 10, 31);
 
-    await cubit.load(from: from, to: to, table: 'users', actor: 'admin');
+      await cubit.load(from: from, to: to, table: 'users', actor: 'admin');
 
-    expect(repository.lastFrom, from);
-    expect(repository.lastTable, 'users');
-    expect(repository.lastActor, 'admin');
-    expect((cubit.state as AuditLoaded).table, 'users');
-    expect((cubit.state as AuditLoaded).actor, 'admin');
-  });
+      expect(repository.lastFrom, from);
+      expect(repository.lastTable, 'users');
+      expect(repository.lastActor, 'admin');
+      expect((cubit.state as AuditLoaded).table, 'users');
+      expect((cubit.state as AuditLoaded).actor, 'admin');
+    },
+  );
 
   test('Success: clearing filters drops the previous selection', () async {
-    await cubit.load(table: 'users');
+    await cubit.load(table: 'users', search: 'ABC');
 
     await cubit.load(clearFilters: true);
 
     expect(repository.lastTable, isNull);
     expect(repository.lastActor, isNull);
+    expect(repository.lastSearch, isNull);
     expect((cubit.state as AuditLoaded).table, isNull);
     expect((cubit.state as AuditLoaded).actor, isNull);
+    expect((cubit.state as AuditLoaded).search, isNull);
   });
+
+  test(
+    'Success: free-text search reaches the repository and is kept',
+    () async {
+      await cubit.load(search: 'ABC123');
+
+      expect(repository.lastSearch, 'ABC123');
+      expect((cubit.state as AuditLoaded).search, 'ABC123');
+    },
+  );
 
   test('Failure: a rejected load is an AuditFailure with the code', () async {
     repository.error = const ValidationFailure(

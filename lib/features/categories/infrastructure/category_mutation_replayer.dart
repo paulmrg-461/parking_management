@@ -2,6 +2,7 @@ import '../../../core/sync/mutation_replayer.dart';
 import '../../../core/sync/pending_mutation.dart';
 import 'category_local_data_source.dart';
 import 'category_remote_data_source.dart';
+import 'models/category_dto.dart';
 
 /// Replays queued category `update`/`delete` directly against the API.
 class CategoryMutationReplayer extends MutationReplayer {
@@ -14,20 +15,31 @@ class CategoryMutationReplayer extends MutationReplayer {
   MutationEntity get entity => MutationEntity.category;
 
   @override
-  Future<void> replay(PendingMutation mutation) async {
+  Future<int?> replay(PendingMutation mutation) async {
     final id = mutation.entityId!;
     if (mutation.operation == MutationOperation.delete) {
-      return _remote.delete(id);
+      await _remote.delete(id, baseVersion: mutation.baseVersion);
+      return null;
     }
-    final payload = mutation.decodePayload();
-    final name = payload['name'] as String?;
-    if (name != null) {
-      await _local.upsert(await _remote.update(id, name));
+    // The repository queues the whole row (name + capacity) so replaying a
+    // rename never drops a queued capacity change, and vice versa.
+    final updated = await _remote.patch(
+      id,
+      mutation.decodePayload(),
+      baseVersion: mutation.baseVersion,
+    );
+    await _local.upsert(updated);
+    return updated.version;
+  }
+
+  @override
+  Future<void> adoptServer(Map<String, dynamic>? row) async {
+    if (row == null) {
       return;
     }
-    final capacity = payload['capacity'] as int?;
-    if (capacity != null) {
-      await _local.upsert(await _remote.setCapacity(id, capacity));
+    final category = CategoryDto.fromJson(row).toDomain();
+    if (category.id != null) {
+      await _local.upsert(category);
     }
   }
 }

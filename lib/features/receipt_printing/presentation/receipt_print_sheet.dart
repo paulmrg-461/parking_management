@@ -128,10 +128,7 @@ class _BluetoothPrinterList extends StatelessWidget {
               ),
             )
           else if (state.printers.isEmpty)
-            Text(
-              l10n.printNoPrinters,
-              style: theme.textTheme.bodySmall,
-            )
+            Text(l10n.printNoPrinters, style: theme.textTheme.bodySmall)
           else
             for (final printer in state.printers)
               ListTile(
@@ -139,12 +136,11 @@ class _BluetoothPrinterList extends StatelessWidget {
                 leading: const Icon(Icons.print),
                 title: Text(printer.name),
                 subtitle: Text(printer.address),
-                onTap: () =>
-                    context.read<PrinterCubit>().print(
-                      printer,
-                      data,
-                      ReceiptLabels.forLanguage(l10n.localeName),
-                    ),
+                onTap: () => context.read<PrinterCubit>().print(
+                  printer,
+                  data,
+                  ReceiptLabels.forLanguage(l10n.localeName),
+                ),
               ),
         ],
       ),

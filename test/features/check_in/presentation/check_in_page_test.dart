@@ -92,6 +92,7 @@ class _FakeVehicleRepository implements VehicleRepository {
   _FakeVehicleRepository({this.plates = const []});
 
   final List<String> plates;
+  int listPageCalls = 0;
 
   static const known = Vehicle(
     id: 7,
@@ -105,8 +106,9 @@ class _FakeVehicleRepository implements VehicleRepository {
   Future<PagedResult<Vehicle>> listPage({
     int offset = 0,
     int limit = defaultPageSize,
-    String? plate,
+    String? query,
   }) async {
+    listPageCalls++;
     final items = [
       for (final (index, value) in plates.indexed)
         Vehicle(id: index + 1, plate: value, categoryId: 1),
@@ -130,7 +132,7 @@ class _FakeVehicleRepository implements VehicleRepository {
       throw UnimplementedError();
 
   @override
-  Future<void> delete(int id) => throw UnimplementedError();
+  Future<void> delete(int id, {int? baseVersion}) => throw UnimplementedError();
 }
 
 class _FakeCategoryRepository implements CategoryRepository {
@@ -150,14 +152,15 @@ class _FakeCategoryRepository implements CategoryRepository {
   Future<Category> create(String name) => throw UnimplementedError();
 
   @override
-  Future<Category> update(int id, String name) => throw UnimplementedError();
-
-  @override
-  Future<Category> setCapacity(int id, int capacity) =>
+  Future<Category> update(int id, String name, {int? baseVersion}) =>
       throw UnimplementedError();
 
   @override
-  Future<void> delete(int id) => throw UnimplementedError();
+  Future<Category> setCapacity(int id, int capacity, {int? baseVersion}) =>
+      throw UnimplementedError();
+
+  @override
+  Future<void> delete(int id, {int? baseVersion}) => throw UnimplementedError();
 }
 
 class _FakeCapture implements PlateImageCapture {
@@ -222,6 +225,8 @@ void main() {
     void Function(BuildContext context, String plate)? onMarkExit,
     ReservationRepository? reservations,
     List<String> knownPlates = const [],
+    _FakeVehicleRepository? vehicles,
+    bool preloadDashboard = false,
     bool withVehicles = true,
     Future<XFile?> Function()? recordVideo,
     int? initialSpotId,
@@ -237,6 +242,11 @@ void main() {
     occupancy = FakeCheckOutRepository(categories: occupancyCategories)
       ..capacityToReturn = space
       ..slotBoardToReturn = board ?? SlotBoard.empty;
+    final dashboard = DashboardCubit(occupancy);
+    addTearDown(dashboard.close);
+    if (preloadDashboard) {
+      await dashboard.load();
+    }
     await tester.pumpWidget(
       testApp(
         MultiBlocProvider(
@@ -244,9 +254,7 @@ void main() {
             BlocProvider<CheckInCubit>(
               create: (_) => CheckInCubit(CreateCheckIn(checkIns), checkIns),
             ),
-            BlocProvider<DashboardCubit>(
-              create: (_) => DashboardCubit(occupancy),
-            ),
+            BlocProvider<DashboardCubit>.value(value: dashboard),
             BlocProvider<VehicleLookupCubit>(
               create: (_) => VehicleLookupCubit(
                 _FakeVehicleRepository(),
@@ -268,9 +276,11 @@ void main() {
             onMarkExit: onMarkExit,
             reservations: reservations,
             recordVideo: recordVideo,
-            vehicles: withVehicles
-                ? _FakeVehicleRepository(plates: knownPlates)
-                : null,
+            vehicles:
+                vehicles ??
+                (withVehicles
+                    ? _FakeVehicleRepository(plates: knownPlates)
+                    : null),
           ),
         ),
       ),
@@ -759,6 +769,32 @@ void main() {
     expect(find.text('Motorcycle'), findsOneWidget);
   });
 
+  testWidgets('Success: a hold is picked by its code from check-in', (
+    tester,
+  ) async {
+    final holds = FakeReservationRepository([
+      sampleReservation(id: 7, plate: 'CODE07', categoryName: 'car'),
+      sampleReservation(id: 9, plate: 'CODE09', categoryName: 'moto'),
+    ]);
+    await pumpPage(tester, reservations: holds);
+    await scrollTo(tester, find.byKey(const Key('check_in_hold_lookup')));
+
+    await tester.tap(find.byKey(const Key('check_in_hold_lookup')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Reservas activas'), findsOneWidget);
+    expect(find.text('#7'), findsOneWidget);
+    expect(find.text('CODE09'), findsOneWidget);
+
+    await tester.tap(find.text('CODE07'));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.widget<TextField>(find.byType(TextField).first).controller!.text,
+      'CODE07',
+    );
+  });
+
   testWidgets('Success: an active hold can be cancelled from check-in', (
     tester,
   ) async {
@@ -803,6 +839,36 @@ void main() {
     await enterPlate(tester, 'A');
 
     expect(find.byType(ActionChip), findsNothing);
+  });
+
+  testWidgets('Success: known plates load only after the second character', (
+    tester,
+  ) async {
+    final vehicles = _FakeVehicleRepository(plates: ['ABC123']);
+    await pumpPage(tester, vehicles: vehicles);
+
+    expect(vehicles.listPageCalls, 0);
+
+    await tester.enterText(plateField(), 'A');
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.pumpAndSettle();
+    expect(vehicles.listPageCalls, 0);
+
+    await tester.enterText(plateField(), 'AB');
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.pumpAndSettle();
+    expect(vehicles.listPageCalls, 1);
+  });
+
+  testWidgets('Success: a loaded dashboard refreshes only capacity', (
+    tester,
+  ) async {
+    await pumpPage(tester, preloadDashboard: true);
+
+    // The preloaded dashboard did one occupancy read; opening check-in only
+    // adds a capacity read, not the whole six-request dashboard load.
+    expect(occupancy.occupancyCalls, 1);
+    expect(occupancy.capacityCalls, 2);
   });
 
   testWidgets('Security: suggestions stay off without a repository', (

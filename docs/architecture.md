@@ -121,6 +121,11 @@ sequenceDiagram
 - GoTrue rotates tokens; the auth-state listener rewrites the Hive snapshot.
 - Logout clears reference-data caches and signs out locally; the outbox is
   **never** cleared (work done offline must still reach the server).
+- The home dashboard keeps its last successful KPIs (occupancy, today, trend
+  and capacity) in the Hive `cache` box, keyed by site. When a load fails the
+  cubit serves that snapshot with `cachedAt`, the UI marks it as offline data
+  and hides the live board/inside list; the next complete load rewrites it.
+  A degraded load (one KPI failed) never overwrites a complete snapshot.
 
 ## 4. Check-in (online and offline)
 
@@ -162,6 +167,29 @@ Key invariants:
   minute skew tolerance), so billing starts when the operator acted.
 - The lot is captured at enqueue time and validated by `resolve_lot()`, so a
   queued entry lands in the site where it happened even after a lot switch.
+
+### Outbox states
+
+```mermaid
+stateDiagram-v2
+  [*] --> Pending: mutation queued (payload + baseVersion + base snapshot)
+  Pending --> [*]: replayed (settled)
+  Pending --> Pending: ServerFailure / backoff, or auto-merge rebased
+  Pending --> DeadLetter: ValidationFailure (never retried)
+  Pending --> Conflict: VersionConflictFailure (needs a human)
+  Conflict --> Pending: keep mine / merge fields / keep delete (rebased)
+  Conflict --> [*]: keep theirs / accept deletion (adopt server row)
+  DeadLetter --> [*]: discarded by the operator
+```
+
+`version` columns (`vehicles`, `tariffs`, `categories`, `parking_settings`)
+plus the `x-versioned-write` header make a stale write a conflict instead of a
+silent overwrite. The outbox entry keeps the version and the cached row it was
+based on, so `SyncService` can three-way merge disjoint field edits without
+asking; only overlapping fields reach the operator, who chooses per field in
+the conflict dialog. Conflicts are parked (`needsResolution`) and never
+replayed until resolved. Check-in/check-out are safe by idempotency instead of
+by version.
 
 ## 5. Check-out and billing
 
@@ -265,6 +293,7 @@ platform admins can request the consolidated view.
 | No application server | One deployable, no duplicated business rules, RLS is the boundary. |
 | SQL RPCs own logic | Billing/capacity must be atomic; the client cannot be trusted. |
 | Hive + outbox instead of live-sync | A parking lot loses connectivity; operators must keep working. |
+| Row `version` + field-level merge instead of last-write-wins | Two operators editing the same tariff/category/settings row must not silently overwrite each other; disjoint edits still merge without asking. |
 | Header-selected lot (mandatory) | No re-login to switch sites; validated server-side, so it is only a selector. Missing header fails closed. |
 | PDF/thermal receipts, no e-invoicing | Product scope: internal receipt only. |
 | Separate `admin-users` function | GoTrue admin API needs the service key; it must never reach the app. |

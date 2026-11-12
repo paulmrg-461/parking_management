@@ -5,13 +5,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/features/records/application/records_cubit.dart';
 import 'package:parking_management/features/records/presentation/records_page.dart';
 
+import 'package:parking_management/features/evidence/domain/repositories/session_evidence_repository.dart';
+
 import '../../../helpers/fake_record_repository.dart';
+import '../../../helpers/fake_session_evidence_repository.dart';
 import '../../../helpers/test_app.dart';
 
 Future<RecordsCubit> pumpPage(
   WidgetTester tester,
   FakeRecordRepository repository, {
   void Function(BuildContext, String)? onOpenHistory,
+  SessionEvidenceRepository? evidence,
 }) async {
   tester.view.physicalSize = const Size(800, 1200);
   tester.view.devicePixelRatio = 1;
@@ -22,7 +26,10 @@ Future<RecordsCubit> pumpPage(
     testApp(
       BlocProvider<RecordsCubit>.value(
         value: cubit,
-        child: RecordsPage(onOpenHistory: onOpenHistory),
+        child: RecordsPage(
+          onOpenHistory: onOpenHistory,
+          evidenceRepository: evidence,
+        ),
       ),
     ),
   );
@@ -60,10 +67,7 @@ void main() {
     ]);
     await pumpPage(tester, repository);
 
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Placa'),
-      'LCR',
-    );
+    await tester.enterText(find.widgetWithText(TextField, 'Placa'), 'LCR');
     await tester.pumpAndSettle();
 
     expect(repository.lastPlate, 'LCR');
@@ -93,6 +97,24 @@ void main() {
     expect(opened, 'ABC123');
   });
 
+  testWidgets('Success: a record with photos opens the evidence viewer', (
+    tester,
+  ) async {
+    final evidence = FakeSessionEvidenceRepository();
+    await pumpPage(
+      tester,
+      FakeRecordRepository([sampleRecord(id: 1, photoCount: 2)]),
+      evidence: evidence,
+    );
+
+    expect(find.text('Evidencias (2)'), findsOneWidget);
+    await tester.tap(find.text('Evidencias (2)'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Evidencias de ABC123'), findsOneWidget);
+    expect(evidence.calls, 1);
+  });
+
   testWidgets('Failure: an unknown plate shows the empty state', (
     tester,
   ) async {
@@ -101,10 +123,7 @@ void main() {
       FakeRecordRepository([sampleRecord(id: 1, plate: 'ABC123')]),
     );
 
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Placa'),
-      'ZZZ',
-    );
+    await tester.enterText(find.widgetWithText(TextField, 'Placa'), 'ZZZ');
     await tester.pumpAndSettle();
 
     expect(find.text('Sin registros para «ZZZ»'), findsOneWidget);

@@ -44,15 +44,18 @@ void main() {
     );
   });
 
-  test('Failure: a failed save keeps the data and reports the failure', () async {
-    await cubit.load();
-    repository.saveError = const ServerFailure('invalid name');
+  test(
+    'Failure: a failed save keeps the data and reports the failure',
+    () async {
+      await cubit.load();
+      repository.saveError = const ServerFailure('invalid name');
 
-    await cubit.save(current().copyWith(name: 'Nope'));
+      await cubit.save(current().copyWith(name: 'Nope'));
 
-    final loaded = cubit.state as SettingsLoaded;
-    expect(loaded.settings.name, 'Parqueadero Central');
-    expect(loaded.submission, isA<SubmissionFailed>());
-    expect((loaded.submission as SubmissionFailed).message, 'invalid name');
-  });
+      final loaded = cubit.state as SettingsLoaded;
+      expect(loaded.settings.name, 'Parqueadero Central');
+      expect(loaded.submission, isA<SubmissionFailed>());
+      expect((loaded.submission as SubmissionFailed).message, 'invalid name');
+    },
+  );
 }

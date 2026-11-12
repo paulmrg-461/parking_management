@@ -17,7 +17,10 @@ void main() {
   late LotsCubit cubit;
 
   setUp(() {
-    repository = FakeLotsRepository([sampleLot(), sampleLot(id: 2, code: 'N2', name: 'North')]);
+    repository = FakeLotsRepository([
+      sampleLot(),
+      sampleLot(id: 2, code: 'N2', name: 'North'),
+    ]);
     store = FakeKeyValueStore();
     session = LotSession();
     context = LotContext(store, session);
@@ -26,15 +29,18 @@ void main() {
 
   tearDown(() => cubit.close());
 
-  test('Success: load exposes the memberships and picks a default lot', () async {
-    await cubit.load();
+  test(
+    'Success: load exposes the memberships and picks a default lot',
+    () async {
+      await cubit.load();
 
-    final state = cubit.state as LotsLoaded;
-    expect(state.lots.length, 2);
-    expect(state.canSwitch, isTrue);
-    expect(state.activeId, 1);
-    expect(session.activeLotId, 1);
-  });
+      final state = cubit.state as LotsLoaded;
+      expect(state.lots.length, 2);
+      expect(state.canSwitch, isTrue);
+      expect(state.activeId, 1);
+      expect(session.activeLotId, 1);
+    },
+  );
 
   test('Success: the last selected lot is restored', () async {
     await store.put(LotContext.box, 'active_lot_id', 2);
@@ -55,14 +61,16 @@ void main() {
     expect(store.get(LotContext.box, 'active_lot_id'), 2);
   });
 
-  test('Failure: a stale persisted lot falls back to the first membership',
-      () async {
-    await store.put(LotContext.box, 'active_lot_id', 99);
+  test(
+    'Failure: a stale persisted lot falls back to the first membership',
+    () async {
+      await store.put(LotContext.box, 'active_lot_id', 99);
 
-    await cubit.load();
+      await cubit.load();
 
-    expect((cubit.state as LotsLoaded).activeId, 1);
-  });
+      expect((cubit.state as LotsLoaded).activeId, 1);
+    },
+  );
 
   test('Failure: a rejected create keeps the list and reports it', () async {
     await cubit.load();
@@ -75,8 +83,10 @@ void main() {
 
     final state = cubit.state as LotsLoaded;
     expect(state.lots.length, 2);
-    expect((state.submission as SubmissionFailed).failure?.code,
-        'DuplicateLotCodeError');
+    expect(
+      (state.submission as SubmissionFailed).failure?.code,
+      'DuplicateLotCodeError',
+    );
   });
 
   test('Security: only loaded memberships can become the active lot', () async {
@@ -89,12 +99,7 @@ void main() {
   test('Success: members are listed and roles can be changed', () async {
     await cubit.load();
     repository.memberList = const [
-      LotMember(
-        userId: 2,
-        username: 'op',
-        displayName: 'Op',
-        role: 'operator',
-      ),
+      LotMember(userId: 2, username: 'op', displayName: 'Op', role: 'operator'),
     ];
 
     expect((await cubit.members(1)).single.username, 'op');
@@ -102,17 +107,21 @@ void main() {
     expect(repository.memberWrites, ['2:1:admin']);
   });
 
-  test('Failure: a rejected role change reports it without dropping data',
-      () async {
-    await cubit.load();
-    repository.writeError = const ValidationFailure(
-      'LastAdminError',
-      'LastAdminError',
-    );
+  test(
+    'Failure: a rejected role change reports it without dropping data',
+    () async {
+      await cubit.load();
+      repository.writeError = const ValidationFailure(
+        'LastAdminError',
+        'LastAdminError',
+      );
 
-    expect(await cubit.setMember(2, 1, 'operator'), isFalse);
-    final state = cubit.state as LotsLoaded;
-    expect((state.submission as SubmissionFailed).failure?.code,
-        'LastAdminError');
-  });
+      expect(await cubit.setMember(2, 1, 'operator'), isFalse);
+      final state = cubit.state as LotsLoaded;
+      expect(
+        (state.submission as SubmissionFailed).failure?.code,
+        'LastAdminError',
+      );
+    },
+  );
 }

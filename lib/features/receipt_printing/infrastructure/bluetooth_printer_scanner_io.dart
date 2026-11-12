@@ -44,9 +44,8 @@ class BluetoothPrintScanner implements BluetoothPrinterScanner {
   Stream<bool> get isScanning => BluetoothPrintPlus.isScanning;
 
   @override
-  Future<void> startScan() => BluetoothPrintPlus.startScan(
-    timeout: const Duration(seconds: 10),
-  );
+  Future<void> startScan() =>
+      BluetoothPrintPlus.startScan(timeout: const Duration(seconds: 10));
 
   @override
   Future<void> stopScan() => BluetoothPrintPlus.stopScan();

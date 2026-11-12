@@ -35,9 +35,7 @@ Future<void> pumpPage(
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
-    testApp(
-      BlocProvider.value(value: cubit, child: const DiagnosticsPage()),
-    ),
+    testApp(BlocProvider.value(value: cubit, child: const DiagnosticsPage())),
   );
   await tester.pumpAndSettle();
 }
@@ -70,10 +68,7 @@ void main() {
   ) async {
     await pumpPage(tester, staleSessions: 2, deadPush: 1);
 
-    expect(
-      find.textContaining('requieren atención'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('requieren atención'), findsOneWidget);
   });
 
   testWidgets('Success: a client error opens its detail', (tester) async {
@@ -123,9 +118,6 @@ void main() {
   ) async {
     await pumpPage(tester);
 
-    expect(
-      find.text('Sin mensajes de WhatsApp en el periodo'),
-      findsOneWidget,
-    );
+    expect(find.text('Sin mensajes de WhatsApp en el periodo'), findsOneWidget);
   });
 }

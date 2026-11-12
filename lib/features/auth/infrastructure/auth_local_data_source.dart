@@ -32,10 +32,7 @@ class HiveAuthLocalDataSource implements AuthLocalDataSource {
     // without a profile is simply overwritten on the next login.
     await _tokens.write(session.token);
     final box = await _box();
-    await box.put(
-      _sessionKey,
-      AuthSession(user: session.user, token: ''),
-    );
+    await box.put(_sessionKey, AuthSession(user: session.user, token: ''));
   }
 
   @override

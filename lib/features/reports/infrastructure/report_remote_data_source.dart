@@ -1,7 +1,11 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/network/supabase_error_mapper.dart';
+import '../domain/entities/hourly_traffic.dart';
 import '../domain/entities/occupancy_report.dart';
+import '../domain/entities/forecast_backtest.dart';
+import '../domain/entities/period_comparison.dart';
+import '../domain/entities/reservation_report.dart';
 import '../domain/entities/revenue_report.dart';
 import '../domain/entities/whatsapp_report.dart';
 import 'models/occupancy_report_dto.dart';
@@ -17,6 +21,20 @@ abstract class ReportRemoteDataSource {
   Future<OccupancyReport> getOccupancyReport();
 
   Future<WhatsappReport> getWhatsappReport({
+    required DateTime startDate,
+    required DateTime endDate,
+  });
+
+  Future<PeriodComparison> getPeriodComparison({int months = 6});
+
+  Future<ForecastBacktest> getForecastBacktest({int weeks = 4});
+
+  Future<ReservationReport> getReservationReport({
+    required DateTime startDate,
+    required DateTime endDate,
+  });
+
+  Future<HourlyTraffic> getHourlyTraffic({
     required DateTime startDate,
     required DateTime endDate,
   });
@@ -41,9 +59,8 @@ class SupabaseReportRemoteDataSource implements ReportRemoteDataSource {
           'p_end_date': _formatDate(endDate),
         },
       );
-      return RevenueReportDto.fromJson(
-        Map<String, dynamic>.from(result as Map),
-      ).toDomain();
+      return RevenueReportDto.fromJson(Map<String, dynamic>.from(result as Map))
+          .toDomain();
     } catch (error) {
       throw mapSupabaseError(error);
     }
@@ -56,6 +73,76 @@ class SupabaseReportRemoteDataSource implements ReportRemoteDataSource {
       return OccupancyReportDto.fromJson(
         Map<String, dynamic>.from(result as Map),
       ).toDomain();
+    } catch (error) {
+      throw mapSupabaseError(error);
+    }
+  }
+
+  @override
+  Future<PeriodComparison> getPeriodComparison({int months = 6}) async {
+    try {
+      final result = await _client.rpc(
+        'report_period_comparison',
+        params: {'p_months': months},
+      );
+      return PeriodComparison.fromJson(
+        Map<String, dynamic>.from(result as Map),
+      );
+    } catch (error) {
+      throw mapSupabaseError(error);
+    }
+  }
+
+  @override
+  Future<ReservationReport> getReservationReport({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    try {
+      final result = await _client.rpc(
+        'report_reservations',
+        params: {
+          'p_start_date': startDate.toIso8601String().substring(0, 10),
+          'p_end_date': endDate.toIso8601String().substring(0, 10),
+        },
+      );
+      return ReservationReport.fromJson(
+        Map<String, dynamic>.from(result as Map),
+      );
+    } catch (error) {
+      throw mapSupabaseError(error);
+    }
+  }
+
+  @override
+  Future<ForecastBacktest> getForecastBacktest({int weeks = 4}) async {
+    try {
+      final result = await _client.rpc(
+        'occupancy_forecast_backtest',
+        params: {'p_weeks': weeks},
+      );
+      if (result is! Map) {
+        return ForecastBacktest.empty;
+      }
+      return ForecastBacktest.fromJson(Map<String, dynamic>.from(result));
+    } catch (error) {
+      throw mapSupabaseError(error);
+    }
+  }
+
+  Future<HourlyTraffic> getHourlyTraffic({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    try {
+      final result = await _client.rpc(
+        'report_hourly_traffic',
+        params: {
+          'p_start_date': _formatDate(startDate),
+          'p_end_date': _formatDate(endDate),
+        },
+      );
+      return HourlyTraffic.fromJson(Map<String, dynamic>.from(result as Map));
     } catch (error) {
       throw mapSupabaseError(error);
     }
@@ -77,9 +164,7 @@ class SupabaseReportRemoteDataSource implements ReportRemoteDataSource {
           'p_end_date': _formatDate(endDate),
         },
       );
-      return WhatsappReport.fromJson(
-        Map<String, dynamic>.from(result as Map),
-      );
+      return WhatsappReport.fromJson(Map<String, dynamic>.from(result as Map));
     } catch (error) {
       throw mapSupabaseError(error);
     }

@@ -181,6 +181,9 @@ before rotating secrets.
 Run the notification/retention script every minute from the host:
 
 ```bash
+# Optional on a VM: the `supabase-jobs` compose service already runs these
+# tasks every 5 minutes inside the stack. Use system cron only if you want the
+# faster cadence or the push/WhatsApp dispatch from the host:
 * * * * * cd /opt/parking && sh supabase/notifications-cron.sh >> /var/log/parking-cron.log 2>&1
 # daily, after the 02:30 backup; sites with retention_days = 0 are skipped
 40 3 * * * cd /opt/parking && sh supabase/evidence-archive.sh >> /var/log/parking-evidence.log 2>&1

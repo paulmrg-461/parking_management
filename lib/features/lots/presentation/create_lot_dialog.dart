@@ -72,9 +72,8 @@ class _CreateLotDialogState extends State<CreateLotDialog> {
                 LengthLimitingTextInputFormatter(10),
               ],
               decoration: InputDecoration(labelText: l10n.lotCode),
-              validator: (value) => (value ?? '').trim().length < 2
-                  ? l10n.fieldRequired
-                  : null,
+              validator: (value) =>
+                  (value ?? '').trim().length < 2 ? l10n.fieldRequired : null,
             ),
             const SizedBox(height: Space.md),
             TextFormField(

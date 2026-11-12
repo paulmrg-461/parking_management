@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/tokens.dart';
@@ -72,7 +73,9 @@ class _PoliciesBody extends StatelessWidget {
         if (line.trim().isNotEmpty) line.trim(),
     ];
     final heading = lines.isEmpty ? null : lines.first;
-    final clauses = lines.length <= 1 ? const <String>[] : lines.skip(1).toList();
+    final clauses = lines.length <= 1
+        ? const <String>[]
+        : lines.skip(1).toList();
     final scheme = theme.colorScheme;
     return ListView(
       padding: const EdgeInsets.all(Space.md),
@@ -144,6 +147,12 @@ class _PoliciesBody extends StatelessWidget {
                       text: profile.phone,
                     ),
                 ],
+                const SizedBox(height: Space.md),
+                FilledButton.icon(
+                  onPressed: () => context.push('/reserve?lot=${profile.id}'),
+                  icon: const Icon(Icons.event_available),
+                  label: Text(l10n.bookingTitle),
+                ),
               ],
             ),
           ),
@@ -152,10 +161,7 @@ class _PoliciesBody extends StatelessWidget {
         if (policy.isEmpty)
           Text(l10n.policiesEmpty, style: theme.textTheme.bodyLarge)
         else ...[
-          SectionHeader(
-            icon: Icons.gavel_outlined,
-            title: l10n.policiesTitle,
-          ),
+          SectionHeader(icon: Icons.gavel_outlined, title: l10n.policiesTitle),
           const SizedBox(height: Space.sm),
           Card(
             clipBehavior: Clip.antiAlias,

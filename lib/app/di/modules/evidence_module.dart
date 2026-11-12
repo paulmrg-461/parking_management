@@ -3,8 +3,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../features/evidence/application/evidence_cubit.dart';
 import '../../../features/evidence/domain/repositories/evidence_repository.dart';
+import '../../../features/evidence/domain/repositories/session_evidence_repository.dart';
 import '../../../features/evidence/infrastructure/evidence_remote_data_source.dart';
 import '../../../features/evidence/infrastructure/evidence_repository_impl.dart';
+import '../../../features/evidence/infrastructure/session_evidence_remote_data_source.dart';
+import '../../../features/evidence/infrastructure/session_evidence_repository_impl.dart';
 
 void registerEvidenceModule(GetIt sl) {
   sl
@@ -13,6 +16,13 @@ void registerEvidenceModule(GetIt sl) {
     )
     ..registerLazySingleton<EvidenceRepository>(
       () => EvidenceRepositoryImpl(sl<EvidenceRemoteDataSource>()),
+    )
+    ..registerLazySingleton<SessionEvidenceRemoteDataSource>(
+      () => SupabaseSessionEvidenceRemoteDataSource(sl<SupabaseClient>()),
+    )
+    ..registerLazySingleton<SessionEvidenceRepository>(
+      () =>
+          SessionEvidenceRepositoryImpl(sl<SessionEvidenceRemoteDataSource>()),
     )
     ..registerFactory<EvidenceCubit>(
       () => EvidenceCubit(sl<EvidenceRepository>()),

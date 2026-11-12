@@ -43,7 +43,7 @@ types:
         index: 1
   Category:
     typeId: 4
-    nextIndex: 3
+    nextIndex: 4
     fields:
       id:
         index: 0
@@ -51,9 +51,11 @@ types:
         index: 1
       capacity:
         index: 2
+      version:
+        index: 3
   Tariff:
     typeId: 5
-    nextIndex: 7
+    nextIndex: 8
     fields:
       id:
         index: 0
@@ -69,6 +71,8 @@ types:
         index: 5
       active:
         index: 6
+      version:
+        index: 7
   TariffType:
     typeId: 6
     nextIndex: 4
@@ -83,7 +87,7 @@ types:
         index: 3
   Vehicle:
     typeId: 7
-    nextIndex: 7
+    nextIndex: 8
     fields:
       id:
         index: 0
@@ -99,6 +103,8 @@ types:
         index: 5
       ownerName:
         index: 6
+      version:
+        index: 7
   MonthlyPass:
     typeId: 8
     nextIndex: 8
@@ -121,7 +127,7 @@ types:
         index: 7
   ParkingSettings:
     typeId: 9
-    nextIndex: 18
+    nextIndex: 22
     fields:
       name:
         index: 0
@@ -159,3 +165,11 @@ types:
         index: 16
       policePhone:
         index: 17
+      reservationGraceMinutes:
+        index: 18
+      coverPath:
+        index: 19
+      coverVersion:
+        index: 20
+      version:
+        index: 21

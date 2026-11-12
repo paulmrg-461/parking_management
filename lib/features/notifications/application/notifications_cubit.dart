@@ -43,13 +43,7 @@ class NotificationsState extends Equatable {
   );
 
   @override
-  List<Object?> get props => [
-    status,
-    items,
-    error,
-    latestArrived,
-    actionError,
-  ];
+  List<Object?> get props => [status, items, error, latestArrived, actionError];
 }
 
 class NotificationsCubit extends ResilientCubit<NotificationsState> {
@@ -65,12 +59,14 @@ class NotificationsCubit extends ResilientCubit<NotificationsState> {
       return;
     }
     _started = true;
-    _subscription = _repository.watch(userId).listen(
-      _onIncoming,
-      onError: (_) {
-        // Realtime reconnects on its own; the next load catches up.
-      },
-    );
+    _subscription = _repository
+        .watch(userId)
+        .listen(
+          _onIncoming,
+          onError: (_) {
+            // Realtime reconnects on its own; the next load catches up.
+          },
+        );
     await load();
   }
 
@@ -79,18 +75,10 @@ class NotificationsCubit extends ResilientCubit<NotificationsState> {
     try {
       final items = await _repository.load();
       emit(
-        NotificationsState(
-          status: NotificationsStatus.loaded,
-          items: items,
-        ),
+        NotificationsState(status: NotificationsStatus.loaded, items: items),
       );
     } on Failure catch (failure) {
-      emit(
-        state.copyWith(
-          status: NotificationsStatus.failure,
-          error: failure,
-        ),
-      );
+      emit(state.copyWith(status: NotificationsStatus.failure, error: failure));
     }
   }
 

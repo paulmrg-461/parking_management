@@ -4,11 +4,16 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/config/app_config.dart';
 import '../../core/qr/qr_decoder.dart';
 import '../../core/receipt/evidence_link.dart';
+import '../../features/public_booking/application/public_booking_cubit.dart';
+import '../../features/public_booking/presentation/public_booking_page.dart';
 import '../../features/reservations/domain/repositories/reservation_repository.dart';
 import '../../features/vehicles/domain/repositories/vehicle_repository.dart';
 import '../../core/widgets/deferred_page.dart';
+import '../../features/anomalies/application/anomalies_cubit.dart';
+import '../../features/anomalies/presentation/anomalies_page.dart';
 import '../../features/audit/application/audit_cubit.dart';
 import '../../features/audit/presentation/audit_page.dart';
 import '../../features/diagnostics/application/diagnostics_cubit.dart';
@@ -45,6 +50,8 @@ import '../../features/plate_scanning/domain/repositories/plate_image_capture.da
 import '../../features/plate_scanning/domain/repositories/plate_scanner.dart';
 import '../../features/plate_scanning/presentation/plate_scan_page.dart';
 import '../../features/reservations/application/reservations_cubit.dart';
+import '../../features/waitlist/application/public_waitlist_cubit.dart';
+import '../../features/waitlist/application/waitlist_cubit.dart';
 import '../../features/reservations/presentation/reservations_page.dart';
 import '../di/injection.dart';
 import '../shell/app_shell.dart';
@@ -67,8 +74,12 @@ import 'route_error_page.dart';
 /// `go('/users')` builds the stack `[home, users]`: sub-pages get a back
 /// arrow and Android back returns home instead of closing the app.
 /// `/scan` lives on the root navigator (full-screen camera, returns a plate).
-GoRouter buildRouter(AuthCubit auth, Listenable refresh) => GoRouter(
-  initialLocation: homePath,
+GoRouter buildRouter(
+  AuthCubit auth,
+  Listenable refresh, {
+  String initialLocation = homePath,
+}) => GoRouter(
+  initialLocation: initialLocation,
   refreshListenable: refresh,
   redirect: (_, state) => authRedirect(auth.state, state.uri.path),
   errorBuilder: (context, state) => RouteErrorPage(error: state.error),
@@ -84,6 +95,28 @@ GoRouter buildRouter(AuthCubit auth, Listenable refresh) => GoRouter(
         create: (_) => serviceLocator<PoliciesCubit>(),
         child: PoliciesPage(
           lotId: int.tryParse(state.uri.queryParameters['lot'] ?? ''),
+        ),
+      ),
+    ),
+    GoRoute(
+      path: reservePath,
+      builder: (context, state) => MultiBlocProvider(
+        providers: [
+          BlocProvider<PublicBookingCubit>(
+            create: (_) => serviceLocator<PublicBookingCubit>(),
+          ),
+          BlocProvider<PublicWaitlistCubit>(
+            create: (_) => serviceLocator<PublicWaitlistCubit>(),
+          ),
+        ],
+        child: PublicBookingPage(
+          lotId: int.tryParse(state.uri.queryParameters['lot'] ?? '') ?? 1,
+          waitlistCode: int.tryParse(
+            state.uri.queryParameters['waitlist'] ?? '',
+          ),
+          captchaSiteKey: serviceLocator.isRegistered<AppConfig>()
+              ? serviceLocator<AppConfig>().turnstileSiteKey
+              : '',
         ),
       ),
     ),
@@ -189,10 +222,20 @@ GoRoute _homeRoute(AuthCubit auth) => GoRoute(
       ),
     ),
     GoRoute(
+      path: 'anomalies',
+      builder: (context, state) => BlocProvider<AnomaliesCubit>(
+        create: (_) => serviceLocator<AnomaliesCubit>(),
+        child: const AnomaliesPage(),
+      ),
+    ),
+    GoRoute(
       path: 'audit',
       builder: (context, state) => BlocProvider<AuditCubit>(
         create: (_) => serviceLocator<AuditCubit>(),
-        child: const AuditPage(),
+        child: AuditPage(
+          initialTable: state.uri.queryParameters['table'],
+          initialSearch: state.uri.queryParameters['search'],
+        ),
       ),
     ),
     GoRoute(
@@ -204,15 +247,19 @@ GoRoute _homeRoute(AuthCubit auth) => GoRoute(
     ),
     GoRoute(
       path: 'reservations',
-      builder: (context, state) => BlocProvider<ReservationsCubit>(
-        create: (_) => serviceLocator<ReservationsCubit>(),
+      builder: (context, state) => MultiBlocProvider(
+        providers: [
+          BlocProvider<ReservationsCubit>(
+            create: (_) => serviceLocator<ReservationsCubit>(),
+          ),
+          BlocProvider<WaitlistCubit>(
+            create: (_) => serviceLocator<WaitlistCubit>(),
+          ),
+        ],
         child: const ReservationsPage(),
       ),
     ),
-    GoRoute(
-      path: 'help',
-      builder: (context, state) => const HelpPage(),
-    ),
+    GoRoute(path: 'help', builder: (context, state) => const HelpPage()),
     GoRoute(
       path: 'preferences',
       builder: (context, state) => const PreferencesPage(),

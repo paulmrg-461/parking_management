@@ -125,6 +125,7 @@ class _CreateTariffDialogState extends State<CreateTariffDialog> {
   ];
 
   Widget _categoryField(AppLocalizations l10n) => DropdownButtonFormField<int>(
+    isExpanded: true,
     initialValue: _categoryId,
     items: [
       for (final category in widget.categories)
@@ -138,6 +139,7 @@ class _CreateTariffDialogState extends State<CreateTariffDialog> {
 
   Widget _typeField(AppLocalizations l10n) =>
       DropdownButtonFormField<TariffType>(
+        isExpanded: true,
         initialValue: _type,
         items: [
           for (final type in TariffType.values)

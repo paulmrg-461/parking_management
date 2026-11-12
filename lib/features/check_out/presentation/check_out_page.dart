@@ -29,6 +29,8 @@ import '../../../core/widgets/skeleton.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/widgets/sync_badge.dart';
 import '../../emergency/presentation/emergency_action.dart';
+import '../../evidence/domain/repositories/session_evidence_repository.dart';
+import '../../evidence/presentation/session_evidence_sheet.dart';
 import '../../auth/application/auth_cubit.dart';
 import '../../auth/domain/entities/user.dart';
 import '../../plate_scanning/domain/repositories/plate_image_capture.dart';
@@ -55,6 +57,7 @@ class CheckOutPage extends StatefulWidget {
     this.capture,
     this.qrDecoder,
     this.scanQr,
+    this.evidenceRepository,
   });
 
   /// Plate to filter by (e.g. arriving from the vehicle history).
@@ -71,6 +74,9 @@ class CheckOutPage extends StatefulWidget {
 
   /// Test seam: returns the payload the live scanner read (or null to cancel).
   final Future<String?> Function(BuildContext context)? scanQr;
+
+  /// Injectable for widget tests; production resolves it from the locator.
+  final SessionEvidenceRepository? evidenceRepository;
 
   @override
   State<CheckOutPage> createState() => _CheckOutPageState();
@@ -244,6 +250,7 @@ class _CheckOutPageState extends State<CheckOutPage> {
                 onCheckOut: _startCheckout,
                 canReprint: _canDiscount(context),
                 openingSessionId: _openingSessionId,
+                evidenceRepository: widget.evidenceRepository,
               ),
             ),
           ],
@@ -470,11 +477,13 @@ class _SessionsList extends StatelessWidget {
     required this.onCheckOut,
     required this.canReprint,
     this.openingSessionId,
+    this.evidenceRepository,
   });
 
   final PaymentMethod? rememberedMethod;
   final ValueChanged<PaymentMethod> onMethodChosen;
   final bool canReprint;
+  final SessionEvidenceRepository? evidenceRepository;
   final int? openingSessionId;
   final Future<void> Function(
     BuildContext context,
@@ -556,6 +565,7 @@ class _SessionsList extends StatelessWidget {
       plate: plate,
       canReprint: canReprint,
       busy: session.id == openingSessionId,
+      evidenceRepository: evidenceRepository,
       onCharge: () => onCheckOut(context, session, plate),
     );
   }
@@ -568,12 +578,14 @@ class _SessionTile extends StatelessWidget {
     required this.onCharge,
     required this.canReprint,
     this.busy = false,
+    this.evidenceRepository,
   });
 
   final OpenSession session;
   final String plate;
   final VoidCallback onCharge;
   final bool canReprint;
+  final SessionEvidenceRepository? evidenceRepository;
 
   /// Its charge flow is running: the button shows progress and is disabled.
   final bool busy;
@@ -655,6 +667,19 @@ class _SessionTile extends StatelessWidget {
                     label: l10n.checkInLeftKeysShort,
                     tone: StatusTone.neutral,
                     icon: Icons.key_outlined,
+                  ),
+                if (session.photoCount > 0)
+                  ActionChip(
+                    avatar: const Icon(Icons.photo_library_outlined, size: 16),
+                    label: Text(l10n.sessionEvidenceShort(session.photoCount)),
+                    materialTapTargetSize: MaterialTapTargetSize.padded,
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () => showSessionEvidence(
+                      context,
+                      sessionId: session.id,
+                      plate: plate,
+                      repository: evidenceRepository,
+                    ),
                   ),
               ],
             ),

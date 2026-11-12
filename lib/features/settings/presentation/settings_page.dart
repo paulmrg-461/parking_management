@@ -12,8 +12,10 @@ import '../../../core/l10n/failure_messages.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/confirm_dialog.dart';
+import '../../../core/widgets/error_state.dart';
 import '../../../core/widgets/list_page_scaffold.dart';
 import '../../../core/widgets/section_header.dart';
+import '../../../core/widgets/skeleton.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/utils/policy_template.dart';
 import '../../../core/widgets/submission_listener.dart';
@@ -30,7 +32,7 @@ final _websitePattern = RegExp(
 
 /// Admin-only form for the singleton parking identity plus logo upload.
 class SettingsPage extends StatefulWidget {
-  const SettingsPage({super.key, this.pickLogo, this.spots});
+  const SettingsPage({super.key, this.pickLogo, this.pickCover, this.spots});
 
   /// Optional map access: when the site already drew bays, out-of-service is
   /// per bay and the count fields are hidden.
@@ -38,6 +40,9 @@ class SettingsPage extends StatefulWidget {
 
   /// Test seam: returns the picked logo bytes (or null when cancelled).
   final Future<Uint8List?> Function()? pickLogo;
+
+  /// Test seam for the wide cover shown on the public page.
+  final Future<Uint8List?> Function()? pickCover;
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -53,6 +58,7 @@ class _SettingsPageState extends State<SettingsPage> {
   late final TextEditingController _whatsapp;
   late final TextEditingController _policePhone;
   late final TextEditingController _evidenceRetention;
+  late final TextEditingController _grace;
   late final TextEditingController _carCapacity;
   late final TextEditingController _motoCapacity;
   late final TextEditingController _keyCapacity;
@@ -87,6 +93,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _whatsapp = TextEditingController();
     _policePhone = TextEditingController();
     _evidenceRetention = TextEditingController();
+    _grace = TextEditingController();
     _carCapacity = TextEditingController();
     _motoCapacity = TextEditingController();
     _keyCapacity = TextEditingController();
@@ -108,6 +115,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _whatsapp.dispose();
     _policePhone.dispose();
     _evidenceRetention.dispose();
+    _grace.dispose();
     _carCapacity.dispose();
     _motoCapacity.dispose();
     _keyCapacity.dispose();
@@ -142,14 +150,10 @@ class _SettingsPageState extends State<SettingsPage> {
             listener: (context, state) =>
                 _seed((state as SettingsLoaded).settings),
             builder: (context, state) => switch (state) {
-              SettingsInitial() || SettingsLoading() => const Center(
-                child: CircularProgressIndicator(),
-              ),
-              SettingsFailure(:final message, :final failure) => Center(
-                child: Text(
-                  context.l10n.errorText(message, failure),
-                  textAlign: TextAlign.center,
-                ),
+              SettingsInitial() || SettingsLoading() => const SkeletonList(),
+              SettingsFailure(:final message, :final failure) => ErrorState(
+                message: context.l10n.errorText(message, failure),
+                onRetry: cubit.load,
               ),
               SettingsLoaded() => _form(context, state.settings),
             },
@@ -196,6 +200,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _whatsapp.text,
     _policePhone.text,
     _evidenceRetention.text,
+    _grace.text,
     _carCapacity.text,
     _motoCapacity.text,
     _keyCapacity.text,
@@ -242,6 +247,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _whatsapp.text = settings.whatsapp;
     _policePhone.text = settings.policePhone;
     _evidenceRetention.text = settings.evidenceRetentionDays.toString();
+    _grace.text = settings.reservationGraceMinutes.toString();
     _carCapacity.text = settings.carCapacity.toString();
     _motoCapacity.text = settings.motoCapacity.toString();
     _keyCapacity.text = settings.keyCapacity.toString();
@@ -273,6 +279,7 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         children: [
           _logoSection(context, settings),
+          _coverSection(context, settings),
           if (MediaQuery.sizeOf(context).width >= 720) ...[
             _sectionIndex(context),
             const SizedBox(height: Space.md),
@@ -391,10 +398,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const SizedBox(height: Space.md),
           if (_carBays > 0)
-            _MapMaintenanceNote(
-              label: l10n.homeCapacityCars,
-              bays: _carBaysOut,
-            )
+            _MapMaintenanceNote(label: l10n.homeCapacityCars, bays: _carBaysOut)
           else
             TextFormField(
               key: const Key('settings_car_out_of_service'),
@@ -439,6 +443,24 @@ class _SettingsPageState extends State<SettingsPage> {
               helperMaxLines: 2,
             ),
             validator: _capacity,
+          ),
+          const SizedBox(height: Space.md),
+          TextFormField(
+            key: const Key('settings_reservation_grace'),
+            controller: _grace,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: InputDecoration(
+              labelText: l10n.settingsReservationGrace,
+              helperText: l10n.settingsReservationGraceHint,
+              helperMaxLines: 2,
+            ),
+            validator: (value) {
+              final minutes = int.tryParse((value ?? '').trim());
+              return minutes == null || minutes < 0 || minutes > 120
+                  ? l10n.invalidAmount
+                  : null;
+            },
           ),
           const SizedBox(height: Space.md),
           OutlinedButton.icon(
@@ -493,6 +515,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const SizedBox(height: Space.sm),
           DropdownButtonFormField<String>(
+            isExpanded: true,
             key: const Key('settings_currency'),
             initialValue: _currency,
             decoration: InputDecoration(
@@ -700,60 +723,70 @@ class _SettingsPageState extends State<SettingsPage> {
           clipBehavior: Clip.antiAlias,
           child: Padding(
             padding: const EdgeInsets.all(Space.md),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Container(
-                  width: 64,
-                  height: 64,
-                  padding: const EdgeInsets.all(Space.sm),
-                  decoration: BoxDecoration(
-                    color: scheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(Radii.md),
-                  ),
-                  child: bytes == null
-                      ? Icon(
-                          Icons.local_parking_rounded,
-                          size: 36,
-                          color: scheme.onPrimaryContainer,
-                        )
-                      : ClipRRect(
-                          borderRadius: BorderRadius.circular(Radii.sm),
-                          child: Image.memory(
-                            bytes,
-                            fit: BoxFit.contain,
-                            errorBuilder: (_, _, _) => Icon(
-                              Icons.broken_image_outlined,
+                Row(
+                  children: [
+                    Container(
+                      width: 64,
+                      height: 64,
+                      padding: const EdgeInsets.all(Space.sm),
+                      decoration: BoxDecoration(
+                        color: scheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(Radii.md),
+                      ),
+                      child: bytes == null
+                          ? Icon(
+                              Icons.local_parking_rounded,
+                              size: 36,
                               color: scheme.onPrimaryContainer,
+                            )
+                          : ClipRRect(
+                              borderRadius: BorderRadius.circular(Radii.sm),
+                              child: Image.memory(
+                                bytes,
+                                fit: BoxFit.contain,
+                                errorBuilder: (_, _, _) => Icon(
+                                  Icons.broken_image_outlined,
+                                  color: scheme.onPrimaryContainer,
+                                ),
+                              ),
                             ),
+                    ),
+                    const SizedBox(width: Space.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            settings.name.isEmpty
+                                ? l10n.appTitle
+                                : settings.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w700),
                           ),
-                        ),
+                          const SizedBox(height: 2),
+                          Text(
+                            l10n.settingsLogoSection,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: scheme.onSurfaceVariant),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: Space.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        settings.name.isEmpty ? l10n.appTitle : settings.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w700),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        l10n.settingsLogoSection,
-                        style: Theme.of(context).textTheme.bodySmall
-                            ?.copyWith(color: scheme.onSurfaceVariant),
-                      ),
-                    ],
+                const SizedBox(height: Space.sm),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: FilledButton.tonalIcon(
+                    onPressed: _uploadLogo,
+                    icon: const Icon(Icons.image_outlined),
+                    label: Text(l10n.settingsLogoPick),
                   ),
-                ),
-                const SizedBox(width: Space.sm),
-                FilledButton.tonalIcon(
-                  onPressed: _uploadLogo,
-                  icon: const Icon(Icons.image_outlined),
-                  label: Text(l10n.settingsLogoPick),
                 ),
               ],
             ),
@@ -761,6 +794,62 @@ class _SettingsPageState extends State<SettingsPage> {
         );
       },
     );
+  }
+
+  Widget _coverSection(BuildContext context, ParkingSettings settings) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Card(
+      margin: const EdgeInsets.only(bottom: Space.lg),
+      child: Padding(
+        padding: const EdgeInsets.all(Space.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.panorama_outlined, color: scheme.primary),
+                const SizedBox(width: Space.sm),
+                Expanded(
+                  child: Text(
+                    l10n.settingsCoverSection,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: Space.xs),
+            Text(
+              settings.hasCover
+                  ? l10n.settingsCoverConfigured
+                  : l10n.settingsCoverHint,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: Space.sm),
+            FilledButton.tonalIcon(
+              key: const Key('settings_cover_pick'),
+              onPressed: _uploadCover,
+              icon: const Icon(Icons.image_outlined),
+              label: Text(l10n.settingsCoverPick),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _uploadCover() async {
+    final pick = widget.pickCover ?? _pickFromGallery;
+    final bytes = await pick();
+    if (bytes == null || !mounted) {
+      return;
+    }
+    await context.read<SettingsCubit>().uploadCover(bytes);
   }
 
   Future<void> _save(BuildContext context, ParkingSettings current) async {
@@ -778,6 +867,7 @@ class _SettingsPageState extends State<SettingsPage> {
         policePhone: _policePhone.text.trim(),
         evidenceRetentionDays:
             int.tryParse(_evidenceRetention.text.trim()) ?? 0,
+        reservationGraceMinutes: int.tryParse(_grace.text.trim()) ?? 15,
         whatsappAuto: _whatsappAuto,
         carCapacity: int.tryParse(_carCapacity.text.trim()) ?? 0,
         motoCapacity: int.tryParse(_motoCapacity.text.trim()) ?? 0,

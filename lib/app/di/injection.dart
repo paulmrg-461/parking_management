@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:get_it/get_it.dart';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -27,6 +28,9 @@ import 'modules/receipt_printing_module.dart';
 import 'modules/reports_module.dart';
 import 'modules/evidence_module.dart';
 import 'modules/policies_module.dart';
+import 'modules/public_booking_module.dart';
+import 'modules/anomalies_module.dart';
+import 'modules/waitlist_module.dart';
 import 'modules/records_module.dart';
 import 'modules/reservations_module.dart';
 import 'modules/spots_module.dart';
@@ -68,10 +72,21 @@ Future<void> _initSupabase(AppConfig config) async {
     anonKey: config.supabaseAnonKey,
     httpClient: ResilientHttpClient(http.Client()),
     authOptions: FlutterAuthClientOptions(
-      localStorage: SecureSupabaseStorage(),
+      // Keychain/Keystore on mobile. On the web `flutter_secure_storage`
+      // needs a secure context (HTTPS or localhost): over plain HTTP on the
+      // LAN its WebCrypto calls are unavailable and the login hangs, so the
+      // browser falls back to gotrue's localStorage store.
+      localStorage: kIsWeb ? null : SecureSupabaseStorage(),
     ),
   );
   serviceLocator.registerSingleton<SupabaseClient>(supabase.client);
+  // This build sends row versions on table writes, so a lot that turns on
+  // `row_version_required` keeps working. Set before the lot header so both
+  // survive the map rebuild below.
+  supabase.client.headers = {
+    ...supabase.client.headers,
+    'x-versioned-write': '1',
+  };
   // The active lot travels as a header on every request; the client validates
   // membership server-side, so a stale value only fails closed.
   final lotContext = serviceLocator<LotContext>();
@@ -122,6 +137,9 @@ void registerAllModules(GetIt sl, AppConfig config) {
   registerRecordsModule(sl);
   registerPoliciesModule(sl);
   registerEvidenceModule(sl);
+  registerPublicBookingModule(sl);
+  registerWaitlistModule(sl);
+  registerAnomaliesModule(sl);
   registerSpotsModule(sl);
   registerSettingsModule(sl);
   registerShiftsModule(sl);

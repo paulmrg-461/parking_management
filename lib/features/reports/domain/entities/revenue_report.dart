@@ -131,19 +131,18 @@ class RevenueReport extends Equatable {
   final List<LotRevenue> byLot;
 
   @override
-  List<Object?> get props =>
-      [
-        startDate,
-        endDate,
-        total,
-        byDay,
-        byCategory,
-        byPayment,
-        totalDiscounts,
-        discountedSessions,
-        discountAudit,
-        passRevenue,
-        passByPayment,
-        byLot,
-      ];
+  List<Object?> get props => [
+    startDate,
+    endDate,
+    total,
+    byDay,
+    byCategory,
+    byPayment,
+    totalDiscounts,
+    discountedSessions,
+    discountAudit,
+    passRevenue,
+    passByPayment,
+    byLot,
+  ];
 }

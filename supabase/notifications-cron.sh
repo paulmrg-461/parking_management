@@ -30,6 +30,16 @@ docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
 # Same jobs pg_cron schedules when the extension is available; harmless here.
 docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
   "select public.expire_reservations(24);" >/dev/null
+# Waitlist: expire offers and stale turns, serve the queue, purge old turns.
+docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
+  "select public.waitlist_expire();" >/dev/null
+docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
+  "select public.waitlist_dispatch_all();" >/dev/null
+docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
+  "select public.purge_waitlist(30);" >/dev/null
+# Rebuilds the occupancy profile when it is older than six hours.
+docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
+  "select public.refresh_occupancy_profile();" >/dev/null
 docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
   "select public.purge_stale_notifications(90);" >/dev/null
 docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
@@ -38,6 +48,11 @@ docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
   "select public.purge_audit_log(365);" >/dev/null
 docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
   "select public.purge_whatsapp_messages(90);" >/dev/null
+# Cash anomaly detection and retention.
+docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
+  "select public.detect_cash_anomalies();" >/dev/null
+docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
+  "select public.purge_cash_anomalies(365);" >/dev/null
 
 curl -fsS -X POST "${API_URL:-http://localhost:8000}/functions/v1/push-dispatch" \
   -H "Authorization: Bearer ${SERVICE_KEY}" >/dev/null

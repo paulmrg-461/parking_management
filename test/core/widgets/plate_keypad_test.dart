@@ -17,10 +17,7 @@ void main() {
       testApp(
         Scaffold(
           body: SingleChildScrollView(
-            child: PlateKeypad(
-              controller: controller,
-              maxLength: maxLength,
-            ),
+            child: PlateKeypad(controller: controller, maxLength: maxLength),
           ),
         ),
       ),

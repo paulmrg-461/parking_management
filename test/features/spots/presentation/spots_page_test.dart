@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/features/check_out/domain/entities/slot_board.dart';
 import 'package:parking_management/features/spots/application/spots_cubit.dart';
 import 'package:parking_management/features/spots/domain/entities/parking_spot.dart';
+import 'package:parking_management/features/spots/domain/entities/spot_event.dart';
 import 'package:parking_management/features/check_out/domain/entities/capacity_snapshot.dart';
 import 'package:parking_management/features/home/application/dashboard_cubit.dart';
 import 'package:parking_management/features/spots/presentation/spots_page.dart';
@@ -17,8 +19,9 @@ Future<SpotsCubit> pumpPage(
   FakeSpotRepository repository, {
   bool isAdmin = true,
   CapacitySnapshot? capacity,
+  Size size = const Size(900, 1400),
 }) async {
-  tester.view.physicalSize = const Size(900, 1400);
+  tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   final cubit = SpotsCubit(repository);
@@ -100,6 +103,149 @@ void main() {
     expect(repository.spots.first.code, 'B1');
   });
 
+  testWidgets('Success: taking a bay out of service sends the reason', (
+    tester,
+  ) async {
+    final repository = sampleRepository();
+    await pumpPage(tester, repository);
+
+    await tester.tap(find.text('A1'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(Switch));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('spot_reason')), findsOneWidget);
+    await tester.enterText(
+      find.byKey(const Key('spot_reason')),
+      'fuga de aceite',
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Guardar'));
+    await tester.pumpAndSettle();
+
+    expect(repository.lastReason, 'fuga de aceite');
+    expect(repository.spots.first.active, isFalse);
+  });
+
+  testWidgets('Failure: a too-short reason blocks the status change', (
+    tester,
+  ) async {
+    final repository = sampleRepository();
+    await pumpPage(tester, repository);
+
+    await tester.tap(find.text('A1'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(Switch));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('spot_reason')), 'ab');
+    await tester.tap(find.widgetWithText(FilledButton, 'Guardar'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Escribe al menos 3 caracteres o déjalo vacío'),
+      findsOneWidget,
+    );
+    expect(repository.lastReason, isNull);
+    expect(find.byKey(const Key('spot_edit_code')), findsOneWidget);
+  });
+
+  testWidgets('Success: the history dialog lists the transitions', (
+    tester,
+  ) async {
+    final repository = sampleRepository();
+    repository.events = [
+      SpotEvent(
+        id: 9,
+        spotId: 1,
+        spotCode: 'A1',
+        active: true,
+        actorName: 'Ana',
+        createdAt: DateTime(2026, 11, 9, 12),
+      ),
+      SpotEvent(
+        id: 8,
+        spotId: 1,
+        spotCode: 'A1',
+        active: false,
+        reason: 'pintura',
+        actorName: 'Paul',
+        createdAt: DateTime(2026, 11, 9, 10),
+      ),
+    ];
+    await pumpPage(tester, repository);
+
+    await tester.tap(find.text('A1'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Ver historial'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Historial de A1'), findsOneWidget);
+    expect(find.textContaining('pintura'), findsOneWidget);
+    expect(find.textContaining('Paul'), findsOneWidget);
+    expect(find.textContaining('Ana'), findsOneWidget);
+  });
+
+  testWidgets('Success: an untouched bay explains its empty history', (
+    tester,
+  ) async {
+    final repository = sampleRepository();
+    await pumpPage(tester, repository);
+
+    await tester.tap(find.text('A1'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Ver historial'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Sin cambios de estado'), findsOneWidget);
+  });
+
+  testWidgets('Failure: a failed history offers a retry', (tester) async {
+    final repository = sampleRepository();
+    repository.eventsError = const NetworkFailure('offline');
+    await pumpPage(tester, repository);
+
+    await tester.tap(find.text('A1'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Ver historial'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('No hay conexión con el servidor'), findsOneWidget);
+
+    repository.eventsError = null;
+    await tester.tap(find.text('Reintentar'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Sin cambios de estado'), findsOneWidget);
+  });
+
+  testWidgets('A11y: the maintenance sheet and history fit a phone', (
+    tester,
+  ) async {
+    final repository = sampleRepository();
+    repository.events = [
+      SpotEvent(
+        id: 9,
+        spotId: 1,
+        spotCode: 'A1',
+        active: false,
+        reason: 'fuga de aceite en el motor, revisar mañana temprano',
+        actorName: 'Paul Realpe',
+        createdAt: DateTime(2026, 11, 9, 10),
+      ),
+    ];
+    await pumpPage(tester, repository, size: const Size(400, 2200));
+
+    await tester.tap(find.text('A1'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(Switch));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Ver historial'));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Historial de A1'), findsOneWidget);
+    expect(find.textContaining('Paul Realpe'), findsOneWidget);
+  });
+
   testWidgets('Success: dragging a bay moves it on the grid', (tester) async {
     final repository = sampleRepository();
     await pumpPage(tester, repository);
@@ -130,7 +276,12 @@ void main() {
 
     expect(find.text('Carros y camionetas 2 de 3'), findsOneWidget);
     expect(find.text('Faltan 1'), findsOneWidget);
-    expect(find.text('El mapa debe tener exactamente los espacios configurados en Ajustes.'), findsOneWidget);
+    expect(
+      find.text(
+        'El mapa debe tener exactamente los espacios configurados en Ajustes.',
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('Failure: a full group cannot take another bay', (tester) async {
@@ -163,10 +314,7 @@ void main() {
     await pumpPage(
       tester,
       sampleRepository(),
-      capacity: const CapacitySnapshot(
-        carCapacity: 2,
-        carTargetCapacity: 4,
-      ),
+      capacity: const CapacitySnapshot(carCapacity: 2, carTargetCapacity: 4),
     );
     await tester.pumpAndSettle();
 

@@ -4,27 +4,28 @@ import 'package:parking_management/features/about/presentation/about_developer_p
 import '../../../helpers/test_app.dart';
 
 void main() {
-  testWidgets('Success: shows the DevPaul identity and the authorship notices', (
-    tester,
-  ) async {
-    await tester.pumpWidget(testApp(const AboutDeveloperPage()));
+  testWidgets(
+    'Success: shows the DevPaul identity and the authorship notices',
+    (tester) async {
+      await tester.pumpWidget(testApp(const AboutDeveloperPage()));
 
-    expect(find.text('DevPaul'), findsWidgets);
-    expect(find.textContaining('Paul Realpe'), findsWidgets);
-    // Hero chip + app card footer + page footer.
-    expect(find.text('Hecho por DevPaul'), findsNWidgets(3));
-    expect(
-      find.text('© 2026 DevPaul. Todos los derechos reservados.'),
-      findsOneWidget,
-    );
-    expect(find.bySemanticsLabel('Logotipo de DevPaul'), findsOneWidget);
-    expect(find.text('Desarrolladores'), findsOneWidget);
-    expect(find.text('Paul Realpe'), findsWidgets);
-    expect(find.text('Jimmy Realpe'), findsOneWidget);
-    expect(find.textContaining('7 años'), findsOneWidget);
-    expect(find.textContaining('backend'), findsOneWidget);
-    expect(find.text('DevPaul'), findsWidgets);
-  });
+      expect(find.text('DevPaul'), findsWidgets);
+      expect(find.textContaining('Paul Realpe'), findsWidgets);
+      // Hero chip + app card footer + page footer.
+      expect(find.text('Hecho por DevPaul'), findsNWidgets(3));
+      expect(
+        find.text('© 2026 DevPaul. Todos los derechos reservados.'),
+        findsOneWidget,
+      );
+      expect(find.bySemanticsLabel('Logotipo de DevPaul'), findsOneWidget);
+      expect(find.text('Desarrolladores'), findsOneWidget);
+      expect(find.text('Paul Realpe'), findsWidgets);
+      expect(find.text('Jimmy Realpe'), findsOneWidget);
+      expect(find.textContaining('7 años'), findsOneWidget);
+      expect(find.textContaining('backend'), findsOneWidget);
+      expect(find.text('DevPaul'), findsWidgets);
+    },
+  );
 
   testWidgets('Success: a link opens the developer profile', (tester) async {
     Uri? opened;

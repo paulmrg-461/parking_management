@@ -14,6 +14,9 @@ import 'package:parking_management/core/qr/qr_decoder.dart';
 import 'package:parking_management/core/sync/sync_status_cubit.dart';
 import 'package:parking_management/core/theme/theme_cubit.dart';
 import 'package:parking_management/features/auth/application/auth_cubit.dart';
+import 'package:parking_management/features/anomalies/application/anomalies_cubit.dart';
+import 'package:parking_management/features/waitlist/application/public_waitlist_cubit.dart';
+import 'package:parking_management/features/waitlist/application/waitlist_cubit.dart';
 import 'package:parking_management/features/auth/domain/entities/auth_session.dart';
 import 'package:parking_management/features/auth/domain/entities/user.dart';
 import 'package:parking_management/core/lot/lot_context.dart';
@@ -42,6 +45,9 @@ import 'fake_lots_repository.dart';
 import 'fake_shift_repository.dart';
 import 'fake_user_repository.dart';
 import 'fake_sync_outbox.dart';
+import 'fake_anomaly_repository.dart';
+import 'fake_public_waitlist_repository.dart';
+import 'fake_waitlist_repository.dart';
 
 class _NoopCapture implements PlateImageCapture {
   @override
@@ -108,6 +114,16 @@ Future<AuthCubit> pumpApp(
         FakeReservationRepository(),
         FakeCategoryRepository(),
       ),
+    )
+    // The reservations board mounts the waitlist section next to the holds.
+    ..registerFactory<WaitlistCubit>(
+      () => WaitlistCubit(FakeWaitlistRepository()),
+    )
+    ..registerFactory<PublicWaitlistCubit>(
+      () => PublicWaitlistCubit(FakePublicWaitlistRepository()),
+    )
+    ..registerFactory<AnomaliesCubit>(
+      () => AnomaliesCubit(FakeAnomalyRepository()),
     );
   addTearDown(serviceLocator.reset);
   final syncOutbox = outbox ?? FakeSyncOutbox();
@@ -123,8 +139,7 @@ Future<AuthCubit> pumpApp(
     ParkingApp(
       authCubit: auth,
       syncStatusCubit: syncStatus,
-      brandingCubit:
-          branding ?? BrandingCubit(FakeParkingSettingsRepository()),
+      brandingCubit: branding ?? BrandingCubit(FakeParkingSettingsRepository()),
       connectivityCubit: connectivity,
       lotsCubit: serviceLocator<LotsCubit>(),
       themeCubit: theme,

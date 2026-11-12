@@ -14,7 +14,10 @@ class ParkingSettingsDto {
     required this.website,
     required this.whatsapp,
     this.logoVersion = 0,
+    this.coverPath = '',
+    this.coverVersion = 0,
     this.evidenceRetentionDays = 0,
+    this.reservationGraceMinutes = 15,
     this.whatsappAuto = false,
     this.carCapacity = 0,
     this.motoCapacity = 0,
@@ -25,6 +28,7 @@ class ParkingSettingsDto {
     this.currency = 'COP',
     this.minAppVersion = '',
     this.policePhone = '',
+    this.version = 0,
   });
 
   factory ParkingSettingsDto.fromJson(Map<String, dynamic> json) =>
@@ -37,7 +41,12 @@ class ParkingSettingsDto {
   final String website;
   final String whatsapp;
   final int logoVersion;
+  final String coverPath;
+  final int coverVersion;
   final int evidenceRetentionDays;
+
+  /// Minutes after `reserved_until` a hold still counts (0..120).
+  final int reservationGraceMinutes;
   final bool whatsappAuto;
   final int carCapacity;
   final int motoCapacity;
@@ -48,6 +57,7 @@ class ParkingSettingsDto {
   final String currency;
   final String minAppVersion;
   final String policePhone;
+  final int version;
 
   Map<String, dynamic> toJson() => _$ParkingSettingsDtoToJson(this);
 
@@ -59,7 +69,10 @@ class ParkingSettingsDto {
     website: website,
     whatsapp: whatsapp,
     logoVersion: logoVersion,
+    coverPath: coverPath,
+    coverVersion: coverVersion,
     evidenceRetentionDays: evidenceRetentionDays,
+    reservationGraceMinutes: reservationGraceMinutes,
     whatsappAuto: whatsappAuto,
     carCapacity: carCapacity,
     motoCapacity: motoCapacity,
@@ -70,5 +83,6 @@ class ParkingSettingsDto {
     currency: currency,
     minAppVersion: minAppVersion,
     policePhone: policePhone,
+    version: version,
   );
 }

@@ -5,10 +5,15 @@ import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/features/check_out/domain/entities/open_session.dart';
 import 'package:parking_management/features/check_out/domain/entities/today_summary.dart';
 import 'package:parking_management/features/check_out/domain/entities/capacity_snapshot.dart';
+import 'package:parking_management/features/check_out/domain/entities/dashboard_trend.dart';
+import 'package:parking_management/features/check_out/domain/entities/lot_setup_status.dart';
+import 'package:parking_management/features/check_out/domain/entities/occupancy_forecast.dart';
 import 'package:parking_management/features/check_out/domain/entities/slot_board.dart';
 import 'package:parking_management/features/home/application/dashboard_cubit.dart';
 
+import '../../../helpers/dashboard_fixtures.dart';
 import '../../../helpers/fake_check_out_repository.dart';
+import '../../../helpers/fake_dashboard_cache.dart';
 
 List<OpenSession> _sessions(int count) => [
   for (var i = 1; i <= count; i++)
@@ -87,6 +92,156 @@ void main() {
     expect(state.today, TodaySummary.empty);
   });
 
+  test('Success: the weekly trend lands in the loaded state', () async {
+    final repository = FakeCheckOutRepository(sessions: _sessions(2))
+      ..trend = DashboardTrend(
+        days: [
+          TrendDay(date: DateTime(2026, 11, 4), revenue: 8000, entries: 2),
+          TrendDay(date: DateTime(2026, 11, 5), revenue: 12000, entries: 3),
+        ],
+      );
+    final cubit = DashboardCubit(repository);
+
+    await cubit.load();
+
+    final state = cubit.state as DashboardLoaded;
+    expect(repository.trendCalls, 1);
+    expect(state.trend.days, hasLength(2));
+    expect(state.trend.totalRevenue, 20000);
+  });
+
+  test('Failure: a broken trend keeps the rest of the home', () async {
+    final repository = FakeCheckOutRepository(sessions: _sessions(2))
+      ..trendError = const NetworkFailure('offline');
+    final cubit = DashboardCubit(repository);
+
+    await cubit.load();
+
+    final state = cubit.state as DashboardLoaded;
+    expect(state.openSessions, 2);
+    expect(state.trend, DashboardTrend.empty);
+  });
+
+  test('Success: the dashboard extras load in parallel', () async {
+    final repository = FakeCheckOutRepository(sessions: _sessions(1));
+    final gate = Completer<void>();
+    repository.todayGate = gate.future;
+    final cubit = DashboardCubit(repository);
+
+    final pending = cubit.load();
+    await pumpEventQueue();
+
+    // While today's summary is still waiting, the trend already ran: the
+    // extras are concurrent instead of serialized behind it.
+    expect(repository.trendCalls, 1);
+    expect(repository.trendDaysRequested, 14);
+
+    gate.complete();
+    await pending;
+
+    expect(cubit.state, isA<DashboardLoaded>());
+  });
+
+  test('Success: a complete load refreshes the offline cache', () async {
+    final repository = FakeCheckOutRepository(
+      sessions: _sessions(3),
+      today: const TodaySummary(revenue: 25000, entries: 4),
+    );
+    final cache = FakeDashboardCache();
+    final cubit = DashboardCubit(
+      repository,
+      cache: cache,
+      clock: () => DateTime(2026, 11, 9, 16),
+    );
+
+    await cubit.load();
+    await pumpEventQueue();
+
+    expect(cache.writes, 1);
+    expect(cache.snapshot!.today.revenue, 25000);
+    expect(cache.snapshot!.occupancy.totalOpen, 3);
+    expect(cache.snapshot!.cachedAt, DateTime(2026, 11, 9, 16));
+  });
+
+  test('Success: a failed load falls back to the cached KPIs', () async {
+    final repository = FakeCheckOutRepository(
+      listError: const NetworkFailure('offline'),
+    );
+    final cache = FakeDashboardCache()..snapshot = sampleDashboardSnapshot();
+    final cubit = DashboardCubit(repository, cache: cache);
+
+    await cubit.load();
+
+    final state = cubit.state as DashboardLoaded;
+    expect(state.isStale, isTrue);
+    expect(state.openSessions, 3);
+    expect(state.today.revenue, 25000);
+    expect(state.capacity.carCapacity, 10);
+    expect(state.trend.days, hasLength(2));
+    expect(state.slotBoard, SlotBoard.empty);
+    expect(cache.reads, 1);
+  });
+
+  test('Failure: a failed load without a cache still reports it', () async {
+    final repository = FakeCheckOutRepository(
+      listError: const NetworkFailure('offline'),
+    );
+    final cubit = DashboardCubit(repository, cache: FakeDashboardCache());
+
+    await cubit.load();
+
+    expect(cubit.state, isA<DashboardFailure>());
+  });
+
+  test('Failure: an unreadable cache is ignored', () async {
+    final repository = FakeCheckOutRepository(
+      listError: const NetworkFailure('offline'),
+    );
+    final cache = FakeDashboardCache()..failRead = true;
+    final cubit = DashboardCubit(repository, cache: cache);
+
+    await cubit.load();
+
+    expect(cubit.state, isA<DashboardFailure>());
+  });
+
+  test('Success: the setup checklist lands in the loaded state', () async {
+    final repository = FakeCheckOutRepository(sessions: _sessions(1))
+      ..setupToReturn = const LotSetupStatus(categories: 1);
+    final cubit = DashboardCubit(repository);
+
+    await cubit.load();
+
+    final state = cubit.state as DashboardLoaded;
+    expect(state.setup.known, isTrue);
+    expect(state.setup.hasCategories, isTrue);
+    expect(state.setup.complete, isFalse);
+  });
+
+  test('Failure: a broken setup status is unknown', () async {
+    final repository = FakeCheckOutRepository(sessions: _sessions(1))
+      ..setupError = const NetworkFailure('offline');
+    final cubit = DashboardCubit(repository);
+
+    await cubit.load();
+
+    final state = cubit.state as DashboardLoaded;
+    expect(state.setup, LotSetupStatus.unknown);
+  });
+
+  test('Security: a degraded load never overwrites the cache', () async {
+    final repository = FakeCheckOutRepository(sessions: _sessions(2))
+      ..trendError = const NetworkFailure('offline');
+    final cache = FakeDashboardCache();
+    final cubit = DashboardCubit(repository, cache: cache);
+
+    await cubit.load();
+    await pumpEventQueue();
+
+    expect(cache.writes, 0);
+    expect(cubit.state, isA<DashboardLoaded>());
+  });
+
   test(
     'Success: the capacity snapshot and inside list feed the home',
     () async {
@@ -150,7 +305,7 @@ void main() {
     test('Success: a slower load for the previous lot never overwrites the new one', () async {
       var lot = 1;
       final repository = FakeCheckOutRepository(sessions: _sessions(7));
-      final cubit = DashboardCubit(repository, () => lot);
+      final cubit = DashboardCubit(repository, activeLot: () => lot);
       final gate = Completer<void>();
       repository.occupancyGate = gate.future;
 
@@ -172,7 +327,7 @@ void main() {
       () async {
         var lot = 1;
         final repository = FakeCheckOutRepository(sessions: _sessions(7));
-        final cubit = DashboardCubit(repository, () => lot);
+        final cubit = DashboardCubit(repository, activeLot: () => lot);
         await cubit.load();
 
         lot = 2;
@@ -193,5 +348,64 @@ void main() {
       final state = cubit.state as DashboardLoaded;
       expect(state.sessions.map(state.plateOf), ['PLT1', 'PLT2', 'PLT3']);
     });
+  });
+
+  test('Success: the forecast lands in DashboardLoaded', () async {
+    final repository = FakeCheckOutRepository(sessions: _sessions(1))
+      ..forecastToReturn = OccupancyForecast.fromJson({
+        'status': 'ok',
+        'groups': [
+          {
+            'group': 'car',
+            'capacity': 40,
+            'current': 31,
+            'confidence': 'high',
+            'samples': 8,
+            'full_now': false,
+            'full_at': '17:30',
+            'hours': [
+              {'hour': 15, 'expected': 32, 'level': 'busy'},
+            ],
+          },
+        ],
+      });
+    final cubit = DashboardCubit(repository);
+
+    await cubit.load();
+
+    final state = cubit.state as DashboardLoaded;
+    expect(state.forecast.hasForecast, isTrue);
+    expect(state.forecast.firstToFill?.fullAt, '17:30');
+    expect(repository.forecastCalls, 1);
+  });
+
+  test('Failure: a failing forecast degrades to unavailable', () async {
+    final repository = FakeCheckOutRepository(sessions: _sessions(1))
+      ..forecastError = const NetworkFailure('offline');
+    final cubit = DashboardCubit(repository);
+
+    await cubit.load();
+
+    final state = cubit.state as DashboardLoaded;
+    expect(state.forecast, OccupancyForecast.unavailable);
+    expect(state.openSessions, 1);
+  });
+
+  test('Success: the forecast is never written to the cache', () async {
+    final repository = FakeCheckOutRepository(sessions: _sessions(2))
+      ..forecastToReturn = OccupancyForecast.fromJson({
+        'status': 'ok',
+        'groups': [
+          {'group': 'car', 'capacity': 10, 'current': 1, 'hours': []},
+        ],
+      });
+    final cache = FakeDashboardCache();
+    final cubit = DashboardCubit(repository, cache: cache);
+
+    await cubit.load();
+
+    expect(cache.writes, 1);
+    // The cached snapshot has no forecast: an offline load shows none.
+    expect(cache.snapshot?.occupancy.totalOpen, 2);
   });
 }

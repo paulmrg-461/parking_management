@@ -1,0 +1,1338 @@
+-- Booking waitlist, part 1: settings, tables, constraints.
+--
+-- When every category is full the public page used to render "call us" and the
+-- customer left. The waitlist remembers the turn and hands out the space when
+-- one frees, as a **real hold** in `category_reservations` (`source =
+-- 'waitlist'`), so every capacity counter already counts it and an offer
+-- cannot overbook by construction.
+--
+-- This file holds the schema first; the customer RPCs, the dispatch/claim/
+-- expiry functions, the triggers and the desk RPCs follow in the same
+-- migration (see the sections below).
+--
+-- `waitlist_enabled` defaults to false: with it off every new RPC refuses or
+-- reports `enabled = false` and the triggers return at once, so the page looks
+-- exactly as it does today.
+
+alter table public.parking_settings
+    add column if not exists waitlist_enabled boolean not null default false;
+alter table public.parking_settings
+    add column if not exists waitlist_claim_minutes integer not null default 15;
+alter table public.parking_settings
+    add column if not exists waitlist_max_entries integer not null default 30;
+
+alter table public.parking_settings
+    drop constraint if exists parking_settings_waitlist_check;
+alter table public.parking_settings
+    add constraint parking_settings_waitlist_check check (
+        waitlist_claim_minutes between 5 and 120
+        and waitlist_max_entries between 1 and 500
+    );
+
+-- A waitlist offer is a hold, so the source catalogue and the "a public hold
+-- carries contact data" rule both widen by one value.
+alter table public.category_reservations
+    drop constraint if exists category_reservations_source_check;
+alter table public.category_reservations
+    add constraint category_reservations_source_check
+    check (source in ('app', 'public', 'waitlist'));
+
+alter table public.category_reservations
+    drop constraint if exists category_reservations_public_contact_check;
+alter table public.category_reservations
+    add constraint category_reservations_public_contact_check
+    check (
+        source not in ('public', 'waitlist')
+        or (
+            customer_name is not null
+            and length(btrim(customer_name)) between 1 and 120
+            -- `null ~ pattern` is null, which would let a hold through: the
+            -- explicit null test is what makes the rule hold.
+            and customer_phone is not null
+            and customer_phone ~ '^3[0-9]{9}$'
+        )
+    );
+
+create table if not exists public.reservation_waitlist (
+    id             bigserial   primary key,
+    lot_id         integer     not null references public.parking_lots(id),
+    category_id    integer     not null,
+    group_name     text        not null check (group_name in ('car', 'moto', 'heavy')),
+    plate          varchar(20) not null,
+    customer_name  varchar(120) not null,
+    customer_phone varchar(20) not null,
+    status         text        not null default 'waiting'
+                   check (status in ('waiting', 'offered', 'claimed', 'expired', 'left', 'cancelled')),
+    wait_until     timestamptz not null,
+    hold_minutes   integer     not null default 60 check (hold_minutes between 10 and 1440),
+    offered_at     timestamptz,
+    offer_until    timestamptz,
+    reservation_id bigint      references public.category_reservations(id) on delete set null,
+    claimed_at     timestamptz,
+    created_at     timestamptz not null default now(),
+    constraint reservation_waitlist_category_lot_fkey
+        foreign key (category_id, lot_id) references public.categories (id, lot_id),
+    constraint reservation_waitlist_contact_check check (
+        customer_phone ~ '^3[0-9]{9}$'
+        and length(btrim(customer_name)) between 1 and 120
+    ),
+    -- An offer always carries its deadline and its hold; nothing else does.
+    constraint reservation_waitlist_offer_check check (
+        (status = 'offered') = (offer_until is not null and reservation_id is not null)
+        or status <> 'offered'
+    )
+);
+
+-- One active turn per plate and lot (waiting or offered).
+create unique index if not exists uq_waitlist_active_plate
+    on public.reservation_waitlist (lot_id, plate)
+    where status in ('waiting', 'offered');
+create index if not exists ix_waitlist_fifo
+    on public.reservation_waitlist (lot_id, group_name, created_at, id)
+    where status = 'waiting';
+create index if not exists ix_waitlist_phone_active
+    on public.reservation_waitlist (lot_id, customer_phone)
+    where status in ('waiting', 'offered');
+create index if not exists ix_waitlist_offer_due
+    on public.reservation_waitlist (offer_until)
+    where status = 'offered';
+create index if not exists ix_waitlist_created
+    on public.reservation_waitlist (lot_id, created_at);
+
+-- A trigger that could not take the group lock records the group here; the
+-- job drains it. Internal: no policy and no grant.
+create table if not exists public.waitlist_kicks (
+    lot_id     integer     not null references public.parking_lots(id) on delete cascade,
+    group_name text        not null,
+    created_at timestamptz not null default now(),
+    primary key (lot_id, group_name)
+);
+
+alter table public.reservation_waitlist enable row level security;
+alter table public.waitlist_kicks enable row level security;
+revoke all on public.reservation_waitlist, public.waitlist_kicks from anon, authenticated;
+grant select on public.reservation_waitlist to authenticated;
+
+drop policy if exists waitlist_read on public.reservation_waitlist;
+create policy waitlist_read on public.reservation_waitlist
+    for select to authenticated using (lot_id = public.current_lot_id());
+
+-- ---------------------------------------------------------------------------
+-- Customer RPCs
+-- ---------------------------------------------------------------------------
+
+-- What the public card needs before the customer types anything: whether the
+-- waitlist exists for this lot, how long an offer lasts, and how many people
+-- are waiting per category (sorted by id). `notify_channel` tells the page
+-- whether to promise WhatsApp or "keep this page open".
+create or replace function public.public_waitlist_info(p_lot_id integer)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+    lot public.parking_lots%rowtype;
+    settings public.parking_settings%rowtype;
+    waiting jsonb;
+begin
+    select * into lot
+      from public.parking_lots l
+     where l.id = p_lot_id and l.active;
+    if not found then
+        return null;
+    end if;
+    select * into settings
+      from public.parking_settings ps
+     where ps.lot_id = p_lot_id;
+
+    select coalesce(jsonb_agg(entry order by entry ->> 'category_id'), '[]'::jsonb)
+      into waiting
+      from (
+          select jsonb_build_object(
+                     'category_id', w.category_id,
+                     'count', count(*)
+                 ) as entry
+            from public.reservation_waitlist w
+           where w.lot_id = p_lot_id
+             and w.status = 'waiting'
+           group by w.category_id
+      ) grouped;
+
+    return jsonb_build_object(
+        'enabled', coalesce(settings.waitlist_enabled, false),
+        'claim_minutes', coalesce(settings.waitlist_claim_minutes, 15),
+        'max_hold_minutes', 1440,
+        'notify_channel',
+            case when coalesce(settings.whatsapp_auto, false)
+                 then 'whatsapp' else 'screen' end,
+        'waiting', waiting
+    );
+end;
+$$;
+
+revoke all on function public.public_waitlist_info(integer) from public;
+grant execute on function public.public_waitlist_info(integer) to anon, authenticated;
+
+-- The body of a public join. Service-role only: the anonymous twin below is a
+-- captcha gate in front of it, exactly like `public_create_reservation`.
+create or replace function public.public_join_waitlist_verified(
+    p_lot_id integer,
+    p_plate text,
+    p_category_id integer,
+    p_wait_until timestamptz,
+    p_hold_minutes integer,
+    p_customer_name text default null,
+    p_customer_phone text default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+    lot public.parking_lots%rowtype;
+    settings public.parking_settings%rowtype;
+    normalized text := upper(regexp_replace(coalesce(p_plate, ''), '\s', '', 'g'));
+    customer_name text := btrim(coalesce(p_customer_name, ''));
+    phone_digits text := regexp_replace(coalesce(p_customer_phone, ''), '\D', '', 'g');
+    phone_local text;
+    category public.categories%rowtype;
+    entry_group text;
+    timezone_name text;
+    entry public.reservation_waitlist%rowtype;
+    active_count integer;
+    position integer;
+    capacity_free boolean := false;
+    notify_channel text;
+begin
+    select * into lot
+      from public.parking_lots l
+     where l.id = p_lot_id and l.active;
+    if not found then
+        raise exception 'LotNotFoundError';
+    end if;
+    if normalized !~ '^[A-Z0-9-]{3,20}$' then
+        raise exception 'InvalidPlateError';
+    end if;
+    if customer_name = '' or length(customer_name) > 120 then
+        raise exception 'InvalidNameError';
+    end if;
+    phone_local := case
+        when length(phone_digits) = 12 and phone_digits like '57%'
+            then right(phone_digits, 10)
+        else phone_digits
+    end;
+    if phone_local !~ '^3[0-9]{9}$' then
+        raise exception 'InvalidPhoneError';
+    end if;
+    -- Waiting at least 10 minutes and at most a day; a hold between 10 and
+    -- 1440 minutes, the same bounds as the table check.
+    if p_wait_until is null
+       or p_wait_until <= now() + interval '10 minutes'
+       or p_wait_until > now() + interval '24 hours'
+       or p_hold_minutes is null
+       or p_hold_minutes not between 10 and 1440 then
+        raise exception 'InvalidWaitWindowError';
+    end if;
+
+    select * into settings
+      from public.parking_settings ps
+     where ps.lot_id = p_lot_id;
+    if not coalesce(settings.waitlist_enabled, false) then
+        raise exception 'WaitlistDisabledError';
+    end if;
+
+    select * into category
+      from public.categories c
+     where c.id = p_category_id
+       and c.lot_id = p_lot_id;
+    if not found then
+        raise exception 'CategoryNotFoundError';
+    end if;
+    entry_group := public.category_group(lower(category.name));
+
+    -- Same lock, key and window as public bookings, but counting waitlist
+    -- entries: a waitlist flood never eats the booking quota and vice versa.
+    perform pg_advisory_xact_lock(hashtext('public_booking_throttle'), p_lot_id);
+    if (
+        select count(*)
+          from public.reservation_waitlist w
+         where w.lot_id = p_lot_id
+           and w.created_at > now() - interval '1 hour'
+    ) >= coalesce(settings.public_booking_hourly_limit, 20) then
+        raise exception 'BookingThrottledError';
+    end if;
+
+    -- The space is still there: the customer should book, not wait. The probe
+    -- sets a flag instead of raising inside the block so the "not needed"
+    -- answer cannot be swallowed by the handler.
+    begin
+        perform public.reservation_capacity_check(
+            p_lot_id, p_category_id, normalized
+        );
+        capacity_free := true;
+    exception when others then
+        if sqlerrm not like '%CategoryFullError%'
+           and sqlerrm not like '%ParkingFullError%' then
+            raise;
+        end if;
+    end;
+    if capacity_free then
+        raise exception 'WaitlistNotNeededError';
+    end if;
+
+    if exists (
+        select 1
+          from public.category_reservations r
+         where r.lot_id = p_lot_id
+           and r.plate = normalized
+           and r.status = 'active'
+           and r.reserved_until > now()
+    ) then
+        raise exception 'ReservationExistsError';
+    end if;
+
+    if exists (
+        select 1
+          from public.reservation_waitlist w
+         where w.lot_id = p_lot_id
+           and w.plate = normalized
+           and w.status in ('waiting', 'offered')
+    ) then
+        raise exception 'WaitlistExistsError';
+    end if;
+
+    select count(*) into active_count
+      from public.reservation_waitlist w
+     where w.lot_id = p_lot_id
+       and w.customer_phone = phone_local
+       and w.status in ('waiting', 'offered');
+    if active_count >= 2 then
+        raise exception 'WaitlistLimitError';
+    end if;
+
+    select count(*) into active_count
+      from public.reservation_waitlist w
+     where w.lot_id = p_lot_id
+       and w.status in ('waiting', 'offered');
+    if active_count >= coalesce(settings.waitlist_max_entries, 30) then
+        raise exception 'WaitlistFullError';
+    end if;
+
+    insert into public.reservation_waitlist (
+        lot_id, category_id, group_name, plate, customer_name, customer_phone,
+        wait_until, hold_minutes
+    )
+    values (
+        p_lot_id, p_category_id, entry_group, normalized, customer_name,
+        phone_local, p_wait_until, p_hold_minutes
+    )
+    returning * into entry;
+
+    select count(*) + 1 into position
+      from public.reservation_waitlist w
+     where w.lot_id = p_lot_id
+       and w.group_name = entry_group
+       and w.status = 'waiting'
+       and (w.created_at, w.id) < (entry.created_at, entry.id);
+
+    timezone_name := coalesce(settings.business_timezone, lot.timezone, 'America/Bogota');
+    notify_channel := case when coalesce(settings.whatsapp_auto, false)
+                           then 'whatsapp' else 'screen' end;
+
+    insert into public.notifications (
+        user_id, type, title, body, data, dedupe_key, lot_id
+    )
+    select u.id,
+           'waitlist_joined',
+           'Lista de espera: ' || entry.plate,
+           customer_name || ' espera ' || lower(category.name),
+           jsonb_build_object(
+               'entry_id', entry.id,
+               'plate', entry.plate,
+               'category_id', p_category_id
+           ),
+           'waitlist_joined:' || entry.id || ':user:' || u.id,
+           p_lot_id
+      from public.users u
+      join public.lot_members lm on lm.user_id = u.id
+     where lm.lot_id = p_lot_id
+       and u.is_active
+    on conflict (dedupe_key) do nothing;
+
+    return jsonb_build_object(
+        'id', entry.id,
+        'plate', entry.plate,
+        'category_id', entry.category_id,
+        'category_name', lower(category.name),
+        'status', entry.status,
+        'position', position,
+        'wait_until', entry.wait_until,
+        'hold_minutes', entry.hold_minutes,
+        'claim_minutes', coalesce(settings.waitlist_claim_minutes, 15),
+        'notify_channel', notify_channel,
+        'lot', jsonb_build_object(
+            'id', lot.id,
+            'name', lot.name,
+            'address', coalesce(settings.address, ''),
+            'phone', coalesce(settings.phone, ''),
+            'whatsapp', coalesce(settings.whatsapp, '')
+        )
+    );
+end;
+$$;
+
+revoke all on function public.public_join_waitlist_verified(
+    integer, text, integer, timestamp with time zone, integer, text, text
+) from public, anon, authenticated;
+grant execute on function public.public_join_waitlist_verified(
+    integer, text, integer, timestamp with time zone, integer, text, text
+) to service_role;
+
+-- The anonymous entry point: refuses when the lot demands a captcha (the
+-- caller could not have proved one), otherwise runs the shared body.
+create or replace function public.public_join_waitlist(
+    p_lot_id integer,
+    p_plate text,
+    p_category_id integer,
+    p_wait_until timestamptz,
+    p_hold_minutes integer,
+    p_customer_name text default null,
+    p_customer_phone text default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+    if exists (
+        select 1
+          from public.parking_settings ps
+         where ps.lot_id = p_lot_id
+           and ps.public_booking_captcha
+    ) then
+        raise exception 'CaptchaRequiredError';
+    end if;
+    return public.public_join_waitlist_verified(
+        p_lot_id, p_plate, p_category_id, p_wait_until, p_hold_minutes,
+        p_customer_name, p_customer_phone
+    );
+end;
+$$;
+
+revoke all on function public.public_join_waitlist(
+    integer, text, integer, timestamp with time zone, integer, text, text
+) from public;
+grant execute on function public.public_join_waitlist(
+    integer, text, integer, timestamp with time zone, integer, text, text
+) to anon, authenticated;
+
+-- The customer's own turn, fetched with the code and the mobile. Entries from
+-- the last 48 hours so an expired turn still explains itself.
+create or replace function public.public_waitlist_lookup(
+    p_lot_id integer,
+    p_entry_id bigint,
+    p_customer_phone text
+)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+    phone_digits text := regexp_replace(coalesce(p_customer_phone, ''), '\D', '', 'g');
+    phone_local text;
+    lot public.parking_lots%rowtype;
+    settings public.parking_settings%rowtype;
+    entry public.reservation_waitlist%rowtype;
+    category_name text;
+    position integer;
+begin
+    phone_local := case
+        when length(phone_digits) = 12 and phone_digits like '57%'
+            then right(phone_digits, 10)
+        else phone_digits
+    end;
+
+    select * into entry
+      from public.reservation_waitlist w
+     where w.id = p_entry_id
+       and w.lot_id = p_lot_id
+       and w.customer_phone = phone_local
+       and w.created_at > now() - interval '48 hours';
+    if not found then
+        return null;
+    end if;
+
+    select * into lot
+      from public.parking_lots l
+     where l.id = p_lot_id and l.active;
+    select * into settings
+      from public.parking_settings ps
+     where ps.lot_id = p_lot_id;
+    select lower(c.name) into category_name
+      from public.categories c
+     where c.id = entry.category_id;
+
+    select count(*) + 1 into position
+      from public.reservation_waitlist w
+     where w.lot_id = p_lot_id
+       and w.group_name = entry.group_name
+       and w.status = 'waiting'
+       and (w.created_at, w.id) < (entry.created_at, entry.id);
+
+    return jsonb_build_object(
+        'id', entry.id,
+        'plate', entry.plate,
+        'category_id', entry.category_id,
+        'category_name', coalesce(category_name, ''),
+        'status', entry.status,
+        'position', position,
+        'wait_until', entry.wait_until,
+        'hold_minutes', entry.hold_minutes,
+        'claim_minutes', coalesce(settings.waitlist_claim_minutes, 15),
+        'offer_until', entry.offer_until,
+        'reservation_id', entry.reservation_id,
+        'notify_channel',
+            case when coalesce(settings.whatsapp_auto, false)
+                 then 'whatsapp' else 'screen' end,
+        'lot', jsonb_build_object(
+            'id', p_lot_id,
+            'name', coalesce(lot.name, ''),
+            'address', coalesce(settings.address, ''),
+            'phone', coalesce(settings.phone, ''),
+            'whatsapp', coalesce(settings.whatsapp, '')
+        )
+    );
+end;
+$$;
+
+revoke all on function public.public_waitlist_lookup(integer, bigint, text)
+    from public;
+grant execute on function public.public_waitlist_lookup(integer, bigint, text)
+    to anon, authenticated;
+
+-- Leaving a turn. Waiting entries become `left`; an offered entry is completed
+-- by the dispatch section (it also releases the hold).
+create or replace function public.public_leave_waitlist(
+    p_lot_id integer,
+    p_entry_id bigint,
+    p_customer_phone text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+    phone_digits text := regexp_replace(coalesce(p_customer_phone, ''), '\D', '', 'g');
+    phone_local text;
+    entry public.reservation_waitlist%rowtype;
+begin
+    phone_local := case
+        when length(phone_digits) = 12 and phone_digits like '57%'
+            then right(phone_digits, 10)
+        else phone_digits
+    end;
+
+    select * into entry
+      from public.reservation_waitlist w
+     where w.id = p_entry_id
+       and w.lot_id = p_lot_id
+       and w.customer_phone = phone_local
+       for update;
+    if not found or entry.status in ('claimed', 'expired', 'left', 'cancelled') then
+        raise exception 'WaitlistEntryNotFoundError';
+    end if;
+
+    -- Leaving an unclaimed offer releases the hold; its trigger hands the
+    -- space to the next turn.
+    if entry.status = 'offered' and entry.reservation_id is not null then
+        update public.category_reservations
+           set status = 'cancelled'
+         where id = entry.reservation_id
+           and status = 'active';
+    end if;
+
+    update public.reservation_waitlist
+       set status = 'left'
+     where id = entry.id;
+
+    return jsonb_build_object('id', entry.id, 'status', 'left');
+end;
+$$;
+
+revoke all on function public.public_leave_waitlist(integer, bigint, text)
+    from public;
+grant execute on function public.public_leave_waitlist(integer, bigint, text)
+    to anon, authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Dispatch, claim, expiry, desk and triggers
+-- ---------------------------------------------------------------------------
+
+-- Shared claim body for the anonymous and the desk entry points. Locks the
+-- entry first, then the hold (the only order used anywhere), extends the hold
+-- to the customer's chosen window and flips it to a normal web booking.
+create or replace function public.waitlist_claim_entry(
+    p_entry_id bigint,
+    p_phone text,
+    p_desk boolean
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+    phone_digits text := regexp_replace(coalesce(p_phone, ''), '\D', '', 'g');
+    phone_local text;
+    entry public.reservation_waitlist%rowtype;
+    reservation public.category_reservations%rowtype;
+    settings public.parking_settings%rowtype;
+    lot public.parking_lots%rowtype;
+    category_name text;
+    timezone_name text;
+begin
+    if p_desk then
+        perform public.require_app_user();
+    else
+        phone_local := case
+            when length(phone_digits) = 12 and phone_digits like '57%'
+                then right(phone_digits, 10)
+            else phone_digits
+        end;
+    end if;
+
+    select * into entry
+      from public.reservation_waitlist w
+     where w.id = p_entry_id
+       for update;
+    if not found then
+        raise exception 'WaitlistEntryNotFoundError';
+    end if;
+    if p_desk then
+        if entry.lot_id <> public.current_lot_id() then
+            raise exception 'LotRequiredError';
+        end if;
+    elsif entry.customer_phone <> phone_local then
+        raise exception 'WaitlistEntryNotFoundError';
+    end if;
+
+    if entry.status = 'waiting' then
+        raise exception 'WaitlistNotOfferedError';
+    end if;
+    if entry.status in ('expired', 'left', 'cancelled') then
+        raise exception 'OfferNoLongerAvailableError';
+    end if;
+
+    select * into settings
+      from public.parking_settings ps
+     where ps.lot_id = entry.lot_id;
+    select * into lot
+      from public.parking_lots l
+     where l.id = entry.lot_id;
+    select lower(c.name) into category_name
+      from public.categories c
+     where c.id = entry.category_id;
+    timezone_name := coalesce(settings.business_timezone, lot.timezone, 'America/Bogota');
+
+    if entry.status = 'claimed' then
+        -- Idempotent: answering again with the hold the customer already has.
+        select * into reservation
+          from public.category_reservations r
+         where r.id = entry.reservation_id;
+        if not found then
+            raise exception 'OfferNoLongerAvailableError';
+        end if;
+    else
+        if entry.offer_until is null or entry.offer_until <= now() then
+            raise exception 'OfferNoLongerAvailableError';
+        end if;
+        update public.category_reservations
+           set reserved_until = now() + make_interval(mins => entry.hold_minutes),
+               source = 'public'
+         where id = entry.reservation_id
+           and status = 'active'
+        returning * into reservation;
+        if not found then
+            update public.reservation_waitlist
+               set status = 'expired'
+             where id = entry.id;
+            raise exception 'OfferNoLongerAvailableError';
+        end if;
+
+        update public.reservation_waitlist
+           set status = 'claimed',
+               claimed_at = now()
+         where id = entry.id
+        returning * into entry;
+
+        update public.parking_settings
+           set updated_at = now()
+         where lot_id = entry.lot_id;
+
+        if coalesce(settings.whatsapp_auto, false) then
+            insert into public.whatsapp_messages (
+                lot_id, to_phone, template, language, params
+            )
+            values (
+                entry.lot_id,
+                entry.customer_phone,
+                'reservation_confirmed',
+                'es',
+                jsonb_build_array(
+                    entry.customer_name,
+                    entry.plate,
+                    to_char(
+                        reservation.reserved_until at time zone timezone_name,
+                        'DD/MM HH24:MI'
+                    ),
+                    lot.name
+                )
+            );
+        end if;
+    end if;
+
+    return jsonb_build_object(
+        'entry_id', entry.id,
+        'id', reservation.id,
+        'plate', reservation.plate,
+        'category_id', reservation.category_id,
+        'category_name', coalesce(category_name, ''),
+        'reserved_until', reservation.reserved_until,
+        'status', reservation.status,
+        'lot', jsonb_build_object(
+            'id', lot.id,
+            'name', lot.name,
+            'address', coalesce(settings.address, ''),
+            'phone', coalesce(settings.phone, ''),
+            'whatsapp', coalesce(settings.whatsapp, '')
+        )
+    );
+end;
+$$;
+
+revoke all on function public.waitlist_claim_entry(bigint, text, boolean)
+    from public, anon, authenticated;
+
+create or replace function public.public_claim_waitlist(
+    p_lot_id integer,
+    p_entry_id bigint,
+    p_customer_phone text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+    entry public.reservation_waitlist%rowtype;
+begin
+    select * into entry
+      from public.reservation_waitlist w
+     where w.id = p_entry_id
+       and w.lot_id = p_lot_id;
+    if not found then
+        raise exception 'WaitlistEntryNotFoundError';
+    end if;
+    return public.waitlist_claim_entry(p_entry_id, p_customer_phone, false);
+end;
+$$;
+
+revoke all on function public.public_claim_waitlist(integer, bigint, text)
+    from public;
+grant execute on function public.public_claim_waitlist(integer, bigint, text)
+    to anon, authenticated;
+
+create or replace function public.desk_claim_waitlist(p_id bigint)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+    return public.waitlist_claim_entry(p_id, null, true);
+end;
+$$;
+
+revoke all on function public.desk_claim_waitlist(bigint) from public;
+grant execute on function public.desk_claim_waitlist(bigint) to authenticated;
+
+-- Offers FIFO: the oldest waiting entry of the group gets the freed space, as
+-- a real hold, after the same capacity check any other hold goes through.
+-- The caller already holds the group lock.
+create or replace function public.waitlist_dispatch(
+    p_lot integer,
+    p_group text
+)
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+    settings public.parking_settings%rowtype;
+    lot_name text;
+    timezone_name text;
+    entry public.reservation_waitlist%rowtype;
+    reservation public.category_reservations%rowtype;
+    claim_minutes integer;
+    tries integer := 0;
+    offers integer := 0;
+    tried bigint[] := '{}';
+    skip_entry boolean;
+    exhausted boolean;
+begin
+    select * into settings
+      from public.parking_settings ps
+     where ps.lot_id = p_lot;
+    if not coalesce(settings.waitlist_enabled, false) then
+        return 0;
+    end if;
+    claim_minutes := coalesce(settings.waitlist_claim_minutes, 15);
+    select coalesce(l.name, ''), l.timezone into lot_name, timezone_name
+      from public.parking_lots l where l.id = p_lot;
+    timezone_name := coalesce(settings.business_timezone, timezone_name, 'America/Bogota');
+
+    loop
+        tries := tries + 1;
+        exit when tries > 50;
+
+        select * into entry
+          from public.reservation_waitlist w
+         where w.lot_id = p_lot
+           and w.group_name = p_group
+           and w.status = 'waiting'
+           and w.wait_until > now()
+           and not (w.id = any(tried))
+         order by w.created_at, w.id
+         limit 1
+           for update skip locked;
+        exit when not found;
+        tried := array_append(tried, entry.id);
+
+        -- Already holding a space: the turn is stale, not an offer.
+        if exists (
+            select 1
+              from public.category_reservations r
+             where r.lot_id = p_lot
+               and r.plate = entry.plate
+               and r.status = 'active'
+               and r.reserved_until > now()
+        ) then
+            update public.reservation_waitlist
+               set status = 'expired'
+             where id = entry.id;
+            continue;
+        end if;
+
+        exhausted := false;
+        skip_entry := false;
+        begin
+            perform public.reservation_capacity_check(
+                p_lot, entry.category_id, entry.plate
+            );
+        exception when others then
+            if sqlerrm like '%ParkingFullError%' then
+                exhausted := true;
+            elsif sqlerrm like '%CategoryFullError%'
+               or sqlerrm like '%VehicleAlreadyInsideError%'
+               or sqlerrm like '%CategoryNotFoundError%' then
+                skip_entry := true;
+            else
+                raise;
+            end if;
+        end;
+        exit when exhausted;
+        if skip_entry then
+            -- Only this category is full: the queue keeps its FIFO order and
+            -- the next turn is tried.
+            continue;
+        end if;
+
+        insert into public.category_reservations (
+            plate, category_id, reserved_until, notes, created_by, lot_id,
+            customer_name, customer_phone, source
+        )
+        values (
+            entry.plate, entry.category_id,
+            now() + make_interval(mins => claim_minutes),
+            'waitlist:' || entry.id, null, p_lot,
+            entry.customer_name, entry.customer_phone, 'waitlist'
+        )
+        returning * into reservation;
+
+        update public.reservation_waitlist
+           set status = 'offered',
+               offered_at = now(),
+               offer_until = reservation.reserved_until,
+               reservation_id = reservation.id
+         where id = entry.id;
+
+        insert into public.notifications (
+            user_id, type, title, body, data, dedupe_key, lot_id
+        )
+        select u.id,
+               'waitlist_offer',
+               'Cupo ofrecido: ' || entry.plate,
+               'Oferta hasta ' ||
+                   to_char(reservation.reserved_until at time zone timezone_name, 'HH24:MI') ||
+                   case when coalesce(settings.whatsapp_auto, false)
+                        then ' (avisado por WhatsApp)'
+                        else ' - llamar al cliente' end,
+               jsonb_build_object(
+                   'entry_id', entry.id,
+                   'plate', entry.plate,
+                   'category_id', entry.category_id
+               ),
+               'waitlist_offer:' || entry.id || ':user:' || u.id,
+               p_lot
+          from public.users u
+          join public.lot_members lm on lm.user_id = u.id
+         where lm.lot_id = p_lot
+           and u.is_active
+        on conflict (dedupe_key) do nothing;
+
+        if coalesce(settings.whatsapp_auto, false) then
+            insert into public.whatsapp_messages (
+                lot_id, to_phone, template, language, params
+            )
+            values (
+                p_lot,
+                entry.customer_phone,
+                'waitlist_offer',
+                'es',
+                jsonb_build_array(
+                    entry.customer_name,
+                    entry.plate,
+                    to_char(reservation.reserved_until at time zone timezone_name, 'HH24:MI'),
+                    lot_name,
+                    entry.id::text
+                )
+            );
+        end if;
+
+        offers := offers + 1;
+    end loop;
+
+    return offers;
+end;
+$$;
+
+revoke all on function public.waitlist_dispatch(integer, text)
+    from public, anon, authenticated;
+
+-- Trigger-safe dispatch: never waits for the group lock, because a blocking
+-- wait inside check_out could deadlock with a check-in of the same plate. A
+-- miss is recorded and drained by the job.
+create or replace function public.waitlist_try_dispatch(
+    p_lot integer,
+    p_group text
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+    if p_lot is null or p_group is null then
+        return;
+    end if;
+    if not pg_try_advisory_xact_lock(hashtext('group:' || p_lot || ':' || p_group)) then
+        insert into public.waitlist_kicks (lot_id, group_name)
+        values (p_lot, p_group)
+        on conflict do nothing;
+        return;
+    end if;
+    perform public.waitlist_dispatch(p_lot, p_group);
+exception when others then
+    -- The originating write must never fail because the queue could not be
+    -- served; the next job run retries it.
+    insert into public.waitlist_kicks (lot_id, group_name)
+    values (p_lot, p_group)
+    on conflict do nothing;
+end;
+$$;
+
+revoke all on function public.waitlist_try_dispatch(integer, text)
+    from public, anon, authenticated;
+
+create or replace function public.list_waitlist()
+returns table(
+    id bigint,
+    plate text,
+    category_id integer,
+    category_name text,
+    customer_name text,
+    customer_phone text,
+    status text,
+    wait_until timestamptz,
+    hold_minutes integer,
+    offer_until timestamptz,
+    reservation_id bigint,
+    "position" integer,
+    created_at timestamptz
+)
+language sql
+stable
+security invoker
+set search_path = public
+as $$
+    select w.id,
+           w.plate::text,
+           w.category_id,
+           lower(c.name)::text,
+           w.customer_name::text,
+           w.customer_phone::text,
+           w.status,
+           w.wait_until,
+           w.hold_minutes,
+           w.offer_until,
+           w.reservation_id,
+           row_number() over (
+               partition by w.group_name order by w.created_at, w.id
+           )::integer,
+           w.created_at
+      from public.reservation_waitlist w
+      join public.categories c on c.id = w.category_id
+     where w.status in ('waiting', 'offered')
+     order by w.created_at, w.id;
+$$;
+
+revoke all on function public.list_waitlist() from public, anon;
+grant execute on function public.list_waitlist() to authenticated;
+
+create or replace function public.desk_remove_waitlist(p_id bigint)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+    entry public.reservation_waitlist%rowtype;
+begin
+    perform public.require_app_user();
+    select * into entry
+      from public.reservation_waitlist w
+     where w.id = p_id
+       for update;
+    if not found then
+        raise exception 'WaitlistEntryNotFoundError';
+    end if;
+    if entry.lot_id <> public.current_lot_id() then
+        raise exception 'LotRequiredError';
+    end if;
+    if entry.status in ('claimed', 'expired', 'left', 'cancelled') then
+        raise exception 'OfferNoLongerAvailableError';
+    end if;
+
+    if entry.status = 'offered' and entry.reservation_id is not null then
+        update public.category_reservations
+           set status = 'cancelled'
+         where id = entry.reservation_id
+           and status = 'active';
+    end if;
+
+    update public.reservation_waitlist
+       set status = 'cancelled'
+     where id = entry.id;
+
+    return jsonb_build_object('id', entry.id, 'status', 'cancelled');
+end;
+$$;
+
+revoke all on function public.desk_remove_waitlist(bigint) from public;
+grant execute on function public.desk_remove_waitlist(bigint) to authenticated;
+
+create or replace function public.set_waitlist_settings(
+    p_enabled boolean default null,
+    p_claim_minutes integer default null,
+    p_max_entries integer default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+    lot integer := public.require_lot_admin();
+    updated public.parking_settings%rowtype;
+begin
+    if (p_claim_minutes is not null and p_claim_minutes not between 5 and 120)
+       or (p_max_entries is not null and p_max_entries not between 1 and 500) then
+        raise exception 'InvalidDataError';
+    end if;
+
+    update public.parking_settings
+       set waitlist_enabled = coalesce(p_enabled, waitlist_enabled),
+           waitlist_claim_minutes =
+               coalesce(p_claim_minutes, waitlist_claim_minutes),
+           waitlist_max_entries = coalesce(p_max_entries, waitlist_max_entries),
+           updated_at = now()
+     where lot_id = lot
+     returning * into updated;
+    if not found then
+        raise exception 'NotFoundError';
+    end if;
+
+    return jsonb_build_object(
+        'enabled', updated.waitlist_enabled,
+        'claim_minutes', updated.waitlist_claim_minutes,
+        'max_entries', updated.waitlist_max_entries
+    );
+end;
+$$;
+
+revoke all on function public.set_waitlist_settings(boolean, integer, integer)
+    from public, anon;
+grant execute on function public.set_waitlist_settings(boolean, integer, integer)
+    to authenticated;
+
+-- Job: reconcile, expire offers and stale turns, then serve the queue.
+create or replace function public.waitlist_expire()
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+    changed integer := 0;
+    step integer := 0;
+begin
+    -- A check-in consumed the hold: the customer arrived, the turn is served.
+    update public.reservation_waitlist w
+       set status = 'claimed',
+           claimed_at = coalesce(w.claimed_at, now())
+      from public.category_reservations r
+     where w.status = 'offered'
+       and w.reservation_id = r.id
+       and r.status = 'used';
+    get diagnostics step = row_count;
+    changed := changed + step;
+
+    -- The hold is gone (cancelled/expired by someone else): the offer is over.
+    update public.reservation_waitlist w
+       set status = 'expired'
+      from public.category_reservations r
+     where w.status = 'offered'
+       and w.reservation_id = r.id
+       and r.status in ('cancelled', 'expired');
+    get diagnostics step = row_count;
+    changed := changed + step;
+
+    -- The offer ran out: free the space explicitly (status-based exclusion, so
+    -- the grace window does not starve the queue) and close the turn.
+    update public.category_reservations r
+       set status = 'expired'
+      from public.reservation_waitlist w
+     where w.status = 'offered'
+       and w.reservation_id = r.id
+       and r.status = 'active'
+       and w.offer_until <= now();
+    get diagnostics step = row_count;
+    changed := changed + step;
+
+    update public.reservation_waitlist w
+       set status = 'expired'
+     where w.status = 'offered'
+       and w.offer_until <= now();
+    get diagnostics step = row_count;
+    changed := changed + step;
+
+    update public.reservation_waitlist w
+       set status = 'expired'
+     where w.status = 'waiting'
+       and w.wait_until <= now();
+    get diagnostics step = row_count;
+    changed := changed + step;
+
+    perform public.waitlist_dispatch_all();
+    return changed;
+end;
+$$;
+
+revoke all on function public.waitlist_expire() from public, anon, authenticated;
+grant execute on function public.waitlist_expire() to service_role;
+
+-- Job: drain the trigger kicks, then serve every group that still queues.
+create or replace function public.waitlist_dispatch_all()
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+    item record;
+    offers integer := 0;
+begin
+    for item in select k.lot_id, k.group_name from public.waitlist_kicks k loop
+        delete from public.waitlist_kicks k
+         where k.lot_id = item.lot_id
+           and k.group_name = item.group_name;
+        perform pg_advisory_xact_lock(
+            hashtext('group:' || item.lot_id || ':' || item.group_name)
+        );
+        offers := offers + public.waitlist_dispatch(item.lot_id, item.group_name);
+    end loop;
+
+    for item in
+        select distinct w.lot_id, w.group_name
+          from public.reservation_waitlist w
+         where w.status = 'waiting'
+    loop
+        perform pg_advisory_xact_lock(
+            hashtext('group:' || item.lot_id || ':' || item.group_name)
+        );
+        offers := offers + public.waitlist_dispatch(item.lot_id, item.group_name);
+    end loop;
+
+    return offers;
+end;
+$$;
+
+revoke all on function public.waitlist_dispatch_all()
+    from public, anon, authenticated;
+grant execute on function public.waitlist_dispatch_all() to service_role;
+
+create or replace function public.purge_waitlist(p_days integer default 30)
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+    removed integer;
+begin
+    delete from public.reservation_waitlist w
+     where w.status in ('claimed', 'expired', 'left', 'cancelled')
+       and w.created_at < now() - make_interval(days => coalesce(p_days, 30));
+    get diagnostics removed = row_count;
+    return removed;
+end;
+$$;
+
+revoke all on function public.purge_waitlist(integer)
+    from public, anon, authenticated;
+grant execute on function public.purge_waitlist(integer) to service_role;
+
+-- Triggers: a freed space is offered inside the freeing transaction. They use
+-- the try-lock wrapper so they never block the origin write.
+create or replace function public.trg_waitlist_session_closed()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+    spot_group text;
+begin
+    if old.status = 'open' and new.status <> 'open' then
+        select public.category_group(lower(c.name)) into spot_group
+          from public.vehicles v
+          join public.categories c on c.id = v.category_id
+         where v.id = new.vehicle_id;
+        perform public.waitlist_try_dispatch(new.lot_id, spot_group);
+    end if;
+    return new;
+end;
+$$;
+
+drop trigger if exists trg_waitlist_session_closed on public.parking_sessions;
+create trigger trg_waitlist_session_closed
+    after update of status on public.parking_sessions
+    for each row execute function public.trg_waitlist_session_closed();
+
+create or replace function public.trg_waitlist_hold_released()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+    spot_group text;
+begin
+    if old.status = 'active' and new.status in ('cancelled', 'expired') then
+        select public.category_group(lower(c.name)) into spot_group
+          from public.categories c
+         where c.id = new.category_id;
+        perform public.waitlist_try_dispatch(new.lot_id, spot_group);
+    end if;
+    return new;
+end;
+$$;
+
+drop trigger if exists trg_waitlist_hold_released on public.category_reservations;
+create trigger trg_waitlist_hold_released
+    after update of status on public.category_reservations
+    for each row execute function public.trg_waitlist_hold_released();
+
+create or replace function public.trg_waitlist_spot_freed()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+    if new.status = 'active'
+       and (tg_op = 'INSERT' or old.status is distinct from 'active') then
+        perform public.waitlist_try_dispatch(new.lot_id, new.group_name);
+    end if;
+    return new;
+end;
+$$;
+
+drop trigger if exists trg_waitlist_spot_freed on public.parking_spots;
+create trigger trg_waitlist_spot_freed
+    after insert or update of status on public.parking_spots
+    for each row execute function public.trg_waitlist_spot_freed();
+
+create or replace function public.trg_waitlist_settings_capacity()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+    if new.car_capacity > old.car_capacity
+       or new.car_out_of_service < old.car_out_of_service then
+        perform public.waitlist_try_dispatch(new.lot_id, 'car');
+    end if;
+    if new.moto_capacity > old.moto_capacity
+       or new.moto_out_of_service < old.moto_out_of_service then
+        perform public.waitlist_try_dispatch(new.lot_id, 'moto');
+    end if;
+    return new;
+end;
+$$;
+
+drop trigger if exists trg_waitlist_settings_capacity on public.parking_settings;
+create trigger trg_waitlist_settings_capacity
+    after update of car_capacity, moto_capacity, car_out_of_service,
+        moto_out_of_service on public.parking_settings
+    for each row execute function public.trg_waitlist_settings_capacity();
+
+create or replace function public.trg_waitlist_category_capacity()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+    if new.capacity is distinct from old.capacity then
+        perform public.waitlist_try_dispatch(
+            new.lot_id, public.category_group(lower(new.name))
+        );
+    end if;
+    return new;
+end;
+$$;
+
+drop trigger if exists trg_waitlist_category_capacity on public.categories;
+create trigger trg_waitlist_category_capacity
+    after update of capacity on public.categories
+    for each row execute function public.trg_waitlist_category_capacity();

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/features/categories/domain/entities/category.dart';
@@ -13,8 +14,12 @@ void main() {
   Future<FakeReservationRepository> pumpPage(
     WidgetTester tester, {
     List<dynamic> reservations = const [],
-    void Function(BuildContext context, String plate)? onCheckIn,
+    Future<void> Function(BuildContext context, String plate)? onCheckIn,
+    Size size = const Size(800, 1200),
   }) async {
+    tester.view.physicalSize = size;
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     final repository = FakeReservationRepository([
       for (final reservation in reservations) reservation,
     ]);
@@ -123,9 +128,7 @@ void main() {
 
     expect(find.text('No hay reservas activas'), findsOneWidget);
     expect(
-      find.text(
-        'Reserva el cupo de un cliente para asegurar su entrada.',
-      ),
+      find.text('Reserva el cupo de un cliente para asegurar su entrada.'),
       findsOneWidget,
     );
 
@@ -177,13 +180,220 @@ void main() {
     await pumpPage(
       tester,
       reservations: [sampleReservation(plate: 'ABC123')],
-      onCheckIn: (_, plate) => requested = plate,
+      onCheckIn: (_, plate) async => requested = plate,
     );
 
     await tester.tap(find.byTooltip('Registrar entrada'));
     await tester.pumpAndSettle();
 
     expect(requested, 'ABC123');
+  });
+
+  testWidgets('Success: a public booking shows who booked it', (tester) async {
+    await pumpPage(
+      tester,
+      reservations: [
+        sampleReservation(
+          plate: 'WEB123',
+          customerName: 'Ana Perez',
+          customerPhone: '3009998877',
+          source: 'public',
+        ),
+      ],
+    );
+
+    expect(find.byKey(const Key('reservation_public')), findsOneWidget);
+    expect(find.text('Web'), findsOneWidget);
+    expect(find.text('Ana Perez · 3009998877'), findsOneWidget);
+    expect(find.byTooltip('Llamar al cliente'), findsOneWidget);
+    expect(find.byTooltip('WhatsApp al cliente'), findsOneWidget);
+  });
+
+  testWidgets('Success: the web filter hides the operator holds', (
+    tester,
+  ) async {
+    await pumpPage(
+      tester,
+      reservations: [
+        sampleReservation(id: 1, plate: 'AAA111'),
+        sampleReservation(
+          id: 2,
+          plate: 'WEB123',
+          customerName: 'Ana Perez',
+          customerPhone: '3009998877',
+          source: 'public',
+        ),
+      ],
+    );
+
+    await tester.tap(find.text('Solo web'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('AAA111'), findsNothing);
+    expect(find.text('WEB123'), findsOneWidget);
+    expect(find.text('1 reservas'), findsOneWidget);
+
+    await tester.tap(find.text('Limpiar filtros').first);
+    await tester.pumpAndSettle();
+    expect(find.text('AAA111'), findsOneWidget);
+  });
+
+  testWidgets('Security: an operator hold has no customer actions', (
+    tester,
+  ) async {
+    await pumpPage(tester, reservations: [sampleReservation(plate: 'ABC123')]);
+
+    expect(find.byKey(const Key('reservation_public')), findsNothing);
+    expect(find.byTooltip('Llamar al cliente'), findsNothing);
+    expect(find.byTooltip('WhatsApp al cliente'), findsNothing);
+  });
+
+  testWidgets('Success: a late hold is flagged as in grace', (tester) async {
+    await pumpPage(
+      tester,
+      reservations: [
+        sampleReservation(
+          id: 3,
+          plate: 'LATE01',
+          reservedUntil: DateTime.now().subtract(const Duration(minutes: 5)),
+          inGrace: true,
+        ),
+      ],
+    );
+
+    expect(find.byKey(const Key('reservation_in_grace')), findsOneWidget);
+    expect(find.text('En tolerancia'), findsOneWidget);
+  });
+
+  testWidgets('Success: the card shows the code the customer was given', (
+    tester,
+  ) async {
+    await pumpPage(tester, reservations: [sampleReservation(id: 12)]);
+
+    expect(find.textContaining('#12 ·'), findsOneWidget);
+  });
+
+  testWidgets('Success: the search finds a booking by its code', (
+    tester,
+  ) async {
+    await pumpPage(
+      tester,
+      reservations: [
+        sampleReservation(id: 7, plate: 'AAA111'),
+        sampleReservation(id: 12, plate: 'BBB222'),
+      ],
+    );
+
+    await tester.enterText(find.byType(TextField).first, '12');
+    await tester.pumpAndSettle();
+
+    expect(find.text('AAA111'), findsNothing);
+    expect(find.text('BBB222'), findsOneWidget);
+  });
+
+  testWidgets('Success: the search finds a booking by customer', (
+    tester,
+  ) async {
+    await pumpPage(
+      tester,
+      reservations: [
+        sampleReservation(id: 1, plate: 'AAA111'),
+        sampleReservation(
+          id: 2,
+          plate: 'BBB222',
+          customerName: 'Carlos Ruiz',
+          customerPhone: '3005556677',
+          source: 'public',
+        ),
+      ],
+    );
+
+    await tester.enterText(find.byType(TextField).first, 'carlos');
+    await tester.pumpAndSettle();
+
+    expect(find.text('AAA111'), findsNothing);
+    expect(find.text('BBB222'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField).first, '3005556677');
+    await tester.pumpAndSettle();
+    expect(find.text('BBB222'), findsOneWidget);
+  });
+
+  testWidgets('A11y: a public booking fits a 400 px phone', (tester) async {
+    await pumpPage(
+      tester,
+      size: const Size(400, 1200),
+      reservations: [
+        sampleReservation(
+          plate: 'WEB123',
+          customerName: 'Ana Maria Perez Rodriguez',
+          customerPhone: '3009998877',
+          notes: 'Llega a las 8',
+          source: 'public',
+        ),
+      ],
+    );
+
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(const Key('reservation_public')), findsOneWidget);
+  });
+
+  testWidgets('Success: the CSV button copies the visible holds', (
+    tester,
+  ) async {
+    final calls = <MethodCall>[];
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        calls.add(call);
+        return null;
+      },
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
+    );
+
+    await pumpPage(
+      tester,
+      reservations: [
+        sampleReservation(
+          id: 7,
+          plate: 'WEB123',
+          customerName: 'Ana',
+          customerPhone: '3009998877',
+          source: 'public',
+        ),
+      ],
+    );
+    await tester.tap(find.byKey(const Key('reservations_csv')));
+    await tester.pumpAndSettle();
+
+    final copy = calls.firstWhere((c) => c.method == 'Clipboard.setData');
+    final text = (copy.arguments as Map)['text'] as String;
+    expect(text, contains('code,plate,category,reserved_until'));
+    expect(text, contains('7,WEB123,car'));
+    expect(text, contains('Ana'));
+    expect(text, contains('3009998877,public,active'));
+    expect(find.text('Reservas copiadas en CSV'), findsOneWidget);
+  });
+
+  testWidgets('Success: coming back from check-in reloads the board', (
+    tester,
+  ) async {
+    final repository = await pumpPage(
+      tester,
+      reservations: [sampleReservation(plate: 'ABC123')],
+      onCheckIn: (_, _) async {},
+    );
+    final calls = repository.activeCalls;
+
+    await tester.tap(find.byTooltip('Registrar entrada'));
+    await tester.pumpAndSettle();
+
+    expect(repository.activeCalls, calls + 1);
   });
 
   testWidgets('Success: the reservation plate is uppercased while typing', (

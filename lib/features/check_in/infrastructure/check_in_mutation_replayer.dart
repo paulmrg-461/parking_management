@@ -16,7 +16,7 @@ class CheckInMutationReplayer extends MutationReplayer {
   MutationEntity get entity => MutationEntity.checkIn;
 
   @override
-  Future<void> replay(PendingMutation mutation) async {
+  Future<int?> replay(PendingMutation mutation) async {
     final payload = mutation.decodePayload();
     final clientRef = payload['client_ref'] as String;
     final paths = (payload['photo_paths'] as List<dynamic>).cast<String>();
@@ -35,6 +35,8 @@ class CheckInMutationReplayer extends MutationReplayer {
       lotId: (payload['lot_id'] as num?)?.toInt(),
     );
     await _photos.deleteFor(clientRef);
+    // Check-ins are safe by idempotency, not by version: nothing to return.
+    return null;
   }
 
   @override

@@ -28,6 +28,14 @@ class CategoryOccupancySnapshot extends Equatable {
 
   @override
   List<Object?> get props => [categoryId, name, count, capacity, isFull];
+
+  Map<String, dynamic> toJson() => {
+    'category_id': categoryId,
+    'category_name': name,
+    'count': count,
+    'capacity': capacity,
+    'is_full': isFull,
+  };
 }
 
 class OccupancySnapshot extends Equatable {
@@ -58,4 +66,10 @@ class OccupancySnapshot extends Equatable {
 
   @override
   List<Object?> get props => [totalOpen, totalCapacity, byCategory];
+
+  Map<String, dynamic> toJson() => {
+    'total_open': totalOpen,
+    'total_capacity': totalCapacity,
+    'by_category': [for (final category in byCategory) category.toJson()],
+  };
 }

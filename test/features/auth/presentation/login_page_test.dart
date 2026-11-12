@@ -20,7 +20,10 @@ Widget _wrap(AuthCubit cubit) {
     initialLocation: '/login',
     routes: [
       GoRoute(path: '/login', builder: (_, _) => const LoginPage()),
-      GoRoute(path: '/', builder: (_, _) => const Scaffold(body: Text('home'))),
+      GoRoute(
+        path: '/',
+        builder: (_, _) => const Scaffold(body: Text('home')),
+      ),
     ],
   );
   return BlocProvider<BrandingCubit>.value(
@@ -200,5 +203,23 @@ void main() {
     await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
     await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
     await expectLater(tester, meetsGuideline(textContrastGuideline));
+  });
+  testWidgets('A11y: login fits a 320 dp phone with large text and keyboard', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 480);
+    tester.view.devicePixelRatio = 1;
+    tester.view.viewInsets = const FakeViewPadding(bottom: 180);
+    tester.platformDispatcher.textScaleFactorTestValue = 1.6;
+    addTearDown(tester.view.reset);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+    await tester.pumpWidget(_wrap(AuthCubit(FakeAuthRepository())));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Ingresar'), findsOneWidget);
+    await tester.ensureVisible(find.text('Ingresar'));
+    expect(tester.takeException(), isNull);
   });
 }

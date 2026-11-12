@@ -1,0 +1,182 @@
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../../../core/error/failure.dart';
+import '../../../core/network/supabase_error_mapper.dart';
+import '../domain/entities/public_booking.dart';
+
+abstract class PublicBookingRemoteDataSource {
+  Future<PublicBookingAvailability?> availability(int lotId);
+
+  Future<PublicReservation?> lookup({
+    required int lotId,
+    required int reservationId,
+    required String phone,
+  });
+
+  Future<void> cancel({
+    required int lotId,
+    required int reservationId,
+    required String plate,
+    required String phone,
+  });
+
+  Future<PublicReservation> reserve({
+    required int lotId,
+    required String plate,
+    required int categoryId,
+    required DateTime until,
+    required String phone,
+    required String name,
+    String? captchaToken,
+  });
+}
+
+class SupabasePublicBookingRemoteDataSource
+    implements PublicBookingRemoteDataSource {
+  SupabasePublicBookingRemoteDataSource(this._client);
+
+  final SupabaseClient _client;
+
+  @override
+  Future<PublicBookingAvailability?> availability(int lotId) async {
+    try {
+      final result = await _client.rpc(
+        'public_availability',
+        params: {'p_lot_id': lotId},
+      );
+      if (result is! Map) {
+        return null;
+      }
+      final json = Map<String, dynamic>.from(result);
+      final lot = json['lot'] is Map
+          ? Map<String, dynamic>.from(json['lot'] as Map)
+          : const <String, dynamic>{};
+      final logoPath = lot['logo_path'] as String? ?? '';
+      final coverPath = lot['cover_path'] as String? ?? '';
+      final logoUrl = logoPath.isEmpty
+          ? null
+          : _client.storage.from('branding').getPublicUrl(logoPath);
+      final coverUrl = coverPath.isEmpty
+          ? null
+          : _client.storage.from('branding').getPublicUrl(coverPath);
+      return PublicBookingAvailability.fromJson(
+        json,
+        logoUrl: logoUrl,
+        coverUrl: coverUrl,
+      );
+    } catch (error) {
+      throw mapSupabaseError(error);
+    }
+  }
+
+  @override
+  Future<PublicReservation?> lookup({
+    required int lotId,
+    required int reservationId,
+    required String phone,
+  }) async {
+    try {
+      final result = await _client.rpc(
+        'public_reservation_lookup',
+        params: {
+          'p_lot_id': lotId,
+          'p_reservation_id': reservationId,
+          'p_customer_phone': phone,
+        },
+      );
+      if (result is! Map) {
+        return null;
+      }
+      return PublicReservation.fromJson(Map<String, dynamic>.from(result));
+    } catch (error) {
+      throw mapSupabaseError(error);
+    }
+  }
+
+  @override
+  Future<void> cancel({
+    required int lotId,
+    required int reservationId,
+    required String plate,
+    required String phone,
+  }) async {
+    try {
+      await _client.rpc(
+        'public_cancel_reservation',
+        params: {
+          'p_lot_id': lotId,
+          'p_reservation_id': reservationId,
+          'p_plate': plate,
+          'p_customer_phone': phone,
+        },
+      );
+    } catch (error) {
+      throw mapSupabaseError(error);
+    }
+  }
+
+  @override
+  Future<PublicReservation> reserve({
+    required int lotId,
+    required String plate,
+    required int categoryId,
+    required DateTime until,
+    required String phone,
+    required String name,
+    String? captchaToken,
+  }) async {
+    try {
+      final result = captchaToken == null
+          ? await _client.rpc(
+              'public_create_reservation',
+              params: {
+                'p_lot_id': lotId,
+                'p_plate': plate,
+                'p_category_id': categoryId,
+                'p_until': until.toUtc().toIso8601String(),
+                'p_customer_name': name,
+                'p_customer_phone': phone,
+              },
+            )
+          : await _verifiedBooking({
+              'lot_id': lotId,
+              'plate': plate,
+              'category_id': categoryId,
+              'until': until.toUtc().toIso8601String(),
+              'name': name,
+              'phone': phone,
+              'captcha_token': captchaToken,
+            });
+      return PublicReservation.fromJson(
+        Map<String, dynamic>.from(result as Map),
+      );
+    } on Failure {
+      rethrow;
+    } catch (error) {
+      throw mapSupabaseError(error);
+    }
+  }
+
+  /// Books through `public-booking`, which verifies the captcha token before
+  /// it creates the hold. The function answers the same typed names the RPC
+  /// raises (plus the `Captcha*Error` family) as `{"message": ...}`.
+  Future<Object?> _verifiedBooking(Map<String, Object?> body) async {
+    try {
+      final response = await _client.functions.invoke(
+        'public-booking',
+        body: body,
+      );
+      return response.data;
+    } on FunctionException catch (error) {
+      final details = error.details;
+      final message = details is Map ? details['message'] : null;
+      if (message is String && _typedError.hasMatch(message)) {
+        throw ValidationFailure(message, message);
+      }
+      rethrow;
+    }
+  }
+}
+
+/// Backend error class names (`BookingThrottledError`, `CaptchaFailedError`).
+final _typedError = RegExp(r'^[A-Za-z]+Error$');

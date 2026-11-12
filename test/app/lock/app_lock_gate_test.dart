@@ -51,24 +51,25 @@ Future<(AuthCubit, AutoLockCubit)> _pump(
 }
 
 void main() {
-  testWidgets('Success: the lock screen covers the app and the PIN unlocks it', (
-    tester,
-  ) async {
-    final (auth, lock) = await _pump(tester);
+  testWidgets(
+    'Success: the lock screen covers the app and the PIN unlocks it',
+    (tester) async {
+      final (auth, lock) = await _pump(tester);
 
-    lock.lockNow();
-    await tester.pumpAndSettle();
-    expect(find.text('Sesión bloqueada'), findsOneWidget);
-    expect(find.text('juan'), findsOneWidget);
+      lock.lockNow();
+      await tester.pumpAndSettle();
+      expect(find.text('Sesión bloqueada'), findsOneWidget);
+      expect(find.text('juan'), findsOneWidget);
 
-    await tester.enterText(find.byKey(const Key('lock_pin')), '123456');
-    await tester.tap(find.byKey(const Key('lock_unlock')));
-    await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const Key('lock_pin')), '123456');
+      await tester.tap(find.byKey(const Key('lock_unlock')));
+      await tester.pumpAndSettle();
 
-    expect(find.text('Sesión bloqueada'), findsNothing);
-    expect(find.text('app content'), findsOneWidget);
-    expect(auth.state, isA<AuthAuthenticated>());
-  });
+      expect(find.text('Sesión bloqueada'), findsNothing);
+      expect(find.text('app content'), findsOneWidget);
+      expect(auth.state, isA<AuthAuthenticated>());
+    },
+  );
 
   testWidgets('Failure: a wrong PIN keeps the app locked', (tester) async {
     final (_, lock) = await _pump(

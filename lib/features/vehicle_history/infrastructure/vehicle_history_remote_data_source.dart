@@ -29,9 +29,7 @@ class SupabaseVehicleHistoryRemoteDataSource
         'vehicle_history',
         params: {'p_plate': plate},
       );
-      return VehicleHistory.fromJson(
-        Map<String, dynamic>.from(result as Map),
-      );
+      return VehicleHistory.fromJson(Map<String, dynamic>.from(result as Map));
     } catch (error) {
       throw mapSupabaseError(error);
     }

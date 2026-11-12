@@ -43,7 +43,10 @@ void main() {
 
     expect(values.last, '');
     expect(find.byIcon(Icons.clear), findsNothing);
-    expect(tester.widget<TextField>(find.byType(TextField)).controller!.text, '');
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller!.text,
+      '',
+    );
   });
 
   testWidgets('Security: Escape clears instead of closing the screen', (

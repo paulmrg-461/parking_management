@@ -9,6 +9,7 @@ class Vehicle extends Equatable {
     this.brand,
     this.ownerPhone,
     this.ownerName,
+    this.version = 0,
   });
 
   final int? id;
@@ -23,6 +24,11 @@ class Vehicle extends Equatable {
   /// Optional full name of the owner, useful for passes or left keys.
   final String? ownerName;
 
+  /// Row version from the server (`0` when unknown, e.g. an old cache entry);
+  /// offline edits send it back so a concurrent change is a conflict, not an
+  /// overwrite.
+  final int version;
+
   @override
   List<Object?> get props => [
     id,
@@ -32,5 +38,6 @@ class Vehicle extends Equatable {
     brand,
     ownerPhone,
     ownerName,
+    version,
   ];
 }

@@ -35,6 +35,7 @@ String _notifications(AppLocalizations l) => l.navNotifications;
 String _reservations(AppLocalizations l) => l.navReservations;
 String _lots(AppLocalizations l) => l.navLots;
 String _records(AppLocalizations l) => l.navRecords;
+String _anomalies(AppLocalizations l) => l.navAnomalies;
 String _audit(AppLocalizations l) => l.navAudit;
 String _diagnostics(AppLocalizations l) => l.navDiagnostics;
 
@@ -69,12 +70,7 @@ const managementDestinations = [
     Icons.directions_car_outlined,
     Icons.directions_car,
   ),
-  AppDestination(
-    '/tariffs',
-    _tariffs,
-    Icons.payments_outlined,
-    Icons.payments,
-  ),
+  AppDestination('/tariffs', _tariffs, Icons.payments_outlined, Icons.payments),
   AppDestination(
     '/categories',
     _categories,
@@ -88,11 +84,12 @@ const managementDestinations = [
     Icons.monitor_heart,
   ),
   AppDestination(
-    '/audit',
-    _audit,
-    Icons.history_outlined,
-    Icons.history,
+    '/anomalies',
+    _anomalies,
+    Icons.report_problem_outlined,
+    Icons.report_problem,
   ),
+  AppDestination('/audit', _audit, Icons.history_outlined, Icons.history),
   AppDestination(
     '/lots',
     _lots,

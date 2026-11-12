@@ -47,16 +47,17 @@ class _LotsPageState extends State<LotsPage> {
               message: message,
               onRetry: context.read<LotsCubit>().load,
             ),
-            final LotsLoaded loaded => loaded.lots.isEmpty
-                ? EmptyState(
-                    message: l10n.lotsEmpty,
-                    icon: Icons.location_city_outlined,
-                  )
-                : ListView.builder(
-                    itemCount: loaded.lots.length,
-                    itemBuilder: (context, index) =>
-                        _LotTile(lot: loaded.lots[index]),
-                  ),
+            final LotsLoaded loaded =>
+              loaded.lots.isEmpty
+                  ? EmptyState(
+                      message: l10n.lotsEmpty,
+                      icon: Icons.location_city_outlined,
+                    )
+                  : ListView.builder(
+                      itemCount: loaded.lots.length,
+                      itemBuilder: (context, index) =>
+                          _LotTile(lot: loaded.lots[index]),
+                    ),
           },
         ),
       ),
@@ -121,9 +122,8 @@ class _LotTile extends StatelessWidget {
         ),
         title: Text(
           lot.name,
-          style: Theme.of(
-            context,
-          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+          style: Theme.of(context).textTheme.titleSmall
+              ?.copyWith(fontWeight: FontWeight.w600),
         ),
         subtitle: Text(
           [
@@ -142,10 +142,8 @@ class _LotTile extends StatelessWidget {
             ),
             Switch(
               value: lot.active,
-              onChanged: (value) => context.read<LotsCubit>().setActiveFlag(
-                lot,
-                value,
-              ),
+              onChanged: (value) =>
+                  context.read<LotsCubit>().setActiveFlag(lot, value),
             ),
           ],
         ),

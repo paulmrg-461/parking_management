@@ -1,4 +1,8 @@
+import '../domain/entities/hourly_traffic.dart';
 import '../domain/entities/occupancy_report.dart';
+import '../domain/entities/forecast_backtest.dart';
+import '../domain/entities/period_comparison.dart';
+import '../domain/entities/reservation_report.dart';
 import '../domain/entities/revenue_report.dart';
 import '../domain/entities/whatsapp_report.dart';
 import '../domain/repositories/report_repository.dart';
@@ -34,9 +38,28 @@ class ReportRepositoryImpl implements ReportRepository {
     required DateTime startDate,
     required DateTime endDate,
   }) async {
-    return _remote.getWhatsappReport(
-      startDate: startDate,
-      endDate: endDate,
-    );
+    return _remote.getWhatsappReport(startDate: startDate, endDate: endDate);
+  }
+
+  @override
+  Future<PeriodComparison> getPeriodComparison({int months = 6}) =>
+      _remote.getPeriodComparison(months: months);
+
+  @override
+  Future<ReservationReport> getReservationReport({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) => _remote.getReservationReport(startDate: startDate, endDate: endDate);
+
+  @override
+  Future<ForecastBacktest> getForecastBacktest({int weeks = 4}) =>
+      _remote.getForecastBacktest(weeks: weeks);
+
+  @override
+  Future<HourlyTraffic> getHourlyTraffic({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    return _remote.getHourlyTraffic(startDate: startDate, endDate: endDate);
   }
 }

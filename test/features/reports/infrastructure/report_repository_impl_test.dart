@@ -1,6 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/error/failure.dart';
+import 'package:parking_management/features/reports/domain/entities/hourly_traffic.dart';
 import 'package:parking_management/features/reports/domain/entities/occupancy_report.dart';
+import 'package:parking_management/features/reports/domain/entities/forecast_backtest.dart';
+import 'package:parking_management/features/reports/domain/entities/period_comparison.dart';
+import 'package:parking_management/features/reports/domain/entities/reservation_report.dart';
 import 'package:parking_management/features/reports/domain/entities/revenue_report.dart';
 import 'package:parking_management/features/reports/domain/entities/whatsapp_report.dart';
 import 'package:parking_management/features/reports/infrastructure/report_remote_data_source.dart';
@@ -12,6 +16,7 @@ class _FakeRemote implements ReportRemoteDataSource {
   final RevenueReport? revenueToReturn;
   final OccupancyReport? occupancyToReturn;
   final Failure? error;
+  PeriodComparison comparisonToReturn = PeriodComparison.empty;
 
   @override
   Future<RevenueReport> getRevenueReport({
@@ -31,6 +36,25 @@ class _FakeRemote implements ReportRemoteDataSource {
     required DateTime startDate,
     required DateTime endDate,
   }) async => WhatsappReport.empty;
+
+  @override
+  Future<ForecastBacktest> getForecastBacktest({int weeks = 4}) async =>
+      ForecastBacktest.empty;
+
+  Future<PeriodComparison> getPeriodComparison({int months = 6}) async =>
+      comparisonToReturn;
+
+  @override
+  Future<ReservationReport> getReservationReport({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async => ReservationReport.empty;
+
+  @override
+  Future<HourlyTraffic> getHourlyTraffic({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async => HourlyTraffic.empty;
 
   @override
   Future<OccupancyReport> getOccupancyReport() async {

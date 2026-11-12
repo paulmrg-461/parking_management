@@ -24,6 +24,36 @@ void main() {
     expect(es.failure(failure), 'Ingresa la placa');
   });
 
+  test(
+    'Success: the conflict codes are localized in Spanish and English',
+    () async {
+      final en = await AppLocalizations.delegate.load(const Locale('en'));
+
+      expect(
+        es.failure(const VersionConflictFailure(null)),
+        'Otra persona cambió este registro. Revisa el conflicto desde el ícono de sincronización.',
+      );
+      expect(
+        es.failure(
+          const ValidationFailure('x', ClientFailureCodes.conflictPending),
+        ),
+        'Resuelve primero el conflicto pendiente de este registro.',
+      );
+      expect(
+        es.failure(const ValidationFailure('x', 'VersionRequiredError')),
+        'Actualiza la aplicación para editar este registro.',
+      );
+      expect(
+        es.failure(const ValidationFailure('x', 'MinVersionRequiredError')),
+        'Define primero la versión mínima de la app.',
+      );
+      expect(
+        en.failure(const VersionConflictFailure(null)),
+        'Someone else changed this record. Review the conflict from the sync icon.',
+      );
+    },
+  );
+
   test('Failure: unknown code falls back to the backend detail', () {
     const failure = ValidationFailure('PIN must be 4 to 6 digits', 'Weird');
     expect(es.failure(failure), 'PIN must be 4 to 6 digits');

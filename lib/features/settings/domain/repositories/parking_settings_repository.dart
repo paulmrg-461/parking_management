@@ -21,6 +21,9 @@ abstract class ParkingSettingsRepository {
   /// offline with the cached logo untouched.
   Future<ParkingSettings> uploadLogo(Uint8List bytes);
 
+  /// Uploads the wide cover for the public page and stores its path.
+  Future<ParkingSettings> uploadCover(Uint8List bytes);
+
   /// Server-side default contract template (admin; online only).
   Future<String> resetLegalPolicy();
 }

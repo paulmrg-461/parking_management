@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../../../app/shell/app_destinations.dart';
 import '../../../../core/l10n/failure_messages.dart';
@@ -10,12 +11,15 @@ import '../../../../core/theme/tokens.dart';
 import '../../../../core/utils/elapsed.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/app_icon_button.dart';
+import '../../../check_out/domain/entities/occupancy_forecast.dart';
 import '../../../../core/widgets/money_text.dart';
 import '../../../../core/widgets/plate_text.dart';
 import '../../../../core/widgets/status_chip.dart';
 import '../../../auth/application/auth_cubit.dart';
 import '../../../auth/domain/entities/user.dart';
 import '../../../check_out/domain/entities/capacity_snapshot.dart';
+import '../../../check_out/domain/entities/dashboard_trend.dart';
+import '../../../check_out/domain/entities/lot_setup_status.dart';
 import '../../../shifts/application/shift_cubit.dart';
 import '../../application/dashboard_cubit.dart';
 
@@ -380,11 +384,10 @@ class CapacityCard extends StatelessWidget {
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ),
-                      if (_isAdmin(context))
-                        TextButton(
-                          onPressed: () => context.go('/reservations'),
-                          child: Text(l10n.homeSeeReservations),
-                        ),
+                      TextButton(
+                        onPressed: () => context.go('/reservations'),
+                        child: Text(l10n.homeSeeReservations),
+                      ),
                     ],
                   ),
                   if (capacity.reservationsExpiring > 0)
@@ -447,11 +450,26 @@ class _CapacityRow extends StatelessWidget {
             children: [
               Icon(icon, size: 16, color: scheme.onSurfaceVariant),
               const SizedBox(width: 6),
-              Expanded(child: Text(label, style: theme.textTheme.bodyMedium)),
-              Text(
-                limited ? '$open / $available' : '$open · ${l10n.homeNoLimit}',
-                style: theme.textTheme.labelLarge?.copyWith(
-                  color: full ? scheme.error : scheme.onSurfaceVariant,
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ),
+              const SizedBox(width: Space.xs),
+              Flexible(
+                child: Text(
+                  limited
+                      ? '$open / $available'
+                      : '$open · ${l10n.homeNoLimit}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.end,
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: full ? scheme.error : scheme.onSurfaceVariant,
+                  ),
                 ),
               ),
             ],
@@ -993,6 +1011,483 @@ class _TodayMetric extends StatelessWidget {
   }
 }
 
+/// Seven-day activity for the site: one bar per business day, the weekly
+/// totals below and (for admins) a shortcut to the full reports screen.
+/// Operators see it too: it is a summary, not an admin-only report.
+class TrendCard extends StatelessWidget {
+  const TrendCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final textTheme = Theme.of(context).textTheme;
+    return BlocBuilder<DashboardCubit, DashboardState>(
+      buildWhen: (previous, current) =>
+          previous is! DashboardLoaded ||
+          current is! DashboardLoaded ||
+          previous.trend != current.trend,
+      builder: (context, state) {
+        final loading = state is DashboardLoading;
+        final failed = state is DashboardFailure;
+        final trend = state is DashboardLoaded
+            ? state.trend
+            : DashboardTrend.empty;
+        final current = trend.latest(7);
+        final previous = trend.window(7, skip: 7);
+        final quiet =
+            state is DashboardLoaded && !current.any((day) => day.hasMovement);
+        final previousTotal = trend.revenueOf(previous);
+        final currentTotal = trend.revenueOf(current);
+        final comparable =
+            previous.length == current.length &&
+            current.isNotEmpty &&
+            previousTotal > 0;
+        final delta = comparable
+            ? ((currentTotal - previousTotal) * 100 / previousTotal).round()
+            : null;
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(Space.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    const _KpiIcon(icon: Icons.show_chart),
+                    const SizedBox(width: Space.sm),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(l10n.homeTrend, style: textTheme.titleSmall),
+                          Text(
+                            current.isEmpty
+                                ? l10n.homeTrendHint
+                                : _rangeLabel(context, current),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (_isAdmin(context))
+                      AppIconButton(
+                        icon: Icons.open_in_new,
+                        tooltip: l10n.homeTrendOpenReports,
+                        onPressed: () => context.go('/reports'),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: Space.md),
+                if (loading)
+                  const _TrendSkeleton()
+                else if (failed)
+                  _TrendQuiet(message: l10n.homeTrendUnavailable)
+                else if (quiet)
+                  _TrendQuiet(message: l10n.homeTrendEmpty)
+                else ...[
+                  _TrendChart(days: current),
+                  const SizedBox(height: Space.md),
+                  Wrap(
+                    spacing: Space.lg,
+                    runSpacing: Space.xs,
+                    children: [
+                      _TodayMetric(
+                        label: l10n.homeTrendTotal,
+                        value: Formatters.money(currentTotal),
+                      ),
+                      _TodayMetric(
+                        label: l10n.homeTrendEntries,
+                        value: '${_sum(current, (day) => day.entries)}',
+                      ),
+                      _TodayMetric(
+                        label: l10n.homeTrendExits,
+                        value: '${_sum(current, (day) => day.exits)}',
+                      ),
+                    ],
+                  ),
+                  if (delta != null) ...[
+                    const SizedBox(height: Space.sm),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: StatusChip(
+                        label: delta == 0
+                            ? l10n.homeTrendFlat
+                            : l10n.homeTrendVsPrevious(_signedPercent(delta)),
+                        tone: switch (delta) {
+                          > 0 => StatusTone.success,
+                          < 0 => StatusTone.warning,
+                          _ => StatusTone.neutral,
+                        },
+                        icon: switch (delta) {
+                          > 0 => Icons.trending_up,
+                          < 0 => Icons.trending_down,
+                          _ => Icons.trending_flat,
+                        },
+                      ),
+                    ),
+                  ],
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  static int _sum(List<TrendDay> days, int Function(TrendDay) value) =>
+      days.fold<int>(0, (total, day) => total + value(day));
+
+  static String _signedPercent(int percent) =>
+      percent > 0 ? '+$percent %' : '$percent %';
+
+  static String _rangeLabel(BuildContext context, List<TrendDay> days) {
+    final format = DateFormat.MMMd(context.l10n.localeName);
+    return context.l10n.homeTrendRange(
+      format.format(days.first.date),
+      format.format(days.last.date),
+    );
+  }
+}
+
+/// Bars scaled to the best day of the range; zero days keep a thin baseline
+/// so the series stays readable.
+class _TrendChart extends StatelessWidget {
+  const _TrendChart({required this.days});
+
+  final List<TrendDay> days;
+
+  @override
+  Widget build(BuildContext context) {
+    final peak = days.fold<int>(
+      0,
+      (max, day) => day.revenue > max ? day.revenue : max,
+    );
+    return SizedBox(
+      height: 116,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          for (var i = 0; i < days.length; i++)
+            Expanded(
+              child: _TrendBar(
+                day: days[i],
+                peak: peak,
+                isToday: i == days.length - 1,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TrendBar extends StatelessWidget {
+  const _TrendBar({
+    required this.day,
+    required this.peak,
+    required this.isToday,
+  });
+
+  final TrendDay day;
+  final int peak;
+  final bool isToday;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final label = DateFormat.MMMd(l10n.localeName).format(day.date);
+    final semantic = l10n.homeTrendDay(
+      label,
+      Formatters.money(day.revenue),
+      day.entries,
+      day.exits,
+    );
+    final ratio = peak <= 0 ? 0.0 : day.revenue / peak;
+    Widget bar() {
+      if (day.revenue == 0) {
+        return Container(
+          height: 3,
+          decoration: BoxDecoration(
+            color: scheme.outlineVariant,
+            borderRadius: BorderRadius.circular(Radii.sm),
+          ),
+        );
+      }
+      return FractionallySizedBox(
+        heightFactor: ratio.clamp(0.08, 1.0),
+        child: Container(
+          decoration: BoxDecoration(
+            color: isToday ? scheme.tertiary : scheme.primary,
+            borderRadius: BorderRadius.circular(Radii.sm),
+          ),
+        ),
+      );
+    }
+
+    return Tooltip(
+      message: semantic,
+      child: Semantics(
+        label: semantic,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 2),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Expanded(
+                child: Align(alignment: Alignment.bottomCenter, child: bar()),
+              ),
+              const SizedBox(height: Space.xs),
+              Text(
+                DateFormat.d(l10n.localeName).format(day.date),
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: isToday ? scheme.onSurface : scheme.onSurfaceVariant,
+                  fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Placeholder with the same geometry as the chart while the dashboard loads.
+class _TrendSkeleton extends StatelessWidget {
+  const _TrendSkeleton();
+
+  static const _heights = [0.4, 0.7, 0.55, 0.9, 0.35, 0.8, 0.6];
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return SizedBox(
+      height: 116,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          for (final factor in _heights)
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 2,
+                  vertical: Space.xs,
+                ),
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: FractionallySizedBox(
+                    heightFactor: factor,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: scheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(Radii.sm),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TrendQuiet extends StatelessWidget {
+  const _TrendQuiet({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Icon(
+          Icons.insights_outlined,
+          size: 18,
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+        const SizedBox(width: Space.sm),
+        Expanded(child: Text(message, style: theme.textTheme.bodyMedium)),
+      ],
+    );
+  }
+}
+
+/// Admin-only onboarding card: shows the missing setup steps of a new site
+/// and links to the screen that fixes each one. Hidden once the site is ready
+/// or when the status RPC failed.
+class SetupChecklistCard extends StatelessWidget {
+  const SetupChecklistCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final textTheme = Theme.of(context).textTheme;
+    if (!_isAdmin(context)) {
+      return const SizedBox.shrink();
+    }
+    return BlocBuilder<DashboardCubit, DashboardState>(
+      buildWhen: (previous, current) =>
+          previous is! DashboardLoaded ||
+          current is! DashboardLoaded ||
+          previous.setup != current.setup,
+      builder: (context, state) {
+        final setup = state is DashboardLoaded
+            ? state.setup
+            : LotSetupStatus.unknown;
+        if (!setup.known || setup.complete) {
+          return const SizedBox.shrink();
+        }
+        return Padding(
+          padding: const EdgeInsets.only(bottom: Space.lg),
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.all(Space.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      const _KpiIcon(icon: Icons.checklist_outlined),
+                      const SizedBox(width: Space.sm),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(l10n.setupTitle, style: textTheme.titleSmall),
+                            Text(
+                              l10n.setupProgress(
+                                setup.doneSteps,
+                                LotSetupStatus.totalSteps,
+                              ),
+                              style: textTheme.bodySmall?.copyWith(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: Space.sm),
+                  LinearProgressIndicator(
+                    value: setup.doneSteps / LotSetupStatus.totalSteps,
+                    minHeight: 6,
+                    borderRadius: BorderRadius.circular(Radii.pill),
+                  ),
+                  const SizedBox(height: Space.xs),
+                  _SetupStep(
+                    done: setup.hasCategories,
+                    title: l10n.setupCategories,
+                    hint: l10n.setupCategoriesHint,
+                    onTap: () => context.go('/categories'),
+                  ),
+                  _SetupStep(
+                    done: setup.hasTariffs,
+                    title: l10n.setupTariffs,
+                    hint: l10n.setupTariffsHint,
+                    onTap: () => context.go('/tariffs'),
+                  ),
+                  _SetupStep(
+                    done: setup.hasCapacity,
+                    title: l10n.setupCapacity,
+                    hint: l10n.setupCapacityHint,
+                    onTap: () => context.go('/settings'),
+                  ),
+                  _SetupStep(
+                    done: setup.hasIdentity,
+                    title: l10n.setupIdentity,
+                    hint: l10n.setupIdentityHint,
+                    onTap: () => context.go('/settings'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _SetupStep extends StatelessWidget {
+  const _SetupStep({
+    required this.done,
+    required this.title,
+    required this.hint,
+    required this.onTap,
+  });
+
+  final bool done;
+  final String title;
+  final String hint;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final color = done
+        ? StatusColors.of(context).success
+        : scheme.onSurfaceVariant;
+    return InkWell(
+      borderRadius: BorderRadius.circular(Radii.sm),
+      onTap: onTap,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: Layout.minTouch),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: Space.xs),
+          child: Row(
+            children: [
+              Icon(
+                done ? Icons.check_circle : Icons.radio_button_unchecked,
+                size: 22,
+                color: color,
+              ),
+              const SizedBox(width: Space.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: theme.textTheme.titleSmall),
+                    Text(
+                      hint,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (!done)
+                Icon(
+                  Icons.chevron_right,
+                  size: 18,
+                  color: scheme.onSurfaceVariant,
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 bool _isAdmin(BuildContext context) {
   try {
     final auth = context.read<AuthCubit>();
@@ -1002,5 +1497,254 @@ bool _isAdmin(BuildContext context) {
     };
   } on ProviderNotFoundException {
     return false;
+  }
+}
+
+/// "Will it be full at 6 pm?" — the next 12 hours from the profile blended with
+/// today's live occupancy. Never cached: while the dashboard is stale (offline)
+/// the card is not rendered at all (the page hides it).
+class OccupancyForecastCard extends StatefulWidget {
+  const OccupancyForecastCard({super.key});
+
+  @override
+  State<OccupancyForecastCard> createState() => _OccupancyForecastCardState();
+}
+
+class _OccupancyForecastCardState extends State<OccupancyForecastCard> {
+  String? _group;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final textTheme = Theme.of(context).textTheme;
+    return BlocBuilder<DashboardCubit, DashboardState>(
+      buildWhen: (previous, current) =>
+          previous is! DashboardLoaded ||
+          current is! DashboardLoaded ||
+          previous.forecast != current.forecast ||
+          (previous is DashboardLoading) != (current is DashboardLoading),
+      builder: (context, state) {
+        final loading = state is DashboardLoading;
+        final forecast = state is DashboardLoaded
+            ? state.forecast
+            : OccupancyForecast.unavailable;
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(Space.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    const _KpiIcon(icon: Icons.insights_outlined),
+                    const SizedBox(width: Space.sm),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l10n.homeForecastTitle,
+                            style: textTheme.titleSmall,
+                          ),
+                          Text(
+                            l10n.homeForecastHint,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: Space.md),
+                if (loading)
+                  const _ForecastSkeleton()
+                else if (!forecast.hasForecast)
+                  _TrendQuiet(message: _quietMessage(context, forecast.status))
+                else
+                  ..._content(context, forecast),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  String _quietMessage(BuildContext context, ForecastStatus status) {
+    final l10n = context.l10n;
+    return switch (status) {
+      ForecastStatus.disabled => l10n.homeForecastDisabled,
+      ForecastStatus.insufficientHistory => l10n.homeForecastInsufficient,
+      ForecastStatus.noCapacity => l10n.homeForecastNoCapacity,
+      _ => l10n.homeForecastUnavailable,
+    };
+  }
+
+  List<Widget> _content(BuildContext context, OccupancyForecast forecast) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final selected = forecast.groupOf(_group ?? '') ?? forecast.groups.first;
+    final first = forecast.firstToFill;
+    final headline = first == null
+        ? l10n.homeForecastNotFull
+        : first.fullNow
+        ? l10n.homeForecastFullNow(_groupLabel(context, first.group))
+        : l10n.homeForecastFullAt(
+            _groupLabel(context, first.group),
+            first.fullAt ?? '',
+          );
+    return [
+      Text(
+        headline,
+        style: theme.textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      if (forecast.groups.length > 1) ...[
+        const SizedBox(height: Space.sm),
+        Wrap(
+          spacing: Space.xs,
+          children: [
+            for (final group in forecast.groups)
+              ChoiceChip(
+                key: Key('forecast-group-${group.group}'),
+                label: Text(_groupLabel(context, group.group)),
+                selected: group.group == selected.group,
+                onSelected: (_) => setState(() => _group = group.group),
+              ),
+          ],
+        ),
+      ],
+      const SizedBox(height: Space.md),
+      _ForecastBars(group: selected),
+      const SizedBox(height: Space.sm),
+      Align(
+        alignment: Alignment.centerLeft,
+        child: StatusChip(
+          label: switch (selected.confidence) {
+            ForecastConfidence.high => l10n.homeForecastConfidenceHigh,
+            ForecastConfidence.medium => l10n.homeForecastConfidenceMedium,
+            ForecastConfidence.low => l10n.homeForecastConfidenceLow,
+          },
+          tone: switch (selected.confidence) {
+            ForecastConfidence.high => StatusTone.success,
+            ForecastConfidence.medium => StatusTone.neutral,
+            ForecastConfidence.low => StatusTone.pending,
+          },
+        ),
+      ),
+    ];
+  }
+
+  String _groupLabel(BuildContext context, String group) => group == 'moto'
+      ? context.l10n.homeForecastGroupMoto
+      : context.l10n.homeForecastGroupCar;
+}
+
+class _ForecastBars extends StatelessWidget {
+  const _ForecastBars({required this.group});
+
+  final ForecastGroup group;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final scheme = Theme.of(context).colorScheme;
+    final status = StatusColors.of(context);
+    final capacity = group.capacity <= 0 ? 1 : group.capacity;
+    return SizedBox(
+      height: 96,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          for (var index = 0; index < group.hours.length; index++)
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 1),
+                child: Semantics(
+                  label: l10n.homeForecastBarSemantics(
+                    group.hours[index].hour,
+                    group.hours[index].expected,
+                    capacity,
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Expanded(
+                        child: Align(
+                          alignment: Alignment.bottomCenter,
+                          child: FractionallySizedBox(
+                            heightFactor:
+                                (group.hours[index].expected / capacity).clamp(
+                                  0.04,
+                                  1.0,
+                                ),
+                            child: Container(
+                              key: Key(
+                                'forecast-bar-${group.hours[index].hour}',
+                              ),
+                              decoration: BoxDecoration(
+                                color: switch (group.hours[index].level) {
+                                  ForecastLevel.full => scheme.error,
+                                  ForecastLevel.busy => status.warning,
+                                  ForecastLevel.free => scheme.primary,
+                                },
+                                borderRadius: BorderRadius.circular(Radii.sm),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      if (index % 3 == 0)
+                        Text(
+                          '${group.hours[index].hour}',
+                          style: Theme.of(context).textTheme.labelSmall,
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ForecastSkeleton extends StatelessWidget {
+  const _ForecastSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final width in const [180.0, 240.0])
+          Container(
+            width: width,
+            height: 12,
+            margin: const EdgeInsets.only(bottom: Space.sm),
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(Radii.sm),
+            ),
+          ),
+        const SizedBox(height: Space.sm),
+        Container(
+          height: 64,
+          decoration: BoxDecoration(
+            color: scheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(Radii.sm),
+          ),
+        ),
+      ],
+    );
   }
 }

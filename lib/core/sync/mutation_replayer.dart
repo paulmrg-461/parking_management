@@ -8,8 +8,14 @@ import 'pending_mutation.dart';
 abstract class MutationReplayer {
   MutationEntity get entity;
 
-  Future<void> replay(PendingMutation mutation);
+  /// Replays the mutation and returns the row version the server assigned
+  /// (`null` when the entity has no version or the operation deleted it).
+  Future<int?> replay(PendingMutation mutation);
 
   /// Cleans up local side artifacts when the operator discards a dead letter.
   Future<void> discard(PendingMutation mutation) async {}
+
+  /// Refreshes the local cache with the row the server has (or removes it when
+  /// [row] is null) after a conflict is resolved in the server's favour.
+  Future<void> adoptServer(Map<String, dynamic>? row) async {}
 }

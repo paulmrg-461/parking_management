@@ -5,6 +5,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/core/theme/contrast.dart';
 import 'package:parking_management/features/reports/application/reports_cubit.dart';
+import 'package:parking_management/features/reports/domain/entities/hourly_traffic.dart';
+import 'package:parking_management/features/reports/domain/entities/forecast_backtest.dart';
+import 'package:parking_management/features/reports/domain/entities/period_comparison.dart';
+import 'package:parking_management/features/reports/domain/entities/reservation_report.dart';
 import 'package:parking_management/features/reports/domain/entities/occupancy_report.dart';
 import 'package:parking_management/features/reports/domain/entities/revenue_report.dart';
 import 'package:parking_management/features/reports/domain/entities/whatsapp_report.dart';
@@ -16,6 +20,8 @@ import 'package:parking_management/features/reports/presentation/reports_page.da
 import '../../../helpers/test_app.dart';
 
 class _FakeReportRepository implements ReportRepository {
+  ForecastBacktest backtestToReturn = ForecastBacktest.empty;
+  bool failBacktest = false;
   _FakeReportRepository(this.revenue, this.occupancy);
 
   final RevenueReport revenue;
@@ -32,7 +38,31 @@ class _FakeReportRepository implements ReportRepository {
     byDay: [WhatsappDaily(date: DateTime(2026, 1, 1), sent: 8, failed: 1)],
   );
 
+  HourlyTraffic hourly = HourlyTraffic.empty;
+  ReservationReport reservations = ReservationReport.empty;
+  PeriodComparison comparison = PeriodComparison.empty;
+  int? comparisonMonthsRequested;
+
   int _revenueCalls = 0;
+
+  @override
+  Future<ForecastBacktest> getForecastBacktest({int weeks = 4}) async {
+    if (failBacktest) {
+      throw const NetworkFailure('offline');
+    }
+    return backtestToReturn;
+  }
+
+  Future<PeriodComparison> getPeriodComparison({int months = 6}) async {
+    comparisonMonthsRequested = months;
+    return comparison;
+  }
+
+  @override
+  Future<ReservationReport> getReservationReport({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async => reservations;
 
   @override
   Future<RevenueReport> getRevenueReport({
@@ -62,6 +92,12 @@ class _FakeReportRepository implements ReportRepository {
   }) async => whatsapp;
 
   @override
+  Future<HourlyTraffic> getHourlyTraffic({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async => hourly;
+
+  @override
   Future<OccupancyReport> getOccupancyReport() async => occupancy;
 }
 
@@ -73,12 +109,22 @@ final _revenue = RevenueReport(
   byCategory: const [
     CategoryRevenue(categoryId: 1, categoryName: 'Car', amount: 100000),
   ],
-  byPayment: const [
-    PaymentRevenue(paymentMethod: 'cash', amount: 100000),
-  ],
+  byPayment: const [PaymentRevenue(paymentMethod: 'cash', amount: 100000)],
   byLot: const [
-    LotRevenue(lotId: 1, lotName: 'Central', amount: 120000, tickets: 4, avgTicket: 30000),
-    LotRevenue(lotId: 2, lotName: 'North', amount: 30000, tickets: 2, avgTicket: 15000),
+    LotRevenue(
+      lotId: 1,
+      lotName: 'Central',
+      amount: 120000,
+      tickets: 4,
+      avgTicket: 30000,
+    ),
+    LotRevenue(
+      lotId: 2,
+      lotName: 'North',
+      amount: 30000,
+      tickets: 2,
+      avgTicket: 15000,
+    ),
   ],
 );
 
@@ -91,20 +137,26 @@ Future<_FakeReportRepository> _pump(
   WidgetTester tester, {
   Failure? error,
   RevenueReport? previousRevenue,
+  HourlyTraffic? hourly,
+  ReservationReport? reservations,
+  _FakeReportRepository? repository,
 }) async {
-  final repository = _FakeReportRepository(_revenue, _occupancy)
+  final fake = repository ?? _FakeReportRepository(_revenue, _occupancy);
+  fake
     ..error = error
-    ..previousRevenue = previousRevenue;
+    ..previousRevenue = previousRevenue
+    ..hourly = hourly ?? HourlyTraffic.empty
+    ..reservations = reservations ?? ReservationReport.empty;
   await tester.pumpWidget(
     testApp(
       BlocProvider<ReportsCubit>(
-        create: (_) => ReportsCubit(repository),
+        create: (_) => ReportsCubit(fake),
         child: const ReportsPage(),
       ),
     ),
   );
   await tester.pumpAndSettle();
-  return repository;
+  return fake;
 }
 
 /// The report list is lazy and disposes rows quickly: move in small steps so
@@ -127,6 +179,22 @@ Future<void> _scrollTo(WidgetTester tester, Finder finder) async {
   await Scrollable.ensureVisible(tester.element(finder));
 }
 
+HourlyTraffic _hourly() => HourlyTraffic(
+  timezone: 'America/Bogota',
+  hours: [
+    for (var hour = 0; hour < 24; hour++)
+      HourlyTrafficPoint(
+        hour: hour,
+        entries: hour == 8
+            ? 12
+            : hour == 14
+            ? 3
+            : 0,
+        exits: hour == 9 ? 4 : 0,
+      ),
+  ],
+);
+
 void main() {
   testWidgets('Success: renders total revenue and occupancy in Spanish', (
     tester,
@@ -141,6 +209,37 @@ void main() {
     expect(find.text('Efectivo'), findsOneWidget);
     await _scrollTo(tester, find.text('Vehículos dentro: 7'));
     expect(find.text('Vehículos dentro: 7'), findsOneWidget);
+  });
+
+  testWidgets('Success: hourly traffic shows the peak and hour cells', (
+    tester,
+  ) async {
+    await _pump(tester, hourly: _hourly());
+
+    await _scrollTo(tester, find.text('Hora pico: 08:00 · 12 entradas'));
+
+    expect(find.text('Hora pico: 08:00 · 12 entradas'), findsOneWidget);
+    expect(find.text('08'), findsOneWidget);
+    expect(find.text('14'), findsOneWidget);
+  });
+
+  testWidgets('Failure: an empty hourly period explains itself', (
+    tester,
+  ) async {
+    await _pump(tester);
+
+    await _scrollTo(tester, find.text('Sin entradas en el periodo'));
+
+    expect(find.text('Sin entradas en el periodo'), findsOneWidget);
+  });
+
+  testWidgets('A11y: the hourly grid fits a phone', (tester) async {
+    tester.view.physicalSize = const Size(400, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await _pump(tester);
+    await _scrollTo(tester, find.text('Sin entradas en el periodo'));
   });
 
   testWidgets('Failure: an error offers retry that reloads', (tester) async {
@@ -220,6 +319,24 @@ void main() {
     expect(repository.lastEnd, DateTime(today.year, today.month, today.day));
   });
 
+  testWidgets('Success: month presets use calendar boundaries', (tester) async {
+    final repository = await _pump(tester);
+
+    await tester.tap(find.text('Mes anterior'));
+    await tester.pumpAndSettle();
+
+    final now = DateTime.now();
+    expect(repository.lastStart, DateTime(now.year, now.month - 1, 1));
+    expect(repository.lastEnd, DateTime(now.year, now.month, 0));
+
+    await tester.tap(find.text('Este mes'));
+    await tester.pumpAndSettle();
+
+    final today = DateTime(now.year, now.month, now.day);
+    expect(repository.lastStart, DateTime(today.year, today.month, 1));
+    expect(repository.lastEnd, today);
+  });
+
   testWidgets('Success: the variation against the previous period is shown', (
     tester,
   ) async {
@@ -245,6 +362,28 @@ void main() {
 
     expect(find.byType(MetricCard), findsWidgets);
     expect(find.text('Ingresos totales'), findsOneWidget);
+  });
+
+  testWidgets('Success: the reservations section shows the web conversion', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      reservations: const ReservationReport(
+        total: 6,
+        public: 4,
+        app: 2,
+        used: 3,
+        usedPublic: 3,
+        cancelled: 1,
+        expired: 1,
+      ),
+    );
+    await _scrollTo(tester, find.text('75% llegaron a entrar'));
+
+    expect(find.text('Reservas de cupo'), findsOneWidget);
+    expect(find.text('75% llegaron a entrar'), findsOneWidget);
+    expect(find.textContaining('6 reservas en total'), findsOneWidget);
   });
 
   testWidgets('Success: the CSV button copies the report', (tester) async {

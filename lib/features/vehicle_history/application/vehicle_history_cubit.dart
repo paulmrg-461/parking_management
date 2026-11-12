@@ -24,8 +24,7 @@ class VehicleHistoryState extends Equatable {
 }
 
 class VehicleHistoryCubit extends ResilientCubit<VehicleHistoryState> {
-  VehicleHistoryCubit(this._repository)
-    : super(const VehicleHistoryState());
+  VehicleHistoryCubit(this._repository) : super(const VehicleHistoryState());
 
   final VehicleHistoryRepository _repository;
 
@@ -49,24 +48,28 @@ class VehicleHistoryCubit extends ResilientCubit<VehicleHistoryState> {
         ownerPhone: ownerPhone,
         ownerName: ownerName,
       );
-      emit(VehicleHistoryState(
-        status: VehicleHistoryStatus.loaded,
-        history: history.withFlags(
-          isBlacklisted: flags.isBlacklisted,
-          notes: flags.notes,
-          replaceNotes: true,
-          ownerPhone: flags.ownerPhone,
-          replaceOwnerPhone: true,
-          ownerName: flags.ownerName,
-          replaceOwnerName: true,
+      emit(
+        VehicleHistoryState(
+          status: VehicleHistoryStatus.loaded,
+          history: history.withFlags(
+            isBlacklisted: flags.isBlacklisted,
+            notes: flags.notes,
+            replaceNotes: true,
+            ownerPhone: flags.ownerPhone,
+            replaceOwnerPhone: true,
+            ownerName: flags.ownerName,
+            replaceOwnerName: true,
+          ),
         ),
-      ));
+      );
     } on Failure catch (failure) {
-      emit(VehicleHistoryState(
-        status: VehicleHistoryStatus.loaded,
-        history: history,
-        failure: failure,
-      ));
+      emit(
+        VehicleHistoryState(
+          status: VehicleHistoryStatus.loaded,
+          history: history,
+          failure: failure,
+        ),
+      );
     }
   }
 
@@ -75,29 +78,37 @@ class VehicleHistoryCubit extends ResilientCubit<VehicleHistoryState> {
     try {
       plate = normalizePlate(rawPlate);
     } on Failure catch (failure) {
-      emit(VehicleHistoryState(
-        status: VehicleHistoryStatus.failure,
-        history: state.history,
-        failure: failure,
-      ));
+      emit(
+        VehicleHistoryState(
+          status: VehicleHistoryStatus.failure,
+          history: state.history,
+          failure: failure,
+        ),
+      );
       return;
     }
-    emit(VehicleHistoryState(
-      status: VehicleHistoryStatus.loading,
-      history: state.history,
-    ));
+    emit(
+      VehicleHistoryState(
+        status: VehicleHistoryStatus.loading,
+        history: state.history,
+      ),
+    );
     try {
       final history = await _repository.lookup(plate);
-      emit(VehicleHistoryState(
-        status: VehicleHistoryStatus.loaded,
-        history: history,
-      ));
+      emit(
+        VehicleHistoryState(
+          status: VehicleHistoryStatus.loaded,
+          history: history,
+        ),
+      );
     } on Failure catch (failure) {
-      emit(VehicleHistoryState(
-        status: VehicleHistoryStatus.failure,
-        history: state.history,
-        failure: failure,
-      ));
+      emit(
+        VehicleHistoryState(
+          status: VehicleHistoryStatus.failure,
+          history: state.history,
+          failure: failure,
+        ),
+      );
     }
   }
 

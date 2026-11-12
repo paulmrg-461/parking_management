@@ -117,6 +117,247 @@ class AppLocalizationsEn extends AppLocalizations {
   String get policiesTitle => 'Policies and contract';
 
   @override
+  String get bookingTitle => 'Reserve your space';
+
+  @override
+  String get bookingSubtitle =>
+      'Pick your vehicle type and secure a spot in seconds.';
+
+  @override
+  String get bookingOnline => 'Online booking';
+
+  @override
+  String get bookingSectionAvailability => 'Availability now';
+
+  @override
+  String get bookingSectionHint => 'Live data from the parking lot';
+
+  @override
+  String get bookingRefresh => 'Refresh availability';
+
+  @override
+  String bookingAvailable(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count available',
+      one: '1 available',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get bookingFull => 'Full';
+
+  @override
+  String get bookingUnlimited => 'No limit';
+
+  @override
+  String get bookingNoSpaceTitle => 'No space right now';
+
+  @override
+  String get bookingNoSpaceHint =>
+      'The lot just filled up. Call us or try again in a few minutes.';
+
+  @override
+  String bookingFromPrice(String price) {
+    return 'From $price/hour';
+  }
+
+  @override
+  String get bookingPriceUndefined => 'Rate at the desk';
+
+  @override
+  String get bookingSelectCategory => 'Choose a vehicle type';
+
+  @override
+  String get bookingFormTitle => 'Your details';
+
+  @override
+  String get bookingPhone => 'Mobile phone';
+
+  @override
+  String get bookingPhoneHint => '300 000 0000';
+
+  @override
+  String get bookingName => 'Name';
+
+  @override
+  String get bookingDuration => 'How long do you need it?';
+
+  @override
+  String bookingDurationHours(int hours) {
+    return '$hours h';
+  }
+
+  @override
+  String get bookingSubmit => 'Reserve a space';
+
+  @override
+  String get bookingSubmitting => 'Reserving…';
+
+  @override
+  String get bookingLegal =>
+      'By booking you accept the lot\'s policies and contract.';
+
+  @override
+  String get bookingPolicies => 'View policies';
+
+  @override
+  String get bookingSuccessTitle => 'Reservation confirmed!';
+
+  @override
+  String get bookingSuccessHint => 'Show this code when you arrive.';
+
+  @override
+  String get bookingCode => 'Reservation code';
+
+  @override
+  String get bookingPlateDetail => 'Plate';
+
+  @override
+  String get bookingCategoryDetail => 'Type';
+
+  @override
+  String get bookingUntil => 'Valid until';
+
+  @override
+  String get bookingAddress => 'Address';
+
+  @override
+  String get bookingAnother => 'Book another space';
+
+  @override
+  String get bookingLookupTitle => 'Already booked?';
+
+  @override
+  String get bookingLookupHint =>
+      'Check or cancel with the code and the mobile you booked with.';
+
+  @override
+  String get bookingLookupCode => 'Code';
+
+  @override
+  String get bookingLookupPhone => 'Mobile phone';
+
+  @override
+  String get bookingLookupAction => 'Find my reservation';
+
+  @override
+  String get bookingLookupChecking => 'Looking…';
+
+  @override
+  String get bookingLookupInvalid =>
+      'Enter the code and a valid mobile number.';
+
+  @override
+  String get bookingLookupNotFound =>
+      'We could not find an active reservation with that code and mobile.';
+
+  @override
+  String bookingLookupFound(String plate) {
+    return 'Reservation for $plate';
+  }
+
+  @override
+  String get bookingCancel => 'Cancel reservation';
+
+  @override
+  String get bookingCancelTitle => 'Cancel your reservation?';
+
+  @override
+  String bookingCancelBody(String plate) {
+    return 'The space held for $plate will be released. This cannot be undone.';
+  }
+
+  @override
+  String get bookingCancelledTitle => 'Reservation cancelled';
+
+  @override
+  String get bookingCancelledHint =>
+      'The space is available again. Thanks for letting us know.';
+
+  @override
+  String get bookingErrorNotFound =>
+      'We could not find that reservation. Check the code or call the lot.';
+
+  @override
+  String get bookingCall => 'Call';
+
+  @override
+  String get bookingWhatsApp => 'WhatsApp';
+
+  @override
+  String bookingWhatsAppMessage(String lot) {
+    return 'Hi, I have a reservation at $lot.';
+  }
+
+  @override
+  String get bookingEmpty =>
+      'No vehicle types configured. Please call the lot.';
+
+  @override
+  String get bookingFooter =>
+      'Booking subject to availability. If you cannot make it, let us know.';
+
+  @override
+  String get bookingErrorFull =>
+      'That vehicle type is full. Pick another or try later.';
+
+  @override
+  String get bookingErrorExists =>
+      'You already have an active reservation for this plate.';
+
+  @override
+  String get bookingErrorLimit =>
+      'You reached the reservation limit for this phone.';
+
+  @override
+  String get bookingErrorInside => 'This vehicle is already inside the lot.';
+
+  @override
+  String get bookingErrorWindow => 'The reservation time is not valid.';
+
+  @override
+  String get bookingErrorPhone =>
+      'Enter a valid 10-digit mobile number (starts with 3).';
+
+  @override
+  String get bookingErrorName => 'Enter your name.';
+
+  @override
+  String get bookingErrorPlate => 'Enter a valid plate.';
+
+  @override
+  String get bookingErrorLot => 'We could not find this parking lot.';
+
+  @override
+  String get bookingCaptchaLabel => 'Security check';
+
+  @override
+  String get bookingCaptchaPending => 'Complete the security check to book.';
+
+  @override
+  String get bookingCaptchaExpired =>
+      'The security check expired. Please complete it again.';
+
+  @override
+  String get bookingCaptchaFailed =>
+      'We could not verify that you are a person. Please try again.';
+
+  @override
+  String get bookingCaptchaUnavailable =>
+      'The security check is not available right now. Try again in a few minutes or call the parking lot.';
+
+  @override
+  String get bookingCaptchaRequired =>
+      'This parking lot requires a security check to book online. Reload the page or call the parking lot.';
+
+  @override
+  String get bookingErrorThrottled =>
+      'There are too many online bookings right now. Try again in a few minutes or call the parking lot.';
+
+  @override
   String get policiesInvalid => 'We could not load this parking lot policies.';
 
   @override
@@ -309,6 +550,601 @@ class AppLocalizationsEn extends AppLocalizations {
   String get syncNow => 'Retry now';
 
   @override
+  String syncConflicts(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count conflicts to resolve',
+      one: '1 conflict to resolve',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get syncConflictTitle => 'Conflicting change';
+
+  @override
+  String get syncConflictHint =>
+      'Someone else changed this record while you were editing it.';
+
+  @override
+  String get syncKeepMine => 'Keep my change';
+
+  @override
+  String get syncKeepTheirs => 'Keep the server\'s';
+
+  @override
+  String get conflictTitle => 'Resolve conflict';
+
+  @override
+  String get syncConflictSection => 'Need your decision';
+
+  @override
+  String get syncConflictTileSubtitle => 'Someone else changed this record.';
+
+  @override
+  String get conflictIntro =>
+      'Your offline changes clash with someone else\'s changes.';
+
+  @override
+  String get conflictColumnBase => 'Before';
+
+  @override
+  String get conflictColumnMine => 'Mine';
+
+  @override
+  String get conflictColumnTheirs => 'Server';
+
+  @override
+  String conflictAutoMerged(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count non-clashing changes will apply on their own.',
+      one: '1 non-clashing change will apply on its own.',
+      zero: '',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get conflictPickEach => 'Pick a value for each field.';
+
+  @override
+  String get conflictApply => 'Apply selection';
+
+  @override
+  String get conflictDeletedTitle => 'Someone else deleted this record.';
+
+  @override
+  String get conflictDeletedBody =>
+      'Your changes cannot be applied. You can accept the deletion and re-enter them if needed.';
+
+  @override
+  String get conflictAcceptDeletion => 'Accept the deletion';
+
+  @override
+  String get conflictEditedTitle =>
+      'Someone else edited this record while you deleted it.';
+
+  @override
+  String get conflictKeepDelete => 'Delete anyway';
+
+  @override
+  String get conflictKeepRecord => 'Keep the record';
+
+  @override
+  String get conflictAgain =>
+      'The record changed again. Review the current values.';
+
+  @override
+  String get conflictEmpty => 'No pending conflicts.';
+
+  @override
+  String get conflictNone => 'No value';
+
+  @override
+  String get cfYes => 'Yes';
+
+  @override
+  String get cfNo => 'No';
+
+  @override
+  String get waitlistJoinTitle => 'Waitlist';
+
+  @override
+  String get waitlistJoinHint =>
+      'We are full. Leave your details and we will tell you when a space frees up.';
+
+  @override
+  String get waitlistJoinAction => 'Join the waitlist';
+
+  @override
+  String get waitlistWaitFor => 'I can wait until:';
+
+  @override
+  String get waitlistHoldFor => 'Hold the space for:';
+
+  @override
+  String waitlistHoldHours(int hours) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hours,
+      locale: localeName,
+      other: '$hours hours',
+      one: '1 hour',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get waitlistJoined => 'You are on the waitlist';
+
+  @override
+  String waitlistPosition(int position) {
+    return 'Your turn: $position';
+  }
+
+  @override
+  String waitlistCode(int code) {
+    return 'Code $code';
+  }
+
+  @override
+  String get waitlistKeepCode =>
+      'Keep this code: you need it to claim or leave.';
+
+  @override
+  String get waitlistNotifyWhatsapp => 'We will notify you by WhatsApp.';
+
+  @override
+  String get waitlistNotifyScreen =>
+      'Keep this page open or call us: we will tell you here.';
+
+  @override
+  String get waitlistOfferTitle => 'A space is free!';
+
+  @override
+  String waitlistOfferBody(String time) {
+    return 'Claim it before $time.';
+  }
+
+  @override
+  String get waitlistClaim => 'Claim my space';
+
+  @override
+  String get waitlistLeave => 'Leave the waitlist';
+
+  @override
+  String get waitlistLeft => 'You left the waitlist';
+
+  @override
+  String get waitlistExpiredTitle => 'Your offer expired';
+
+  @override
+  String get waitlistExpiredHint => 'You can join the waitlist again.';
+
+  @override
+  String waitlistWaitingCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count people waiting',
+      one: '1 person waiting',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get waitlistLookupLabel => 'Waitlist code';
+
+  @override
+  String get waitlistDeskTitle => 'Waitlist';
+
+  @override
+  String get waitlistDeskEmptyTitle => 'Nobody on the waitlist';
+
+  @override
+  String get waitlistDeskEmptyHint =>
+      'When the lot is full, web customers can join here.';
+
+  @override
+  String waitlistDeskOffered(String time) {
+    return 'Offer until $time';
+  }
+
+  @override
+  String get waitlistDeskCallCustomer => 'Call: automatic WhatsApp is off';
+
+  @override
+  String get waitlistDeskClaim => 'Give the space';
+
+  @override
+  String get waitlistDeskRemove => 'Remove from the waitlist';
+
+  @override
+  String waitlistDeskRemoveBody(String plate) {
+    return '$plate will be removed and its offer released.';
+  }
+
+  @override
+  String get waitlistSettingsTitle => 'Waitlist';
+
+  @override
+  String get waitlistSettingsEnabled => 'Enable public waitlist';
+
+  @override
+  String get waitlistSettingsClaimMinutes => 'Minutes to claim an offer';
+
+  @override
+  String get waitlistSettingsMaxEntries => 'Maximum people on the list';
+
+  @override
+  String get waitlistOfferChip => 'Offer';
+
+  @override
+  String get notifTypeWaitlist => 'Waitlist';
+
+  @override
+  String get errorWaitlistDisabled => 'The waitlist is not available.';
+
+  @override
+  String get errorWaitlistNotNeeded => 'There is space: you can book now.';
+
+  @override
+  String get errorWaitlistExists => 'That plate is already on the waitlist.';
+
+  @override
+  String get errorWaitlistLimit =>
+      'This mobile already has two turns on the list.';
+
+  @override
+  String get errorWaitlistFull => 'The waitlist is full.';
+
+  @override
+  String get errorWaitlistWindow => 'Pick a valid waiting time.';
+
+  @override
+  String get errorWaitlistNotFound => 'We could not find that turn.';
+
+  @override
+  String get errorWaitlistNotOffered => 'There is no space for you yet.';
+
+  @override
+  String get errorOfferGone => 'The offer is no longer available.';
+
+  @override
+  String get reportWaitlistTitle => 'Waitlist';
+
+  @override
+  String get reportWaitlistJoined => 'Joined';
+
+  @override
+  String get reportWaitlistOffered => 'Offers';
+
+  @override
+  String get reportWaitlistClaimed => 'Claimed';
+
+  @override
+  String get homeForecastTitle => 'Occupancy forecast';
+
+  @override
+  String get homeForecastHint => 'Next 12 hours from past weeks';
+
+  @override
+  String homeForecastFullAt(String group, String time) {
+    return '$group: expected to fill around $time';
+  }
+
+  @override
+  String homeForecastFullNow(String group) {
+    return '$group: already full';
+  }
+
+  @override
+  String get homeForecastNotFull => 'Not expected to fill in the next 12 hours';
+
+  @override
+  String get homeForecastGroupCar => 'Cars';
+
+  @override
+  String get homeForecastGroupMoto => 'Motorcycles';
+
+  @override
+  String get homeForecastConfidenceHigh => 'High confidence';
+
+  @override
+  String get homeForecastConfidenceMedium => 'Medium confidence';
+
+  @override
+  String get homeForecastConfidenceLow => 'Low confidence';
+
+  @override
+  String homeForecastBarSemantics(int hour, int expected, int capacity) {
+    return '$hour:00, $expected of $capacity expected';
+  }
+
+  @override
+  String get homeForecastInsufficient => 'Still collecting history to forecast';
+
+  @override
+  String get homeForecastNoCapacity => 'Set the capacity to see the forecast';
+
+  @override
+  String get homeForecastDisabled => 'The forecast is turned off';
+
+  @override
+  String get homeForecastUnavailable => 'Forecast unavailable';
+
+  @override
+  String get reportsForecastTitle => 'Forecast accuracy';
+
+  @override
+  String get reportsForecastSubtitle =>
+      'Mean error when replaying the forecast over recent weeks';
+
+  @override
+  String get reportsForecastRun => 'Compute accuracy';
+
+  @override
+  String reportsForecastMae(String value) {
+    return 'Mean error: $value vehicles';
+  }
+
+  @override
+  String reportsForecastPriorOnly(String value) {
+    return 'History only: $value';
+  }
+
+  @override
+  String reportsForecastBetter(int percent) {
+    return '$percent% better with live data';
+  }
+
+  @override
+  String reportsForecastLead(int hours, String value) {
+    return 'At $hours h: $value';
+  }
+
+  @override
+  String get reportsForecastEmpty => 'Not enough history yet';
+
+  @override
+  String get reportsForecastUnavailable => 'The accuracy could not be computed';
+
+  @override
+  String get publicForecastTitle => 'When does it fill up?';
+
+  @override
+  String publicForecastFullAt(String time) {
+    return 'Usually fills up around $time';
+  }
+
+  @override
+  String get publicForecastFullNow => 'Full right now';
+
+  @override
+  String get publicForecastNotFull => 'Usually not full in the coming hours';
+
+  @override
+  String get publicForecastGroupCar => 'Cars';
+
+  @override
+  String get publicForecastGroupMoto => 'Motorcycles';
+
+  @override
+  String get publicForecastLevelFree => 'Spaces free';
+
+  @override
+  String get publicForecastLevelBusy => 'Busy';
+
+  @override
+  String get publicForecastLevelFull => 'Full';
+
+  @override
+  String get publicForecastDisclaimer =>
+      'Estimate based on previous days; it may vary.';
+
+  @override
+  String get navAnomalies => 'Anomalies';
+
+  @override
+  String get anomaliesTitle => 'Cash anomalies';
+
+  @override
+  String get anomaliesSettings => 'Thresholds';
+
+  @override
+  String anomaliesOpenCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count open',
+      one: '1 open',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get anomaliesStatusOpen => 'Open';
+
+  @override
+  String get anomaliesStatusAcknowledged => 'Acknowledged';
+
+  @override
+  String get anomaliesStatusDismissed => 'Dismissed';
+
+  @override
+  String get anomaliesStatusAll => 'All';
+
+  @override
+  String get anomaliesClearFilters => 'Clear filters';
+
+  @override
+  String get anomaliesRuleLabel => 'Rule';
+
+  @override
+  String get anomaliesSeverityLabel => 'Severity';
+
+  @override
+  String get anomaliesSeverityLow => 'Low';
+
+  @override
+  String get anomaliesSeverityMedium => 'Medium';
+
+  @override
+  String get anomaliesSeverityHigh => 'High';
+
+  @override
+  String get anomalyRuleShiftShortage => 'Repeated shortages';
+
+  @override
+  String get anomalyRuleLostTicketRate => 'High lost-ticket rate';
+
+  @override
+  String get anomalyRulePostCloseAdjustment => 'Adjustment after close';
+
+  @override
+  String get anomalyRuleZeroCharge => 'Check-out with no charge';
+
+  @override
+  String get anomalyRuleShortLostTicket => 'Lost ticket on a short stay';
+
+  @override
+  String get anomalyRuleDiscountRate => 'Frequent discounts';
+
+  @override
+  String get anomalyRuleShiftOpenLong => 'Shift open too long';
+
+  @override
+  String get anomalyRuleSessionOpenLong => 'Vehicle inside for many days';
+
+  @override
+  String anomalyDescShiftShortage(int count, String amount) {
+    return '$count short shifts, total $amount';
+  }
+
+  @override
+  String anomalyDescLostTicketRate(String rate, String baseline) {
+    return '$rate% lost tickets against $baseline% for the site';
+  }
+
+  @override
+  String anomalyDescPostCloseAdjustment(String from, String to, String admin) {
+    return 'Difference $from → $to adjusted by $admin';
+  }
+
+  @override
+  String anomalyDescZeroCharge(String plate, String method) {
+    return '$plate left with no charge ($method)';
+  }
+
+  @override
+  String anomalyDescShortLostTicket(String plate, int minutes) {
+    return '$plate: lost ticket after $minutes min';
+  }
+
+  @override
+  String anomalyDescDiscountRate(int count, String share) {
+    return '$count discounts ($share% of exits)';
+  }
+
+  @override
+  String anomalyDescShiftOpenLong(int hours) {
+    return 'Open for $hours h';
+  }
+
+  @override
+  String anomalyDescSessionOpenLong(String plate, int days) {
+    return '$plate has been inside for $days days';
+  }
+
+  @override
+  String get anomalyAcknowledge => 'Acknowledge';
+
+  @override
+  String get anomalyDismiss => 'Dismiss';
+
+  @override
+  String get anomalyNoteLabel => 'Note';
+
+  @override
+  String get anomalyNoteRequired => 'Write a note of at least 3 characters';
+
+  @override
+  String get anomalyViewAudit => 'View audit trail';
+
+  @override
+  String get anomalyViewContext => 'View details';
+
+  @override
+  String get anomaliesEmptyTitle => 'All clear';
+
+  @override
+  String get anomaliesEmpty => 'No anomalies match these filters.';
+
+  @override
+  String get anomaliesSettingsEnabled => 'Detection enabled';
+
+  @override
+  String get anomaliesSettingsSaved => 'Thresholds saved';
+
+  @override
+  String get anomaliesSettingsWindowDays => 'Window (days)';
+
+  @override
+  String get anomaliesSettingsShortageMinAmount => 'Minimum shortage per shift';
+
+  @override
+  String get anomaliesSettingsShortageMinShifts => 'Short shifts to alert';
+
+  @override
+  String get anomaliesSettingsLostTicketMinClosed =>
+      'Minimum exits per operator';
+
+  @override
+  String get anomaliesSettingsLostTicketMinRatePct =>
+      'Minimum lost-ticket rate (%)';
+
+  @override
+  String get anomaliesSettingsLostTicketFactorPct =>
+      'Times the site\'s rate (%)';
+
+  @override
+  String get anomaliesSettingsAdjustmentMinAmount =>
+      'Minimum adjustment after close';
+
+  @override
+  String get anomaliesSettingsShortStayMinutes => 'Short stay (minutes)';
+
+  @override
+  String get anomaliesSettingsDiscountMinCount => 'Minimum discounts per admin';
+
+  @override
+  String get anomaliesSettingsDiscountSharePct => 'Discount share (%)';
+
+  @override
+  String get anomaliesSettingsShiftOpenHours => 'Hours for an open shift';
+
+  @override
+  String get anomaliesSettingsSessionOpenDays => 'Days for a vehicle inside';
+
+  @override
+  String get notifTypeCashAnomaly => 'Cash anomaly';
+
+  @override
+  String get errorAnomalyNotFound => 'We could not find that anomaly';
+
+  @override
+  String get errorAnomalyAlreadyResolved => 'That anomaly was already reviewed';
+
+  @override
+  String get errorAnomalyNoteRequired =>
+      'Write a note of at least 3 characters';
+
+  @override
+  String get errorInvalidAnomalySetting => 'Check the threshold values';
+
+  @override
   String syncQueued(int count) {
     return '$count queued, retried automatically.';
   }
@@ -462,6 +1298,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get auditAllActors => 'All';
 
   @override
+  String get auditSearch => 'Search';
+
+  @override
+  String get auditSearchHint => 'Plate, user, table or value';
+
+  @override
   String get auditTitle => 'Audit log';
 
   @override
@@ -524,6 +1366,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String reservationExpiresIn(String duration) {
     return 'Expires in $duration';
   }
+
+  @override
+  String get reservationInGrace => 'Grace period';
 
   @override
   String get reservationQuick2h => '+2 h';
@@ -966,6 +1811,42 @@ class AppLocalizationsEn extends AppLocalizations {
   String get vehicleChargeAction => 'Charge at checkout';
 
   @override
+  String vehicleEvidenceAction(int count) {
+    return 'View evidence ($count)';
+  }
+
+  @override
+  String sessionEvidenceTitle(String plate) {
+    return 'Evidence for $plate';
+  }
+
+  @override
+  String get sessionEvidenceEmpty => 'No photos or videos for this session';
+
+  @override
+  String sessionEvidencePhotoLabel(int index) {
+    return 'Photo $index';
+  }
+
+  @override
+  String sessionEvidenceVideoLabel(int seconds) {
+    return 'Video of $seconds s';
+  }
+
+  @override
+  String sessionEvidenceDurationShort(int seconds) {
+    return '$seconds s';
+  }
+
+  @override
+  String get sessionEvidenceOpenFailed => 'Could not open the evidence';
+
+  @override
+  String sessionEvidenceShort(int count) {
+    return 'Evidence ($count)';
+  }
+
+  @override
   String get vehicleWhatsappReadyAction => 'Notify it is ready';
 
   @override
@@ -987,6 +1868,26 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get errorWhatsappUnavailable =>
       'WhatsApp could not be opened on this device';
+
+  @override
+  String get errorVersionConflict =>
+      'Someone else changed this record. Review the conflict from the sync icon.';
+
+  @override
+  String get errorConflictPending =>
+      'Resolve the pending conflict for this record first.';
+
+  @override
+  String get errorVersionRequired => 'Update the app to edit this record.';
+
+  @override
+  String get errorMinVersionRequired => 'Set the minimum app version first.';
+
+  @override
+  String get errorMapsUnavailable => 'Maps could not be opened on this device';
+
+  @override
+  String get bookingDirections => 'Directions';
 
   @override
   String get vehicleNotes => 'Vehicle notes';
@@ -1027,6 +1928,41 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get vehicleHistoryTitle => 'Vehicle history';
+
+  @override
+  String get vehicleHistoryAction => 'View history';
+
+  @override
+  String get setupTitle => 'First steps';
+
+  @override
+  String setupProgress(int done, int total) {
+    return '$done of $total ready';
+  }
+
+  @override
+  String get setupCategories => 'Vehicle categories';
+
+  @override
+  String get setupCategoriesHint => 'Cars, motorcycles and other types';
+
+  @override
+  String get setupTariffs => 'Tariffs';
+
+  @override
+  String get setupTariffsHint => 'Hourly, daily and night prices';
+
+  @override
+  String get setupCapacity => 'Spaces and capacity';
+
+  @override
+  String get setupCapacityHint => 'Capacity in Settings or a physical map';
+
+  @override
+  String get setupIdentity => 'Parking identity';
+
+  @override
+  String get setupIdentityHint => 'Address and phone for receipts and QR';
 
   @override
   String get vehicleHistoryPrompt =>
@@ -1140,6 +2076,30 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get spotsActiveHint => 'Turn it off for maintenance';
+
+  @override
+  String get spotsReason => 'Maintenance reason (optional)';
+
+  @override
+  String get spotsReasonHint => 'E.g. oil leak, painting, broken glass';
+
+  @override
+  String get spotsReasonInvalid =>
+      'Write at least 3 characters or leave it empty';
+
+  @override
+  String get spotsHistory => 'View history';
+
+  @override
+  String spotsHistoryTitle(String code) {
+    return 'History of $code';
+  }
+
+  @override
+  String get spotsHistoryEmpty => 'No status changes';
+
+  @override
+  String get spotsHistorySystem => 'System';
 
   @override
   String get spotsDelete => 'Delete spot';
@@ -1302,6 +2262,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsKeyCapacity => 'Maximum cars leaving keys';
 
   @override
+  String get settingsReservationGrace => 'Reservation grace (min)';
+
+  @override
+  String get settingsReservationGraceHint =>
+      'Minutes after expiry for a late customer; 0 disables it.';
+
+  @override
   String get settingsCapacityHint => '0 = no limit';
 
   @override
@@ -1351,6 +2318,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsSaved => 'Settings saved';
+
+  @override
+  String get settingsCoverSection => 'Public page cover';
+
+  @override
+  String get settingsCoverHint =>
+      'A wide photo of the lot is shown on the booking page.';
+
+  @override
+  String get settingsCoverConfigured =>
+      'Cover set. You can replace it at any time.';
+
+  @override
+  String get settingsCoverPick => 'Choose cover';
 
   @override
   String get settingsLogoSection => 'Logo';
@@ -1413,6 +2394,53 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homeTodayPasses => 'Monthly passes';
+
+  @override
+  String get homeTrend => 'Trend';
+
+  @override
+  String get homeTrendHint => 'Last 7 days';
+
+  @override
+  String homeTrendRange(String start, String end) {
+    return '$start – $end';
+  }
+
+  @override
+  String get homeTrendTotal => 'Revenue';
+
+  @override
+  String get homeTrendEntries => 'Entries';
+
+  @override
+  String get homeTrendExits => 'Exits';
+
+  @override
+  String get homeTrendOpenReports => 'Open reports';
+
+  @override
+  String get homeTrendEmpty => 'No activity in the last few days';
+
+  @override
+  String get homeTrendUnavailable => 'Trend not available';
+
+  @override
+  String homeTrendDay(String date, String amount, int entries, int exits) {
+    return '$date: $amount · $entries entries · $exits exits';
+  }
+
+  @override
+  String homeTrendVsPrevious(String delta) {
+    return '$delta vs last week';
+  }
+
+  @override
+  String get homeTrendFlat => 'Same as last week';
+
+  @override
+  String homeStaleData(String time) {
+    return 'Offline · saved data from $time';
+  }
 
   @override
   String get homeCapacityTitle => 'Parking capacity';
@@ -1757,6 +2785,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get searchPlate => 'Search by plate';
+
+  @override
+  String get monthlyPassesSearch => 'Search plate or owner';
+
+  @override
+  String get monthlyPassesSearchHint => 'Plate, name or phone';
 
   @override
   String get checkOutClearSearch => 'Clear search';
@@ -2126,7 +3160,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get vehiclesSearch => 'Search plate';
+  String get vehiclesSearch => 'Search plate or owner';
+
+  @override
+  String get vehiclesSearchHint => 'Plate, name or phone';
 
   @override
   String vehiclesNoMatch(String query) {
@@ -2429,6 +3466,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportsLast30 => '30 days';
 
   @override
+  String get reportsThisMonth => 'This month';
+
+  @override
+  String get reportsLastMonth => 'Last month';
+
+  @override
   String get reportsTitle => 'Reports';
 
   @override
@@ -2469,6 +3512,63 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reportsRevenueByDay => 'Revenue by day';
+
+  @override
+  String get reportsReservationsTitle => 'Reservations';
+
+  @override
+  String get reportsReservationsSubtitle =>
+      'How many were created in the period and how they ended';
+
+  @override
+  String get reportsReservationsPublic => 'Web bookings';
+
+  @override
+  String reportsReservationsConversion(int value) {
+    return '$value% turned into a stay';
+  }
+
+  @override
+  String get reportsReservationsClosed => 'Cancelled or expired';
+
+  @override
+  String reportsReservationsClosedHint(int cancelled, int expired) {
+    return '$cancelled cancelled · $expired expired';
+  }
+
+  @override
+  String reportsReservationsTotal(int total, int app, int used) {
+    return '$total reservations · $app from the desk · $used turned into a stay';
+  }
+
+  @override
+  String get reportsHourlyTitle => 'Hourly traffic';
+
+  @override
+  String get reportsHourlySubtitle =>
+      'Entries and exits by hour in the parking schedule';
+
+  @override
+  String reportsHourlyPeak(String time, int count) {
+    return 'Peak hour: $time · $count entries';
+  }
+
+  @override
+  String reportsHourlyCell(String time, int entries, int exits) {
+    return '$time · $entries entries · $exits exits';
+  }
+
+  @override
+  String get reportsHourlyEmpty => 'No entries in the period';
+
+  @override
+  String reportsHourlyPair(int entries, int exits) {
+    return '$entries entries · $exits exits';
+  }
+
+  @override
+  String get reportsHourlyLegend =>
+      'The bar shows entries; the detail includes exits.';
 
   @override
   String get reportsPassRevenue => 'Monthly pass revenue';
@@ -2691,10 +3791,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reservationsSearchLabel => 'Search holds';
 
   @override
-  String get reservationsSearchHint => 'Plate';
+  String get reservationsSearchHint => 'Plate, name, mobile or code';
+
+  @override
+  String get reservationWeb => 'Web';
+
+  @override
+  String get reservationCall => 'Call the customer';
+
+  @override
+  String get reservationWhatsApp => 'WhatsApp the customer';
+
+  @override
+  String reservationWhatsAppMessage(String plate) {
+    return 'Hi, we are contacting you about the reservation for plate $plate.';
+  }
 
   @override
   String get reservationsOnlyExpiring => 'Expiring only';
+
+  @override
+  String get reservationsOnlyPublic => 'Web only';
+
+  @override
+  String get reservationsCopyCsv => 'Copy CSV';
+
+  @override
+  String get reservationsCsvCopied => 'Reservations copied as CSV';
 
   @override
   String reservationsCount(int count) {
@@ -2769,6 +3892,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get checkInVehicleSection => 'Vehicle';
 
   @override
+  String checkInHoldLookup(int count) {
+    return 'Find a reservation ($count)';
+  }
+
+  @override
+  String get checkInHoldLookupTitle => 'Active reservations';
+
+  @override
+  String get checkInHoldLookupEmpty =>
+      'There are no active reservations right now.';
+
+  @override
   String get checkInVehicleHint => 'Plate, category and vehicle details';
 
   @override
@@ -2792,6 +3927,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get notifTypeOverstay => 'Overstay';
+
+  @override
+  String get notifTypeReservation => 'Web booking';
 
   @override
   String get notifTypeShiftClosed => 'Shift closed';
@@ -3171,4 +4309,113 @@ class AppLocalizationsEn extends AppLocalizations {
   String emergencyLocation(String location) {
     return 'Location: $location';
   }
+
+  @override
+  String get reportsPeriodTitle => 'Period comparison';
+
+  @override
+  String get reportsPeriodSubtitle =>
+      'Each month against the previous month and the same month last year';
+
+  @override
+  String get reportsPeriodActiveLotOnly => 'Active site only';
+
+  @override
+  String reportsPeriodMonths(int count) {
+    return '$count months';
+  }
+
+  @override
+  String get reportsPeriodMetricLabel => 'Metric';
+
+  @override
+  String get reportsPeriodMetricRevenue => 'Revenue';
+
+  @override
+  String get reportsPeriodMetricEntries => 'Entries';
+
+  @override
+  String get reportsPeriodMetricExits => 'Exits';
+
+  @override
+  String get reportsPeriodMetricAvgTicket => 'Average ticket';
+
+  @override
+  String get reportsPeriodMetricAvgStay => 'Average stay';
+
+  @override
+  String get reportsPeriodMetricPassRevenue => 'Monthly pass revenue';
+
+  @override
+  String get reportsPeriodMetricReservations => 'Reservations';
+
+  @override
+  String reportsPeriodReservationsUsed(int count) {
+    return '$count used';
+  }
+
+  @override
+  String reportsPeriodPartial(int days, int total) {
+    return 'Month in progress · $days of $total days';
+  }
+
+  @override
+  String get reportsPeriodPartialChip => 'Partial';
+
+  @override
+  String reportsPeriodPartialHint(int days) {
+    return 'Compared with the first $days days of each month';
+  }
+
+  @override
+  String reportsPeriodVsMonth(String delta) {
+    return '$delta vs previous month';
+  }
+
+  @override
+  String reportsPeriodVsYear(String delta) {
+    return '$delta vs last year';
+  }
+
+  @override
+  String get reportsPeriodFlatMonth => 'Same as the previous month';
+
+  @override
+  String get reportsPeriodFlatYear => 'Same as last year';
+
+  @override
+  String get reportsPeriodNoBase => 'No comparison base';
+
+  @override
+  String get reportsPeriodLegendCurrent => 'Month';
+
+  @override
+  String get reportsPeriodLegendLastYear => 'Same month last year';
+
+  @override
+  String get reportsPeriodEmptyTitle => 'No history yet';
+
+  @override
+  String get reportsPeriodEmpty =>
+      'Once the site has activity the monthly comparison will appear here.';
+
+  @override
+  String get reportsPeriodUnavailable => 'The comparison could not be loaded.';
+
+  @override
+  String reportsPeriodBarSemantics(
+    String month,
+    String value,
+    String previous,
+  ) {
+    return '$month: $value; last year: $previous';
+  }
+
+  @override
+  String reportsPeriodPdfPartial(String month, String days) {
+    return '$month ($days)';
+  }
+
+  @override
+  String get reportsPeriodPdfNoBase => 'n/a';
 }

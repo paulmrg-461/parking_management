@@ -89,7 +89,7 @@ class _MonthlyPassesPageState extends State<MonthlyPassesPage> {
                         summary: context.l10n.monthlyPassesCount(
                           [
                             for (final pass in loaded.monthlyPasses)
-                              if (_matches(loaded.plateOf(pass)) &&
+                              if (loaded.matchesPass(pass, _query) &&
                                   (!_onlyActive || _isActive(pass)))
                                 pass,
                           ].length,
@@ -102,7 +102,8 @@ class _MonthlyPassesPageState extends State<MonthlyPassesPage> {
                           SizedBox(
                             width: 240,
                             child: SearchField(
-                              label: context.l10n.searchPlate,
+                              label: context.l10n.monthlyPassesSearch,
+                              hint: context.l10n.monthlyPassesSearchHint,
                               onChanged: (value) =>
                                   setState(() => _query = value),
                             ),
@@ -118,9 +119,7 @@ class _MonthlyPassesPageState extends State<MonthlyPassesPage> {
                                 Icons.verified_outlined,
                                 size: 18,
                               ),
-                              label: Text(
-                                context.l10n.monthlyPassesOnlyActive,
-                              ),
+                              label: Text(context.l10n.monthlyPassesOnlyActive),
                               onSelected: (value) =>
                                   setState(() => _onlyActive = value),
                             ),
@@ -139,13 +138,9 @@ class _MonthlyPassesPageState extends State<MonthlyPassesPage> {
     );
   }
 
-  bool _matches(String plate) =>
-      _query.trim().isEmpty ||
-      plate.toLowerCase().contains(_query.trim().toLowerCase());
-
   bool _isActive(MonthlyPass pass) =>
-      pass.active && monthlyPassStatus(pass, DateTime.now()) ==
-          MonthlyPassStatus.active;
+      pass.active &&
+      monthlyPassStatus(pass, DateTime.now()) == MonthlyPassStatus.active;
 
   void _clearFilters() => setState(() {
     _query = '';
@@ -156,11 +151,11 @@ class _MonthlyPassesPageState extends State<MonthlyPassesPage> {
     final l10n = context.l10n;
     final payments = [
       for (final payment in loaded.pendingPayments)
-        if (_matches(payment.plate)) payment,
+        if (loaded.matchesPayment(payment, _query)) payment,
     ];
     final passes = [
       for (final pass in loaded.monthlyPasses)
-        if (_matches(loaded.plateOf(pass)) &&
+        if (loaded.matchesPass(pass, _query) &&
             (!_onlyActive || _isActive(pass)))
           pass,
     ];
@@ -420,7 +415,10 @@ class _MonthlyPassTile extends StatelessWidget {
     );
     final status = monthlyPassStatus(monthlyPass, DateTime.now());
     final (statusLabel, statusTone) = switch (status) {
-      MonthlyPassStatus.active => (l10n.monthlyPassStatusActive, StatusTone.success),
+      MonthlyPassStatus.active => (
+        l10n.monthlyPassStatusActive,
+        StatusTone.success,
+      ),
       MonthlyPassStatus.upcoming => (
         l10n.monthlyPassStatusUpcoming,
         StatusTone.warning,
@@ -578,7 +576,6 @@ class _MonthlyPassTile extends StatelessWidget {
   }
 }
 
-
 class _PendingPaymentTile extends StatelessWidget {
   const _PendingPaymentTile({required this.payment});
 
@@ -589,9 +586,7 @@ class _PendingPaymentTile extends StatelessWidget {
     final l10n = context.l10n;
     return ListTile(
       leading: const Icon(Icons.payments_outlined),
-      title: Text(
-        '${payment.plate} · ${Formatters.money(payment.amount)}',
-      ),
+      title: Text('${payment.plate} · ${Formatters.money(payment.amount)}'),
       subtitle: Text(
         '${l10n.monthlyPassDue(Formatters.date(payment.dueDate))} · '
         '${paymentMethodLabel(l10n, payment.paymentMethod)}',

@@ -74,7 +74,10 @@ void main() {
   });
 
   MonthlyPassRepositoryImpl repository(_FakeRemote remote) =>
-      MonthlyPassRepositoryImpl(remote, HiveMonthlyPassLocalDataSource(LotSession()));
+      MonthlyPassRepositoryImpl(
+        remote,
+        HiveMonthlyPassLocalDataSource(LotSession()),
+      );
 
   test('Success: list returns remote monthly passes and caches them', () async {
     final result = await repository(_FakeRemote()).list();

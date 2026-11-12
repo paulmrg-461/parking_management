@@ -57,11 +57,7 @@ class SupabaseAuthRemoteDataSource implements AuthRemoteDataSource {
     final role = authUser.appMetadata['role'] == 'admin'
         ? UserRole.admin
         : UserRole.operator;
-    return User(
-      username: username,
-      displayName: username,
-      role: role,
-    );
+    return User(username: username, displayName: username, role: role);
   }
 
   Failure _failure(supabase.AuthException error) {

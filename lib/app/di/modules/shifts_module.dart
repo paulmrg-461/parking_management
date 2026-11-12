@@ -14,7 +14,5 @@ void registerShiftsModule(GetIt sl) {
     ..registerLazySingleton<ShiftRepository>(
       () => ShiftRepositoryImpl(sl<ShiftRemoteDataSource>()),
     )
-    ..registerFactory<ShiftCubit>(
-      () => ShiftCubit(sl<ShiftRepository>()),
-    );
+    ..registerFactory<ShiftCubit>(() => ShiftCubit(sl<ShiftRepository>()));
 }

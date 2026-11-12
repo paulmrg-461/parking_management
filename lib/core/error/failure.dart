@@ -48,6 +48,21 @@ class ServerFailure extends NetworkFailure {
   ]);
 }
 
+/// The row changed on the server since the version this edit was based on.
+/// Carries the row the server has now (`null` when it was deleted) so the sync
+/// layer can merge or ask the operator.
+class VersionConflictFailure extends Failure {
+  const VersionConflictFailure(
+    this.serverRow, [
+    String message = 'The record changed on the server',
+  ]) : super(message, 'VersionConflictError');
+
+  final Map<String, dynamic>? serverRow;
+
+  @override
+  List<Object?> get props => [...super.props, serverRow];
+}
+
 /// 429 Too Many Requests. [retryAfter] comes from the `Retry-After` header
 /// (seconds) when the server sent a valid one.
 class RateLimitedFailure extends ServerFailure {
@@ -72,5 +87,6 @@ abstract final class ClientFailureCodes {
   static const photoTooLarge = 'PhotoTooLargeError';
   static const pendingSyncCheckOut = 'PendingSyncCheckOut';
   static const missingPendingPhoto = 'MissingPendingPhoto';
+  static const conflictPending = 'ConflictPendingError';
   static const unexpected = 'UnexpectedError';
 }

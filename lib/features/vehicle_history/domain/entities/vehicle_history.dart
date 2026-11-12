@@ -15,6 +15,7 @@ class VehicleHistorySession extends Equatable {
     this.lotName,
     this.discountAmount = 0,
     this.discountReason,
+    this.photoCount = 0,
   });
 
   final int id;
@@ -30,6 +31,9 @@ class VehicleHistorySession extends Equatable {
   final String? lotName;
   final int discountAmount;
   final String? discountReason;
+
+  /// Evidence files captured for this session in the active lot.
+  final int photoCount;
 
   bool get isOpen => status == 'open';
 
@@ -50,6 +54,7 @@ class VehicleHistorySession extends Equatable {
         lotName: json['lot_name'] as String?,
         discountAmount: (json['discount_amount'] as num?)?.toInt() ?? 0,
         discountReason: json['discount_reason'] as String?,
+        photoCount: (json['photo_count'] as num?)?.toInt() ?? 0,
       );
 
   Map<String, dynamic> toJson() => {
@@ -66,6 +71,7 @@ class VehicleHistorySession extends Equatable {
     'lot_name': lotName,
     'discount_amount': discountAmount,
     'discount_reason': discountReason,
+    'photo_count': photoCount,
   };
 
   @override
@@ -83,6 +89,7 @@ class VehicleHistorySession extends Equatable {
     lotName,
     discountAmount,
     discountReason,
+    photoCount,
   ];
 }
 
@@ -148,25 +155,24 @@ class VehicleHistory extends Equatable {
     bool replaceOwnerPhone = false,
     String? ownerName,
     bool replaceOwnerName = false,
-  }) =>
-      VehicleHistory(
-        plate: plate,
-        vehicleId: vehicleId,
-        categoryName: categoryName,
-        color: color,
-        brand: brand,
-        visits: visits,
-        totalSpent: totalSpent,
-        openSessions: openSessions,
-        sessions: sessions,
-        isBlacklisted: isBlacklisted ?? this.isBlacklisted,
-        notes: replaceNotes ? notes : (notes ?? this.notes),
-        currentLotVisits: currentLotVisits,
-        ownerPhone: replaceOwnerPhone
-            ? ownerPhone
-            : (ownerPhone ?? this.ownerPhone),
-        ownerName: replaceOwnerName ? ownerName : (ownerName ?? this.ownerName),
-      );
+  }) => VehicleHistory(
+    plate: plate,
+    vehicleId: vehicleId,
+    categoryName: categoryName,
+    color: color,
+    brand: brand,
+    visits: visits,
+    totalSpent: totalSpent,
+    openSessions: openSessions,
+    sessions: sessions,
+    isBlacklisted: isBlacklisted ?? this.isBlacklisted,
+    notes: replaceNotes ? notes : (notes ?? this.notes),
+    currentLotVisits: currentLotVisits,
+    ownerPhone: replaceOwnerPhone
+        ? ownerPhone
+        : (ownerPhone ?? this.ownerPhone),
+    ownerName: replaceOwnerName ? ownerName : (ownerName ?? this.ownerName),
+  );
 
   factory VehicleHistory.fromJson(Map<String, dynamic> json) => VehicleHistory(
     plate: json['plate'] as String,

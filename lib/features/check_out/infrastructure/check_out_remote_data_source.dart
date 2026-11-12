@@ -5,6 +5,9 @@ import '../../../core/pagination/paged_result.dart';
 import '../domain/entities/capacity_snapshot.dart';
 import '../domain/entities/check_out_preview.dart';
 import '../domain/entities/check_out_receipt.dart';
+import '../domain/entities/dashboard_trend.dart';
+import '../domain/entities/lot_setup_status.dart';
+import '../domain/entities/occupancy_forecast.dart';
 import '../domain/entities/occupancy_snapshot.dart';
 import '../domain/entities/slot_board.dart';
 import '../domain/entities/open_session.dart';
@@ -40,6 +43,12 @@ abstract class CheckOutRemoteDataSource {
   Future<SlotBoard> slotBoard();
 
   Future<TodaySummary> todaySummary();
+
+  Future<DashboardTrend> dashboardTrend({int days = 7});
+
+  Future<LotSetupStatus> lotSetup();
+
+  Future<OccupancyForecast> occupancyForecast({int horizon = 12});
 
   Future<CheckOutPreview> preview(int sessionId);
 }
@@ -133,6 +142,45 @@ class SupabaseCheckOutRemoteDataSource implements CheckOutRemoteDataSource {
     try {
       final result = await _client.rpc('dashboard_today');
       return TodaySummary.fromJson(Map<String, dynamic>.from(result as Map));
+    } catch (error) {
+      throw mapSupabaseError(error);
+    }
+  }
+
+  @override
+  Future<DashboardTrend> dashboardTrend({int days = 7}) async {
+    try {
+      final result = await _client.rpc(
+        'dashboard_trend',
+        params: {'p_days': days},
+      );
+      return DashboardTrend.fromJson(Map<String, dynamic>.from(result as Map));
+    } catch (error) {
+      throw mapSupabaseError(error);
+    }
+  }
+
+  @override
+  Future<OccupancyForecast> occupancyForecast({int horizon = 12}) async {
+    try {
+      final result = await _client.rpc(
+        'occupancy_forecast',
+        params: {'p_horizon_hours': horizon},
+      );
+      if (result is! Map) {
+        return OccupancyForecast.unavailable;
+      }
+      return OccupancyForecast.fromJson(Map<String, dynamic>.from(result));
+    } catch (error) {
+      throw mapSupabaseError(error);
+    }
+  }
+
+  @override
+  Future<LotSetupStatus> lotSetup() async {
+    try {
+      final result = await _client.rpc('lot_setup_status');
+      return LotSetupStatus.fromJson(Map<String, dynamic>.from(result as Map));
     } catch (error) {
       throw mapSupabaseError(error);
     }

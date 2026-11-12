@@ -77,7 +77,8 @@ class _FakePhotos implements PendingPhotoStorage {
   }) async => throw UnimplementedError();
 
   @override
-  Future<XFile?> loadVideo(String? ref) async => ref == null ? null : XFile(ref);
+  Future<XFile?> loadVideo(String? ref) async =>
+      ref == null ? null : XFile(ref);
 }
 
 PendingMutation _queued(String payload) => PendingMutation(
@@ -96,8 +97,12 @@ void main() {
     final remote = _FakeRemote();
     final photos = _FakePhotos();
 
-    await CheckInMutationReplayer(remote, photos).replay(_queued(_withVehicle));
+    final version = await CheckInMutationReplayer(
+      remote,
+      photos,
+    ).replay(_queued(_withVehicle));
 
+    expect(version, isNull);
     expect(remote.plate, 'XYZ999');
     expect(remote.photos!.single.path, '/tmp/a.jpg');
     expect(

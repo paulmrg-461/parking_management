@@ -174,19 +174,22 @@ class CategoryAdapter extends TypeAdapter<Category> {
       id: (fields[0] as num?)?.toInt(),
       name: fields[1] as String,
       capacity: fields[2] == null ? 0 : (fields[2] as num).toInt(),
+      version: fields[3] == null ? 0 : (fields[3] as num).toInt(),
     );
   }
 
   @override
   void write(BinaryWriter writer, Category obj) {
     writer
-      ..writeByte(3)
+      ..writeByte(4)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
       ..write(obj.name)
       ..writeByte(2)
-      ..write(obj.capacity);
+      ..write(obj.capacity)
+      ..writeByte(3)
+      ..write(obj.version);
   }
 
   @override
@@ -218,13 +221,14 @@ class TariffAdapter extends TypeAdapter<Tariff> {
       startTime: fields[4] as String?,
       endTime: fields[5] as String?,
       active: fields[6] == null ? true : fields[6] as bool,
+      version: fields[7] == null ? 0 : (fields[7] as num).toInt(),
     );
   }
 
   @override
   void write(BinaryWriter writer, Tariff obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(8)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -238,7 +242,9 @@ class TariffAdapter extends TypeAdapter<Tariff> {
       ..writeByte(5)
       ..write(obj.endTime)
       ..writeByte(6)
-      ..write(obj.active);
+      ..write(obj.active)
+      ..writeByte(7)
+      ..write(obj.version);
   }
 
   @override
@@ -315,13 +321,14 @@ class VehicleAdapter extends TypeAdapter<Vehicle> {
       brand: fields[4] as String?,
       ownerPhone: fields[5] as String?,
       ownerName: fields[6] as String?,
+      version: fields[7] == null ? 0 : (fields[7] as num).toInt(),
     );
   }
 
   @override
   void write(BinaryWriter writer, Vehicle obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(8)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -335,7 +342,9 @@ class VehicleAdapter extends TypeAdapter<Vehicle> {
       ..writeByte(5)
       ..write(obj.ownerPhone)
       ..writeByte(6)
-      ..write(obj.ownerName);
+      ..write(obj.ownerName)
+      ..writeByte(7)
+      ..write(obj.version);
   }
 
   @override
@@ -422,7 +431,12 @@ class ParkingSettingsAdapter extends TypeAdapter<ParkingSettings> {
       website: fields[4] == null ? '' : fields[4] as String,
       whatsapp: fields[5] == null ? '' : fields[5] as String,
       logoVersion: fields[6] == null ? 0 : (fields[6] as num).toInt(),
+      coverPath: fields[19] == null ? '' : fields[19] as String,
+      coverVersion: fields[20] == null ? 0 : (fields[20] as num).toInt(),
       evidenceRetentionDays: fields[7] == null ? 0 : (fields[7] as num).toInt(),
+      reservationGraceMinutes: fields[18] == null
+          ? 15
+          : (fields[18] as num).toInt(),
       whatsappAuto: fields[8] == null ? false : fields[8] as bool,
       carCapacity: fields[9] == null ? 0 : (fields[9] as num).toInt(),
       motoCapacity: fields[10] == null ? 0 : (fields[10] as num).toInt(),
@@ -433,13 +447,14 @@ class ParkingSettingsAdapter extends TypeAdapter<ParkingSettings> {
       currency: fields[15] == null ? 'COP' : fields[15] as String,
       minAppVersion: fields[16] == null ? '' : fields[16] as String,
       policePhone: fields[17] == null ? '' : fields[17] as String,
+      version: fields[21] == null ? 0 : (fields[21] as num).toInt(),
     );
   }
 
   @override
   void write(BinaryWriter writer, ParkingSettings obj) {
     writer
-      ..writeByte(18)
+      ..writeByte(22)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
@@ -475,7 +490,15 @@ class ParkingSettingsAdapter extends TypeAdapter<ParkingSettings> {
       ..writeByte(16)
       ..write(obj.minAppVersion)
       ..writeByte(17)
-      ..write(obj.policePhone);
+      ..write(obj.policePhone)
+      ..writeByte(18)
+      ..write(obj.reservationGraceMinutes)
+      ..writeByte(19)
+      ..write(obj.coverPath)
+      ..writeByte(20)
+      ..write(obj.coverVersion)
+      ..writeByte(21)
+      ..write(obj.version);
   }
 
   @override

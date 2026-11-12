@@ -1,7 +1,11 @@
 import 'package:equatable/equatable.dart';
 
 import '../../../core/error/failure.dart';
+import '../domain/entities/hourly_traffic.dart';
 import '../domain/entities/occupancy_report.dart';
+import '../domain/entities/forecast_backtest.dart';
+import '../domain/entities/period_comparison.dart';
+import '../domain/entities/reservation_report.dart';
 import '../domain/entities/revenue_report.dart';
 import '../domain/entities/whatsapp_report.dart';
 import '../domain/repositories/report_repository.dart';
@@ -27,6 +31,15 @@ class ReportsLoaded extends ReportsState {
     this.revenue,
     this.occupancy, {
     this.whatsapp = WhatsappReport.empty,
+    this.hourly = HourlyTraffic.empty,
+    this.reservations = ReservationReport.empty,
+    this.comparison = PeriodComparison.empty,
+    this.comparisonMonths = 6,
+    this.comparisonFailed = false,
+    this.comparisonLoading = false,
+    this.backtest = ForecastBacktest.empty,
+    this.backtestFailed = false,
+    this.backtestLoading = false,
     this.allLots = false,
     this.previousTotal,
     this.previousStart,
@@ -36,6 +49,54 @@ class ReportsLoaded extends ReportsState {
   final RevenueReport revenue;
   final OccupancyReport occupancy;
   final WhatsappReport whatsapp;
+
+  /// Entries/exits per hour (empty when the RPC failed).
+  final HourlyTraffic hourly;
+
+  /// Holds created in the window, by origin and outcome.
+  final ReservationReport reservations;
+
+  /// Trailing months with the month before and the same month last year.
+  final PeriodComparison comparison;
+  final int comparisonMonths;
+
+  /// The last comparison request failed (the section offers a retry).
+  final bool comparisonFailed;
+
+  /// A months switch or a retry is in flight (the section shows a skeleton).
+  final bool comparisonLoading;
+
+  /// Forecast accuracy, computed on demand (the heaviest read).
+  final ForecastBacktest backtest;
+  final bool backtestFailed;
+  final bool backtestLoading;
+
+  ReportsLoaded copyWith({
+    PeriodComparison? comparison,
+    int? comparisonMonths,
+    bool? comparisonFailed,
+    bool? comparisonLoading,
+    ForecastBacktest? backtest,
+    bool? backtestFailed,
+    bool? backtestLoading,
+  }) => ReportsLoaded(
+    revenue,
+    occupancy,
+    whatsapp: whatsapp,
+    hourly: hourly,
+    reservations: reservations,
+    comparison: comparison ?? this.comparison,
+    comparisonMonths: comparisonMonths ?? this.comparisonMonths,
+    comparisonFailed: comparisonFailed ?? this.comparisonFailed,
+    comparisonLoading: comparisonLoading ?? this.comparisonLoading,
+    backtest: backtest ?? this.backtest,
+    backtestFailed: backtestFailed ?? this.backtestFailed,
+    backtestLoading: backtestLoading ?? this.backtestLoading,
+    allLots: allLots,
+    previousTotal: previousTotal,
+    previousStart: previousStart,
+    previousEnd: previousEnd,
+  );
 
   /// `true` while the consolidated (every lot) view is selected.
   final bool allLots;
@@ -59,6 +120,15 @@ class ReportsLoaded extends ReportsState {
     revenue,
     occupancy,
     whatsapp,
+    hourly,
+    reservations,
+    comparison,
+    comparisonMonths,
+    comparisonFailed,
+    comparisonLoading,
+    backtest,
+    backtestFailed,
+    backtestLoading,
     allLots,
     previousTotal,
     previousStart,
@@ -90,6 +160,7 @@ class ReportsCubit extends ResilientCubit<ReportsState> {
     required DateTime startDate,
     required DateTime endDate,
     bool allLots = false,
+    int comparisonMonths = 6,
   }) async {
     emit(const ReportsLoading());
     final days = endDate.difference(startDate).inDays + 1;
@@ -103,10 +174,25 @@ class ReportsCubit extends ResilientCubit<ReportsState> {
           allLots: allLots,
         ),
         _repository.getOccupancyReport(),
-        _repository.getWhatsappReport(
-          startDate: startDate,
-          endDate: endDate,
-        ),
+        _repository.getWhatsappReport(startDate: startDate, endDate: endDate),
+        _repository
+            .getHourlyTraffic(startDate: startDate, endDate: endDate)
+            .then<HourlyTraffic>(
+              (report) => report,
+              onError: (Object _) => HourlyTraffic.empty,
+            ),
+        _repository
+            .getPeriodComparison(months: comparisonMonths)
+            .then<PeriodComparison?>(
+              (report) => report,
+              onError: (Object _) => null,
+            ),
+        _repository
+            .getReservationReport(startDate: startDate, endDate: endDate)
+            .then<ReservationReport>(
+              (report) => report,
+              onError: (Object _) => ReservationReport.empty,
+            ),
         _repository
             .getRevenueReport(
               startDate: previousStart,
@@ -118,12 +204,18 @@ class ReportsCubit extends ResilientCubit<ReportsState> {
               onError: (Object _) => null,
             ),
       ]);
-      final previous = results[3] as RevenueReport?;
+      final previous = results[6] as RevenueReport?;
       emit(
         ReportsLoaded(
           results[0] as RevenueReport,
           results[1] as OccupancyReport,
           whatsapp: results[2] as WhatsappReport,
+          hourly: results[3] as HourlyTraffic,
+          reservations: results[5] as ReservationReport,
+          comparison:
+              (results[4] as PeriodComparison?) ?? PeriodComparison.empty,
+          comparisonMonths: comparisonMonths,
+          comparisonFailed: results[4] == null,
           allLots: allLots,
           previousTotal: previous?.total,
           previousStart: previous == null ? null : previousStart,
@@ -132,6 +224,75 @@ class ReportsCubit extends ResilientCubit<ReportsState> {
       );
     } on Failure catch (failure) {
       emit(ReportsFailure.of(failure));
+    }
+  }
+
+  /// Switches the comparison between 6 and 12 months (or retries it) without
+  /// flashing the page: it stays on [ReportsLoaded] and never emits the
+  /// loading or failure state of the whole report.
+  /// Replays the forecast over the last [weeks] weeks. Never replaces the
+  /// report: it only toggles its own loading/failed flags.
+  Future<void> loadBacktest({int weeks = 4}) async {
+    final current = state;
+    if (current is! ReportsLoaded) {
+      return;
+    }
+    emit(current.copyWith(backtestLoading: true));
+    try {
+      final result = await _repository.getForecastBacktest(weeks: weeks);
+      final latest = state;
+      if (isClosed || latest is! ReportsLoaded) {
+        return;
+      }
+      emit(
+        latest.copyWith(
+          backtest: result,
+          backtestFailed: false,
+          backtestLoading: false,
+        ),
+      );
+    } on Failure {
+      final latest = state;
+      if (isClosed || latest is! ReportsLoaded) {
+        return;
+      }
+      emit(latest.copyWith(backtestFailed: true, backtestLoading: false));
+    }
+  }
+
+  Future<void> loadComparison({required int months}) async {
+    final current = state;
+    if (current is! ReportsLoaded) {
+      return;
+    }
+    emit(current.copyWith(comparisonLoading: true, comparisonMonths: months));
+    try {
+      final report = await _repository.getPeriodComparison(months: months);
+      final latest = state;
+      if (isClosed || latest is! ReportsLoaded) {
+        return;
+      }
+      emit(
+        latest.copyWith(
+          comparison: report,
+          comparisonMonths: months,
+          comparisonFailed: false,
+          comparisonLoading: false,
+        ),
+      );
+    } on Failure {
+      final latest = state;
+      if (isClosed || latest is! ReportsLoaded) {
+        return;
+      }
+      emit(
+        latest.copyWith(
+          comparison: PeriodComparison.empty,
+          comparisonMonths: months,
+          comparisonFailed: true,
+          comparisonLoading: false,
+        ),
+      );
     }
   }
 }

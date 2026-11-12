@@ -14,6 +14,7 @@ class TariffDto {
     this.startTime,
     this.endTime,
     this.active = true,
+    this.version = 0,
   });
 
   factory TariffDto.fromJson(Map<String, dynamic> json) =>
@@ -34,18 +35,20 @@ class TariffDto {
   final String? endTime;
 
   final bool active;
+  final int version;
 
   Map<String, dynamic> toJson() => _$TariffDtoToJson(this);
 
   Tariff toDomain() => Tariff(
-        id: id,
-        categoryId: categoryId,
-        type: _parseType(type),
-        amount: amount,
-        startTime: startTime,
-        endTime: endTime,
-        active: active,
-      );
+    id: id,
+    categoryId: categoryId,
+    type: _parseType(type),
+    amount: amount,
+    startTime: startTime,
+    endTime: endTime,
+    active: active,
+    version: version,
+  );
 
   static TariffType _parseType(String value) {
     return TariffType.values.firstWhere(

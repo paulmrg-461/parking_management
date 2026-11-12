@@ -43,7 +43,10 @@ class EvidenceCubit extends ResilientCubit<EvidenceState> {
       emit(
         const EvidenceState(
           status: EvidenceStatus.failure,
-          failure: ValidationFailure('Invalid evidence link', 'EvidenceNotFoundError'),
+          failure: ValidationFailure(
+            'Invalid evidence link',
+            'EvidenceNotFoundError',
+          ),
         ),
       );
       return;

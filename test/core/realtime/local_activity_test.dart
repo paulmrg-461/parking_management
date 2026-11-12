@@ -9,7 +9,11 @@ void main() {
     LocalActivity.remember('check_in', 7, at: at);
 
     expect(
-      LocalActivity.owns('check_in', 7, now: at.add(const Duration(seconds: 5))),
+      LocalActivity.owns(
+        'check_in',
+        7,
+        now: at.add(const Duration(seconds: 5)),
+      ),
       isTrue,
     );
   });

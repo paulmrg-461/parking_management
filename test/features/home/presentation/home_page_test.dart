@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -6,21 +8,28 @@ import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/features/auth/application/auth_cubit.dart';
 import 'package:parking_management/features/auth/domain/entities/user.dart';
 import 'package:parking_management/features/check_out/domain/entities/capacity_snapshot.dart';
+import 'package:parking_management/features/check_out/domain/entities/dashboard_trend.dart';
+import 'package:parking_management/features/check_out/domain/entities/lot_setup_status.dart';
 import 'package:parking_management/features/check_out/domain/entities/today_summary.dart';
 import 'package:parking_management/features/check_out/domain/entities/open_session.dart';
 import 'package:parking_management/core/widgets/plate_text.dart';
+import 'package:parking_management/core/widgets/skeleton.dart';
 import 'package:parking_management/features/check_out/domain/entities/slot_board.dart';
 import 'package:parking_management/features/home/application/dashboard_cubit.dart';
+import 'package:parking_management/features/home/domain/repositories/dashboard_cache.dart';
 import 'package:parking_management/features/home/presentation/home_page.dart';
 import 'package:parking_management/features/home/presentation/widgets/dashboard_widgets.dart';
+import 'package:parking_management/features/home/presentation/widgets/slot_board_card.dart';
 import 'package:parking_management/features/reservations/domain/entities/reservation.dart';
 import 'package:parking_management/features/spots/domain/entities/parking_spot.dart';
 import 'package:parking_management/features/reservations/domain/repositories/reservation_repository.dart';
 import 'package:parking_management/features/settings/application/branding_cubit.dart';
 
 import '../../../helpers/app_harness.dart';
+import '../../../helpers/dashboard_fixtures.dart';
 import '../../../helpers/fake_auth_repository.dart';
 import '../../../helpers/fake_check_out_repository.dart';
+import '../../../helpers/fake_dashboard_cache.dart';
 import '../../../helpers/fake_reservation_repository.dart';
 import '../../../helpers/fake_settings_repository.dart';
 import '../../../helpers/test_app.dart';
@@ -30,6 +39,12 @@ Future<FakeCheckOutRepository> _pump(
   UserRole role = UserRole.operator,
   Failure? error,
   TodaySummary today = TodaySummary.empty,
+  DashboardTrend trend = DashboardTrend.empty,
+  Failure? trendError,
+  LotSetupStatus setup = LotSetupStatus.unknown,
+  Future<void>? todayGate,
+  DashboardCache? cache,
+  bool settle = true,
   int capacity = 0,
   CapacitySnapshot? space,
   SlotBoard? board,
@@ -55,9 +70,13 @@ Future<FakeCheckOutRepository> _pump(
           ],
           listError: error,
           today: today,
+          trend: trend,
+          trendError: trendError,
         )
         ..capacityToReturn = space ?? CapacitySnapshot.empty
-        ..slotBoardToReturn = board ?? SlotBoard.empty;
+        ..slotBoardToReturn = board ?? SlotBoard.empty
+        ..setupToReturn = setup
+        ..todayGate = todayGate;
   final auth = AuthCubit(
     FakeAuthRepository(sessionToRestore: sessionFor(role)),
   );
@@ -67,7 +86,7 @@ Future<FakeCheckOutRepository> _pump(
       GoRoute(
         path: '/',
         builder: (_, _) => BlocProvider(
-          create: (_) => DashboardCubit(sessions),
+          create: (_) => DashboardCubit(sessions, cache: cache),
           child: HomePage(reservations: reservations),
         ),
         routes: [
@@ -93,7 +112,11 @@ Future<FakeCheckOutRepository> _pump(
       child: BlocProvider.value(value: auth, child: testRouterApp(router)),
     ),
   );
-  await tester.pumpAndSettle();
+  if (settle) {
+    await tester.pumpAndSettle();
+  } else {
+    await tester.pump();
+  }
   return sessions;
 }
 
@@ -117,6 +140,30 @@ class _RoutePage extends StatelessWidget {
 
 String _routeQuery(WidgetTester tester) =>
     tester.widget<Text>(find.byKey(const Key('route_query'))).data ?? '';
+
+DashboardTrend _week() => DashboardTrend(
+  days: [
+    for (var i = 0; i < 7; i++)
+      TrendDay(
+        date: DateTime(2026, 11, 3).add(Duration(days: i)),
+        revenue: i * 1000,
+        entries: i + 1,
+        exits: i,
+      ),
+  ],
+);
+
+DashboardTrend _fortnight() => DashboardTrend(
+  days: [
+    for (var i = 0; i < 14; i++)
+      TrendDay(
+        date: DateTime(2026, 10, 27).add(Duration(days: i)),
+        revenue: i * 1000,
+        entries: i + 1,
+        exits: i,
+      ),
+  ],
+);
 
 void main() {
   testWidgets('Success: operator dashboard shows occupancy and actions', (
@@ -158,11 +205,23 @@ void main() {
     expect(find.text('Entrada'), findsOneWidget);
   });
 
-  testWidgets('Security: operators do not see the management section', (
-    tester,
-  ) async {
+  testWidgets('Security: operators only see the management sections they '
+      'may use', (tester) async {
     await _pump(tester);
-    expect(find.text('Gestión'), findsNothing);
+    await tester.scrollUntilVisible(
+      find.text('Gestión'),
+      200,
+      scrollable: find
+          .descendant(
+            of: find.byType(RefreshIndicator),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+
+    expect(find.text('Reservas'), findsOneWidget);
+    expect(find.text('Reportes'), findsNothing);
+    expect(find.text('Usuarios'), findsNothing);
   });
 
   testWidgets('Success: admins get management shortcuts', (tester) async {
@@ -215,6 +274,213 @@ void main() {
     expect(find.text('5'), findsOneWidget);
     expect(find.textContaining('30.000'), findsOneWidget);
     expect(find.text('Mensualidades'), findsOneWidget);
+  });
+
+  testWidgets('Success: the trend card sums the week and its totals', (
+    tester,
+  ) async {
+    final trend = DashboardTrend(
+      days: [
+        for (var i = 0; i < 7; i++)
+          TrendDay(
+            date: DateTime(2026, 11, 3).add(Duration(days: i)),
+            revenue: i * 1000,
+            entries: i + 1,
+            exits: i,
+          ),
+      ],
+    );
+
+    final sessions = await _pump(tester, trend: trend);
+
+    expect(sessions.trendCalls, 1);
+    expect(find.text('Tendencia'), findsOneWidget);
+    expect(find.textContaining('21.000'), findsOneWidget);
+    expect(find.text('Ingresos'), findsOneWidget);
+  });
+
+  testWidgets('Failure: a quiet week shows the empty trend message', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      trend: DashboardTrend(
+        days: [
+          for (var i = 0; i < 7; i++)
+            TrendDay(date: DateTime(2026, 11, 3).add(Duration(days: i))),
+        ],
+      ),
+    );
+
+    expect(find.text('Sin movimientos en los últimos días'), findsOneWidget);
+  });
+
+  testWidgets('Success: the trend compares against the previous week', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      trend: DashboardTrend(
+        days: [
+          for (var i = 0; i < 14; i++)
+            TrendDay(
+              date: DateTime(2026, 10, 27).add(Duration(days: i)),
+              revenue: i < 7 ? 10000 : 15000,
+            ),
+        ],
+      ),
+    );
+
+    expect(find.text('+50 % vs semana anterior'), findsOneWidget);
+    expect(find.textContaining('105.000'), findsOneWidget);
+  });
+
+  testWidgets('Success: a weaker week is flagged as a warning', (tester) async {
+    await _pump(
+      tester,
+      trend: DashboardTrend(
+        days: [
+          for (var i = 0; i < 14; i++)
+            TrendDay(
+              date: DateTime(2026, 10, 27).add(Duration(days: i)),
+              revenue: i < 7 ? 10000 : 5000,
+            ),
+        ],
+      ),
+    );
+
+    expect(find.text('-50 % vs semana anterior'), findsOneWidget);
+  });
+
+  testWidgets('Success: an even week says it matches the previous one', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      trend: DashboardTrend(
+        days: [
+          for (var i = 0; i < 14; i++)
+            TrendDay(
+              date: DateTime(2026, 10, 27).add(Duration(days: i)),
+              revenue: 5000,
+            ),
+        ],
+      ),
+    );
+
+    expect(find.text('Igual que la semana anterior'), findsOneWidget);
+  });
+
+  testWidgets('Success: the home paints card skeletons until it loads', (
+    tester,
+  ) async {
+    final gate = Completer<void>();
+    await _pump(tester, todayGate: gate.future, settle: false);
+
+    expect(find.byType(SkeletonCard), findsNWidgets(4));
+    expect(find.byType(OccupancyCard), findsNothing);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SkeletonCard), findsNothing);
+    expect(find.text('Vehículos dentro'), findsWidgets);
+  });
+
+  testWidgets('Failure: a broken trend never hides the rest of the home', (
+    tester,
+  ) async {
+    await _pump(tester, trendError: const NetworkFailure('offline'));
+
+    expect(find.text('Sin movimientos en los últimos días'), findsOneWidget);
+    expect(find.text('Vehículos dentro'), findsWidgets);
+  });
+
+  testWidgets('Failure: a broken dashboard says the trend is unavailable', (
+    tester,
+  ) async {
+    await _pump(tester, error: const NetworkFailure('offline'));
+
+    expect(find.text('Tendencia no disponible'), findsOneWidget);
+  });
+
+  testWidgets('Security: only admins get the reports shortcut', (tester) async {
+    await _pump(tester, trend: _week());
+
+    expect(find.byTooltip('Abrir reportes'), findsNothing);
+  });
+
+  testWidgets('Success: admins open the reports screen from the trend', (
+    tester,
+  ) async {
+    await _pump(tester, role: UserRole.admin, trend: _week());
+
+    expect(find.byTooltip('Abrir reportes'), findsOneWidget);
+  });
+
+  testWidgets('Success: offline shows the cached KPIs with a stale notice', (
+    tester,
+  ) async {
+    final cache = FakeDashboardCache()..snapshot = sampleDashboardSnapshot();
+    await _pump(tester, error: const NetworkFailure('offline'), cache: cache);
+
+    expect(
+      find.text('Sin conexión · datos guardados de las 14:32'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('25.000'), findsWidgets);
+    expect(find.byType(SlotBoardCard), findsNothing);
+    expect(find.byType(InsideCard), findsNothing);
+  });
+
+  testWidgets('Success: an unfinished site guides admins through setup', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      role: UserRole.admin,
+      setup: const LotSetupStatus(categories: 1),
+    );
+
+    expect(find.text('Primeros pasos'), findsOneWidget);
+    expect(find.text('1 de 4 listos'), findsOneWidget);
+    expect(find.text('Tarifas'), findsOneWidget);
+    expect(find.text('Datos del parqueadero'), findsOneWidget);
+  });
+
+  testWidgets('Security: operators never see the setup card', (tester) async {
+    await _pump(tester, setup: const LotSetupStatus(categories: 1));
+
+    expect(find.text('Primeros pasos'), findsNothing);
+  });
+
+  testWidgets('Success: a ready site hides the setup card', (tester) async {
+    await _pump(
+      tester,
+      role: UserRole.admin,
+      setup: const LotSetupStatus(
+        categories: 1,
+        tariffs: 1,
+        carCapacity: 10,
+        hasAddress: true,
+        hasPhone: true,
+      ),
+    );
+
+    expect(find.text('Primeros pasos'), findsNothing);
+  });
+
+  testWidgets('A11y: the trend card fits a phone with large text', (
+    tester,
+  ) async {
+    tester.platformDispatcher.textScaleFactorTestValue = 1.6;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+    await _pump(tester, size: const Size(400, 2200), trend: _fortnight());
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Tendencia'), findsOneWidget);
+    expect(find.textContaining('vs semana anterior'), findsOneWidget);
   });
 
   testWidgets('A11y: reduced motion fills the occupancy bar immediately', (
@@ -322,9 +588,7 @@ void main() {
     expect(find.text('reservations page'), findsOneWidget);
   });
 
-  testWidgets('Security: operators do not get the holds shortcut', (
-    tester,
-  ) async {
+  testWidgets('Success: operators get the holds shortcut too', (tester) async {
     await _pump(
       tester,
       capacity: 8,
@@ -332,7 +596,9 @@ void main() {
     );
 
     expect(find.text('3 reservas activas'), findsOneWidget);
-    expect(find.text('Ver reservas'), findsNothing);
+    await tester.tap(find.text('Ver reservas'));
+    await tester.pumpAndSettle();
+    expect(find.text('reservations page'), findsOneWidget);
   });
 
   testWidgets('Success: the space map paints free, occupied and held cells', (
@@ -370,7 +636,14 @@ void main() {
     expect(find.text('BRD001'), findsOneWidget);
     expect(find.textContaining('HOLD01'), findsOneWidget);
 
-    await tester.tap(find.text('Reservas'));
+    // The map has its own "Reservas" filter chip; the management tile sits
+    // further down and would make find.text ambiguous.
+    await tester.tap(
+      find.descendant(
+        of: find.byType(ChoiceChip),
+        matching: find.text('Reservas'),
+      ),
+    );
     await tester.pumpAndSettle();
     expect(find.text('BRD001'), findsNothing);
     expect(find.textContaining('HOLD01'), findsOneWidget);
