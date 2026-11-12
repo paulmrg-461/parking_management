@@ -23,7 +23,11 @@ import 'audit_export.dart';
 
 /// Admin audit trail: who changed which reference data, when and where.
 class AuditPage extends StatefulWidget {
-  const AuditPage({super.key});
+  const AuditPage({super.key, this.initialTable, this.initialSearch});
+
+  /// Pre-filters set by a deep link (`/audit?table=...&search=...`).
+  final String? initialTable;
+  final String? initialSearch;
 
   @override
   State<AuditPage> createState() => _AuditPageState();
@@ -42,12 +46,22 @@ class _AuditPageState extends State<AuditPage> {
     'parking_settings',
     'parking_lots',
     'lot_members',
+    'cash_anomalies',
+    'anomaly_settings',
   ];
 
   @override
   void initState() {
     super.initState();
-    unawaited(context.read<AuditCubit>().load());
+    if (widget.initialSearch case final initial?) {
+      _search.text = initial;
+    }
+    unawaited(
+      context.read<AuditCubit>().load(
+        table: widget.initialTable,
+        search: widget.initialSearch,
+      ),
+    );
   }
 
   @override

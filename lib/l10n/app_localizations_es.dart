@@ -955,6 +955,208 @@ class AppLocalizationsEs extends AppLocalizations {
       'Estimación según días anteriores; puede variar.';
 
   @override
+  String get navAnomalies => 'Anomalías';
+
+  @override
+  String get anomaliesTitle => 'Anomalías de caja';
+
+  @override
+  String get anomaliesSettings => 'Umbrales';
+
+  @override
+  String anomaliesOpenCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count abiertas',
+      one: '1 abierta',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get anomaliesStatusOpen => 'Abiertas';
+
+  @override
+  String get anomaliesStatusAcknowledged => 'Reconocidas';
+
+  @override
+  String get anomaliesStatusDismissed => 'Descartadas';
+
+  @override
+  String get anomaliesStatusAll => 'Todas';
+
+  @override
+  String get anomaliesClearFilters => 'Limpiar filtros';
+
+  @override
+  String get anomaliesRuleLabel => 'Regla';
+
+  @override
+  String get anomaliesSeverityLabel => 'Severidad';
+
+  @override
+  String get anomaliesSeverityLow => 'Baja';
+
+  @override
+  String get anomaliesSeverityMedium => 'Media';
+
+  @override
+  String get anomaliesSeverityHigh => 'Alta';
+
+  @override
+  String get anomalyRuleShiftShortage => 'Faltantes repetidos';
+
+  @override
+  String get anomalyRuleLostTicketRate => 'Tasa alta de ticket perdido';
+
+  @override
+  String get anomalyRulePostCloseAdjustment => 'Ajuste después del cierre';
+
+  @override
+  String get anomalyRuleZeroCharge => 'Salida sin cobro';
+
+  @override
+  String get anomalyRuleShortLostTicket => 'Ticket perdido con estadía corta';
+
+  @override
+  String get anomalyRuleDiscountRate => 'Descuentos frecuentes';
+
+  @override
+  String get anomalyRuleShiftOpenLong => 'Turno abierto demasiado tiempo';
+
+  @override
+  String get anomalyRuleSessionOpenLong => 'Vehículo dentro por muchos días';
+
+  @override
+  String anomalyDescShiftShortage(int count, String amount) {
+    return '$count turnos con faltante, total $amount';
+  }
+
+  @override
+  String anomalyDescLostTicketRate(String rate, String baseline) {
+    return '$rate % de tickets perdidos frente a $baseline % de la sede';
+  }
+
+  @override
+  String anomalyDescPostCloseAdjustment(String from, String to, String admin) {
+    return 'Diferencia $from → $to ajustada por $admin';
+  }
+
+  @override
+  String anomalyDescZeroCharge(String plate, String method) {
+    return '$plate salió sin cobro ($method)';
+  }
+
+  @override
+  String anomalyDescShortLostTicket(String plate, int minutes) {
+    return '$plate: ticket perdido tras $minutes min';
+  }
+
+  @override
+  String anomalyDescDiscountRate(int count, String share) {
+    return '$count descuentos ($share % de las salidas)';
+  }
+
+  @override
+  String anomalyDescShiftOpenLong(int hours) {
+    return 'Abierto desde hace $hours h';
+  }
+
+  @override
+  String anomalyDescSessionOpenLong(String plate, int days) {
+    return '$plate lleva $days días dentro';
+  }
+
+  @override
+  String get anomalyAcknowledge => 'Reconocer';
+
+  @override
+  String get anomalyDismiss => 'Descartar';
+
+  @override
+  String get anomalyNoteLabel => 'Nota';
+
+  @override
+  String get anomalyNoteRequired => 'Escribe una nota de al menos 3 caracteres';
+
+  @override
+  String get anomalyViewAudit => 'Ver auditoría';
+
+  @override
+  String get anomalyViewContext => 'Ver detalle';
+
+  @override
+  String get anomaliesEmptyTitle => 'Todo en orden';
+
+  @override
+  String get anomaliesEmpty => 'No hay anomalías con estos filtros.';
+
+  @override
+  String get anomaliesSettingsEnabled => 'Detección activa';
+
+  @override
+  String get anomaliesSettingsSaved => 'Umbrales guardados';
+
+  @override
+  String get anomaliesSettingsWindowDays => 'Ventana (días)';
+
+  @override
+  String get anomaliesSettingsShortageMinAmount => 'Faltante mínimo por turno';
+
+  @override
+  String get anomaliesSettingsShortageMinShifts =>
+      'Turnos con faltante para alertar';
+
+  @override
+  String get anomaliesSettingsLostTicketMinClosed =>
+      'Salidas mínimas por operador';
+
+  @override
+  String get anomaliesSettingsLostTicketMinRatePct =>
+      'Tasa mínima de ticket perdido (%)';
+
+  @override
+  String get anomaliesSettingsLostTicketFactorPct =>
+      'Veces la tasa de la sede (%)';
+
+  @override
+  String get anomaliesSettingsAdjustmentMinAmount =>
+      'Ajuste mínimo tras el cierre';
+
+  @override
+  String get anomaliesSettingsShortStayMinutes => 'Estadía corta (minutos)';
+
+  @override
+  String get anomaliesSettingsDiscountMinCount =>
+      'Descuentos mínimos por admin';
+
+  @override
+  String get anomaliesSettingsDiscountSharePct => 'Cuota de descuentos (%)';
+
+  @override
+  String get anomaliesSettingsShiftOpenHours => 'Horas para turno abierto';
+
+  @override
+  String get anomaliesSettingsSessionOpenDays => 'Días para vehículo dentro';
+
+  @override
+  String get notifTypeCashAnomaly => 'Anomalía de caja';
+
+  @override
+  String get errorAnomalyNotFound => 'No encontramos esa anomalía';
+
+  @override
+  String get errorAnomalyAlreadyResolved => 'Esa anomalía ya fue revisada';
+
+  @override
+  String get errorAnomalyNoteRequired =>
+      'Escribe una nota de al menos 3 caracteres';
+
+  @override
+  String get errorInvalidAnomalySetting => 'Revisa los valores de los umbrales';
+
+  @override
   String syncQueued(int count) {
     return '$count en cola, se reintentarán solos.';
   }

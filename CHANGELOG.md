@@ -68,6 +68,23 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Added
 
+- **Cash anomaly detection** (`0110`,
+  `openspec/changes/add-cash-anomaly-detection`). Eight deterministic rules over
+  the rows the lot already has, so the admin stops finding the leak patterns by
+  browsing:
+  - Repeated shift shortages per operator, lost-ticket rate against the lot
+    baseline, adjustments after close, zero-charge check-outs that are not
+    passes, lost tickets on very short stays, discount share per admin, shifts
+    open too long and sessions open for many days.
+  - One row per anomaly (`cash_anomalies`), deduped per lot and subject so
+    nothing is raised twice; a dismissed anomaly never comes back.
+  - Thresholds live in `anomaly_settings`, **admin-only** (operators can read
+    `parking_settings`), tunable from the new "Anomalías" screen.
+  - Review workflow: acknowledge or dismiss with a note, audited with the actor.
+    One summary notification per lot and run goes to the admins (deep link to
+    `/anomalies`); low-severity findings stay in the page.
+  - Detection and retention run from the jobs container. Everything is
+    remote-only and read-mostly: nothing blocks or reverses a transaction.
 - **Occupancy forecast** (`0109`, `openspec/changes/add-occupancy-forecast`).
   The home dashboard and the public page could only say how full the lot is
   *now*. The system now answers "will it be full at 6 pm?":

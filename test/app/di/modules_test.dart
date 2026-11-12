@@ -15,6 +15,7 @@ import 'package:parking_management/core/sync/notifying_sync_outbox.dart';
 import 'package:parking_management/core/sync/pending_photo_storage.dart';
 import 'package:parking_management/core/sync/sync_outbox.dart';
 import 'package:parking_management/core/sync/sync_service.dart';
+import 'package:parking_management/features/anomalies/application/anomalies_cubit.dart';
 import 'package:parking_management/features/check_in/application/check_in_cubit.dart';
 import 'package:parking_management/features/check_out/application/check_out_cubit.dart';
 import 'package:parking_management/features/monthly_passes/application/monthly_passes_cubit.dart';
@@ -64,6 +65,12 @@ void main() {
       expect(sl<SyncService>(), isA<SyncService>());
     },
   );
+
+  test('Success: AnomaliesCubit resolves from the container', () {
+    _register(sl);
+
+    expect(sl<AnomaliesCubit>(), isA<AnomaliesCubit>());
+  });
 
   test('Success: registers the waitlist module', () {
     _register(sl);

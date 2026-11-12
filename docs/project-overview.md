@@ -167,6 +167,18 @@ plate, two per mobile, a per-lot maximum). It is off per site
 (`parking_settings.waitlist_enabled`), and WhatsApp notices are optional
 (`waitlist_offer` template; without it the page polls and the desk calls).
 
+## 7.03 Cash anomaly detection (implemented)
+
+The admin no longer has to find cash leaks by browsing. Eight deterministic
+rules run on a schedule over the lot's own rows: repeated shift shortages per
+operator, a lost-ticket rate above the lot baseline, adjustments made after a
+shift closed, zero-charge check-outs that are not monthly passes, a lost-ticket
+fee on a very short stay, an admin's discount share, shifts left open and
+vehicles inside for many days. Each finding is stored once (deduped per lot and
+subject), can be acknowledged or dismissed with a note (audited), and one
+summary notification per run reaches the lot's admins. Thresholds are
+per-lot and admin-only; detection and retention run from the jobs container.
+
 ## 7.05 Occupancy forecast (implemented)
 
 "Will it be full at 6 pm?" is answered from the lot's own history: per group,

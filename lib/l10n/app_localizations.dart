@@ -1670,6 +1670,348 @@ abstract class AppLocalizations {
   /// **'Estimación según días anteriores; puede variar.'**
   String get publicForecastDisclaimer;
 
+  /// No description provided for @navAnomalies.
+  ///
+  /// In es, this message translates to:
+  /// **'Anomalías'**
+  String get navAnomalies;
+
+  /// No description provided for @anomaliesTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Anomalías de caja'**
+  String get anomaliesTitle;
+
+  /// No description provided for @anomaliesSettings.
+  ///
+  /// In es, this message translates to:
+  /// **'Umbrales'**
+  String get anomaliesSettings;
+
+  /// No description provided for @anomaliesOpenCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 abierta} other{{count} abiertas}}'**
+  String anomaliesOpenCount(int count);
+
+  /// No description provided for @anomaliesStatusOpen.
+  ///
+  /// In es, this message translates to:
+  /// **'Abiertas'**
+  String get anomaliesStatusOpen;
+
+  /// No description provided for @anomaliesStatusAcknowledged.
+  ///
+  /// In es, this message translates to:
+  /// **'Reconocidas'**
+  String get anomaliesStatusAcknowledged;
+
+  /// No description provided for @anomaliesStatusDismissed.
+  ///
+  /// In es, this message translates to:
+  /// **'Descartadas'**
+  String get anomaliesStatusDismissed;
+
+  /// No description provided for @anomaliesStatusAll.
+  ///
+  /// In es, this message translates to:
+  /// **'Todas'**
+  String get anomaliesStatusAll;
+
+  /// No description provided for @anomaliesClearFilters.
+  ///
+  /// In es, this message translates to:
+  /// **'Limpiar filtros'**
+  String get anomaliesClearFilters;
+
+  /// No description provided for @anomaliesRuleLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Regla'**
+  String get anomaliesRuleLabel;
+
+  /// No description provided for @anomaliesSeverityLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Severidad'**
+  String get anomaliesSeverityLabel;
+
+  /// No description provided for @anomaliesSeverityLow.
+  ///
+  /// In es, this message translates to:
+  /// **'Baja'**
+  String get anomaliesSeverityLow;
+
+  /// No description provided for @anomaliesSeverityMedium.
+  ///
+  /// In es, this message translates to:
+  /// **'Media'**
+  String get anomaliesSeverityMedium;
+
+  /// No description provided for @anomaliesSeverityHigh.
+  ///
+  /// In es, this message translates to:
+  /// **'Alta'**
+  String get anomaliesSeverityHigh;
+
+  /// No description provided for @anomalyRuleShiftShortage.
+  ///
+  /// In es, this message translates to:
+  /// **'Faltantes repetidos'**
+  String get anomalyRuleShiftShortage;
+
+  /// No description provided for @anomalyRuleLostTicketRate.
+  ///
+  /// In es, this message translates to:
+  /// **'Tasa alta de ticket perdido'**
+  String get anomalyRuleLostTicketRate;
+
+  /// No description provided for @anomalyRulePostCloseAdjustment.
+  ///
+  /// In es, this message translates to:
+  /// **'Ajuste después del cierre'**
+  String get anomalyRulePostCloseAdjustment;
+
+  /// No description provided for @anomalyRuleZeroCharge.
+  ///
+  /// In es, this message translates to:
+  /// **'Salida sin cobro'**
+  String get anomalyRuleZeroCharge;
+
+  /// No description provided for @anomalyRuleShortLostTicket.
+  ///
+  /// In es, this message translates to:
+  /// **'Ticket perdido con estadía corta'**
+  String get anomalyRuleShortLostTicket;
+
+  /// No description provided for @anomalyRuleDiscountRate.
+  ///
+  /// In es, this message translates to:
+  /// **'Descuentos frecuentes'**
+  String get anomalyRuleDiscountRate;
+
+  /// No description provided for @anomalyRuleShiftOpenLong.
+  ///
+  /// In es, this message translates to:
+  /// **'Turno abierto demasiado tiempo'**
+  String get anomalyRuleShiftOpenLong;
+
+  /// No description provided for @anomalyRuleSessionOpenLong.
+  ///
+  /// In es, this message translates to:
+  /// **'Vehículo dentro por muchos días'**
+  String get anomalyRuleSessionOpenLong;
+
+  /// No description provided for @anomalyDescShiftShortage.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} turnos con faltante, total {amount}'**
+  String anomalyDescShiftShortage(int count, String amount);
+
+  /// No description provided for @anomalyDescLostTicketRate.
+  ///
+  /// In es, this message translates to:
+  /// **'{rate} % de tickets perdidos frente a {baseline} % de la sede'**
+  String anomalyDescLostTicketRate(String rate, String baseline);
+
+  /// No description provided for @anomalyDescPostCloseAdjustment.
+  ///
+  /// In es, this message translates to:
+  /// **'Diferencia {from} → {to} ajustada por {admin}'**
+  String anomalyDescPostCloseAdjustment(String from, String to, String admin);
+
+  /// No description provided for @anomalyDescZeroCharge.
+  ///
+  /// In es, this message translates to:
+  /// **'{plate} salió sin cobro ({method})'**
+  String anomalyDescZeroCharge(String plate, String method);
+
+  /// No description provided for @anomalyDescShortLostTicket.
+  ///
+  /// In es, this message translates to:
+  /// **'{plate}: ticket perdido tras {minutes} min'**
+  String anomalyDescShortLostTicket(String plate, int minutes);
+
+  /// No description provided for @anomalyDescDiscountRate.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} descuentos ({share} % de las salidas)'**
+  String anomalyDescDiscountRate(int count, String share);
+
+  /// No description provided for @anomalyDescShiftOpenLong.
+  ///
+  /// In es, this message translates to:
+  /// **'Abierto desde hace {hours} h'**
+  String anomalyDescShiftOpenLong(int hours);
+
+  /// No description provided for @anomalyDescSessionOpenLong.
+  ///
+  /// In es, this message translates to:
+  /// **'{plate} lleva {days} días dentro'**
+  String anomalyDescSessionOpenLong(String plate, int days);
+
+  /// No description provided for @anomalyAcknowledge.
+  ///
+  /// In es, this message translates to:
+  /// **'Reconocer'**
+  String get anomalyAcknowledge;
+
+  /// No description provided for @anomalyDismiss.
+  ///
+  /// In es, this message translates to:
+  /// **'Descartar'**
+  String get anomalyDismiss;
+
+  /// No description provided for @anomalyNoteLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Nota'**
+  String get anomalyNoteLabel;
+
+  /// No description provided for @anomalyNoteRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe una nota de al menos 3 caracteres'**
+  String get anomalyNoteRequired;
+
+  /// No description provided for @anomalyViewAudit.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver auditoría'**
+  String get anomalyViewAudit;
+
+  /// No description provided for @anomalyViewContext.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver detalle'**
+  String get anomalyViewContext;
+
+  /// No description provided for @anomaliesEmptyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Todo en orden'**
+  String get anomaliesEmptyTitle;
+
+  /// No description provided for @anomaliesEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay anomalías con estos filtros.'**
+  String get anomaliesEmpty;
+
+  /// No description provided for @anomaliesSettingsEnabled.
+  ///
+  /// In es, this message translates to:
+  /// **'Detección activa'**
+  String get anomaliesSettingsEnabled;
+
+  /// No description provided for @anomaliesSettingsSaved.
+  ///
+  /// In es, this message translates to:
+  /// **'Umbrales guardados'**
+  String get anomaliesSettingsSaved;
+
+  /// No description provided for @anomaliesSettingsWindowDays.
+  ///
+  /// In es, this message translates to:
+  /// **'Ventana (días)'**
+  String get anomaliesSettingsWindowDays;
+
+  /// No description provided for @anomaliesSettingsShortageMinAmount.
+  ///
+  /// In es, this message translates to:
+  /// **'Faltante mínimo por turno'**
+  String get anomaliesSettingsShortageMinAmount;
+
+  /// No description provided for @anomaliesSettingsShortageMinShifts.
+  ///
+  /// In es, this message translates to:
+  /// **'Turnos con faltante para alertar'**
+  String get anomaliesSettingsShortageMinShifts;
+
+  /// No description provided for @anomaliesSettingsLostTicketMinClosed.
+  ///
+  /// In es, this message translates to:
+  /// **'Salidas mínimas por operador'**
+  String get anomaliesSettingsLostTicketMinClosed;
+
+  /// No description provided for @anomaliesSettingsLostTicketMinRatePct.
+  ///
+  /// In es, this message translates to:
+  /// **'Tasa mínima de ticket perdido (%)'**
+  String get anomaliesSettingsLostTicketMinRatePct;
+
+  /// No description provided for @anomaliesSettingsLostTicketFactorPct.
+  ///
+  /// In es, this message translates to:
+  /// **'Veces la tasa de la sede (%)'**
+  String get anomaliesSettingsLostTicketFactorPct;
+
+  /// No description provided for @anomaliesSettingsAdjustmentMinAmount.
+  ///
+  /// In es, this message translates to:
+  /// **'Ajuste mínimo tras el cierre'**
+  String get anomaliesSettingsAdjustmentMinAmount;
+
+  /// No description provided for @anomaliesSettingsShortStayMinutes.
+  ///
+  /// In es, this message translates to:
+  /// **'Estadía corta (minutos)'**
+  String get anomaliesSettingsShortStayMinutes;
+
+  /// No description provided for @anomaliesSettingsDiscountMinCount.
+  ///
+  /// In es, this message translates to:
+  /// **'Descuentos mínimos por admin'**
+  String get anomaliesSettingsDiscountMinCount;
+
+  /// No description provided for @anomaliesSettingsDiscountSharePct.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuota de descuentos (%)'**
+  String get anomaliesSettingsDiscountSharePct;
+
+  /// No description provided for @anomaliesSettingsShiftOpenHours.
+  ///
+  /// In es, this message translates to:
+  /// **'Horas para turno abierto'**
+  String get anomaliesSettingsShiftOpenHours;
+
+  /// No description provided for @anomaliesSettingsSessionOpenDays.
+  ///
+  /// In es, this message translates to:
+  /// **'Días para vehículo dentro'**
+  String get anomaliesSettingsSessionOpenDays;
+
+  /// No description provided for @notifTypeCashAnomaly.
+  ///
+  /// In es, this message translates to:
+  /// **'Anomalía de caja'**
+  String get notifTypeCashAnomaly;
+
+  /// No description provided for @errorAnomalyNotFound.
+  ///
+  /// In es, this message translates to:
+  /// **'No encontramos esa anomalía'**
+  String get errorAnomalyNotFound;
+
+  /// No description provided for @errorAnomalyAlreadyResolved.
+  ///
+  /// In es, this message translates to:
+  /// **'Esa anomalía ya fue revisada'**
+  String get errorAnomalyAlreadyResolved;
+
+  /// No description provided for @errorAnomalyNoteRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe una nota de al menos 3 caracteres'**
+  String get errorAnomalyNoteRequired;
+
+  /// No description provided for @errorInvalidAnomalySetting.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisa los valores de los umbrales'**
+  String get errorInvalidAnomalySetting;
+
   /// No description provided for @syncQueued.
   ///
   /// In es, this message translates to:

@@ -523,6 +523,47 @@ Last updated: 2026-11-11 (period comparison reports).
   the edge-runtime container (it was exercised with Deno against mocks).
 - Test count: 1172; schema `0001..0103`.
 
+## Cash anomalies (2026-11-12, `0110`)
+
+- Eight rules, one row per finding, dedupe key chosen so a legitimate
+  recurrence is new and a review is final: `shift_shortage:<operator>:<max id>`,
+  `lost_ticket_rate:<operator>:<ISO week>`, `post_close_adjustment:<adj id>`,
+  `zero_charge:<session id>`, `short_lost_ticket:<session id>`,
+  `discount_rate:<admin>:<ISO week>`, `shift_open_long:<shift id>`,
+  `session_open_long:<session id>`. A dismissed row stays in the table, so it is
+  never raised again (the job inserts `on conflict do nothing`).
+- Thresholds live in `anomaly_settings`, **not** `parking_settings`: every lot
+  member can read the latter, which would tell operators exactly how much they
+  can get away with. The table policy requires `is_lot_admin(lot_id)` and the
+  active lot; operators get 0 rows and `AdminRequiredError` from the RPCs.
+- `detect_cash_anomalies()` runs under `pg_try_advisory_xact_lock`, so the host
+  cron and the jobs container overlapping is a no-op, and notifies once per lot
+  and run: the "not yet notified" state is the `notified_at` column, not job
+  memory. Low-severity findings never notify.
+- Findings explained by later changes: `anomaly_zero_charge_excluded(session)`
+  returns false today; `add-merchant-validations` (and a future loyalty change)
+  redefine it with `create or replace` to return true for an explained zero.
+  Nothing else has to change when they land.
+- Attribution gap: the closing operator is `parking_sessions.shift_id ->
+  shifts.operator_id`; a session closed without an open shift is invisible to
+  the per-operator rules (it still feeds the session-based ones). Adjustments
+  and discounts are reported to admins about admins: the audit log is the second
+  line of review, there is no role above lot admin.
+- `exempt` is a zero charge any operator can pick, so it is flagged `medium`
+  (not high); a monthly pass is excluded. A shift with `difference is null` is
+  ignored (it is open).
+- Jobs: `run detect_cash_anomalies` and `run purge_cash_anomalies` in
+  `jobs.sh` (and the equivalent psql lines in `notifications-cron.sh`). Live
+  run: the first pass created 2 findings, the second 0 (idempotent) with one
+  settings row per lot.
+- Gatekeeper (2026-11-12): migration `0110` applied live, **1379 tests** green,
+  coverage 79.6% (application 92.3%, domain 60.5%), `flutter analyze` clean,
+  SQL suite over `0001`-`0110`, web rebuilt and republished (`/reserve` 200),
+  release APK installed and launched on the connected phone.
+- Left open: the widget tests listed for the settings sheet edge cases and the
+  audit deep-link navigation are covered only by review; `flutter test -d linux`
+  was not run.
+
 ## Occupancy forecast (2026-11-12, `0109`)
 
 - Algorithm in five lines: `occupancy_grid` rebuilds the hourly net occupancy

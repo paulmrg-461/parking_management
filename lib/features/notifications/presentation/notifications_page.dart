@@ -70,6 +70,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                   ('public_reservation', context.l10n.notifTypeReservation),
                   ('waitlist_joined', context.l10n.notifTypeWaitlist),
                   ('waitlist_offer', context.l10n.notifTypeWaitlist),
+                  ('cash_anomaly', context.l10n.notifTypeCashAnomaly),
                 ])
                   PopupMenuItem(value: entry.$1, child: Text(entry.$2)),
               ],
@@ -530,6 +531,7 @@ class _NotificationTile extends StatelessWidget {
     'shift_closed' => Icons.point_of_sale,
     'public_reservation' => Icons.event_available_outlined,
     'waitlist_joined' || 'waitlist_offer' => Icons.hourglass_top_outlined,
+    'cash_anomaly' => Icons.report_problem_outlined,
     _ => Icons.notifications,
   };
 }

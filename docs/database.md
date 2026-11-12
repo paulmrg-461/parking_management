@@ -146,6 +146,18 @@ hold with a phone and automated WhatsApp, queues `reservation_cancelled`.
 WhatsApp for public holds ending inside the window (default 60 min) when the
 lot has automated WhatsApp on, and stamps `reminder_sent_at` (idempotent).
 
+**Cash anomalies** (`0110`)
+`cash_anomalies` (rule, severity, dedupe key, subject/shift/session, details,
+open/acknowledged/dismissed, resolver and note) and `anomaly_settings` (the
+thresholds, admin-only RLS). Rules: `anomaly_rule_shift_shortage`,
+`lost_ticket_rate`, `post_close_adjustment`, `zero_charge`,
+`short_lost_ticket`, `discount_rate`, `shift_open_long`, `session_open_long`,
+all revoked from the API roles and driven by `detect_cash_anomalies()` (summary
+notification to admins) and `purge_cash_anomalies(p_days)`. Review RPCs:
+`list_cash_anomalies`, `resolve_cash_anomaly`, `get_anomaly_settings`,
+`set_anomaly_settings` (lot admin). `anomaly_zero_charge_excluded(session)` is
+the extension point later changes redefine to explain a zero charge.
+
 **Occupancy forecast** (`0109`)
 `occupancy_profile` (lot, group, weekday, hour → median + samples + computed_at)
 and `forecast_settings` (enabled, history weeks, minimum samples, decay, full

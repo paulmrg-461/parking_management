@@ -945,6 +945,206 @@ class AppLocalizationsEn extends AppLocalizations {
       'Estimate based on previous days; it may vary.';
 
   @override
+  String get navAnomalies => 'Anomalies';
+
+  @override
+  String get anomaliesTitle => 'Cash anomalies';
+
+  @override
+  String get anomaliesSettings => 'Thresholds';
+
+  @override
+  String anomaliesOpenCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count open',
+      one: '1 open',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get anomaliesStatusOpen => 'Open';
+
+  @override
+  String get anomaliesStatusAcknowledged => 'Acknowledged';
+
+  @override
+  String get anomaliesStatusDismissed => 'Dismissed';
+
+  @override
+  String get anomaliesStatusAll => 'All';
+
+  @override
+  String get anomaliesClearFilters => 'Clear filters';
+
+  @override
+  String get anomaliesRuleLabel => 'Rule';
+
+  @override
+  String get anomaliesSeverityLabel => 'Severity';
+
+  @override
+  String get anomaliesSeverityLow => 'Low';
+
+  @override
+  String get anomaliesSeverityMedium => 'Medium';
+
+  @override
+  String get anomaliesSeverityHigh => 'High';
+
+  @override
+  String get anomalyRuleShiftShortage => 'Repeated shortages';
+
+  @override
+  String get anomalyRuleLostTicketRate => 'High lost-ticket rate';
+
+  @override
+  String get anomalyRulePostCloseAdjustment => 'Adjustment after close';
+
+  @override
+  String get anomalyRuleZeroCharge => 'Check-out with no charge';
+
+  @override
+  String get anomalyRuleShortLostTicket => 'Lost ticket on a short stay';
+
+  @override
+  String get anomalyRuleDiscountRate => 'Frequent discounts';
+
+  @override
+  String get anomalyRuleShiftOpenLong => 'Shift open too long';
+
+  @override
+  String get anomalyRuleSessionOpenLong => 'Vehicle inside for many days';
+
+  @override
+  String anomalyDescShiftShortage(int count, String amount) {
+    return '$count short shifts, total $amount';
+  }
+
+  @override
+  String anomalyDescLostTicketRate(String rate, String baseline) {
+    return '$rate% lost tickets against $baseline% for the site';
+  }
+
+  @override
+  String anomalyDescPostCloseAdjustment(String from, String to, String admin) {
+    return 'Difference $from → $to adjusted by $admin';
+  }
+
+  @override
+  String anomalyDescZeroCharge(String plate, String method) {
+    return '$plate left with no charge ($method)';
+  }
+
+  @override
+  String anomalyDescShortLostTicket(String plate, int minutes) {
+    return '$plate: lost ticket after $minutes min';
+  }
+
+  @override
+  String anomalyDescDiscountRate(int count, String share) {
+    return '$count discounts ($share% of exits)';
+  }
+
+  @override
+  String anomalyDescShiftOpenLong(int hours) {
+    return 'Open for $hours h';
+  }
+
+  @override
+  String anomalyDescSessionOpenLong(String plate, int days) {
+    return '$plate has been inside for $days days';
+  }
+
+  @override
+  String get anomalyAcknowledge => 'Acknowledge';
+
+  @override
+  String get anomalyDismiss => 'Dismiss';
+
+  @override
+  String get anomalyNoteLabel => 'Note';
+
+  @override
+  String get anomalyNoteRequired => 'Write a note of at least 3 characters';
+
+  @override
+  String get anomalyViewAudit => 'View audit trail';
+
+  @override
+  String get anomalyViewContext => 'View details';
+
+  @override
+  String get anomaliesEmptyTitle => 'All clear';
+
+  @override
+  String get anomaliesEmpty => 'No anomalies match these filters.';
+
+  @override
+  String get anomaliesSettingsEnabled => 'Detection enabled';
+
+  @override
+  String get anomaliesSettingsSaved => 'Thresholds saved';
+
+  @override
+  String get anomaliesSettingsWindowDays => 'Window (days)';
+
+  @override
+  String get anomaliesSettingsShortageMinAmount => 'Minimum shortage per shift';
+
+  @override
+  String get anomaliesSettingsShortageMinShifts => 'Short shifts to alert';
+
+  @override
+  String get anomaliesSettingsLostTicketMinClosed =>
+      'Minimum exits per operator';
+
+  @override
+  String get anomaliesSettingsLostTicketMinRatePct =>
+      'Minimum lost-ticket rate (%)';
+
+  @override
+  String get anomaliesSettingsLostTicketFactorPct =>
+      'Times the site\'s rate (%)';
+
+  @override
+  String get anomaliesSettingsAdjustmentMinAmount =>
+      'Minimum adjustment after close';
+
+  @override
+  String get anomaliesSettingsShortStayMinutes => 'Short stay (minutes)';
+
+  @override
+  String get anomaliesSettingsDiscountMinCount => 'Minimum discounts per admin';
+
+  @override
+  String get anomaliesSettingsDiscountSharePct => 'Discount share (%)';
+
+  @override
+  String get anomaliesSettingsShiftOpenHours => 'Hours for an open shift';
+
+  @override
+  String get anomaliesSettingsSessionOpenDays => 'Days for a vehicle inside';
+
+  @override
+  String get notifTypeCashAnomaly => 'Cash anomaly';
+
+  @override
+  String get errorAnomalyNotFound => 'We could not find that anomaly';
+
+  @override
+  String get errorAnomalyAlreadyResolved => 'That anomaly was already reviewed';
+
+  @override
+  String get errorAnomalyNoteRequired =>
+      'Write a note of at least 3 characters';
+
+  @override
+  String get errorInvalidAnomalySetting => 'Check the threshold values';
+
+  @override
   String syncQueued(int count) {
     return '$count queued, retried automatically.';
   }

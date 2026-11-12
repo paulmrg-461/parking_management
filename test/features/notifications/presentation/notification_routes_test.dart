@@ -47,4 +47,8 @@ void main() {
     expect(routeForNotification(_n('waitlist_joined')), '/reservations');
     expect(routeForNotification(_n('waitlist_offer')), '/reservations');
   });
+
+  test('Success: cash_anomaly routes to /anomalies', () {
+    expect(routeForNotification(_n('cash_anomaly')), '/anomalies');
+  });
 }

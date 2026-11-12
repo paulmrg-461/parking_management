@@ -12,6 +12,8 @@ import '../../features/public_booking/presentation/public_booking_page.dart';
 import '../../features/reservations/domain/repositories/reservation_repository.dart';
 import '../../features/vehicles/domain/repositories/vehicle_repository.dart';
 import '../../core/widgets/deferred_page.dart';
+import '../../features/anomalies/application/anomalies_cubit.dart';
+import '../../features/anomalies/presentation/anomalies_page.dart';
 import '../../features/audit/application/audit_cubit.dart';
 import '../../features/audit/presentation/audit_page.dart';
 import '../../features/diagnostics/application/diagnostics_cubit.dart';
@@ -220,10 +222,20 @@ GoRoute _homeRoute(AuthCubit auth) => GoRoute(
       ),
     ),
     GoRoute(
+      path: 'anomalies',
+      builder: (context, state) => BlocProvider<AnomaliesCubit>(
+        create: (_) => serviceLocator<AnomaliesCubit>(),
+        child: const AnomaliesPage(),
+      ),
+    ),
+    GoRoute(
       path: 'audit',
       builder: (context, state) => BlocProvider<AuditCubit>(
         create: (_) => serviceLocator<AuditCubit>(),
-        child: const AuditPage(),
+        child: AuditPage(
+          initialTable: state.uri.queryParameters['table'],
+          initialSearch: state.uri.queryParameters['search'],
+        ),
       ),
     ),
     GoRoute(
