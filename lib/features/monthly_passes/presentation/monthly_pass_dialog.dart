@@ -203,6 +203,7 @@ class _MonthlyPassDialogState extends State<MonthlyPassDialog> {
               ),
               if (_autoRenew)
                 DropdownButtonFormField<String>(
+                  isExpanded: true,
                   initialValue: _autoRenewMethod,
                   decoration: InputDecoration(
                     labelText: l10n.monthlyPassRenewalMethod,
@@ -242,6 +243,7 @@ class _MonthlyPassDialogState extends State<MonthlyPassDialog> {
   }
 
   Widget _vehicleField(AppLocalizations l10n) => DropdownButtonFormField<int>(
+    isExpanded: true,
     initialValue: _vehicleId,
     items: [
       for (final vehicle in widget.vehicles)

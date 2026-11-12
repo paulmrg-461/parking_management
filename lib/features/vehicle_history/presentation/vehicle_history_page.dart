@@ -23,6 +23,7 @@ import '../../../core/widgets/money_text.dart';
 import '../../../core/widgets/receipt_card.dart';
 import '../../../core/widgets/metric_card.dart';
 import '../../../core/widgets/section_header.dart';
+import '../../../core/widgets/skeleton.dart';
 import '../../../core/widgets/status_chip.dart';
 import '../../emergency/presentation/emergency_action.dart';
 import '../../evidence/domain/repositories/session_evidence_repository.dart';
@@ -145,9 +146,7 @@ class _VehicleHistoryPageState extends State<VehicleHistoryPage> {
                   VehicleHistoryStatus.initial => _Hint(
                     message: l10n.vehicleHistoryPrompt,
                   ),
-                  VehicleHistoryStatus.loading => const Center(
-                    child: CircularProgressIndicator(),
-                  ),
+                  VehicleHistoryStatus.loading => const SkeletonList(),
                   VehicleHistoryStatus.failure => ErrorState(
                     message: state.failure == null
                         ? l10n.errorUnknown

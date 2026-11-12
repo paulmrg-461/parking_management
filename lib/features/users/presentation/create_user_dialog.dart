@@ -111,6 +111,7 @@ class _CreateUserDialogState extends State<CreateUserDialog> {
               ),
               const SizedBox(height: Space.md),
               DropdownButtonFormField<UserRole>(
+                isExpanded: true,
                 initialValue: _role,
                 decoration: InputDecoration(labelText: l10n.fieldRole),
                 items: [
@@ -125,6 +126,7 @@ class _CreateUserDialogState extends State<CreateUserDialog> {
               if (widget.lots.length > 1) ...[
                 const SizedBox(height: Space.md),
                 DropdownButtonFormField<int>(
+                  isExpanded: true,
                   initialValue: _lotId,
                   decoration: InputDecoration(labelText: l10n.lotLabel),
                   items: [

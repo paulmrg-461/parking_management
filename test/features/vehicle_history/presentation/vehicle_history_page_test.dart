@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/error/failure.dart';
+import 'package:parking_management/core/widgets/skeleton.dart';
 import 'package:parking_management/features/auth/application/auth_cubit.dart';
 import 'package:parking_management/features/auth/domain/entities/user.dart';
 import 'package:parking_management/features/vehicle_history/application/vehicle_history_cubit.dart';
@@ -559,5 +562,30 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.byTooltip('Cobrar en caja'), findsOneWidget);
+  });
+  testWidgets('Loading: the lookup paints a skeleton, not a spinner', (
+    tester,
+  ) async {
+    final gate = Completer<void>();
+    final repository = FakeVehicleHistoryRepository(history: sampleHistory())
+      ..lookupGate = gate;
+    final cubit = VehicleHistoryCubit(repository);
+    addTearDown(cubit.close);
+    await tester.pumpWidget(
+      testApp(
+        BlocProvider.value(value: cubit, child: const VehicleHistoryPage()),
+      ),
+    );
+
+    await tester.enterText(find.byType(TextField), 'abc 123');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pump();
+
+    expect(find.byType(SkeletonPulse), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(find.text('TCK-000002'), findsOneWidget);
   });
 }

@@ -1117,6 +1117,7 @@ class _CheckInPageState extends State<CheckInPage> {
           _buildCategoryChips(context, lookup, full)
         else
           DropdownButtonFormField<int>(
+            isExpanded: true,
             key: ObjectKey(lookup),
             initialValue: _categoryId,
             decoration: InputDecoration(

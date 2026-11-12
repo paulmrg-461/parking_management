@@ -10,6 +10,15 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 ## [Unreleased] — 2026-11 (app reliability and operator UX)
 
 ### Fixed
+- **Settings** no longer shows a bare spinner while loading or a plain text
+  with no way out when the load fails: it paints a skeleton and an
+  `ErrorState` with **Reintentar**. The vehicle history lookup also paints a
+  skeleton instead of a spinner.
+- Settings overflowed on a 360 dp phone with large text: the currency
+  selector and the logo card (image, text and **Elegir logo** in one row).
+  Every form dropdown now sets `isExpanded` (check-in, passes, reservations,
+  bays, tariffs, users, vehicles, waitlist) so long labels ellipsize instead
+  of overflowing.
 - **Pass income leaked across lots**: `report_revenue` summed monthly-pass
   payments of every lot (`pass_revenue` and `pass_by_payment`) inside a
   `security definer` function, so a lot admin saw other lots' pass income in

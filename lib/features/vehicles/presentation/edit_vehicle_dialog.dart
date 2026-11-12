@@ -110,6 +110,7 @@ class _EditVehicleDialogState extends State<EditVehicleDialog> {
               ),
               const SizedBox(height: Space.md),
               DropdownButtonFormField<int>(
+                isExpanded: true,
                 key: const Key('vehicle_edit_category'),
                 initialValue: _categoryId,
                 decoration: InputDecoration(labelText: l10n.fieldCategory),

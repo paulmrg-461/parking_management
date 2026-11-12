@@ -813,6 +813,7 @@ class _GroupField extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return DropdownButtonFormField<SlotGroup>(
+      isExpanded: true,
       initialValue: value,
       decoration: InputDecoration(labelText: l10n.spotsGroup),
       items: [

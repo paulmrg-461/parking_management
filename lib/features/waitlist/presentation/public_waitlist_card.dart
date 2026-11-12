@@ -109,8 +109,7 @@ class _PublicWaitlistCardState extends State<PublicWaitlistCard> {
         PublicWaitlistUnavailable() => const SizedBox.shrink(),
         PublicWaitlistFailure(:final failure) => ErrorState(
           message: context.l10n.failure(failure),
-          onRetry: () =>
-              context.read<PublicWaitlistCubit>().load(widget.lotId),
+          onRetry: () => context.read<PublicWaitlistCubit>().load(widget.lotId),
         ),
         final PublicWaitlistReady ready => _card(context, ready),
       },
@@ -132,9 +131,8 @@ class _PublicWaitlistCardState extends State<PublicWaitlistCard> {
         children: [
           Text(
             context.l10n.waitlistJoinTitle,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+            style: Theme.of(context).textTheme.titleMedium
+                ?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: Space.xs),
           if (ready.actionFailure case final failure?) ...[
@@ -180,9 +178,8 @@ class _PublicWaitlistCardState extends State<PublicWaitlistCard> {
       children: [
         Text(
           l10n.waitlistJoinHint,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
+          style: Theme.of(context).textTheme.bodySmall
+              ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
         ),
         const SizedBox(height: Space.sm),
         if (widget.fullCategories.isNotEmpty)
@@ -217,6 +214,7 @@ class _PublicWaitlistCardState extends State<PublicWaitlistCard> {
           children: [
             Expanded(
               child: DropdownButtonFormField<int>(
+                isExpanded: true,
                 key: const Key('waitlist-wait-hours'),
                 initialValue: _waitHours,
                 decoration: InputDecoration(labelText: l10n.waitlistWaitFor),
@@ -234,6 +232,7 @@ class _PublicWaitlistCardState extends State<PublicWaitlistCard> {
             const SizedBox(width: Space.sm),
             Expanded(
               child: DropdownButtonFormField<int>(
+                isExpanded: true,
                 key: const Key('waitlist-hold-hours'),
                 initialValue: _holdHours,
                 decoration: InputDecoration(labelText: l10n.waitlistHoldFor),
@@ -301,7 +300,9 @@ class _PublicWaitlistCardState extends State<PublicWaitlistCard> {
                   key: const Key('waitlist-code'),
                   controller: _code,
                   keyboardType: TextInputType.number,
-                  decoration: InputDecoration(labelText: l10n.waitlistLookupLabel),
+                  decoration: InputDecoration(
+                    labelText: l10n.waitlistLookupLabel,
+                  ),
                 ),
               ),
               const SizedBox(width: Space.sm),
@@ -409,9 +410,7 @@ class _PublicWaitlistCardState extends State<PublicWaitlistCard> {
     if (code == null) {
       return;
     }
-    await context
-        .read<PublicWaitlistCubit>()
-        .lookup(code, _phone.text.trim());
+    await context.read<PublicWaitlistCubit>().lookup(code, _phone.text.trim());
   }
 }
 

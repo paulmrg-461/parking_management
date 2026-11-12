@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/error/failure.dart';
+import 'package:parking_management/core/widgets/error_state.dart';
+import 'package:parking_management/core/widgets/skeleton.dart';
 import 'package:parking_management/features/settings/application/branding_cubit.dart';
 import 'package:parking_management/features/settings/application/settings_cubit.dart';
 import 'package:parking_management/features/settings/domain/entities/parking_settings.dart';
@@ -444,5 +446,77 @@ void main() {
       findsOneWidget,
     );
     expect(repository.settings.policePhone, isEmpty);
+  });
+  testWidgets('Failure: a failed load offers Reintentar and recovers', (
+    tester,
+  ) async {
+    final repository = FakeParkingSettingsRepository(_configured)
+      ..loadError = const NetworkFailure('offline');
+    await pumpPage(tester, repository: repository);
+
+    expect(find.byType(ErrorState), findsOneWidget);
+    expect(find.text('Reintentar'), findsOneWidget);
+
+    repository.loadError = null;
+    await tester.tap(find.text('Reintentar'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ErrorState), findsNothing);
+    expect(find.byKey(const Key('settings_save')), findsOneWidget);
+  });
+
+  testWidgets('Loading: the first load paints a skeleton, not a spinner', (
+    tester,
+  ) async {
+    final repository = FakeParkingSettingsRepository(_configured);
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MultiBlocProvider(
+        providers: [
+          BlocProvider<SettingsCubit>(create: (_) => SettingsCubit(repository)),
+          BlocProvider<BrandingCubit>.value(value: BrandingCubit(repository)),
+        ],
+        child: testApp(const SettingsPage()),
+      ),
+    );
+
+    expect(find.byType(SkeletonPulse), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    await tester.pumpAndSettle();
+  });
+  testWidgets('A11y: the whole form fits 360 dp with large text', (
+    tester,
+  ) async {
+    final repository = FakeParkingSettingsRepository(_configured);
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MultiBlocProvider(
+        providers: [
+          BlocProvider<SettingsCubit>(create: (_) => SettingsCubit(repository)),
+          BlocProvider<BrandingCubit>.value(value: BrandingCubit(repository)),
+        ],
+        child: testApp(
+          Builder(
+            builder: (context) => MediaQuery(
+              data: MediaQuery.of(context)
+                  .copyWith(textScaler: const TextScaler.linear(1.6)),
+              child: const SettingsPage(),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    for (var step = 0; step < 24; step++) {
+      expect(tester.takeException(), isNull, reason: 'overflow at step $step');
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, -350));
+      await tester.pump();
+    }
+    expect(tester.takeException(), isNull);
   });
 }

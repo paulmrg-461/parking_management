@@ -141,6 +141,7 @@ class _CreateVehicleDialogState extends State<CreateVehicleDialog> {
   }
 
   Widget _categoryField(AppLocalizations l10n) => DropdownButtonFormField<int>(
+    isExpanded: true,
     initialValue: _categoryId,
     items: [
       for (final category in widget.categories)

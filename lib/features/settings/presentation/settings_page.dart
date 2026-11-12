@@ -12,8 +12,10 @@ import '../../../core/l10n/failure_messages.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/confirm_dialog.dart';
+import '../../../core/widgets/error_state.dart';
 import '../../../core/widgets/list_page_scaffold.dart';
 import '../../../core/widgets/section_header.dart';
+import '../../../core/widgets/skeleton.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/utils/policy_template.dart';
 import '../../../core/widgets/submission_listener.dart';
@@ -148,14 +150,10 @@ class _SettingsPageState extends State<SettingsPage> {
             listener: (context, state) =>
                 _seed((state as SettingsLoaded).settings),
             builder: (context, state) => switch (state) {
-              SettingsInitial() || SettingsLoading() => const Center(
-                child: CircularProgressIndicator(),
-              ),
-              SettingsFailure(:final message, :final failure) => Center(
-                child: Text(
-                  context.l10n.errorText(message, failure),
-                  textAlign: TextAlign.center,
-                ),
+              SettingsInitial() || SettingsLoading() => const SkeletonList(),
+              SettingsFailure(:final message, :final failure) => ErrorState(
+                message: context.l10n.errorText(message, failure),
+                onRetry: cubit.load,
               ),
               SettingsLoaded() => _form(context, state.settings),
             },
@@ -517,6 +515,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const SizedBox(height: Space.sm),
           DropdownButtonFormField<String>(
+            isExpanded: true,
             key: const Key('settings_currency'),
             initialValue: _currency,
             decoration: InputDecoration(
@@ -724,60 +723,70 @@ class _SettingsPageState extends State<SettingsPage> {
           clipBehavior: Clip.antiAlias,
           child: Padding(
             padding: const EdgeInsets.all(Space.md),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Container(
-                  width: 64,
-                  height: 64,
-                  padding: const EdgeInsets.all(Space.sm),
-                  decoration: BoxDecoration(
-                    color: scheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(Radii.md),
-                  ),
-                  child: bytes == null
-                      ? Icon(
-                          Icons.local_parking_rounded,
-                          size: 36,
-                          color: scheme.onPrimaryContainer,
-                        )
-                      : ClipRRect(
-                          borderRadius: BorderRadius.circular(Radii.sm),
-                          child: Image.memory(
-                            bytes,
-                            fit: BoxFit.contain,
-                            errorBuilder: (_, _, _) => Icon(
-                              Icons.broken_image_outlined,
+                Row(
+                  children: [
+                    Container(
+                      width: 64,
+                      height: 64,
+                      padding: const EdgeInsets.all(Space.sm),
+                      decoration: BoxDecoration(
+                        color: scheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(Radii.md),
+                      ),
+                      child: bytes == null
+                          ? Icon(
+                              Icons.local_parking_rounded,
+                              size: 36,
                               color: scheme.onPrimaryContainer,
+                            )
+                          : ClipRRect(
+                              borderRadius: BorderRadius.circular(Radii.sm),
+                              child: Image.memory(
+                                bytes,
+                                fit: BoxFit.contain,
+                                errorBuilder: (_, _, _) => Icon(
+                                  Icons.broken_image_outlined,
+                                  color: scheme.onPrimaryContainer,
+                                ),
+                              ),
                             ),
+                    ),
+                    const SizedBox(width: Space.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            settings.name.isEmpty
+                                ? l10n.appTitle
+                                : settings.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w700),
                           ),
-                        ),
+                          const SizedBox(height: 2),
+                          Text(
+                            l10n.settingsLogoSection,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: scheme.onSurfaceVariant),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: Space.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        settings.name.isEmpty ? l10n.appTitle : settings.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w700),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        l10n.settingsLogoSection,
-                        style: Theme.of(context).textTheme.bodySmall
-                            ?.copyWith(color: scheme.onSurfaceVariant),
-                      ),
-                    ],
+                const SizedBox(height: Space.sm),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: FilledButton.tonalIcon(
+                    onPressed: _uploadLogo,
+                    icon: const Icon(Icons.image_outlined),
+                    label: Text(l10n.settingsLogoPick),
                   ),
-                ),
-                const SizedBox(width: Space.sm),
-                FilledButton.tonalIcon(
-                  onPressed: _uploadLogo,
-                  icon: const Icon(Icons.image_outlined),
-                  label: Text(l10n.settingsLogoPick),
                 ),
               ],
             ),

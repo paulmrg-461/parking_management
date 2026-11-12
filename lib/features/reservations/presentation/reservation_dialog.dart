@@ -123,6 +123,7 @@ class _ReservationDialogState extends State<ReservationDialog> {
               PlateInputField(controller: _plate, autofocus: true),
               const SizedBox(height: Space.md),
               DropdownButtonFormField<int>(
+                isExpanded: true,
                 initialValue: _categoryId,
                 decoration: InputDecoration(labelText: l10n.fieldCategory),
                 items: [

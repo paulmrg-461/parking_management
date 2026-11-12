@@ -62,6 +62,12 @@ Every data screen maps its cubit state to one of four explicit views:
   `Scaffold.bottomNavigationBar` + `SafeArea` + `Space.md`), and inline
   validation: errors go on the offending field through
   `InputDecoration.errorText`; a banner is only for errors without a field.
+  Every `DropdownButtonFormField` sets `isExpanded: true`: without it the
+  selected label (a category or user name, or large text) overflows a phone
+  width. Rows that put a primary action next to a title and text (the logo
+  card) stack the action under the header instead of squeezing the `Row`.
+  Long forms get a 360 dp + 1.6x text test that scrolls the whole page
+  (`settings_page_test.dart`, "the whole form fits 360 dp").
 - **Choice inputs**: up to five options render as a `Wrap` of `ChoiceChip`s
   (payment method, check-in category with availability; unavailable options
   disabled), more fall back to a dropdown.
