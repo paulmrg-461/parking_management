@@ -79,6 +79,8 @@ class _FakeCheckOutRepository implements CheckOutRepository {
     return CheckOutPreview(sessionId: sessionId, amount: 5000);
   }
 
+  String? lastPaymentMethod;
+
   @override
   Future<CheckOutReceipt> checkOut(
     int sessionId, {
@@ -94,6 +96,7 @@ class _FakeCheckOutRepository implements CheckOutRepository {
   }) async {
     checkedOutPlate = plate;
     checkedOutEntry = entryTime;
+    lastPaymentMethod = paymentMethod;
     if (checkOutError != null) {
       throw checkOutError!;
     }
@@ -164,6 +167,14 @@ void main() {
     expect(repository.lastPlate, 'xyz');
     expect(loaded().visible.map((s) => s.id), [2]);
     expect(loaded().sessions, hasLength(2));
+  });
+
+  test('Success: a paid session still sends a normal method', () async {
+    await cubit.loadOpenSessions();
+
+    await cubit.checkOut(1, paymentMethod: 'cash');
+
+    expect(repository.lastPaymentMethod, 'cash');
   });
 
   test(

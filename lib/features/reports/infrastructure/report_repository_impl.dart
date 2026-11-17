@@ -1,4 +1,5 @@
 import '../domain/entities/hourly_traffic.dart';
+import '../domain/entities/online_payment_report.dart';
 import '../domain/entities/occupancy_report.dart';
 import '../domain/entities/forecast_backtest.dart';
 import '../domain/entities/period_comparison.dart';
@@ -50,6 +51,12 @@ class ReportRepositoryImpl implements ReportRepository {
     required DateTime startDate,
     required DateTime endDate,
   }) => _remote.getReservationReport(startDate: startDate, endDate: endDate);
+
+  @override
+  Future<OnlinePaymentReport> getOnlinePayments({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) => _remote.getOnlinePayments(startDate: startDate, endDate: endDate);
 
   @override
   Future<ForecastBacktest> getForecastBacktest({int weeks = 4}) =>

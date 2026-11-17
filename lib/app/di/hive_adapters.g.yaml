@@ -127,7 +127,7 @@ types:
         index: 7
   ParkingSettings:
     typeId: 9
-    nextIndex: 22
+    nextIndex: 25
     fields:
       name:
         index: 0
@@ -173,3 +173,9 @@ types:
         index: 20
       version:
         index: 21
+      onlinePaymentsEnabled:
+        index: 22
+      onlinePaymentGraceMinutes:
+        index: 23
+      onlinePaymentMinAmount:
+        index: 24

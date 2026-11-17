@@ -71,6 +71,11 @@ class _NotificationsPageState extends State<NotificationsPage> {
                   ('waitlist_joined', context.l10n.notifTypeWaitlist),
                   ('waitlist_offer', context.l10n.notifTypeWaitlist),
                   ('cash_anomaly', context.l10n.notifTypeCashAnomaly),
+                  ('online_payment', context.l10n.notifTypeOnlinePayment),
+                  (
+                    'online_payment_review',
+                    context.l10n.notifTypeOnlinePaymentReview,
+                  ),
                 ])
                   PopupMenuItem(value: entry.$1, child: Text(entry.$2)),
               ],
@@ -519,6 +524,8 @@ class _NotificationTile extends StatelessWidget {
         'overstay' => l10n.notifTypeOverstay,
         'shift_closed' => l10n.notifTypeShiftClosed,
         'public_reservation' => l10n.notifTypeReservation,
+        'online_payment' => l10n.notifTypeOnlinePayment,
+        'online_payment_review' => l10n.notifTypeOnlinePaymentReview,
         _ => l10n.notifTypeGeneric,
       };
 
@@ -532,6 +539,8 @@ class _NotificationTile extends StatelessWidget {
     'public_reservation' => Icons.event_available_outlined,
     'waitlist_joined' || 'waitlist_offer' => Icons.hourglass_top_outlined,
     'cash_anomaly' => Icons.report_problem_outlined,
+    'online_payment' => Icons.qr_code_2_outlined,
+    'online_payment_review' => Icons.pending_actions_outlined,
     _ => Icons.notifications,
   };
 }

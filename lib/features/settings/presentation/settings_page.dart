@@ -10,6 +10,8 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/error/failure.dart';
 import '../../../core/l10n/failure_messages.dart';
 import '../../../core/l10n/l10n.dart';
+import '../../../core/money/money.dart';
+import '../../../core/money/money_input.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/error_state.dart';
@@ -66,12 +68,16 @@ class _SettingsPageState extends State<SettingsPage> {
   late final TextEditingController _motoOutOfService;
   late final TextEditingController _legalPolicy;
   late final TextEditingController _minVersion;
+  late final TextEditingController _onlineGrace;
+  late final TextEditingController _onlineMin;
   String _currency = 'COP';
+  bool _onlineEnabled = false;
   final _identityKey = GlobalKey();
   final _emergencyKey = GlobalKey();
   final _spacesKey = GlobalKey();
   final _evidenceKey = GlobalKey();
   final _messagingKey = GlobalKey();
+  final _onlineKey = GlobalKey();
   final _preferencesKey = GlobalKey();
   final _legalKey = GlobalKey();
   var _seeded = false;
@@ -101,6 +107,8 @@ class _SettingsPageState extends State<SettingsPage> {
     _motoOutOfService = TextEditingController();
     _legalPolicy = TextEditingController();
     _minVersion = TextEditingController();
+    _onlineGrace = TextEditingController();
+    _onlineMin = TextEditingController();
     unawaited(context.read<SettingsCubit>().load());
     unawaited(_loadSpotCounts());
   }
@@ -123,6 +131,8 @@ class _SettingsPageState extends State<SettingsPage> {
     _motoOutOfService.dispose();
     _legalPolicy.dispose();
     _minVersion.dispose();
+    _onlineGrace.dispose();
+    _onlineMin.dispose();
     super.dispose();
   }
 
@@ -210,6 +220,9 @@ class _SettingsPageState extends State<SettingsPage> {
     _currency,
     _minVersion.text,
     '$_whatsappAuto',
+    _onlineGrace.text,
+    _onlineMin.text,
+    '$_onlineEnabled',
   ];
 
   bool get _dirty => _baseline != null && !listEquals(_snapshot(), _baseline!);
@@ -255,6 +268,9 @@ class _SettingsPageState extends State<SettingsPage> {
     _motoOutOfService.text = settings.motoOutOfService.toString();
     _legalPolicy.text = settings.legalPolicy;
     _minVersion.text = settings.minAppVersion;
+    _onlineGrace.text = settings.onlinePaymentGraceMinutes.toString();
+    _onlineMin.text = settings.onlinePaymentMinAmount.toString();
+    _onlineEnabled = settings.onlinePaymentsEnabled;
     _currency = settings.currency;
     _whatsappAuto = settings.whatsappAuto;
     _baseline = _snapshot();
@@ -509,6 +525,69 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const SizedBox(height: Space.lg),
           SectionHeader(
+            key: _onlineKey,
+            icon: Icons.qr_code_2_outlined,
+            title: l10n.settingsOnlinePayments,
+          ),
+          SwitchListTile(
+            key: const Key('settings_online_enabled'),
+            contentPadding: EdgeInsets.zero,
+            value: _onlineEnabled,
+            onChanged: _currency == 'COP'
+                ? (value) => setState(() => _onlineEnabled = value)
+                : null,
+            title: Text(l10n.settingsOnlinePayments),
+            subtitle: Text(
+              _currency == 'COP'
+                  ? l10n.settingsOnlinePaymentsHint
+                  : l10n.settingsOnlineCopOnly,
+            ),
+          ),
+          const SizedBox(height: Space.sm),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: TextFormField(
+                  key: const Key('settings_online_grace'),
+                  controller: _onlineGrace,
+                  enabled: _onlineEnabled && _currency == 'COP',
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  decoration: InputDecoration(
+                    labelText: l10n.settingsOnlineGraceMinutes,
+                  ),
+                  validator: (value) {
+                    final minutes = int.tryParse((value ?? '').trim());
+                    return minutes == null || minutes < 5 || minutes > 120
+                        ? l10n.invalidAmount
+                        : null;
+                  },
+                ),
+              ),
+              const SizedBox(width: Space.md),
+              Expanded(
+                child: TextFormField(
+                  key: const Key('settings_online_min_amount'),
+                  controller: _onlineMin,
+                  enabled: _onlineEnabled && _currency == 'COP',
+                  keyboardType: TextInputType.number,
+                  inputFormatters: moneyInputFormatters(),
+                  decoration: InputDecoration(
+                    labelText: l10n.settingsOnlineMinAmount,
+                  ),
+                  validator: (value) {
+                    final amount = Money.parse((value ?? '').trim());
+                    return amount == null || amount < 0
+                        ? l10n.invalidAmount
+                        : null;
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: Space.lg),
+          SectionHeader(
             key: _preferencesKey,
             icon: Icons.tune,
             title: l10n.settingsSectionPreferences,
@@ -678,6 +757,7 @@ class _SettingsPageState extends State<SettingsPage> {
       (Icons.grid_view_rounded, l10n.settingsSectionSpaces, _spacesKey),
       (Icons.photo_camera_outlined, l10n.settingsSectionEvidence, _evidenceKey),
       (Icons.chat_outlined, l10n.settingsSectionMessaging, _messagingKey),
+      (Icons.qr_code_2_outlined, l10n.settingsOnlinePayments, _onlineKey),
       (Icons.tune, l10n.settingsSectionPreferences, _preferencesKey),
       (Icons.gavel_outlined, l10n.settingsSectionLegal, _legalKey),
     ];
@@ -877,6 +957,10 @@ class _SettingsPageState extends State<SettingsPage> {
         legalPolicy: _legalPolicy.text.trim(),
         currency: _currency,
         minAppVersion: _minVersion.text.trim(),
+        onlinePaymentsEnabled: _onlineEnabled,
+        onlinePaymentGraceMinutes: int.tryParse(_onlineGrace.text.trim()) ?? 15,
+        onlinePaymentMinAmount:
+            Money.parse(_onlineMin.text.trim()) ?? 1500,
       ),
     );
   }

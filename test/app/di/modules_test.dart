@@ -20,6 +20,8 @@ import 'package:parking_management/features/feedback/application/feedback_summar
 import 'package:parking_management/features/feedback/application/public_feedback_cubit.dart';
 import 'package:parking_management/features/check_in/application/check_in_cubit.dart';
 import 'package:parking_management/features/check_out/application/check_out_cubit.dart';
+import 'package:parking_management/features/online_payments/application/online_payment_cubit.dart';
+import 'package:parking_management/features/online_payments/domain/repositories/online_payment_repository.dart';
 import 'package:parking_management/features/monthly_passes/application/monthly_passes_cubit.dart';
 import 'package:parking_management/features/plate_scanning/domain/repositories/plate_image_capture.dart';
 import 'package:parking_management/features/plate_scanning/domain/repositories/plate_scanner.dart';
@@ -88,6 +90,13 @@ void main() {
     expect(sl<PublicWaitlistRepository>(), isA<PublicWaitlistRepository>());
     expect(sl<WaitlistCubit>(), isA<WaitlistCubit>());
     expect(sl<PublicWaitlistCubit>(), isA<PublicWaitlistCubit>());
+  });
+
+  test('Success: registers the online payments module', () {
+    _register(sl);
+
+    expect(sl<OnlinePaymentRepository>(), isA<OnlinePaymentRepository>());
+    expect(sl<OnlinePaymentCubit>(), isA<OnlinePaymentCubit>());
   });
 
   test('Success: the shared outbox kicks a drain on every enqueue', () {

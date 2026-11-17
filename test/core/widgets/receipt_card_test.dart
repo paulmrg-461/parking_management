@@ -268,6 +268,30 @@ void main() {
     expect(find.text(r'$7.500'), findsOneWidget);
   });
 
+  testWidgets('an online payment shows what the customer already paid', (
+    tester,
+  ) async {
+    final data = ReceiptData(
+      kind: ReceiptKind.checkOut,
+      plate: 'ABC123',
+      entryTime: DateTime(2026, 1, 1, 8, 30),
+      exitTime: DateTime(2026, 1, 1, 11, 45),
+      amountCharged: 12500,
+      paymentMethod: 'online',
+      onlinePaidAmount: 12500,
+      ticketNumber: 'TCK-000042',
+    );
+    await tester.pumpWidget(
+      testApp(Scaffold(body: SingleChildScrollView(child: ReceiptCard(data: data)))),
+    );
+
+    expect(find.text('Pagado en línea'), findsOneWidget);
+    expect(find.text(r'$12.500'), findsWidgets);
+    // The payment method label comes from the l10n, not the wire value.
+    expect(find.text('En línea'), findsOneWidget);
+    expect(find.text('online'), findsNothing);
+  });
+
   testWidgets('Imprimir closes the receipt before the print sheet', (
     tester,
   ) async {

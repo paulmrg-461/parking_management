@@ -8095,6 +8095,222 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'{days, plural, =1{1 día} other{{days} días}}'**
   String feedbackPeriodDays(int days);
+
+  /// No description provided for @paymentOnline.
+  ///
+  /// In es, this message translates to:
+  /// **'En línea'**
+  String get paymentOnline;
+
+  /// No description provided for @onlinePayTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Paga desde tu celular'**
+  String get onlinePayTitle;
+
+  /// No description provided for @onlinePayDue.
+  ///
+  /// In es, this message translates to:
+  /// **'Valor a pagar'**
+  String get onlinePayDue;
+
+  /// No description provided for @onlinePayAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Pagar en línea'**
+  String get onlinePayAction;
+
+  /// No description provided for @onlinePayHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Tarjeta, PSE o Nequi. Después de pagar tienes {minutes} minutos para salir.'**
+  String onlinePayHint(int minutes);
+
+  /// No description provided for @onlinePayChecking.
+  ///
+  /// In es, this message translates to:
+  /// **'Confirmando tu pago…'**
+  String get onlinePayChecking;
+
+  /// No description provided for @onlinePayApproved.
+  ///
+  /// In es, this message translates to:
+  /// **'Pago recibido. Muestra esta pantalla al salir.'**
+  String get onlinePayApproved;
+
+  /// No description provided for @onlinePayDeclined.
+  ///
+  /// In es, this message translates to:
+  /// **'El pago no fue aprobado. Puedes intentarlo de nuevo.'**
+  String get onlinePayDeclined;
+
+  /// No description provided for @onlinePayPending.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no confirmamos tu pago. Si ya pagaste, espera un momento.'**
+  String get onlinePayPending;
+
+  /// No description provided for @onlinePayGraceUntil.
+  ///
+  /// In es, this message translates to:
+  /// **'Sal antes de las {time}'**
+  String onlinePayGraceUntil(String time);
+
+  /// No description provided for @onlinePayLate.
+  ///
+  /// In es, this message translates to:
+  /// **'Si pasas de esa hora, pagas la diferencia en caja.'**
+  String get onlinePayLate;
+
+  /// No description provided for @onlinePayNothingDue.
+  ///
+  /// In es, this message translates to:
+  /// **'No tienes nada por pagar.'**
+  String get onlinePayNothingDue;
+
+  /// No description provided for @checkOutPaidOnline.
+  ///
+  /// In es, this message translates to:
+  /// **'Pagado en línea'**
+  String get checkOutPaidOnline;
+
+  /// No description provided for @checkOutBalanceDue.
+  ///
+  /// In es, this message translates to:
+  /// **'Saldo en caja'**
+  String get checkOutBalanceDue;
+
+  /// No description provided for @checkOutNoCashDue.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin cobro en caja: ya pagó en línea'**
+  String get checkOutNoCashDue;
+
+  /// No description provided for @checkOutGraceExpired.
+  ///
+  /// In es, this message translates to:
+  /// **'Venció la tolerancia de salida; se cobra la diferencia'**
+  String get checkOutGraceExpired;
+
+  /// No description provided for @checkOutOnlineUnknownOffline.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin conexión no se puede confirmar si este vehículo pagó en línea'**
+  String get checkOutOnlineUnknownOffline;
+
+  /// No description provided for @shiftOnlineSales.
+  ///
+  /// In es, this message translates to:
+  /// **'Pagos en línea'**
+  String get shiftOnlineSales;
+
+  /// No description provided for @receiptPaidOnline.
+  ///
+  /// In es, this message translates to:
+  /// **'Pagado en línea'**
+  String get receiptPaidOnline;
+
+  /// No description provided for @settingsOnlinePayments.
+  ///
+  /// In es, this message translates to:
+  /// **'Pagos en línea'**
+  String get settingsOnlinePayments;
+
+  /// No description provided for @settingsOnlinePaymentsHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Permite que el cliente pague desde el QR del recibo. Requiere credenciales Wompi en el servidor.'**
+  String get settingsOnlinePaymentsHint;
+
+  /// No description provided for @settingsOnlineGraceMinutes.
+  ///
+  /// In es, this message translates to:
+  /// **'Minutos para salir después de pagar'**
+  String get settingsOnlineGraceMinutes;
+
+  /// No description provided for @settingsOnlineMinAmount.
+  ///
+  /// In es, this message translates to:
+  /// **'Valor mínimo en línea'**
+  String get settingsOnlineMinAmount;
+
+  /// No description provided for @settingsOnlineCopOnly.
+  ///
+  /// In es, this message translates to:
+  /// **'Solo disponible para sedes en COP'**
+  String get settingsOnlineCopOnly;
+
+  /// No description provided for @notifTypeOnlinePayment.
+  ///
+  /// In es, this message translates to:
+  /// **'Pago en línea'**
+  String get notifTypeOnlinePayment;
+
+  /// No description provided for @notifTypeOnlinePaymentReview.
+  ///
+  /// In es, this message translates to:
+  /// **'Pago en línea por revisar'**
+  String get notifTypeOnlinePaymentReview;
+
+  /// No description provided for @reportOnlinePayments.
+  ///
+  /// In es, this message translates to:
+  /// **'Pagos en línea'**
+  String get reportOnlinePayments;
+
+  /// No description provided for @reportOnlineReference.
+  ///
+  /// In es, this message translates to:
+  /// **'Referencia'**
+  String get reportOnlineReference;
+
+  /// No description provided for @errorOnlinePaymentsDisabled.
+  ///
+  /// In es, this message translates to:
+  /// **'Los pagos en línea no están activos en esta sede'**
+  String get errorOnlinePaymentsDisabled;
+
+  /// No description provided for @errorNothingToPay.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay nada por pagar'**
+  String get errorNothingToPay;
+
+  /// No description provided for @errorAmountTooLow.
+  ///
+  /// In es, this message translates to:
+  /// **'El valor es menor al mínimo para pagar en línea; paga en caja'**
+  String get errorAmountTooLow;
+
+  /// No description provided for @errorPaymentsNotConfigured.
+  ///
+  /// In es, this message translates to:
+  /// **'El pago en línea no está disponible por ahora; paga en caja'**
+  String get errorPaymentsNotConfigured;
+
+  /// No description provided for @errorPaymentThrottled.
+  ///
+  /// In es, this message translates to:
+  /// **'Demasiados intentos de pago. Intenta de nuevo en una hora o paga en caja'**
+  String get errorPaymentThrottled;
+
+  /// No description provided for @errorPaymentEventFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo registrar el pago; intenta más tarde'**
+  String get errorPaymentEventFailed;
+
+  /// No description provided for @errorInvalidLink.
+  ///
+  /// In es, this message translates to:
+  /// **'El enlace no es válido o está incompleto'**
+  String get errorInvalidLink;
+
+  /// No description provided for @checkOutConfirmExit.
+  ///
+  /// In es, this message translates to:
+  /// **'Confirmar salida'**
+  String get checkOutConfirmExit;
 }
 
 class _AppLocalizationsDelegate

@@ -459,6 +459,7 @@ class _CheckOutPageState extends State<CheckOutPage> {
     discountAmount: receipt.discountAmount,
     discountReason: receipt.discountReason,
     pendingSync: receipt.pendingSync,
+    onlinePaidAmount: receipt.onlinePaidAmount,
     evidenceUrl: receipt.pendingSync ? null : publicEvidenceUrl(receipt.id),
     feedbackUrl: receipt.pendingSync
         ? null
@@ -665,6 +666,12 @@ class _SessionTile extends StatelessWidget {
                     label: l10n.paymentMonthlyPass,
                     tone: StatusTone.success,
                     icon: Icons.card_membership,
+                  ),
+                if (session.onlinePaidAmount > 0)
+                  StatusChip(
+                    label: l10n.checkOutPaidOnline,
+                    tone: StatusTone.success,
+                    icon: Icons.qr_code_2_outlined,
                   ),
                 if (session.leftKeys)
                   StatusChip(

@@ -4,19 +4,84 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-11-17 (customer feedback survey).
+Last updated: 2026-11-17 (online payments, Wompi).
 
 ## Where we are
 
 - Stack: Flutter (android + web) + self-hosted Supabase only. No FastAPI,
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
-- `supabase/migrations/0001..0111` are the schema owner (applied by
+- `supabase/migrations/0001..0114` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 1437 tests green, `flutter analyze` reports only SDK deprecation
-  infos from the pinned beta channel (0 errors/warnings). Web build green.
+- Flutter: 1493 tests green (coverage 80.0% global; application 91.8%,
+  domain 60.8%, infrastructure 45.0%), `flutter analyze` reports only SDK
+  deprecation infos from the pinned beta channel (0 errors/warnings). Web
+  build green. Deno tests for the payment functions: 22 green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
   item is the manual smoke for `add-parking-settings` (task 10.4).
+
+
+## Online payments (2026-11-17, `0112`-`0114`)
+
+- Invariant: `amount_charged = online_paid_amount + desk_due` (`desk_due >= 0`).
+  Reports derive the desk part as `amount_charged - online_paid_amount`; never
+  store the split twice.
+- `online` is a **server-only** payment method. `check_out` keeps rejecting it
+  from the caller (`InvalidPaymentMethod`) and sets it when `paid > 0 and
+  desk_due = 0` (after the pass override). The Flutter enum still has no online
+  member on purpose: `PaymentMethod.values` drives the dialog buttons.
+- `online_settlement_amounts(gross, paid, paid_at, exit, grace)` is the single
+  rule: inside the window the charge is exactly `paid` (desk due 0); outside it
+  `greatest(gross, paid)` and the desk collects the difference. `check_out`,
+  `check_out_preview`, `public_session_summary` and `session_settlement` all
+  call it; do not re-implement the comparison.
+- Three switches must agree to protect a lot: Wompi secrets in `.env` (restart
+  `functions`), `PAYMENT_REDIRECT_BASE_URL`, and the lot switch in Ajustes.
+  Turn the lot switch on **last**; on without keys refuses online payment and
+  the page sends the customer to the desk.
+- The webhook is the only source of truth: `payment-webhook` verifies the
+  SHA-256 checksum over the raw body and calls `apply_payment_event` (service
+  role). It MUST stay reachable without a JWT, so `FUNCTIONS_VERIFY_JWT` stays
+  false. The redirect page only polls `payment_intent_status(reference,
+  plate)`, which returns `null` for a wrong plate (no oracle).
+- `payment_events` (`unique (gateway, transaction_id, gateway_status)`) is the
+  dedupe; an `APPROVED` event for an `expired` intent still pays (money was
+  taken), an approval for a closed session records `late_closed` and notifies
+  the admins, and a `VOIDED` subtracts the amount while the session is open.
+  Refunds are human decisions, never automatic.
+- `settle_payment_intent` is the only dispatch on `payment_intents.kind`
+  (`add-pass-auto-renewal` re-declares it to add `pass`); the hook functions
+  (`fare_pricing_step`, `fare_reward_step`) do not exist yet and belong to
+  `add-merchant-validations`/`add-dynamic-pricing`.
+- Client: `features/online_payments` (cubit polls every 3 s, stops at a final
+  status or 180 s). `/evidence` wraps `EvidenceCubit` + `OnlinePaymentCubit`
+  and forwards `?pay=`; the panel hides when the switch is off, the session is
+  closed or `amount_due` is 0.
+- Gotcha: `functions.invoke` turns a dropped connection into
+  `FunctionException(status: 0)`; the data source maps that to `NetworkFailure`
+  and any `{"message": "<Name>Error"}` body to `ValidationFailure(name, name)`
+  for every status (429/503 included), otherwise the code is lost.
+- Gotcha: a polling test must not `pumpAndSettle` (each poll emits a state and
+  schedules a frame forever). Use `pump()` twice and let the teardown close the
+  cubit; `await cubit.close()` while its widget is still mounted deadlocks.
+- Gotcha: `fake_async` is now a declared dev dependency (the waitlist test
+  imported it transitively and the analyzer complained).
+- Jobs: `jobs.sh`/`notifications-cron.sh` run `expire_payment_intents` and
+  `dispatch /functions/v1/payments-reconcile`. The reconcile job uses the same
+  `apply_payment_event`, so a lost webhook is recovered, and it is inert
+  (`{configured:false}`) without keys.
+- Edge Functions live in `payment-intent`, `payment-webhook`,
+  `payments-reconcile` with tests next to `_shared/*_test.ts` (Deno tests must
+  not live inside the function folders: `supabase/.gitignore` only allowlists
+  `index.ts` there).
+- ASSUMPTIONS to confirm with Wompi before go-live: the event JSON shape and
+  checksum concatenation, the checkout integrity signature, the minimum amount
+  per method, `GET {api}/transactions?reference=` for the reconcile, and one
+  merchant account per deployment.
+- Not verified: a real Turnstile-free Wompi sandbox payment (no credentials),
+  the function inside the edge-runtime container (Deno tests use mocks), and
+  the operator smoke (task 6.2 of the change). The SQL suite runs the schema,
+  RPCs and check-out blocks.
 
 ## Customer feedback (2026-11-17, `0111`)
 

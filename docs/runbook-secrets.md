@@ -16,6 +16,7 @@ and what to do if one leaks.
 | `FCM_SERVICE_ACCOUNT_JSON` | `push-dispatch` | Replace the JSON, restart `functions`. |
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | `push-dispatch`, web build | Browser subscriptions become invalid: users must re-enable notifications; rebuild the web app with the new public key. |
 | `WHATSAPP_TOKEN` / `WHATSAPP_PHONE_NUMBER_ID` | `whatsapp-dispatch` | Replace in `.env`, restart `functions`. Queued messages keep retrying. |
+| `WOMPI_PUBLIC_KEY` / `WOMPI_PRIVATE_KEY` / `WOMPI_INTEGRITY_SECRET` / `WOMPI_EVENTS_SECRET` | `payment-intent`, `payment-webhook`, `payments-reconcile` | Replace in `.env`, restart `functions`; also update the events secret in the Wompi dashboard. Pending intents keep polling; a rotated events secret rejects old webhooks (`401`), so rotate with no traffic. |
 
 `.env` must be `chmod 600` and excluded from git. Keep an encrypted copy
 sealed somewhere safe (it is intentionally not part of `backup.sh`).
@@ -113,6 +114,22 @@ in `docker-compose.yml` and repeat the `alter user` for that role.
   with the new public key → users re-enable notifications in the inbox.
 - **WhatsApp**: new system-user token → `.env` → `restart functions`. Failed
   queue rows retry; check `/diagnostics` afterwards.
+
+## 6b. Rotate online payment credentials (Wompi)
+
+- **Integrity secret**: new value in `.env` → `docker compose restart
+  functions`. Checkouts created before the restart keep their signed URL
+  (already opened) but a new intent signs with the new secret.
+- **Events secret**: change it in `.env` **and** in the Wompi dashboard at the
+  same time, then restart `functions`. While they disagree every webhook is
+  `401 InvalidSignatureError`; the reconcile job recovers those payments once
+  the secrets match again (`payments-reconcile` asks the API for pending
+  intents older than 10 minutes).
+- **Private/public key**: new merchant keys → `.env` → restart. Public keys are
+  safe to expose (only `WOMPI_PUBLIC_KEY` reaches the URL); the private key and
+  both secrets must never appear in the client, a log line or a `--dart-define`.
+- After any rotation: `select public.expire_payment_intents();` and check
+  `/reports` → "Pagos en línea" for the day.
 
 ## 7. Suspected leak
 

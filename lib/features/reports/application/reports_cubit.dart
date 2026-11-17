@@ -2,6 +2,7 @@ import 'package:equatable/equatable.dart';
 
 import '../../../core/error/failure.dart';
 import '../domain/entities/hourly_traffic.dart';
+import '../domain/entities/online_payment_report.dart';
 import '../domain/entities/occupancy_report.dart';
 import '../domain/entities/forecast_backtest.dart';
 import '../domain/entities/period_comparison.dart';
@@ -33,6 +34,7 @@ class ReportsLoaded extends ReportsState {
     this.whatsapp = WhatsappReport.empty,
     this.hourly = HourlyTraffic.empty,
     this.reservations = ReservationReport.empty,
+    this.onlinePayments = OnlinePaymentReport.empty,
     this.comparison = PeriodComparison.empty,
     this.comparisonMonths = 6,
     this.comparisonFailed = false,
@@ -55,6 +57,9 @@ class ReportsLoaded extends ReportsState {
 
   /// Holds created in the window, by origin and outcome.
   final ReservationReport reservations;
+
+  /// Approved online payments of the window (empty when the RPC failed).
+  final OnlinePaymentReport onlinePayments;
 
   /// Trailing months with the month before and the same month last year.
   final PeriodComparison comparison;
@@ -85,6 +90,7 @@ class ReportsLoaded extends ReportsState {
     whatsapp: whatsapp,
     hourly: hourly,
     reservations: reservations,
+    onlinePayments: onlinePayments,
     comparison: comparison ?? this.comparison,
     comparisonMonths: comparisonMonths ?? this.comparisonMonths,
     comparisonFailed: comparisonFailed ?? this.comparisonFailed,
@@ -203,6 +209,12 @@ class ReportsCubit extends ResilientCubit<ReportsState> {
               (report) => report,
               onError: (Object _) => null,
             ),
+        _repository
+            .getOnlinePayments(startDate: startDate, endDate: endDate)
+            .then<OnlinePaymentReport>(
+              (report) => report,
+              onError: (Object _) => OnlinePaymentReport.empty,
+            ),
       ]);
       final previous = results[6] as RevenueReport?;
       emit(
@@ -212,6 +224,7 @@ class ReportsCubit extends ResilientCubit<ReportsState> {
           whatsapp: results[2] as WhatsappReport,
           hourly: results[3] as HourlyTraffic,
           reservations: results[5] as ReservationReport,
+          onlinePayments: results[7] as OnlinePaymentReport,
           comparison:
               (results[4] as PeriodComparison?) ?? PeriodComparison.empty,
           comparisonMonths: comparisonMonths,

@@ -19,6 +19,7 @@ class ReceiptData {
     this.cashChange,
     this.discountAmount = 0,
     this.discountReason,
+    this.onlinePaidAmount = 0,
     this.pendingSync = false,
     this.evidenceUrl,
     this.feedbackUrl,
@@ -39,6 +40,10 @@ class ReceiptData {
   final int? cashChange;
   final int discountAmount;
   final String? discountReason;
+
+  /// Part of the charge the customer already paid online (0 = none). The
+  /// session's `amount_charged` already includes it.
+  final int onlinePaidAmount;
   final bool pendingSync;
 
   /// Public page (plate is the key) with the session's photos and videos.

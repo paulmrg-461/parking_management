@@ -17,6 +17,7 @@ import '../../../core/widgets/plate_text.dart';
 import '../../../core/widgets/skeleton.dart';
 import '../../../core/widgets/status_chip.dart';
 import '../../../core/widgets/submission_feedback.dart';
+import '../../online_payments/presentation/widgets/pay_online_panel.dart';
 import '../application/evidence_cubit.dart';
 import '../../settings/domain/whatsapp_url.dart';
 import '../domain/entities/public_evidence.dart';
@@ -24,10 +25,19 @@ import '../domain/entities/public_evidence.dart';
 /// Public, plate-keyed evidence page opened by the QR/link on the receipt.
 /// No login: the link carries the session and the plate is the access key.
 class PublicEvidencePage extends StatefulWidget {
-  const PublicEvidencePage({super.key, this.sessionId, this.plate});
+  const PublicEvidencePage({
+    super.key,
+    this.sessionId,
+    this.plate,
+    this.payReference,
+  });
 
   final int? sessionId;
   final String? plate;
+
+  /// `pay` query parameter: the customer is back from the gateway and the
+  /// page polls this reference until it is decided.
+  final String? payReference;
 
   @override
   State<PublicEvidencePage> createState() => _PublicEvidencePageState();
@@ -107,6 +117,7 @@ class _PublicEvidencePageState extends State<PublicEvidencePage> {
             EvidenceStatus.loaded => _EvidenceBody(
               evidence: state.evidence!,
               onOpen: _open,
+              payReference: widget.payReference,
             ),
           };
         },
@@ -218,10 +229,15 @@ class _PlateGate extends StatelessWidget {
 }
 
 class _EvidenceBody extends StatelessWidget {
-  const _EvidenceBody({required this.evidence, required this.onOpen});
+  const _EvidenceBody({
+    required this.evidence,
+    required this.onOpen,
+    this.payReference,
+  });
 
   final PublicEvidence evidence;
   final ValueChanged<String> onOpen;
+  final String? payReference;
 
   Future<void> _call(BuildContext context, String phone) async {
     final digits = phone.replaceAll(RegExp(r'\D'), '');
@@ -368,6 +384,13 @@ class _EvidenceBody extends StatelessWidget {
             ),
           ),
         ],
+        if (evidence.summary case final summary?
+            when summary.isOpen && summary.onlinePaymentsEnabled)
+          PayOnlinePanel(
+            summary: summary,
+            plate: evidence.plate,
+            payReference: payReference,
+          ),
         const SizedBox(height: Space.md),
         if (evidence.isEmpty)
           EmptyState(

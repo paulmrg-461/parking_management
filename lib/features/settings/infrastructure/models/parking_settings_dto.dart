@@ -28,6 +28,9 @@ class ParkingSettingsDto {
     this.currency = 'COP',
     this.minAppVersion = '',
     this.policePhone = '',
+    this.onlinePaymentsEnabled = false,
+    this.onlinePaymentGraceMinutes = 15,
+    this.onlinePaymentMinAmount = 1500,
     this.version = 0,
   });
 
@@ -57,6 +60,15 @@ class ParkingSettingsDto {
   final String currency;
   final String minAppVersion;
   final String policePhone;
+
+  @JsonKey(name: 'online_payments_enabled', defaultValue: false)
+  final bool onlinePaymentsEnabled;
+
+  @JsonKey(name: 'online_payment_grace_minutes', defaultValue: 15)
+  final int onlinePaymentGraceMinutes;
+
+  @JsonKey(name: 'online_payment_min_amount', defaultValue: 1500)
+  final int onlinePaymentMinAmount;
   final int version;
 
   Map<String, dynamic> toJson() => _$ParkingSettingsDtoToJson(this);
@@ -83,6 +95,9 @@ class ParkingSettingsDto {
     currency: currency,
     minAppVersion: minAppVersion,
     policePhone: policePhone,
+    onlinePaymentsEnabled: onlinePaymentsEnabled,
+    onlinePaymentGraceMinutes: onlinePaymentGraceMinutes,
+    onlinePaymentMinAmount: onlinePaymentMinAmount,
     version: version,
   );
 }

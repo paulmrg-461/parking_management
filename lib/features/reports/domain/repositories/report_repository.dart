@@ -1,4 +1,5 @@
 import '../entities/hourly_traffic.dart';
+import '../entities/online_payment_report.dart';
 import '../entities/occupancy_report.dart';
 import '../entities/forecast_backtest.dart';
 import '../entities/period_comparison.dart';
@@ -37,6 +38,12 @@ abstract class ReportRepository {
 
   /// Entries/exits per hour of the business day for the range.
   Future<HourlyTraffic> getHourlyTraffic({
+    required DateTime startDate,
+    required DateTime endDate,
+  });
+
+  /// Approved and voided online payments of the range (lot admins only).
+  Future<OnlinePaymentReport> getOnlinePayments({
     required DateTime startDate,
     required DateTime endDate,
   });

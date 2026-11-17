@@ -67,6 +67,45 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - Android release build: R8 keep rules for the optional ML Kit scripts.
 
 ### Added
+- **Online payments with Wompi** (`0112`–`0114`,
+  `openspec/changes/add-online-payments`). The customer can pay from the
+  receipt QR and the desk closes the session without collecting cash:
+  - Per-site opt-in (`online_payments_enabled`, COP only), a grace window
+    (`online_payment_grace_minutes`, 5..120, default 15) and a minimum amount
+    (`online_payment_min_amount`, default 1500). Without Wompi credentials the
+    functions stay inert and the site behaves exactly as before.
+  - `payment-intent` prices the stay **server-side** and freezes the amount in
+    `payment_intents`; the gateway is signed with that amount, so the browser
+    cannot change it. Five intents per session per hour, and a wrong plate and
+    an unknown session answer the same (`SessionNotFoundError`).
+  - `payment-webhook` is the only source of truth: the Wompi checksum is
+    verified, `payment_events` makes it idempotent and `apply_payment_event`
+    stamps `online_paid_amount` + `online_paid_at`. The redirect page only
+    polls `payment_intent_status(reference, plate)`.
+  - `check_out` applies `online_settlement_amounts(gross, paid, paid_at, exit,
+    grace)`: inside the window the charge is exactly what was paid, after it
+    the desk collects `max(gross, paid) − paid`. `online` is a **server-only**
+    payment method (the client still cannot send it) and
+    `amount_charged = online_paid_amount + desk_due`.
+  - Shifts keep the online money out of `expected_cash` (`cash_sales` and the
+    other desk methods are net of the online part) and add `online_sales`;
+    `report_revenue.by_payment` splits an `online` row; a new
+    `report_online_payments` lists approved/voided intents for bank
+    reconciliation (`/reports` → "Pagos en línea").
+  - Public page: `/evidence` shows the amount due, the pay button and, on
+    return, polls for up to 180 s, then renders the exit deadline. The
+    operator list shows a "Pagado en línea" chip and the settlement dialog
+    hides the payment choice when nothing is due (or collects only the
+    difference after the window, with a warning).
+  - Rejected webhooks, amount mismatches, late approvals (session already
+    closed), voids and pass-covered payments raise
+    `online_payment`/`online_payment_review` notifications; refunds are a
+    human decision.
+  - `payments-reconcile` (jobs container/host cron) asks the gateway for
+    pending intents older than 10 minutes, so a lost webhook is recovered
+    through the same idempotent path. `expire_payment_intents` closes stale
+    intents but an `APPROVED` event after expiry still counts.
+
 - **Customer satisfaction survey** (`0111`, `openspec/changes/add-customer-feedback`).
   The receipt now closes the loop with the customer:
   - `session_feedback` stores **one answer per closed session** (1..5 stars and
@@ -1168,6 +1207,12 @@ Migrations are append-only and applied in filename order by `supabase-migrate`.
 | `0033`–`0038` | Evidence retention, storage membership, diagnostics, audit export, report comparison, home KPIs |
 | `0039`–`0044` | Site comparison fields, ticket reprint, customer phone, WhatsApp queue/report |
 | `0045`–`0059` | Check-out preview, pass flag, capacity groups, reservations consuming group capacity, reserved counts, hold counters, space board, fare breakdown, out-of-service spaces, live activity notifications, physical spot map and its editor |
+| `0060`–`0073` | Bay capacity, records log, video evidence, policies, card type, cash received, billing integrity (hour allocation, lost ticket, closed-at), shift integrity |
+| `0074`–`0086` | Statement timeouts, vehicle update grant, version guard, evidence retention, scale indexes, audit search, setup checklist, records evidence |
+| `0087`–`0096` | Public booking (availability, holds, notifications, cancel/lookup, prices, grace, WhatsApp), purge |
+| `0097`–`0103` | Reservation listing/reminders, reports, branding cover, period comparison, row versions, waitlist, public booking protection |
+| `0104`–`0111` | Pass lot scope, occupancy forecast, cash anomalies, customer feedback |
+| `0112`–`0114` | Online payments: settings/columns, `payment_intents`/`payment_events`, settlement rule, service RPCs, check-out/preview/summary/shift/report integration |
 
 ## Verification snapshot
 

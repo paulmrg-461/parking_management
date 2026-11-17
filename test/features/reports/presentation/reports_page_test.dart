@@ -6,6 +6,7 @@ import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/core/theme/contrast.dart';
 import 'package:parking_management/features/reports/application/reports_cubit.dart';
 import 'package:parking_management/features/reports/domain/entities/hourly_traffic.dart';
+import 'package:parking_management/features/reports/domain/entities/online_payment_report.dart';
 import 'package:parking_management/features/reports/domain/entities/forecast_backtest.dart';
 import 'package:parking_management/features/reports/domain/entities/period_comparison.dart';
 import 'package:parking_management/features/reports/domain/entities/reservation_report.dart';
@@ -39,6 +40,7 @@ class _FakeReportRepository implements ReportRepository {
   );
 
   HourlyTraffic hourly = HourlyTraffic.empty;
+  OnlinePaymentReport onlinePayments = OnlinePaymentReport.empty;
   ReservationReport reservations = ReservationReport.empty;
   PeriodComparison comparison = PeriodComparison.empty;
   int? comparisonMonthsRequested;
@@ -96,6 +98,12 @@ class _FakeReportRepository implements ReportRepository {
     required DateTime startDate,
     required DateTime endDate,
   }) async => hourly;
+
+  @override
+  Future<OnlinePaymentReport> getOnlinePayments({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async => onlinePayments;
 
   @override
   Future<OccupancyReport> getOccupancyReport() async => occupancy;
@@ -289,6 +297,41 @@ void main() {
     expect(find.text('Ingresos por sede'), findsOneWidget);
     expect(find.text('Central'), findsOneWidget);
     expect(find.text('80% del total'), findsOneWidget);
+  });
+
+  testWidgets('Success: the online payments section lists approved rows', (
+    tester,
+  ) async {
+    final repository = _FakeReportRepository(_revenue, _occupancy)
+      ..onlinePayments = OnlinePaymentReport(
+        total: 6000,
+        count: 1,
+        items: [
+          OnlinePaymentItem(
+            intentId: 9,
+            reference: 'PM-1A2B3C4D5E6F',
+            amount: 6000,
+            approvedAt: DateTime(2026, 1, 10, 12),
+            plate: 'ABC123',
+            method: 'CARD',
+          ),
+        ],
+      );
+    await _pump(tester, repository: repository);
+    await _scrollTo(tester, find.textContaining('PM-1A2B3C4D5E6F'));
+
+    expect(find.text('Pagos en línea'), findsOneWidget);
+    expect(find.textContaining('ABC123'), findsWidgets);
+    expect(find.textContaining('PM-1A2B3C4D5E6F'), findsWidgets);
+  });
+
+  testWidgets('Security: an empty online report hides the section', (
+    tester,
+  ) async {
+    await _pump(tester);
+
+    expect(find.text('Pagos en línea'), findsNothing);
+    expect(find.text('Ingresos totales'), findsWidgets);
   });
 
   testWidgets('Success: WhatsApp delivery metrics are shown', (tester) async {

@@ -34,6 +34,7 @@ import '../../features/feedback/presentation/public_feedback_page.dart';
 import '../../features/help/presentation/help_page.dart';
 import '../../features/preferences/presentation/preferences_page.dart';
 import '../../features/evidence/presentation/public_evidence_page.dart';
+import '../../features/online_payments/application/online_payment_cubit.dart';
 import '../../features/policies/application/policies_cubit.dart';
 import '../../features/policies/presentation/policies_page.dart';
 import '../../features/records/application/records_cubit.dart';
@@ -126,11 +127,19 @@ GoRouter buildRouter(
     ),
     GoRoute(
       path: evidencePath,
-      builder: (context, state) => BlocProvider<EvidenceCubit>(
-        create: (_) => serviceLocator<EvidenceCubit>(),
+      builder: (context, state) => MultiBlocProvider(
+        providers: [
+          BlocProvider<EvidenceCubit>(
+            create: (_) => serviceLocator<EvidenceCubit>(),
+          ),
+          BlocProvider<OnlinePaymentCubit>(
+            create: (_) => serviceLocator<OnlinePaymentCubit>(),
+          ),
+        ],
         child: PublicEvidencePage(
           sessionId: int.tryParse(state.uri.queryParameters['session'] ?? ''),
           plate: state.uri.queryParameters['plate'],
+          payReference: state.uri.queryParameters['pay'],
         ),
       ),
     ),

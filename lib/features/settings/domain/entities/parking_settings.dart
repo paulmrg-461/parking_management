@@ -26,6 +26,9 @@ class ParkingSettings extends Equatable {
     this.currency = 'COP',
     this.minAppVersion = '',
     this.policePhone = '',
+    this.onlinePaymentsEnabled = false,
+    this.onlinePaymentGraceMinutes = 15,
+    this.onlinePaymentMinAmount = 1500,
     this.version = 0,
   });
 
@@ -85,6 +88,15 @@ class ParkingSettings extends Equatable {
   /// Nearest police quadrant for the emergency action ('' = use 123).
   final String policePhone;
 
+  /// Customers may pay from the receipt QR (COP lots only).
+  final bool onlinePaymentsEnabled;
+
+  /// Minutes to leave the lot after an approved online payment.
+  final int onlinePaymentGraceMinutes;
+
+  /// Smallest amount accepted online (minor units); below it the desk charges.
+  final int onlinePaymentMinAmount;
+
   /// Row version from the server (`0` when unknown); an edit sends it so a
   /// concurrent change is a conflict, not an overwrite.
   final int version;
@@ -114,6 +126,9 @@ class ParkingSettings extends Equatable {
     String? currency,
     String? minAppVersion,
     String? policePhone,
+    bool? onlinePaymentsEnabled,
+    int? onlinePaymentGraceMinutes,
+    int? onlinePaymentMinAmount,
     int? version,
   }) => ParkingSettings(
     name: name ?? this.name,
@@ -138,6 +153,12 @@ class ParkingSettings extends Equatable {
     currency: currency ?? this.currency,
     minAppVersion: minAppVersion ?? this.minAppVersion,
     policePhone: policePhone ?? this.policePhone,
+    onlinePaymentsEnabled:
+        onlinePaymentsEnabled ?? this.onlinePaymentsEnabled,
+    onlinePaymentGraceMinutes:
+        onlinePaymentGraceMinutes ?? this.onlinePaymentGraceMinutes,
+    onlinePaymentMinAmount:
+        onlinePaymentMinAmount ?? this.onlinePaymentMinAmount,
     version: version ?? this.version,
   );
 
@@ -161,6 +182,9 @@ class ParkingSettings extends Equatable {
     'currency': currency,
     'min_app_version': minAppVersion,
     'police_phone': policePhone,
+    'online_payments_enabled': onlinePaymentsEnabled,
+    'online_payment_grace_minutes': onlinePaymentGraceMinutes,
+    'online_payment_min_amount': onlinePaymentMinAmount,
   };
 
   @override
@@ -186,6 +210,9 @@ class ParkingSettings extends Equatable {
     currency,
     minAppVersion,
     policePhone,
+    onlinePaymentsEnabled,
+    onlinePaymentGraceMinutes,
+    onlinePaymentMinAmount,
     version,
   ];
 }

@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/features/reports/domain/entities/hourly_traffic.dart';
+import 'package:parking_management/features/reports/domain/entities/online_payment_report.dart';
 import 'package:parking_management/features/reports/domain/entities/occupancy_report.dart';
 import 'package:parking_management/features/reports/domain/entities/forecast_backtest.dart';
 import 'package:parking_management/features/reports/domain/entities/period_comparison.dart';
@@ -55,6 +56,13 @@ class _FakeRemote implements ReportRemoteDataSource {
     required DateTime startDate,
     required DateTime endDate,
   }) async => HourlyTraffic.empty;
+  OnlinePaymentReport onlineToReturn = OnlinePaymentReport.empty;
+
+  @override
+  Future<OnlinePaymentReport> getOnlinePayments({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async => onlineToReturn;
 
   @override
   Future<OccupancyReport> getOccupancyReport() async {
@@ -102,6 +110,33 @@ void main() {
       expect(occupancyResult, occupancy);
     },
   );
+
+  test('Success: the online payment report reaches the domain entity', () async {
+    final remote = _FakeRemote(
+      revenueToReturn: revenue,
+      occupancyToReturn: occupancy,
+    )..onlineToReturn = const OnlinePaymentReport(
+      total: 6000,
+      count: 1,
+      items: [
+        OnlinePaymentItem(
+          intentId: 9,
+          reference: 'PM-1A2B3C4D5E6F',
+          amount: 6000,
+          plate: 'ABC123',
+        ),
+      ],
+    );
+    final repository = ReportRepositoryImpl(remote);
+
+    final report = await repository.getOnlinePayments(
+      startDate: DateTime(2026, 1, 1),
+      endDate: DateTime(2026, 1, 31),
+    );
+
+    expect(report.total, 6000);
+    expect(report.items.single.reference, 'PM-1A2B3C4D5E6F');
+  });
 
   test('Failure: remote errors are rethrown as the mapped Failure', () async {
     final remote = _FakeRemote(error: const NetworkFailure('offline'));

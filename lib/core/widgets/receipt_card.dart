@@ -161,6 +161,16 @@ class ReceiptSummaryDialog extends StatelessWidget {
                 ),
               if (data.isCheckOut &&
                   !data.pendingSync &&
+                  data.onlinePaidAmount > 0)
+                Padding(
+                  padding: const EdgeInsets.only(top: Space.md),
+                  child: ReceiptRow(
+                    label: l10n.receiptPaidOnline,
+                    value: Formatters.money(data.onlinePaidAmount),
+                  ),
+                ),
+              if (data.isCheckOut &&
+                  !data.pendingSync &&
                   data.ticketNumber != null)
                 Padding(
                   padding: const EdgeInsets.only(top: Space.md),
@@ -363,6 +373,11 @@ class ReceiptCard extends StatelessWidget {
               data.paymentMethod,
               cardType: data.cardType,
             ),
+          ),
+        if (data.isCheckOut && !data.pendingSync && data.onlinePaidAmount > 0)
+          ReceiptRow(
+            label: l10n.receiptPaidOnline,
+            value: Formatters.money(data.onlinePaidAmount),
           ),
         if (data.isCheckOut && !data.pendingSync && data.cashReceived != null)
           ReceiptRow(

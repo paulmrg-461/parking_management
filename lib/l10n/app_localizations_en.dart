@@ -4615,4 +4615,128 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get paymentOnline => 'Online';
+
+  @override
+  String get onlinePayTitle => 'Pay from your phone';
+
+  @override
+  String get onlinePayDue => 'Amount due';
+
+  @override
+  String get onlinePayAction => 'Pay online';
+
+  @override
+  String onlinePayHint(int minutes) {
+    return 'Card, PSE or Nequi. After paying you have $minutes minutes to leave.';
+  }
+
+  @override
+  String get onlinePayChecking => 'Confirming your payment…';
+
+  @override
+  String get onlinePayApproved =>
+      'Payment received. Show this screen at the exit.';
+
+  @override
+  String get onlinePayDeclined =>
+      'The payment was not approved. You can try again.';
+
+  @override
+  String get onlinePayPending =>
+      'We have not confirmed your payment yet. If you already paid, wait a moment.';
+
+  @override
+  String onlinePayGraceUntil(String time) {
+    return 'Leave before $time';
+  }
+
+  @override
+  String get onlinePayLate =>
+      'If you stay past that time, you pay the difference at the desk.';
+
+  @override
+  String get onlinePayNothingDue => 'You have nothing to pay.';
+
+  @override
+  String get checkOutPaidOnline => 'Paid online';
+
+  @override
+  String get checkOutBalanceDue => 'Balance at the desk';
+
+  @override
+  String get checkOutNoCashDue => 'Nothing to collect: paid online';
+
+  @override
+  String get checkOutGraceExpired =>
+      'The exit window is over; the difference is due';
+
+  @override
+  String get checkOutOnlineUnknownOffline =>
+      'Offline: we cannot confirm whether this vehicle paid online';
+
+  @override
+  String get shiftOnlineSales => 'Online payments';
+
+  @override
+  String get receiptPaidOnline => 'Paid online';
+
+  @override
+  String get settingsOnlinePayments => 'Online payments';
+
+  @override
+  String get settingsOnlinePaymentsHint =>
+      'Lets customers pay from the receipt QR. Requires Wompi credentials on the server.';
+
+  @override
+  String get settingsOnlineGraceMinutes => 'Minutes to leave after paying';
+
+  @override
+  String get settingsOnlineMinAmount => 'Minimum online amount';
+
+  @override
+  String get settingsOnlineCopOnly => 'Only available for COP sites';
+
+  @override
+  String get notifTypeOnlinePayment => 'Online payment';
+
+  @override
+  String get notifTypeOnlinePaymentReview => 'Online payment to review';
+
+  @override
+  String get reportOnlinePayments => 'Online payments';
+
+  @override
+  String get reportOnlineReference => 'Reference';
+
+  @override
+  String get errorOnlinePaymentsDisabled =>
+      'Online payments are not enabled at this site';
+
+  @override
+  String get errorNothingToPay => 'There is nothing to pay';
+
+  @override
+  String get errorAmountTooLow =>
+      'The amount is below the online minimum; pay at the desk';
+
+  @override
+  String get errorPaymentsNotConfigured =>
+      'Online payment is unavailable right now; pay at the desk';
+
+  @override
+  String get errorPaymentThrottled =>
+      'Too many payment attempts. Try again in an hour or pay at the desk';
+
+  @override
+  String get errorPaymentEventFailed =>
+      'The payment could not be recorded; try again later';
+
+  @override
+  String get errorInvalidLink => 'The link is invalid or incomplete';
+
+  @override
+  String get checkOutConfirmExit => 'Confirm exit';
 }

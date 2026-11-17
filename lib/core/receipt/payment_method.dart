@@ -71,6 +71,11 @@ String paymentMethodLabel(
   if (wire == null || wire == 'unknown') {
     return l10n.paymentUnknown;
   }
+  // `online` is a server-only method; the enum drives the dialog buttons, so
+  // it is not a member on purpose.
+  if (wire == 'online') {
+    return l10n.paymentOnline;
+  }
   final method = paymentMethodFromWire(wire);
   final kind = cardTypeFromWire(cardType);
   return method == PaymentMethod.card && kind != null

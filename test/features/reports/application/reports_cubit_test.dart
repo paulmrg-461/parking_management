@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/features/reports/application/reports_cubit.dart';
 import 'package:parking_management/features/reports/domain/entities/hourly_traffic.dart';
+import 'package:parking_management/features/reports/domain/entities/online_payment_report.dart';
 import 'package:parking_management/features/reports/domain/entities/forecast_backtest.dart';
 import 'package:parking_management/features/reports/domain/entities/period_comparison.dart';
 import 'package:parking_management/features/reports/domain/entities/reservation_report.dart';
@@ -93,6 +94,11 @@ class _FakeReportRepository implements ReportRepository {
     }
     return hourlyToReturn ?? HourlyTraffic.empty;
   }
+  @override
+  Future<OnlinePaymentReport> getOnlinePayments({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async => OnlinePaymentReport.empty;
 
   @override
   Future<OccupancyReport> getOccupancyReport() async {

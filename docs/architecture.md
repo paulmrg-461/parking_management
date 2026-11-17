@@ -218,6 +218,42 @@ daily cap per day touched, night window replaces the day tariff, monthly pass
 tickets require a reason and charge the full daily tariff. Ticket numbers carry
 the site code (`TCK-<LOT>-000123`).
 
+## 5b. Online payment (Wompi)
+
+```mermaid
+sequenceDiagram
+  participant C as Customer (/evidence)
+  participant FN as payment-intent
+  participant DB as PostgreSQL
+  participant W as Wompi
+  participant WH as payment-webhook
+  participant J as payments-reconcile
+  participant O as Operator
+
+  C->>FN: session + plate
+  FN->>DB: create_session_payment_intent
+  DB->>DB: session_settlement → fare_breakdown + grace rule
+  DB-->>FN: reference, frozen amount
+  FN-->>C: checkout_url (signed)
+  C->>W: pay (card/PSE/Nequi)
+  W->>WH: transaction.updated (+ checksum)
+  WH->>WH: verify SHA-256 checksum
+  WH->>DB: apply_payment_event (idempotent event row)
+  DB->>DB: settle_payment_intent → online_paid_amount/paid_at
+  DB-->>O: "online_payment" notification
+  W-->>C: redirect /evidence?session&pay=reference
+  C->>DB: payment_intent_status(reference, plate) every 3 s
+  O->>DB: check_out → online_settlement_amounts → desk_due
+  Note over J,DB: a lost webhook is recovered by the reconcile job<br/>through the same apply_payment_event path
+```
+
+The browser never holds a gateway key: `payment-intent` and the webhook use
+the service role, the amount is computed server-side and frozen in
+`payment_intents`, and `payment_events` (unique per gateway transaction and
+status) makes a replayed event a no-op. Inside the grace window the session
+charges exactly what was paid; after it the desk collects the difference.
+`online` is written only by the database, never by the client.
+
 ## 6. Shifts and cash
 
 An operator opens one shift per site (`unique (operator_id, lot_id)`), records

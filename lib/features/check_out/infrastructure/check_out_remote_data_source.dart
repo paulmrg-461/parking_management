@@ -71,7 +71,7 @@ class SupabaseCheckOutRemoteDataSource implements CheckOutRemoteDataSource {
           .from(_view)
           .select(
             'id, vehicle_id, plate, entry_time, has_pass, photo_count, '
-            'left_keys',
+            'left_keys, online_paid_amount, online_grace_until',
           );
       if (plate != null && plate.trim().isNotEmpty) {
         query = query.ilike('plate', '%${plate.trim()}%');

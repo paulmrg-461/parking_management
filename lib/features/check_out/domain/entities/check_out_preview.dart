@@ -17,6 +17,10 @@ class CheckOutPreview extends Equatable {
     this.dailyRate,
     this.dailyCapApplied = false,
     this.lostTicketAmount,
+    this.onlinePaidAmount = 0,
+    this.amountDue,
+    this.graceActive = false,
+    this.graceUntil,
   });
 
   final int sessionId;
@@ -45,6 +49,20 @@ class CheckOutPreview extends Equatable {
   /// on servers that predate `lost_ticket_amount`.
   final int? lostTicketAmount;
 
+  /// Already paid online (minor units); `amount` includes it.
+  final int onlinePaidAmount;
+
+  /// What the desk still collects right now (`null` = unknown, treated as
+  /// `amount`). Inside the grace window it is 0.
+  final int? amountDue;
+
+  /// The customer is still inside the exit window.
+  final bool graceActive;
+  final DateTime? graceUntil;
+
+  /// Desk balance, falling back to the full fare on old servers.
+  int get deskDue => amountDue ?? amount;
+
   Duration get elapsed => Duration(seconds: elapsedSeconds);
 
   factory CheckOutPreview.fromJson(Map<String, dynamic> json) =>
@@ -61,6 +79,10 @@ class CheckOutPreview extends Equatable {
         dailyRate: (json['daily_rate'] as num?)?.toInt(),
         dailyCapApplied: json['daily_cap_applied'] == true,
         lostTicketAmount: (json['lost_ticket_amount'] as num?)?.toInt(),
+        onlinePaidAmount: (json['online_paid_amount'] as num?)?.toInt() ?? 0,
+        amountDue: (json['amount_due'] as num?)?.toInt(),
+        graceActive: json['grace_active'] as bool? ?? false,
+        graceUntil: DateTime.tryParse(json['grace_until'] as String? ?? ''),
       );
 
   @override
@@ -77,5 +99,9 @@ class CheckOutPreview extends Equatable {
     dailyRate,
     dailyCapApplied,
     lostTicketAmount,
+    onlinePaidAmount,
+    amountDue,
+    graceActive,
+    graceUntil,
   ];
 }

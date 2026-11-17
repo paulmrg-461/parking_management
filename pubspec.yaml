@@ -84,6 +84,9 @@ dev_dependencies:
   json_serializable: ^6.14.1
   path_provider_platform_interface: ^2.1.3
   url_launcher_platform_interface: ^2.3.2
+  # Timer-driven cubit tests (polling); also comes transitively with
+  # flutter_test, declared so the analyzer accepts the import.
+  fake_async: ^1.3.3
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

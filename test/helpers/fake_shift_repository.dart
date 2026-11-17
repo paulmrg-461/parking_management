@@ -112,6 +112,7 @@ ShiftSummary sampleShift({
   String? notes,
   int withdrawals = 0,
   int deposits = 0,
+  int onlineSales = 0,
 }) => ShiftSummary(
   id: id,
   operatorId: 1,
@@ -125,6 +126,7 @@ ShiftSummary sampleShift({
   sessionCount: 1,
   revenue: 5000,
   cashSales: 5000,
+  onlineSales: onlineSales,
   discounts: 1000,
   withdrawals: withdrawals,
   deposits: deposits,

@@ -97,6 +97,9 @@ class EscPosGenerator {
       );
     }
 
+    if (data.isCheckOut && !data.pendingSync && data.onlinePaidAmount > 0) {
+      _row(bytes, labels.onlinePaid, CopFormatter.format(data.onlinePaidAmount));
+    }
     if (data.isCheckOut && !data.pendingSync && data.cashReceived != null) {
       _row(bytes, labels.received, CopFormatter.format(data.cashReceived!));
     }

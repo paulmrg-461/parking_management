@@ -40,11 +40,12 @@ WhatsApp (manual or automated).
 | Evidence retention | Complete (scheduled archive) | Live object deletion verified |
 | Diagnostics / observability | Complete (`/diagnostics`, healthcheck, error reports) | SQL + widget tests |
 | Customer feedback | Complete (public survey + admin satisfaction report) | SQL + widget tests |
+| Online payments | Complete, inert without Wompi keys (`/evidence` pay panel, webhook, reconcile job, settlement) | SQL + Deno + widget tests |
 | Backups / restore | Complete, with a safe drill | Drill executed against a real backup |
 | Secrets / PIN operations | Complete (scripts + runbook) | PIN rotation verified live |
 | E2E and CI | Complete (API + Flutter client, real stack) | CI job `supabase-e2e` |
 
-Quality snapshot (2026-11-17, local stack): **1437 Flutter tests + 1 integration
+Quality snapshot (2026-11-17, local stack): **1493 Flutter tests + 1 integration
 test**, SQL/RLS suite green, web build green, analyzer with **0 errors and 0
 warnings** (only SDK deprecation infos from the pinned beta channel), restore
 drill green.
@@ -73,7 +74,8 @@ the main data it touches.
 | `shifts` | Open/close with expected-vs-counted and a denomination counter, movements, history filters, corrections, PDF | `shifts`, `cash_movements`, `shift_adjustments`, `list_shifts`, `adjust_shift` |
 | `reports` | Revenue, occupancy, site comparison, hourly traffic, period comparison, WhatsApp metrics, PDF | `report_revenue(_all)`, `report_occupancy`, `report_hourly_traffic`, `report_period_comparison`, `report_whatsapp` |
 | `notifications` | Inbox, bell, deep links, browser push toggle | `notifications`, `web_push_subscriptions` |
-| `settings` | Per-site identity, branding, currency (COP/USD), retention, WhatsApp mode, police quadrant | `parking_settings`, `set_branding_logo` |
+| `settings` | Per-site identity, branding, currency (COP/USD), retention, WhatsApp mode, police quadrant, online payments | `parking_settings`, `set_branding_logo` |
+| `online_payments` | Public pay-from-phone panel, intent polling and the pay-online receipts/refunds review | `payment-intent`, `payment-webhook`, `payments-reconcile` (Edge Functions), `session_settlement`, `payment_intent_status`, `report_online_payments` |
 | `emergency` | One-tap call to the nearest police quadrant (123 fallback) | `parking_settings.police_phone` |
 | `users` | Admin user management | `admin-users` Edge Function |
 | `lots` | Sites and membership | `my_lots`, `create_lot`, `set_lot_member`, `list_lot_members` |
@@ -87,8 +89,9 @@ the main data it touches.
 | `app` | DI modules, router, shell | — |
 
 **Edge Functions** (`supabase/volumes/functions`): `admin-users`,
-`push-dispatch`, `evidence-archive`, `whatsapp-dispatch`, `public-evidence` (the `hello`/`main`
-folders are Supabase scaffolding, not used by the app).
+`push-dispatch`, `evidence-archive`, `whatsapp-dispatch`, `public-evidence`,
+`public-booking`, `payment-intent`, `payment-webhook`, `payments-reconcile`
+(the `hello`/`main` folders are Supabase scaffolding, not used by the app).
 
 ## 4. Architecture in one paragraph
 
@@ -98,7 +101,10 @@ evidence/branding; Realtime streams notification rows; Edge Functions run with
 the service key for operations that need it. Business rules that must be atomic
 (billing, capacity, shifts, idempotent writes) live in SQL and derive the actor
 from `auth.uid()`. The client keeps a Hive cache plus an outbox; queued writes
-capture their idempotency key, client timestamp and site. See
+capture their idempotency key, client timestamp and site. Online payments keep
+the gateway contracts inside Edge Functions: the browser never sees a Wompi
+key, the redirect page only polls, and the signed webhook is what marks a
+session as paid. See
 [`architecture.md`](architecture.md) for diagrams and flows.
 
 ## 5. Security model

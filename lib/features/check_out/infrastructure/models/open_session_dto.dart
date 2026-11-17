@@ -14,6 +14,8 @@ class OpenSessionDto {
     this.hasPass = false,
     this.photoCount = 0,
     this.leftKeys = false,
+    this.onlinePaidAmount = 0,
+    this.onlineGraceUntil,
   });
 
   factory OpenSessionDto.fromJson(Map<String, dynamic> json) =>
@@ -39,6 +41,12 @@ class OpenSessionDto {
   @JsonKey(name: 'left_keys', defaultValue: false)
   final bool leftKeys;
 
+  @JsonKey(name: 'online_paid_amount', defaultValue: 0)
+  final int onlinePaidAmount;
+
+  @JsonKey(name: 'online_grace_until')
+  final DateTime? onlineGraceUntil;
+
   Map<String, dynamic> toJson() => _$OpenSessionDtoToJson(this);
 
   OpenSession toDomain() => OpenSession(
@@ -49,5 +57,7 @@ class OpenSessionDto {
     hasPass: hasPass,
     photoCount: photoCount,
     leftKeys: leftKeys,
+    onlinePaidAmount: onlinePaidAmount,
+    onlineGraceUntil: onlineGraceUntil,
   );
 }

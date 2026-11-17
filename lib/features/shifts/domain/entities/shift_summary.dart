@@ -19,6 +19,7 @@ class ShiftSummary extends Equatable {
     this.transferSales = 0,
     this.passSales = 0,
     this.exemptSales = 0,
+    this.onlineSales = 0,
     this.discounts = 0,
     this.withdrawals = 0,
     this.deposits = 0,
@@ -42,6 +43,9 @@ class ShiftSummary extends Equatable {
   final int transferSales;
   final int passSales;
   final int exemptSales;
+
+  /// Money paid online that the shift closes; never part of the cash count.
+  final int onlineSales;
   final int discounts;
   final int withdrawals;
   final int deposits;
@@ -69,6 +73,7 @@ class ShiftSummary extends Equatable {
     transferSales: (json['transfer_sales'] as num?)?.toInt() ?? 0,
     passSales: (json['pass_sales'] as num?)?.toInt() ?? 0,
     exemptSales: (json['exempt_sales'] as num?)?.toInt() ?? 0,
+    onlineSales: (json['online_sales'] as num?)?.toInt() ?? 0,
     discounts: (json['discounts'] as num?)?.toInt() ?? 0,
     withdrawals: (json['withdrawals'] as num?)?.toInt() ?? 0,
     deposits: (json['deposits'] as num?)?.toInt() ?? 0,
@@ -94,6 +99,7 @@ class ShiftSummary extends Equatable {
     transferSales,
     passSales,
     exemptSales,
+    onlineSales,
     discounts,
     withdrawals,
     deposits,

@@ -447,6 +447,13 @@ class ParkingSettingsAdapter extends TypeAdapter<ParkingSettings> {
       currency: fields[15] == null ? 'COP' : fields[15] as String,
       minAppVersion: fields[16] == null ? '' : fields[16] as String,
       policePhone: fields[17] == null ? '' : fields[17] as String,
+      onlinePaymentsEnabled: fields[22] == null ? false : fields[22] as bool,
+      onlinePaymentGraceMinutes: fields[23] == null
+          ? 15
+          : (fields[23] as num).toInt(),
+      onlinePaymentMinAmount: fields[24] == null
+          ? 1500
+          : (fields[24] as num).toInt(),
       version: fields[21] == null ? 0 : (fields[21] as num).toInt(),
     );
   }
@@ -454,7 +461,7 @@ class ParkingSettingsAdapter extends TypeAdapter<ParkingSettings> {
   @override
   void write(BinaryWriter writer, ParkingSettings obj) {
     writer
-      ..writeByte(22)
+      ..writeByte(25)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
@@ -498,7 +505,13 @@ class ParkingSettingsAdapter extends TypeAdapter<ParkingSettings> {
       ..writeByte(20)
       ..write(obj.coverVersion)
       ..writeByte(21)
-      ..write(obj.version);
+      ..write(obj.version)
+      ..writeByte(22)
+      ..write(obj.onlinePaymentsEnabled)
+      ..writeByte(23)
+      ..write(obj.onlinePaymentGraceMinutes)
+      ..writeByte(24)
+      ..write(obj.onlinePaymentMinAmount);
   }
 
   @override

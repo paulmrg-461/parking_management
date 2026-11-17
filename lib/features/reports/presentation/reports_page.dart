@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/l10n/failure_messages.dart';
+import '../../../core/money/money.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/receipt/payment_method.dart';
@@ -18,6 +19,7 @@ import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/widgets/sync_badge.dart';
 import '../../emergency/presentation/emergency_action.dart';
 import '../application/reports_cubit.dart';
+import '../domain/entities/online_payment_report.dart';
 import '../domain/entities/reservation_report.dart';
 import 'report_csv.dart';
 import 'report_pdf.dart';
@@ -462,6 +464,15 @@ class _ReportsBody extends StatelessWidget {
           const SizedBox(height: Space.sm),
           _WaitlistMetrics(report: loaded.reservations.waitlist),
         ],
+        if (loaded.onlinePayments.hasData) ...[
+          const SizedBox(height: Space.lg),
+          SectionHeader(
+            icon: Icons.qr_code_2_outlined,
+            title: l10n.reportOnlinePayments,
+          ),
+          const SizedBox(height: Space.sm),
+          _OnlinePaymentsCard(report: loaded.onlinePayments),
+        ],
         const SizedBox(height: Space.lg),
         const SizedBox(height: Space.lg),
         const ForecastAccuracySection(),
@@ -716,6 +727,88 @@ class _ReservationMetrics extends StatelessWidget {
               ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
         ),
       ],
+    );
+  }
+}
+
+
+/// Online money of the window: total approved plus one row per intent, so the
+/// bank statement can be matched by reference.
+class _OnlinePaymentsCard extends StatelessWidget {
+  const _OnlinePaymentsCard({required this.report});
+
+  final OnlinePaymentReport report;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(Space.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    l10n.reportsTotalRevenue,
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ),
+                Text(
+                  Money.format(report.total),
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: Space.lg),
+            for (final item in report.items) ...[
+              Padding(
+                padding: const EdgeInsets.only(bottom: Space.sm),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.plate.isEmpty
+                                ? item.reference
+                                : '${item.plate} · ${item.reference}',
+                            style: theme.textTheme.bodyMedium,
+                          ),
+                          Text(
+                            [
+                              l10n.reportOnlineReference,
+                              if (item.method != null && item.method!.isNotEmpty)
+                                item.method!,
+                              if (item.approvedAt != null)
+                                Formatters.dateTime(item.approvedAt!),
+                            ].join(' · '),
+                            style: theme.textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      Money.format(item.amount),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }

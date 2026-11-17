@@ -5,6 +5,17 @@ import 'package:parking_management/features/auth/domain/entities/user.dart';
 import 'helpers/app_harness.dart';
 
 void main() {
+  testWidgets('Security: /evidence is public and accepts the pay reference', (
+    tester,
+  ) async {
+    await pumpApp(tester);
+    await goTo(tester, '/evidence?session=43&pay=PM-1A2B3C4D5E6F');
+
+    // The public route wins over the login redirect and asks for the plate.
+    expect(find.text('Ingresar'), findsNothing);
+    expect(find.text('Evidencias del vehículo'), findsOneWidget);
+  });
+
   group('Router (F-RT)', () {
     testWidgets('redirects unauthenticated users to the login page', (
       tester,

@@ -101,14 +101,23 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
   /// server's `lost_ticket_amount` (older servers: the regular fare).
   int? get _due {
     final preview = widget.preview;
+    // A lost ticket ignores the online payment (there is no ticket to prove
+    // the stay), so its fee is charged in full at the desk.
     final amount = _lostTicket
         ? preview?.lostTicketAmount ?? preview?.amount
-        : preview?.amount;
+        : preview?.deskDue ?? preview?.amount;
     if (amount == null) {
       return null;
     }
     return (amount - _discount).clamp(0, amount);
   }
+
+  /// The customer paid online for this session.
+  bool get _paidOnline => (widget.preview?.onlinePaidAmount ?? 0) > 0;
+
+  /// Paid in full inside the exit window: nothing to collect, no payment
+  /// choice to make (the server stores it as `online`).
+  bool get _nothingDue => _paidOnline && !_lostTicket && (_due ?? 1) == 0;
 
   /// A lost ticket is always charged: a monthly pass cannot cover it
   /// (`LostTicketPassMethodError`), so the method falls back to cash.
@@ -149,6 +158,7 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
       if (_lostTicket && _lostReasonController.text.trim().isEmpty)
         _Field.lostReason: l10n.lostTicketReasonRequired,
       if (_selected == PaymentMethod.cash &&
+          !_nothingDue &&
           received != null &&
           due != null &&
           received < due)
@@ -204,12 +214,15 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
                   l10n.slotEstimateUnavailable,
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
+              if (_paidOnline) _buildOnlineBox(context),
               if (due != null && _discount > 0) _buildDueRow(context, due),
               const SizedBox(height: Space.sm),
-              ..._buildMethodPicker(context),
-              if (_selected == PaymentMethod.cash && due != null) ...[
-                const SizedBox(height: Space.sm),
-                _buildCashBox(context, due),
+              if (!_nothingDue) ...[
+                ..._buildMethodPicker(context),
+                if (_selected == PaymentMethod.cash && due != null) ...[
+                  const SizedBox(height: Space.sm),
+                  _buildCashBox(context, due),
+                ],
               ],
               const SizedBox(height: Space.sm),
               CheckboxListTile(
@@ -248,12 +261,81 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
           onPressed: _confirm,
           icon: const Icon(Icons.check),
           label: Text(
-            due == null
+            _nothingDue
+                ? l10n.checkOutConfirmExit
+                : due == null
                 ? l10n.actionConfirm
                 : l10n.checkoutChargeAmount(Money.format(due)),
           ),
         ),
       ],
+    );
+  }
+
+  /// Paid amount and desk balance, so nobody collects the money twice.
+  Widget _buildOnlineBox(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final preview = widget.preview!;
+    final due = _due ?? 0;
+    return Container(
+      key: const Key('checkout_online_box'),
+      margin: const EdgeInsets.only(top: Space.sm),
+      padding: const EdgeInsets.all(Space.sm),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primaryContainer,
+        borderRadius: BorderRadius.circular(Radii.md),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.qr_code_2_outlined, color: theme.colorScheme.primary),
+              const SizedBox(width: Space.sm),
+              Expanded(
+                child: Text(
+                  l10n.checkOutPaidOnline,
+                  style: theme.textTheme.titleSmall,
+                ),
+              ),
+              Text(
+                Money.format(preview.onlinePaidAmount),
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: Space.xs),
+          if (_nothingDue)
+            Text(l10n.checkOutNoCashDue)
+          else ...[
+            Row(
+              children: [
+                Expanded(child: Text(l10n.checkOutBalanceDue)),
+                Text(
+                  Money.format(due),
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ],
+            ),
+            if (!preview.graceActive)
+              Padding(
+                padding: const EdgeInsets.only(top: Space.xs),
+                child: Text(
+                  l10n.checkOutGraceExpired,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.error,
+                  ),
+                ),
+              ),
+          ],
+        ],
+      ),
     );
   }
 

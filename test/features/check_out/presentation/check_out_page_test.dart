@@ -82,6 +82,7 @@ class _FakeCheckOutRepository implements CheckOutRepository {
       const OccupancySnapshot(totalOpen: 0, totalCapacity: 0);
 
   bool firstHasPass = false;
+  int firstOnlinePaid = 0;
 
   static const _plates = {1: 'ABC123', 2: 'XYZ999'};
 
@@ -104,6 +105,7 @@ class _FakeCheckOutRepository implements CheckOutRepository {
         hasPass: firstHasPass,
         photoCount: 2,
         leftKeys: true,
+        onlinePaidAmount: firstOnlinePaid,
       ),
       OpenSession(
         id: 2,
@@ -178,6 +180,7 @@ void main() {
     String? initialQuery,
     String? initialScan,
     bool firstHasPass = false,
+    int firstOnlinePaid = 0,
     Future<String?> Function(BuildContext context)? scanQr,
     UserRole? role,
     bool empty = false,
@@ -185,6 +188,7 @@ void main() {
   }) async {
     repository = _FakeCheckOutRepository()
       ..firstHasPass = firstHasPass
+      ..firstOnlinePaid = firstOnlinePaid
       ..empty = empty;
     occupancy = FakeCheckOutRepository();
     notifications = FakeNotificationRepository();
@@ -228,6 +232,14 @@ void main() {
     await tester.pumpAndSettle();
     await notificationsCubit.start(1);
   }
+
+  testWidgets('Success: a paid session shows the paid-online chip', (
+    tester,
+  ) async {
+    await pumpPage(tester, firstOnlinePaid: 6000);
+
+    expect(find.text('Pagado en línea'), findsOneWidget);
+  });
 
   testWidgets('Success: renders the open sessions list resolved to plates', (
     tester,

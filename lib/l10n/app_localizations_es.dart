@@ -4657,4 +4657,129 @@ class AppLocalizationsEs extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get paymentOnline => 'En línea';
+
+  @override
+  String get onlinePayTitle => 'Paga desde tu celular';
+
+  @override
+  String get onlinePayDue => 'Valor a pagar';
+
+  @override
+  String get onlinePayAction => 'Pagar en línea';
+
+  @override
+  String onlinePayHint(int minutes) {
+    return 'Tarjeta, PSE o Nequi. Después de pagar tienes $minutes minutos para salir.';
+  }
+
+  @override
+  String get onlinePayChecking => 'Confirmando tu pago…';
+
+  @override
+  String get onlinePayApproved =>
+      'Pago recibido. Muestra esta pantalla al salir.';
+
+  @override
+  String get onlinePayDeclined =>
+      'El pago no fue aprobado. Puedes intentarlo de nuevo.';
+
+  @override
+  String get onlinePayPending =>
+      'Aún no confirmamos tu pago. Si ya pagaste, espera un momento.';
+
+  @override
+  String onlinePayGraceUntil(String time) {
+    return 'Sal antes de las $time';
+  }
+
+  @override
+  String get onlinePayLate =>
+      'Si pasas de esa hora, pagas la diferencia en caja.';
+
+  @override
+  String get onlinePayNothingDue => 'No tienes nada por pagar.';
+
+  @override
+  String get checkOutPaidOnline => 'Pagado en línea';
+
+  @override
+  String get checkOutBalanceDue => 'Saldo en caja';
+
+  @override
+  String get checkOutNoCashDue => 'Sin cobro en caja: ya pagó en línea';
+
+  @override
+  String get checkOutGraceExpired =>
+      'Venció la tolerancia de salida; se cobra la diferencia';
+
+  @override
+  String get checkOutOnlineUnknownOffline =>
+      'Sin conexión no se puede confirmar si este vehículo pagó en línea';
+
+  @override
+  String get shiftOnlineSales => 'Pagos en línea';
+
+  @override
+  String get receiptPaidOnline => 'Pagado en línea';
+
+  @override
+  String get settingsOnlinePayments => 'Pagos en línea';
+
+  @override
+  String get settingsOnlinePaymentsHint =>
+      'Permite que el cliente pague desde el QR del recibo. Requiere credenciales Wompi en el servidor.';
+
+  @override
+  String get settingsOnlineGraceMinutes =>
+      'Minutos para salir después de pagar';
+
+  @override
+  String get settingsOnlineMinAmount => 'Valor mínimo en línea';
+
+  @override
+  String get settingsOnlineCopOnly => 'Solo disponible para sedes en COP';
+
+  @override
+  String get notifTypeOnlinePayment => 'Pago en línea';
+
+  @override
+  String get notifTypeOnlinePaymentReview => 'Pago en línea por revisar';
+
+  @override
+  String get reportOnlinePayments => 'Pagos en línea';
+
+  @override
+  String get reportOnlineReference => 'Referencia';
+
+  @override
+  String get errorOnlinePaymentsDisabled =>
+      'Los pagos en línea no están activos en esta sede';
+
+  @override
+  String get errorNothingToPay => 'No hay nada por pagar';
+
+  @override
+  String get errorAmountTooLow =>
+      'El valor es menor al mínimo para pagar en línea; paga en caja';
+
+  @override
+  String get errorPaymentsNotConfigured =>
+      'El pago en línea no está disponible por ahora; paga en caja';
+
+  @override
+  String get errorPaymentThrottled =>
+      'Demasiados intentos de pago. Intenta de nuevo en una hora o paga en caja';
+
+  @override
+  String get errorPaymentEventFailed =>
+      'No se pudo registrar el pago; intenta más tarde';
+
+  @override
+  String get errorInvalidLink => 'El enlace no es válido o está incompleto';
+
+  @override
+  String get checkOutConfirmExit => 'Confirmar salida';
 }

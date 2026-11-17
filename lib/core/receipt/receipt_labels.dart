@@ -23,6 +23,7 @@ class ReceiptLabels {
     required this.evidenceHint,
     required this.feedbackHint,
     required this.paymentMethod,
+    required this.onlinePaid,
   });
 
   final String checkInTitle;
@@ -51,8 +52,11 @@ class ReceiptLabels {
   /// Caption under the QR that opens the customer survey.
   final String feedbackHint;
 
+  /// "Paid online" row on a settled check-out that had a partial payment.
+  final String onlinePaid;
+
   /// Localizes a wire value (`cash`, `card`, `transfer`, `monthly_pass`,
-  /// `exempt`) plus the optional card type (`debit`/`credit`).
+  /// `exempt`, `online`) plus the optional card type (`debit`/`credit`).
   final String Function(String method, String? cardType) paymentMethod;
 
   /// Accent-free labels: thermal printers run on a CP437 code page.
@@ -76,6 +80,7 @@ class ReceiptLabels {
     scanHint: 'Presente este codigo al salir',
     evidenceHint: 'Evidencias del vehiculo (clave: placa)',
     feedbackHint: 'Califica tu visita',
+    onlinePaid: 'Pagado en linea',
     paymentMethod: _paymentEs,
   );
 
@@ -99,6 +104,7 @@ class ReceiptLabels {
     scanHint: 'Show this code at the exit',
     evidenceHint: 'Vehicle evidence (key: plate)',
     feedbackHint: 'Rate your visit',
+    onlinePaid: 'Paid online',
     paymentMethod: _paymentEn,
   );
 
@@ -114,6 +120,7 @@ class ReceiptLabels {
     'transfer' => 'Transferencia',
     'monthly_pass' => 'Mensualidad',
     'exempt' => 'Exento',
+    'online' => 'En linea',
     _ => method,
   };
 
@@ -125,6 +132,7 @@ class ReceiptLabels {
     'transfer' => 'Transfer',
     'monthly_pass' => 'Monthly pass',
     'exempt' => 'Exempt',
+    'online' => 'Online',
     _ => method,
   };
 }

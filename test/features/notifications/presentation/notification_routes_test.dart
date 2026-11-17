@@ -18,6 +18,17 @@ void main() {
     expect(routeForNotification(_n('monthly_pass_renewed')), '/monthly-passes');
   });
 
+  test('Success: online payment alerts open the plate history', () {
+    expect(
+      routeForNotification(_n('online_payment', {'plate': 'ABC123'})),
+      '/history?plate=ABC123',
+    );
+    expect(
+      routeForNotification(_n('online_payment_review', {'plate': 'ABC123'})),
+      '/history?plate=ABC123',
+    );
+  });
+
   test('Success: vehicle events open the history for the plate', () {
     expect(
       routeForNotification(_n('check_out', {'plate': 'ABC 123'})),

@@ -112,6 +112,12 @@ class SystemDialogReceiptPrinter implements ReceiptPrinter {
             labels.payment,
             labels.paymentMethod(data.paymentMethod!, data.cardType),
           ),
+        if (data.isCheckOut && !data.pendingSync && data.onlinePaidAmount > 0)
+          _row(
+            context,
+            labels.onlinePaid,
+            CopFormatter.format(data.onlinePaidAmount),
+          ),
         if (data.isCheckOut && !data.pendingSync && data.cashReceived != null)
           _row(
             context,

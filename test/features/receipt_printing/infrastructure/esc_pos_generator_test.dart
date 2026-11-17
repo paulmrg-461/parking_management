@@ -173,4 +173,30 @@ void main() {
 
     expect(_contains(bytes, _qrPrint), isFalse);
   });
+
+  test('Success: a paid-online receipt prints the paid row in ASCII', () {
+    final data = ReceiptData(
+      kind: ReceiptKind.checkOut,
+      plate: 'ABC123',
+      entryTime: DateTime(2026, 1, 1, 8, 30),
+      exitTime: DateTime(2026, 1, 1, 11, 45),
+      amountCharged: 12500,
+      paymentMethod: 'online',
+      onlinePaidAmount: 12500,
+      ticketNumber: 'TCK-000042',
+    );
+    for (final labels in [ReceiptLabels.spanish, ReceiptLabels.english]) {
+      final text = _decode(
+        const EscPosGenerator().build(data, _configured, labels),
+      );
+      expect(text, contains(labels.onlinePaid));
+      expect(text, contains(labels.paymentMethod('online', null)));
+      // Thermal printers run on CP437: the label must stay ASCII.
+      expect(labels.onlinePaid.codeUnits.every((unit) => unit < 128), isTrue);
+      expect(
+        labels.paymentMethod('online', null).codeUnits.every((unit) => unit < 128),
+        isTrue,
+      );
+    }
+  });
 }

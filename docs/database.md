@@ -43,6 +43,10 @@ erDiagram
 
   monthly_passes ||--|| monthly_pass_payments : "charged once"
   monthly_passes ||--o| monthly_passes : "renews"
+
+  parking_lots ||--o{ payment_intents : "bills"
+  parking_sessions ||--o{ payment_intents : "paid by"
+  payment_intents ||--o{ payment_events : "confirmed by"
 ```
 
 ## 2. Tables
@@ -66,7 +70,9 @@ erDiagram
 | `category_reservations` | Capacity hold for a plate (`active`/`used`/`cancelled`/`expired`), with the public customer name/phone and `source` when created from `/reserve`. | yes |
 | `parking_spots` | Physical bay per site: code, group (`car`/`moto`/`heavy`), grid cell and `active`/`out_of_service`; unique code and cell per lot. | yes |
 | `parking_spot_events` | Maintenance history of a bay: status transition, optional reason, actor and timestamp; written by `save_parking_spot`, lot-scoped RLS. | yes |
-| `parking_settings` (`car_capacity`, `moto_capacity`, `key_capacity`) | Per-site branding (name, address, schedule, contacts, police quadrant, logo version/path) + `business_timezone`, `overstay_hours`, `lost_ticket_fee`, `evidence_retention_days`. | yes |
+| `parking_settings` (`car_capacity`, `moto_capacity`, `key_capacity`) | Per-site branding (name, address, schedule, contacts, police quadrant, logo version/path) + `business_timezone`, `overstay_hours`, `lost_ticket_fee`, `evidence_retention_days`, online-payment switch/window/minimum. | yes |
+| `payment_intents` | Frozen amount for a gateway checkout: `reference` (random `PM-…`), `amount`, `currency` (COP only), `gateway` (`wompi`), `status` (`pending`/`approved`/`declined`/`voided`/`error`/`expired`), transaction id/method, `expires_at`. Written only by the service RPCs. | yes |
+| `payment_events` | Idempotent webhook log: `unique (gateway, gateway_transaction_id, gateway_status)` plus `outcome` (`applied`/`ignored`/`unknown_reference`/`mismatch`/`late_closed`) and the raw payload. Service role only (RLS on, no policy). | via intent |
 | `notifications` | Per-user inbox rows (type, title, body, data, read/pushed state, dedupe key). | optional |
 | `device_tokens` | FCM tokens per user/device. | no |
 | `web_push_subscriptions` | Browser push endpoints (endpoint + p256dh + auth). | no |
@@ -300,6 +306,19 @@ days).
 `purge_client_error_reports`, `report_client_error`,
 `handle_auth_user` (trigger), `add_default_lot_member` (trigger).
 
+**Online payments (`0112`–`0114`)**
+`session_settlement(session, at)` (internal) → `gross`, `paid`, `due`,
+`grace_active`, `grace_until`, `enabled`, `min_amount`;
+`create_session_payment_intent(session, plate)` (service role; plate-keyed,
+5/hour);
+`apply_payment_event(gateway, event)` (service role; idempotent);
+`settle_payment_intent(intent)` (internal; the only `kind` switch);
+`payment_intent_status(reference, plate)` (anon; `null` on a mismatch);
+`expire_payment_intents()`; `list_reconcilable_payment_intents(minutes)`
+(service role); `report_online_payments(start, end)` (lot admin);
+`online_settlement_amounts(gross, paid, paid_at, exit, grace)` is the pure
+grace-window rule (internal, immutable).
+
 ## 4. Access control (RLS)
 
 | Table | Read | Write |
@@ -315,6 +334,8 @@ days).
 | `parking_settings` (`car_capacity`, `moto_capacity`, `key_capacity`) | active lot; anonymous only the first lot (login branding) | lot admins |
 | `whatsapp_messages` | admins | `enqueue_whatsapp_message` + the dispatcher |
 | `session_feedback` | active lot | only the public RPCs (no client write grant) |
+| `payment_intents` | lot admins of the active lot | service RPCs only (Edge Functions) |
+| `payment_events` | nobody (RLS on, no policy, no grant) | `apply_payment_event` / service role |
 | `notifications` | own rows, active lot (or global) | RPCs/triggers |
 | `audit_log` | platform admins | triggers and the `admin-users` Edge Function |
 | `device_tokens`, `web_push_subscriptions` | own rows | RPCs |
@@ -403,6 +424,16 @@ operator pick cash/card/transfer and retries). `check_out_preview` returns:
 **Exit time.** `p_client_exit_time` must be within 12 h of the server clock
 (`StaleExitTimeError`) and not later than now + 5 min nor before entry
 (`InvalidExitTimeError`). `closed_recorded_at` stores the server time.
+
+**Online payments.** `online_settlement_amounts(gross, paid, paid_at, exit,
+grace)`: inside the window (`exit <= paid_at + grace`) the charge is exactly
+`paid` and the desk due is 0; outside it the charge is `greatest(gross, paid)`
+and the desk collects `charge - paid`. `check_out` stores
+`amount_charged = online_paid_amount + desk_due` and sets `payment_method =
+'online'` when nothing is left to collect (the caller can never send
+`online`). `shift_totals` nets the online part out of the desk methods and adds
+`online_sales`; `expected_cash` never includes it. `report_online_payments`
+(lot admin) lists approved/voided intents of a business-date window.
 
 **Shifts.** Sales, cash movements and cash pass payments attach only to the
 actor's open shift (`closed_at is null`), locked `FOR SHARE`; `close_shift`

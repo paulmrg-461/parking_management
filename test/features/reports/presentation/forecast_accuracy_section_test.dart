@@ -7,6 +7,7 @@ import 'package:parking_management/features/reports/presentation/widgets/forecas
 
 import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/features/reports/domain/entities/hourly_traffic.dart';
+import 'package:parking_management/features/reports/domain/entities/online_payment_report.dart';
 import 'package:parking_management/features/reports/domain/entities/occupancy_report.dart';
 import 'package:parking_management/features/reports/domain/entities/period_comparison.dart';
 import 'package:parking_management/features/reports/domain/entities/reservation_report.dart';
@@ -63,6 +64,11 @@ class FakeReportRepository implements ReportRepository {
     required DateTime startDate,
     required DateTime endDate,
   }) async => HourlyTraffic.empty;
+  @override
+  Future<OnlinePaymentReport> getOnlinePayments({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async => OnlinePaymentReport.empty;
 
   @override
   Future<PeriodComparison> getPeriodComparison({int months = 6}) async =>

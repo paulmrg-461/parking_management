@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/network/supabase_error_mapper.dart';
 import '../domain/entities/hourly_traffic.dart';
+import '../domain/entities/online_payment_report.dart';
 import '../domain/entities/occupancy_report.dart';
 import '../domain/entities/forecast_backtest.dart';
 import '../domain/entities/period_comparison.dart';
@@ -35,6 +36,12 @@ abstract class ReportRemoteDataSource {
   });
 
   Future<HourlyTraffic> getHourlyTraffic({
+    required DateTime startDate,
+    required DateTime endDate,
+  });
+
+  /// Approved (and voided) online payments of the window.
+  Future<OnlinePaymentReport> getOnlinePayments({
     required DateTime startDate,
     required DateTime endDate,
   });
@@ -109,6 +116,28 @@ class SupabaseReportRemoteDataSource implements ReportRemoteDataSource {
       return ReservationReport.fromJson(
         Map<String, dynamic>.from(result as Map),
       );
+    } catch (error) {
+      throw mapSupabaseError(error);
+    }
+  }
+
+  @override
+  Future<OnlinePaymentReport> getOnlinePayments({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    try {
+      final result = await _client.rpc(
+        'report_online_payments',
+        params: {
+          'p_start_date': _formatDate(startDate),
+          'p_end_date': _formatDate(endDate),
+        },
+      );
+      if (result is! Map) {
+        return OnlinePaymentReport.empty;
+      }
+      return OnlinePaymentReport.fromJson(Map<String, dynamic>.from(result));
     } catch (error) {
       throw mapSupabaseError(error);
     }
