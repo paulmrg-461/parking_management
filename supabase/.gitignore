@@ -32,3 +32,15 @@ test.http
 docker-compose.override.yml
 .supabase-version
 backups
+!volumes/functions/_shared/
+volumes/functions/_shared/**
+!volumes/functions/_shared/*.ts
+!volumes/functions/payment-intent/
+volumes/functions/payment-intent/**
+!volumes/functions/payment-intent/index.ts
+!volumes/functions/payment-webhook/
+volumes/functions/payment-webhook/**
+!volumes/functions/payment-webhook/index.ts
+!volumes/functions/payments-reconcile/
+volumes/functions/payments-reconcile/**
+!volumes/functions/payments-reconcile/index.ts

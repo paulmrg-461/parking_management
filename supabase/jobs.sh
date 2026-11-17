@@ -52,6 +52,10 @@ while true; do
   run purge_audit_log
   run purge_whatsapp_messages
   run purge_cash_anomalies
+  # Online payments: pending -> expired, then ask the gateway for anything the
+  # webhook may have missed (both are no-ops without WOMPI_* credentials).
+  run expire_payment_intents
+  dispatch "${API_URL}/functions/v1/payments-reconcile"
   # Both are no-ops until their credentials are configured.
   dispatch "${API_URL}/functions/v1/push-dispatch"
   dispatch "${API_URL}/functions/v1/whatsapp-dispatch"

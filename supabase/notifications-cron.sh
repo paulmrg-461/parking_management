@@ -53,6 +53,11 @@ docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
   "select public.detect_cash_anomalies();" >/dev/null
 docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
   "select public.purge_cash_anomalies(365);" >/dev/null
+# Online payments: expire stale intents, then reconcile with the gateway.
+docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
+  "select public.expire_payment_intents();" >/dev/null
+curl -fsS -X POST "${API_URL:-http://localhost:8000}/functions/v1/payments-reconcile" \
+  -H "Authorization: Bearer ${SERVICE_KEY}" >/dev/null
 
 curl -fsS -X POST "${API_URL:-http://localhost:8000}/functions/v1/push-dispatch" \
   -H "Authorization: Bearer ${SERVICE_KEY}" >/dev/null
