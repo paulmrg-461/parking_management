@@ -8014,4 +8014,1208 @@ end $$;
 
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
 
+-- ---------------------------------------------------------------------------
+-- online-payments: schema
+-- ---------------------------------------------------------------------------
+insert into public.vehicles (plate, category_id)
+values ('PAY001', (select id from public.categories where lot_id = 1 order by id limit 1)),
+       ('PAY002', (select id from public.categories where lot_id = 2 order by id limit 1));
+
+insert into public.parking_sessions
+    (vehicle_id, operator_id, lot_id, entry_time, status)
+select v.id, 1, 1, now() - interval '2 hours', 'open'
+  from public.vehicles v where v.plate = 'PAY001';
+insert into public.parking_sessions
+    (vehicle_id, operator_id, lot_id, entry_time, exit_time, status, amount_charged)
+select v.id, 1, 2, now() - interval '4 hours', now() - interval '1 hour', 'closed', 5000
+  from public.vehicles v where v.plate = 'PAY002';
+
+do $$
+begin
+    perform set_config('app.pay_open', (
+        select s.id::text from public.parking_sessions s
+          join public.vehicles v on v.id = s.vehicle_id
+         where v.plate = 'PAY001'
+    ), true);
+    perform set_config('app.pay_lot2_closed', (
+        select s.id::text from public.parking_sessions s
+          join public.vehicles v on v.id = s.vehicle_id
+         where v.plate = 'PAY002'
+    ), true);
+end $$;
+
+-- online-payments: schema defaults
+do $$
+declare
+    settings public.parking_settings%rowtype;
+    session public.parking_sessions%rowtype;
+begin
+    select * into settings from public.parking_settings where lot_id = 1;
+    if settings.online_payments_enabled is not false
+       or settings.online_payment_grace_minutes <> 15
+       or settings.online_payment_min_amount <> 1500 then
+        raise exception 'the online payment settings defaults are wrong';
+    end if;
+
+    select * into session from public.parking_sessions
+     where id = current_setting('app.pay_open')::integer;
+    if session.online_paid_amount <> 0 or session.online_paid_at is not null then
+        raise exception 'the session online columns do not default to unpaid';
+    end if;
+end $$;
+
+-- online-payments: online is a stored payment method
+do $$
+declare
+    closed bigint := current_setting('app.pay_lot2_closed')::bigint;
+begin
+    update public.parking_sessions
+       set payment_method = 'online'
+     where id = closed;
+    if (select payment_method from public.parking_sessions where id = closed) <> 'online' then
+        raise exception 'online is not accepted as a stored payment method';
+    end if;
+    update public.parking_sessions
+       set payment_method = 'card'
+     where id = closed;
+end $$;
+
+-- online-payments: settings constraints
+do $$
+begin
+    begin
+        update public.parking_settings
+           set online_payment_grace_minutes = 4
+         where lot_id = 1;
+        raise exception 'a 4-minute grace window was accepted';
+    exception when check_violation then null;
+    end;
+    begin
+        update public.parking_settings
+           set online_payment_grace_minutes = 121
+         where lot_id = 1;
+        raise exception 'a 121-minute grace window was accepted';
+    exception when check_violation then null;
+    end;
+
+    update public.parking_settings set currency = 'USD' where lot_id = 2;
+    begin
+        update public.parking_settings
+           set online_payments_enabled = true
+         where lot_id = 2;
+        raise exception 'online payments were enabled on a USD lot';
+    exception when check_violation then null;
+    end;
+    update public.parking_settings set currency = 'COP' where lot_id = 2;
+end $$;
+
+-- online-payments: unknown intent status rejected
+do $$
+begin
+    begin
+        insert into public.payment_intents (lot_id, session_id, reference, amount, status, expires_at)
+        values (1, current_setting('app.pay_open')::integer, 'PM-BADSTATUS', 6000,
+                'paid', now() + interval '30 minutes');
+        raise exception 'an unknown intent status was accepted';
+    exception when check_violation then null;
+    end;
+end $$;
+
+-- online-payments: RLS enabled on payment_intents and payment_events
+do $$
+begin
+    if not (select relrowsecurity from pg_class where oid = 'public.payment_intents'::regclass)
+       or not (select relrowsecurity from pg_class where oid = 'public.payment_events'::regclass) then
+        raise exception 'RLS is not enabled on the payment tables';
+    end if;
+end $$;
+
+-- online-payments: operator cannot select payment_intents
+insert into public.payment_intents (lot_id, session_id, reference, amount, expires_at)
+values (1, current_setting('app.pay_open')::integer, 'PM-OPERATOR', 6000,
+        now() + interval '30 minutes');
+
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    if (select count(*) from public.payment_intents) <> 0 then
+        raise exception 'an operator read the payment intents';
+    end if;
+end $$;
+reset role;
+
+-- online-payments: admin of lot 1 cannot read lot 2 intents
+insert into public.payment_intents (lot_id, session_id, reference, amount, expires_at)
+values (2, current_setting('app.pay_lot2_closed')::integer, 'PM-LOT2', 4000,
+        now() + interval '30 minutes');
+
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+begin
+    if exists (select 1 from public.payment_intents where reference = 'PM-LOT2') then
+        raise exception 'a lot 1 admin read a lot 2 intent';
+    end if;
+    if not exists (select 1 from public.payment_intents where reference = 'PM-OPERATOR') then
+        raise exception 'a lot 1 admin cannot read its own intents';
+    end if;
+end $$;
+reset role;
+
+-- online-payments: authenticated cannot select payment_events
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+begin
+    begin
+        perform count(*) from public.payment_events;
+        raise exception 'an authenticated user read the payment events';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
+-- online-payments: settlement inside grace charges what was paid
+do $$
+declare
+    paid_at timestamptz := now() - interval '5 minutes';
+    result jsonb := public.online_settlement_amounts(
+        9000, 6000, paid_at, paid_at + interval '5 minutes', 15
+    );
+begin
+    if (result ->> 'charged')::integer <> 6000 then
+        raise exception 'inside the window the charge is not the paid amount: %', result;
+    end if;
+    if (result ->> 'desk_due')::integer <> 0 then
+        raise exception 'inside the window the desk still charges: %', result;
+    end if;
+    if (result ->> 'grace_active')::boolean is not true then
+        raise exception 'inside the window grace_active is false: %', result;
+    end if;
+    if (result ->> 'grace_until')::timestamptz <> paid_at + interval '15 minutes' then
+        raise exception 'the grace deadline is wrong: %', result;
+    end if;
+end $$;
+
+-- online-payments: settlement outside grace charges max(gross, paid)
+do $$
+declare
+    paid_at timestamptz := now() - interval '40 minutes';
+    result jsonb := public.online_settlement_amounts(
+        20000, 6000, paid_at, paid_at + interval '20 minutes', 15
+    );
+begin
+    if (result ->> 'charged')::integer <> 20000 then
+        raise exception 'outside the window the charge is not the fare: %', result;
+    end if;
+    if (result ->> 'desk_due')::integer <> 14000 then
+        raise exception 'outside the window the desk due is not the difference: %', result;
+    end if;
+    if (result ->> 'grace_active')::boolean is not false then
+        raise exception 'outside the window grace_active is true: %', result;
+    end if;
+end $$;
+
+-- online-payments: settlement nothing paid keeps gross
+do $$
+declare
+    result jsonb := public.online_settlement_amounts(9000, 0, null, now(), 15);
+begin
+    if (result ->> 'charged')::integer <> 9000
+       or (result ->> 'desk_due')::integer <> 9000
+       or (result ->> 'grace_active')::boolean is not false
+       or (result -> 'grace_until') <> 'null'::jsonb then
+        raise exception 'an unpaid session does not keep the gross fare: %', result;
+    end if;
+end $$;
+
+-- online-payments: settlement is not callable by api roles
+set local role authenticated;
+do $$
+begin
+    begin
+        perform public.online_settlement_amounts(9000, 6000, now(), now(), 15);
+        raise exception 'an authenticated user called the settlement rule';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- ---------------------------------------------------------------------------
+-- online-payments: rpcs
+-- ---------------------------------------------------------------------------
+update public.parking_settings
+   set online_payments_enabled = true, online_payment_min_amount = 1500,
+       online_payment_grace_minutes = 15
+ where lot_id = 1;
+
+insert into public.vehicles (plate, category_id) values
+    ('PAY010', 2), ('PAY011', 2), ('PAY012', 2), ('PAY013', 2),
+    ('PAY014', 2), ('PAY015', 2), ('PAY016', 2), ('PAY017', 2),
+    ('PAY018', 2), ('PAY019', 2);
+
+insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+select v.id, 1, 1, now() - interval '2 hours', 'open'
+  from public.vehicles v
+ where v.plate like 'PAY01%' and v.plate <> 'PAY014';
+
+insert into public.parking_sessions
+    (vehicle_id, operator_id, lot_id, entry_time, exit_time, status, amount_charged)
+select v.id, 1, 1, now() - interval '3 hours', now() - interval '1 hour', 'closed', 10000
+  from public.vehicles v where v.plate = 'PAY014';
+
+insert into public.monthly_passes (vehicle_id, lot_id, start_date, end_date, amount, active)
+select v.id, 1, current_date - 1, current_date + 29, 80000, true
+  from public.vehicles v where v.plate = 'PAY015';
+
+do $$
+declare
+    plates text[] := array['PAY010','PAY011','PAY012','PAY013','PAY015',
+                          'PAY016','PAY017','PAY018','PAY019'];
+    plate_value text;
+begin
+    foreach plate_value in array plates loop
+        perform set_config('app.online_' || plate_value, (
+            select s.id::text from public.parking_sessions s
+              join public.vehicles v on v.id = s.vehicle_id
+             where v.plate = plate_value
+        ), true);
+    end loop;
+    perform set_config('app.online_closed', (
+        select s.id::text from public.parking_sessions s
+          join public.vehicles v on v.id = s.vehicle_id
+         where v.plate = 'PAY014'
+    ), true);
+end $$;
+
+-- online-payments: intent creates a pending intent with the server amount
+do $$
+declare
+    s bigint := current_setting('app.online_PAY010')::bigint;
+    result jsonb := public.create_session_payment_intent(
+        s, ' pay 010 '
+    );
+    stored public.payment_intents%rowtype;
+begin
+    if result ->> 'status' <> 'pending' then
+        raise exception 'the intent is not pending: %', result;
+    end if;
+    if (result ->> 'amount')::integer
+       <> (public.session_settlement(s::integer) ->> 'gross')::integer then
+        raise exception 'the intent amount is not the server fare: %', result;
+    end if;
+    if result ->> 'currency' <> 'COP'
+       or result ->> 'reference' not like 'PM-%'
+       or length(result ->> 'reference') <> 15 then
+        raise exception 'the intent reference is wrong: %', result;
+    end if;
+    if (result ->> 'grace_minutes')::integer <> 15 then
+        raise exception 'the intent does not carry the grace window: %', result;
+    end if;
+
+    select * into stored from public.payment_intents where id = (result ->> 'intent_id')::bigint;
+    if stored.lot_id <> 1 or stored.session_id <> s or stored.expires_at <= now() then
+        raise exception 'the stored intent is wrong: %', stored;
+    end if;
+    perform set_config('app.online_ref1', stored.reference, true);
+    perform set_config('app.online_intent1', stored.id::text, true);
+    perform set_config('app.online_amount1', stored.amount::text, true);
+end $$;
+
+-- online-payments: intent reuses the pending intent with the same amount
+do $$
+declare
+    s bigint := current_setting('app.online_PAY010')::bigint;
+    first_id bigint := current_setting('app.online_intent1')::bigint;
+    second jsonb := public.create_session_payment_intent(s, 'PAY010');
+begin
+    if (second ->> 'intent_id')::bigint <> first_id then
+        raise exception 'a second pending intent was created: %', second;
+    end if;
+    if (select count(*) from public.payment_intents where session_id = s) <> 1 then
+        raise exception 'the reuse left more than one intent';
+    end if;
+end $$;
+
+-- online-payments: event APPROVED stamps online_paid_amount and online_paid_at
+do $$
+declare
+    s bigint := current_setting('app.online_PAY010')::bigint;
+    paid integer := current_setting('app.online_amount1')::integer;
+    reference_value text := current_setting('app.online_ref1');
+    result jsonb := public.apply_payment_event('wompi', jsonb_build_object(
+        'transaction_id', 'TX-PAY-1',
+        'reference', reference_value,
+        'status', 'APPROVED',
+        'amount', paid,
+        'currency', 'COP',
+        'method', 'CARD',
+        'occurred_at', now(),
+        'raw', jsonb_build_object('source', 'test')
+    ));
+    session public.parking_sessions%rowtype;
+begin
+    if (result ->> 'applied')::boolean is not true
+       or result ->> 'outcome' <> 'applied' then
+        raise exception 'the approved event did not apply: %', result;
+    end if;
+    select * into session from public.parking_sessions where id = s;
+    if session.online_paid_amount <> paid or session.online_paid_at is null then
+        raise exception 'the payment was not stored on the session: %', session;
+    end if;
+    if (select status from public.payment_intents where id = (result ->> 'intent_id')::bigint) <> 'approved' then
+        raise exception 'the intent is not approved';
+    end if;
+    if (select gateway_method from public.payment_intents where id = (result ->> 'intent_id')::bigint) <> 'CARD' then
+        raise exception 'the gateway method was not stored';
+    end if;
+end $$;
+
+-- online-payments: event duplicate event is a no-op
+do $$
+declare
+    s bigint := current_setting('app.online_PAY010')::bigint;
+    reference_value text := current_setting('app.online_ref1');
+    result jsonb := public.apply_payment_event('wompi', jsonb_build_object(
+        'transaction_id', 'TX-PAY-1',
+        'reference', reference_value,
+        'status', 'APPROVED',
+        'amount', 10000,
+        'currency', 'COP',
+        'method', 'CARD'
+    ));
+begin
+    if (result ->> 'duplicate')::boolean is not true
+       or (result ->> 'applied')::boolean is not false then
+        raise exception 'a duplicate event was not ignored: %', result;
+    end if;
+    if (select online_paid_amount from public.parking_sessions where id = s)
+       <> current_setting('app.online_amount1')::integer then
+        raise exception 'a duplicate event paid twice';
+    end if;
+    if (select count(*) from public.payment_events
+         where gateway_transaction_id = 'TX-PAY-1') <> 1 then
+        raise exception 'a duplicate event was stored twice';
+    end if;
+end $$;
+
+-- online-payments: event notifies lot members once
+do $$
+declare
+    intent_id bigint := current_setting('app.online_intent1')::bigint;
+    members integer;
+    notified integer;
+begin
+    select count(*) into members
+      from public.lot_members lm join public.users u on u.id = lm.user_id
+     where lm.lot_id = 1 and u.is_active;
+    select count(*) into notified
+      from public.notifications n
+     where n.type = 'online_payment'
+       and (n.data ->> 'intent_id')::bigint = intent_id;
+    if notified <> members then
+        raise exception 'the payment notified % of % members', notified, members;
+    end if;
+    perform public.apply_payment_event('wompi', jsonb_build_object(
+        'transaction_id', 'TX-PAY-1',
+        'reference', current_setting('app.online_ref1'),
+        'status', 'APPROVED',
+        'amount', current_setting('app.online_amount1')::integer,
+        'currency', 'COP'
+    ));
+    if (select count(*) from public.notifications n
+         where n.type = 'online_payment'
+           and (n.data ->> 'intent_id')::bigint = intent_id) <> members then
+        raise exception 'a duplicate event notified twice';
+    end if;
+end $$;
+
+-- online-payments: status returns approved with the right plate
+set local role anon;
+do $$
+declare
+    intent_id bigint := current_setting('app.online_intent1')::bigint;
+    found jsonb := public.payment_intent_status(
+        current_setting('app.online_ref1'), 'pay 010'
+    );
+begin
+    if found is null
+       or found ->> 'status' <> 'approved'
+       or (found ->> 'amount')::integer <> current_setting('app.online_amount1')::integer
+       or (found ->> 'paid_total')::integer <> current_setting('app.online_amount1')::integer
+       or found ->> 'grace_until' is null then
+        raise exception 'the public status is wrong: %', found;
+    end if;
+    if found ? 'plate' or found ? 'reference' then
+        raise exception 'the public status leaks data: %', found;
+    end if;
+    if public.payment_intent_status(current_setting('app.online_ref1'), 'PAY999') is not null then
+        raise exception 'a wrong plate returned the status';
+    end if;
+    if public.payment_intent_status('PM-NOT-A-REFERENCE', 'PAY010') is not null then
+        raise exception 'an unknown reference returned the status';
+    end if;
+end $$;
+reset role;
+
+-- online-payments: event approved after expired still applies
+do $$
+declare
+    s bigint := current_setting('app.online_PAY011')::bigint;
+    created jsonb := public.create_session_payment_intent(s, 'PAY011');
+    result jsonb;
+begin
+    update public.payment_intents
+       set status = 'expired', expires_at = now() - interval '1 minute'
+     where id = (created ->> 'intent_id')::bigint;
+    result := public.apply_payment_event('wompi', jsonb_build_object(
+        'transaction_id', 'TX-PAY-2',
+        'reference', created ->> 'reference',
+        'status', 'APPROVED',
+        'amount', (created ->> 'amount')::integer,
+        'currency', 'COP',
+        'method', 'NEQUI'
+    ));
+    if (result ->> 'applied')::boolean is not true then
+        raise exception 'an approval after expiry was dropped: %', result;
+    end if;
+    perform set_config('app.online_amount2', created ->> 'amount', true);
+    if (select online_paid_amount from public.parking_sessions where id = s)
+       <> current_setting('app.online_amount2')::integer then
+        raise exception 'the late approval did not pay the session';
+    end if;
+end $$;
+
+-- online-payments: expire marks old pending intents expired
+do $$
+declare
+    s bigint := current_setting('app.online_PAY012')::bigint;
+    created jsonb := public.create_session_payment_intent(s, 'PAY012');
+    expired integer;
+begin
+    update public.payment_intents
+       set created_at = now() - interval '2 hours',
+           expires_at = now() - interval '90 minutes'
+     where id = (created ->> 'intent_id')::bigint;
+    expired := public.expire_payment_intents();
+    if expired < 1 then
+        raise exception 'the expiry job expired nothing';
+    end if;
+    if (select status from public.payment_intents where id = (created ->> 'intent_id')::bigint) <> 'expired' then
+        raise exception 'the stale intent is not expired';
+    end if;
+end $$;
+
+-- online-payments: intent unknown session
+do $$
+begin
+    begin
+        perform public.create_session_payment_intent(999999, 'PAY010');
+        raise exception 'an unknown session created an intent';
+    exception when others then
+        if sqlerrm not like '%SessionNotFoundError%' then raise; end if;
+    end;
+    begin
+        perform public.create_session_payment_intent(
+            current_setting('app.online_PAY010')::bigint, 'PAY999'
+        );
+        raise exception 'a wrong plate created an intent';
+    exception when others then
+        if sqlerrm not like '%SessionNotFoundError%' then raise; end if;
+    end;
+end $$;
+
+-- online-payments: intent closed session
+do $$
+begin
+    begin
+        perform public.create_session_payment_intent(
+            current_setting('app.online_closed')::bigint, 'PAY014'
+        );
+        raise exception 'a closed session created an intent';
+    exception when others then
+        if sqlerrm not like '%SessionAlreadyClosedError%' then raise; end if;
+    end;
+end $$;
+
+-- online-payments: intent switch off and currency guard
+do $$
+begin
+    update public.parking_settings set online_payments_enabled = false where lot_id = 1;
+    begin
+        perform public.create_session_payment_intent(
+            current_setting('app.online_PAY010')::bigint, 'PAY010'
+        );
+        raise exception 'a disabled lot created an intent';
+    exception when others then
+        if sqlerrm not like '%OnlinePaymentsDisabledError%' then raise; end if;
+    end;
+    update public.parking_settings set online_payments_enabled = true where lot_id = 1;
+end $$;
+
+-- online-payments: intent nothing due for a pass holder
+do $$
+begin
+    begin
+        perform public.create_session_payment_intent(
+            current_setting('app.online_PAY015')::bigint, 'PAY015'
+        );
+        raise exception 'a pass holder created an intent';
+    exception when others then
+        if sqlerrm not like '%NothingToPayError%' then raise; end if;
+    end;
+end $$;
+
+-- online-payments: intent below the minimum
+do $$
+begin
+    update public.parking_settings set online_payment_min_amount = 20000 where lot_id = 1;
+    begin
+        perform public.create_session_payment_intent(
+            current_setting('app.online_PAY013')::bigint, 'PAY013'
+        );
+        raise exception 'an amount below the minimum created an intent';
+    exception when others then
+        if sqlerrm not like '%AmountTooLowError%' then raise; end if;
+    end;
+    update public.parking_settings set online_payment_min_amount = 1500 where lot_id = 1;
+end $$;
+
+-- online-payments: intent throttles the sixth intent in an hour
+do $$
+declare
+    s bigint := current_setting('app.online_PAY016')::bigint;
+    idx integer;
+begin
+    for idx in 1 .. 5 loop
+        insert into public.payment_intents (
+            lot_id, session_id, reference, amount, expires_at, status
+        ) values (
+            1, s, 'PM-THROTTLE' || idx, 10000, now() - interval '1 minute', 'expired'
+        );
+    end loop;
+    begin
+        perform public.create_session_payment_intent(s, 'PAY016');
+        raise exception 'the sixth intent in an hour was accepted';
+    exception when others then
+        if sqlerrm not like '%PaymentThrottledError%' then raise; end if;
+    end;
+end $$;
+
+-- online-payments: event amount mismatch records mismatch and does not pay
+do $$
+declare
+    s bigint := current_setting('app.online_PAY017')::bigint;
+    created jsonb := public.create_session_payment_intent(s, 'PAY017');
+    result jsonb;
+begin
+    result := public.apply_payment_event('wompi', jsonb_build_object(
+        'transaction_id', 'TX-PAY-MISMATCH',
+        'reference', created ->> 'reference',
+        'status', 'APPROVED',
+        'amount', 9999,
+        'currency', 'COP'
+    ));
+    if (result ->> 'applied')::boolean is not false
+       or result ->> 'outcome' <> 'mismatch' then
+        raise exception 'a mismatched amount was applied: %', result;
+    end if;
+    if (select online_paid_amount from public.parking_sessions where id = s) <> 0 then
+        raise exception 'a mismatched amount paid the session';
+    end if;
+    if (select outcome from public.payment_events
+         where gateway_transaction_id = 'TX-PAY-MISMATCH') <> 'mismatch' then
+        raise exception 'the mismatch was not recorded';
+    end if;
+    if not exists (
+        select 1 from public.notifications n
+         where n.type = 'online_payment_review'
+           and (n.data ->> 'intent_id')::bigint = (created ->> 'intent_id')::bigint
+    ) then
+        raise exception 'the mismatch did not notify the admins';
+    end if;
+end $$;
+
+-- online-payments: event unknown reference
+do $$
+declare
+    result jsonb := public.apply_payment_event('wompi', jsonb_build_object(
+        'transaction_id', 'TX-PAY-UNKNOWN',
+        'reference', 'PM-000000000000',
+        'status', 'APPROVED',
+        'amount', 5000,
+        'currency', 'COP'
+    ));
+begin
+    if (result ->> 'applied')::boolean is not false
+       or result ->> 'outcome' <> 'unknown_reference' then
+        raise exception 'an unknown reference was applied: %', result;
+    end if;
+    if (select outcome from public.payment_events
+         where gateway_transaction_id = 'TX-PAY-UNKNOWN') <> 'unknown_reference' then
+        raise exception 'the unknown reference was not recorded';
+    end if;
+end $$;
+
+-- online-payments: event DECLINED never downgrades an approved intent
+do $$
+declare
+    intent_id bigint := current_setting('app.online_intent1')::bigint;
+    result jsonb := public.apply_payment_event('wompi', jsonb_build_object(
+        'transaction_id', 'TX-PAY-DECLINED',
+        'reference', current_setting('app.online_ref1'),
+        'status', 'DECLINED',
+        'amount', current_setting('app.online_amount1')::integer,
+        'currency', 'COP'
+    ));
+begin
+    if (result ->> 'applied')::boolean is not false then
+        raise exception 'a declined event applied over an approved intent: %', result;
+    end if;
+    if (select status from public.payment_intents where id = intent_id) <> 'approved' then
+        raise exception 'the approved intent was downgraded';
+    end if;
+end $$;
+
+-- online-payments: event VOIDED reduces the paid amount and notifies
+do $$
+declare
+    s bigint := current_setting('app.online_PAY018')::bigint;
+    created jsonb := public.create_session_payment_intent(s, 'PAY018');
+    approved jsonb;
+    voided jsonb;
+begin
+    approved := public.apply_payment_event('wompi', jsonb_build_object(
+        'transaction_id', 'TX-PAY-VOID',
+        'reference', created ->> 'reference',
+        'status', 'APPROVED',
+        'amount', (created ->> 'amount')::integer,
+        'currency', 'COP'
+    ));
+    if (approved ->> 'applied')::boolean is not true then
+        raise exception 'the payment for the void test was not applied: %', approved;
+    end if;
+    voided := public.apply_payment_event('wompi', jsonb_build_object(
+        'transaction_id', 'TX-PAY-VOID',
+        'reference', created ->> 'reference',
+        'status', 'VOIDED',
+        'amount', (created ->> 'amount')::integer,
+        'currency', 'COP'
+    ));
+    if (voided ->> 'applied')::boolean is not true then
+        raise exception 'the void was not applied: %', voided;
+    end if;
+    if (select online_paid_amount from public.parking_sessions where id = s) <> 0 then
+        raise exception 'the void did not reduce the paid amount';
+    end if;
+    if (select status from public.payment_intents
+         where id = (created ->> 'intent_id')::bigint) <> 'voided' then
+        raise exception 'the intent is not voided';
+    end if;
+    if not exists (
+        select 1 from public.notifications n
+         where n.type = 'online_payment_review'
+           and (n.data ->> 'intent_id')::bigint = (created ->> 'intent_id')::bigint
+    ) then
+        raise exception 'the void did not notify the admins';
+    end if;
+end $$;
+
+-- online-payments: event approval on a closed session is late_closed
+do $$
+declare
+    s bigint := current_setting('app.online_PAY019')::bigint;
+    created jsonb := public.create_session_payment_intent(s, 'PAY019');
+    result jsonb;
+begin
+    perform set_config('app.online_amount3', created ->> 'amount', true);
+    update public.parking_sessions
+       set status = 'closed', exit_time = now(),
+           amount_charged = (created ->> 'amount')::integer,
+           payment_method = 'cash'
+     where id = s;
+    result := public.apply_payment_event('wompi', jsonb_build_object(
+        'transaction_id', 'TX-PAY-LATE',
+        'reference', created ->> 'reference',
+        'status', 'APPROVED',
+        'amount', (created ->> 'amount')::integer,
+        'currency', 'COP'
+    ));
+    if result ->> 'outcome' <> 'late_closed' then
+        raise exception 'a closed session was not late_closed: %', result;
+    end if;
+    if (select online_paid_amount from public.parking_sessions where id = s) <> 0 then
+        raise exception 'a late payment was added to a closed session';
+    end if;
+    if not exists (
+        select 1 from public.notifications n
+         where n.type = 'online_payment_review'
+           and (n.data ->> 'intent_id')::bigint = (created ->> 'intent_id')::bigint
+    ) then
+        raise exception 'the late payment did not notify the admins';
+    end if;
+end $$;
+
+-- online-payments: report lists approved intents of the lot
+do $$
+declare
+    result jsonb := public.report_online_payments(current_date, current_date);
+begin
+    if (result ->> 'count')::integer <> 3 then
+        raise exception 'the report does not count the approved intents: %', result;
+    end if;
+    if (result ->> 'total')::integer
+       <> current_setting('app.online_amount1')::integer
+          + current_setting('app.online_amount2')::integer
+          + current_setting('app.online_amount3')::integer then
+        raise exception 'the report total is wrong: %', result;
+    end if;
+    if not exists (
+        select 1 from jsonb_array_elements(result -> 'items') item
+         where item ->> 'reference' = current_setting('app.online_ref1')
+           and item ->> 'plate' = 'PAY010'
+           and item ->> 'status' = 'approved'
+    ) then
+        raise exception 'the report does not list the approved intent: %', result;
+    end if;
+    if exists (
+        select 1 from jsonb_array_elements(result -> 'items') item
+         where item ->> 'reference' = 'PM-LOT2'
+    ) then
+        raise exception 'the report leaked another lot: %', result;
+    end if;
+end $$;
+
+-- online-payments: rpc grants
+do $$
+begin
+    if has_function_privilege('anon', 'public.create_session_payment_intent(bigint, text)', 'execute')
+       or has_function_privilege('authenticated', 'public.create_session_payment_intent(bigint, text)', 'execute')
+       or has_function_privilege('anon', 'public.apply_payment_event(text, jsonb)', 'execute')
+       or has_function_privilege('authenticated', 'public.apply_payment_event(text, jsonb)', 'execute') then
+        raise exception 'a browser role can execute a service payment RPC';
+    end if;
+    if not has_function_privilege('service_role', 'public.apply_payment_event(text, jsonb)', 'execute')
+       or not has_function_privilege('service_role', 'public.create_session_payment_intent(bigint, text)', 'execute')
+       or not has_function_privilege('service_role', 'public.list_reconcilable_payment_intents(integer)', 'execute') then
+        raise exception 'the service role cannot execute the payment RPCs';
+    end if;
+    if not has_function_privilege('anon', 'public.payment_intent_status(text, text)', 'execute') then
+        raise exception 'anon cannot poll the payment status';
+    end if;
+    if (select count(*) from pg_proc p
+         where p.pronamespace = 'public'::regnamespace
+           and p.proname in ('session_settlement', 'create_session_payment_intent',
+                             'apply_payment_event', 'settle_payment_intent',
+                             'payment_intent_status', 'expire_payment_intents',
+                             'list_reconcilable_payment_intents',
+                             'report_online_payments')) <> 8 then
+        raise exception 'a payment RPC has more than one overload';
+    end if;
+end $$;
+
+-- online-payments: report requires a lot admin
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+set local role authenticated;
+do $$
+begin
+    begin
+        perform public.report_online_payments(current_date, current_date);
+        raise exception 'an operator read the online payment report';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- online-payments: anon cannot call the service rpcs
+set local role anon;
+do $$
+begin
+    begin
+        perform public.create_session_payment_intent(1, 'PAY010');
+        raise exception 'anon created a payment intent';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform public.apply_payment_event('wompi', '{}'::jsonb);
+        raise exception 'anon applied a payment event';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- ---------------------------------------------------------------------------
+-- online-payments: checkout
+-- ---------------------------------------------------------------------------
+insert into public.vehicles (plate, category_id) values
+    ('PAY020', 2), ('PAY021', 2), ('PAY022', 2), ('PAY023', 2),
+    ('PAY024', 2), ('PAY025', 2), ('PAY026', 2), ('PAY027', 2),
+    ('PAY028', 2), ('PAY029', 2);
+
+insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+select v.id, 1, 1, now() - interval '2 hours', 'open'
+  from public.vehicles v
+ where v.plate in ('PAY020', 'PAY021', 'PAY022', 'PAY023', 'PAY024',
+                   'PAY026', 'PAY027');
+
+insert into public.parking_sessions
+    (vehicle_id, operator_id, lot_id, entry_time, status, online_paid_amount, online_paid_at)
+values
+    ((select id from public.vehicles where plate = 'PAY025'), 1, 1,
+     now() - interval '2 hours', 'open', 8000, now() - interval '5 minutes'),
+    ((select id from public.vehicles where plate = 'PAY028'), 2, 2,
+     now() - interval '2 hours', 'open', 0, null);
+
+insert into public.monthly_passes (vehicle_id, lot_id, start_date, end_date, amount, active)
+select v.id, 1, current_date - 1, current_date + 29, 80000, true
+  from public.vehicles v where v.plate = 'PAY022';
+
+do $$
+declare
+    plates text[] := array['PAY020','PAY021','PAY022','PAY023','PAY024',
+                          'PAY026','PAY027'];
+    plate_value text;
+begin
+    foreach plate_value in array plates loop
+        perform set_config('app.co_' || plate_value, (
+            select s.id::text from public.parking_sessions s
+              join public.vehicles v on v.id = s.vehicle_id
+             where v.plate = plate_value
+        ), true);
+    end loop;
+    perform set_config('app.co_lot2', (
+        select s.id::text from public.parking_sessions s
+          join public.vehicles v on v.id = s.vehicle_id
+         where v.plate = 'PAY028'
+    ), true);
+end $$;
+
+-- paid sessions: inside the window, after the window and pass-covered
+update public.parking_sessions
+   set online_paid_amount = 8000, online_paid_at = now() - interval '5 minutes'
+ where id = current_setting('app.co_PAY020')::integer;
+update public.parking_sessions
+   set online_paid_amount = 6000, online_paid_at = now() - interval '2 hours'
+ where id = current_setting('app.co_PAY021')::integer;
+update public.parking_sessions
+   set online_paid_amount = 7000, online_paid_at = now() - interval '2 minutes'
+ where id = current_setting('app.co_PAY022')::integer;
+update public.parking_sessions
+   set online_paid_amount = 3000, online_paid_at = now() - interval '1 hour'
+ where id = current_setting('app.co_PAY023')::integer;
+update public.parking_sessions
+   set online_paid_amount = 5000, online_paid_at = now() - interval '30 minutes'
+ where id = current_setting('app.co_PAY024')::integer;
+update public.parking_sessions
+   set online_paid_amount = 6000, online_paid_at = now() - interval '2 hours'
+ where id in (current_setting('app.co_PAY026')::integer,
+              current_setting('app.co_PAY027')::integer);
+
+-- online-payments: preview exposes online_paid_amount and amount_due
+do $$
+declare
+    s integer := current_setting('app.co_PAY023')::integer;
+    preview jsonb := public.check_out_preview(s);
+    gross integer;
+begin
+    gross := (preview ->> 'amount')::integer;
+    if (preview ->> 'online_paid_amount')::integer <> 3000 then
+        raise exception 'the preview does not carry the paid amount: %', preview;
+    end if;
+    if preview ->> 'online_paid_at' is null then
+        raise exception 'the preview does not carry the paid time: %', preview;
+    end if;
+    if (preview ->> 'grace_active')::boolean is not false then
+        raise exception 'the preview says the grace window is active: %', preview;
+    end if;
+    if preview ->> 'grace_until' is null then
+        raise exception 'the preview does not carry the grace deadline: %', preview;
+    end if;
+    if (preview ->> 'amount_due')::integer <> greatest(gross - 3000, 0) then
+        raise exception 'the preview amount due is wrong: %', preview;
+    end if;
+end $$;
+
+-- online-payments: check_out inside grace closes as online with paid amount
+do $$
+declare
+    s integer := current_setting('app.co_PAY020')::integer;
+    result jsonb := public.check_out(s, null, null, 'cash');
+    session public.parking_sessions%rowtype;
+begin
+    if result ->> 'payment_method' <> 'online' then
+        raise exception 'the paid session was not stored as online: %', result;
+    end if;
+    if (result ->> 'amount_charged')::integer <> 8000
+       or (result ->> 'online_paid_amount')::integer <> 8000 then
+        raise exception 'the inside-grace charge is not what was paid: %', result;
+    end if;
+    select * into session from public.parking_sessions where id = s;
+    if session.amount_charged <> 8000 or session.cash_received is not null then
+        raise exception 'the closed session is wrong: %', session;
+    end if;
+end $$;
+
+-- online-payments: check_out after grace charges gross and keeps the desk method
+do $$
+declare
+    s integer := current_setting('app.co_PAY021')::integer;
+    result jsonb := public.check_out(s, null, null, 'card', 0, null, false, null, null, 'debit');
+    gross integer;
+begin
+    gross := (result ->> 'amount_charged')::integer;
+    if result ->> 'payment_method' <> 'card' then
+        raise exception 'the desk method was not kept: %', result;
+    end if;
+    if gross <= 6000 then
+        raise exception 'the charge did not grow after the window: %', result;
+    end if;
+    if (result ->> 'online_paid_amount')::integer <> 6000 then
+        raise exception 'the paid amount was lost: %', result;
+    end if;
+    if (select online_paid_amount from public.parking_sessions where id = s) <> 6000 then
+        raise exception 'the stored paid amount was lost';
+    end if;
+end $$;
+
+-- online-payments: paid plus monthly pass is stored online and reviewed
+do $$
+declare
+    s integer := current_setting('app.co_PAY022')::integer;
+    result jsonb := public.check_out(s, null, null, 'monthly_pass');
+begin
+    if result ->> 'payment_method' <> 'online' then
+        raise exception 'a pass-covered payment was not stored as online: %', result;
+    end if;
+    if (result ->> 'amount_charged')::integer <> 7000 then
+        raise exception 'the pass plus payment charge is wrong: %', result;
+    end if;
+    if not exists (
+        select 1 from public.notifications n
+         where n.type = 'online_payment_review'
+           and n.dedupe_key like 'online_pass:' || s || ':%'
+    ) then
+        raise exception 'the pass plus payment did not notify the admins';
+    end if;
+end $$;
+
+-- online-payments: public summary exposes amount_due and the switch
+set local role anon;
+do $$
+declare
+    s bigint := current_setting('app.co_PAY024')::bigint;
+    found jsonb := public.public_session_summary(s, 'pay 024');
+    gross integer;
+begin
+    if found is null then
+        raise exception 'the public summary did not answer';
+    end if;
+    if (found ->> 'online_payments_enabled')::boolean is not true then
+        raise exception 'the public summary hides the switch: %', found;
+    end if;
+    if (found ->> 'online_paid_amount')::integer <> 5000 then
+        raise exception 'the public summary hides the paid amount: %', found;
+    end if;
+    if (found ->> 'online_min_amount')::integer <> 1500 then
+        raise exception 'the public summary hides the minimum: %', found;
+    end if;
+    if found ->> 'grace_until' is null then
+        raise exception 'the public summary hides the grace deadline: %', found;
+    end if;
+    gross := (found -> 'breakdown' ->> 'amount')::integer;
+    if (found ->> 'amount_due')::integer <> greatest(gross - 5000, 0) then
+        raise exception 'the public amount due is wrong: %', found;
+    end if;
+end $$;
+reset role;
+
+-- online-payments: open_sessions_view shows the paid amount and deadline
+do $$
+declare
+    s integer := current_setting('app.co_PAY024')::integer;
+    row record;
+begin
+    select * into row from public.open_sessions_view where id = s;
+    if row.online_paid_amount <> 5000 then
+        raise exception 'the open sessions view hides the paid amount: %', row;
+    end if;
+    if row.online_grace_until <> (
+        select online_paid_at + interval '15 minutes'
+          from public.parking_sessions where id = s
+    ) then
+        raise exception 'the open sessions view grace deadline is wrong: %', row;
+    end if;
+end $$;
+
+-- online-payments: shift totals split desk and online money
+do $$
+declare
+    shift_id bigint;
+    totals jsonb;
+    paid_cash integer;
+    paid_online integer;
+    paid_card integer;
+begin
+    insert into public.shifts (operator_id, lot_id, opening_float, closed_at)
+    values (1, 1, 1000, now())
+    returning id into shift_id;
+
+    insert into public.parking_sessions
+        (vehicle_id, operator_id, lot_id, entry_time, exit_time, status,
+         amount_charged, payment_method, shift_id, online_paid_amount)
+    values
+        ((select id from public.vehicles where plate = 'PAY025'), 1, 1,
+         now() - interval '3 hours', now() - interval '1 hour', 'closed',
+         10000, 'cash', shift_id, 2000),
+        ((select id from public.vehicles where plate = 'PAY028'), 1, 1,
+         now() - interval '5 hours', now() - interval '2 hours', 'closed',
+         8000, 'online', shift_id, 8000),
+        ((select id from public.vehicles where plate = 'PAY029'), 1, 1,
+         now() - interval '4 hours', now() - interval '1 hour', 'closed',
+         5000, 'card', shift_id, 0);
+
+    paid_cash := 8000;
+    paid_online := 10000;
+    paid_card := 5000;
+
+    totals := public.shift_totals(shift_id);
+    if (totals ->> 'cash_sales')::integer <> paid_cash then
+        raise exception 'cash sales include the online part: %', totals;
+    end if;
+    if (totals ->> 'online_sales')::integer <> paid_online then
+        raise exception 'online sales are wrong: %', totals;
+    end if;
+    if (totals ->> 'card_sales')::integer <> paid_card then
+        raise exception 'card sales are wrong: %', totals;
+    end if;
+    if (totals ->> 'revenue')::integer <> 23000 then
+        raise exception 'revenue is not the gross total: %', totals;
+    end if;
+    if (totals ->> 'expected_cash')::integer <> 9000 then
+        raise exception 'the online money entered expected cash: %', totals;
+    end if;
+    if (totals ->> 'revenue')::integer
+       <> (totals ->> 'cash_sales')::integer
+          + (totals ->> 'card_sales')::integer
+          + (totals ->> 'transfer_sales')::integer
+          + (totals ->> 'pass_sales')::integer
+          + (totals ->> 'exempt_sales')::integer
+          + (totals ->> 'online_sales')::integer then
+        raise exception 'revenue does not equal the sum of its parts: %', totals;
+    end if;
+end $$;
+
+-- online-payments: report revenue splits the online row
+do $$
+declare
+    tz text;
+    window_start timestamptz;
+    window_end timestamptz;
+    expected_total bigint;
+    expected_online bigint;
+    report jsonb;
+begin
+    select coalesce(business_timezone, 'America/Bogota') into tz
+      from public.parking_settings where lot_id = 1;
+    window_start := current_date::timestamp at time zone tz;
+    window_end := (current_date + 1)::timestamp at time zone tz;
+
+    select coalesce(sum(amount_charged), 0), coalesce(sum(online_paid_amount), 0)
+      into expected_total, expected_online
+      from public.parking_sessions
+     where status = 'closed' and lot_id = 1
+       and exit_time >= window_start and exit_time < window_end;
+
+    report := public.report_revenue(current_date, current_date);
+    if (report ->> 'total')::bigint <> expected_total then
+        raise exception 'the report total changed: % vs %', report ->> 'total', expected_total;
+    end if;
+    if not exists (
+        select 1 from jsonb_array_elements(report -> 'by_payment') item
+         where item ->> 'payment_method' = 'online'
+           and (item ->> 'amount')::bigint = expected_online
+    ) then
+        raise exception 'the report has no online row: %', report -> 'by_payment';
+    end if;
+    if (select coalesce(sum((item ->> 'amount')::bigint), 0)
+          from jsonb_array_elements(report -> 'by_payment') item) <> expected_total then
+        raise exception 'the payment rows do not add up to the total: %', report -> 'by_payment';
+    end if;
+end $$;
+
+-- online-payments: check_out rejects the online method from the client
+do $$
+declare
+    s integer := current_setting('app.co_PAY026')::integer;
+begin
+    begin
+        perform public.check_out(s, null, null, 'online');
+        raise exception 'the client sent the online method';
+    exception when others then
+        if sqlerrm not like '%InvalidPaymentMethod%' then raise; end if;
+    end;
+    if (select status from public.parking_sessions where id = s) <> 'open' then
+        raise exception 'the refused check-out closed the session';
+    end if;
+end $$;
+
+-- online-payments: cash received below the desk due is rejected
+do $$
+declare
+    s integer := current_setting('app.co_PAY027')::integer;
+begin
+    begin
+        perform public.check_out(s, null, null, 'cash', 0, null, false, null, null, null, 10);
+        raise exception 'a short cash amount was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidCashReceivedError%' then raise; end if;
+    end;
+end $$;
+
+-- online-payments: a discount above the desk due is rejected
+do $$
+declare
+    s integer := current_setting('app.co_PAY027')::integer;
+begin
+    begin
+        perform public.check_out(s, null, null, 'cash', 999999, 'prueba');
+        raise exception 'a discount above the desk due was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDiscountError%' then raise; end if;
+    end;
+end $$;
+
+-- online-payments: check_out enforces the lot
+do $$
+begin
+    begin
+        perform public.check_out(current_setting('app.co_lot2')::integer, null, null, 'cash');
+        raise exception 'a session of another lot was closed';
+    exception when others then
+        if sqlerrm not like '%LotRequiredError%' then raise; end if;
+    end;
+end $$;
+
+-- online-payments: an operator cannot discount a paid session
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+declare
+    s integer := current_setting('app.co_PAY027')::integer;
+begin
+    begin
+        perform public.check_out(s, null, null, 'cash', 1000, 'prueba');
+        raise exception 'an operator raised a discount on a paid session';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+end $$;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
 rollback;
