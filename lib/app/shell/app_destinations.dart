@@ -29,6 +29,7 @@ String _categories(AppLocalizations l) => l.navCategories;
 String _monthlyPasses(AppLocalizations l) => l.navMonthlyPasses;
 String _users(AppLocalizations l) => l.navUsers;
 String _reports(AppLocalizations l) => l.navReports;
+String _satisfaction(AppLocalizations l) => l.navSatisfaction;
 String _settings(AppLocalizations l) => l.navSettings;
 String _contact(AppLocalizations l) => l.navContact;
 String _notifications(AppLocalizations l) => l.navNotifications;
@@ -114,6 +115,12 @@ const managementDestinations = [
     _reports,
     Icons.bar_chart_outlined,
     Icons.bar_chart,
+  ),
+  AppDestination(
+    '/satisfaction',
+    _satisfaction,
+    Icons.sentiment_satisfied_alt_outlined,
+    Icons.sentiment_satisfied_alt,
   ),
   AppDestination(
     '/settings',

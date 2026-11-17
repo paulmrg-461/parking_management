@@ -27,6 +27,7 @@ import 'modules/platform_module.dart';
 import 'modules/receipt_printing_module.dart';
 import 'modules/reports_module.dart';
 import 'modules/evidence_module.dart';
+import 'modules/feedback_module.dart';
 import 'modules/policies_module.dart';
 import 'modules/public_booking_module.dart';
 import 'modules/anomalies_module.dart';
@@ -140,6 +141,7 @@ void registerAllModules(GetIt sl, AppConfig config) {
   registerPublicBookingModule(sl);
   registerWaitlistModule(sl);
   registerAnomaliesModule(sl);
+  registerFeedbackModule(sl);
   registerSpotsModule(sl);
   registerSettingsModule(sl);
   registerShiftsModule(sl);

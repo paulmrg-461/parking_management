@@ -4,19 +4,57 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-11-11 (period comparison reports).
+Last updated: 2026-11-17 (customer feedback survey).
 
 ## Where we are
 
 - Stack: Flutter (android + web) + self-hosted Supabase only. No FastAPI,
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
-- `supabase/migrations/0001..0104` are the schema owner (applied by
+- `supabase/migrations/0001..0111` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 1200 tests green, `flutter analyze` reports only SDK deprecation
+- Flutter: 1437 tests green, `flutter analyze` reports only SDK deprecation
   infos from the pinned beta channel (0 errors/warnings). Web build green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
   item is the manual smoke for `add-parking-settings` (task 10.4).
+
+## Customer feedback (2026-11-17, `0111`)
+
+- `session_feedback` (lot, session unique, rating 1..5, comment <= 500,
+  created_at) is read-only for clients (select grant + `lot_id =
+  current_lot_id()` policy); inserts happen only inside
+  `public_submit_feedback` (security definer), which derives the lot from the
+  session, never from the request.
+- The key is the session **plus** the plate (uppercase, blanks removed), same
+  as `/evidence`: the id alone walks integers and the plate alone is guessable.
+  `public_feedback_session` returns `null` for an unknown session or a wrong
+  plate — "not found" is an answer, not an error.
+- Only closed sessions are rateable (`exit_time is not null`); `unique
+  (session_id)` plus `on conflict do nothing` is what makes a double tap safe
+  (`FeedbackAlreadyError`). Do not replace it with a pre-check: the conflict
+  path is the dedupe.
+- `feedback_summary(p_days)` is platform-admin only (`require_admin()`, like the
+  reports) and lot-scoped; `average_x10` (43 = 4.3) and `response_rate_bp` are
+  integers so Dart never averages floats. `closed_sessions` counts exits in the
+  period in the business timezone; `recent` is the newest 20 by
+  `(created_at desc, id desc)`.
+- Flutter: `features/feedback` (public survey cubit + admin summary cubit);
+  `/feedback` is public in `authRedirect`, `/satisfaction` is a deferred admin
+  route and a management destination (home shortcuts and sidebar derive from
+  it). The period chips keep the content
+  (`FeedbackSummaryLoaded.refreshing`) instead of flashing the skeleton.
+- Receipts: `ReceiptData.feedbackUrl` (built by
+  `core/receipt/feedback_link.dart` from `APP_URL`) drives the QR in the
+  PDF/thermal/on-screen receipt and the line in the manual WhatsApp message;
+  without `APP_URL` nothing is printed. `ReceiptLabels.feedbackHint` is ASCII
+  for the thermal printer.
+- Online only on purpose: nothing is queued in the outbox; a failed submit
+  keeps the stars/comment in the page and shows the localized retry.
+- Live smoke (2026-11-17): anon lookup with `mjs 368` resolved session 55, anon
+  submit stored "Prueba de humo" (rating 5), admin `feedback_summary(30)`
+  returned `average_x10 50`, `response_rate_bp 667` (1/15 exits) and the
+  five-bucket distribution; the smoke row was deleted afterwards.
+  Test count: 1437; schema `0001..0111`.
 
 ## Live deployment (2026-11-05)
 

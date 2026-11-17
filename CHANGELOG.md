@@ -67,6 +67,27 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - Android release build: R8 keep rules for the optional ML Kit scripts.
 
 ### Added
+- **Customer satisfaction survey** (`0111`, `openspec/changes/add-customer-feedback`).
+  The receipt now closes the loop with the customer:
+  - `session_feedback` stores **one answer per closed session** (1..5 stars and
+    an optional comment up to 500 characters), lot-scoped and read-only for
+    clients; only the `security definer` RPCs write it.
+  - Public, plate-keyed page `/feedback?session=…&plate=…` (the plate is the
+    access key, like `/evidence`): branded hero with the lot name, a 48 dp star
+    selector, the counter on the comment, explicit loading / survey / already
+    rated / submitted / invalid link / retry states. Open sessions explain that
+    the visit can be rated after check-out.
+  - Admin page `/satisfaction`: average (integer `average_x10`), answers plus
+    the response rate against closed sessions, low ratings (≤ 3), the full 1..5
+    distribution and the latest comments, with 7 / 30 / 90-day chips. Operators
+    are refused by the router and by `feedback_summary` itself.
+  - Discovery: the PDF and thermal check-out receipts print the survey QR when
+    `APP_URL` is configured, the on-screen receipt preview shows it too, and the
+    manual WhatsApp receipt appends the link. Without `APP_URL` there is no
+    dangling code.
+  - Online only by design: the server must verify the session and the one-answer
+    rule, so nothing is queued in the outbox.
+
 
 - **Cash anomaly detection** (`0110`,
   `openspec/changes/add-cash-anomaly-detection`). Eight deterministic rules over

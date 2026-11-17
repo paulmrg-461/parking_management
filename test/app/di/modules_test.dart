@@ -16,6 +16,8 @@ import 'package:parking_management/core/sync/pending_photo_storage.dart';
 import 'package:parking_management/core/sync/sync_outbox.dart';
 import 'package:parking_management/core/sync/sync_service.dart';
 import 'package:parking_management/features/anomalies/application/anomalies_cubit.dart';
+import 'package:parking_management/features/feedback/application/feedback_summary_cubit.dart';
+import 'package:parking_management/features/feedback/application/public_feedback_cubit.dart';
 import 'package:parking_management/features/check_in/application/check_in_cubit.dart';
 import 'package:parking_management/features/check_out/application/check_out_cubit.dart';
 import 'package:parking_management/features/monthly_passes/application/monthly_passes_cubit.dart';
@@ -65,6 +67,13 @@ void main() {
       expect(sl<SyncService>(), isA<SyncService>());
     },
   );
+
+  test('Success: registers the feedback module', () {
+    _register(sl);
+
+    expect(sl<PublicFeedbackCubit>(), isA<PublicFeedbackCubit>());
+    expect(sl<FeedbackSummaryCubit>(), isA<FeedbackSummaryCubit>());
+  });
 
   test('Success: AnomaliesCubit resolves from the container', () {
     _register(sl);

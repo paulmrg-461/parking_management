@@ -117,7 +117,14 @@ class EscPosGenerator {
       _qr(bytes, data.evidenceUrl!);
       _text(bytes, labels.evidenceHint, align: 1);
     }
-    if (!data.isCheckOut || data.evidenceUrl != null) {
+    if (data.feedbackUrl != null) {
+      _rule(bytes);
+      _qr(bytes, data.feedbackUrl!);
+      _text(bytes, labels.feedbackHint, align: 1);
+    }
+    if (!data.isCheckOut ||
+        data.evidenceUrl != null ||
+        data.feedbackUrl != null) {
       _rule(bytes);
     }
 

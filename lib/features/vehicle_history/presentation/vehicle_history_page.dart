@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/error/failure.dart';
 import '../../../core/l10n/failure_messages.dart';
 import '../../../core/l10n/l10n.dart';
+import '../../../core/receipt/feedback_link.dart';
 import '../../../core/receipt/payment_method.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/formatters.dart';
@@ -599,6 +600,7 @@ class _SessionTile extends StatelessWidget {
     paymentMethod: session.paymentMethod,
     discountAmount: session.discountAmount,
     discountReason: session.discountReason,
+    feedbackUrl: publicFeedbackUrl(session.id, plate: plate),
   );
 
   Future<void> _sendWhatsapp(BuildContext context) async {
@@ -612,6 +614,7 @@ class _SessionTile extends StatelessWidget {
         l10n: context.l10n,
         plate: plate,
         session: session,
+        feedbackUrl: publicFeedbackUrl(session.id, plate: plate),
       ),
     );
     await openWhatsapp(context, url);

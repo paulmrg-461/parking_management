@@ -39,11 +39,12 @@ WhatsApp (manual or automated).
 | Customer WhatsApp | Manual (`wa.me`) and automated queue | SQL + widget tests |
 | Evidence retention | Complete (scheduled archive) | Live object deletion verified |
 | Diagnostics / observability | Complete (`/diagnostics`, healthcheck, error reports) | SQL + widget tests |
+| Customer feedback | Complete (public survey + admin satisfaction report) | SQL + widget tests |
 | Backups / restore | Complete, with a safe drill | Drill executed against a real backup |
 | Secrets / PIN operations | Complete (scripts + runbook) | PIN rotation verified live |
 | E2E and CI | Complete (API + Flutter client, real stack) | CI job `supabase-e2e` |
 
-Quality snapshot (2026-11-09, local stack): **1153 Flutter tests + 1 integration
+Quality snapshot (2026-11-17, local stack): **1437 Flutter tests + 1 integration
 test**, SQL/RLS suite green, web build green, analyzer with **0 errors and 0
 warnings** (only SDK deprecation infos from the pinned beta channel), restore
 drill green.
@@ -64,6 +65,7 @@ the main data it touches.
 | `records` | Site activity log with a plate/date filter, paging and evidence access | `session_records` |
 | `policies` | Public legal policy / service contract | `public_lot_profile`, `reset_legal_policy` |
 | `public_booking` | Public availability and anonymous reservations (`/reserve?lot=`) | `public_availability`, `public_create_reservation` |
+| `feedback` | Public satisfaction survey (`/feedback?session=&plate=`) and the admin report (`/satisfaction`) | `session_feedback`, `public_feedback_session`, `public_submit_feedback`, `feedback_summary` |
 | `vehicle_history` | Timeline, notes, blacklist, owner name/phone, evidence viewer, reprint, WhatsApp | `vehicle_history`, `update_vehicle_flags` |
 | `vehicles` | Registry CRUD and paging | `vehicles` |
 | `categories` / `tariffs` | Reference data per site, capacity | `categories`, `tariffs` |
@@ -136,6 +138,9 @@ Deployment: [`setup-cloud.md`](setup-cloud.md) (single VM + TLS proxy) and
 - **Operator-provided credentials** for FCM, VAPID and Meta WhatsApp; without
   them the features are inert (in-app notifications still work).
 - **Evidence archival deletes objects.** Backups are the archive of record.
+- **Customer feedback is online-only and unmoderated.** The answer needs the
+  server to verify the session and the one-answer rule, there is no reply or
+  deletion flow, and low ratings do not trigger an alert yet.
 - **`pg_cron` is not available in the shipped image's app database**, so
   scheduled work runs from host cron (documented); the functions are the same.
 - **Single currency and single tax regime** assumptions (no per-vehicle
@@ -191,6 +196,19 @@ reports screen can replay the algorithm over past weeks to see whether the live
 blend beats the profile alone. Below the minimum history the forecast is not
 shown instead of guessed. Holidays are out of scope, reservation holds are not
 subtracted, and the forecast is never cached (it is time-sensitive).
+
+## 7.07 Customer feedback (implemented)
+
+Each check-out receipt can carry a survey link (QR on the PDF/thermal receipt
+and a line in the manual WhatsApp receipt, only when `APP_URL` is configured).
+The customer opens `/feedback?session=…&plate=…`, sees the site name and rates
+the visit from 1 to 5 with an optional comment. The plate is the access key, a
+session can be answered once, and only closed sessions are rateable, so a
+receipt cannot be used to score a visit that has not ended. The admin page
+`/satisfaction` turns the answers into an average, a response rate against the
+lot's check-outs, the count of low ratings (≤ 3), the 1..5 distribution and the
+latest comments, for 7, 30 or 90 days. The survey is online-only and there is no
+moderation, reply or export yet.
 
 ## 7.1 Offline conflicts (implemented)
 

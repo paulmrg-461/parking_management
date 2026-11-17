@@ -7795,6 +7795,306 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'n/d'**
   String get reportsPeriodPdfNoBase;
+
+  /// No description provided for @navSatisfaction.
+  ///
+  /// In es, this message translates to:
+  /// **'Satisfacción'**
+  String get navSatisfaction;
+
+  /// No description provided for @feedbackTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu opinión'**
+  String get feedbackTitle;
+
+  /// No description provided for @feedbackGateTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresa la placa para calificar tu visita'**
+  String get feedbackGateTitle;
+
+  /// No description provided for @feedbackGateHint.
+  ///
+  /// In es, this message translates to:
+  /// **'La placa impresa en el recibo es la clave de acceso.'**
+  String get feedbackGateHint;
+
+  /// No description provided for @feedbackUnlock.
+  ///
+  /// In es, this message translates to:
+  /// **'Continuar'**
+  String get feedbackUnlock;
+
+  /// No description provided for @feedbackHeroTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Cómo fue tu visita a {lot}?'**
+  String feedbackHeroTitle(String lot);
+
+  /// No description provided for @feedbackHeroSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu opinión ayuda a mejorar el servicio. Toma menos de un minuto.'**
+  String get feedbackHeroSubtitle;
+
+  /// No description provided for @feedbackRateLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu calificación'**
+  String get feedbackRateLabel;
+
+  /// No description provided for @feedbackStarLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Calificar con {rating} estrellas'**
+  String feedbackStarLabel(int rating);
+
+  /// No description provided for @feedbackRating1.
+  ///
+  /// In es, this message translates to:
+  /// **'Muy mala'**
+  String get feedbackRating1;
+
+  /// No description provided for @feedbackRating2.
+  ///
+  /// In es, this message translates to:
+  /// **'Mala'**
+  String get feedbackRating2;
+
+  /// No description provided for @feedbackRating3.
+  ///
+  /// In es, this message translates to:
+  /// **'Regular'**
+  String get feedbackRating3;
+
+  /// No description provided for @feedbackRating4.
+  ///
+  /// In es, this message translates to:
+  /// **'Buena'**
+  String get feedbackRating4;
+
+  /// No description provided for @feedbackRating5.
+  ///
+  /// In es, this message translates to:
+  /// **'Excelente'**
+  String get feedbackRating5;
+
+  /// No description provided for @feedbackCommentLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Comentario (opcional)'**
+  String get feedbackCommentLabel;
+
+  /// No description provided for @feedbackCommentHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuéntanos qué podemos mejorar'**
+  String get feedbackCommentHint;
+
+  /// No description provided for @feedbackSubmit.
+  ///
+  /// In es, this message translates to:
+  /// **'Enviar calificación'**
+  String get feedbackSubmit;
+
+  /// No description provided for @feedbackThanksTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¡Gracias por tu opinión!'**
+  String get feedbackThanksTitle;
+
+  /// No description provided for @feedbackThanksBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu calificación ayuda a que el servicio mejore cada día.'**
+  String get feedbackThanksBody;
+
+  /// No description provided for @feedbackCloseHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Puedes cerrar esta página.'**
+  String get feedbackCloseHint;
+
+  /// No description provided for @feedbackAlreadyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya calificaste esta visita'**
+  String get feedbackAlreadyTitle;
+
+  /// No description provided for @feedbackAlreadyBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Gracias. Solo se acepta una calificación por visita.'**
+  String get feedbackAlreadyBody;
+
+  /// No description provided for @feedbackInvalidTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'No encontramos esta visita'**
+  String get feedbackInvalidTitle;
+
+  /// No description provided for @feedbackInvalidBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisa el enlace o el código del recibo. Si el problema continúa, pide ayuda en la recepción.'**
+  String get feedbackInvalidBody;
+
+  /// No description provided for @feedbackPendingTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu visita sigue en curso'**
+  String get feedbackPendingTitle;
+
+  /// No description provided for @feedbackPendingBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Podrás calificarla cuando registres la salida.'**
+  String get feedbackPendingBody;
+
+  /// No description provided for @feedbackReportTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Satisfacción del cliente'**
+  String get feedbackReportTitle;
+
+  /// No description provided for @feedbackReportSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Opiniones de tus clientes en el periodo'**
+  String get feedbackReportSubtitle;
+
+  /// No description provided for @feedbackPeriodSummary.
+  ///
+  /// In es, this message translates to:
+  /// **'{total, plural, =1{1 respuesta} other{{total} respuestas}} · últimos {days} días'**
+  String feedbackPeriodSummary(int total, int days);
+
+  /// No description provided for @feedbackAverage.
+  ///
+  /// In es, this message translates to:
+  /// **'Calificación promedio'**
+  String get feedbackAverage;
+
+  /// No description provided for @feedbackAverageValue.
+  ///
+  /// In es, this message translates to:
+  /// **'{whole},{decimal}'**
+  String feedbackAverageValue(int whole, int decimal);
+
+  /// No description provided for @feedbackAverageCaption.
+  ///
+  /// In es, this message translates to:
+  /// **'{total, plural, =0{Sin respuestas} =1{Basada en 1 respuesta} other{Basada en {total} respuestas}}'**
+  String feedbackAverageCaption(int total);
+
+  /// No description provided for @feedbackResponses.
+  ///
+  /// In es, this message translates to:
+  /// **'Respuestas'**
+  String get feedbackResponses;
+
+  /// No description provided for @feedbackResponseRate.
+  ///
+  /// In es, this message translates to:
+  /// **'{percent}% de las salidas'**
+  String feedbackResponseRate(int percent);
+
+  /// No description provided for @feedbackLowRatings.
+  ///
+  /// In es, this message translates to:
+  /// **'Calificaciones bajas'**
+  String get feedbackLowRatings;
+
+  /// No description provided for @feedbackLowCaption.
+  ///
+  /// In es, this message translates to:
+  /// **'1 a 3 estrellas'**
+  String get feedbackLowCaption;
+
+  /// No description provided for @feedbackLowEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Ninguna'**
+  String get feedbackLowEmpty;
+
+  /// No description provided for @feedbackDistribution.
+  ///
+  /// In es, this message translates to:
+  /// **'Distribución'**
+  String get feedbackDistribution;
+
+  /// No description provided for @feedbackDistributionRow.
+  ///
+  /// In es, this message translates to:
+  /// **'{rating} estrellas'**
+  String feedbackDistributionRow(int rating);
+
+  /// No description provided for @feedbackDistributionSemantics.
+  ///
+  /// In es, this message translates to:
+  /// **'{rating} estrellas: {count} respuestas'**
+  String feedbackDistributionSemantics(int rating, int count);
+
+  /// No description provided for @feedbackRecent.
+  ///
+  /// In es, this message translates to:
+  /// **'Últimos comentarios'**
+  String get feedbackRecent;
+
+  /// No description provided for @feedbackRecentEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin comentarios en el periodo'**
+  String get feedbackRecentEmpty;
+
+  /// No description provided for @feedbackNoComment.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin comentario'**
+  String get feedbackNoComment;
+
+  /// No description provided for @feedbackEmptyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no hay calificaciones'**
+  String get feedbackEmptyTitle;
+
+  /// No description provided for @feedbackEmptyBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuando tus clientes califiquen una visita desde el recibo, verás aquí el promedio y sus comentarios.'**
+  String get feedbackEmptyBody;
+
+  /// No description provided for @feedbackRefresh.
+  ///
+  /// In es, this message translates to:
+  /// **'Actualizar'**
+  String get feedbackRefresh;
+
+  /// No description provided for @errorFeedbackAlready.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya calificaste esta visita. Solo se acepta una calificación por visita.'**
+  String get errorFeedbackAlready;
+
+  /// No description provided for @receiptFeedbackHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Califica tu visita: escanea el código'**
+  String get receiptFeedbackHint;
+
+  /// No description provided for @vehicleWhatsappFeedback.
+  ///
+  /// In es, this message translates to:
+  /// **'Califica tu visita: {url}'**
+  String vehicleWhatsappFeedback(String url);
+
+  /// No description provided for @feedbackPeriodDays.
+  ///
+  /// In es, this message translates to:
+  /// **'{days, plural, =1{1 día} other{{days} días}}'**
+  String feedbackPeriodDays(int days);
 }
 
 class _AppLocalizationsDelegate

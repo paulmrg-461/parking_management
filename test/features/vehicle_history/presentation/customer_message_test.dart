@@ -50,6 +50,29 @@ void main() {
     expect(message, isNot(contains('Total cobrado')));
   });
 
+  test('Success: the survey link is appended only when present', () async {
+    final l10n = await AppLocalizations.delegate.load(defaultLocale);
+
+    final withLink = receiptWhatsappMessage(
+      l10n: l10n,
+      plate: 'ABC123',
+      session: _session(),
+      feedbackUrl: 'https://app.test/feedback?session=1&plate=ABC123',
+    );
+    final withoutLink = receiptWhatsappMessage(
+      l10n: l10n,
+      plate: 'ABC123',
+      session: _session(),
+    );
+
+    expect(
+      withLink,
+      contains('https://app.test/feedback?session=1&plate=ABC123'),
+    );
+    expect(withLink, contains('Califica tu visita'));
+    expect(withoutLink, isNot(contains('Califica tu visita')));
+  });
+
   test('Success: the general greeting names the plate', () async {
     final l10n = await AppLocalizations.delegate.load(defaultLocale);
 

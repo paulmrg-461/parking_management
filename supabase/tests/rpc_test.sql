@@ -7675,5 +7675,343 @@ end $$;
 reset role;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
 
+-- ---------------------------------------------------------------------------
+-- feedback: fixtures (one closed session per lot and one open session)
+-- ---------------------------------------------------------------------------
+insert into public.vehicles (plate, category_id)
+values ('FEED01', (select id from public.categories where lot_id = 1 order by id limit 1)),
+       ('FEED02', (select id from public.categories where lot_id = 2 order by id limit 1)),
+       ('FEED03', (select id from public.categories where lot_id = 1 order by id limit 1));
+
+insert into public.parking_sessions
+    (vehicle_id, operator_id, lot_id, entry_time, exit_time, status, amount_charged)
+select v.id, 1, 1, now() - interval '3 hours', now() - interval '1 hour', 'closed', 5000
+  from public.vehicles v where v.plate = 'FEED01';
+insert into public.parking_sessions
+    (vehicle_id, operator_id, lot_id, entry_time, exit_time, status, amount_charged)
+select v.id, 2, 2, now() - interval '3 hours', now() - interval '1 hour', 'closed', 4000
+  from public.vehicles v where v.plate = 'FEED02';
+insert into public.parking_sessions
+    (vehicle_id, operator_id, lot_id, entry_time, status)
+select v.id, 1, 1, now() - interval '1 hour', 'open'
+  from public.vehicles v where v.plate = 'FEED03';
+
+do $$
+begin
+    perform set_config('app.fb_closed', (
+        select s.id::text from public.parking_sessions s
+          join public.vehicles v on v.id = s.vehicle_id
+         where v.plate = 'FEED01'
+    ), true);
+    perform set_config('app.fb_lot2', (
+        select s.id::text from public.parking_sessions s
+          join public.vehicles v on v.id = s.vehicle_id
+         where v.plate = 'FEED02'
+    ), true);
+    perform set_config('app.fb_open', (
+        select s.id::text from public.parking_sessions s
+          join public.vehicles v on v.id = s.vehicle_id
+         where v.plate = 'FEED03'
+    ), true);
+end $$;
+
+-- feedback: defaults and constraints
+do $$
+declare
+    closed bigint := current_setting('app.fb_closed')::bigint;
+    stored public.session_feedback%rowtype;
+begin
+    insert into public.session_feedback (lot_id, session_id, rating)
+    values (1, closed, 4)
+    returning * into stored;
+    if stored.comment <> '' or stored.created_at is null then
+        raise exception 'the feedback defaults are wrong';
+    end if;
+    delete from public.session_feedback where id = stored.id;
+
+    begin
+        insert into public.session_feedback (lot_id, session_id, rating)
+        values (1, closed, 0);
+        raise exception 'rating 0 was accepted';
+    exception when check_violation then null;
+    end;
+    begin
+        insert into public.session_feedback (lot_id, session_id, rating)
+        values (1, closed, 6);
+        raise exception 'rating 6 was accepted';
+    exception when check_violation then null;
+    end;
+    begin
+        insert into public.session_feedback (lot_id, session_id, rating, comment)
+        values (1, closed, 5, repeat('x', 501));
+        raise exception 'a 501-character comment was accepted';
+    exception when check_violation then null;
+    end;
+
+    insert into public.session_feedback (lot_id, session_id, rating)
+    values (1, closed, 4);
+    begin
+        insert into public.session_feedback (lot_id, session_id, rating)
+        values (1, closed, 2);
+        raise exception 'a second feedback row was accepted';
+    exception when unique_violation then null;
+    end;
+    delete from public.session_feedback where session_id = closed;
+end $$;
+
+-- feedback: anon cannot read the table
+set local role anon;
+do $$
+begin
+    begin
+        perform count(*) from public.session_feedback;
+        raise exception 'anon read the feedback table';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
+-- feedback: lookup normalises the plate and hides unknown sessions
+set local role anon;
+do $$
+declare
+    closed bigint := current_setting('app.fb_closed')::bigint;
+    open_session bigint := current_setting('app.fb_open')::bigint;
+    found jsonb;
+begin
+    found := public.public_feedback_session(closed, ' feed 01 ');
+    if found is null
+       or (found ->> 'rateable')::boolean is not true
+       or (found ->> 'rated')::boolean is not false
+       or (found ->> 'lot_name') is null then
+        raise exception 'the lookup did not normalise the plate: %', found;
+    end if;
+    if (found ? 'plate') or (found ? 'amount_charged') then
+        raise exception 'the public lookup leaked session data: %', found;
+    end if;
+
+    if public.public_feedback_session(closed, 'FEED02') is not null then
+        raise exception 'a wrong plate resolved the session';
+    end if;
+    if public.public_feedback_session(999999, 'FEED01') is not null then
+        raise exception 'an unknown session resolved';
+    end if;
+
+    found := public.public_feedback_session(open_session, 'FEED03');
+    if found is null or (found ->> 'rateable')::boolean is not false then
+        raise exception 'an open session was reported rateable: %', found;
+    end if;
+end $$;
+reset role;
+
+-- feedback: open session is not rateable
+set local role anon;
+do $$
+begin
+    begin
+        perform public.public_submit_feedback(
+            current_setting('app.fb_open')::bigint, 'FEED03', 5, null
+        );
+        raise exception 'an open session was rated';
+    exception when others then
+        if sqlerrm not like '%SessionNotFoundError%' then raise; end if;
+    end;
+    begin
+        perform public.public_submit_feedback(
+            current_setting('app.fb_closed')::bigint, 'WRONG', 5, null
+        );
+        raise exception 'a wrong plate was accepted';
+    exception when others then
+        if sqlerrm not like '%SessionNotFoundError%' then raise; end if;
+    end;
+end $$;
+reset role;
+
+-- feedback: submit stores one trimmed row and the lookup reflects it
+set local role anon;
+do $$
+declare
+    closed bigint := current_setting('app.fb_closed')::bigint;
+    saved jsonb;
+    found jsonb;
+begin
+    saved := public.public_submit_feedback(closed, 'feed01', 5, '  Muy rápido  ');
+    if (saved ->> 'rating')::integer <> 5 or (saved ->> 'created_at') is null then
+        raise exception 'the submit response is wrong: %', saved;
+    end if;
+    found := public.public_feedback_session(closed, 'FEED01');
+    if (found ->> 'rated')::boolean is not true
+       or (found ->> 'rating')::integer <> 5 then
+        raise exception 'the lookup did not report the stored rating: %', found;
+    end if;
+end $$;
+reset role;
+do $$
+begin
+    if (select comment from public.session_feedback
+         where session_id = current_setting('app.fb_closed')::bigint)
+       is distinct from 'Muy rápido' then
+        raise exception 'the comment was not trimmed';
+    end if;
+end $$;
+
+-- feedback: duplicate and invalid submissions
+set local role anon;
+do $$
+declare
+    closed bigint := current_setting('app.fb_closed')::bigint;
+begin
+    begin
+        perform public.public_submit_feedback(closed, 'FEED01', 4, null);
+        raise exception 'a duplicate submission was accepted';
+    exception when others then
+        if sqlerrm not like '%FeedbackAlreadyError%' then raise; end if;
+    end;
+    begin
+        perform public.public_submit_feedback(closed, 'FEED01', 0, null);
+        raise exception 'rating 0 was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+    begin
+        perform public.public_submit_feedback(closed, 'FEED01', 5, repeat('x', 501));
+        raise exception 'a 501-character comment was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+end $$;
+reset role;
+
+-- feedback: operator reads own lot only
+insert into public.session_feedback (lot_id, session_id, rating, comment)
+values (2, current_setting('app.fb_lot2')::bigint, 2, 'Baño sucio');
+
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+set local request.headers = '{"x-lot-id":"1"}';
+do $$
+begin
+    if (select count(*) from public.session_feedback) = 0 then
+        raise exception 'the operator saw no feedback of its lot';
+    end if;
+    if exists (select 1 from public.session_feedback where lot_id <> 1) then
+        raise exception 'the operator saw another lot feedback';
+    end if;
+end $$;
+reset role;
+
+-- feedback: summary math excludes other lots
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local request.headers = '{"x-lot-id":"1"}';
+do $$
+declare
+    summary jsonb;
+    expected_avg integer;
+    expected_total integer;
+    closed integer;
+    recent jsonb;
+begin
+    summary := public.feedback_summary(30);
+    select count(*), coalesce(round(avg(rating) * 10)::integer, 0)
+      into expected_total, expected_avg
+      from public.session_feedback
+     where lot_id = 1
+       and created_at >= now() - interval '30 days';
+
+    if (summary ->> 'total')::integer <> expected_total then
+        raise exception 'total mismatch: % vs %', summary ->> 'total', expected_total;
+    end if;
+    if (summary ->> 'average_x10')::integer <> expected_avg then
+        raise exception 'average mismatch: % vs %', summary ->> 'average_x10', expected_avg;
+    end if;
+    if (summary ->> 'low_count')::integer <> 0 then
+        raise exception 'a 5-star lot reported low ratings';
+    end if;
+    if (summary -> 'distribution') ? '2' is not true
+       or (summary -> 'distribution' ->> '2')::integer <> 0
+       or (summary -> 'distribution' ->> '5')::integer <> 1 then
+        raise exception 'the distribution is wrong: %', summary -> 'distribution';
+    end if;
+    if (summary ->> 'closed_sessions')::integer < 1 then
+        raise exception 'closed sessions were not counted';
+    end if;
+    closed := (summary ->> 'closed_sessions')::integer;
+    if (summary ->> 'response_rate_bp')::integer
+       <> round(expected_total * 10000.0 / closed)::integer then
+        raise exception 'response rate mismatch: %', summary ->> 'response_rate_bp';
+    end if;
+    recent := summary -> 'recent';
+    if jsonb_array_length(recent) <> expected_total then
+        raise exception 'recent length mismatch: %', jsonb_array_length(recent);
+    end if;
+    if (recent -> 0 ->> 'plate') <> 'FEED01'
+       or (recent -> 0 ->> 'comment') <> 'Muy rápido' then
+        raise exception 'the recent row is wrong: %', recent -> 0;
+    end if;
+    if (summary ->> 'timezone') is null then
+        raise exception 'the summary has no timezone';
+    end if;
+end $$;
+reset role;
+
+-- feedback: summary gates and range
+set local role authenticated;
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    begin
+        perform public.feedback_summary(30);
+        raise exception 'an operator read the feedback summary';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+end $$;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+begin
+    begin
+        perform public.feedback_summary(0);
+        raise exception 'a zero-day range was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidReportRangeError%' then raise; end if;
+    end;
+    begin
+        perform public.feedback_summary(366);
+        raise exception 'a 366-day range was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidReportRangeError%' then raise; end if;
+    end;
+end $$;
+reset role;
+
+-- feedback: public functions are the only anon entry points
+do $$
+begin
+    if has_table_privilege('anon', 'public.session_feedback', 'select') then
+        raise exception 'anon can select the feedback table';
+    end if;
+    if has_function_privilege(
+        'anon', 'public.feedback_summary(integer)', 'execute'
+    ) then
+        raise exception 'anon can call the feedback summary';
+    end if;
+    if not has_function_privilege(
+        'anon', 'public.public_feedback_session(bigint, text)', 'execute'
+    ) or not has_function_privilege(
+        'anon', 'public.public_submit_feedback(bigint, text, integer, text)', 'execute'
+    ) then
+        raise exception 'the public feedback functions are not callable by anon';
+    end if;
+    if (select count(*) from pg_proc p
+         where p.pronamespace = 'public'::regnamespace
+           and p.proname in ('public_feedback_session', 'public_submit_feedback',
+                             'feedback_summary')) <> 3 then
+        raise exception 'the feedback functions have more than one overload';
+    end if;
+end $$;
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
 
 rollback;

@@ -19,6 +19,7 @@ const _domainCodes = {
   'DuplicateUsernameError',
   'EvidenceAlreadyUsedError',
   'EvidenceNotFoundError',
+  'FeedbackAlreadyError',
   'InvalidBillingPeriodError',
   'InvalidEntryTimeError',
   'InvalidExitTimeError',

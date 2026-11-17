@@ -429,6 +429,27 @@ class ReceiptCard extends StatelessWidget {
             ),
           ),
         ],
+        if (!data.pendingSync && data.feedbackUrl != null) ...[
+          const SizedBox(height: Space.md),
+          Center(
+            child: Semantics(
+              label: l10n.receiptFeedbackHint,
+              child: QrCode(
+                data: data.feedbackUrl!,
+                size: 88,
+                semanticLabel: l10n.receiptFeedbackHint,
+              ),
+            ),
+          ),
+          const SizedBox(height: Space.xs),
+          Text(
+            l10n.receiptFeedbackHint,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+        ],
         const SizedBox(height: Space.lg),
         const Divider(height: 1),
         const SizedBox(height: Space.sm),

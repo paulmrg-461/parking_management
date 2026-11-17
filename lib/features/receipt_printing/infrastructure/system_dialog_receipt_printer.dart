@@ -155,6 +155,22 @@ class SystemDialogReceiptPrinter implements ReceiptPrinter {
             style: const pw.TextStyle(fontSize: 7),
           ),
         ],
+        if (data.feedbackUrl != null) ...[
+          pw.SizedBox(height: 10),
+          pw.Center(
+            child: pw.BarcodeWidget(
+              barcode: Barcode.qrCode(),
+              data: data.feedbackUrl!,
+              width: 70,
+              height: 70,
+            ),
+          ),
+          pw.Text(
+            labels.feedbackHint,
+            textAlign: pw.TextAlign.center,
+            style: const pw.TextStyle(fontSize: 7),
+          ),
+        ],
         pw.SizedBox(height: 8),
         pw.Text(
           '${labels.generatedOn} ${_dateTime(DateTime.now())}',

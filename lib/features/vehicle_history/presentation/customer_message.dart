@@ -8,6 +8,7 @@ String receiptWhatsappMessage({
   required AppLocalizations l10n,
   required String plate,
   required VehicleHistorySession session,
+  String? feedbackUrl,
 }) {
   final lines = <String>[
     l10n.vehicleWhatsappReceipt(plate),
@@ -32,6 +33,9 @@ String receiptWhatsappMessage({
     lines.add('${l10n.receiptTicket}: ${session.ticketNumber}');
   }
   lines.add(l10n.vehicleWhatsappThanks);
+  if (feedbackUrl != null && feedbackUrl.isNotEmpty) {
+    lines.add(l10n.vehicleWhatsappFeedback(feedbackUrl));
+  }
   return lines.join('\n');
 }
 

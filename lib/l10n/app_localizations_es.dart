@@ -4459,4 +4459,202 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get reportsPeriodPdfNoBase => 'n/d';
+
+  @override
+  String get navSatisfaction => 'Satisfacción';
+
+  @override
+  String get feedbackTitle => 'Tu opinión';
+
+  @override
+  String get feedbackGateTitle => 'Ingresa la placa para calificar tu visita';
+
+  @override
+  String get feedbackGateHint =>
+      'La placa impresa en el recibo es la clave de acceso.';
+
+  @override
+  String get feedbackUnlock => 'Continuar';
+
+  @override
+  String feedbackHeroTitle(String lot) {
+    return '¿Cómo fue tu visita a $lot?';
+  }
+
+  @override
+  String get feedbackHeroSubtitle =>
+      'Tu opinión ayuda a mejorar el servicio. Toma menos de un minuto.';
+
+  @override
+  String get feedbackRateLabel => 'Tu calificación';
+
+  @override
+  String feedbackStarLabel(int rating) {
+    return 'Calificar con $rating estrellas';
+  }
+
+  @override
+  String get feedbackRating1 => 'Muy mala';
+
+  @override
+  String get feedbackRating2 => 'Mala';
+
+  @override
+  String get feedbackRating3 => 'Regular';
+
+  @override
+  String get feedbackRating4 => 'Buena';
+
+  @override
+  String get feedbackRating5 => 'Excelente';
+
+  @override
+  String get feedbackCommentLabel => 'Comentario (opcional)';
+
+  @override
+  String get feedbackCommentHint => 'Cuéntanos qué podemos mejorar';
+
+  @override
+  String get feedbackSubmit => 'Enviar calificación';
+
+  @override
+  String get feedbackThanksTitle => '¡Gracias por tu opinión!';
+
+  @override
+  String get feedbackThanksBody =>
+      'Tu calificación ayuda a que el servicio mejore cada día.';
+
+  @override
+  String get feedbackCloseHint => 'Puedes cerrar esta página.';
+
+  @override
+  String get feedbackAlreadyTitle => 'Ya calificaste esta visita';
+
+  @override
+  String get feedbackAlreadyBody =>
+      'Gracias. Solo se acepta una calificación por visita.';
+
+  @override
+  String get feedbackInvalidTitle => 'No encontramos esta visita';
+
+  @override
+  String get feedbackInvalidBody =>
+      'Revisa el enlace o el código del recibo. Si el problema continúa, pide ayuda en la recepción.';
+
+  @override
+  String get feedbackPendingTitle => 'Tu visita sigue en curso';
+
+  @override
+  String get feedbackPendingBody =>
+      'Podrás calificarla cuando registres la salida.';
+
+  @override
+  String get feedbackReportTitle => 'Satisfacción del cliente';
+
+  @override
+  String get feedbackReportSubtitle =>
+      'Opiniones de tus clientes en el periodo';
+
+  @override
+  String feedbackPeriodSummary(int total, int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$total respuestas',
+      one: '1 respuesta',
+    );
+    return '$_temp0 · últimos $days días';
+  }
+
+  @override
+  String get feedbackAverage => 'Calificación promedio';
+
+  @override
+  String feedbackAverageValue(int whole, int decimal) {
+    return '$whole,$decimal';
+  }
+
+  @override
+  String feedbackAverageCaption(int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'Basada en $total respuestas',
+      one: 'Basada en 1 respuesta',
+      zero: 'Sin respuestas',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get feedbackResponses => 'Respuestas';
+
+  @override
+  String feedbackResponseRate(int percent) {
+    return '$percent% de las salidas';
+  }
+
+  @override
+  String get feedbackLowRatings => 'Calificaciones bajas';
+
+  @override
+  String get feedbackLowCaption => '1 a 3 estrellas';
+
+  @override
+  String get feedbackLowEmpty => 'Ninguna';
+
+  @override
+  String get feedbackDistribution => 'Distribución';
+
+  @override
+  String feedbackDistributionRow(int rating) {
+    return '$rating estrellas';
+  }
+
+  @override
+  String feedbackDistributionSemantics(int rating, int count) {
+    return '$rating estrellas: $count respuestas';
+  }
+
+  @override
+  String get feedbackRecent => 'Últimos comentarios';
+
+  @override
+  String get feedbackRecentEmpty => 'Sin comentarios en el periodo';
+
+  @override
+  String get feedbackNoComment => 'Sin comentario';
+
+  @override
+  String get feedbackEmptyTitle => 'Aún no hay calificaciones';
+
+  @override
+  String get feedbackEmptyBody =>
+      'Cuando tus clientes califiquen una visita desde el recibo, verás aquí el promedio y sus comentarios.';
+
+  @override
+  String get feedbackRefresh => 'Actualizar';
+
+  @override
+  String get errorFeedbackAlready =>
+      'Ya calificaste esta visita. Solo se acepta una calificación por visita.';
+
+  @override
+  String get receiptFeedbackHint => 'Califica tu visita: escanea el código';
+
+  @override
+  String vehicleWhatsappFeedback(String url) {
+    return 'Califica tu visita: $url';
+  }
+
+  @override
+  String feedbackPeriodDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days días',
+      one: '1 día',
+    );
+    return '$_temp0';
+  }
 }

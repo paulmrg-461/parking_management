@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 import '../../core/receipt/evidence_link.dart';
+import '../../core/receipt/feedback_link.dart';
 import '../../features/auth/application/auth_cubit.dart';
 import '../../features/auth/domain/entities/user.dart';
 
@@ -56,7 +57,8 @@ String? authRedirect(AuthState auth, String location) {
   if (path == evidencePath ||
       path == policiesPath ||
       path == aboutPath ||
-      path == reservePath) {
+      path == reservePath ||
+      path == feedbackPath) {
     return null;
   }
   final atLogin = path == loginPath;

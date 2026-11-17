@@ -97,6 +97,7 @@ extension FailureMessages on AppLocalizations {
     'AnomalyNoteRequiredError' => errorAnomalyNoteRequired,
     'InvalidAnomalySettingError' => errorInvalidAnomalySetting,
     'InvalidAnomalyStatusError' => errorInvalidData,
+    'FeedbackAlreadyError' => errorFeedbackAlready,
     'WaitlistDisabledError' => errorWaitlistDisabled,
     'WaitlistNotNeededError' => errorWaitlistNotNeeded,
     'WaitlistExistsError' => errorWaitlistExists,

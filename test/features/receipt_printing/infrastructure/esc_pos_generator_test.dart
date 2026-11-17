@@ -105,6 +105,31 @@ void main() {
     expect(text, isNot(contains('TCK-000043')));
   });
 
+  test('Success: a feedback URL prints its own QR and caption', () {
+    final bytes = const EscPosGenerator().build(
+      ReceiptData(
+        kind: ReceiptKind.checkOut,
+        plate: 'ABC123',
+        entryTime: DateTime(2026, 1, 1, 8, 30),
+        exitTime: DateTime(2026, 1, 1, 9, 30),
+        amountCharged: 8000,
+        feedbackUrl: 'https://app.test/feedback?session=7&plate=ABC123',
+      ),
+      _configured,
+    );
+
+    final text = _decode(bytes);
+    expect(text, contains('Califica tu visita'));
+    expect(text, contains('/feedback?session=7&plate=ABC123'));
+    expect(_contains(bytes, _qrPrint), isTrue);
+  });
+
+  test('Failure: without a feedback URL the caption is absent', () {
+    final bytes = const EscPosGenerator().build(_checkOut, _configured);
+
+    expect(_decode(bytes), isNot(contains('Califica tu visita')));
+  });
+
   test('Success: English labels print a fully translated receipt', () {
     final bytes = const EscPosGenerator().build(
       _checkOut,

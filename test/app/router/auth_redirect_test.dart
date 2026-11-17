@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/app/router/route_access.dart';
+import 'package:parking_management/core/receipt/feedback_link.dart';
 import 'package:parking_management/features/auth/application/auth_cubit.dart';
 import 'package:parking_management/features/auth/domain/entities/auth_session.dart';
 import 'package:parking_management/features/auth/domain/entities/user.dart';
@@ -14,6 +15,7 @@ AuthAuthenticated _as(UserRole role) => AuthAuthenticated(
 const _adminOnly = [
   '/users',
   '/reports',
+  '/satisfaction',
   '/categories',
   '/tariffs',
   '/vehicles',
@@ -57,6 +59,24 @@ void main() {
         authRedirect(const AuthUnauthenticated(), '/reserve?lot=1'),
         isNull,
       );
+    });
+
+    test('Security: the survey page is public (plate-keyed link)', () {
+      expect(authRedirect(const AuthUnauthenticated(), feedbackPath), isNull);
+      expect(
+        authRedirect(
+          const AuthUnauthenticated(),
+          '/feedback?session=7&plate=ABC123',
+        ),
+        isNull,
+      );
+      expect(authRedirect(_as(UserRole.operator), feedbackPath), isNull);
+    });
+
+    test('Security: operators cannot open the satisfaction report', () {
+      expect(authRedirect(_as(UserRole.operator), '/satisfaction'), '/');
+      expect(canAccess(UserRole.operator, '/satisfaction'), isFalse);
+      expect(authRedirect(_as(UserRole.admin), '/satisfaction'), isNull);
     });
 
     test('Security: the evidence page is public (plate-keyed link)', () {

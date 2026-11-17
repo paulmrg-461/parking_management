@@ -21,6 +21,7 @@ import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/filter_bar.dart';
 import '../../../core/widgets/error_state.dart';
 import '../../../core/receipt/evidence_link.dart';
+import '../../../core/receipt/feedback_link.dart';
 import '../../../core/widgets/receipt_card.dart';
 import '../../../core/widgets/plate_keypad.dart';
 import '../../../core/widgets/search_field.dart';
@@ -459,6 +460,9 @@ class _CheckOutPageState extends State<CheckOutPage> {
     discountReason: receipt.discountReason,
     pendingSync: receipt.pendingSync,
     evidenceUrl: receipt.pendingSync ? null : publicEvidenceUrl(receipt.id),
+    feedbackUrl: receipt.pendingSync
+        ? null
+        : publicFeedbackUrl(receipt.id, plate: receipt.plate),
   );
 }
 

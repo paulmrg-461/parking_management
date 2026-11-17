@@ -21,6 +21,7 @@ class ReceiptData {
     this.discountReason,
     this.pendingSync = false,
     this.evidenceUrl,
+    this.feedbackUrl,
   });
 
   final ReceiptKind kind;
@@ -42,6 +43,9 @@ class ReceiptData {
 
   /// Public page (plate is the key) with the session's photos and videos.
   final String? evidenceUrl;
+
+  /// Public survey page for this visit (check-out receipts only).
+  final String? feedbackUrl;
 
   bool get isCheckOut => kind == ReceiptKind.checkOut;
 }

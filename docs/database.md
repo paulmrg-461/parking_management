@@ -34,6 +34,8 @@ erDiagram
   users ||--o{ web_push_subscriptions : "subscribes"
 
   parking_sessions ||--o{ evidence_photos : "has"
+  parking_sessions ||--o| session_feedback : "rated by"
+  parking_lots ||--o{ session_feedback : "collects"
   shifts ||--o{ parking_sessions : "reconciles"
   shifts ||--o{ cash_movements : "records"
   shifts ||--o{ shift_adjustments : "corrected by"
@@ -55,6 +57,7 @@ erDiagram
 | `vehicles` | Global plate registry (category, color, brand, notes, blacklist, customer phone). A plate can park anywhere. | no |
 | `parking_sessions` | A stay: entry/exit, amount, payment method, discount audit, lost ticket, shift, lot, ticket number; `closed_recorded_at` is the server time of the check-out (the exit time may be an offline client time). | yes |
 | `evidence_photos` | Check-in photos/videos (storage path per session, unique `file_path`). | via session |
+| `session_feedback` | Customer survey: one row per closed session (`unique (session_id)`), rating 1..5 and an optional comment up to 500 characters. Written only by the public RPCs, read by the lot. | yes |
 | `shifts` | Operator cash shift per site: opening float, counted cash, expected, difference. | yes |
 | `cash_movements` | Withdrawals/deposits/adjustments inside a shift. | via shift |
 | `shift_adjustments` | Audit of admin corrections to a closed shift. | via shift |
@@ -145,6 +148,18 @@ hold with a phone and automated WhatsApp, queues `reservation_cancelled`.
 `notify_expiring_reservations(window)` queues a `reservation_reminder`
 WhatsApp for public holds ending inside the window (default 60 min) when the
 lot has automated WhatsApp on, and stamps `reminder_sent_at` (idempotent).
+
+**Customer feedback** (`0111`)
+`public_feedback_session(session, plate)` (anon) returns the lot name,
+`rateable`, `rated` and the stored rating, or `null` when the session does not
+exist or the plate does not match; `public_submit_feedback(session, plate,
+rating, comment)` (anon) requires a closed session matching the plate, trims the
+comment, stores one row and raises `InvalidDataError`, `SessionNotFoundError`
+or `FeedbackAlreadyError`. `feedback_summary(p_days)` (`require_admin()`,
+lot-scoped, business timezone, 1..365 days) returns `total`, `average_x10`,
+`closed_sessions`, `response_rate_bp`, `low_count`, the five-bucket
+`distribution` and the newest 20 rows. The survey link is built by the client
+(`APP_URL`); no edge function is involved.
 
 **Cash anomalies** (`0110`)
 `cash_anomalies` (rule, severity, dedupe key, subject/shift/session, details,
@@ -299,6 +314,7 @@ days).
 | `monthly_pass_payments`, `category_reservations` | active lot | RPCs |
 | `parking_settings` (`car_capacity`, `moto_capacity`, `key_capacity`) | active lot; anonymous only the first lot (login branding) | lot admins |
 | `whatsapp_messages` | admins | `enqueue_whatsapp_message` + the dispatcher |
+| `session_feedback` | active lot | only the public RPCs (no client write grant) |
 | `notifications` | own rows, active lot (or global) | RPCs/triggers |
 | `audit_log` | platform admins | triggers and the `admin-users` Edge Function |
 | `device_tokens`, `web_push_subscriptions` | own rows | RPCs |

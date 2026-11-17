@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/config/app_config.dart';
 import '../../core/qr/qr_decoder.dart';
 import '../../core/receipt/evidence_link.dart';
+import '../../core/receipt/feedback_link.dart';
 import '../../features/public_booking/application/public_booking_cubit.dart';
 import '../../features/public_booking/presentation/public_booking_page.dart';
 import '../../features/reservations/domain/repositories/reservation_repository.dart';
@@ -28,6 +29,8 @@ import '../../features/check_out/application/check_out_cubit.dart';
 import '../../features/check_out/presentation/check_out_page.dart';
 import '../../features/about/presentation/about_developer_page.dart';
 import '../../features/evidence/application/evidence_cubit.dart';
+import '../../features/feedback/application/public_feedback_cubit.dart';
+import '../../features/feedback/presentation/public_feedback_page.dart';
 import '../../features/help/presentation/help_page.dart';
 import '../../features/preferences/presentation/preferences_page.dart';
 import '../../features/evidence/presentation/public_evidence_page.dart';
@@ -56,6 +59,7 @@ import '../../features/reservations/presentation/reservations_page.dart';
 import '../di/injection.dart';
 import '../shell/app_shell.dart';
 import 'deferred/categories_entry.dart' deferred as categories;
+import 'deferred/feedback_entry.dart' deferred as feedback;
 import 'deferred/contact_entry.dart' deferred as contact;
 import 'deferred/monthly_passes_entry.dart' deferred as monthly_passes;
 import 'deferred/reports_entry.dart' deferred as reports;
@@ -125,6 +129,16 @@ GoRouter buildRouter(
       builder: (context, state) => BlocProvider<EvidenceCubit>(
         create: (_) => serviceLocator<EvidenceCubit>(),
         child: PublicEvidencePage(
+          sessionId: int.tryParse(state.uri.queryParameters['session'] ?? ''),
+          plate: state.uri.queryParameters['plate'],
+        ),
+      ),
+    ),
+    GoRoute(
+      path: feedbackPath,
+      builder: (context, state) => BlocProvider<PublicFeedbackCubit>(
+        create: (_) => serviceLocator<PublicFeedbackCubit>(),
+        child: PublicFeedbackPage(
           sessionId: int.tryParse(state.uri.queryParameters['session'] ?? ''),
           plate: state.uri.queryParameters['plate'],
         ),
@@ -321,6 +335,11 @@ GoRoute _homeRoute(AuthCubit auth) => GoRoute(
       'reports',
       reports.loadLibrary,
       () => reports.buildReportsEntry(),
+    ),
+    _deferred(
+      'satisfaction',
+      feedback.loadLibrary,
+      () => feedback.buildFeedbackEntry(),
     ),
     _deferred(
       'settings',

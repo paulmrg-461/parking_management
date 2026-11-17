@@ -21,6 +21,7 @@ class ReceiptLabels {
     required this.thanks,
     required this.scanHint,
     required this.evidenceHint,
+    required this.feedbackHint,
     required this.paymentMethod,
   });
 
@@ -47,6 +48,9 @@ class ReceiptLabels {
   /// Caption under the smaller QR that opens the public evidence page.
   final String evidenceHint;
 
+  /// Caption under the QR that opens the customer survey.
+  final String feedbackHint;
+
   /// Localizes a wire value (`cash`, `card`, `transfer`, `monthly_pass`,
   /// `exempt`) plus the optional card type (`debit`/`credit`).
   final String Function(String method, String? cardType) paymentMethod;
@@ -71,6 +75,7 @@ class ReceiptLabels {
     thanks: 'Gracias por su visita',
     scanHint: 'Presente este codigo al salir',
     evidenceHint: 'Evidencias del vehiculo (clave: placa)',
+    feedbackHint: 'Califica tu visita',
     paymentMethod: _paymentEs,
   );
 
@@ -93,6 +98,7 @@ class ReceiptLabels {
     thanks: 'Thank you for your visit',
     scanHint: 'Show this code at the exit',
     evidenceHint: 'Vehicle evidence (key: plate)',
+    feedbackHint: 'Rate your visit',
     paymentMethod: _paymentEn,
   );
 
