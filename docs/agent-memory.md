@@ -78,10 +78,20 @@ Last updated: 2026-11-17 (online payments, Wompi).
   checksum concatenation, the checkout integrity signature, the minimum amount
   per method, `GET {api}/transactions?reference=` for the reconcile, and one
   merchant account per deployment.
-- Not verified: a real Turnstile-free Wompi sandbox payment (no credentials),
-  the function inside the edge-runtime container (Deno tests use mocks), and
-  the operator smoke (task 6.2 of the change). The SQL suite runs the schema,
-  RPCs and check-out blocks.
+- Gatekeeper (2026-11-17): migrations `0112`-`0114` applied live (defaults
+  `online_payments_enabled = false`, grace 15, minimum 1500), **1493 tests**
+  green, coverage 80.0% global (application 91.8%, domain 60.8%,
+  infrastructure 45.0%), `flutter analyze` clean, SQL suite green over
+  `0001`-`0114`, Deno **22 tests** green, web release + debug APK built,
+  `build/web-public` rebuilt with the LAN API and `APP_URL` and republished
+  (`/evidence` 200). Live inert-path smoke: `payment-intent` →
+  `503 PaymentsNotConfiguredError`, anon `payment_intent_status` → `null`,
+  `online_settlement_amounts(9000, 6000, now, now, 15)` → charged 6000 /
+  desk_due 0. No device attached: the APK was not installed.
+- Not verified: a real Wompi sandbox payment (no credentials), the function
+  inside the edge-runtime container (Deno tests use mocks), and the operator
+  smoke (task 6.2 of the change). The SQL suite runs the schema, RPCs and
+  check-out blocks.
 
 ## Customer feedback (2026-11-17, `0111`)
 
