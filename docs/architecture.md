@@ -348,6 +348,31 @@ unless a clear entry/exit pair, medium/high confidence and a same-vehicle yes
 support it, and computes the overall result. Exit photos need connectivity in
 v1; billing and the check-out path never change.
 
+## 5f. Device gateway
+
+```mermaid
+sequenceDiagram
+  participant D as Device (camera/barrier/hub)
+  participant G as device-gateway
+  participant DB as PostgreSQL
+
+  D->>G: GET /v1/time
+  G-->>D: server_time, max_skew 300 s
+  D->>G: POST /v1/heartbeat<br/>X-Device-Key, X-Device-Seq, X-Device-Timestamp
+  G->>DB: device_lookup(prefix) (service role)
+  DB-->>G: id + key_hash
+  G->>G: SHA-256(key) constant-time compare
+  G->>DB: device_accept_request(id, seq, sent_at, firmware)
+  DB-->>G: ok | disabled | skew | replay | rate
+  G->>DB: device_heartbeat(id, status)
+  G-->>D: server_time, heartbeat_interval_s, device, offline_minutes
+  Note over DB: offline_notified_at + notify_offline_devices()<br/>alerts the lot admins once per silence
+```
+
+The device never sends a lot id or a user JWT: the gateway derives both from
+the registry. The service key lives only in this function; the follow-up
+hardware changes add routes to the same table and reuse the same checks.
+
 ## 6. Shifts and cash
 
 An operator opens one shift per site (`unique (operator_id, lot_id)`), records

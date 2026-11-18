@@ -67,6 +67,25 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - Android release build: R8 keep rules for the optional ML Kit scripts.
 
 ### Added
+- **Device gateway (`0128`–`0129`)**
+  (`openspec/changes/add-device-gateway`). Hardware devices get their own
+  per-lot identity, never a user account:
+  - `lot_devices` (kind, name, SHA-256 key hash, show-once plaintext, enabled,
+    last seen, monotonic sequence, firmware, rate window, offline marker) and
+    the `device_events` trail. No audit trigger copies the hash; the event log
+    is the audit. Admin RPCs register/rotate/update/delete/list devices, read
+    events and set the offline threshold (`parking_settings.device_offline_minutes`).
+  - Service-role-only `device_lookup`, `device_accept_request` (strictly
+    increasing `X-Device-Seq`, ±5 min clock skew, per-device rate window,
+    online/offline events) and `device_heartbeat`. `notify_offline_devices` and
+    `purge_device_events` run from the jobs container.
+  - `device-gateway` Edge Function: `GET /v1/time` and `POST /v1/heartbeat`
+    with `X-Device-Key` (constant-time hash compare), no user JWT and no lot
+    header from the device. The route table is ready for the camera, barrier
+    and sensor changes.
+  - Flutter admin screen `/devices` is the next batch; the registry, transport
+    and jobs are complete and tested.
+
 - **Damage comparison (backend, `0127`)**
   (`openspec/changes/add-ai-damage-comparison`). Exit evidence and the
   advisory AI comparison record, with a human review workflow:
@@ -1392,6 +1411,7 @@ Migrations are append-only and applied in filename order by `supabase-migrate`.
 | `0124`–`0125` | Electronic invoicing: fiscal settings/resolutions/documents, numbering, issuance, outbox, credit notes, sweeper, admin list |
 | `0126` | Shared AI platform: features, per-lot limits, request/token ledger, budget RPCs and retention |
 | `0127` | Damage comparison: exit evidence phase, comparisons/findings, begin/get/review, service-role store/fail and retention |
+| `0128`–`0129` | Device gateway: registry/events, admin + service RPCs, offline alerts, retention |
 
 ## Verification snapshot
 

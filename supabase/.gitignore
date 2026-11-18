@@ -65,3 +65,7 @@ volumes/functions/_shared/ai/**
 volumes/functions/damage-compare/**
 !volumes/functions/damage-compare/**/
 !volumes/functions/damage-compare/**/*.ts
+!volumes/functions/device-gateway/
+volumes/functions/device-gateway/**
+!volumes/functions/device-gateway/index.ts
+!volumes/functions/device-gateway/index_test.ts

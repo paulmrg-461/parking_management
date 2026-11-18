@@ -48,6 +48,11 @@ docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
   "select public.purge_audit_log(365);" >/dev/null
 docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
   "select public.purge_whatsapp_messages(90);" >/dev/null
+# Device gateway: offline alerts and event retention.
+docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
+  "select public.notify_offline_devices();" >/dev/null
+docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
+  "select public.purge_device_events(180);" >/dev/null
 # Damage comparisons follow the evidence retention window.
 docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
   "select public.purge_damage_comparisons();" >/dev/null

@@ -48,6 +48,7 @@ WhatsApp (manual or automated).
 | Electronic invoicing | Complete, inert by default (`mode = off`, provider optional; every DIAN rule an ASSUMPTION) | SQL + Deno + widget tests |
 | Report assistant | Complete, inert without `DEEPSEEK_API_KEY` (tool allowlist, verified figures, budget) | SQL + Deno + widget tests |
 | Damage comparison | Complete, inert without a key (exit photos, advisory AI comparison, human review) | SQL + Deno + widget tests |
+| Device gateway | Backend complete, admin screen pending (registry, keys, transport, offline alerts) | SQL + Deno tests |
 | Backups / restore | Complete, with a safe drill | Drill executed against a real backup |
 | Secrets / PIN operations | Complete (scripts + runbook) | PIN rotation verified live |
 | E2E and CI | Complete (API + Flutter client, real stack) | CI job `supabase-e2e` |
@@ -86,6 +87,7 @@ the main data it touches.
 | `pass_renewal` | Public token-keyed renewal page (`/renew?t=`) and the admin "send renewal link" action | `pass_renewal_offers`, `public_pass_renewal`, `pass-renewal-intent` (Edge Function), `settle_pass_renewal`, `queue_pass_renewal_reminders` |
 | `merchants` | Agreements, show-once credentials, per-vehicle policy, settlement and the public `/validate?m=` page | `merchants`, `merchant_credentials`, `merchant_validations`, `fare_quote`, `save_merchant`, `merchant_validate`, `report_merchant_settlement` |
 | `pricing` | Dynamic rates: rules, guard rails, simulation, impact and the check-in price chip | `pricing_rules`, `pricing_lock`, `pricing_quote`, `pricing_simulate`, `report_pricing_impact`, `public_availability` price keys |
+| `devices` | Per-lot hardware registry, key rotation, heartbeat/offline alerts and the `device-gateway` transport (admin screen pending) | `lot_devices`, `device_events`, `register_lot_device`, `device_accept_request`, `device_heartbeat`, `notify_offline_devices` |
 | `damage_comparison` | Exit photos, advisory AI comparison of entry/exit photos and the human review (UI pending) | `damage_comparisons`, `damage_findings`, `add_exit_evidence`, `begin/get_damage_comparison`, `review_damage_finding`, `damage-compare` |
 | `report_assistant` | Natural-language questions over the report RPCs with a verified figure/source for each number (`/report-assistant`) | `ai_requests`/`ai_limits`, `ai_budget_*`, `report-assistant` Edge Function, `report_revenue` and the other report RPCs |
 | `invoicing` | Fiscal issuer/resolutions, document outbox, credit notes and the admin list (`/invoicing`) | `fiscal_settings`, `fiscal_resolutions`, `fiscal_documents`, `issue_fiscal_document`, `list_fiscal_documents`, `request_credit_note`, `fiscal-dispatch` |
@@ -256,6 +258,21 @@ that writes the ledger never blocks a check-out: a loyalty failure is stored as
 a skipped visit with reason `error`. `/loyalty` shows the program, the members
 with a bounded, reasoned progress correction, and the impact report. A manual
 correction can move progress but can never mint a reward.
+
+## 7.12 Device gateway (backend, no user accounts for devices)
+
+Cameras, barriers and sensor hubs are registered per lot with a `pkd_…` API key
+whose SHA-256 hash is stored (the plaintext is shown once, on registration or
+rotation). A device never gets a GoTrue user or a lot header it can choose: the
+`device-gateway` Edge Function resolves the lot from the registry, compares the
+key in constant time, and enforces a strictly increasing `X-Device-Seq`, a ±5
+minute timestamp (`max_client_clock_skew()`) and a per-device rate window before
+calling the service-role RPCs. Every registration, rotation, enable/disable,
+rename, delete, rejected request and online/offline transition lands in
+`device_events`. `notify_offline_devices` alerts the lot admins once per
+silence. `/v1/time` and `/v1/heartbeat` are the only routes in this change; the
+camera, barrier and sensor changes extend the same route table. The Flutter
+admin screen is the next batch.
 
 ## 7.11 Damage comparison (backend, inert without a key)
 

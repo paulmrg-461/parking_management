@@ -15719,6 +15719,232 @@ begin
     end if;
 end $$;
 
+
+-- ---------------------------------------------------------------------------
+-- devices: register, rotate and list
+-- ---------------------------------------------------------------------------
+do $$
+declare
+    result jsonb;
+    prefix text;
+    device_id integer;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    perform set_config('request.jwt.claim.sub',
+        '00000000-0000-0000-0000-000000000001', true);
+    result := public.register_lot_device('camera', 'Entrada principal');
+    if result ->> 'api_key' is null
+       or (result ->> 'status') <> 'never_seen'
+       or (result ->> 'api_key') !~ '^pkd_[0-9a-f]{12}_[0-9a-f]{64}$' then
+        raise exception 'the registered device is wrong: %', result;
+    end if;
+    prefix := split_part(result ->> 'api_key', '_', 2);
+    if public.device_lookup(prefix) ->> 'key_hash' is null then
+        raise exception 'the device lookup did not find the key';
+    end if;
+    device_id := (result ->> 'id')::integer;
+    perform set_config('app.device', device_id::text, true);
+    perform set_config('app.device_prefix', prefix, true);
+
+    begin
+        perform public.register_lot_device('barrier', 'Entrada principal');
+        raise exception 'a duplicate device name was accepted';
+    exception when others then
+        if sqlerrm not like '%DeviceNameTakenError%' then raise; end if;
+    end;
+    begin
+        perform public.register_lot_device('drone', 'X');
+        raise exception 'an invalid kind was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDeviceKindError%' then raise; end if;
+    end;
+end $$;
+
+-- devices: rotate resets the sequence and writes an event
+do $$
+declare
+    device_id integer := current_setting('app.device')::integer;
+    old_prefix text := current_setting('app.device_prefix');
+    result jsonb;
+begin
+    update public.lot_devices set last_seq = 42 where id = device_id;
+    result := public.rotate_lot_device_key(device_id);
+    if split_part(result ->> 'api_key', '_', 2) = old_prefix then
+        raise exception 'the key was not rotated';
+    end if;
+    if (select last_seq from public.lot_devices where id = device_id) <> 0 then
+        raise exception 'rotation did not reset the sequence';
+    end if;
+    if not exists (select 1 from public.device_events e
+                    where e.device_id = current_setting('app.device')::integer
+                      and e.event = 'key_rotated') then
+        raise exception 'the rotation was not logged';
+    end if;
+end $$;
+
+-- devices: accept, replay, clock and disable
+do $$
+declare
+    device_id integer := current_setting('app.device')::integer;
+    result jsonb;
+begin
+    result := public.device_accept_request(device_id, 1, now(), 'lpr-1.0');
+    if (result ->> 'ok')::boolean is not true
+       or (result ->> 'lot_id')::integer <> 1 then
+        raise exception 'a valid request was refused: %', result;
+    end if;
+    result := public.device_accept_request(device_id, 1, now(), null);
+    if result ->> 'error' <> 'DeviceReplayError' then
+        raise exception 'a replayed sequence was accepted: %', result;
+    end if;
+    result := public.device_accept_request(device_id, 2, now() - interval '10 minutes', null);
+    if result ->> 'error' <> 'DeviceClockSkewError' then
+        raise exception 'a skewed timestamp was accepted: %', result;
+    end if;
+    update public.lot_devices set enabled = false where id = device_id;
+    result := public.device_accept_request(device_id, 3, now(), null);
+    if result ->> 'error' <> 'DeviceDisabledError' then
+        raise exception 'a disabled device was accepted: %', result;
+    end if;
+    update public.lot_devices set enabled = true where id = device_id;
+end $$;
+
+-- devices: list shows the online status, events and the threshold
+do $$
+declare
+    listed jsonb;
+    events jsonb;
+begin
+    listed := public.list_lot_devices();
+    if (listed ->> 'offline_minutes')::integer <> 5 then
+        raise exception 'the default offline threshold is wrong: %', listed;
+    end if;
+    if listed -> 'devices' -> 0 ->> 'status' <> 'online' then
+        raise exception 'the device is not online: %', listed;
+    end if;
+    events := public.list_device_events(null, 50);
+    if jsonb_array_length(events) < 3 then
+        raise exception 'the device events are missing: %', events;
+    end if;
+    if public.set_device_offline_minutes(10) ->> 'offline_minutes' <> '10' then
+        raise exception 'the offline threshold was not saved';
+    end if;
+    begin
+        perform public.set_device_offline_minutes(1);
+        raise exception 'an out-of-range threshold was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+end $$;
+
+-- devices: update and heartbeat
+do $$
+declare
+    device_id integer := current_setting('app.device')::integer;
+    result jsonb;
+begin
+    result := public.update_lot_device(device_id, 'Cámara norte', null, 60);
+    if result ->> 'name' <> 'Cámara norte'
+       or (result ->> 'rate_per_minute')::integer <> 60 then
+        raise exception 'the device was not updated: %', result;
+    end if;
+    result := public.device_heartbeat(device_id, jsonb_build_object('uptime_s', 10));
+    if (result ->> 'heartbeat_interval_s')::integer <> 60
+       or (result ->> 'offline_minutes')::integer <> 10 then
+        raise exception 'the heartbeat answer is wrong: %', result;
+    end if;
+    begin
+        perform public.device_heartbeat(device_id, '[]'::jsonb);
+        raise exception 'a non-object heartbeat status was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+end $$;
+
+-- devices: offline alert is written once
+do $$
+declare
+    device_id integer := current_setting('app.device')::integer;
+    flagged integer;
+begin
+    update public.lot_devices
+       set last_seen_at = now() - interval '30 minutes',
+           offline_notified_at = null
+     where id = device_id;
+    flagged := public.notify_offline_devices();
+    if flagged < 1 then
+        raise exception 'the offline device was not flagged';
+    end if;
+    if not exists (select 1 from public.notifications
+                    where type = 'device_offline'
+                      and data ->> 'device_id' = device_id::text) then
+        raise exception 'the offline notification is missing';
+    end if;
+    if public.notify_offline_devices() <> 0 then
+        raise exception 'the offline device was flagged twice';
+    end if;
+    if not exists (select 1 from public.device_events e
+                    where e.device_id = current_setting('app.device')::integer
+                      and e.event = 'offline') then
+        raise exception 'the offline event is missing';
+    end if;
+end $$;
+
+-- devices: auth failure notification and purge
+do $$
+declare
+    device_id integer := current_setting('app.device')::integer;
+    removed integer;
+begin
+    perform public.device_record_auth_failure(device_id);
+    if not exists (select 1 from public.notifications
+                    where type = 'device_auth_failed'
+                      and data ->> 'device_id' = device_id::text) then
+        raise exception 'the auth failure notification is missing';
+    end if;
+    update public.device_events set created_at = now() - interval '200 days';
+    removed := public.purge_device_events(180);
+    if removed < 1 then
+        raise exception 'the event purge removed nothing';
+    end if;
+end $$;
+
+-- devices: security boundaries
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    begin
+        perform public.list_lot_devices();
+        raise exception 'an operator listed the devices';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+    begin
+        perform public.register_lot_device('camera', 'Operador');
+        raise exception 'an operator registered a device';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+end $$;
+reset role;
+set local role anon;
+do $$
+begin
+    begin
+        perform 1 from public.device_events limit 1;
+        raise exception 'anon read the device events';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform public.register_lot_device('camera', 'Anon');
+        raise exception 'anon registered a device';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
 set local request.headers = '{"x-lot-id":"1"}';
 
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';

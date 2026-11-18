@@ -55,6 +55,9 @@ while true; do
   run purge_ai_requests
   # Damage comparisons follow the evidence retention window.
   run purge_damage_comparisons
+  # Device gateway: offline alerts and event retention.
+  run notify_offline_devices
+  run purge_device_events
   run purge_cash_anomalies
   # Pass renewal reminders (queued only when the lot opted in).
   run queue_pass_renewal_reminders

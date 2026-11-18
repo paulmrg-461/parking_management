@@ -100,6 +100,8 @@ erDiagram
 | `parking_spot_events` | Maintenance history of a bay: status transition, optional reason, actor and timestamp; written by `save_parking_spot`, lot-scoped RLS. | yes |
 | `parking_settings` (`car_capacity`, `moto_capacity`, `key_capacity`) | Per-site branding (name, address, schedule, contacts, police quadrant, logo version/path) + `business_timezone`, `overstay_hours`, `lost_ticket_fee`, `evidence_retention_days`, online-payment switch/window/minimum. | yes |
 | `payment_intents` | Frozen amount for a gateway checkout: `reference` (random `PM-…`), `amount`, `currency` (COP only), `gateway` (`wompi`), `status` (`pending`/`approved`/`declined`/`voided`/`error`/`expired`), transaction id/method, `expires_at`. Written only by the service RPCs. | yes |
+| `lot_devices` | Per-lot hardware: kind, name, key prefix + SHA-256 hash, enabled, last seen/sequence/status, firmware, rate window, offline marker. No API grant (the hash never leaves the definer RPCs). | yes |
+| `device_events` | Device audit trail: registration, rotation, rename, enable/disable, delete, online/offline, auth failures and rejected requests. Admin-read only; no audit trigger on `lot_devices`. | yes |
 | `damage_comparisons` | One advisory comparison run per session (run number, status, overall verdict, summary, quality, model, counts, error). Written by the service role only. | yes |
 | `damage_findings` | One possible finding per comparison: zone, description, classification (`pre_existing`/`new`/`uncertain`), categorical confidence, downgrade marker, photo ids and the human review (status/note/reviewer/time). Audited on update. | yes |
 | `ai_features` | AI feature registry: `admin_only` and the default daily request/token caps. Seeded with `report_assistant`. No API grant. | — |
@@ -440,6 +442,17 @@ re-open admin-only, audited) and `purge_damage_comparisons` (internal; follows
 holds the service key and nothing else does. `photo_count` now includes exit
 photos.
 
+**Device gateway (`0128`–`0129`)**
+`max_client_clock_skew()`, `device_status`, `device_json`, `device_event`
+(internal); `register_lot_device`, `rotate_lot_device_key`,
+`update_lot_device`, `delete_lot_device`, `list_lot_devices`,
+`list_device_events`, `set_device_offline_minutes` (lot admins);
+`device_lookup`, `device_accept_request`, `device_record_auth_failure`,
+`device_heartbeat` (service role); `notify_offline_devices`,
+`purge_device_events` (jobs). Keys are generated with `gen_random_bytes` and
+stored only as a SHA-256 hash; `lot_devices` has no audit trigger so the hash
+cannot leak into `audit_log`.
+
 ## 4. Access control (RLS)
 
 | Table | Read | Write |
@@ -465,6 +478,8 @@ photos.
 | `ai_features` | nobody (RLS on, no policy, no grant) | seed only |
 | `ai_limits`, `ai_requests` | lot admins of the active lot | definer RPCs only |
 | `damage_comparisons`, `damage_findings` | active lot (RLS) | definer RPCs; the result writers are service-role only |
+| `lot_devices` | nobody (RLS on, no policy, no grant) | definer RPCs only |
+| `device_events` | lot admins of the active lot | definer RPCs only |
 | `fiscal_documents` (service role) | — | `claim_fiscal_documents` / `record_fiscal_result` |
 | `merchant_credentials` | nobody (RLS on, no policy, no grant) | definer RPCs only |
 | `merchant_validations` | active lot | RPCs (desk/admin/public) |

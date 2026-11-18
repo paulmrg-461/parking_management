@@ -4,16 +4,17 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-11-18 (damage comparison UI).
+Last updated: 2026-11-18 (device gateway backend).
 
 ## Where we are
 
 - Stack: Flutter (android + web) + self-hosted Supabase only. No FastAPI,
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
-- `supabase/migrations/0001..0127` are the schema owner (applied by
+- `supabase/migrations/0001..0129` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
 - Flutter: 1866 tests green (coverage 79.1% global; application 90.3%,
-  domain 62.7%, infrastructure 47.9%), `flutter analyze` reports only SDK
+  domain 62.7%, infrastructure 47.9%) — unchanged by the device backend batch;
+  `flutter analyze` reports only SDK
   deprecation infos from the pinned beta channel (0 errors/warnings). Web
   build green. Deno tests for the Edge Functions: 30 green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
@@ -27,6 +28,39 @@ Last updated: 2026-11-18 (damage comparison UI).
 
 
 
+
+
+## Device gateway backend (2026-11-18, `0128`-`0129`)
+
+- Devices are not users: `lot_devices` stores only a SHA-256 hash and a public
+  12-hex prefix; the `pkd_<prefix>_<64 hex>` plaintext is returned once by
+  `register_lot_device`/`rotate_lot_device_key`. Do NOT attach `record_audit()`
+  to `lot_devices`; `device_events` is the audit trail and never holds a key or
+  hash. Rotation resets `last_seq` and clears `offline_notified_at`.
+- Auth path: `device-gateway` computes SHA-256 of `X-Device-Key`, compares it
+  in constant time with `device_lookup(prefix)`, then `device_accept_request`
+  checks enabled -> clock (±5 min via `max_client_clock_skew()`) -> strictly
+  increasing `X-Device-Seq` -> per-device rate window. Refusals are returned as
+  JSON, not raised, so the `request_rejected` event commits. `last_seen_at` and
+  `last_seq` are untouched on refusal.
+- `device_heartbeat` stores a JSON object <= 2048 bytes; the default offline
+  threshold is 5 minutes (`parking_settings.device_offline_minutes`, 2..1440).
+  `notify_offline_devices` alerts admins once per silence and writes an
+  `offline` event; the next accepted request writes `online` and clears the
+  marker.
+- Only `/v1/time` (public) and `/v1/heartbeat` are implemented. The camera,
+  barrier and sensor changes extend a route table; do not change the auth
+  order. The gateway is the only device-facing function with the service key.
+- Gotcha: test queries comparing an unqualified `device_id` against a
+  `device_events.device_id` column are ambiguous; qualify the column or read the
+  id from `current_setting`.
+- Gatekeeper: migrations `0128`-`0129` applied live (offline 5 min), SQL suite
+  green over `0001`-`0129`, **84 Deno tests** green, `/v1/time` answers 200.
+  Flutter tests unchanged (1866).
+- Pending: the Flutter `/devices` admin screen (list, register/show-key-once,
+  rotate, enable/disable, rename, delete, events, threshold), its route/DI and
+  widget tests; then the hardware changes. The registry and transport are
+  ready for them.
 
 ## Damage comparison backend (2026-11-18, `0127`)
 
