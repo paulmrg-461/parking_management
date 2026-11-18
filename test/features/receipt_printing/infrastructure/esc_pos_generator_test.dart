@@ -224,4 +224,26 @@ void main() {
     final text = _decode(const EscPosGenerator().build(data, _configured));
     expect(text, isNot(contains('Visita 4 de 5')));
   });
+
+  test('thermal output contains the fiscal number and CUFE', () {
+    final data = ReceiptData(
+      kind: ReceiptKind.checkOut,
+      plate: 'ABC123',
+      entryTime: DateTime(2026, 1, 1, 8, 30),
+      exitTime: DateTime(2026, 1, 1, 10, 30),
+      amountCharged: 11900,
+      fiscalNumber: 'SETP7',
+      fiscalType: 'pos',
+      cufe: 'CUFE-7',
+    );
+    final text = _decode(const EscPosGenerator().build(data, _configured));
+    expect(text, contains('SETP7'));
+    expect(text, contains('CUFE-7'));
+    expect(text, contains('DOCUMENTO EQUIVALENTE POS'));
+  });
+
+  test('thermal output omits the fiscal block without a document', () {
+    final text = _decode(const EscPosGenerator().build(_checkOut, _configured));
+    expect(text, isNot(contains('DOCUMENTO EQUIVALENTE POS')));
+  });
 }

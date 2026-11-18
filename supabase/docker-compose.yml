@@ -496,6 +496,12 @@ services:
       WOMPI_API_URL: ${WOMPI_API_URL:-}
       WOMPI_CHECKOUT_URL: ${WOMPI_CHECKOUT_URL:-}
       PAYMENT_REDIRECT_BASE_URL: ${PAYMENT_REDIRECT_BASE_URL:-}
+      # Optional: fiscal "proveedor tecnologico". Empty keeps fiscal-dispatch
+      # inert ({configured:false}); documents stay pending and mode is off.
+      FISCAL_PROVIDER_URL: ${FISCAL_PROVIDER_URL:-}
+      FISCAL_PROVIDER_TOKEN: ${FISCAL_PROVIDER_TOKEN:-}
+      FISCAL_PROVIDER_ENV: ${FISCAL_PROVIDER_ENV:-habilitacion}
+      FISCAL_PROVIDER_TIMEOUT_MS: ${FISCAL_PROVIDER_TIMEOUT_MS:-15000}
     command:
       [
         "start",

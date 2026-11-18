@@ -13974,6 +13974,1101 @@ begin
     end if;
 end $$;
 
+
+-- ---------------------------------------------------------------------------
+-- invoicing: amounts
+-- ---------------------------------------------------------------------------
+do $$
+declare
+    result jsonb;
+begin
+    result := public.fiscal_amounts(11900, 0, 1900);
+    if (result ->> 'gross')::integer <> 11900
+       or (result ->> 'tax_base')::integer <> 10000
+       or (result ->> 'tax_amount')::integer <> 1900 then
+        raise exception 'the tax extraction at 19 %% is wrong: %', result;
+    end if;
+    result := public.fiscal_amounts(5000, 0, 1900);
+    if (result ->> 'tax_base')::integer <> 4202
+       or (result ->> 'tax_amount')::integer <> 798 then
+        raise exception 'the tax extraction of 5000 is wrong: %', result;
+    end if;
+    result := public.fiscal_amounts(5000, 0, 0);
+    if (result ->> 'tax_base')::integer <> 5000
+       or (result ->> 'tax_amount')::integer <> 0 then
+        raise exception 'a zero rate produced tax: %', result;
+    end if;
+    result := public.fiscal_amounts(9000, 400, 1900);
+    if (result ->> 'gross')::integer <> 9400
+       or (result ->> 'total')::integer <> 9000
+       or (result ->> 'discount')::integer <> 400 then
+        raise exception 'the gross/total relation is wrong: %', result;
+    end if;
+end $$;
+
+-- invoicing: schema defaults mode off
+do $$
+declare
+    settings public.fiscal_settings%rowtype;
+begin
+    insert into public.parking_lots (code, name, address, timezone)
+    values ('FIS', 'Fiscal Lot', 'Calle 6', 'America/Bogota');
+    do $inner$
+    begin
+        perform set_config('app.fiscal_lot', (
+            select id::text from public.parking_lots where code = 'FIS'
+        ), true);
+    end $inner$;
+    insert into public.parking_settings (lot_id, name, address, car_capacity, business_timezone)
+    select current_setting('app.fiscal_lot')::integer, 'Fiscal Lot', 'Calle 6',
+           10, 'America/Bogota';
+    insert into public.lot_members (lot_id, user_id, role)
+    select current_setting('app.fiscal_lot')::integer, 1, 'admin'
+    union all
+    select current_setting('app.fiscal_lot')::integer, 2, 'operator';
+
+    update public.fiscal_settings
+       set mode = 'off', updated_at = now()
+     where lot_id = current_setting('app.fiscal_lot')::integer;
+end $$;
+
+-- invoicing: settings default
+do $$
+declare
+    lot integer := current_setting('app.fiscal_lot')::integer;
+    settings public.fiscal_settings%rowtype;
+begin
+    select * into settings from public.fiscal_settings fs where fs.lot_id = lot;
+    if found then
+        raise exception 'the fiscal settings started on';
+    end if;
+    if (public.fiscal_settings_json(lot) ->> 'mode') <> 'off' then
+        raise exception 'the fiscal mode does not default to off';
+    end if;
+    begin
+        insert into public.fiscal_settings (lot_id, mode, tax_rate_bps)
+        values (lot, 'on_request', 1900);
+        raise exception 'a mode without issuer data was accepted';
+    exception when check_violation then null;
+    end;
+    begin
+        insert into public.fiscal_settings (lot_id, mode, tax_rate_bps)
+        values (lot, 'off', 10001);
+        raise exception 'a tax rate above 100 %% was accepted';
+    exception when check_violation then null;
+    end;
+end $$;
+
+-- invoicing: schema constraints
+do $$
+declare
+    lot integer := current_setting('app.fiscal_lot')::integer;
+    resolution_id bigint;
+begin
+    insert into public.fiscal_resolutions (
+        lot_id, doc_type, resolution_number, prefix, range_from, range_to,
+        next_number, valid_from, valid_to, active
+    ) values (
+        lot, 'pos', 'RES-1', 'SETP', 1, 100, 1, current_date - 1, current_date + 300, true
+    ) returning id into resolution_id;
+    begin
+        insert into public.fiscal_resolutions (
+            lot_id, doc_type, resolution_number, prefix, range_from, range_to,
+            next_number, valid_from, valid_to, active
+        ) values (
+            lot, 'pos', 'RES-2', 'SETQ', 1, 100, 1, current_date - 1, current_date + 300, true
+        );
+        raise exception 'a second active resolution was accepted';
+    exception when unique_violation then null;
+    end;
+    update public.fiscal_resolutions set active = false where id = resolution_id;
+
+    begin
+        insert into public.fiscal_documents (
+            lot_id, doc_type, resolution_id, prefix, number, full_number,
+            source_kind, source_id, gross_amount, tax_rate_bps, tax_base,
+            tax_amount, total
+        ) values (
+            lot, 'credit_note', resolution_id, 'SETP', 99, 'SETP99',
+            'session', 1, 100, 1900, 84, 16, 100
+        );
+        raise exception 'a credit note without a related document was accepted';
+    exception when check_violation then null;
+    end;
+    begin
+        insert into public.fiscal_documents (
+            lot_id, doc_type, resolution_id, prefix, number, full_number,
+            source_kind, source_id, gross_amount, tax_rate_bps, tax_base,
+            tax_amount, total, customer_doc_type
+        ) values (
+            lot, 'pos', resolution_id, 'SETP', 98, 'SETP98',
+            'session', 1, 100, 1900, 84, 16, 100, 'CC'
+        );
+        raise exception 'a customer type without a number was accepted';
+    exception when check_violation then null;
+    end;
+end $$;
+
+-- invoicing: rls enabled
+do $$
+declare
+    missing text;
+begin
+    select string_agg(c.relname, ', ') into missing
+      from pg_class c
+      join pg_namespace n on n.oid = c.relnamespace
+     where n.nspname = 'public'
+       and c.relname in ('fiscal_settings', 'fiscal_resolutions', 'fiscal_documents')
+       and not c.relrowsecurity;
+    if missing is not null then
+        raise exception 'RLS is off on %', missing;
+    end if;
+end $$;
+
+-- invoicing: fixtures
+insert into public.categories (lot_id, name, capacity)
+select current_setting('app.fiscal_lot')::integer, 'car', 0;
+insert into public.tariffs (category_id, lot_id, type, amount, active, start_time, end_time)
+select c.id, current_setting('app.fiscal_lot')::integer, 'hourly', 3000, true, null, null
+  from public.categories c where c.lot_id = current_setting('app.fiscal_lot')::integer;
+insert into public.tariffs (category_id, lot_id, type, amount, active, start_time, end_time)
+select c.id, current_setting('app.fiscal_lot')::integer, 'daily', 20000, true, null, null
+  from public.categories c where c.lot_id = current_setting('app.fiscal_lot')::integer;
+insert into public.vehicles (plate, category_id)
+select 'FIS' || lpad(n::text, 2, '0'),
+       (select id from public.categories
+         where lot_id = current_setting('app.fiscal_lot')::integer)
+  from generate_series(1, 12) as n;
+
+do $$
+begin
+    perform set_config('request.headers',
+        jsonb_build_object('x-lot-id', current_setting('app.fiscal_lot'))::text, true);
+    perform set_config('request.jwt.claim.sub',
+        '00000000-0000-0000-0000-000000000001', true);
+end $$;
+
+create or replace function public.fiscal_test_session(p_plate text, p_amount integer, p_online integer default 0)
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+    lot integer := current_setting('app.fiscal_lot')::integer;
+    session_id integer;
+begin
+    insert into public.parking_sessions (
+        vehicle_id, operator_id, lot_id, entry_time, status, online_paid_amount
+    )
+    select v.id, 1, lot, now() - interval '2 hours', 'open', p_online
+      from public.vehicles v where v.plate = p_plate
+    returning id into session_id;
+    update public.parking_sessions
+       set status = 'closed', exit_time = now(), amount_charged = p_amount,
+           payment_method = case when p_online > 0 then 'cash' else 'cash' end,
+           discount_amount = 0, closed_recorded_at = now()
+     where id = session_id;
+    return session_id;
+end;
+$$;
+
+-- invoicing: issue mode off
+do $$
+declare
+    session_row integer := public.fiscal_test_session('FIS01', 11900);
+begin
+    begin
+        perform public.issue_fiscal_document('session', session_row, null);
+        raise exception 'a mode-off lot issued a document';
+    exception when others then
+        if sqlerrm not like '%FiscalNotEnabledError%' then raise; end if;
+    end;
+end $$;
+
+-- invoicing: settings save and started_at
+do $$
+declare
+    lot integer := current_setting('app.fiscal_lot')::integer;
+    saved jsonb;
+    started timestamptz;
+begin
+    saved := public.save_fiscal_settings(jsonb_build_object(
+        'mode', 'on_request',
+        'issuer_nit', '900123456',
+        'issuer_legal_name', 'Parqueadero Fiscal SAS',
+        'municipality_code', '11001',
+        'tax_rate_bps', 1900
+    ));
+    if saved ->> 'mode' <> 'on_request' or saved ->> 'issuer_nit' <> '900123456' then
+        raise exception 'the fiscal settings were not saved: %', saved;
+    end if;
+    started := (saved ->> 'started_at')::timestamptz;
+    if started is null then
+        raise exception 'started_at was not stamped';
+    end if;
+
+    saved := public.save_fiscal_settings(jsonb_build_object('tax_rate_bps', 1600));
+    if (saved ->> 'tax_rate_bps')::integer <> 1600
+       or (saved ->> 'started_at')::timestamptz <> started then
+        raise exception 'a partial save moved started_at or lost values: %', saved;
+    end if;
+    perform public.save_fiscal_settings(jsonb_build_object('tax_rate_bps', 1900));
+end $$;
+
+-- invoicing: settings incomplete
+do $$
+begin
+    begin
+        perform public.save_fiscal_settings(jsonb_build_object(
+            'mode', 'always', 'issuer_nit', null));
+        raise exception 'a mode without issuer data was accepted';
+    exception when others then
+        if sqlerrm not like '%FiscalSettingsIncompleteError%'
+           and sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+end $$;
+
+-- invoicing: resolutions
+do $$
+declare
+    lot integer := current_setting('app.fiscal_lot')::integer;
+    saved jsonb;
+    rows jsonb;
+begin
+    saved := public.save_fiscal_resolution(jsonb_build_object(
+        'doc_type', 'pos', 'resolution_number', '18760000001', 'prefix', 'SETP',
+        'range_from', 1, 'range_to', 5000,
+        'valid_from', current_date - 1, 'valid_to', current_date + 365
+    ));
+    if (saved ->> 'remaining')::bigint <> 5000 or saved ->> 'active' <> 'true' then
+        raise exception 'the saved resolution shape is wrong: %', saved;
+    end if;
+
+    saved := public.save_fiscal_resolution(jsonb_build_object(
+        'doc_type', 'pos', 'resolution_number', '18760000002', 'prefix', 'SETQ',
+        'range_from', 10, 'range_to', 20,
+        'valid_from', current_date - 1, 'valid_to', current_date + 365
+    ));
+    rows := public.list_fiscal_resolutions();
+    if jsonb_array_length(rows) < 2 then
+        raise exception 'the resolutions were not listed';
+    end if;
+    if (select count(*) from public.fiscal_resolutions r
+         where r.lot_id = lot and r.doc_type = 'pos' and r.active) <> 1 then
+        raise exception 'the previous resolution was not deactivated';
+    end if;
+
+    perform public.save_fiscal_resolution(jsonb_build_object(
+        'doc_type', 'pos', 'resolution_number', '18760000003', 'prefix', 'SETP',
+        'range_from', 1, 'range_to', 5000,
+        'valid_from', current_date - 1, 'valid_to', current_date + 365
+    ));
+    perform public.save_fiscal_resolution(jsonb_build_object(
+        'doc_type', 'invoice', 'resolution_number', '18760000004', 'prefix', 'FE',
+        'range_from', 1, 'range_to', 5000,
+        'valid_from', current_date - 1, 'valid_to', current_date + 365
+    ));
+    perform public.save_fiscal_resolution(jsonb_build_object(
+        'doc_type', 'credit_note', 'resolution_number', '18760000005', 'prefix', 'NC',
+        'range_from', 1, 'range_to', 5000,
+        'valid_from', current_date - 1, 'valid_to', current_date + 365
+    ));
+
+    if public.fiscal_config() ->> 'has_pos_resolution' <> 'true'
+       or public.fiscal_config() ->> 'has_invoice_resolution' <> 'true' then
+        raise exception 'the config does not see the resolutions';
+    end if;
+end $$;
+
+-- invoicing: issue session pos
+do $$
+declare
+    lot integer := current_setting('app.fiscal_lot')::integer;
+    session_row integer := public.fiscal_test_session('FIS02', 11900);
+    summary jsonb;
+begin
+    summary := public.issue_fiscal_document('session', session_row, null);
+    if (summary ->> 'created')::boolean is not true then
+        raise exception 'the first issuance reported created=false: %', summary;
+    end if;
+    if summary ->> 'doc_type' <> 'pos'
+       or summary ->> 'full_number' <> 'SETP1'
+       or (summary ->> 'total')::integer <> 11900
+       or (summary ->> 'tax_amount')::integer <> 1900 then
+        raise exception 'the pos document is wrong: %', summary;
+    end if;
+    perform set_config('app.fiscal_pos', (summary ->> 'document_id'), true);
+end $$;
+
+-- invoicing: issue idempotent
+do $$
+declare
+    session_row integer := public.fiscal_test_session('FIS02', 11900);
+    summary jsonb;
+begin
+    -- The same source cannot be issued twice; the existing document is returned.
+    begin
+        summary := public.issue_fiscal_document('session', session_row, null);
+    exception when others then
+        raise exception 'the idempotent call failed: %', sqlerrm;
+    end;
+end $$;
+
+do $$
+declare
+    session_row integer;
+    summary jsonb;
+begin
+    select s.id into session_row
+      from public.parking_sessions s
+      join public.vehicles v on v.id = s.vehicle_id
+     where v.plate = 'FIS02' and s.status = 'closed'
+     order by s.id limit 1;
+    summary := public.issue_fiscal_document('session', session_row, null);
+    if (summary ->> 'created')::boolean is not false then
+        raise exception 'a second call created a document: %', summary;
+    end if;
+end $$;
+
+-- invoicing: issue with customer creates an invoice
+do $$
+declare
+    session_row integer := public.fiscal_test_session('FIS03', 5000);
+    summary jsonb;
+begin
+    summary := public.issue_fiscal_document('session', session_row, jsonb_build_object(
+        'document_type', 'NIT',
+        'document_number', '900123456',
+        'name', 'Cliente Empresa SAS',
+        'email', 'facturas@empresa.test'
+    ));
+    if summary ->> 'doc_type' <> 'invoice'
+       or summary ->> 'full_number' <> 'FE1'
+       or (summary ->> 'tax_amount')::integer <> 798 then
+        raise exception 'the invoice is wrong: %', summary;
+    end if;
+end $$;
+
+-- invoicing: invalid customer
+do $$
+declare
+    session_row integer := public.fiscal_test_session('FIS04', 5000);
+begin
+    begin
+        perform public.issue_fiscal_document('session', session_row, jsonb_build_object(
+            'document_type', 'XX', 'document_number', '1', 'name', 'A'));
+        raise exception 'an invalid customer was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidFiscalCustomerError%' then raise; end if;
+    end;
+    begin
+        perform public.issue_fiscal_document('session', session_row, jsonb_build_object(
+            'document_type', 'CC', 'document_number', '123', 'name', 'A',
+            'email', 'not-an-email'));
+        raise exception 'an invalid email was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidFiscalCustomerError%' then raise; end if;
+    end;
+end $$;
+
+-- invoicing: issue rejects non billable sources
+do $$
+declare
+    lot integer := current_setting('app.fiscal_lot')::integer;
+    session_row integer;
+begin
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '1 hour', 'open'
+      from public.vehicles v where v.plate = 'FIS05'
+    returning id into session_row;
+    begin
+        perform public.issue_fiscal_document('session', session_row, null);
+        raise exception 'an open session was invoiced';
+    exception when others then
+        if sqlerrm not like '%FiscalSourceNotBillableError%' then raise; end if;
+    end;
+    delete from public.parking_sessions where id = session_row;
+
+    insert into public.parking_sessions (
+        vehicle_id, operator_id, lot_id, entry_time, status, exit_time,
+        amount_charged, payment_method, closed_recorded_at
+    )
+    select v.id, 1, lot, now() - interval '2 hours', 'closed', now(),
+           0, 'cash', now()
+      from public.vehicles v where v.plate = 'FIS05'
+    returning id into session_row;
+    begin
+        perform public.issue_fiscal_document('session', session_row, null);
+        raise exception 'a zero charge was invoiced';
+    exception when others then
+        if sqlerrm not like '%FiscalSourceNotBillableError%' then raise; end if;
+    end;
+
+    update public.parking_sessions
+       set amount_charged = 5000, payment_method = 'exempt'
+     where id = session_row;
+    begin
+        perform public.issue_fiscal_document('session', session_row, null);
+        raise exception 'an exempt session was invoiced';
+    exception when others then
+        if sqlerrm not like '%FiscalSourceNotBillableError%' then raise; end if;
+    end;
+
+    update public.parking_sessions
+       set payment_method = 'cash', closed_recorded_at = now() - interval '1 day'
+     where id = session_row;
+    begin
+        perform public.issue_fiscal_document('session', session_row, null);
+        raise exception 'a session closed before started_at was invoiced';
+    exception when others then
+        if sqlerrm not like '%FiscalSourceNotBillableError%' then raise; end if;
+    end;
+end $$;
+
+-- invoicing: issue source not found
+do $$
+begin
+    begin
+        perform public.issue_fiscal_document('session', 999999, null);
+        raise exception 'a missing source was invoiced';
+    exception when others then
+        if sqlerrm not like '%FiscalSourceNotFoundError%' then raise; end if;
+    end;
+end $$;
+
+
+-- invoicing: test helpers
+create or replace function public.fiscal_test_issue(
+    p_plate text,
+    p_amount integer,
+    p_online integer default 0,
+    p_customer jsonb default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+    session_row integer := public.fiscal_test_session(p_plate, p_amount, p_online);
+begin
+    return public.issue_fiscal_document('session', session_row, p_customer);
+end;
+$$;
+
+create or replace function public.fiscal_test_accept(p_document_id bigint)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+    perform public.claim_fiscal_documents(100);
+    perform public.record_fiscal_result(p_document_id, jsonb_build_object(
+        'outcome', 'accepted',
+        'cufe', 'CUFE-' || p_document_id,
+        'qr_data', 'https://qr.test/' || p_document_id
+    ));
+end;
+$$;
+
+-- invoicing: payments split online and cash
+do $$
+declare
+    summary jsonb;
+    payload jsonb;
+begin
+    summary := public.fiscal_test_issue('FIS06', 11900, 6000);
+    payload := public.fiscal_document_payload((summary ->> 'document_id')::bigint);
+    if jsonb_array_length(payload -> 'payments') <> 2 then
+        raise exception 'the split payment was not listed: %', payload -> 'payments';
+    end if;
+    if (payload -> 'payments' -> 0 ->> 'method') <> 'online'
+       or (payload -> 'payments' -> 0 ->> 'amount')::integer <> 6000 then
+        raise exception 'the online part is wrong: %', payload -> 'payments';
+    end if;
+    if (payload -> 'payments' -> 1 ->> 'amount')::integer <> 5900 then
+        raise exception 'the desk part is wrong: %', payload -> 'payments';
+    end if;
+    if (payload -> 'issuer' ->> 'nit') <> '900123456'
+       or (payload -> 'document' ->> 'type') <> 'pos'
+       or (payload -> 'totals' ->> 'tax_amount')::integer <> 1900 then
+        raise exception 'the payload header is wrong: %', payload;
+    end if;
+end $$;
+
+-- invoicing: pass payment creates a document
+do $$
+declare
+    lot integer := current_setting('app.fiscal_lot')::integer;
+    pass_id integer;
+    payment_id bigint;
+    summary jsonb;
+begin
+    insert into public.monthly_passes (vehicle_id, lot_id, start_date, end_date, amount)
+    select v.id, lot, current_date, current_date + 30, 50000
+      from public.vehicles v where v.plate = 'FIS07'
+    returning id into pass_id;
+    select id into payment_id
+      from public.monthly_pass_payments p
+     where p.monthly_pass_id = pass_id;
+    update public.monthly_pass_payments
+       set amount = 50000, payment_method = 'cash', status = 'paid',
+           paid_at = now(), paid_by = 1
+     where id = payment_id;
+
+    summary := public.issue_fiscal_document('pass_payment', payment_id, null);
+    if summary ->> 'doc_type' <> 'pos'
+       or (summary ->> 'total')::integer <> 50000 then
+        raise exception 'the pass payment document is wrong: %', summary;
+    end if;
+    perform set_config('app.fiscal_pass_doc', summary ->> 'document_id', true);
+end $$;
+
+-- invoicing: for_session summary without customer data
+do $$
+declare
+    session_row integer;
+    summary jsonb;
+begin
+    select s.id into session_row
+      from public.parking_sessions s
+      join public.vehicles v on v.id = s.vehicle_id
+     where v.plate = 'FIS02' and s.status = 'closed'
+     order by s.id limit 1;
+    summary := public.fiscal_document_for_session(session_row);
+    if summary is null or summary ->> 'full_number' <> 'SETP1' then
+        raise exception 'the session document was not found: %', summary;
+    end if;
+    if summary ? 'customer_name' or summary ? 'customer_doc_number' then
+        raise exception 'the operator read exposes customer PII: %', summary;
+    end if;
+end $$;
+
+-- invoicing: claim and accepted stores cufe and qr
+do $$
+declare
+    document_id bigint := current_setting('app.fiscal_pos')::bigint;
+    claimed jsonb;
+    result jsonb;
+    session_row integer;
+begin
+    claimed := public.claim_fiscal_documents(100);
+    if not exists (
+        select 1 from jsonb_array_elements(claimed) item
+         where (item ->> 'id')::bigint = document_id
+    ) then
+        raise exception 'the pending document was not claimed';
+    end if;
+    if exists (
+        select 1 from public.fiscal_documents d
+         where d.id = document_id and d.locked_until is null
+    ) then
+        raise exception 'the claimed document was not locked';
+    end if;
+
+    result := public.record_fiscal_result(document_id, jsonb_build_object(
+        'outcome', 'accepted', 'cufe', 'CUFE-1', 'qr_data', 'https://qr.test/1'));
+    if result ->> 'status' <> 'accepted' then
+        raise exception 'the accepted result did not stick: %', result;
+    end if;
+    if (select cufe from public.fiscal_documents where id = document_id) <> 'CUFE-1'
+       or (select accepted_at from public.fiscal_documents where id = document_id) is null
+       or (select locked_until from public.fiscal_documents where id = document_id) is not null then
+        raise exception 'the accepted document fields are wrong';
+    end if;
+
+    select s.id into session_row
+      from public.parking_sessions s
+      join public.vehicles v on v.id = s.vehicle_id
+     where v.plate = 'FIS02' and s.status = 'closed'
+     order by s.id limit 1;
+    if (public.fiscal_document_for_session(session_row) ->> 'cufe') <> 'CUFE-1' then
+        raise exception 'the session read does not show the CUFE';
+    end if;
+end $$;
+
+-- invoicing: pending then sent
+do $$
+declare
+    summary jsonb;
+    document_id bigint;
+    result jsonb;
+begin
+    summary := public.fiscal_test_issue('FIS08', 7000);
+    document_id := (summary ->> 'document_id')::bigint;
+    perform public.claim_fiscal_documents(100);
+    result := public.record_fiscal_result(document_id, jsonb_build_object(
+        'outcome', 'pending', 'provider_document_id', 'PROV-8'));
+    if result ->> 'status' <> 'sent' then
+        raise exception 'a processing answer did not move to sent: %', result;
+    end if;
+    if (select provider_document_id from public.fiscal_documents where id = document_id)
+       <> 'PROV-8' then
+        raise exception 'the provider id was not stored';
+    end if;
+    perform set_config('app.fiscal_sent', document_id::text, true);
+end $$;
+
+-- invoicing: transient error schedules backoff
+do $$
+declare
+    document_id bigint := current_setting('app.fiscal_sent')::bigint;
+    before_attempt timestamptz;
+    result jsonb;
+begin
+    update public.fiscal_documents
+       set next_attempt_at = now(), locked_until = null
+     where id = document_id;
+    perform public.claim_fiscal_documents(100);
+    before_attempt := now();
+    result := public.record_fiscal_result(document_id, jsonb_build_object(
+        'outcome', 'transient_error', 'error', 'timeout'));
+    if result ->> 'status' <> 'pending' then
+        raise exception 'a transient error did not stay pending: %', result;
+    end if;
+    if (select next_attempt_at from public.fiscal_documents where id = document_id)
+       < before_attempt + interval '30 seconds' then
+        raise exception 'the backoff was not scheduled';
+    end if;
+    if (select last_error from public.fiscal_documents where id = document_id) <> 'timeout' then
+        raise exception 'the last error was not stored';
+    end if;
+end $$;
+
+-- invoicing: eighth transient error fails and notifies admins
+do $$
+declare
+    document_id bigint := current_setting('app.fiscal_sent')::bigint;
+    result jsonb;
+begin
+    update public.fiscal_documents
+       set attempts = 7, next_attempt_at = now(), locked_until = null
+     where id = document_id;
+    perform public.claim_fiscal_documents(100);
+    result := public.record_fiscal_result(document_id, jsonb_build_object(
+        'outcome', 'transient_error', 'error', 'still down'));
+    if result ->> 'status' <> 'failed' then
+        raise exception 'the eighth attempt did not fail: %', result;
+    end if;
+    if not exists (
+        select 1 from public.notifications n
+         where n.type = 'fiscal_document_failed'
+           and n.data ->> 'document_id' = document_id::text
+    ) then
+        raise exception 'the failed document did not notify the admins';
+    end if;
+end $$;
+
+-- invoicing: rejected notifies admins once
+do $$
+declare
+    summary jsonb;
+    document_id bigint;
+    before_count integer;
+    after_count integer;
+begin
+    summary := public.fiscal_test_issue('FIS09', 8000);
+    document_id := (summary ->> 'document_id')::bigint;
+    perform public.claim_fiscal_documents(100);
+    select count(*) into before_count from public.notifications
+     where type = 'fiscal_document_failed';
+    perform public.record_fiscal_result(document_id, jsonb_build_object(
+        'outcome', 'rejected', 'rejection_reason', 'NIT inválido'));
+    select count(*) into after_count from public.notifications
+     where type = 'fiscal_document_failed';
+    if after_count <> before_count + 1 then
+        raise exception 'the rejection did not notify exactly once: % <> %',
+            after_count, before_count;
+    end if;
+    if (select rejection_reason from public.fiscal_documents where id = document_id)
+       <> 'NIT inválido' then
+        raise exception 'the rejection reason was not stored';
+    end if;
+    perform set_config('app.fiscal_rejected', document_id::text, true);
+end $$;
+
+-- invoicing: retry rejected with new customer data
+do $$
+declare
+    document_id bigint := current_setting('app.fiscal_rejected')::bigint;
+    summary jsonb;
+begin
+    summary := public.retry_fiscal_document(document_id, jsonb_build_object(
+        'document_type', 'NIT',
+        'document_number', '900555111',
+        'name', 'Cliente Corregido SAS'
+    ));
+    if summary ->> 'status' <> 'pending'
+       or (summary ->> 'full_number') is null then
+        raise exception 'the retry did not reset the document: %', summary;
+    end if;
+    if (select customer_doc_number from public.fiscal_documents where id = document_id)
+       <> '900555111'
+       or (select attempts from public.fiscal_documents where id = document_id) <> 0 then
+        raise exception 'the retried customer was not stored';
+    end if;
+end $$;
+
+-- invoicing: retry accepted is refused
+do $$
+begin
+    begin
+        perform public.retry_fiscal_document(
+            current_setting('app.fiscal_pos')::bigint, null);
+        raise exception 'an accepted document was retried';
+    exception when others then
+        if sqlerrm not like '%InvalidFiscalStatusError%' then raise; end if;
+    end;
+end $$;
+
+-- invoicing: credit note requires an accepted document
+do $$
+declare
+    pending_doc bigint := current_setting('app.fiscal_rejected')::bigint;
+begin
+    update public.fiscal_documents set status = 'pending' where id = pending_doc;
+    begin
+        perform public.request_credit_note(pending_doc, 'Motivo válido');
+        raise exception 'a pending document was credited';
+    exception when others then
+        if sqlerrm not like '%FiscalDocumentNotAcceptedError%' then raise; end if;
+    end;
+end $$;
+
+-- invoicing: credit note accepted voids the original and frees the source
+do $$
+declare
+    original bigint := current_setting('app.fiscal_pos')::bigint;
+    summary jsonb;
+    credit_id bigint;
+    session_row integer;
+    reissued jsonb;
+begin
+    summary := public.request_credit_note(original, 'Cliente equivocado');
+    credit_id := (summary ->> 'document_id')::bigint;
+    if summary ->> 'doc_type' <> 'credit_note'
+       or summary ->> 'full_number' <> 'NC1' then
+        raise exception 'the credit note is wrong: %', summary;
+    end if;
+    begin
+        perform public.request_credit_note(original, 'Otra vez');
+        raise exception 'a second credit note was accepted';
+    exception when others then
+        if sqlerrm not like '%FiscalDocumentAlreadyCreditedError%' then raise; end if;
+    end;
+
+    perform public.fiscal_test_accept(credit_id);
+    if (select voided_at from public.fiscal_documents where id = original) is null then
+        raise exception 'the accepted credit note did not void the original';
+    end if;
+
+    select s.id into session_row
+      from public.parking_sessions s
+      join public.vehicles v on v.id = s.vehicle_id
+     where v.plate = 'FIS02' and s.status = 'closed'
+     order by s.id limit 1;
+    reissued := public.issue_fiscal_document('session', session_row, jsonb_build_object(
+        'document_type', 'CC', 'document_number', '123456', 'name', 'Cliente Nuevo'));
+    if reissued ->> 'doc_type' <> 'invoice'
+       or (reissued ->> 'created')::boolean is not true then
+        raise exception 'the source was not freed for a new invoice: %', reissued;
+    end if;
+end $$;
+
+-- invoicing: resolution errors
+do $$
+declare
+    lot integer := current_setting('app.fiscal_lot')::integer;
+    resolution public.fiscal_resolutions%rowtype;
+    summary jsonb;
+begin
+    select * into resolution from public.fiscal_resolutions r
+     where r.lot_id = lot and r.doc_type = 'invoice' and r.active;
+    update public.fiscal_resolutions set active = false where id = resolution.id;
+    begin
+        perform public.fiscal_test_issue('FIS10', 5000, 0, jsonb_build_object(
+            'document_type', 'CC', 'document_number', '777888', 'name', 'Cliente'));
+        raise exception 'an invoice without resolution was issued';
+    exception when others then
+        if sqlerrm not like '%FiscalResolutionMissingError%' then raise; end if;
+    end;
+    update public.fiscal_resolutions set active = true where id = resolution.id;
+
+    update public.fiscal_resolutions set valid_to = current_date - 1 where id = resolution.id;
+    begin
+        perform public.fiscal_test_issue('FIS10', 5000, 0, jsonb_build_object(
+            'document_type', 'CC', 'document_number', '777888', 'name', 'Cliente'));
+        raise exception 'an expired resolution was used';
+    exception when others then
+        if sqlerrm not like '%FiscalResolutionExpiredError%' then raise; end if;
+    end;
+    update public.fiscal_resolutions
+       set valid_to = current_date + 365,
+           next_number = range_to + 1
+     where id = resolution.id;
+    begin
+        perform public.fiscal_test_issue('FIS10', 5000, 0, jsonb_build_object(
+            'document_type', 'CC', 'document_number', '777888', 'name', 'Cliente'));
+        raise exception 'an exhausted resolution was used';
+    exception when others then
+        if sqlerrm not like '%FiscalResolutionExhaustedError%' then raise; end if;
+    end;
+    if (select next_number from public.fiscal_resolutions where id = resolution.id)
+       <> resolution.range_to + 1 then
+        raise exception 'the exhausted sequence moved';
+    end if;
+    update public.fiscal_resolutions
+       set next_number = resolution.next_number where id = resolution.id;
+
+    -- A rollback releases the number (gap-free).
+    summary := null;
+    begin
+        summary := public.fiscal_test_issue('FIS11', 5000, 0, jsonb_build_object(
+            'document_type', 'CC', 'document_number', '777888', 'name', 'Cliente'));
+        raise exception 'force rollback';
+    exception when others then
+        if sqlerrm <> 'force rollback' then raise; end if;
+    end;
+    if (select next_number from public.fiscal_resolutions where id = resolution.id)
+       <> resolution.next_number then
+        raise exception 'the failed issuance consumed a number';
+    end if;
+    summary := public.fiscal_test_issue('FIS11', 5000, 0, jsonb_build_object(
+        'document_type', 'CC', 'document_number', '777888', 'name', 'Cliente'));
+    if (select number from public.fiscal_documents
+         where id = (summary ->> 'document_id')::bigint) <> resolution.next_number then
+        raise exception 'the released number was not reused';
+    end if;
+end $$;
+
+-- invoicing: immutable numbered document
+do $$
+declare
+    document_id bigint := current_setting('app.fiscal_pass_doc')::bigint;
+begin
+    begin
+        update public.fiscal_documents set total = total + 1 where id = document_id;
+        raise exception 'the total of a numbered document was changed';
+    exception when others then
+        if sqlerrm not like '%FiscalDocumentImmutableError%' then raise; end if;
+    end;
+    begin
+        update public.fiscal_documents set number = number + 1 where id = document_id;
+        raise exception 'the number of a numbered document was changed';
+    exception when others then
+        if sqlerrm not like '%FiscalDocumentImmutableError%' then raise; end if;
+    end;
+    begin
+        update public.fiscal_documents set customer_name = 'Otro' where id = document_id;
+        raise exception 'the customer changed outside rejected/failed';
+    exception when others then
+        if sqlerrm not like '%FiscalDocumentImmutableError%' then raise; end if;
+    end;
+    update public.fiscal_documents set status = 'rejected' where id = document_id;
+    update public.fiscal_documents set customer_name = 'Permitido'
+     where id = document_id;
+    if (select customer_name from public.fiscal_documents where id = document_id)
+       <> 'Permitido' then
+        raise exception 'a rejected document could not be corrected';
+    end if;
+end $$;
+
+-- invoicing: sweeper always issues pos after ten minutes
+do $$
+declare
+    lot integer := current_setting('app.fiscal_lot')::integer;
+    session_row integer;
+    created integer;
+    again integer;
+    started_before timestamptz;
+begin
+    update public.fiscal_settings
+       set mode = 'always', started_at = now() - interval '2 days'
+     where lot_id = lot;
+    started_before := now() - interval '2 days';
+    insert into public.parking_sessions (
+        vehicle_id, operator_id, lot_id, entry_time, status
+    )
+    select v.id, 1, lot, now() - interval '3 hours', 'open'
+      from public.vehicles v where v.plate = 'FIS12'
+    returning id into session_row;
+    update public.parking_sessions
+       set status = 'closed', exit_time = now() - interval '15 minutes',
+           amount_charged = 9000, payment_method = 'cash',
+           closed_recorded_at = now() - interval '15 minutes'
+     where id = session_row;
+
+    created := public.enqueue_pending_fiscal_documents();
+    if created < 1 then
+        raise exception 'the sweeper created nothing';
+    end if;
+    if not exists (
+        select 1 from public.fiscal_documents d
+         where d.source_kind = 'session' and d.source_id = session_row
+           and d.doc_type = 'pos' and d.voided_at is null
+    ) then
+        raise exception 'the sweeper did not issue the pos';
+    end if;
+    again := public.enqueue_pending_fiscal_documents();
+    if again <> 0 then
+        raise exception 'the sweeper issued a duplicate: %', again;
+    end if;
+    update public.fiscal_settings set mode = 'on_request' where lot_id = lot;
+end $$;
+
+-- invoicing: low resolution notifies once per day
+do $$
+declare
+    lot integer := current_setting('app.fiscal_lot')::integer;
+    saved jsonb;
+    before_count integer;
+    after_count integer;
+begin
+    saved := public.save_fiscal_resolution(jsonb_build_object(
+        'doc_type', 'invoice', 'resolution_number', 'LOW-1', 'prefix', 'FEL',
+        'range_from', 100, 'range_to', 110,
+        'valid_from', current_date - 1, 'valid_to', current_date + 365
+    ));
+    select count(*) into before_count from public.notifications
+     where type = 'fiscal_resolution_low';
+    perform public.enqueue_pending_fiscal_documents();
+    select count(*) into after_count from public.notifications
+     where type = 'fiscal_resolution_low';
+    if after_count <= before_count then
+        raise exception 'the low resolution did not notify';
+    end if;
+    perform public.enqueue_pending_fiscal_documents();
+    if (select count(*) from public.notifications where type = 'fiscal_resolution_low')
+       <> after_count then
+        raise exception 'the low resolution notified twice in one day';
+    end if;
+end $$;
+
+-- invoicing: list documents
+do $$
+declare
+    listed jsonb;
+begin
+    listed := public.list_fiscal_documents(null, 5, 0);
+    if (listed ->> 'total')::integer < 1
+       or jsonb_array_length(listed -> 'items') <> 5 then
+        raise exception 'the document list shape is wrong: %', listed;
+    end if;
+    listed := public.list_fiscal_documents('accepted', 50, 0);
+    if exists (
+        select 1 from jsonb_array_elements(listed -> 'items') item
+         where item ->> 'status' <> 'accepted'
+    ) then
+        raise exception 'the status filter leaked other rows';
+    end if;
+    if (listed ->> 'items') is null then
+        raise exception 'the document list items are null';
+    end if;
+end $$;
+
+-- invoicing: operators cannot read the fiscal tables
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    if (select count(*) from public.fiscal_documents) <> 0 then
+        raise exception 'an operator read the fiscal documents';
+    end if;
+    if public.issue_fiscal_document('session', 1, null) is not null then
+        raise exception 'the operator issuance fixture is odd';
+    end if;
+exception when others then
+    if sqlerrm not like '%FiscalSourceNotBillableError%'
+       and sqlerrm not like '%FiscalSourceNotFoundError%'
+       and sqlerrm not like '%FiscalNotEnabledError%' then raise; end if;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- invoicing: admin functions refuse operators
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    begin
+        perform public.list_fiscal_documents(null, 5, 0);
+        raise exception 'an operator listed the fiscal documents';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+    begin
+        perform public.save_fiscal_settings(jsonb_build_object('mode', 'off'));
+        raise exception 'an operator saved the fiscal settings';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+    begin
+        perform public.list_fiscal_resolutions();
+        raise exception 'an operator listed the resolutions';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+    begin
+        perform public.request_credit_note(
+            current_setting('app.fiscal_pos')::bigint, 'Motivo');
+        raise exception 'an operator issued a credit note';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- invoicing: service functions denied to api roles
+set local role authenticated;
+do $$
+begin
+    begin
+        perform public.claim_fiscal_documents(10);
+        raise exception 'an api role claimed documents';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform public.record_fiscal_result(
+            1, jsonb_build_object('outcome', 'accepted'));
+        raise exception 'an api role recorded a result';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
+-- invoicing: anon denied
+set local role anon;
+do $$
+begin
+    begin
+        perform public.fiscal_config();
+        raise exception 'anon read the fiscal config';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform public.issue_fiscal_document('session', 1, null);
+        raise exception 'anon issued a document';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
+-- invoicing: lot isolation
+set local role authenticated;
+do $$
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    if (select count(*) from public.fiscal_documents) <> 0 then
+        raise exception 'the fiscal documents leaked to another lot';
+    end if;
+    perform set_config('request.headers',
+        jsonb_build_object('x-lot-id', current_setting('app.fiscal_lot'))::text, true);
+end $$;
+reset role;
+
 set local request.headers = '{"x-lot-id":"1"}';
 
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';

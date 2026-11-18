@@ -49,3 +49,7 @@ volumes/functions/payments-reconcile/**
 volumes/functions/pass-renewal-intent/**
 !volumes/functions/pass-renewal-intent/index.ts
 !volumes/functions/pass-renewal-intent/index_test.ts
+!volumes/functions/fiscal-dispatch/
+volumes/functions/fiscal-dispatch/**
+!volumes/functions/fiscal-dispatch/index.ts
+!volumes/functions/fiscal-dispatch/index_test.ts

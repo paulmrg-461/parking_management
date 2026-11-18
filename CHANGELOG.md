@@ -67,6 +67,32 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - Android release build: R8 keep rules for the optional ML Kit scripts.
 
 ### Added
+- **Electronic invoicing** (`0124`–`0125`, `openspec/changes/add-electronic-invoicing`).
+  Provider-agnostic, inert by default and with every DIAN rule marked as an
+  ASSUMPTION pending the owner/accountant's confirmation:
+  - `fiscal_settings` (mode `off`/`on_request`/`always`, issuer NIT/legal
+    name/municipality, tax regime and one tax rate in basis points; prices are
+    tax-inclusive and the tax is extracted from the amount already charged),
+    `fiscal_resolutions` (authorized range per document type, one active per
+    lot/type, gap-free numbering under a row lock) and `fiscal_documents` (the
+    outbox and the legal record, immutable once numbered).
+  - `issue_fiscal_document` runs **after** check-out (never inside it), so the
+    11-argument `check_out` and offline replays are untouched. A POS document
+    is issued without customer data; an invoice with NIT/CC/etc. A cron sweeper
+    issues the default POS for paid sessions/pass charges in `always` mode
+    after 10 minutes and warns before a resolution runs out.
+  - Async outbox `pending -> sent -> accepted|rejected`, 8 transient attempts
+    with backoff, `failed` + admin notification, retry with corrected customer
+    data, and a full-reversal credit note that voids the original and frees the
+    source for a new document.
+  - Edge Function `fiscal-dispatch` + `_shared/fiscal_provider.ts` /
+    `rest_fiscal_provider.ts`: service-role only, `{configured:false}` without
+    `FISCAL_PROVIDER_*`, the token never reaches the client or a log line.
+  - `/invoicing` (admin): issuer data, resolutions, document list with filters,
+    retry and credit note. The check-out and pass-payment dialogs get an
+    optional "Datos para factura" section; receipts and the history reprint show
+    the number, CUFE and QR (or "documento electrónico en proceso").
+
 - **Loyalty rewards** (`0122`–`0123`, `openspec/changes/add-loyalty-rewards`).
   A lot can reward its regular customers without any Dart-side money math:
   - Per-lot program (off by default): visits required, reward kind
@@ -1321,6 +1347,7 @@ Migrations are append-only and applied in filename order by `supabase-migrate`.
 | `0117`–`0119` | Merchant agreements: schema/credentials, `fare_quote` + hooks, validations, public page, settlement, check-out lines |
 | `0120`–`0121` | Dynamic pricing: rules, session/hold locks, triggers, hook, quote/simulation/impact RPCs, availability price keys |
 | `0122`–`0123` | Loyalty rewards: program settings, accounts/rewards/visits/adjustments, closed-session trigger, reward hook, status/settings/adjust/reverse/expiry RPCs, report and members list |
+| `0124`–`0125` | Electronic invoicing: fiscal settings/resolutions/documents, numbering, issuance, outbox, credit notes, sweeper, admin list |
 
 ## Verification snapshot
 

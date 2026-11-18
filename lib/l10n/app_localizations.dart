@@ -9667,6 +9667,330 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Fidelización'**
   String get navLoyalty;
+
+  /// No description provided for @navInvoicing.
+  ///
+  /// In es, this message translates to:
+  /// **'Facturación'**
+  String get navInvoicing;
+
+  /// No description provided for @invoicingTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Facturación electrónica'**
+  String get invoicingTitle;
+
+  /// No description provided for @invoicingMode.
+  ///
+  /// In es, this message translates to:
+  /// **'Modo'**
+  String get invoicingMode;
+
+  /// No description provided for @invoicingModeOff.
+  ///
+  /// In es, this message translates to:
+  /// **'Apagada'**
+  String get invoicingModeOff;
+
+  /// No description provided for @invoicingModeOnRequest.
+  ///
+  /// In es, this message translates to:
+  /// **'Solo a solicitud'**
+  String get invoicingModeOnRequest;
+
+  /// No description provided for @invoicingModeAlways.
+  ///
+  /// In es, this message translates to:
+  /// **'Siempre'**
+  String get invoicingModeAlways;
+
+  /// No description provided for @invoicingSettings.
+  ///
+  /// In es, this message translates to:
+  /// **'Datos del emisor'**
+  String get invoicingSettings;
+
+  /// No description provided for @invoicingNit.
+  ///
+  /// In es, this message translates to:
+  /// **'NIT del emisor'**
+  String get invoicingNit;
+
+  /// No description provided for @invoicingLegalName.
+  ///
+  /// In es, this message translates to:
+  /// **'Razón social'**
+  String get invoicingLegalName;
+
+  /// No description provided for @invoicingMunicipality.
+  ///
+  /// In es, this message translates to:
+  /// **'Código de municipio'**
+  String get invoicingMunicipality;
+
+  /// No description provided for @invoicingTaxRate.
+  ///
+  /// In es, this message translates to:
+  /// **'Tarifa de impuesto (puntos básicos)'**
+  String get invoicingTaxRate;
+
+  /// No description provided for @invoicingPricesIncludeTax.
+  ///
+  /// In es, this message translates to:
+  /// **'Los precios ya incluyen el impuesto'**
+  String get invoicingPricesIncludeTax;
+
+  /// No description provided for @invoicingResolutions.
+  ///
+  /// In es, this message translates to:
+  /// **'Resoluciones de numeración'**
+  String get invoicingResolutions;
+
+  /// No description provided for @invoicingResolutionAdd.
+  ///
+  /// In es, this message translates to:
+  /// **'Agregar resolución'**
+  String get invoicingResolutionAdd;
+
+  /// No description provided for @invoicingResolutionRemaining.
+  ///
+  /// In es, this message translates to:
+  /// **'Quedan {count} números'**
+  String invoicingResolutionRemaining(int count);
+
+  /// No description provided for @invoicingDocuments.
+  ///
+  /// In es, this message translates to:
+  /// **'Documentos'**
+  String get invoicingDocuments;
+
+  /// No description provided for @invoicingEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no hay documentos. Configura una resolución para empezar.'**
+  String get invoicingEmpty;
+
+  /// No description provided for @invoicingStatusPending.
+  ///
+  /// In es, this message translates to:
+  /// **'Pendiente'**
+  String get invoicingStatusPending;
+
+  /// No description provided for @invoicingStatusSent.
+  ///
+  /// In es, this message translates to:
+  /// **'Enviado'**
+  String get invoicingStatusSent;
+
+  /// No description provided for @invoicingStatusAccepted.
+  ///
+  /// In es, this message translates to:
+  /// **'Aceptado'**
+  String get invoicingStatusAccepted;
+
+  /// No description provided for @invoicingStatusRejected.
+  ///
+  /// In es, this message translates to:
+  /// **'Rechazado'**
+  String get invoicingStatusRejected;
+
+  /// No description provided for @invoicingStatusFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'Falló'**
+  String get invoicingStatusFailed;
+
+  /// No description provided for @invoicingRetry.
+  ///
+  /// In es, this message translates to:
+  /// **'Reintentar envío'**
+  String get invoicingRetry;
+
+  /// No description provided for @invoicingCreditNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Nota crédito'**
+  String get invoicingCreditNote;
+
+  /// No description provided for @invoicingCreditReason.
+  ///
+  /// In es, this message translates to:
+  /// **'Motivo de la nota crédito'**
+  String get invoicingCreditReason;
+
+  /// No description provided for @invoicingIssue.
+  ///
+  /// In es, this message translates to:
+  /// **'Emitir factura electrónica'**
+  String get invoicingIssue;
+
+  /// No description provided for @invoicingIssued.
+  ///
+  /// In es, this message translates to:
+  /// **'Documento creado: {number}'**
+  String invoicingIssued(String number);
+
+  /// No description provided for @invoicingNotConfigured.
+  ///
+  /// In es, this message translates to:
+  /// **'El proveedor de facturación no está configurado; los documentos quedan pendientes.'**
+  String get invoicingNotConfigured;
+
+  /// No description provided for @invoicingOnlineOnly.
+  ///
+  /// In es, this message translates to:
+  /// **'Requiere conexión'**
+  String get invoicingOnlineOnly;
+
+  /// No description provided for @fiscalCustomerSection.
+  ///
+  /// In es, this message translates to:
+  /// **'Datos para factura (opcional)'**
+  String get fiscalCustomerSection;
+
+  /// No description provided for @fiscalDocType.
+  ///
+  /// In es, this message translates to:
+  /// **'Tipo de documento'**
+  String get fiscalDocType;
+
+  /// No description provided for @fiscalDocNumber.
+  ///
+  /// In es, this message translates to:
+  /// **'Número de documento'**
+  String get fiscalDocNumber;
+
+  /// No description provided for @fiscalName.
+  ///
+  /// In es, this message translates to:
+  /// **'Nombre o razón social'**
+  String get fiscalName;
+
+  /// No description provided for @fiscalEmail.
+  ///
+  /// In es, this message translates to:
+  /// **'Correo electrónico'**
+  String get fiscalEmail;
+
+  /// No description provided for @fiscalInvalidCustomer.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisa los datos del cliente'**
+  String get fiscalInvalidCustomer;
+
+  /// No description provided for @receiptFiscalPending.
+  ///
+  /// In es, this message translates to:
+  /// **'Documento electrónico en proceso'**
+  String get receiptFiscalPending;
+
+  /// No description provided for @notifTypeFiscalFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'Documento electrónico con problema'**
+  String get notifTypeFiscalFailed;
+
+  /// No description provided for @notifTypeFiscalResolutionLow.
+  ///
+  /// In es, this message translates to:
+  /// **'Resolución de numeración por agotarse'**
+  String get notifTypeFiscalResolutionLow;
+
+  /// No description provided for @errorFiscalNotEnabled.
+  ///
+  /// In es, this message translates to:
+  /// **'La facturación electrónica no está activa'**
+  String get errorFiscalNotEnabled;
+
+  /// No description provided for @errorFiscalResolutionMissing.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay resolución de numeración activa'**
+  String get errorFiscalResolutionMissing;
+
+  /// No description provided for @errorFiscalResolutionExpired.
+  ///
+  /// In es, this message translates to:
+  /// **'La resolución de numeración venció'**
+  String get errorFiscalResolutionExpired;
+
+  /// No description provided for @errorFiscalResolutionExhausted.
+  ///
+  /// In es, this message translates to:
+  /// **'Se agotó la numeración autorizada'**
+  String get errorFiscalResolutionExhausted;
+
+  /// No description provided for @errorFiscalSourceNotFound.
+  ///
+  /// In es, this message translates to:
+  /// **'No se encontró la venta a facturar'**
+  String get errorFiscalSourceNotFound;
+
+  /// No description provided for @errorFiscalSourceNotBillable.
+  ///
+  /// In es, this message translates to:
+  /// **'Esta venta no se puede facturar'**
+  String get errorFiscalSourceNotBillable;
+
+  /// No description provided for @errorInvalidFiscalCustomer.
+  ///
+  /// In es, this message translates to:
+  /// **'Datos del cliente no válidos'**
+  String get errorInvalidFiscalCustomer;
+
+  /// No description provided for @errorFiscalDocumentNotFound.
+  ///
+  /// In es, this message translates to:
+  /// **'Documento no encontrado'**
+  String get errorFiscalDocumentNotFound;
+
+  /// No description provided for @errorFiscalDocumentNotAccepted.
+  ///
+  /// In es, this message translates to:
+  /// **'Solo se puede acreditar un documento aceptado'**
+  String get errorFiscalDocumentNotAccepted;
+
+  /// No description provided for @errorFiscalDocumentAlreadyCredited.
+  ///
+  /// In es, this message translates to:
+  /// **'El documento ya tiene una nota crédito'**
+  String get errorFiscalDocumentAlreadyCredited;
+
+  /// No description provided for @errorInvalidFiscalStatus.
+  ///
+  /// In es, this message translates to:
+  /// **'El documento no está en un estado que permita reintentar'**
+  String get errorInvalidFiscalStatus;
+
+  /// No description provided for @errorFiscalSettingsIncomplete.
+  ///
+  /// In es, this message translates to:
+  /// **'Completa NIT, razón social y municipio'**
+  String get errorFiscalSettingsIncomplete;
+
+  /// No description provided for @errorFiscalDocumentImmutable.
+  ///
+  /// In es, this message translates to:
+  /// **'El documento ya está numerado y no se puede modificar'**
+  String get errorFiscalDocumentImmutable;
+
+  /// No description provided for @fiscalInvoiceTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'FACTURA ELECTRÓNICA DE VENTA'**
+  String get fiscalInvoiceTitle;
+
+  /// No description provided for @fiscalPosTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'DOCUMENTO EQUIVALENTE POS'**
+  String get fiscalPosTitle;
+
+  /// No description provided for @fiscalCufe.
+  ///
+  /// In es, this message translates to:
+  /// **'CUFE'**
+  String get fiscalCufe;
 }
 
 class _AppLocalizationsDelegate

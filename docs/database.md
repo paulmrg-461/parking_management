@@ -65,6 +65,12 @@ erDiagram
   parking_lots ||--o{ loyalty_adjustments : "corrects"
   parking_sessions ||--o| loyalty_visits : "explains"
   loyalty_rewards ||--o| loyalty_visits : "earned by"
+
+  parking_lots ||--o| fiscal_settings : "configures"
+  parking_lots ||--o{ fiscal_resolutions : "authorizes"
+  parking_lots ||--o{ fiscal_documents : "issues"
+  fiscal_resolutions ||--o{ fiscal_documents : "numbers"
+  fiscal_documents ||--o| fiscal_documents : "credited by"
 ```
 
 ## 2. Tables
@@ -90,6 +96,9 @@ erDiagram
 | `parking_spot_events` | Maintenance history of a bay: status transition, optional reason, actor and timestamp; written by `save_parking_spot`, lot-scoped RLS. | yes |
 | `parking_settings` (`car_capacity`, `moto_capacity`, `key_capacity`) | Per-site branding (name, address, schedule, contacts, police quadrant, logo version/path) + `business_timezone`, `overstay_hours`, `lost_ticket_fee`, `evidence_retention_days`, online-payment switch/window/minimum. | yes |
 | `payment_intents` | Frozen amount for a gateway checkout: `reference` (random `PM-…`), `amount`, `currency` (COP only), `gateway` (`wompi`), `status` (`pending`/`approved`/`declined`/`voided`/`error`/`expired`), transaction id/method, `expires_at`. Written only by the service RPCs. | yes |
+| `fiscal_settings` | Per-site fiscal switch (`off`/`on_request`/`always`), issuer NIT/legal name/municipality, tax regime and one tax rate in basis points. Prices are tax-inclusive. | yes (PK) |
+| `fiscal_resolutions` | Authorized numbering range per document type (`pos`/`invoice`/`credit_note`), prefix, validity, `next_number`; one active per `(lot, type)`. | yes |
+| `fiscal_documents` | The outbox and the legal record: number, source, snapshot amounts/tax, optional customer PII, status/attempts/backoff, provider id, CUFE/QR, rejection/void. Immutable once numbered. | yes |
 | `loyalty_accounts` | Counter per `(lot, plate)`: progress, earned/redeemed totals and the last counted day. Created lazily by the closed-session trigger. | yes |
 | `loyalty_rewards` | One reward: snapshot of kind/max/fixed at earn time, `available`/`redeemed`/`expired`/`reversed`, earning and redeeming session, redeemed amount and expiry. Audited. | yes |
 | `loyalty_visits` | Ledger of closed sessions: counted, skipped (with reason) or reversed, amount, progress before and the reward it earned. Unique per session. | yes |
@@ -390,6 +399,19 @@ closes (never raises); `loyalty_plate_status` (operators; counts only),
 (admin); `loyalty_reverse_visit` (internal, for a future void feature) and
 `loyalty_expire_rewards` (service role, job).
 
+**Electronic invoicing (`0124`–`0125`)**
+`fiscal_amounts` (pure), `fiscal_customer` (validation), `fiscal_settings_json`,
+`fiscal_resolution_json`, `fiscal_document_summary`, `fiscal_notify_admins`,
+`next_fiscal_number` (row-locked, gap-free), `fiscal_document_payload`
+(canonical provider-neutral JSON), `fiscal_create_document` (internal);
+`fiscal_config`, `get/save_fiscal_settings`, `save/list_fiscal_resolutions`,
+`issue_fiscal_document`, `fiscal_document_for_session`,
+`list_fiscal_documents`, `retry_fiscal_document`, `request_credit_note`
+(authenticated); `enqueue_pending_fiscal_documents` (cron);
+`claim_fiscal_documents` / `record_fiscal_result` (service role). The
+immutability trigger `guard_fiscal_document` protects the number and money;
+there is no delete grant.
+
 ## 4. Access control (RLS)
 
 | Table | Read | Write |
@@ -411,6 +433,8 @@ closes (never raises); `loyalty_plate_status` (operators; counts only),
 | `merchants` | active lot (staff need the desk picker) | RPCs (lot admins) |
 | `pricing_rules` | lot admins of the active lot | RPCs (lot admins) |
 | `loyalty_accounts`, `loyalty_rewards`, `loyalty_visits`, `loyalty_adjustments` | lot admins of the active lot (operators get counts through `loyalty_plate_status`) | definer RPCs only |
+| `fiscal_settings`, `fiscal_resolutions`, `fiscal_documents` | lot admins of the active lot (no operator PII read) | definer RPCs only; no update/delete grant |
+| `fiscal_documents` (service role) | — | `claim_fiscal_documents` / `record_fiscal_result` |
 | `merchant_credentials` | nobody (RLS on, no policy, no grant) | definer RPCs only |
 | `merchant_validations` | active lot | RPCs (desk/admin/public) |
 | `notifications` | own rows, active lot (or global) | RPCs/triggers |
@@ -527,6 +551,16 @@ never reads rules or settings again, so previews, check-out and reprints agree.
 Base = tariff → pricing → merchant lines → reward → manual discount. A
 pass holder or lost ticket is excluded. Offline entries may only keep a cheaper
 lock; a public hold's promise wins when it is cheaper.
+
+**Electronic invoicing.** Issuance is separate from `check_out`: the page, the
+pass dialog or the cron sweeper call `issue_fiscal_document` after the money is
+settled. The document total is the amount charged, `gross = total + discount`,
+and `tax_base = round(total * 10000 / (10000 + tax_rate_bps))` (tax-inclusive
+prices; one rule per lot). `next_fiscal_number` locks the active resolution
+`for update`, so a rollback releases the number and the sequence stays gap-free.
+Documents are immutable once numbered (only the delivery state and, while
+`rejected`/`failed`, the customer data can change); an accepted credit note
+stamps `voided_at` on the original, which frees the source for a new document.
 
 **Loyalty rewards.** The closed-session trigger takes a per-plate advisory lock,
 upserts the account, consumes any `reward` line of `fare_adjustments`, and then

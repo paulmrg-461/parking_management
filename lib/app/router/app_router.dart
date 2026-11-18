@@ -72,6 +72,7 @@ import 'deferred/monthly_passes_entry.dart' deferred as monthly_passes;
 import 'deferred/merchants_entry.dart' deferred as merchants;
 import 'deferred/pricing_entry.dart' deferred as pricing;
 import 'deferred/loyalty_entry.dart' deferred as loyalty;
+import 'deferred/invoicing_entry.dart' deferred as invoicing;
 import 'deferred/reports_entry.dart' deferred as reports;
 import 'deferred/settings_entry.dart' deferred as settings;
 import 'deferred/spots_entry.dart' deferred as spots;
@@ -373,6 +374,11 @@ GoRoute _homeRoute(AuthCubit auth) => GoRoute(
       'loyalty',
       loyalty.loadLibrary,
       () => loyalty.buildLoyaltyEntry(),
+    ),
+    _deferred(
+      'invoicing',
+      invoicing.loadLibrary,
+      () => invoicing.buildInvoicingEntry(),
     ),
     _deferred('users', users.loadLibrary, () => users.buildUsersEntry()),
     _deferred(

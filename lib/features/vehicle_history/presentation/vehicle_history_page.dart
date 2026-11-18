@@ -15,6 +15,11 @@ import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/error_state.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../../../app/di/injection.dart';
+import '../../invoicing/domain/entities/fiscal_document.dart';
+import '../../invoicing/domain/entities/fiscal_resolution.dart';
+import '../../invoicing/domain/entities/fiscal_settings.dart';
+import '../../invoicing/domain/repositories/invoicing_repository.dart';
+import '../../invoicing/presentation/widgets/fiscal_customer_form.dart';
 import '../../auth/application/auth_cubit.dart';
 import '../../auth/domain/entities/user.dart';
 import '../../customer_messages/domain/repositories/customer_message_repository.dart';
@@ -590,7 +595,7 @@ class _SessionTile extends StatelessWidget {
   final String? phone;
   final SessionEvidenceRepository? evidenceRepository;
 
-  ReceiptData get _receipt => ReceiptData(
+  ReceiptData _receiptFor(FiscalDocSummary? fiscal) => ReceiptData(
     kind: ReceiptKind.checkOut,
     plate: plate,
     entryTime: session.entryTime,
@@ -603,6 +608,13 @@ class _SessionTile extends StatelessWidget {
     grossAmount: session.grossAmount,
     adjustments: session.adjustments,
     feedbackUrl: publicFeedbackUrl(session.id, plate: plate),
+    fiscalNumber: fiscal?.fullNumber,
+    fiscalType: fiscal == null
+        ? null
+        : (fiscal.docType == FiscalDocType.invoice ? 'invoice' : 'pos'),
+    cufe: fiscal?.status.isAccepted ?? false ? fiscal?.cufe : null,
+    fiscalQr: fiscal?.status.isAccepted ?? false ? fiscal?.qrData : null,
+    fiscalPending: fiscal != null && !fiscal.status.isAccepted,
   );
 
   Future<void> _sendWhatsapp(BuildContext context) async {
@@ -681,11 +693,70 @@ class _SessionTile extends StatelessWidget {
     }
   }
 
-  Future<void> _reprint(BuildContext context) => showReceiptSummary(
-    context,
-    _receipt,
-    onPrint: () => showReceiptPrintSheet(context, _receipt),
-  );
+  Future<void> _reprint(BuildContext context) async {
+    final fiscal = await _fiscalDocument();
+    if (!context.mounted) {
+      return;
+    }
+    final data = _receiptFor(fiscal);
+    await showReceiptSummary(
+      context,
+      data,
+      onPrint: () => showReceiptPrintSheet(context, data),
+    );
+  }
+
+  Future<FiscalDocSummary?> _fiscalDocument() async {
+    if (!serviceLocator.isRegistered<InvoicingRepository>()) {
+      return null;
+    }
+    try {
+      return await serviceLocator<InvoicingRepository>().documentForSession(
+        session.id,
+      );
+    } on Failure {
+      return null;
+    }
+  }
+
+  Future<void> _issueInvoice(BuildContext context) async {
+    if (!serviceLocator.isRegistered<InvoicingRepository>()) {
+      return;
+    }
+    final repository = serviceLocator<InvoicingRepository>();
+    FiscalConfig config;
+    try {
+      config = await repository.config();
+    } on Failure catch (failure) {
+      if (context.mounted) {
+        showErrorSnack(context, context.l10n.failure(failure));
+      }
+      return;
+    }
+    if (!config.enabled || !context.mounted) {
+      return;
+    }
+    final customer = await showFiscalCustomerDialog(context, config: config);
+    if (!context.mounted) {
+      return;
+    }
+    try {
+      final summary = await repository.issueForSession(
+        session.id,
+        customer: customer,
+      );
+      if (context.mounted) {
+        showInfoSnack(
+          context,
+          context.l10n.invoicingIssued(summary.fullNumber),
+        );
+      }
+    } on Failure catch (failure) {
+      if (context.mounted) {
+        showErrorSnack(context, context.l10n.failure(failure));
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -731,6 +802,13 @@ class _SessionTile extends StatelessWidget {
                     tooltip: l10n.actionReprintTicket,
                     icon: Icons.receipt_long_outlined,
                     onPressed: () => _reprint(context),
+                  ),
+                if (!session.isOpen &&
+                    serviceLocator.isRegistered<InvoicingRepository>())
+                  AppIconButton(
+                    tooltip: l10n.invoicingIssue,
+                    icon: Icons.request_quote_outlined,
+                    onPressed: () => _issueInvoice(context),
                   ),
                 if (!session.isOpen && phone != null)
                   AppIconButton(

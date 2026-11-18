@@ -5550,4 +5550,182 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get navLoyalty => 'Fidelización';
+
+  @override
+  String get navInvoicing => 'Facturación';
+
+  @override
+  String get invoicingTitle => 'Facturación electrónica';
+
+  @override
+  String get invoicingMode => 'Modo';
+
+  @override
+  String get invoicingModeOff => 'Apagada';
+
+  @override
+  String get invoicingModeOnRequest => 'Solo a solicitud';
+
+  @override
+  String get invoicingModeAlways => 'Siempre';
+
+  @override
+  String get invoicingSettings => 'Datos del emisor';
+
+  @override
+  String get invoicingNit => 'NIT del emisor';
+
+  @override
+  String get invoicingLegalName => 'Razón social';
+
+  @override
+  String get invoicingMunicipality => 'Código de municipio';
+
+  @override
+  String get invoicingTaxRate => 'Tarifa de impuesto (puntos básicos)';
+
+  @override
+  String get invoicingPricesIncludeTax => 'Los precios ya incluyen el impuesto';
+
+  @override
+  String get invoicingResolutions => 'Resoluciones de numeración';
+
+  @override
+  String get invoicingResolutionAdd => 'Agregar resolución';
+
+  @override
+  String invoicingResolutionRemaining(int count) {
+    return 'Quedan $count números';
+  }
+
+  @override
+  String get invoicingDocuments => 'Documentos';
+
+  @override
+  String get invoicingEmpty =>
+      'Aún no hay documentos. Configura una resolución para empezar.';
+
+  @override
+  String get invoicingStatusPending => 'Pendiente';
+
+  @override
+  String get invoicingStatusSent => 'Enviado';
+
+  @override
+  String get invoicingStatusAccepted => 'Aceptado';
+
+  @override
+  String get invoicingStatusRejected => 'Rechazado';
+
+  @override
+  String get invoicingStatusFailed => 'Falló';
+
+  @override
+  String get invoicingRetry => 'Reintentar envío';
+
+  @override
+  String get invoicingCreditNote => 'Nota crédito';
+
+  @override
+  String get invoicingCreditReason => 'Motivo de la nota crédito';
+
+  @override
+  String get invoicingIssue => 'Emitir factura electrónica';
+
+  @override
+  String invoicingIssued(String number) {
+    return 'Documento creado: $number';
+  }
+
+  @override
+  String get invoicingNotConfigured =>
+      'El proveedor de facturación no está configurado; los documentos quedan pendientes.';
+
+  @override
+  String get invoicingOnlineOnly => 'Requiere conexión';
+
+  @override
+  String get fiscalCustomerSection => 'Datos para factura (opcional)';
+
+  @override
+  String get fiscalDocType => 'Tipo de documento';
+
+  @override
+  String get fiscalDocNumber => 'Número de documento';
+
+  @override
+  String get fiscalName => 'Nombre o razón social';
+
+  @override
+  String get fiscalEmail => 'Correo electrónico';
+
+  @override
+  String get fiscalInvalidCustomer => 'Revisa los datos del cliente';
+
+  @override
+  String get receiptFiscalPending => 'Documento electrónico en proceso';
+
+  @override
+  String get notifTypeFiscalFailed => 'Documento electrónico con problema';
+
+  @override
+  String get notifTypeFiscalResolutionLow =>
+      'Resolución de numeración por agotarse';
+
+  @override
+  String get errorFiscalNotEnabled =>
+      'La facturación electrónica no está activa';
+
+  @override
+  String get errorFiscalResolutionMissing =>
+      'No hay resolución de numeración activa';
+
+  @override
+  String get errorFiscalResolutionExpired =>
+      'La resolución de numeración venció';
+
+  @override
+  String get errorFiscalResolutionExhausted =>
+      'Se agotó la numeración autorizada';
+
+  @override
+  String get errorFiscalSourceNotFound => 'No se encontró la venta a facturar';
+
+  @override
+  String get errorFiscalSourceNotBillable => 'Esta venta no se puede facturar';
+
+  @override
+  String get errorInvalidFiscalCustomer => 'Datos del cliente no válidos';
+
+  @override
+  String get errorFiscalDocumentNotFound => 'Documento no encontrado';
+
+  @override
+  String get errorFiscalDocumentNotAccepted =>
+      'Solo se puede acreditar un documento aceptado';
+
+  @override
+  String get errorFiscalDocumentAlreadyCredited =>
+      'El documento ya tiene una nota crédito';
+
+  @override
+  String get errorInvalidFiscalStatus =>
+      'El documento no está en un estado que permita reintentar';
+
+  @override
+  String get errorFiscalSettingsIncomplete =>
+      'Completa NIT, razón social y municipio';
+
+  @override
+  String get errorFiscalDocumentImmutable =>
+      'El documento ya está numerado y no se puede modificar';
+
+  @override
+  String get fiscalInvoiceTitle => 'FACTURA ELECTRÓNICA DE VENTA';
+
+  @override
+  String get fiscalPosTitle => 'DOCUMENTO EQUIVALENTE POS';
+
+  @override
+  String get fiscalCufe => 'CUFE';
 }

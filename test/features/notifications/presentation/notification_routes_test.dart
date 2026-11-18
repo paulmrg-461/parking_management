@@ -53,6 +53,11 @@ void main() {
     );
   });
 
+  test('Success: fiscal alerts open the invoicing screen', () {
+    expect(routeForNotification(_n('fiscal_document_failed')), '/invoicing');
+    expect(routeForNotification(_n('fiscal_resolution_low')), '/invoicing');
+  });
+
   test('Security: unknown types never navigate', () {
     expect(routeForNotification(_n('unknown')), isNull);
     expect(routeForNotification(_n('check_in')), isNull);

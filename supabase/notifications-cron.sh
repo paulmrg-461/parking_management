@@ -67,6 +67,11 @@ curl -fsS -X POST "${API_URL:-http://localhost:8000}/functions/v1/push-dispatch"
 # Loyalty rewards past their validity become `expired`.
 docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
   "select public.loyalty_expire_rewards();" >/dev/null
+# Electronic invoicing: POS documents in `always` mode, then the dispatcher.
+docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
+  "select public.enqueue_pending_fiscal_documents();" >/dev/null
+curl -fsS -X POST "${API_URL:-http://localhost:8000}/functions/v1/fiscal-dispatch" \
+  -H "Authorization: Bearer ${SERVICE_KEY}" >/dev/null
 # No-op ({configured:false}) until WHATSAPP_TOKEN/PHONE_NUMBER_ID are set.
 curl -fsS -X POST "${API_URL:-http://localhost:8000}/functions/v1/whatsapp-dispatch" \
   -H "Authorization: Bearer ${SERVICE_KEY}" >/dev/null

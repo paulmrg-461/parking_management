@@ -75,6 +75,14 @@ class _NotificationsPageState extends State<NotificationsPage> {
                   ('waitlist_joined', context.l10n.notifTypeWaitlist),
                   ('waitlist_offer', context.l10n.notifTypeWaitlist),
                   ('cash_anomaly', context.l10n.notifTypeCashAnomaly),
+                  (
+                    'fiscal_document_failed',
+                    context.l10n.notifTypeFiscalFailed,
+                  ),
+                  (
+                    'fiscal_resolution_low',
+                    context.l10n.notifTypeFiscalResolutionLow,
+                  ),
                   ('online_payment', context.l10n.notifTypeOnlinePayment),
                   (
                     'online_payment_review',

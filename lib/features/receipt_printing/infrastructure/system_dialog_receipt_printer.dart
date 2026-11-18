@@ -153,6 +153,35 @@ class SystemDialogReceiptPrinter implements ReceiptPrinter {
           _row(context, labels.change, CopFormatter.format(data.cashChange!)),
         if (data.isCheckOut && !data.pendingSync && data.ticketNumber != null)
           _row(context, labels.ticket, data.ticketNumber!),
+        if (data.isCheckOut &&
+            (data.fiscalNumber != null || data.fiscalPending)) ...[
+          pw.Divider(),
+          pw.Text(
+            data.fiscalType == 'invoice'
+                ? labels.fiscalInvoice
+                : labels.fiscalPos,
+            textAlign: pw.TextAlign.center,
+            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+          ),
+          if (data.fiscalNumber != null)
+            _row(context, labels.ticket, data.fiscalNumber!),
+          if (data.cufe != null)
+            _row(context, labels.cufeLabel, data.cufe!),
+          if (data.fiscalPending)
+            pw.Text(
+              labels.fiscalPendingLabel,
+              textAlign: pw.TextAlign.center,
+            ),
+          if (data.fiscalQr != null)
+            pw.Center(
+              child: pw.BarcodeWidget(
+                barcode: Barcode.qrCode(),
+                data: data.fiscalQr!,
+                width: 72,
+                height: 72,
+              ),
+            ),
+        ],
         pw.Divider(),
         if (!data.isCheckOut) ...[
           pw.SizedBox(height: 8),

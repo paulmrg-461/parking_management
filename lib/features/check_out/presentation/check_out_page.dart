@@ -34,6 +34,13 @@ import '../../../core/widgets/sync_badge.dart';
 import '../../emergency/presentation/emergency_action.dart';
 import '../../evidence/domain/repositories/session_evidence_repository.dart';
 import '../../evidence/presentation/session_evidence_sheet.dart';
+import '../../../core/network/connectivity_cubit.dart';
+import '../../invoicing/application/issue_fiscal_document.dart';
+import '../../invoicing/domain/entities/fiscal_customer.dart';
+import '../../invoicing/domain/entities/fiscal_document.dart';
+import '../../invoicing/domain/entities/fiscal_resolution.dart';
+import '../../invoicing/domain/entities/fiscal_settings.dart';
+import '../../invoicing/domain/repositories/invoicing_repository.dart';
 import '../../loyalty/application/loyalty_status_cubit.dart';
 import '../../loyalty/domain/entities/loyalty_status.dart';
 import '../../loyalty/domain/repositories/loyalty_repository.dart';
@@ -95,6 +102,8 @@ class CheckOutPage extends StatefulWidget {
 }
 
 class _CheckOutPageState extends State<CheckOutPage> {
+  FiscalConfig? _fiscalConfig;
+  FiscalCustomer? _pendingFiscalCustomer;
   static const _prefsBox = 'preferences';
   static const _lastPaymentKey = 'last_payment_method';
 
@@ -290,7 +299,7 @@ class _CheckOutPageState extends State<CheckOutPage> {
         );
         unawaited(context.read<DashboardCubit>().load());
         _refreshShift(context);
-        unawaited(_showReceipt(context, result));
+        unawaited(_issueAndShowReceipt(context, result));
       case SubmissionFailed(:final message, :final failure):
         showErrorSnack(context, context.l10n.errorText(message, failure));
       default:
@@ -346,6 +355,7 @@ class _CheckOutPageState extends State<CheckOutPage> {
     final preview = await cubit.preview(session.id);
     final merchants = await _merchantOptions(context, session.id);
     final loyalty = _loyaltyOptions(context, session.id, preview);
+    _fiscalConfig = await _fiscalConfigFor();
     _setOpening(null);
     if (!context.mounted) {
       return;
@@ -357,6 +367,8 @@ class _CheckOutPageState extends State<CheckOutPage> {
       preview: preview,
       merchants: merchants,
       loyalty: loyalty,
+      fiscal: _fiscalConfig,
+      online: _online(context),
       initialMethod: (preview?.hasPass ?? false)
           ? PaymentMethod.monthlyPass
           : _basePaymentMethod(_rememberedMethod),
@@ -364,6 +376,7 @@ class _CheckOutPageState extends State<CheckOutPage> {
     if (choice == null) {
       return;
     }
+    _pendingFiscalCustomer = choice.fiscalCustomer;
     _chooseMethod(choice.method);
     _setOpening(session.id);
     await cubit.checkOut(
@@ -517,15 +530,64 @@ class _CheckOutPageState extends State<CheckOutPage> {
     await _startCheckout(context, session, _plateOf(context, session));
   }
 
-  Future<void> _showReceipt(
+  Future<void> _issueAndShowReceipt(
     BuildContext context,
     CheckOutReceipt receipt,
   ) async {
+    final fiscal = await _issueFiscal(receipt);
+    if (!mounted) {
+      return;
+    }
+    await _showReceipt(context, receipt, fiscal: fiscal);
+  }
+
+  /// Best effort: a fiscal failure never delays or breaks the receipt.
+  Future<FiscalDocSummary?> _issueFiscal(CheckOutReceipt receipt) async {
+    final customer = _pendingFiscalCustomer;
+    _pendingFiscalCustomer = null;
+    final config = _fiscalConfig;
+    if (config == null || !config.enabled ||
+        !serviceLocator.isRegistered<IssueFiscalDocument>()) {
+      return null;
+    }
+    return serviceLocator<IssueFiscalDocument>().forSession(
+      receipt.id,
+      config: config,
+      customer: customer,
+      online: _online(context),
+    );
+  }
+
+  bool _online(BuildContext context) {
+    try {
+      return context.read<ConnectivityCubit>().state;
+    } on ProviderNotFoundException {
+      return true;
+    }
+  }
+
+  Future<FiscalConfig?> _fiscalConfigFor() async {
+    if (!serviceLocator.isRegistered<InvoicingRepository>()) {
+      return null;
+    }
+    try {
+      final config = await serviceLocator<InvoicingRepository>().config();
+      return config.enabled ? config : null;
+    } on Failure {
+      return null;
+    }
+  }
+
+  Future<void> _showReceipt(
+    BuildContext context,
+    CheckOutReceipt receipt, {
+    FiscalDocSummary? fiscal,
+  }) async {
     await _loadLoyalty(receipt.plate);
     if (!mounted) {
       return;
     }
-    final data = _receiptData(receipt);
+    final data = _receiptData(receipt, fiscal: fiscal);
     return showReceiptSummary(
       context,
       data,
@@ -574,7 +636,10 @@ class _CheckOutPageState extends State<CheckOutPage> {
     return '${pricing.ruleName} x$percent';
   }
 
-  ReceiptData _receiptData(CheckOutReceipt receipt) => ReceiptData(
+  ReceiptData _receiptData(
+    CheckOutReceipt receipt, {
+    FiscalDocSummary? fiscal,
+  }) => ReceiptData(
     kind: ReceiptKind.checkOut,
     plate: receipt.plate,
     entryTime: receipt.entryTime,
@@ -595,6 +660,13 @@ class _CheckOutPageState extends State<CheckOutPage> {
     pricingDelta: receipt.pricing?.delta ?? 0,
     loyaltyVisits: _loyaltyStatus?.visits,
     loyaltyRequired: _loyaltyStatus?.required,
+    fiscalNumber: fiscal?.fullNumber,
+    fiscalType: fiscal == null
+        ? null
+        : (fiscal.docType == FiscalDocType.invoice ? 'invoice' : 'pos'),
+    cufe: fiscal?.status.isAccepted ?? false ? fiscal?.cufe : null,
+    fiscalQr: fiscal?.status.isAccepted ?? false ? fiscal?.qrData : null,
+    fiscalPending: fiscal != null && !fiscal.status.isAccepted,
     evidenceUrl: receipt.pendingSync ? null : publicEvidenceUrl(receipt.id),
     feedbackUrl: receipt.pendingSync
         ? null

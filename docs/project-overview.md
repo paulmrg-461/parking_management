@@ -45,11 +45,12 @@ WhatsApp (manual or automated).
 | Merchant agreements | Complete (`/merchants`, `/validate` link + PIN, settlement, fare_quote) | SQL + widget tests |
 | Dynamic pricing | Complete, inert by default (rules, locked rate at entry, simulation, impact) | SQL + widget tests |
 | Loyalty rewards | Complete, inert by default (visit accrual, reward redemption, `/loyalty`, expiry job) | SQL + widget tests |
+| Electronic invoicing | Complete, inert by default (`mode = off`, provider optional; every DIAN rule an ASSUMPTION) | SQL + Deno + widget tests |
 | Backups / restore | Complete, with a safe drill | Drill executed against a real backup |
 | Secrets / PIN operations | Complete (scripts + runbook) | PIN rotation verified live |
 | E2E and CI | Complete (API + Flutter client, real stack) | CI job `supabase-e2e` |
 
-Quality snapshot (2026-11-18, local stack): **1727 Flutter tests + 1 integration
+Quality snapshot (2026-11-18, local stack): **1797 Flutter tests + 1 integration
 test**, SQL/RLS suite green, web build green, analyzer with **0 errors and 0
 warnings** (only SDK deprecation infos from the pinned beta channel), restore
 drill green.
@@ -83,6 +84,7 @@ the main data it touches.
 | `pass_renewal` | Public token-keyed renewal page (`/renew?t=`) and the admin "send renewal link" action | `pass_renewal_offers`, `public_pass_renewal`, `pass-renewal-intent` (Edge Function), `settle_pass_renewal`, `queue_pass_renewal_reminders` |
 | `merchants` | Agreements, show-once credentials, per-vehicle policy, settlement and the public `/validate?m=` page | `merchants`, `merchant_credentials`, `merchant_validations`, `fare_quote`, `save_merchant`, `merchant_validate`, `report_merchant_settlement` |
 | `pricing` | Dynamic rates: rules, guard rails, simulation, impact and the check-in price chip | `pricing_rules`, `pricing_lock`, `pricing_quote`, `pricing_simulate`, `report_pricing_impact`, `public_availability` price keys |
+| `invoicing` | Fiscal issuer/resolutions, document outbox, credit notes and the admin list (`/invoicing`) | `fiscal_settings`, `fiscal_resolutions`, `fiscal_documents`, `issue_fiscal_document`, `list_fiscal_documents`, `request_credit_note`, `fiscal-dispatch` |
 | `loyalty` | Visit program, reward redemption, member corrections and the impact report (`/loyalty`) | `loyalty_accounts`, `loyalty_rewards`, `loyalty_visits`, `loyalty_adjustments`, `fare_reward_step`, `loyalty_plate_status`, `choose_loyalty_redemption`, `report_loyalty`, `list_loyalty_accounts` |
 | `emergency` | One-tap call to the nearest police quadrant (123 fallback) | `parking_settings.police_phone` |
 | `users` | Admin user management | `admin-users` Edge Function |
@@ -99,7 +101,7 @@ the main data it touches.
 **Edge Functions** (`supabase/volumes/functions`): `admin-users`,
 `push-dispatch`, `evidence-archive`, `whatsapp-dispatch`, `public-evidence`,
 `public-booking`, `payment-intent`, `payment-webhook`, `payments-reconcile`,
-`pass-renewal-intent`
+`pass-renewal-intent`, `fiscal-dispatch`
 (the `hello`/`main` folders are Supabase scaffolding, not used by the app).
 
 ## 4. Architecture in one paragraph
@@ -148,7 +150,11 @@ Deployment: [`setup-cloud.md`](setup-cloud.md) (single VM + TLS proxy) and
 ## 7. Intentional limitations
 
 - **Android + Web only.** No iOS target, no desktop target.
-- **Internal receipts only.** No electronic invoicing.
+- **Electronic invoicing is opt-in and provider-dependent.** Every DIAN rule
+  (document types, IVA rate, codes, CUFE/CUDE, resolution fields) is an
+  ASSUMPTION that the owner and their accountant must confirm; the shipped
+  default is `mode = 'off'` and, without `FISCAL_PROVIDER_*`, documents stay
+  `pending` instead of being transmitted.
 - **COP or USD only** (site-level, integer minor units) and **ES/EN only**
   (system/Spanish default; English at key parity).
 - **Operator-provided credentials** for FCM, VAPID and Meta WhatsApp; without
@@ -159,8 +165,10 @@ Deployment: [`setup-cloud.md`](setup-cloud.md) (single VM + TLS proxy) and
   deletion flow, and low ratings do not trigger an alert yet.
 - **`pg_cron` is not available in the shipped image's app database**, so
   scheduled work runs from host cron (documented); the functions are the same.
-- **Single currency and single tax regime** assumptions (no per-vehicle
-  currency, no tax engine).
+- **Single currency and one tax rule.** Prices are tax-inclusive; the fiscal
+  document derives `tax_base = round(total × 10000 / (10000 + rate))` and
+  `tax = total − tax_base`, with one rate per lot (no per-category rates,
+  withholdings or tax engine).
 - **Physical bays are optional.** Without a map the board paints virtual
   capacity cells and capacity comes from Ajustes; with a map the bays define the
   capacity. Bicycles are not modelled.
@@ -244,6 +252,24 @@ that writes the ledger never blocks a check-out: a loyalty failure is stored as
 a skipped visit with reason `error`. `/loyalty` shows the program, the members
 with a bounded, reasoned progress correction, and the impact report. A manual
 correction can move progress but can never mint a reward.
+
+## 7.09 Electronic invoicing (implemented, inert by default)
+
+A separate call after check-out (or the cron sweeper in `always` mode) creates
+a numbered fiscal document: a POS equivalent for a final consumer, an invoice
+when the operator captures the optional customer data, or a credit note when an
+admin reverses an accepted document. Numbering is gap-free under the
+resolution's row lock, documents are immutable once numbered, and every
+provider rule sits behind `fiscal-dispatch`'s `FiscalProvider` port with one
+generic REST adapter. The app never talks to the DIAN or holds the provider
+token. `mode` defaults to `off`; with no `FISCAL_PROVIDER_*` credentials the
+dispatcher answers `configured: false` and documents remain `pending` in
+`/invoicing`. The tax is extracted from the amount already charged
+(`tax_base = round(total × 10000 / (10000 + rate))`), so the document total
+always equals what the customer paid. Receipts and the history reprint show the
+number, CUFE and QR once accepted, or "Documento electrónico en proceso" while
+the provider has not answered. Every DIAN-specific rule is an ASSUMPTION
+pending the owner's and accountant's written confirmation.
 
 ## 7.1 Offline conflicts (implemented)
 

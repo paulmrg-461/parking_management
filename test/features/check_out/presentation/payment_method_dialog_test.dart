@@ -8,6 +8,8 @@ import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/core/fare/fare_quote.dart';
 import 'package:parking_management/features/check_out/presentation/payment_method_dialog.dart';
 import 'package:parking_management/features/loyalty/domain/repositories/loyalty_repository.dart';
+import 'package:parking_management/features/invoicing/domain/entities/fiscal_customer.dart';
+import 'package:parking_management/features/invoicing/domain/entities/fiscal_settings.dart';
 import 'package:parking_management/features/loyalty/presentation/desk_loyalty_section.dart';
 
 import '../../../helpers/test_app.dart';
@@ -22,6 +24,8 @@ Future<CheckoutChoice? Function()> pumpDialog(
   Size size = const Size(800, 1400),
   bool canDiscount = false,
   LoyaltyDeskOptions? loyalty,
+  FiscalConfig? fiscal,
+  bool online = true,
 }) async {
   CheckoutChoice? result;
   tester.view.physicalSize = size;
@@ -40,6 +44,8 @@ Future<CheckoutChoice? Function()> pumpDialog(
                 preview: preview,
                 initialMethod: initialMethod,
                 loyalty: loyalty,
+                fiscal: fiscal,
+                online: online,
               );
             },
             child: const Text('open'),
@@ -489,6 +495,77 @@ void main() {
       await pumpDialog(tester);
 
       expect(find.byKey(const Key('desk_loyalty_section')), findsNothing);
+    });
+  });
+
+  group('fiscal customer', () {
+    const enabled = FiscalConfig(mode: FiscalMode.onRequest);
+
+    testWidgets('hidden when the mode is off', (tester) async {
+      await pumpDialog(
+        tester,
+        fiscal: const FiscalConfig(mode: FiscalMode.off),
+      );
+      expect(find.byKey(const Key('fiscal_customer_form')), findsNothing);
+    });
+
+    testWidgets('hidden offline', (tester) async {
+      await pumpDialog(tester, fiscal: enabled, online: false);
+      expect(find.byKey(const Key('fiscal_customer_form')), findsNothing);
+    });
+
+    testWidgets('valid data returns the customer in the choice', (tester) async {
+      final result = await pumpDialog(tester, fiscal: enabled);
+
+      await tester.tap(find.byKey(const Key('fiscal_customer_toggle')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('fiscal_doc_number')),
+        '900123456',
+      );
+      await tester.enterText(
+        find.byKey(const Key('fiscal_name')),
+        'Cliente Empresa SAS',
+      );
+      await tester.enterText(
+        find.byKey(const Key('fiscal_email')),
+        'facturas@empresa.test',
+      );
+      await tester.tap(_confirm);
+      await tester.pumpAndSettle();
+
+      final customer = result()?.fiscalCustomer;
+      expect(customer, isNotNull);
+      expect(customer!.documentType, FiscalIdType.cc);
+      expect(customer.documentNumber, '900123456');
+    });
+
+    testWidgets('invalid data blocks confirmation with an inline error', (
+      tester,
+    ) async {
+      final result = await pumpDialog(tester, fiscal: enabled);
+
+      await tester.tap(find.byKey(const Key('fiscal_customer_toggle')));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const Key('fiscal_doc_number')), '1');
+      await tester.enterText(find.byKey(const Key('fiscal_name')), 'A');
+      await tester.tap(_confirm);
+      await tester.pumpAndSettle();
+
+      expect(result(), isNull);
+      expect(find.textContaining('Revisa los datos'), findsWidgets);
+    });
+
+    testWidgets('the section is optional', (tester) async {
+      final result = await pumpDialog(tester, fiscal: enabled);
+
+      await tester.tap(find.byKey(const Key('fiscal_customer_toggle')));
+      await tester.pumpAndSettle();
+      await tester.tap(_confirm);
+      await tester.pumpAndSettle();
+
+      expect(result(), isNotNull);
+      expect(result()?.fiscalCustomer, isNull);
     });
   });
 }

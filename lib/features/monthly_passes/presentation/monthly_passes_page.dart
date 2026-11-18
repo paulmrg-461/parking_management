@@ -23,6 +23,11 @@ import '../../../core/widgets/metric_card.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/search_field.dart';
 import '../../../app/di/injection.dart';
+import '../../invoicing/application/issue_fiscal_document.dart';
+import '../../invoicing/domain/entities/fiscal_customer.dart';
+import '../../invoicing/domain/entities/fiscal_settings.dart';
+import '../../invoicing/domain/repositories/invoicing_repository.dart';
+import '../../invoicing/presentation/widgets/fiscal_customer_form.dart';
 import '../../../core/utils/whatsapp_launcher.dart';
 import '../../../core/widgets/plate_text.dart';
 import '../../../core/widgets/status_chip.dart';
@@ -659,21 +664,54 @@ class _PendingPaymentTile extends StatelessWidget {
   }
 
   Future<void> _pay(BuildContext context) async {
-    final method = await showDialog<PaymentMethod>(
+    final fiscal = await _fiscalConfig();
+    final choice = await showDialog<({PaymentMethod method, FiscalCustomer? customer})>(
       context: context,
-      builder: (_) => const _PaymentMethodDialog(),
+      builder: (_) => _PaymentMethodDialog(fiscal: fiscal),
     );
-    if (method != null && context.mounted) {
+    if (choice != null && context.mounted) {
       await context.read<MonthlyPassesCubit>().registerPayment(
         payment.id,
-        method.wire,
+        choice.method.wire,
       );
+      await _issueFiscal(payment.id, fiscal, choice.customer, context);
     }
+  }
+
+  Future<FiscalConfig?> _fiscalConfig() async {
+    if (!serviceLocator.isRegistered<InvoicingRepository>()) {
+      return null;
+    }
+    try {
+      final config = await serviceLocator<InvoicingRepository>().config();
+      return config.enabled ? config : null;
+    } on Failure {
+      return null;
+    }
+  }
+
+  Future<void> _issueFiscal(
+    int paymentId,
+    FiscalConfig? config,
+    FiscalCustomer? customer,
+    BuildContext context,
+  ) async {
+    if (config == null || !serviceLocator.isRegistered<IssueFiscalDocument>()) {
+      return;
+    }
+    await serviceLocator<IssueFiscalDocument>().forPassPayment(
+      paymentId,
+      config: config,
+      customer: customer,
+      online: _online(context),
+    );
   }
 }
 
 class _PaymentMethodDialog extends StatefulWidget {
-  const _PaymentMethodDialog();
+  const _PaymentMethodDialog({this.fiscal});
+
+  final FiscalConfig? fiscal;
 
   @override
   State<_PaymentMethodDialog> createState() => _PaymentMethodDialogState();
@@ -681,6 +719,7 @@ class _PaymentMethodDialog extends StatefulWidget {
 
 class _PaymentMethodDialogState extends State<_PaymentMethodDialog> {
   PaymentMethod _method = PaymentMethod.cash;
+  final _fiscalKey = GlobalKey<FiscalCustomerFormState>();
 
   @override
   Widget build(BuildContext context) {
@@ -705,6 +744,8 @@ class _PaymentMethodDialogState extends State<_PaymentMethodDialog> {
               title: Text(method.label(context.l10n)),
               secondary: Icon(method.icon),
             ),
+          if (widget.fiscal case final fiscal? when fiscal.enabled)
+            FiscalCustomerForm(key: _fiscalKey, config: fiscal),
         ],
       ),
       actions: [
@@ -713,7 +754,15 @@ class _PaymentMethodDialogState extends State<_PaymentMethodDialog> {
           child: Text(context.l10n.actionCancel),
         ),
         FilledButton(
-          onPressed: () => Navigator.of(context).pop(_method),
+          onPressed: () {
+            final customer = _fiscalKey.currentState?.customer;
+            if (!(_fiscalKey.currentState?.isValid ?? true)) {
+              return;
+            }
+            Navigator.of(context).pop(
+              (method: _method, customer: customer),
+            );
+          },
           child: Text(context.l10n.actionConfirm),
         ),
       ],

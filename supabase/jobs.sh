@@ -60,6 +60,10 @@ while true; do
   dispatch "${API_URL}/functions/v1/payments-reconcile"
   # Loyalty rewards past their validity become `expired`.
   run loyalty_expire_rewards
+  # Electronic invoicing: default POS documents in `always` mode and the
+  # dispatcher (a no-op without FISCAL_PROVIDER_* credentials).
+  run enqueue_pending_fiscal_documents
+  dispatch "${API_URL}/functions/v1/fiscal-dispatch"
   # Both are no-ops until their credentials are configured.
   dispatch "${API_URL}/functions/v1/push-dispatch"
   dispatch "${API_URL}/functions/v1/whatsapp-dispatch"

@@ -30,6 +30,10 @@ class ReceiptLabels {
     required this.loyaltyVisit,
     required this.loyaltyReward,
     required this.loyaltyRewardEarned,
+    required this.fiscalInvoice,
+    required this.fiscalPos,
+    required this.cufeLabel,
+    required this.fiscalPendingLabel,
   });
 
   final String checkInTitle;
@@ -79,6 +83,12 @@ class ReceiptLabels {
   /// The visit that earned a reward.
   final String loyaltyRewardEarned;
 
+  /// Fiscal document titles (ASCII only for thermal printers).
+  final String fiscalInvoice;
+  final String fiscalPos;
+  final String cufeLabel;
+  final String fiscalPendingLabel;
+
   /// Localizes a wire value (`cash`, `card`, `transfer`, `monthly_pass`,
   /// `exempt`, `online`) plus the optional card type (`debit`/`credit`).
   final String Function(String method, String? cardType) paymentMethod;
@@ -111,6 +121,10 @@ class ReceiptLabels {
     loyaltyVisit: _loyaltyVisitEs,
     loyaltyReward: 'Recompensa',
     loyaltyRewardEarned: 'Recompensa ganada',
+    fiscalInvoice: 'FACTURA ELECTRONICA DE VENTA',
+    fiscalPos: 'DOCUMENTO EQUIVALENTE POS',
+    cufeLabel: 'CUFE',
+    fiscalPendingLabel: 'Documento electronico en proceso',
     paymentMethod: _paymentEs,
   );
 
@@ -141,6 +155,10 @@ class ReceiptLabels {
     loyaltyVisit: _loyaltyVisitEn,
     loyaltyReward: 'Reward',
     loyaltyRewardEarned: 'Reward earned',
+    fiscalInvoice: 'ELECTRONIC SALES INVOICE',
+    fiscalPos: 'POS EQUIVALENT DOCUMENT',
+    cufeLabel: 'CUFE',
+    fiscalPendingLabel: 'Electronic document in process',
     paymentMethod: _paymentEn,
   );
 

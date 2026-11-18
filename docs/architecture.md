@@ -254,6 +254,38 @@ status) makes a replayed event a no-op. Inside the grace window the session
 charges exactly what was paid; after it the desk collects the difference.
 `online` is written only by the database, never by the client.
 
+## 5c. Electronic invoicing (outbox)
+
+```mermaid
+sequenceDiagram
+  participant O as Operator
+  participant APP as Flutter
+  participant DB as PostgreSQL
+  participant J as jobs (cron)
+  participant FN as fiscal-dispatch
+  participant P as Proveedor tecnologico
+
+  O->>APP: check-out (unchanged) + optional invoice data
+  APP->>DB: issue_fiscal_document(source, customer?)
+  DB->>DB: next_fiscal_number (row lock) + fiscal_amounts
+  DB-->>APP: number + status pending
+  APP-->>O: receipt "documento electronico en proceso"
+  J->>DB: enqueue_pending_fiscal_documents (always mode, POS after 10 min)
+  J->>FN: POST /functions/v1/fiscal-dispatch (service key)
+  FN->>DB: claim_fiscal_documents (FOR UPDATE SKIP LOCKED)
+  FN->>P: submit(payload, Idempotency-Key) / query(provider id)
+  P-->>FN: accepted | rejected | processing | transient
+  FN->>DB: record_fiscal_result (accepted: CUFE + QR, credit note voids original)
+  O->>APP: history reprint
+  APP->>DB: fiscal_document_for_session
+  DB-->>APP: number, CUFE, QR (no customer PII)
+```
+
+`mode = 'off'` (default) creates nothing; without `FISCAL_PROVIDER_*` the
+function answers `{configured:false}` and documents stay `pending`. Every DIAN
+rule (document type, IVA rate, codes, resolution fields, CUFE/CUDE, QR) is an
+ASSUMPTION pending the owner's and accountant's confirmation.
+
 ## 6. Shifts and cash
 
 An operator opens one shift per site (`unique (operator_id, lot_id)`), records

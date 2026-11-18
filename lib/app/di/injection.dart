@@ -26,6 +26,7 @@ import 'modules/online_payments_module.dart';
 import 'modules/merchants_module.dart';
 import 'modules/pricing_module.dart';
 import 'modules/loyalty_module.dart';
+import 'modules/invoicing_module.dart';
 import 'modules/pass_renewal_module.dart';
 import 'modules/plate_scanning_module.dart';
 import 'modules/platform_module.dart';
@@ -148,6 +149,7 @@ void registerAllModules(GetIt sl, AppConfig config) {
   registerMerchantsModule(sl);
   registerPricingModule(sl);
   registerLoyaltyModule(sl);
+  registerInvoicingModule(sl);
   registerPublicBookingModule(sl);
   registerWaitlistModule(sl);
   registerAnomaliesModule(sl);

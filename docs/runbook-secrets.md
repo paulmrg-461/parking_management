@@ -16,6 +16,7 @@ and what to do if one leaks.
 | `FCM_SERVICE_ACCOUNT_JSON` | `push-dispatch` | Replace the JSON, restart `functions`. |
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | `push-dispatch`, web build | Browser subscriptions become invalid: users must re-enable notifications; rebuild the web app with the new public key. |
 | `WHATSAPP_TOKEN` / `WHATSAPP_PHONE_NUMBER_ID` | `whatsapp-dispatch` | Replace in `.env`, restart `functions`. Queued messages keep retrying. |
+| `FISCAL_PROVIDER_URL` / `FISCAL_PROVIDER_TOKEN` / `FISCAL_PROVIDER_ENV` | `fiscal-dispatch` | Replace in `.env`, restart `functions`. Empty keeps invoicing inert; documents stay `pending`. The token is server-only and never logged. |
 | `WOMPI_PUBLIC_KEY` / `WOMPI_PRIVATE_KEY` / `WOMPI_INTEGRITY_SECRET` / `WOMPI_EVENTS_SECRET` | `payment-intent`, `payment-webhook`, `payments-reconcile` | Replace in `.env`, restart `functions`; also update the events secret in the Wompi dashboard. Pending intents keep polling; a rotated events secret rejects old webhooks (`401`), so rotate with no traffic. |
 
 `.env` must be `chmod 600` and excluded from git. Keep an encrypted copy
@@ -130,6 +131,16 @@ in `docker-compose.yml` and repeat the `alter user` for that role.
   both secrets must never appear in the client, a log line or a `--dart-define`.
 - After any rotation: `select public.expire_payment_intents();` and check
   `/reports` → "Pagos en línea" for the day.
+
+## 6.1 Fiscal provider credentials
+
+Every DIAN rule named in `openspec/changes/add-electronic-invoicing` is an
+ASSUMPTION: the document type (POS/invoice), the IVA rate, the customer and
+payment-means codes, the resolution fields, CUFE vs CUDE and the QR format must
+be confirmed by the owner and their accountant before `mode` leaves `off`. The
+provider token lives only in the `functions` environment; the client never
+receives it. Rotate it like the Wompi secrets (replace in `.env`, restart
+`functions`, check `/invoicing` for documents stuck `pending`).
 
 ## 7. Suspected leak
 

@@ -4,16 +4,16 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-11-18 (loyalty rewards).
+Last updated: 2026-11-18 (electronic invoicing).
 
 ## Where we are
 
 - Stack: Flutter (android + web) + self-hosted Supabase only. No FastAPI,
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
-- `supabase/migrations/0001..0123` are the schema owner (applied by
+- `supabase/migrations/0001..0125` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 1727 tests green (coverage 79.1% global; application 90.6%,
-  domain 61.4%, infrastructure 46.2%), `flutter analyze` reports only SDK
+- Flutter: 1797 tests green (coverage 79.1% global; application 90.5%,
+  domain 61.3%, infrastructure 46.7%), `flutter analyze` reports only SDK
   deprecation infos from the pinned beta channel (0 errors/warnings). Web
   build green. Deno tests for the Edge Functions: 30 green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
@@ -24,6 +24,70 @@ Last updated: 2026-11-18 (loyalty rewards).
 
 
 
+
+
+## Electronic invoicing (2026-11-18, `0124`-`0125`)
+
+- **Decision 0.2 (recorded as required):** the change ships with `mode = 'off'`
+  and every DIAN rule flagged ASSUMPTION. The owner/accountant has NOT confirmed
+  the document type, IVA rate, codes, resolution fields, CUFE/CUDE, QR format
+  or retention; do not switch a production lot away from `off` until they do.
+  The generic REST adapter is a placeholder for a real "proveedor tecnologico".
+- Issuance is **separate from `check_out`**: the page/request or the cron
+  sweeper calls `issue_fiscal_document` after the money is settled. `check_out`
+  keeps its 11 arguments and offline replays are untouched. A failure never
+  delays the receipt (the use case swallows `Failure` and returns null).
+- `mode` semantics: `off` creates nothing; `on_request` issues only when the
+  operator/admin asks; `always` also lets `enqueue_pending_fiscal_documents`
+  issue a default POS for paid sessions/pass charges older than 10 minutes
+  (offline check-outs and forgotten clicks). `started_at` is stamped once, when
+  the mode first leaves `off`, and sources closed/paid before it are refused.
+- Numbering is gap-free: `next_fiscal_number` locks the active resolution
+  `for update` and increments inside the issuing transaction, so a rollback
+  releases the number. One active resolution per `(lot, doc_type)`; saving a new
+  one deactivates the previous. Expired/exhausted/missing resolutions raise
+  their typed errors before any row is written.
+- Documents are immutable once numbered (`guard_fiscal_document`): number,
+  prefix, lot, source, amounts, tax, `issued_at` and `related_document_id`
+  never change; customer columns only while `rejected`/`failed` (through
+  `retry_fiscal_document`). There is no delete grant. Accepted credit notes
+  stamp `voided_at` on the original and free the source for a new document.
+- Tax (single rule per lot): prices are tax-inclusive, so
+  `tax_base = round(total * 10000 / (10000 + rate_bps))`,
+  `tax = total - tax_base`, `gross = total + discount`. Totals always equal what
+  the customer paid; there is no per-category rate, withholding or tax engine.
+- Outbox: `pending -> sent -> accepted`, `rejected` or `failed` (8 transient
+  attempts, backoff `1,5,15,60,240,240,240` minutes). `claim_fiscal_documents`
+  uses `for update skip locked`, a 5-minute lease and increments `attempts`;
+  `record_fiscal_result` clears the lease on every outcome, stores CUFE/QR and
+  notifies admins on `rejected`/`failed` (deduped per document, status, user).
+- Privacy: customer name/document/email are PII. Only lot admins can select the
+  tables; operators use `fiscal_document_for_session`, which returns the number,
+  status, CUFE/QR and amounts only. No fiscal function is granted to `anon`.
+- Security boundary: the provider token lives only in the `functions` env
+  (`FISCAL_PROVIDER_URL/TOKEN/ENV/TIMEOUT_MS`), never in SQL, the client or a
+  log line. `fiscal-dispatch` is service-role only and answers
+  `{configured:false}` without credentials.
+- Gotchas: `fiscal_settings` has a PK on `lot_id` (one row per site) but it is
+  NOT in the versioned set (no offline edits). A monthly pass already gets a
+  pending payment row from its trigger, so issuing fixtures must update that
+  row, not insert a second one. PL/pgSQL variable/column shadowing (`doc_type`,
+  `status`, `plate`) bit twice; all variables are `*_value`/`*_kind`.
+- Flutter: the check-out dialog shows the fiscal section only when the lot is
+  enabled and the device is online; the pass-payment dialog reuses the same
+  form; the history reprint loads `fiscal_document_for_session` (pending label
+  until accepted) and offers "Emitir factura electrónica". `/invoicing` is
+  deferred and admin-only (not in `operatorRoutes`).
+- Gatekeeper (2026-11-18): migrations `0124`-`0125` applied live (mode off, no
+  resolutions, tax 1900), **1797 tests** green, coverage 79.1% global,
+  `flutter analyze` clean, SQL suite green over `0001`-`0125`, **49 Deno tests**
+  green, web release + web-public + debug APK built. Live smoke:
+  `fiscal_config` -> `{"mode":"off", ...}`, `get_fiscal_settings` -> off,
+  sweeper 0, claim queue empty, document list empty.
+- Pending: the real habilitacion smoke with the provider (task 7.2) needs the
+  owner's credentials, and the legal confirmation of every ASSUMPTION; the
+  manual two-device fiscal receipt smoke is also unrun. `integration_test/
+  app_flow_test.dart` still does not exist (reported, not invented).
 
 ## Loyalty rewards (2026-11-18, `0122`-`0123`)
 

@@ -28,6 +28,8 @@ import 'package:parking_management/features/check_out/domain/entities/occupancy_
 import 'package:parking_management/features/check_out/domain/repositories/check_out_repository.dart';
 import 'package:parking_management/features/check_out/presentation/check_out_page.dart';
 import 'package:parking_management/features/evidence/domain/repositories/session_evidence_repository.dart';
+import 'package:parking_management/features/invoicing/application/issue_fiscal_document.dart';
+import 'package:parking_management/features/invoicing/domain/repositories/invoicing_repository.dart';
 import 'package:parking_management/features/auth/application/auth_cubit.dart';
 import 'package:parking_management/features/auth/domain/entities/user.dart';
 import 'package:parking_management/features/home/application/dashboard_cubit.dart';
@@ -37,6 +39,7 @@ import '../../../helpers/fake_auth_repository.dart';
 import '../../../helpers/fake_check_out_repository.dart';
 import '../../../helpers/fake_key_value_store.dart';
 import '../../../helpers/fake_notification_repository.dart';
+import '../../../helpers/fake_invoicing_repository.dart';
 import '../../../helpers/fake_session_evidence_repository.dart';
 import '../../../helpers/test_app.dart';
 
@@ -835,6 +838,56 @@ void main() {
       );
       expect(size.width, greaterThanOrEqualTo(48));
       expect(size.height, greaterThanOrEqualTo(48));
+    });
+  });
+
+  group('fiscal issuance', () {
+    testWidgets('issues the document after a successful check-out', (
+      tester,
+    ) async {
+      final invoicing = FakeInvoicingRepository();
+      serviceLocator.registerSingleton<InvoicingRepository>(invoicing);
+      serviceLocator.registerSingleton<IssueFiscalDocument>(
+        IssueFiscalDocument(invoicing),
+      );
+      addTearDown(serviceLocator.reset);
+      await pumpPage(tester);
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Cobrar').first);
+      await tester.pumpAndSettle();
+      await tester.tap(_confirm);
+      await tester.pumpAndSettle();
+
+      expect(invoicing.issueCalls, 1);
+      await tester.tap(find.text('Ver recibo'));
+      await tester.pumpAndSettle();
+      expect(find.text('SETP7'), findsOneWidget);
+      expect(find.text('Documento electrónico en proceso'), findsOneWidget);
+    });
+
+    testWidgets('an issuance failure does not break the receipt', (
+      tester,
+    ) async {
+      final invoicing = FakeInvoicingRepository()
+        ..writeError = const ValidationFailure(
+          'FiscalResolutionMissingError',
+          'FiscalResolutionMissingError',
+        );
+      serviceLocator.registerSingleton<InvoicingRepository>(invoicing);
+      serviceLocator.registerSingleton<IssueFiscalDocument>(
+        IssueFiscalDocument(invoicing),
+      );
+      addTearDown(serviceLocator.reset);
+      await pumpPage(tester);
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Cobrar').first);
+      await tester.pumpAndSettle();
+      await tester.tap(_confirm);
+      await tester.pumpAndSettle();
+
+      expect(invoicing.issueCalls, 1);
+      expect(find.text('SETP7'), findsNothing);
+      expect(find.text('Ver recibo'), findsOneWidget);
     });
   });
 }

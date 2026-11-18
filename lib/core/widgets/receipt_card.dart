@@ -478,6 +478,36 @@ class ReceiptCard extends StatelessWidget {
               ),
             ),
           ),
+        if (data.isCheckOut &&
+            (data.fiscalNumber != null || data.fiscalPending)) ...[
+          const SizedBox(height: Space.md),
+          Text(
+            data.fiscalType == 'invoice'
+                ? l10n.fiscalInvoiceTitle
+                : l10n.fiscalPosTitle,
+            style: theme.textTheme.labelLarge,
+          ),
+          if (data.fiscalNumber != null)
+            ReceiptRow(label: l10n.receiptTicket, value: data.fiscalNumber!),
+          if (data.cufe != null)
+            Padding(
+              padding: const EdgeInsets.only(top: Space.xs),
+              child: Text(
+                '${l10n.fiscalCufe}: ${data.cufe}',
+                style: theme.textTheme.bodySmall,
+              ),
+            ),
+          if (data.fiscalPending)
+            Padding(
+              padding: const EdgeInsets.only(top: Space.xs),
+              child: Text(l10n.receiptFiscalPending),
+            ),
+          if (data.fiscalQr != null)
+            Padding(
+              padding: const EdgeInsets.only(top: Space.sm),
+              child: QrCode(data: data.fiscalQr!, size: 88),
+            ),
+        ],
         if (!data.isCheckOut) ...[
           const SizedBox(height: Space.md),
           Center(

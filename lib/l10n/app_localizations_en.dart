@@ -5504,4 +5504,180 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get navLoyalty => 'Loyalty';
+
+  @override
+  String get navInvoicing => 'Invoicing';
+
+  @override
+  String get invoicingTitle => 'Electronic invoicing';
+
+  @override
+  String get invoicingMode => 'Mode';
+
+  @override
+  String get invoicingModeOff => 'Off';
+
+  @override
+  String get invoicingModeOnRequest => 'On request';
+
+  @override
+  String get invoicingModeAlways => 'Always';
+
+  @override
+  String get invoicingSettings => 'Issuer data';
+
+  @override
+  String get invoicingNit => 'Issuer NIT';
+
+  @override
+  String get invoicingLegalName => 'Legal name';
+
+  @override
+  String get invoicingMunicipality => 'Municipality code';
+
+  @override
+  String get invoicingTaxRate => 'Tax rate (basis points)';
+
+  @override
+  String get invoicingPricesIncludeTax => 'Prices already include tax';
+
+  @override
+  String get invoicingResolutions => 'Numbering resolutions';
+
+  @override
+  String get invoicingResolutionAdd => 'Add resolution';
+
+  @override
+  String invoicingResolutionRemaining(int count) {
+    return '$count numbers left';
+  }
+
+  @override
+  String get invoicingDocuments => 'Documents';
+
+  @override
+  String get invoicingEmpty =>
+      'No documents yet. Set up a resolution to begin.';
+
+  @override
+  String get invoicingStatusPending => 'Pending';
+
+  @override
+  String get invoicingStatusSent => 'Sent';
+
+  @override
+  String get invoicingStatusAccepted => 'Accepted';
+
+  @override
+  String get invoicingStatusRejected => 'Rejected';
+
+  @override
+  String get invoicingStatusFailed => 'Failed';
+
+  @override
+  String get invoicingRetry => 'Retry sending';
+
+  @override
+  String get invoicingCreditNote => 'Credit note';
+
+  @override
+  String get invoicingCreditReason => 'Credit note reason';
+
+  @override
+  String get invoicingIssue => 'Issue electronic invoice';
+
+  @override
+  String invoicingIssued(String number) {
+    return 'Document created: $number';
+  }
+
+  @override
+  String get invoicingNotConfigured =>
+      'The invoicing provider is not configured; documents stay pending.';
+
+  @override
+  String get invoicingOnlineOnly => 'Requires a connection';
+
+  @override
+  String get fiscalCustomerSection => 'Invoice details (optional)';
+
+  @override
+  String get fiscalDocType => 'Document type';
+
+  @override
+  String get fiscalDocNumber => 'Document number';
+
+  @override
+  String get fiscalName => 'Name or company';
+
+  @override
+  String get fiscalEmail => 'Email';
+
+  @override
+  String get fiscalInvalidCustomer => 'Check the customer details';
+
+  @override
+  String get receiptFiscalPending => 'Electronic document in process';
+
+  @override
+  String get notifTypeFiscalFailed => 'Electronic document problem';
+
+  @override
+  String get notifTypeFiscalResolutionLow => 'Numbering resolution running out';
+
+  @override
+  String get errorFiscalNotEnabled => 'Electronic invoicing is not enabled';
+
+  @override
+  String get errorFiscalResolutionMissing =>
+      'There is no active numbering resolution';
+
+  @override
+  String get errorFiscalResolutionExpired =>
+      'The numbering resolution has expired';
+
+  @override
+  String get errorFiscalResolutionExhausted =>
+      'The authorized numbering is exhausted';
+
+  @override
+  String get errorFiscalSourceNotFound => 'The sale to invoice was not found';
+
+  @override
+  String get errorFiscalSourceNotBillable => 'This sale cannot be invoiced';
+
+  @override
+  String get errorInvalidFiscalCustomer => 'Invalid customer details';
+
+  @override
+  String get errorFiscalDocumentNotFound => 'Document not found';
+
+  @override
+  String get errorFiscalDocumentNotAccepted =>
+      'Only an accepted document can be credited';
+
+  @override
+  String get errorFiscalDocumentAlreadyCredited =>
+      'The document already has a credit note';
+
+  @override
+  String get errorInvalidFiscalStatus =>
+      'The document is not in a retryable state';
+
+  @override
+  String get errorFiscalSettingsIncomplete =>
+      'Complete NIT, legal name and municipality';
+
+  @override
+  String get errorFiscalDocumentImmutable =>
+      'The document is already numbered and cannot be changed';
+
+  @override
+  String get fiscalInvoiceTitle => 'ELECTRONIC SALES INVOICE';
+
+  @override
+  String get fiscalPosTitle => 'POS EQUIVALENT DOCUMENT';
+
+  @override
+  String get fiscalCufe => 'CUFE';
 }

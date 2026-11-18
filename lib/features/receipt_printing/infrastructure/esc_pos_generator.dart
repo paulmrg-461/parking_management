@@ -140,6 +140,30 @@ class EscPosGenerator {
       _row(bytes, labels.ticket, data.ticketNumber!);
     }
 
+    if (data.isCheckOut &&
+        (data.fiscalNumber != null || data.fiscalPending)) {
+      _rule(bytes);
+      _text(
+        bytes,
+        data.fiscalType == 'invoice'
+            ? labels.fiscalInvoice
+            : labels.fiscalPos,
+        align: 1,
+      );
+      if (data.fiscalNumber != null) {
+        _row(bytes, labels.ticket, data.fiscalNumber!);
+      }
+      if (data.cufe != null) {
+        _text(bytes, '${labels.cufeLabel} ${data.cufe}', align: 1);
+      }
+      if (data.fiscalPending) {
+        _text(bytes, labels.fiscalPendingLabel, align: 1);
+      }
+      if (data.fiscalQr != null) {
+        _qr(bytes, data.fiscalQr!);
+      }
+    }
+
     if (!data.isCheckOut) {
       _qr(bytes, data.plate);
       _text(bytes, labels.scanHint, align: 1);

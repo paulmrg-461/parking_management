@@ -522,4 +522,64 @@ void main() {
       expect(find.text('Recompensa de fidelidad'), findsOneWidget);
     });
   });
+
+  group('fiscal', () {
+    testWidgets('shows the number, CUFE and QR', (tester) async {
+      final data = ReceiptData(
+        kind: ReceiptKind.checkOut,
+        plate: 'ABC123',
+        entryTime: DateTime(2026, 1, 1, 8, 30),
+        exitTime: DateTime(2026, 1, 1, 10, 30),
+        amountCharged: 11900,
+        fiscalNumber: 'SETP7',
+        fiscalType: 'pos',
+        cufe: 'CUFE-7',
+        fiscalQr: 'https://qr.test/7',
+      );
+      await tester.pumpWidget(
+        testApp(
+          Scaffold(body: SingleChildScrollView(child: ReceiptCard(data: data))),
+        ),
+      );
+
+      expect(find.text('SETP7'), findsOneWidget);
+      expect(find.textContaining('CUFE-7'), findsOneWidget);
+      expect(find.text('DOCUMENTO EQUIVALENTE POS'), findsOneWidget);
+      expect(find.byType(QrCode), findsWidgets);
+    });
+
+    testWidgets('shows the pending label while the provider processes', (
+      tester,
+    ) async {
+      final data = ReceiptData(
+        kind: ReceiptKind.checkOut,
+        plate: 'ABC123',
+        entryTime: DateTime(2026, 1, 1, 8, 30),
+        exitTime: DateTime(2026, 1, 1, 10, 30),
+        amountCharged: 11900,
+        fiscalNumber: 'SETP7',
+        fiscalPending: true,
+      );
+      await tester.pumpWidget(
+        testApp(
+          Scaffold(body: SingleChildScrollView(child: ReceiptCard(data: data))),
+        ),
+      );
+
+      expect(find.text('Documento electrónico en proceso'), findsOneWidget);
+    });
+
+    testWidgets('no fiscal block without a document', (tester) async {
+      await tester.pumpWidget(
+        testApp(
+          Scaffold(
+            body: SingleChildScrollView(child: ReceiptCard(data: _checkOutData())),
+          ),
+        ),
+      );
+
+      expect(find.text('DOCUMENTO EQUIVALENTE POS'), findsNothing);
+      expect(find.textContaining('CUFE'), findsNothing);
+    });
+  });
 }

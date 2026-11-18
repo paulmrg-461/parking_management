@@ -61,6 +61,15 @@ void main() {
       );
     });
 
+    test('Security: invoicing is admin only', () {
+      expect(canAccess(UserRole.operator, '/invoicing'), isFalse);
+      expect(
+        authRedirect(_as(UserRole.operator), '/invoicing'),
+        homePath,
+      );
+      expect(canAccess(UserRole.admin, '/invoicing'), isTrue);
+    });
+
     test('Security: loyalty is admin only', () {
       expect(canAccess(UserRole.operator, '/loyalty'), isFalse);
       expect(

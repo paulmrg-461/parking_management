@@ -29,6 +29,11 @@ class ReceiptData {
     this.loyaltyVisits,
     this.loyaltyRequired,
     this.loyaltyRewardEarned = false,
+    this.fiscalNumber,
+    this.fiscalType,
+    this.cufe,
+    this.fiscalQr,
+    this.fiscalPending = false,
     this.pendingSync = false,
     this.evidenceUrl,
     this.feedbackUrl,
@@ -72,6 +77,15 @@ class ReceiptData {
 
   /// The visit being registered earned a reward.
   final bool loyaltyRewardEarned;
+
+  /// Fiscal document number (`full_number`), type and CUFE once issued.
+  final String? fiscalNumber;
+  final String? fiscalType;
+  final String? cufe;
+  final String? fiscalQr;
+
+  /// The document exists but the provider has not accepted it yet.
+  final bool fiscalPending;
   final bool pendingSync;
 
   /// Public page (plate is the key) with the session's photos and videos.

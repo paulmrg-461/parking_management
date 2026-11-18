@@ -6,6 +6,9 @@ import '../../../core/theme/tokens.dart';
 import '../../../core/money/money.dart';
 import '../../../core/money/money_input.dart';
 import '../../../core/receipt/payment_method.dart';
+import '../../invoicing/domain/entities/fiscal_customer.dart';
+import '../../invoicing/domain/entities/fiscal_settings.dart';
+import '../../invoicing/presentation/widgets/fiscal_customer_form.dart';
 import '../../loyalty/presentation/desk_loyalty_section.dart';
 import '../../merchants/presentation/desk_merchant_section.dart';
 import '../domain/entities/check_out_preview.dart';
@@ -20,6 +23,7 @@ class CheckoutChoice {
     this.lostTicketReason,
     this.cardType,
     this.cashReceived,
+    this.fiscalCustomer,
   });
 
   final PaymentMethod method;
@@ -33,6 +37,9 @@ class CheckoutChoice {
 
   /// Cash handed over (null = exact/unknown); only used to show the change.
   final int? cashReceived;
+
+  /// Optional buyer data for the electronic invoice (null = POS document).
+  final FiscalCustomer? fiscalCustomer;
 }
 
 /// Asks how the customer paid (and, for admins, an optional audited
@@ -45,6 +52,8 @@ Future<CheckoutChoice?> showCheckoutDialog(
   PaymentMethod initialMethod = PaymentMethod.cash,
   MerchantDeskOptions? merchants,
   LoyaltyDeskOptions? loyalty,
+  FiscalConfig? fiscal,
+  bool online = true,
 }) => showDialog<CheckoutChoice>(
   context: context,
   builder: (_) => _CheckoutDialog(
@@ -54,6 +63,8 @@ Future<CheckoutChoice?> showCheckoutDialog(
     initialMethod: initialMethod,
     merchants: merchants,
     loyalty: loyalty,
+    fiscal: fiscal,
+    online: online,
   ),
 );
 
@@ -65,6 +76,8 @@ class _CheckoutDialog extends StatefulWidget {
     this.initialMethod = PaymentMethod.cash,
     this.merchants,
     this.loyalty,
+    this.fiscal,
+    this.online = true,
   });
 
   final String plate;
@@ -73,13 +86,15 @@ class _CheckoutDialog extends StatefulWidget {
   final PaymentMethod initialMethod;
   final MerchantDeskOptions? merchants;
   final LoyaltyDeskOptions? loyalty;
+  final FiscalConfig? fiscal;
+  final bool online;
 
   @override
   State<_CheckoutDialog> createState() => _CheckoutDialogState();
 }
 
 /// Inputs that can carry an inline validation message.
-enum _Field { cash, discountAmount, discountReason, lostReason }
+enum _Field { cash, discountAmount, discountReason, lostReason, fiscal }
 
 class _CheckoutDialogState extends State<_CheckoutDialog> {
   /// How many bill shortcuts to offer above the cash field.
@@ -94,6 +109,7 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
   final _lostReasonController = TextEditingController();
   bool _lostTicket = false;
   final Map<_Field, String> _errors = {};
+  final _fiscalKey = GlobalKey<FiscalCustomerFormState>();
 
   @override
   void dispose() {
@@ -178,6 +194,10 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
   }
 
   void _confirm() {
+    if (!(_fiscalKey.currentState?.isValid ?? true)) {
+      setState(() => _errors[_Field.fiscal] = context.l10n.fiscalInvalidCustomer);
+      return;
+    }
     final errors = _validate();
     if (errors.isNotEmpty) {
       setState(
@@ -200,6 +220,7 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
       lostTicketReason: _lostTicket ? _lostReasonController.text.trim() : null,
       cardType: _selected == PaymentMethod.card ? _cardType : null,
       cashReceived: _selected == PaymentMethod.cash ? _cashReceived : null,
+      fiscalCustomer: _fiscalKey.currentState?.customer,
     );
   }
 
@@ -233,6 +254,19 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
                   options: loyalty,
                   preview: _preview,
                   onChanged: (preview) => setState(() => _preview = preview),
+                ),
+              if (widget.fiscal case final fiscal?
+                  when widget.online && fiscal.enabled)
+                FiscalCustomerForm(key: _fiscalKey, config: fiscal),
+              if (_errors[_Field.fiscal] case final error?)
+                Padding(
+                  padding: const EdgeInsets.only(top: Space.xs),
+                  child: Text(
+                    error,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
                 ),
               if (widget.merchants case final merchants?
                   when !_lostTicket &&
