@@ -51,6 +51,8 @@ while true; do
   run purge_client_error_reports
   run purge_audit_log
   run purge_whatsapp_messages
+  # Shared AI usage log retention (floor 30 days).
+  run purge_ai_requests
   run purge_cash_anomalies
   # Pass renewal reminders (queued only when the lot opted in).
   run queue_pass_renewal_reminders

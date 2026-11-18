@@ -16,6 +16,7 @@ and what to do if one leaks.
 | `FCM_SERVICE_ACCOUNT_JSON` | `push-dispatch` | Replace the JSON, restart `functions`. |
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | `push-dispatch`, web build | Browser subscriptions become invalid: users must re-enable notifications; rebuild the web app with the new public key. |
 | `WHATSAPP_TOKEN` / `WHATSAPP_PHONE_NUMBER_ID` | `whatsapp-dispatch` | Replace in `.env`, restart `functions`. Queued messages keep retrying. |
+| `DEEPSEEK_API_KEY` | `report-assistant` | Replace in `.env`, `docker compose up -d functions`. Empty keeps the assistant inert. Create/rotate it in the DeepSeek console; never put it in the Flutter build or a log. |
 | `FISCAL_PROVIDER_URL` / `FISCAL_PROVIDER_TOKEN` / `FISCAL_PROVIDER_ENV` | `fiscal-dispatch` | Replace in `.env`, restart `functions`. Empty keeps invoicing inert; documents stay `pending`. The token is server-only and never logged. |
 | `WOMPI_PUBLIC_KEY` / `WOMPI_PRIVATE_KEY` / `WOMPI_INTEGRITY_SECRET` / `WOMPI_EVENTS_SECRET` | `payment-intent`, `payment-webhook`, `payments-reconcile` | Replace in `.env`, restart `functions`; also update the events secret in the Wompi dashboard. Pending intents keep polling; a rotated events secret rejects old webhooks (`401`), so rotate with no traffic. |
 

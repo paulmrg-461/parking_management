@@ -61,6 +61,15 @@ void main() {
       );
     });
 
+    test('Security: the report assistant is admin only', () {
+      expect(canAccess(UserRole.operator, '/report-assistant'), isFalse);
+      expect(
+        authRedirect(_as(UserRole.operator), '/report-assistant'),
+        homePath,
+      );
+      expect(canAccess(UserRole.admin, '/report-assistant'), isTrue);
+    });
+
     test('Security: invoicing is admin only', () {
       expect(canAccess(UserRole.operator, '/invoicing'), isFalse);
       expect(

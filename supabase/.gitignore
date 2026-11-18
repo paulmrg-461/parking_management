@@ -53,3 +53,11 @@ volumes/functions/pass-renewal-intent/**
 volumes/functions/fiscal-dispatch/**
 !volumes/functions/fiscal-dispatch/index.ts
 !volumes/functions/fiscal-dispatch/index_test.ts
+!volumes/functions/report-assistant/
+volumes/functions/report-assistant/**
+!volumes/functions/report-assistant/**/
+!volumes/functions/report-assistant/**/*.ts
+!volumes/functions/_shared/ai/
+volumes/functions/_shared/ai/**
+!volumes/functions/_shared/ai/**/
+!volumes/functions/_shared/ai/**/*.ts

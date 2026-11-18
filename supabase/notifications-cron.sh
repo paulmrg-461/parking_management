@@ -48,6 +48,9 @@ docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
   "select public.purge_audit_log(365);" >/dev/null
 docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
   "select public.purge_whatsapp_messages(90);" >/dev/null
+# AI usage log retention (floor 30 days).
+docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
+  "select public.purge_ai_requests(90);" >/dev/null
 # Cash anomaly detection and retention.
 docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
   "select public.detect_cash_anomalies();" >/dev/null

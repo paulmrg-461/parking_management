@@ -71,6 +71,10 @@ erDiagram
   parking_lots ||--o{ fiscal_documents : "issues"
   fiscal_resolutions ||--o{ fiscal_documents : "numbers"
   fiscal_documents ||--o| fiscal_documents : "credited by"
+
+  parking_lots ||--o{ ai_limits : "limits"
+  parking_lots ||--o{ ai_requests : "usage"
+  ai_features ||--o{ ai_limits : "configures"
 ```
 
 ## 2. Tables
@@ -96,6 +100,9 @@ erDiagram
 | `parking_spot_events` | Maintenance history of a bay: status transition, optional reason, actor and timestamp; written by `save_parking_spot`, lot-scoped RLS. | yes |
 | `parking_settings` (`car_capacity`, `moto_capacity`, `key_capacity`) | Per-site branding (name, address, schedule, contacts, police quadrant, logo version/path) + `business_timezone`, `overstay_hours`, `lost_ticket_fee`, `evidence_retention_days`, online-payment switch/window/minimum. | yes |
 | `payment_intents` | Frozen amount for a gateway checkout: `reference` (random `PM-…`), `amount`, `currency` (COP only), `gateway` (`wompi`), `status` (`pending`/`approved`/`declined`/`voided`/`error`/`expired`), transaction id/method, `expires_at`. Written only by the service RPCs. | yes |
+| `ai_features` | AI feature registry: `admin_only` and the default daily request/token caps. Seeded with `report_assistant`. No API grant. | — |
+| `ai_limits` | Per-lot override of the daily request/token budget, audited. | yes |
+| `ai_requests` | Operational AI usage ledger: feature, actor, status, model, token counters, tool calls, duration, error code, business day. Never stores question/answer text. | yes |
 | `fiscal_settings` | Per-site fiscal switch (`off`/`on_request`/`always`), issuer NIT/legal name/municipality, tax regime and one tax rate in basis points. Prices are tax-inclusive. | yes (PK) |
 | `fiscal_resolutions` | Authorized numbering range per document type (`pos`/`invoice`/`credit_note`), prefix, validity, `next_number`; one active per `(lot, type)`. | yes |
 | `fiscal_documents` | The outbox and the legal record: number, source, snapshot amounts/tax, optional customer PII, status/attempts/backoff, provider id, CUFE/QR, rejection/void. Immutable once numbered. | yes |
@@ -412,6 +419,14 @@ closes (never raises); `loyalty_plate_status` (operators; counts only),
 immutability trigger `guard_fiscal_document` protects the number and money;
 there is no delete grant.
 
+**Shared AI platform (`0126`)**
+`ai_default_limit` (internal), `ai_budget_reserve` (authenticates the caller,
+enforces the lot budget under an advisory lock and inserts the reserved row),
+`ai_usage_record` (closes the caller's own reservation with actual tokens),
+`ai_budget_status`, `set_ai_limit` (lot admin, audited) and
+`purge_ai_requests` (internal, 30-day floor). The report assistant never writes
+through these tables directly; the Edge Function uses the caller's JWT.
+
 ## 4. Access control (RLS)
 
 | Table | Read | Write |
@@ -434,6 +449,8 @@ there is no delete grant.
 | `pricing_rules` | lot admins of the active lot | RPCs (lot admins) |
 | `loyalty_accounts`, `loyalty_rewards`, `loyalty_visits`, `loyalty_adjustments` | lot admins of the active lot (operators get counts through `loyalty_plate_status`) | definer RPCs only |
 | `fiscal_settings`, `fiscal_resolutions`, `fiscal_documents` | lot admins of the active lot (no operator PII read) | definer RPCs only; no update/delete grant |
+| `ai_features` | nobody (RLS on, no policy, no grant) | seed only |
+| `ai_limits`, `ai_requests` | lot admins of the active lot | definer RPCs only |
 | `fiscal_documents` (service role) | — | `claim_fiscal_documents` / `record_fiscal_result` |
 | `merchant_credentials` | nobody (RLS on, no policy, no grant) | definer RPCs only |
 | `merchant_validations` | active lot | RPCs (desk/admin/public) |

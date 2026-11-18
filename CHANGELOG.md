@@ -67,6 +67,26 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - Android release build: R8 keep rules for the optional ML Kit scripts.
 
 ### Added
+- **Report assistant** (`0126_ai_usage`, `openspec/changes/add-report-assistant`).
+  Admins ask a report question in Spanish or English and receive figures
+  resolved from the existing read-only report RPCs, each with its source:
+  - `_shared/ai` (DeepSeek/OpenAI-compatible `ModelClient`, typed errors,
+    caller-scoped PostgREST, budget, SSE, deadline, safe logging) and the
+    `report-assistant` Edge Function. Tools run with the caller's JWT and
+    `x-lot-id` over `GET`, so RLS and `require_admin()`/`current_lot_id()`
+    decide visibility; the function never reads the service key.
+  - Closed tool allowlist (revenue, traffic, reservations, WhatsApp,
+    occupancy, capacity, today, daily trend, shifts). The model never writes
+    SQL, numbers or arithmetic: it returns figure recipes (call id + path) and
+    the Edge Function resolves them from the real RPC output with integer math;
+    the Flutter client re-verifies every figure from its raw sources.
+  - `ai_features`/`ai_limits`/`ai_requests` with per-lot daily request/token
+    budgets, reservation-before-call, usage accounting and a 30-day-floor purge
+    job. Inert without `DEEPSEEK_API_KEY` (`configured:false`, no reservation).
+  - `/report-assistant` (deferred, admin only, reachable from `/reports`):
+    suggestions, live tool progress, answer cards with source sheets,
+    budget chip, copy answer / figures CSV, and the four UI states.
+
 - **Electronic invoicing** (`0124`–`0125`, `openspec/changes/add-electronic-invoicing`).
   Provider-agnostic, inert by default and with every DIAN rule marked as an
   ASSUMPTION pending the owner/accountant's confirmation:
@@ -1348,6 +1368,7 @@ Migrations are append-only and applied in filename order by `supabase-migrate`.
 | `0120`–`0121` | Dynamic pricing: rules, session/hold locks, triggers, hook, quote/simulation/impact RPCs, availability price keys |
 | `0122`–`0123` | Loyalty rewards: program settings, accounts/rewards/visits/adjustments, closed-session trigger, reward hook, status/settings/adjust/reverse/expiry RPCs, report and members list |
 | `0124`–`0125` | Electronic invoicing: fiscal settings/resolutions/documents, numbering, issuance, outbox, credit notes, sweeper, admin list |
+| `0126` | Shared AI platform: features, per-lot limits, request/token ledger, budget RPCs and retention |
 
 ## Verification snapshot
 

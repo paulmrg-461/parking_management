@@ -76,6 +76,21 @@ void main() {
     );
   });
 
+  test('Success: every AI code is localized in es and en', () async {
+    final en = await AppLocalizations.delegate.load(const Locale('en'));
+    const codes = [
+      'AiBudgetExceededError', 'AiUnavailableError', 'AiBusyError',
+      'AiTimeoutError', 'AiUpstreamError', 'AiRefusedError',
+      'AiAnswerInvalidError', 'AiIterationLimitError', 'AiTokenLimitError',
+      'AiQuestionInvalidError',
+    ];
+    for (final code in codes) {
+      final failure = ValidationFailure(code, code);
+      expect(es.failure(failure), isNot(code), reason: code);
+      expect(en.failure(failure), isNot(code), reason: code);
+    }
+  });
+
   test('Failure: unknown code falls back to the backend detail', () {
     const failure = ValidationFailure('PIN must be 4 to 6 digits', 'Weird');
     expect(es.failure(failure), 'PIN must be 4 to 6 digits');

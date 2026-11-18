@@ -286,6 +286,37 @@ function answers `{configured:false}` and documents stay `pending`. Every DIAN
 rule (document type, IVA rate, codes, resolution fields, CUFE/CUDE, QR) is an
 ASSUMPTION pending the owner's and accountant's confirmation.
 
+## 5d. Report assistant
+
+```mermaid
+sequenceDiagram
+  participant A as Admin (/report-assistant)
+  participant APP as Flutter
+  participant FN as report-assistant
+  participant DB as PostgreSQL (PostgREST)
+  participant M as DeepSeek API
+
+  A->>APP: question (es/en)
+  APP->>FN: POST ask (Authorization + x-lot-id, SSE)
+  FN->>DB: ai_budget_reserve (caller JWT) → 429 if over budget
+  loop bounded tool loop
+    FN->>M: chat/completions (tools, system prompt, redacted question)
+    M-->>FN: tool calls (report RPC + args) / submit_answer
+    FN->>DB: GET rpc/report_* with the caller's JWT and x-lot-id
+    DB-->>FN: projected aggregate JSON (plates/owners/notes removed)
+  end
+  FN->>FN: resolve figures (call id + path) with integer math
+  FN-->>APP: SSE started/tool/answer/done
+  APP->>APP: re-verify each figure from its raw sources
+  FN->>DB: ai_usage_record (caller JWT, no content)
+```
+
+The function never reads the service key; tools execute under the caller's
+identity, so a prompt injection cannot reach another lot or a write. Without
+`DEEPSEEK_API_KEY` the function answers `{configured:false}` and reserves
+nothing. Every DIAN-style provider decision is out of scope here; the AI
+provider sees only aggregated, field-allowlisted report data.
+
 ## 6. Shifts and cash
 
 An operator opens one shift per site (`unique (operator_id, lot_id)`), records

@@ -29,6 +29,8 @@ import 'package:parking_management/features/merchants/domain/repositories/mercha
 import 'package:parking_management/features/merchants/domain/repositories/public_merchant_repository.dart';
 import 'package:parking_management/features/pass_renewal/domain/repositories/pass_renewal_repository.dart';
 import 'package:parking_management/features/invoicing/application/invoicing_cubit.dart';
+import 'package:parking_management/features/report_assistant/application/report_assistant_cubit.dart';
+import 'package:parking_management/features/report_assistant/domain/repositories/report_assistant_repository.dart';
 import 'package:parking_management/features/invoicing/application/issue_fiscal_document.dart';
 import 'package:parking_management/features/invoicing/domain/repositories/invoicing_repository.dart';
 import 'package:parking_management/features/loyalty/application/loyalty_admin_cubit.dart';
@@ -125,6 +127,14 @@ void main() {
     expect(sl<PricingCubit>(), isA<PricingCubit>());
     expect(sl<PricingSimulationCubit>(), isA<PricingSimulationCubit>());
     expect(sl<PriceQuoteCubit>(), isA<PriceQuoteCubit>());
+  });
+
+  test('Success: registers the report assistant module', () {
+    _register(sl);
+
+    expect(sl<ReportAssistantRepository>(), isA<ReportAssistantRepository>());
+    expect(sl<ReportAssistantCubit>(), isA<ReportAssistantCubit>());
+    expect(sl<ReportAssistantCubit>(), isNot(same(sl<ReportAssistantCubit>())));
   });
 
   test('Success: registers the invoicing module', () {

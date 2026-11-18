@@ -15069,6 +15069,321 @@ begin
 end $$;
 reset role;
 
+
+-- ---------------------------------------------------------------------------
+-- ai: fixtures
+-- ---------------------------------------------------------------------------
+do $$
+declare
+    lot2 integer;
+begin
+    delete from public.ai_requests where lot_id = 1;
+    delete from public.ai_limits where lot_id = 1;
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    perform set_config('request.jwt.claim.sub',
+        '00000000-0000-0000-0000-000000000001', true);
+    select id into lot2 from public.parking_lots where code = 'LY2';
+    if lot2 is null then
+        raise exception 'the second AI fixture lot is missing';
+    end if;
+    perform set_config('app.ai_lot2', lot2::text, true);
+end $$;
+
+-- ai: reserve returns request and remaining
+do $$
+declare
+    result jsonb;
+begin
+    result := public.ai_budget_reserve('report_assistant', 1000);
+    if (result ->> 'request_id') is null
+       or (result ->> 'remaining_requests')::integer <> 99 then
+        raise exception 'the first reservation is wrong: %', result;
+    end if;
+    perform set_config('app.ai_request', result ->> 'request_id', true);
+end $$;
+
+-- ai: record closes reservation
+do $$
+declare
+    request_id bigint := current_setting('app.ai_request')::bigint;
+    row public.ai_requests%rowtype;
+begin
+    perform public.ai_usage_record(request_id, jsonb_build_object(
+        'status', 'ok', 'model', 'deepseek-chat',
+        'input_tokens', 120, 'output_tokens', 40,
+        'cache_read_tokens', 10, 'cache_write_tokens', 5,
+        'tool_calls', 2, 'duration_ms', 900
+    ));
+    select * into row from public.ai_requests r where r.id = request_id;
+    if row.status <> 'ok' or row.input_tokens <> 120
+       or row.output_tokens <> 40 or row.tool_calls <> 2
+       or row.finished_at is null then
+        raise exception 'the usage row is wrong: %', to_jsonb(row);
+    end if;
+    begin
+        perform public.ai_usage_record(request_id, jsonb_build_object('status', 'ok'));
+        raise exception 'a closed reservation was recorded twice';
+    exception when others then
+        if sqlerrm not like '%AiRequestNotFoundError%' then raise; end if;
+    end;
+end $$;
+
+-- ai: status counts today
+do $$
+declare
+    result jsonb;
+begin
+    result := public.ai_budget_status('report_assistant');
+    if (result ->> 'used_requests')::integer <> 1
+       or (result ->> 'used_tokens')::integer <> 175
+       or (result ->> 'remaining_requests')::integer <> 99 then
+        raise exception 'the budget status is wrong: %', result;
+    end if;
+end $$;
+
+-- ai: set limit changes budget
+do $$
+declare
+    result jsonb;
+begin
+    result := public.set_ai_limit('report_assistant', 2, 5000);
+    if (result ->> 'daily_requests')::integer <> 2 then
+        raise exception 'the limit was not saved: %', result;
+    end if;
+    perform public.ai_budget_reserve('report_assistant', 100);
+    begin
+        perform public.ai_budget_reserve('report_assistant', 100);
+        raise exception 'the request limit was not enforced';
+    exception when others then
+        if sqlerrm not like '%AiBudgetExceededError%' then raise; end if;
+    end;
+    perform public.set_ai_limit('report_assistant', 100, 1000000);
+end $$;
+
+-- ai: token limit
+do $$
+begin
+    perform public.set_ai_limit('report_assistant', 100, 200);
+    begin
+        perform public.ai_budget_reserve('report_assistant', 100);
+        raise exception 'the token limit was not enforced';
+    exception when others then
+        if sqlerrm not like '%AiBudgetExceededError%' then raise; end if;
+    end;
+    perform public.set_ai_limit('report_assistant', 100, 1000000);
+end $$;
+
+-- ai: invalid reservations and limits
+do $$
+begin
+    begin
+        perform public.ai_budget_reserve('bogus_feature', 100);
+        raise exception 'an unknown feature reserved budget';
+    exception when others then
+        if sqlerrm not like '%AiFeatureUnknownError%' then raise; end if;
+    end;
+    begin
+        perform public.ai_budget_reserve('report_assistant', 0);
+        raise exception 'a zero estimate was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+    begin
+        perform public.set_ai_limit('report_assistant', -1, 100);
+        raise exception 'a negative limit was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+end $$;
+
+-- ai: set limit audited
+do $$
+begin
+    if not exists (
+        select 1 from public.audit_log a
+         where a.table_name = 'ai_limits' and a.lot_id = 1
+    ) then
+        raise exception 'the AI limit change was not audited';
+    end if;
+end $$;
+
+-- ai: foreign lot refused
+do $$
+begin
+    perform set_config('request.headers', '{"x-lot-id":"999999"}', true);
+    begin
+        perform public.ai_budget_reserve('report_assistant', 100);
+        raise exception 'a foreign lot reserved budget';
+    exception when others then
+        if sqlerrm not like '%LotRequiredError%' then raise; end if;
+    end;
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+end $$;
+
+-- ai: isolated per lot
+do $$
+declare
+    lot1_used integer;
+    lot2_used integer;
+    result jsonb;
+begin
+    select (public.ai_budget_status('report_assistant') ->> 'used_requests')::integer
+      into lot1_used;
+    perform set_config('request.headers',
+        jsonb_build_object('x-lot-id', current_setting('app.ai_lot2'))::text, true);
+    result := public.ai_budget_reserve('report_assistant', 100);
+    if (result ->> 'lot_id')::integer <> current_setting('app.ai_lot2')::integer then
+        raise exception 'the reservation went to another lot: %', result;
+    end if;
+    perform public.ai_usage_record((result ->> 'request_id')::bigint,
+        jsonb_build_object('status', 'ok', 'input_tokens', 10));
+    select (public.ai_budget_status('report_assistant') ->> 'used_requests')::integer
+      into lot2_used;
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    if lot2_used < 1
+       or (public.ai_budget_status('report_assistant') ->> 'used_requests')::integer
+          <> lot1_used then
+        raise exception 'the AI budgets are not isolated per lot';
+    end if;
+end $$;
+
+-- ai: operator denied and table isolation
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    begin
+        perform public.ai_budget_reserve('report_assistant', 100);
+        raise exception 'an operator reserved AI budget';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+    begin
+        perform public.ai_budget_status('report_assistant');
+        raise exception 'an operator read the AI budget';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+    if (select count(*) from public.ai_requests) <> 0
+       or (select count(*) from public.ai_limits) <> 0 then
+        raise exception 'an operator read the AI tables';
+    end if;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- ai: record of another actor denied
+do $$
+declare
+    request_id bigint;
+begin
+    request_id := (public.ai_budget_reserve('report_assistant', 100) ->> 'request_id')::bigint;
+    perform set_config('app.ai_actor_request', request_id::text, true);
+end $$;
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    begin
+        perform public.ai_usage_record(
+            current_setting('app.ai_actor_request')::bigint,
+            jsonb_build_object('status', 'ok'));
+        raise exception 'another actor closed the reservation';
+    exception when others then
+        if sqlerrm not like '%AiRequestNotFoundError%' then raise; end if;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- ai: missing token denied
+do $$
+begin
+    perform set_config('request.jwt.claim.sub', '', true);
+    begin
+        perform public.ai_budget_reserve('report_assistant', 100);
+        raise exception 'a request without a user reserved budget';
+    exception when others then
+        if sqlerrm not like '%InvalidTokenError%' then raise; end if;
+    end;
+    perform set_config('request.jwt.claim.sub',
+        '00000000-0000-0000-0000-000000000001', true);
+end $$;
+
+-- ai: anon denied
+set local role anon;
+do $$
+begin
+    begin
+        perform 1 from public.ai_requests limit 1;
+        raise exception 'anon read the AI requests';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform public.ai_budget_reserve('report_assistant', 100);
+        raise exception 'anon reserved AI budget';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
+-- ai: purge is internal and has a 30 day floor
+set local role authenticated;
+do $$
+begin
+    begin
+        perform public.purge_ai_requests(90);
+        raise exception 'an api role purged the AI log';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+do $$
+declare
+    old_row bigint;
+    recent_row bigint;
+    removed integer;
+begin
+    insert into public.ai_requests (
+        lot_id, feature, actor_id, status, reserved_tokens, business_day, created_at
+    ) values (1, 'report_assistant', 1, 'ok', 10, current_date, now() - interval '40 days')
+    returning id into old_row;
+    insert into public.ai_requests (
+        lot_id, feature, actor_id, status, reserved_tokens, business_day, created_at
+    ) values (1, 'report_assistant', 1, 'ok', 10, current_date, now() - interval '10 days')
+    returning id into recent_row;
+    removed := public.purge_ai_requests(1);
+    if removed < 1 then
+        raise exception 'the purge removed nothing';
+    end if;
+    if exists (select 1 from public.ai_requests where id = old_row) then
+        raise exception 'the 40 day row survived the purge';
+    end if;
+    if not exists (select 1 from public.ai_requests where id = recent_row) then
+        raise exception 'the 30 day floor was not respected';
+    end if;
+end $$;
+
+-- ai: the nine report RPCs are stable (GET-read-only guarantee)
+do $$
+declare
+    missing text;
+begin
+    select string_agg(name, ', ') into missing
+      from unnest(array[
+          'report_revenue', 'report_hourly_traffic', 'report_reservations',
+          'report_whatsapp', 'report_occupancy', 'capacity_snapshot',
+          'dashboard_today', 'dashboard_trend', 'list_shifts'
+      ]) name
+     where not exists (
+         select 1 from pg_proc p
+          where p.proname = name and p.provolatile = 's'
+     );
+    if missing is not null then
+        raise exception 'report RPCs are not stable: %', missing;
+    end if;
+end $$;
+
 set local request.headers = '{"x-lot-id":"1"}';
 
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';

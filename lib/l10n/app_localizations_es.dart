@@ -5728,4 +5728,177 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get fiscalCufe => 'CUFE';
+
+  @override
+  String get assistantTitle => 'Asistente de reportes';
+
+  @override
+  String get assistantOpenTooltip => 'Preguntar al asistente';
+
+  @override
+  String get assistantInputHint =>
+      'Pregunta sobre ingresos, tráfico o reservas';
+
+  @override
+  String get assistantSend => 'Enviar';
+
+  @override
+  String get assistantClear => 'Nueva conversación';
+
+  @override
+  String get assistantEmptyTitle => 'Pregunta en lenguaje natural';
+
+  @override
+  String get assistantEmptyMessage =>
+      'Las cifras salen de tus reportes y cada una muestra su fuente.';
+
+  @override
+  String get assistantSuggestionsTitle => 'Prueba con';
+
+  @override
+  String get assistantSuggestRevenueMonth =>
+      '¿Cuánto generaron las motos el mes pasado?';
+
+  @override
+  String get assistantSuggestBusiestHour => '¿A qué hora entran más vehículos?';
+
+  @override
+  String get assistantSuggestReservations =>
+      '¿Cuántas reservas web terminaron en entrada este mes?';
+
+  @override
+  String get assistantSuggestCompare =>
+      '¿Cómo van los ingresos de esta semana frente a la anterior?';
+
+  @override
+  String get assistantSuggestCash =>
+      '¿Hubo diferencias de caja en los últimos cierres?';
+
+  @override
+  String get assistantSuggestFull =>
+      '¿Qué tan lleno está el parqueadero ahora?';
+
+  @override
+  String get assistantPrivacyNote =>
+      'Tu pregunta y datos agregados de tus reportes se envían al proveedor de IA. No escribas placas ni nombres.';
+
+  @override
+  String get assistantRedacted =>
+      'Quitamos datos personales de tu pregunta antes de enviarla.';
+
+  @override
+  String assistantBudgetLeft(int count) {
+    return 'Quedan $count consultas hoy';
+  }
+
+  @override
+  String get assistantThinking => 'Consultando tus reportes…';
+
+  @override
+  String assistantToolRunning(String report) {
+    return 'Consultando $report…';
+  }
+
+  @override
+  String assistantToolDone(String report) {
+    return '$report: listo';
+  }
+
+  @override
+  String get assistantStatusNeedsClarification => 'Necesito un dato más';
+
+  @override
+  String get assistantStatusOutOfScope => 'Fuera de alcance';
+
+  @override
+  String get assistantStatusNoData => 'Sin datos en el periodo';
+
+  @override
+  String get assistantFigures => 'Cifras';
+
+  @override
+  String get assistantSourceTitle => 'De dónde sale esta cifra';
+
+  @override
+  String assistantSourceReport(String rpc) {
+    return 'Reporte: $rpc';
+  }
+
+  @override
+  String assistantSourceArgs(String args) {
+    return 'Parámetros: $args';
+  }
+
+  @override
+  String assistantSourcePath(String path) {
+    return 'Campo: $path';
+  }
+
+  @override
+  String assistantSourceRaw(String value) {
+    return 'Valor en el reporte: $value';
+  }
+
+  @override
+  String get assistantVerified => 'Cifra verificada con el reporte';
+
+  @override
+  String get assistantUnverified => 'No se pudo verificar esta cifra';
+
+  @override
+  String get assistantUndefinedValue => '—';
+
+  @override
+  String get assistantCopyAnswer => 'Copiar respuesta';
+
+  @override
+  String get assistantCopyFigures => 'Copiar cifras (CSV)';
+
+  @override
+  String get assistantCopied => 'Copiado al portapapeles';
+
+  @override
+  String get assistantDisclaimer =>
+      'Respuesta generada por IA a partir de tus reportes. Verifica las cifras en su fuente.';
+
+  @override
+  String get assistantNotConfiguredTitle => 'El asistente no está activado';
+
+  @override
+  String get assistantNotConfiguredMessage =>
+      'Falta la clave de la API de IA en el servidor. Consulta el runbook de secretos.';
+
+  @override
+  String assistantPeriod(String start, String end) {
+    return 'Periodo: $start a $end';
+  }
+
+  @override
+  String get errorAiBudget =>
+      'Se alcanzó el límite diario de consultas del asistente';
+
+  @override
+  String get errorAiUnavailable =>
+      'El asistente no está disponible en este momento';
+
+  @override
+  String get errorAiTimeout => 'El asistente tardó demasiado. Intenta de nuevo';
+
+  @override
+  String get errorAiUpstream =>
+      'El servicio de IA no respondió. Intenta de nuevo';
+
+  @override
+  String get errorAiRefused => 'El asistente no pudo responder esta pregunta';
+
+  @override
+  String get errorAiAnswerInvalid =>
+      'La respuesta no pasó la verificación de cifras';
+
+  @override
+  String get errorAiLimit =>
+      'La pregunta es demasiado amplia. Prueba con un periodo más corto';
+
+  @override
+  String get errorAiQuestionInvalid => 'Escribe una pregunta válida';
 }

@@ -4,16 +4,16 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-11-18 (electronic invoicing).
+Last updated: 2026-11-18 (report assistant).
 
 ## Where we are
 
 - Stack: Flutter (android + web) + self-hosted Supabase only. No FastAPI,
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
-- `supabase/migrations/0001..0125` are the schema owner (applied by
+- `supabase/migrations/0001..0126` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 1797 tests green (coverage 79.1% global; application 90.5%,
-  domain 61.3%, infrastructure 46.7%), `flutter analyze` reports only SDK
+- Flutter: 1840 tests green (coverage 79.1% global; application 90.4%,
+  domain 61.7%, infrastructure 48.1%), `flutter analyze` reports only SDK
   deprecation infos from the pinned beta channel (0 errors/warnings). Web
   build green. Deno tests for the Edge Functions: 30 green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
@@ -25,6 +25,58 @@ Last updated: 2026-11-18 (electronic invoicing).
 
 
 
+
+
+## Report assistant (2026-11-18, `0126`)
+
+- **Provider decision (owner, 2026-11-18):** DeepSeek instead of Anthropic.
+  `_shared/ai` exposes a provider-neutral `ModelClient`; `deepseek.ts` talks the
+  OpenAI-compatible `/chat/completions` API with function calling. There is no
+  `@anthropic-ai/sdk`, no `cache_control`/`effort` and no refusal-fallback beta;
+  schema strictness is enforced in code (the model's `submit_answer` is fully
+  validated). `DEEPSEEK_API_KEY` + `DEEPSEEK_BASE_URL` +
+  `DEEPSEEK_MODEL_REPORT_ASSISTANT` are server-only. Keep the design's
+  ASSUMPTION about third-party processing (now DeepSeek) pending the owner's
+  written sign-off.
+- The API key that was shared in plain text during implementation must be
+  rotated; it is not written to any tracked file, test or log.
+- Inert behaviour: no key -> `mode=status` answers `{configured:false}` and
+  `mode=ask` answers 503 `AiUnavailableError` **before** reserving or calling
+  out (`ai_requests` stays empty).
+- Tools execute with the caller's `Authorization` + `x-lot-id` over
+  `GET /rest/v1/rpc/<name>`; the function never reads
+  `SUPABASE_SERVICE_ROLE_KEY`. PostgREST runs the stable RPC in a read-only
+  transaction, so a registry mistake still cannot write.
+- The model never types numbers: it submits figure recipes (`call_id` + path);
+  the Edge Function resolves them from the projected RPC JSON with BigInt math
+  (`value`/`sum`/`difference`/`percent_change`/`share_percent`, half away from
+  zero) and the Flutter `FigureVerifier` recomputes every figure from its raw
+  sources. A digit in prose (other than a four-digit year) triggers one repair
+  turn and otherwise `AiAnswerInvalidError`.
+- Tool allowlist: revenue, hourly traffic, reservations, WhatsApp, occupancy,
+  capacity, today, daily trend, shifts. `report_revenue_all`, `session_records`,
+  `vehicle_history` and `list_audit_log` are registered disabled
+  (cross-lot/PII). Projection drops `discount_audit`, shift `notes`/operator id
+  and lot ids; the question is redacted (plates, long digits, emails).
+- Budget: `ai_budget_reserve` takes `pg_advisory_xact_lock(hashtext('ai_budget'),
+  lot)`, counts today's rows in the lot timezone (reserved rows count their
+  reservation), and raises `AiBudgetExceededError`. A crashed request keeps its
+  reservation until the day ends (conservative). `ai_usage_record` only closes
+  the caller's own reserved row.
+- Gotchas: the Edge runtime serves the new function without restarting the
+  `functions` container (it mounts the folder), so the live status call returned
+  200 `{configured:false}` immediately. `report_revenue.pass_revenue` still has
+  no lot predicate (design Q3); the assistant reports it as returned.
+- Deviations/pending from the task list: the 18 replay fixtures + live eval
+  tooling (tasks 3.7/3.8) and the temporary `hello-ai` SSE spike (2.6) were not
+  added; their deterministic coverage lives in the unit/handler tests instead.
+  The CI `edge-functions` job was not added. The full-page a11y/text-contrast
+  cases and the manual live smoke (8.5) remain pending.
+- Gatekeeper (2026-11-18): migration `0126` applied live (budget 100/1M, one
+  reserved smoke row; purged), **1840 Flutter tests** green, coverage 79.1%
+  global / 90.4% application, `flutter analyze` clean, SQL suite green over
+  `0001`-`0126`, **73 Deno tests** green, web release + web-public + debug APK
+  built. Live function status without a key: 200 `{configured:false}`.
 
 ## Electronic invoicing (2026-11-18, `0124`-`0125`)
 

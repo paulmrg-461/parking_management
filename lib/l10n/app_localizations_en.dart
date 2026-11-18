@@ -5680,4 +5680,170 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get fiscalCufe => 'CUFE';
+
+  @override
+  String get assistantTitle => 'Report assistant';
+
+  @override
+  String get assistantOpenTooltip => 'Ask the assistant';
+
+  @override
+  String get assistantInputHint => 'Ask about revenue, traffic or reservations';
+
+  @override
+  String get assistantSend => 'Send';
+
+  @override
+  String get assistantClear => 'New conversation';
+
+  @override
+  String get assistantEmptyTitle => 'Ask in plain language';
+
+  @override
+  String get assistantEmptyMessage =>
+      'Figures come from your reports and each one shows its source.';
+
+  @override
+  String get assistantSuggestionsTitle => 'Try';
+
+  @override
+  String get assistantSuggestRevenueMonth =>
+      'How much did motorcycles make last month?';
+
+  @override
+  String get assistantSuggestBusiestHour => 'What hour has the most entries?';
+
+  @override
+  String get assistantSuggestReservations =>
+      'How many web bookings turned into a stay this month?';
+
+  @override
+  String get assistantSuggestCompare =>
+      'How is revenue this week compared with last week?';
+
+  @override
+  String get assistantSuggestCash =>
+      'Were there cash differences in the latest shift closes?';
+
+  @override
+  String get assistantSuggestFull => 'How full is the lot right now?';
+
+  @override
+  String get assistantPrivacyNote =>
+      'Your question and aggregated report data are sent to the AI provider. Do not type plates or names.';
+
+  @override
+  String get assistantRedacted =>
+      'We removed personal data from your question before sending it.';
+
+  @override
+  String assistantBudgetLeft(int count) {
+    return '$count questions left today';
+  }
+
+  @override
+  String get assistantThinking => 'Checking your reports…';
+
+  @override
+  String assistantToolRunning(String report) {
+    return 'Checking $report…';
+  }
+
+  @override
+  String assistantToolDone(String report) {
+    return '$report: done';
+  }
+
+  @override
+  String get assistantStatusNeedsClarification => 'I need one more detail';
+
+  @override
+  String get assistantStatusOutOfScope => 'Out of scope';
+
+  @override
+  String get assistantStatusNoData => 'No data for the period';
+
+  @override
+  String get assistantFigures => 'Figures';
+
+  @override
+  String get assistantSourceTitle => 'Where this figure comes from';
+
+  @override
+  String assistantSourceReport(String rpc) {
+    return 'Report: $rpc';
+  }
+
+  @override
+  String assistantSourceArgs(String args) {
+    return 'Parameters: $args';
+  }
+
+  @override
+  String assistantSourcePath(String path) {
+    return 'Field: $path';
+  }
+
+  @override
+  String assistantSourceRaw(String value) {
+    return 'Value in the report: $value';
+  }
+
+  @override
+  String get assistantVerified => 'Figure verified against the report';
+
+  @override
+  String get assistantUnverified => 'This figure could not be verified';
+
+  @override
+  String get assistantUndefinedValue => '—';
+
+  @override
+  String get assistantCopyAnswer => 'Copy answer';
+
+  @override
+  String get assistantCopyFigures => 'Copy figures (CSV)';
+
+  @override
+  String get assistantCopied => 'Copied to clipboard';
+
+  @override
+  String get assistantDisclaimer =>
+      'AI-generated answer based on your reports. Check figures at their source.';
+
+  @override
+  String get assistantNotConfiguredTitle => 'The assistant is not enabled';
+
+  @override
+  String get assistantNotConfiguredMessage =>
+      'The AI API key is missing on the server. See the secrets runbook.';
+
+  @override
+  String assistantPeriod(String start, String end) {
+    return 'Period: $start to $end';
+  }
+
+  @override
+  String get errorAiBudget => 'The assistant\'s daily limit was reached';
+
+  @override
+  String get errorAiUnavailable => 'The assistant is not available right now';
+
+  @override
+  String get errorAiTimeout => 'The assistant took too long. Try again';
+
+  @override
+  String get errorAiUpstream => 'The AI service did not respond. Try again';
+
+  @override
+  String get errorAiRefused => 'The assistant could not answer this question';
+
+  @override
+  String get errorAiAnswerInvalid => 'The answer failed figure verification';
+
+  @override
+  String get errorAiLimit => 'The question is too broad. Try a shorter period';
+
+  @override
+  String get errorAiQuestionInvalid => 'Write a valid question';
 }

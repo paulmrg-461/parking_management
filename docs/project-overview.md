@@ -46,11 +46,12 @@ WhatsApp (manual or automated).
 | Dynamic pricing | Complete, inert by default (rules, locked rate at entry, simulation, impact) | SQL + widget tests |
 | Loyalty rewards | Complete, inert by default (visit accrual, reward redemption, `/loyalty`, expiry job) | SQL + widget tests |
 | Electronic invoicing | Complete, inert by default (`mode = off`, provider optional; every DIAN rule an ASSUMPTION) | SQL + Deno + widget tests |
+| Report assistant | Complete, inert without `DEEPSEEK_API_KEY` (tool allowlist, verified figures, budget) | SQL + Deno + widget tests |
 | Backups / restore | Complete, with a safe drill | Drill executed against a real backup |
 | Secrets / PIN operations | Complete (scripts + runbook) | PIN rotation verified live |
 | E2E and CI | Complete (API + Flutter client, real stack) | CI job `supabase-e2e` |
 
-Quality snapshot (2026-11-18, local stack): **1797 Flutter tests + 1 integration
+Quality snapshot (2026-11-18, local stack): **1840 Flutter tests + 1 integration
 test**, SQL/RLS suite green, web build green, analyzer with **0 errors and 0
 warnings** (only SDK deprecation infos from the pinned beta channel), restore
 drill green.
@@ -84,6 +85,7 @@ the main data it touches.
 | `pass_renewal` | Public token-keyed renewal page (`/renew?t=`) and the admin "send renewal link" action | `pass_renewal_offers`, `public_pass_renewal`, `pass-renewal-intent` (Edge Function), `settle_pass_renewal`, `queue_pass_renewal_reminders` |
 | `merchants` | Agreements, show-once credentials, per-vehicle policy, settlement and the public `/validate?m=` page | `merchants`, `merchant_credentials`, `merchant_validations`, `fare_quote`, `save_merchant`, `merchant_validate`, `report_merchant_settlement` |
 | `pricing` | Dynamic rates: rules, guard rails, simulation, impact and the check-in price chip | `pricing_rules`, `pricing_lock`, `pricing_quote`, `pricing_simulate`, `report_pricing_impact`, `public_availability` price keys |
+| `report_assistant` | Natural-language questions over the report RPCs with a verified figure/source for each number (`/report-assistant`) | `ai_requests`/`ai_limits`, `ai_budget_*`, `report-assistant` Edge Function, `report_revenue` and the other report RPCs |
 | `invoicing` | Fiscal issuer/resolutions, document outbox, credit notes and the admin list (`/invoicing`) | `fiscal_settings`, `fiscal_resolutions`, `fiscal_documents`, `issue_fiscal_document`, `list_fiscal_documents`, `request_credit_note`, `fiscal-dispatch` |
 | `loyalty` | Visit program, reward redemption, member corrections and the impact report (`/loyalty`) | `loyalty_accounts`, `loyalty_rewards`, `loyalty_visits`, `loyalty_adjustments`, `fare_reward_step`, `loyalty_plate_status`, `choose_loyalty_redemption`, `report_loyalty`, `list_loyalty_accounts` |
 | `emergency` | One-tap call to the nearest police quadrant (123 fallback) | `parking_settings.police_phone` |
@@ -101,7 +103,7 @@ the main data it touches.
 **Edge Functions** (`supabase/volumes/functions`): `admin-users`,
 `push-dispatch`, `evidence-archive`, `whatsapp-dispatch`, `public-evidence`,
 `public-booking`, `payment-intent`, `payment-webhook`, `payments-reconcile`,
-`pass-renewal-intent`, `fiscal-dispatch`
+`pass-renewal-intent`, `fiscal-dispatch`, `report-assistant`
 (the `hello`/`main` folders are Supabase scaffolding, not used by the app).
 
 ## 4. Architecture in one paragraph
@@ -252,6 +254,23 @@ that writes the ledger never blocks a check-out: a loyalty failure is stored as
 a skipped visit with reason `error`. `/loyalty` shows the program, the members
 with a bounded, reasoned progress correction, and the impact report. A manual
 correction can move progress but can never mint a reward.
+
+## 7.10 Report assistant (implemented, inert without a key)
+
+An admin asks "how much did motorcycles make last month?" from `/reports` and
+gets an answer whose numbers are **not written by the model**: the assistant may
+only call nine reviewed read-only report RPCs (revenue, hourly traffic,
+reservations, WhatsApp, occupancy, capacity, today, daily trend, shifts) with the
+caller's JWT and `x-lot-id` over a `GET`, so RLS and the admin guards keep
+deciding what is visible. The model returns figure recipes (tool call id + field
+path) and the Edge Function resolves them against the real RPC JSON with
+integer math; the Flutter client re-verifies each figure from its raw sources
+and shows the RPC, arguments and path. Plates, owners, usernames and free-text
+notes are projected out and the question is redacted before it leaves the
+server. Cost is bounded by a per-lot daily request/token budget reserved before
+each call. The provider is DeepSeek (OpenAI-compatible) and the feature is
+inert without `DEEPSEEK_API_KEY`; if that key is absent the page says "not
+enabled" and no reservation or outbound call happens.
 
 ## 7.09 Electronic invoicing (implemented, inert by default)
 

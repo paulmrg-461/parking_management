@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/l10n/failure_messages.dart';
 import '../../../core/money/money.dart';
@@ -191,6 +192,12 @@ class _ReportsPageState extends State<ReportsPage> {
       appBar: AppBar(
         title: Text(l10n.reportsTitle),
         actions: [
+          AppIconButton(
+            key: const Key('reports_assistant'),
+            icon: Icons.auto_awesome_outlined,
+            tooltip: l10n.assistantOpenTooltip,
+            onPressed: () => context.push('/report-assistant'),
+          ),
           AppIconButton(
             icon: Icons.ios_share,
             tooltip: l10n.actionExportPdf,

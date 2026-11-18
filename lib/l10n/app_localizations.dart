@@ -9991,6 +9991,288 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'CUFE'**
   String get fiscalCufe;
+
+  /// No description provided for @assistantTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Asistente de reportes'**
+  String get assistantTitle;
+
+  /// No description provided for @assistantOpenTooltip.
+  ///
+  /// In es, this message translates to:
+  /// **'Preguntar al asistente'**
+  String get assistantOpenTooltip;
+
+  /// No description provided for @assistantInputHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Pregunta sobre ingresos, tráfico o reservas'**
+  String get assistantInputHint;
+
+  /// No description provided for @assistantSend.
+  ///
+  /// In es, this message translates to:
+  /// **'Enviar'**
+  String get assistantSend;
+
+  /// No description provided for @assistantClear.
+  ///
+  /// In es, this message translates to:
+  /// **'Nueva conversación'**
+  String get assistantClear;
+
+  /// No description provided for @assistantEmptyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Pregunta en lenguaje natural'**
+  String get assistantEmptyTitle;
+
+  /// No description provided for @assistantEmptyMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'Las cifras salen de tus reportes y cada una muestra su fuente.'**
+  String get assistantEmptyMessage;
+
+  /// No description provided for @assistantSuggestionsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Prueba con'**
+  String get assistantSuggestionsTitle;
+
+  /// No description provided for @assistantSuggestRevenueMonth.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Cuánto generaron las motos el mes pasado?'**
+  String get assistantSuggestRevenueMonth;
+
+  /// No description provided for @assistantSuggestBusiestHour.
+  ///
+  /// In es, this message translates to:
+  /// **'¿A qué hora entran más vehículos?'**
+  String get assistantSuggestBusiestHour;
+
+  /// No description provided for @assistantSuggestReservations.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Cuántas reservas web terminaron en entrada este mes?'**
+  String get assistantSuggestReservations;
+
+  /// No description provided for @assistantSuggestCompare.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Cómo van los ingresos de esta semana frente a la anterior?'**
+  String get assistantSuggestCompare;
+
+  /// No description provided for @assistantSuggestCash.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Hubo diferencias de caja en los últimos cierres?'**
+  String get assistantSuggestCash;
+
+  /// No description provided for @assistantSuggestFull.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Qué tan lleno está el parqueadero ahora?'**
+  String get assistantSuggestFull;
+
+  /// No description provided for @assistantPrivacyNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu pregunta y datos agregados de tus reportes se envían al proveedor de IA. No escribas placas ni nombres.'**
+  String get assistantPrivacyNote;
+
+  /// No description provided for @assistantRedacted.
+  ///
+  /// In es, this message translates to:
+  /// **'Quitamos datos personales de tu pregunta antes de enviarla.'**
+  String get assistantRedacted;
+
+  /// No description provided for @assistantBudgetLeft.
+  ///
+  /// In es, this message translates to:
+  /// **'Quedan {count} consultas hoy'**
+  String assistantBudgetLeft(int count);
+
+  /// No description provided for @assistantThinking.
+  ///
+  /// In es, this message translates to:
+  /// **'Consultando tus reportes…'**
+  String get assistantThinking;
+
+  /// No description provided for @assistantToolRunning.
+  ///
+  /// In es, this message translates to:
+  /// **'Consultando {report}…'**
+  String assistantToolRunning(String report);
+
+  /// No description provided for @assistantToolDone.
+  ///
+  /// In es, this message translates to:
+  /// **'{report}: listo'**
+  String assistantToolDone(String report);
+
+  /// No description provided for @assistantStatusNeedsClarification.
+  ///
+  /// In es, this message translates to:
+  /// **'Necesito un dato más'**
+  String get assistantStatusNeedsClarification;
+
+  /// No description provided for @assistantStatusOutOfScope.
+  ///
+  /// In es, this message translates to:
+  /// **'Fuera de alcance'**
+  String get assistantStatusOutOfScope;
+
+  /// No description provided for @assistantStatusNoData.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin datos en el periodo'**
+  String get assistantStatusNoData;
+
+  /// No description provided for @assistantFigures.
+  ///
+  /// In es, this message translates to:
+  /// **'Cifras'**
+  String get assistantFigures;
+
+  /// No description provided for @assistantSourceTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'De dónde sale esta cifra'**
+  String get assistantSourceTitle;
+
+  /// No description provided for @assistantSourceReport.
+  ///
+  /// In es, this message translates to:
+  /// **'Reporte: {rpc}'**
+  String assistantSourceReport(String rpc);
+
+  /// No description provided for @assistantSourceArgs.
+  ///
+  /// In es, this message translates to:
+  /// **'Parámetros: {args}'**
+  String assistantSourceArgs(String args);
+
+  /// No description provided for @assistantSourcePath.
+  ///
+  /// In es, this message translates to:
+  /// **'Campo: {path}'**
+  String assistantSourcePath(String path);
+
+  /// No description provided for @assistantSourceRaw.
+  ///
+  /// In es, this message translates to:
+  /// **'Valor en el reporte: {value}'**
+  String assistantSourceRaw(String value);
+
+  /// No description provided for @assistantVerified.
+  ///
+  /// In es, this message translates to:
+  /// **'Cifra verificada con el reporte'**
+  String get assistantVerified;
+
+  /// No description provided for @assistantUnverified.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo verificar esta cifra'**
+  String get assistantUnverified;
+
+  /// No description provided for @assistantUndefinedValue.
+  ///
+  /// In es, this message translates to:
+  /// **'—'**
+  String get assistantUndefinedValue;
+
+  /// No description provided for @assistantCopyAnswer.
+  ///
+  /// In es, this message translates to:
+  /// **'Copiar respuesta'**
+  String get assistantCopyAnswer;
+
+  /// No description provided for @assistantCopyFigures.
+  ///
+  /// In es, this message translates to:
+  /// **'Copiar cifras (CSV)'**
+  String get assistantCopyFigures;
+
+  /// No description provided for @assistantCopied.
+  ///
+  /// In es, this message translates to:
+  /// **'Copiado al portapapeles'**
+  String get assistantCopied;
+
+  /// No description provided for @assistantDisclaimer.
+  ///
+  /// In es, this message translates to:
+  /// **'Respuesta generada por IA a partir de tus reportes. Verifica las cifras en su fuente.'**
+  String get assistantDisclaimer;
+
+  /// No description provided for @assistantNotConfiguredTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'El asistente no está activado'**
+  String get assistantNotConfiguredTitle;
+
+  /// No description provided for @assistantNotConfiguredMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'Falta la clave de la API de IA en el servidor. Consulta el runbook de secretos.'**
+  String get assistantNotConfiguredMessage;
+
+  /// No description provided for @assistantPeriod.
+  ///
+  /// In es, this message translates to:
+  /// **'Periodo: {start} a {end}'**
+  String assistantPeriod(String start, String end);
+
+  /// No description provided for @errorAiBudget.
+  ///
+  /// In es, this message translates to:
+  /// **'Se alcanzó el límite diario de consultas del asistente'**
+  String get errorAiBudget;
+
+  /// No description provided for @errorAiUnavailable.
+  ///
+  /// In es, this message translates to:
+  /// **'El asistente no está disponible en este momento'**
+  String get errorAiUnavailable;
+
+  /// No description provided for @errorAiTimeout.
+  ///
+  /// In es, this message translates to:
+  /// **'El asistente tardó demasiado. Intenta de nuevo'**
+  String get errorAiTimeout;
+
+  /// No description provided for @errorAiUpstream.
+  ///
+  /// In es, this message translates to:
+  /// **'El servicio de IA no respondió. Intenta de nuevo'**
+  String get errorAiUpstream;
+
+  /// No description provided for @errorAiRefused.
+  ///
+  /// In es, this message translates to:
+  /// **'El asistente no pudo responder esta pregunta'**
+  String get errorAiRefused;
+
+  /// No description provided for @errorAiAnswerInvalid.
+  ///
+  /// In es, this message translates to:
+  /// **'La respuesta no pasó la verificación de cifras'**
+  String get errorAiAnswerInvalid;
+
+  /// No description provided for @errorAiLimit.
+  ///
+  /// In es, this message translates to:
+  /// **'La pregunta es demasiado amplia. Prueba con un periodo más corto'**
+  String get errorAiLimit;
+
+  /// No description provided for @errorAiQuestionInvalid.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe una pregunta válida'**
+  String get errorAiQuestionInvalid;
 }
 
 class _AppLocalizationsDelegate
