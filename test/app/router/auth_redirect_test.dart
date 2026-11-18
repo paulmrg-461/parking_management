@@ -61,6 +61,11 @@ void main() {
       );
     });
 
+    test('Security: devices are admin only', () {
+      expect(canAccess(UserRole.operator, '/devices'), isFalse);
+      expect(canAccess(UserRole.admin, '/devices'), isTrue);
+    });
+
     test('Success: operators can open the damage comparison', () {
       expect(canAccess(UserRole.operator, '/damage-comparison'), isTrue);
       expect(canAccess(UserRole.operator, '/report-assistant'), isFalse);

@@ -10483,6 +10483,222 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Comparación no encontrada'**
   String get errorComparisonNotFound;
+
+  /// No description provided for @navDevices.
+  ///
+  /// In es, this message translates to:
+  /// **'Dispositivos'**
+  String get navDevices;
+
+  /// No description provided for @devicesTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Dispositivos'**
+  String get devicesTitle;
+
+  /// No description provided for @devicesEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no hay dispositivos'**
+  String get devicesEmpty;
+
+  /// No description provided for @devicesEmptyHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Registra una cámara, barrera o hub para conectarlo.'**
+  String get devicesEmptyHint;
+
+  /// No description provided for @devicesAdd.
+  ///
+  /// In es, this message translates to:
+  /// **'Registrar dispositivo'**
+  String get devicesAdd;
+
+  /// No description provided for @devicesKind.
+  ///
+  /// In es, this message translates to:
+  /// **'Tipo'**
+  String get devicesKind;
+
+  /// No description provided for @devicesName.
+  ///
+  /// In es, this message translates to:
+  /// **'Nombre'**
+  String get devicesName;
+
+  /// No description provided for @devicesRate.
+  ///
+  /// In es, this message translates to:
+  /// **'Peticiones por minuto'**
+  String get devicesRate;
+
+  /// No description provided for @devicesStatusOnline.
+  ///
+  /// In es, this message translates to:
+  /// **'En línea'**
+  String get devicesStatusOnline;
+
+  /// No description provided for @devicesStatusOffline.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin conexión'**
+  String get devicesStatusOffline;
+
+  /// No description provided for @devicesStatusNeverSeen.
+  ///
+  /// In es, this message translates to:
+  /// **'Nunca visto'**
+  String get devicesStatusNeverSeen;
+
+  /// No description provided for @devicesStatusDisabled.
+  ///
+  /// In es, this message translates to:
+  /// **'Deshabilitado'**
+  String get devicesStatusDisabled;
+
+  /// No description provided for @devicesRotate.
+  ///
+  /// In es, this message translates to:
+  /// **'Rotar clave'**
+  String get devicesRotate;
+
+  /// No description provided for @devicesKeyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Guarda esta clave'**
+  String get devicesKeyTitle;
+
+  /// No description provided for @devicesKeyHint.
+  ///
+  /// In es, this message translates to:
+  /// **'No se volverá a mostrar. Configúrala en el dispositivo.'**
+  String get devicesKeyHint;
+
+  /// No description provided for @devicesCopied.
+  ///
+  /// In es, this message translates to:
+  /// **'Copiado'**
+  String get devicesCopied;
+
+  /// No description provided for @devicesEnable.
+  ///
+  /// In es, this message translates to:
+  /// **'Habilitar'**
+  String get devicesEnable;
+
+  /// No description provided for @devicesDisable.
+  ///
+  /// In es, this message translates to:
+  /// **'Deshabilitar'**
+  String get devicesDisable;
+
+  /// No description provided for @devicesRename.
+  ///
+  /// In es, this message translates to:
+  /// **'Renombrar'**
+  String get devicesRename;
+
+  /// No description provided for @devicesDelete.
+  ///
+  /// In es, this message translates to:
+  /// **'Eliminar'**
+  String get devicesDelete;
+
+  /// No description provided for @devicesEvents.
+  ///
+  /// In es, this message translates to:
+  /// **'Historial'**
+  String get devicesEvents;
+
+  /// No description provided for @devicesOfflineMinutes.
+  ///
+  /// In es, this message translates to:
+  /// **'Minutos para marcar sin conexión'**
+  String get devicesOfflineMinutes;
+
+  /// No description provided for @devicesSaved.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardado'**
+  String get devicesSaved;
+
+  /// No description provided for @devicesDeleteConfirm.
+  ///
+  /// In es, this message translates to:
+  /// **'El dispositivo dejará de autenticarse. ¿Eliminar?'**
+  String get devicesDeleteConfirm;
+
+  /// No description provided for @devicesLastSeen.
+  ///
+  /// In es, this message translates to:
+  /// **'Último contacto: {when}'**
+  String devicesLastSeen(String when);
+
+  /// No description provided for @devicesFirmware.
+  ///
+  /// In es, this message translates to:
+  /// **'Firmware: {version}'**
+  String devicesFirmware(String version);
+
+  /// No description provided for @errorInvalidDeviceKind.
+  ///
+  /// In es, this message translates to:
+  /// **'Tipo de dispositivo no válido'**
+  String get errorInvalidDeviceKind;
+
+  /// No description provided for @errorInvalidDeviceName.
+  ///
+  /// In es, this message translates to:
+  /// **'Nombre de dispositivo no válido'**
+  String get errorInvalidDeviceName;
+
+  /// No description provided for @errorDeviceNameTaken.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya existe un dispositivo con ese nombre'**
+  String get errorDeviceNameTaken;
+
+  /// No description provided for @errorDeviceLimit.
+  ///
+  /// In es, this message translates to:
+  /// **'Máximo 50 dispositivos por sede'**
+  String get errorDeviceLimit;
+
+  /// No description provided for @errorDeviceNotFound.
+  ///
+  /// In es, this message translates to:
+  /// **'Dispositivo no encontrado'**
+  String get errorDeviceNotFound;
+
+  /// No description provided for @errorDeviceUnauthorized.
+  ///
+  /// In es, this message translates to:
+  /// **'Clave de dispositivo no válida'**
+  String get errorDeviceUnauthorized;
+
+  /// No description provided for @errorDeviceDisabled.
+  ///
+  /// In es, this message translates to:
+  /// **'El dispositivo está deshabilitado'**
+  String get errorDeviceDisabled;
+
+  /// No description provided for @errorDeviceClockSkew.
+  ///
+  /// In es, this message translates to:
+  /// **'Reloj del dispositivo desviado'**
+  String get errorDeviceClockSkew;
+
+  /// No description provided for @errorDeviceReplay.
+  ///
+  /// In es, this message translates to:
+  /// **'Petición repetida'**
+  String get errorDeviceReplay;
+
+  /// No description provided for @errorDeviceRateLimited.
+  ///
+  /// In es, this message translates to:
+  /// **'Demasiadas peticiones del dispositivo'**
+  String get errorDeviceRateLimited;
 }
 
 class _AppLocalizationsDelegate

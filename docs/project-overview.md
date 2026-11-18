@@ -48,7 +48,7 @@ WhatsApp (manual or automated).
 | Electronic invoicing | Complete, inert by default (`mode = off`, provider optional; every DIAN rule an ASSUMPTION) | SQL + Deno + widget tests |
 | Report assistant | Complete, inert without `DEEPSEEK_API_KEY` (tool allowlist, verified figures, budget) | SQL + Deno + widget tests |
 | Damage comparison | Complete, inert without a key (exit photos, advisory AI comparison, human review) | SQL + Deno + widget tests |
-| Device gateway | Backend complete, admin screen pending (registry, keys, transport, offline alerts) | SQL + Deno tests |
+| Device gateway | Complete (registry, keys, `/devices` admin, transport, offline alerts) | SQL + Deno + widget tests |
 | Backups / restore | Complete, with a safe drill | Drill executed against a real backup |
 | Secrets / PIN operations | Complete (scripts + runbook) | PIN rotation verified live |
 | E2E and CI | Complete (API + Flutter client, real stack) | CI job `supabase-e2e` |

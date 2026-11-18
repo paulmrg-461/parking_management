@@ -6020,4 +6020,119 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get errorComparisonNotFound => 'Comparación no encontrada';
+
+  @override
+  String get navDevices => 'Dispositivos';
+
+  @override
+  String get devicesTitle => 'Dispositivos';
+
+  @override
+  String get devicesEmpty => 'Aún no hay dispositivos';
+
+  @override
+  String get devicesEmptyHint =>
+      'Registra una cámara, barrera o hub para conectarlo.';
+
+  @override
+  String get devicesAdd => 'Registrar dispositivo';
+
+  @override
+  String get devicesKind => 'Tipo';
+
+  @override
+  String get devicesName => 'Nombre';
+
+  @override
+  String get devicesRate => 'Peticiones por minuto';
+
+  @override
+  String get devicesStatusOnline => 'En línea';
+
+  @override
+  String get devicesStatusOffline => 'Sin conexión';
+
+  @override
+  String get devicesStatusNeverSeen => 'Nunca visto';
+
+  @override
+  String get devicesStatusDisabled => 'Deshabilitado';
+
+  @override
+  String get devicesRotate => 'Rotar clave';
+
+  @override
+  String get devicesKeyTitle => 'Guarda esta clave';
+
+  @override
+  String get devicesKeyHint =>
+      'No se volverá a mostrar. Configúrala en el dispositivo.';
+
+  @override
+  String get devicesCopied => 'Copiado';
+
+  @override
+  String get devicesEnable => 'Habilitar';
+
+  @override
+  String get devicesDisable => 'Deshabilitar';
+
+  @override
+  String get devicesRename => 'Renombrar';
+
+  @override
+  String get devicesDelete => 'Eliminar';
+
+  @override
+  String get devicesEvents => 'Historial';
+
+  @override
+  String get devicesOfflineMinutes => 'Minutos para marcar sin conexión';
+
+  @override
+  String get devicesSaved => 'Guardado';
+
+  @override
+  String get devicesDeleteConfirm =>
+      'El dispositivo dejará de autenticarse. ¿Eliminar?';
+
+  @override
+  String devicesLastSeen(String when) {
+    return 'Último contacto: $when';
+  }
+
+  @override
+  String devicesFirmware(String version) {
+    return 'Firmware: $version';
+  }
+
+  @override
+  String get errorInvalidDeviceKind => 'Tipo de dispositivo no válido';
+
+  @override
+  String get errorInvalidDeviceName => 'Nombre de dispositivo no válido';
+
+  @override
+  String get errorDeviceNameTaken => 'Ya existe un dispositivo con ese nombre';
+
+  @override
+  String get errorDeviceLimit => 'Máximo 50 dispositivos por sede';
+
+  @override
+  String get errorDeviceNotFound => 'Dispositivo no encontrado';
+
+  @override
+  String get errorDeviceUnauthorized => 'Clave de dispositivo no válida';
+
+  @override
+  String get errorDeviceDisabled => 'El dispositivo está deshabilitado';
+
+  @override
+  String get errorDeviceClockSkew => 'Reloj del dispositivo desviado';
+
+  @override
+  String get errorDeviceReplay => 'Petición repetida';
+
+  @override
+  String get errorDeviceRateLimited => 'Demasiadas peticiones del dispositivo';
 }

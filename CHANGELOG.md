@@ -83,8 +83,9 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
     with `X-Device-Key` (constant-time hash compare), no user JWT and no lot
     header from the device. The route table is ready for the camera, barrier
     and sensor changes.
-  - Flutter admin screen `/devices` is the next batch; the registry, transport
-    and jobs are complete and tested.
+  - Flutter `/devices` (admin, deferred): list with status, register with
+    show-once key, rotate, enable/disable, rename, delete, event history and
+    the offline threshold; notification routes for device alerts.
 
 - **Damage comparison (backend, `0127`)**
   (`openspec/changes/add-ai-damage-comparison`). Exit evidence and the

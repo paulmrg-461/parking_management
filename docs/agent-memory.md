@@ -4,7 +4,7 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-11-18 (device gateway backend).
+Last updated: 2026-11-18 (device gateway).
 
 ## Where we are
 
@@ -12,9 +12,8 @@ Last updated: 2026-11-18 (device gateway backend).
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0129` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 1866 tests green (coverage 79.1% global; application 90.3%,
-  domain 62.7%, infrastructure 47.9%) — unchanged by the device backend batch;
-  `flutter analyze` reports only SDK
+- Flutter: 1890 tests green (coverage 79.1% global; application 90.2%,
+  domain 63.0%, infrastructure 48.0%), `flutter analyze` reports only SDK
   deprecation infos from the pinned beta channel (0 errors/warnings). Web
   build green. Deno tests for the Edge Functions: 30 green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
@@ -57,10 +56,13 @@ Last updated: 2026-11-18 (device gateway backend).
 - Gatekeeper: migrations `0128`-`0129` applied live (offline 5 min), SQL suite
   green over `0001`-`0129`, **84 Deno tests** green, `/v1/time` answers 200.
   Flutter tests unchanged (1866).
-- Pending: the Flutter `/devices` admin screen (list, register/show-key-once,
-  rotate, enable/disable, rename, delete, events, threshold), its route/DI and
-  widget tests; then the hardware changes. The registry and transport are
-  ready for them.
+- Flutter shipped: `/devices` (admin/deferred) with list + status, register
+  with show-once key, rotate, toggle, rename dialog path, delete confirmation,
+  event history sheet and the offline threshold in the list header; notification
+  routes for `device_offline`/`device_online`/`device_auth_failed`.
+- Pending: the manual device smoke (real ESP32/Jetson with `/v1/time` and
+  `/v1/heartbeat`) and the follow-up hardware changes. The registry, admin
+  screen and transport are ready for them.
 
 ## Damage comparison backend (2026-11-18, `0127`)
 

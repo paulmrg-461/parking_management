@@ -5961,4 +5961,119 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get errorComparisonNotFound => 'Comparison not found';
+
+  @override
+  String get navDevices => 'Devices';
+
+  @override
+  String get devicesTitle => 'Devices';
+
+  @override
+  String get devicesEmpty => 'No devices yet';
+
+  @override
+  String get devicesEmptyHint =>
+      'Register a camera, barrier or hub to connect it.';
+
+  @override
+  String get devicesAdd => 'Register device';
+
+  @override
+  String get devicesKind => 'Type';
+
+  @override
+  String get devicesName => 'Name';
+
+  @override
+  String get devicesRate => 'Requests per minute';
+
+  @override
+  String get devicesStatusOnline => 'Online';
+
+  @override
+  String get devicesStatusOffline => 'Offline';
+
+  @override
+  String get devicesStatusNeverSeen => 'Never seen';
+
+  @override
+  String get devicesStatusDisabled => 'Disabled';
+
+  @override
+  String get devicesRotate => 'Rotate key';
+
+  @override
+  String get devicesKeyTitle => 'Save this key';
+
+  @override
+  String get devicesKeyHint =>
+      'It will not be shown again. Configure it on the device.';
+
+  @override
+  String get devicesCopied => 'Copied';
+
+  @override
+  String get devicesEnable => 'Enable';
+
+  @override
+  String get devicesDisable => 'Disable';
+
+  @override
+  String get devicesRename => 'Rename';
+
+  @override
+  String get devicesDelete => 'Delete';
+
+  @override
+  String get devicesEvents => 'History';
+
+  @override
+  String get devicesOfflineMinutes => 'Minutes before offline';
+
+  @override
+  String get devicesSaved => 'Saved';
+
+  @override
+  String get devicesDeleteConfirm =>
+      'The device will stop authenticating. Delete it?';
+
+  @override
+  String devicesLastSeen(String when) {
+    return 'Last seen: $when';
+  }
+
+  @override
+  String devicesFirmware(String version) {
+    return 'Firmware: $version';
+  }
+
+  @override
+  String get errorInvalidDeviceKind => 'Invalid device type';
+
+  @override
+  String get errorInvalidDeviceName => 'Invalid device name';
+
+  @override
+  String get errorDeviceNameTaken => 'A device with that name already exists';
+
+  @override
+  String get errorDeviceLimit => 'At most 50 devices per lot';
+
+  @override
+  String get errorDeviceNotFound => 'Device not found';
+
+  @override
+  String get errorDeviceUnauthorized => 'Invalid device key';
+
+  @override
+  String get errorDeviceDisabled => 'The device is disabled';
+
+  @override
+  String get errorDeviceClockSkew => 'Device clock is off';
+
+  @override
+  String get errorDeviceReplay => 'Replayed request';
+
+  @override
+  String get errorDeviceRateLimited => 'Too many requests from the device';
 }

@@ -18,6 +18,7 @@ String? routeForNotification(AppNotification notification) {
     'waitlist_offer' => '/reservations',
     'cash_anomaly' => '/anomalies',
     'fiscal_document_failed' || 'fiscal_resolution_low' => '/invoicing',
+    'device_offline' || 'device_online' || 'device_auth_failed' => '/devices',
     _ => null,
   };
 }
