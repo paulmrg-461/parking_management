@@ -199,4 +199,29 @@ void main() {
       );
     }
   });
+
+  test('thermal output contains the loyalty progress line', () {
+    final data = ReceiptData(
+      kind: ReceiptKind.checkIn,
+      plate: 'ABC123',
+      entryTime: DateTime(2026, 1, 1, 8, 30),
+      loyaltyVisits: 3,
+      loyaltyRequired: 5,
+    );
+    final text = _decode(const EscPosGenerator().build(data, _configured));
+    expect(text, contains('Visita 4 de 5'));
+  });
+
+  test('Security: a pending sync receipt prints no loyalty line', () {
+    final data = ReceiptData(
+      kind: ReceiptKind.checkIn,
+      plate: 'ABC123',
+      entryTime: DateTime(2026, 1, 1, 8, 30),
+      loyaltyVisits: 3,
+      loyaltyRequired: 5,
+      pendingSync: true,
+    );
+    final text = _decode(const EscPosGenerator().build(data, _configured));
+    expect(text, isNot(contains('Visita 4 de 5')));
+  });
 }

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 import '../../../app/di/injection.dart';
 import '../../../core/error/failure.dart';
@@ -33,6 +34,10 @@ import '../../../core/widgets/sync_badge.dart';
 import '../../emergency/presentation/emergency_action.dart';
 import '../../evidence/domain/repositories/session_evidence_repository.dart';
 import '../../evidence/presentation/session_evidence_sheet.dart';
+import '../../loyalty/application/loyalty_status_cubit.dart';
+import '../../loyalty/domain/entities/loyalty_status.dart';
+import '../../loyalty/domain/repositories/loyalty_repository.dart';
+import '../../loyalty/presentation/desk_loyalty_section.dart';
 import '../../auth/application/auth_cubit.dart';
 import '../../auth/domain/entities/user.dart';
 import '../../plate_scanning/domain/repositories/plate_image_capture.dart';
@@ -340,6 +345,7 @@ class _CheckOutPageState extends State<CheckOutPage> {
     _setOpening(session.id);
     final preview = await cubit.preview(session.id);
     final merchants = await _merchantOptions(context, session.id);
+    final loyalty = _loyaltyOptions(context, session.id, preview);
     _setOpening(null);
     if (!context.mounted) {
       return;
@@ -350,6 +356,7 @@ class _CheckOutPageState extends State<CheckOutPage> {
       canDiscount: _canDiscount(context),
       preview: preview,
       merchants: merchants,
+      loyalty: loyalty,
       initialMethod: (preview?.hasPass ?? false)
           ? PaymentMethod.monthlyPass
           : _basePaymentMethod(_rememberedMethod),
@@ -415,6 +422,31 @@ class _CheckOutPageState extends State<CheckOutPage> {
           reason: reason,
         );
         return refresh();
+      },
+    );
+  }
+
+  /// Rewards: the section only appears when the preview reports one; the
+  /// choice refreshes the server preview like the agreements do.
+  LoyaltyDeskOptions? _loyaltyOptions(
+    BuildContext context,
+    int sessionId,
+    CheckOutPreview? preview,
+  ) {
+    if (preview?.quote?.reward == null ||
+        !serviceLocator.isRegistered<LoyaltyRepository>()) {
+      return null;
+    }
+    final repository = serviceLocator<LoyaltyRepository>();
+    final cubit = context.read<CheckOutCubit>();
+    return LoyaltyDeskOptions(
+      choose: (choice) async {
+        await repository.choose(sessionId: sessionId, choice: choice);
+        final updated = await cubit.preview(sessionId);
+        if (updated == null) {
+          throw const NetworkFailure('Unable to refresh the preview');
+        }
+        return updated;
       },
     );
   }
@@ -485,7 +517,14 @@ class _CheckOutPageState extends State<CheckOutPage> {
     await _startCheckout(context, session, _plateOf(context, session));
   }
 
-  Future<void> _showReceipt(BuildContext context, CheckOutReceipt receipt) {
+  Future<void> _showReceipt(
+    BuildContext context,
+    CheckOutReceipt receipt,
+  ) async {
+    await _loadLoyalty(receipt.plate);
+    if (!mounted) {
+      return;
+    }
     final data = _receiptData(receipt);
     return showReceiptSummary(
       context,
@@ -499,6 +538,30 @@ class _CheckOutPageState extends State<CheckOutPage> {
         }
       },
     );
+  }
+
+  /// Refreshes the plate progress so the receipt can print it.
+  Future<void> _loadLoyalty(String plate) async {
+    if (!serviceLocator.isRegistered<LoyaltyStatusCubit>()) {
+      return;
+    }
+    try {
+      await context.read<LoyaltyStatusCubit>().load(plate);
+    } on ProviderNotFoundException {
+      // No loyalty provider on this route.
+    }
+  }
+
+  LoyaltyStatus? get _loyaltyStatus {
+    if (!serviceLocator.isRegistered<LoyaltyStatusCubit>()) {
+      return null;
+    }
+    try {
+      final state = context.read<LoyaltyStatusCubit>().state;
+      return state is LoyaltyStatusReady ? state.status : null;
+    } on ProviderNotFoundException {
+      return null;
+    }
   }
 
   static String? _pricingLabel(FarePricing? pricing) {
@@ -530,6 +593,8 @@ class _CheckOutPageState extends State<CheckOutPage> {
     adjustments: receipt.adjustments,
     pricingLabel: _pricingLabel(receipt.pricing),
     pricingDelta: receipt.pricing?.delta ?? 0,
+    loyaltyVisits: _loyaltyStatus?.visits,
+    loyaltyRequired: _loyaltyStatus?.required,
     evidenceUrl: receipt.pendingSync ? null : publicEvidenceUrl(receipt.id),
     feedbackUrl: receipt.pendingSync
         ? null

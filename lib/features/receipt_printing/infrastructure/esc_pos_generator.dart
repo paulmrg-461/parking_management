@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../../../core/fare/fare_adjustment.dart';
 import '../../../core/receipt/receipt_data.dart';
 import '../../../core/receipt/receipt_labels.dart';
 import '../../../core/utils/cop_formatter.dart';
@@ -72,12 +73,26 @@ class EscPosGenerator {
     if (data.isCheckOut && !data.pendingSync && data.pricingLabel != null) {
       _row(bytes, labels.pricingRule, data.pricingLabel!);
     }
+    if (!data.pendingSync && data.loyaltyRequired != null) {
+      _row(
+        bytes,
+        '',
+        data.loyaltyRewardEarned
+            ? labels.loyaltyRewardEarned
+            : labels.loyaltyVisit(
+                (data.loyaltyVisits ?? 0) + 1,
+                data.loyaltyRequired!,
+              ),
+      );
+    }
     if (data.isCheckOut && !data.pendingSync && data.grossAmount != null) {
       _row(bytes, labels.gross, CopFormatter.format(data.grossAmount!));
       for (final line in data.adjustments) {
         _row(
           bytes,
-          '${labels.benefit} ${line.label}',
+          line.type == FareAdjustmentType.reward
+              ? labels.loyaltyReward
+              : '${labels.benefit} ${line.label}',
           '-${CopFormatter.format(line.amount)}',
         );
       }

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:go_router/go_router.dart';
 
@@ -47,6 +48,9 @@ import '../../vehicles/domain/repositories/vehicle_repository.dart';
 import '../../notifications/presentation/notification_bell.dart';
 import '../../notifications/presentation/realtime_activity_listener.dart';
 import '../application/check_in_cubit.dart';
+import '../../loyalty/application/loyalty_status_cubit.dart';
+import '../../loyalty/domain/entities/loyalty_status.dart';
+import '../../loyalty/presentation/loyalty_progress_chip.dart';
 import '../../pricing/application/price_quote_cubit.dart';
 import '../../pricing/presentation/price_quote_chip.dart';
 import '../application/vehicle_lookup_cubit.dart';
@@ -425,6 +429,31 @@ class _CheckInPageState extends State<CheckInPage> {
   void _lookupNow() {
     _debounce?.cancel();
     unawaited(context.read<VehicleLookupCubit>().lookup(_plateController.text));
+    _refreshLoyalty(_plateController.text);
+  }
+
+  /// The loyalty chip is a read-only convenience; a missing cubit is fine.
+  void _refreshLoyalty(String plate) {
+    if (!serviceLocator.isRegistered<LoyaltyStatusCubit>()) {
+      return;
+    }
+    try {
+      unawaited(context.read<LoyaltyStatusCubit>().load(plate));
+    } on ProviderNotFoundException {
+      // No chip in this context.
+    }
+  }
+
+  LoyaltyStatus? get _loyaltyStatus {
+    if (!serviceLocator.isRegistered<LoyaltyStatusCubit>()) {
+      return null;
+    }
+    try {
+      final state = context.read<LoyaltyStatusCubit>().state;
+      return state is LoyaltyStatusReady ? state.status : null;
+    } on ProviderNotFoundException {
+      return null;
+    }
   }
 
   Future<void> _addPhoto() async {
@@ -567,6 +596,8 @@ class _CheckInPageState extends State<CheckInPage> {
       entryTime: result.entryTime,
       photoCount: result.photoCount,
       pendingSync: result.status == ParkingSessionStatus.pendingSync,
+      loyaltyVisits: _loyaltyStatus?.visits,
+      loyaltyRequired: _loyaltyStatus?.required,
       evidenceUrl: result.status == ParkingSessionStatus.pendingSync
           ? null
           : publicEvidenceUrl(result.id),
@@ -850,6 +881,8 @@ class _CheckInPageState extends State<CheckInPage> {
             onChanged: _onPlateChanged,
           ),
         ),
+        if (serviceLocator.isRegistered<LoyaltyStatusCubit>())
+          const LoyaltyProgressChip(),
         if (_plateSuggestions() case final suggestions
             when suggestions.isNotEmpty)
           Padding(

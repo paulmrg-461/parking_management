@@ -67,6 +67,32 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - Android release build: R8 keep rules for the optional ML Kit scripts.
 
 ### Added
+- **Loyalty rewards** (`0122`–`0123`, `openspec/changes/add-loyalty-rewards`).
+  A lot can reward its regular customers without any Dart-side money math:
+  - Per-lot program (off by default): visits required, reward kind
+    (`free_stay` with an optional cap, or a `fixed_amount`), minimum paid amount
+    and minutes per visit, redemption mode (`auto` / `operator`), optional
+    stacking with merchant benefits and the reward validity in days.
+  - Accrual and redemption bookkeeping run in `trg_loyalty_session_closed`
+    (AFTER UPDATE of `status`), so `check_out` keeps its 11 arguments. The
+    trigger holds a per-plate advisory lock, counts at most one visit per plate
+    per business day, never counts a redeeming/pass/lost/exempt/zero-charge
+    stay, and **never blocks a customer from leaving** (any error becomes a
+    `skipped(error)` visit plus a warning).
+  - `fare_reward_step` (the no-op hook from the merchant change) now applies
+    the oldest available, non-expired reward after the merchant lines; the
+    reward value is capped so it never subsidises an online payment already
+    made. Preview, check-out, receipts and a future reprint all show the same
+    line, and a zero charge stays explained for the anomaly rule.
+  - `/loyalty` (admin): program form, member list with search and a bounded,
+    reasoned progress correction, and an impact report (visits by skip reason,
+    rewards earned/redeemed/expired/available, discount given, top plates) with
+    CSV and PDF export. A `loyalty_expire_rewards` job runs from the jobs
+    container.
+  - Check-in shows “Visita 4 de 5” / “Recompensa disponible” for the plate; the
+    settlement dialog lets the operator use or skip the reward (or shows the
+    automatic line), and receipts print the progress or the earned reward.
+
 - **Dynamic pricing** (`0120`–`0121`, `openspec/changes/add-dynamic-pricing`).
   The lot can charge surge or valley rates without ever surprising the
   customer:
@@ -1294,6 +1320,7 @@ Migrations are append-only and applied in filename order by `supabase-migrate`.
 | `0115`–`0116` | Pass auto-renewal: settings/`pass_renewal_offers`/WhatsApp columns, reminder job, public page, renewal settlement |
 | `0117`–`0119` | Merchant agreements: schema/credentials, `fare_quote` + hooks, validations, public page, settlement, check-out lines |
 | `0120`–`0121` | Dynamic pricing: rules, session/hold locks, triggers, hook, quote/simulation/impact RPCs, availability price keys |
+| `0122`–`0123` | Loyalty rewards: program settings, accounts/rewards/visits/adjustments, closed-session trigger, reward hook, status/settings/adjust/reverse/expiry RPCs, report and members list |
 
 ## Verification snapshot
 

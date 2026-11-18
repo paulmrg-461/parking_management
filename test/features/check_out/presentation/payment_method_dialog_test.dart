@@ -4,7 +4,11 @@ import 'package:parking_management/core/money/currency.dart';
 import 'package:parking_management/core/money/money.dart';
 import 'package:parking_management/core/receipt/payment_method.dart';
 import 'package:parking_management/features/check_out/domain/entities/check_out_preview.dart';
+import 'package:parking_management/core/error/failure.dart';
+import 'package:parking_management/core/fare/fare_quote.dart';
 import 'package:parking_management/features/check_out/presentation/payment_method_dialog.dart';
+import 'package:parking_management/features/loyalty/domain/repositories/loyalty_repository.dart';
+import 'package:parking_management/features/loyalty/presentation/desk_loyalty_section.dart';
 
 import '../../../helpers/test_app.dart';
 
@@ -17,6 +21,7 @@ Future<CheckoutChoice? Function()> pumpDialog(
   PaymentMethod initialMethod = PaymentMethod.cash,
   Size size = const Size(800, 1400),
   bool canDiscount = false,
+  LoyaltyDeskOptions? loyalty,
 }) async {
   CheckoutChoice? result;
   tester.view.physicalSize = size;
@@ -34,6 +39,7 @@ Future<CheckoutChoice? Function()> pumpDialog(
                 canDiscount: canDiscount,
                 preview: preview,
                 initialMethod: initialMethod,
+                loyalty: loyalty,
               );
             },
             child: const Text('open'),
@@ -360,6 +366,129 @@ void main() {
       expect(cash.autofocus, isTrue);
       expect(cash.textInputAction, TextInputAction.done);
       await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+    });
+  });
+
+  group('loyalty reward', () {
+    CheckOutPreview rewardPreview({
+      bool available = true,
+      bool applied = false,
+      String? reason = 'operator_choice_pending',
+    }) => CheckOutPreview(
+      sessionId: 1,
+      amount: 6000,
+      quote: FareQuote(
+        sessionId: 1,
+        baseAmount: 6000,
+        gross: 6000,
+        reward: {
+          'available': available,
+          'applied': applied,
+          'reason': reason,
+          'progress': {'visits': 2, 'required': 5},
+        },
+      ),
+    );
+
+    testWidgets('operator mode shows the use reward switch', (tester) async {
+      await pumpDialog(
+        tester,
+        preview: rewardPreview(),
+        loyalty: LoyaltyDeskOptions(
+          choose: (choice) async => rewardPreview(applied: true),
+        ),
+      );
+
+      expect(find.byKey(const Key('desk_loyalty_section')), findsOneWidget);
+      expect(find.byKey(const Key('loyalty_use_reward')), findsOneWidget);
+      expect(find.text('Visita 3 de 5'), findsOneWidget);
+    });
+
+    testWidgets('switch calls choose and refreshes the preview', (
+      tester,
+    ) async {
+      final choices = <LoyaltyChoice>[];
+      await pumpDialog(
+        tester,
+        preview: rewardPreview(),
+        loyalty: LoyaltyDeskOptions(
+          choose: (choice) async {
+            choices.add(choice);
+            return rewardPreview(applied: true, reason: null);
+          },
+        ),
+      );
+
+      await tester.tap(find.byKey(const Key('loyalty_use_reward')));
+      await tester.pumpAndSettle();
+
+      expect(choices, [LoyaltyChoice.redeem]);
+      expect(find.byKey(const Key('loyalty_dont_use')), findsOneWidget);
+    });
+
+    testWidgets('auto mode shows the reward line with do not use now', (
+      tester,
+    ) async {
+      await pumpDialog(
+        tester,
+        preview: rewardPreview(applied: true, reason: null),
+        loyalty: LoyaltyDeskOptions(
+          choose: (choice) async => rewardPreview(),
+        ),
+      );
+
+      expect(find.text('Recompensa de fidelidad'), findsOneWidget);
+      expect(find.byKey(const Key('loyalty_dont_use')), findsOneWidget);
+    });
+
+    testWidgets('skip refreshes the preview without the line', (tester) async {
+      final choices = <LoyaltyChoice>[];
+      await pumpDialog(
+        tester,
+        preview: rewardPreview(applied: true, reason: null),
+        loyalty: LoyaltyDeskOptions(
+          choose: (choice) async {
+            choices.add(choice);
+            return rewardPreview(reason: 'skipped');
+          },
+        ),
+      );
+
+      await tester.tap(find.byKey(const Key('loyalty_dont_use')));
+      await tester.pumpAndSettle();
+
+      expect(choices, [LoyaltyChoice.skip]);
+      expect(find.byKey(const Key('loyalty_dont_use')), findsNothing);
+      expect(find.text('No usar ahora'), findsOneWidget);
+    });
+
+    testWidgets('choose failure keeps the dialog and shows the message', (
+      tester,
+    ) async {
+      await pumpDialog(
+        tester,
+        preview: rewardPreview(applied: true, reason: null),
+        loyalty: LoyaltyDeskOptions(
+          choose: (choice) async => throw const ValidationFailure(
+            'NoRewardAvailableError',
+            'NoRewardAvailableError',
+          ),
+        ),
+      );
+
+      await tester.tap(find.byKey(const Key('loyalty_dont_use')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Esta placa no tiene recompensa disponible'), findsOneWidget);
+      expect(find.byKey(const Key('desk_loyalty_section')), findsOneWidget);
+    });
+
+    testWidgets('no loyalty section when the preview has no reward', (
+      tester,
+    ) async {
+      await pumpDialog(tester);
+
+      expect(find.byKey(const Key('desk_loyalty_section')), findsNothing);
     });
   });
 }

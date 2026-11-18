@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../fare/fare_adjustment.dart';
 import '../l10n/l10n.dart';
 import '../receipt/receipt_data.dart';
 import '../theme/status_colors.dart';
@@ -155,11 +156,23 @@ class ReceiptSummaryDialog extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.only(top: Space.xs),
                     child: ReceiptRow(
-                      label: l10n.fareAdjustmentMerchant(line.label),
+                      label: line.type == FareAdjustmentType.reward
+                          ? l10n.loyaltyRewardLine
+                          : l10n.fareAdjustmentMerchant(line.label),
                       value: '-${Formatters.money(line.amount)}',
                     ),
                   ),
               ],
+              if (!data.pendingSync && data.loyaltyRequired != null)
+                ReceiptRow(
+                  label: data.loyaltyRewardEarned
+                      ? l10n.loyaltyRewardEarned
+                      : l10n.loyaltyVisitOf(
+                          (data.loyaltyVisits ?? 0) + 1,
+                          data.loyaltyRequired!,
+                        ),
+                  value: '',
+                ),
               if (data.pendingSync)
                 _PendingNotice(message: l10n.receiptQueued, status: status)
               else if (data.isCheckOut && data.amountCharged != null)
@@ -403,10 +416,22 @@ class ReceiptCard extends StatelessWidget {
           ),
           for (final line in data.adjustments)
             ReceiptRow(
-              label: l10n.fareAdjustmentMerchant(line.label),
+              label: line.type == FareAdjustmentType.reward
+                          ? l10n.loyaltyRewardLine
+                          : l10n.fareAdjustmentMerchant(line.label),
               value: '-${Formatters.money(line.amount)}',
             ),
         ],
+        if (!data.pendingSync && data.loyaltyRequired != null)
+          ReceiptRow(
+            label: data.loyaltyRewardEarned
+                ? l10n.loyaltyRewardEarned
+                : l10n.loyaltyVisitOf(
+                    (data.loyaltyVisits ?? 0) + 1,
+                    data.loyaltyRequired!,
+                  ),
+            value: '',
+          ),
         if (data.pendingSync)
           _PendingNotice(message: l10n.receiptQueued, status: status)
         else if (data.isCheckOut && data.amountCharged != null)

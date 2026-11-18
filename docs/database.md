@@ -58,6 +58,13 @@ erDiagram
 
   parking_lots ||--o{ pricing_rules : "rules"
   pricing_rules ||--o{ parking_sessions : "locks at entry"
+
+  parking_lots ||--o{ loyalty_accounts : "has members"
+  parking_lots ||--o{ loyalty_rewards : "grants"
+  parking_lots ||--o{ loyalty_visits : "records"
+  parking_lots ||--o{ loyalty_adjustments : "corrects"
+  parking_sessions ||--o| loyalty_visits : "explains"
+  loyalty_rewards ||--o| loyalty_visits : "earned by"
 ```
 
 ## 2. Tables
@@ -70,7 +77,7 @@ erDiagram
 | `categories` | Vehicle category per site (`unique (lot_id, name)`) with optional capacity (0 = unlimited). | yes |
 | `tariffs` | Hourly/daily/nightly/monthly amounts per category, with the night window; `(category_id, lot_id)` must match the category's lot (composite FK). | yes |
 | `vehicles` | Global plate registry (category, color, brand, notes, blacklist, customer phone). A plate can park anywhere. | no |
-| `parking_sessions` | A stay: entry/exit, amount, payment method, discount audit, lost ticket, shift, lot, ticket number; `closed_recorded_at` is the server time of the check-out (the exit time may be an offline client time). | yes |
+| `parking_sessions` | A stay: entry/exit, amount, payment method, discount audit, lost ticket, shift, lot, ticket number; `closed_recorded_at` is the server time of the check-out (the exit time may be an offline client time); `loyalty_choice` records the operator's reward choice (`redeem`/`skip`, NULL = automatic). | yes |
 | `evidence_photos` | Check-in photos/videos (storage path per session, unique `file_path`). | via session |
 | `session_feedback` | Customer survey: one row per closed session (`unique (session_id)`), rating 1..5 and an optional comment up to 500 characters. Written only by the public RPCs, read by the lot. | yes |
 | `shifts` | Operator cash shift per site: opening float, counted cash, expected, difference. | yes |
@@ -83,6 +90,10 @@ erDiagram
 | `parking_spot_events` | Maintenance history of a bay: status transition, optional reason, actor and timestamp; written by `save_parking_spot`, lot-scoped RLS. | yes |
 | `parking_settings` (`car_capacity`, `moto_capacity`, `key_capacity`) | Per-site branding (name, address, schedule, contacts, police quadrant, logo version/path) + `business_timezone`, `overstay_hours`, `lost_ticket_fee`, `evidence_retention_days`, online-payment switch/window/minimum. | yes |
 | `payment_intents` | Frozen amount for a gateway checkout: `reference` (random `PM-…`), `amount`, `currency` (COP only), `gateway` (`wompi`), `status` (`pending`/`approved`/`declined`/`voided`/`error`/`expired`), transaction id/method, `expires_at`. Written only by the service RPCs. | yes |
+| `loyalty_accounts` | Counter per `(lot, plate)`: progress, earned/redeemed totals and the last counted day. Created lazily by the closed-session trigger. | yes |
+| `loyalty_rewards` | One reward: snapshot of kind/max/fixed at earn time, `available`/`redeemed`/`expired`/`reversed`, earning and redeeming session, redeemed amount and expiry. Audited. | yes |
+| `loyalty_visits` | Ledger of closed sessions: counted, skipped (with reason) or reversed, amount, progress before and the reward it earned. Unique per session. | yes |
+| `loyalty_adjustments` | Manual progress corrections: signed delta, reason, actor and progress after. Audited; bounded so it cannot mint a reward. | yes |
 | `pricing_rules` | Dynamic-pricing rule: name, active, priority, vehicle group, occupancy band, weekday mask, local window, multiplier bps, flat surcharge. Audited; admin RPCs only. | yes |
 | `merchants` | Agreement of the lot: name, one benefit rule (`free_minutes`/`percentage`/`fixed_amount` + optional per-validation cap), billing mode, daily/monthly caps, `active`, `credentials_version`. Audited. | yes |
 | `merchant_credentials` | SHA-256 `token_hash`, bcrypt `pin_hash`, failure counter, lock. RLS on with no policy and no grant: only the definer RPCs read it. | via merchant |
@@ -369,6 +380,16 @@ internal `create_merchant_validation`, `merchant_hash_token`, `merchant_summary`
 `pricing_simulate`, `report_pricing_impact`,
 `pricing_decorate_availability`; `fare_pricing_step` is now the real hook.
 
+**Loyalty rewards (`0122`–`0123`)**
+`loyalty_norm_plate` (pure), `loyalty_settings_json` (internal);
+`fare_reward_step` is now the real hook (same signature), and
+`trg_loyalty_session_closed` runs `loyalty_on_session_closed` after a session
+closes (never raises); `loyalty_plate_status` (operators; counts only),
+`get_loyalty_settings` / `set_loyalty_settings`, `adjust_loyalty_progress`,
+`choose_loyalty_redemption`, `report_loyalty`, `list_loyalty_accounts`
+(admin); `loyalty_reverse_visit` (internal, for a future void feature) and
+`loyalty_expire_rewards` (service role, job).
+
 ## 4. Access control (RLS)
 
 | Table | Read | Write |
@@ -389,6 +410,7 @@ internal `create_merchant_validation`, `merchant_hash_token`, `merchant_summary`
 | `pass_renewal_offers` | lot admins of the active lot | RPCs only (cron/admin/service) |
 | `merchants` | active lot (staff need the desk picker) | RPCs (lot admins) |
 | `pricing_rules` | lot admins of the active lot | RPCs (lot admins) |
+| `loyalty_accounts`, `loyalty_rewards`, `loyalty_visits`, `loyalty_adjustments` | lot admins of the active lot (operators get counts through `loyalty_plate_status`) | definer RPCs only |
 | `merchant_credentials` | nobody (RLS on, no policy, no grant) | definer RPCs only |
 | `merchant_validations` | active lot | RPCs (desk/admin/public) |
 | `notifications` | own rows, active lot (or global) | RPCs/triggers |
@@ -505,6 +527,19 @@ never reads rules or settings again, so previews, check-out and reprints agree.
 Base = tariff → pricing → merchant lines → reward → manual discount. A
 pass holder or lost ticket is excluded. Offline entries may only keep a cheaper
 lock; a public hold's promise wins when it is cheaper.
+
+**Loyalty rewards.** The closed-session trigger takes a per-plate advisory lock,
+upserts the account, consumes any `reward` line of `fare_adjustments`, and then
+applies the first failing rule as the skip reason (`reward_redeemed`, `pass`,
+`lost_ticket`, `exempt`, `below_amount`, `below_minutes`, `same_day`). A counted
+visit raises the counter; at N it creates the reward with the settings
+snapshot, points the visit at it and resets progress. `fare_reward_step` only
+reads (the preview has no side effect); it picks the oldest available
+non-expired reward, honours the mode/choice, the merchant-stack switch and the
+online-paid cap, and returns the adjustment line plus the info block. Reversal
+never creates a reward: an available reward goes `reversed`, a redeemed one is
+kept (no clawback of a benefit already given), and the progress returns to
+`N-1` only when the earning reward was still available.
 
 **Merchant agreements.** Benefits apply at check-out, never while the session
 is open. `fare_quote` walks the `pending` validations ordered by

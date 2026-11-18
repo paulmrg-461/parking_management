@@ -58,6 +58,8 @@ while true; do
   # webhook may have missed (both are no-ops without WOMPI_* credentials).
   run expire_payment_intents
   dispatch "${API_URL}/functions/v1/payments-reconcile"
+  # Loyalty rewards past their validity become `expired`.
+  run loyalty_expire_rewards
   # Both are no-ops until their credentials are configured.
   dispatch "${API_URL}/functions/v1/push-dispatch"
   dispatch "${API_URL}/functions/v1/whatsapp-dispatch"

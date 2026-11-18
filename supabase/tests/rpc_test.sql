@@ -12037,6 +12037,1943 @@ begin
     end if;
 end $$;
 
+
+-- ---------------------------------------------------------------------------
+-- loyalty: schema defaults
+-- ---------------------------------------------------------------------------
+do $$
+declare
+    settings public.parking_settings%rowtype;
+begin
+    select * into settings from public.parking_settings where lot_id = 1;
+    if settings.loyalty_enabled is not false
+       or settings.loyalty_visits_required <> 5
+       or settings.loyalty_reward_kind <> 'free_stay'
+       or settings.loyalty_reward_max_amount is not null
+       or settings.loyalty_reward_fixed_amount <> 0
+       or settings.loyalty_min_amount <> 0
+       or settings.loyalty_min_minutes <> 0
+       or settings.loyalty_redeem_mode <> 'auto'
+       or settings.loyalty_stack_with_merchant is not true
+       or settings.loyalty_reward_valid_days <> 90 then
+        raise exception 'the loyalty defaults are wrong';
+    end if;
+    begin
+        update public.parking_settings set loyalty_visits_required = 1 where lot_id = 1;
+        raise exception 'a single-visit program was accepted';
+    exception when check_violation then null;
+    end;
+    begin
+        update public.parking_settings set loyalty_reward_kind = 'bogus' where lot_id = 1;
+        raise exception 'an unknown reward kind was accepted';
+    exception when check_violation then null;
+    end;
+    begin
+        update public.parking_settings set loyalty_reward_kind = 'fixed_amount'
+         where lot_id = 1;
+        raise exception 'a fixed reward worth zero was accepted';
+    exception when check_violation then null;
+    end;
+    begin
+        update public.parking_settings set loyalty_reward_valid_days = 3 where lot_id = 1;
+        raise exception 'a three-day validity was accepted';
+    exception when check_violation then null;
+    end;
+end $$;
+
+-- loyalty: fixtures
+insert into public.parking_lots (code, name, address, timezone)
+values ('LYL', 'Loyalty Lot', 'Calle 4', 'America/Bogota');
+
+do $$
+begin
+    perform set_config('app.loyalty_lot', (
+        select id::text from public.parking_lots where code = 'LYL'
+    ), true);
+end $$;
+
+insert into public.parking_settings (
+    lot_id, name, address, car_capacity, moto_capacity
+)
+select current_setting('app.loyalty_lot')::integer, 'Loyalty Lot', 'Calle 4', 20, 5;
+
+insert into public.lot_members (lot_id, user_id, role)
+select current_setting('app.loyalty_lot')::integer, 1, 'admin'
+union all
+select current_setting('app.loyalty_lot')::integer, 2, 'operator';
+
+insert into public.categories (lot_id, name, capacity)
+select current_setting('app.loyalty_lot')::integer, 'car', 0;
+
+insert into public.tariffs (category_id, lot_id, type, amount, active, start_time, end_time)
+select c.id, current_setting('app.loyalty_lot')::integer, 'hourly', 3000, true, null, null
+  from public.categories c where c.lot_id = current_setting('app.loyalty_lot')::integer;
+insert into public.tariffs (category_id, lot_id, type, amount, active, start_time, end_time)
+select c.id, current_setting('app.loyalty_lot')::integer, 'nightly', 2000, true, '22:00', '06:00'
+  from public.categories c where c.lot_id = current_setting('app.loyalty_lot')::integer;
+insert into public.tariffs (category_id, lot_id, type, amount, active, start_time, end_time)
+select c.id, current_setting('app.loyalty_lot')::integer, 'daily', 20000, true, null, null
+  from public.categories c where c.lot_id = current_setting('app.loyalty_lot')::integer;
+
+insert into public.vehicles (plate, category_id)
+select 'LYL' || lpad(n::text, 2, '0'),
+       (select id from public.categories
+         where lot_id = current_setting('app.loyalty_lot')::integer)
+  from generate_series(1, 14) as n;
+
+update public.parking_settings
+   set loyalty_enabled = true,
+       loyalty_visits_required = 5,
+       loyalty_reward_kind = 'free_stay',
+       loyalty_reward_max_amount = null,
+       loyalty_reward_fixed_amount = 0,
+       loyalty_min_amount = 3000,
+       loyalty_min_minutes = 30,
+       loyalty_redeem_mode = 'auto',
+       loyalty_stack_with_merchant = true,
+       loyalty_reward_valid_days = 90
+ where lot_id = current_setting('app.loyalty_lot')::integer;
+
+do $$
+begin
+    perform set_config('request.headers',
+        jsonb_build_object('x-lot-id', current_setting('app.loyalty_lot'))::text, true);
+end $$;
+
+-- loyalty: anon cannot select tables
+set local role anon;
+do $$
+begin
+    begin
+        perform 1 from public.loyalty_accounts limit 1;
+        raise exception 'anon read the loyalty accounts';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform 1 from public.loyalty_rewards limit 1;
+        raise exception 'anon read the loyalty rewards';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform 1 from public.loyalty_visits limit 1;
+        raise exception 'anon read the loyalty visits';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform 1 from public.loyalty_adjustments limit 1;
+        raise exception 'anon read the loyalty adjustments';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
+-- loyalty: rls enabled
+do $$
+declare
+    missing text;
+begin
+    select string_agg(c.relname, ', ') into missing
+      from pg_class c
+      join pg_namespace n on n.oid = c.relnamespace
+     where n.nspname = 'public'
+       and c.relname in ('loyalty_accounts', 'loyalty_rewards',
+                         'loyalty_visits', 'loyalty_adjustments')
+       and not c.relrowsecurity;
+    if missing is not null then
+        raise exception 'RLS is off on %', missing;
+    end if;
+    if (select count(*) from pg_class c
+          join pg_namespace n on n.oid = c.relnamespace
+         where n.nspname = 'public'
+           and c.relname in ('loyalty_accounts', 'loyalty_rewards',
+                             'loyalty_visits', 'loyalty_adjustments')) <> 4 then
+        raise exception 'a loyalty table is missing';
+    end if;
+end $$;
+
+-- loyalty: unique account and visit
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+begin
+    insert into public.loyalty_accounts (lot_id, plate) values (lot, 'UNIQ1');
+    begin
+        insert into public.loyalty_accounts (lot_id, plate) values (lot, 'UNIQ1');
+        raise exception 'a duplicate account was accepted';
+    exception when unique_violation then null;
+    end;
+
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '1 hour', 'open'
+      from public.vehicles v where v.plate = 'LYL14'
+    returning id into session_row;
+    insert into public.loyalty_visits (
+        lot_id, plate, session_id, business_day, status
+    ) values (lot, 'LYL14', session_row, current_date, 'counted');
+    begin
+        insert into public.loyalty_visits (
+            lot_id, plate, session_id, business_day, status
+        ) values (lot, 'LYL14', session_row, current_date, 'counted');
+        raise exception 'a duplicate visit for one session was accepted';
+    exception when unique_violation then null;
+    end;
+end $$;
+
+-- loyalty: reward redeemed check
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+begin
+    begin
+        insert into public.loyalty_rewards (
+            lot_id, plate, status, kind, visits_required, expires_at
+        ) values (lot, 'UNIQ1', 'redeemed', 'free_stay', 5, now() + interval '10 days');
+        raise exception 'a redeemed reward without a session was accepted';
+    exception when check_violation then null;
+    end;
+end $$;
+
+-- loyalty: operator sees no rows
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+    reward_id bigint;
+begin
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '1 hour', 'open'
+      from public.vehicles v where v.plate = 'LYL13'
+    returning id into session_row;
+    insert into public.loyalty_visits (
+        lot_id, plate, session_id, business_day, status
+    ) values (lot, 'LYL13', session_row, current_date, 'counted');
+    insert into public.loyalty_rewards (
+        lot_id, plate, kind, visits_required, expires_at
+    ) values (lot, 'LYL13', 'free_stay', 5, now() + interval '10 days')
+    returning id into reward_id;
+end $$;
+
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    if (select count(*) from public.loyalty_visits) <> 0 then
+        raise exception 'an operator read the loyalty visits';
+    end if;
+    if (select count(*) from public.loyalty_accounts) <> 0 then
+        raise exception 'an operator read the loyalty accounts';
+    end if;
+end $$;
+reset role;
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+begin
+    if (select count(*) from public.loyalty_visits) < 1 then
+        raise exception 'the lot admin could not read the visits';
+    end if;
+end $$;
+do $$
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+end $$;
+do $$
+begin
+    if (select count(*) from public.loyalty_visits) <> 0 then
+        raise exception 'the admin of lot 1 read another lot visits';
+    end if;
+end $$;
+reset role;
+do $$
+begin
+    perform set_config('request.headers',
+        jsonb_build_object('x-lot-id', current_setting('app.loyalty_lot'))::text, true);
+end $$;
+
+-- loyalty: success visit counts
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+    account public.loyalty_accounts%rowtype;
+    visit public.loyalty_visits%rowtype;
+begin
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '2 hours', 'open'
+      from public.vehicles v where v.plate = 'LYL01'
+    returning id into session_row;
+    update public.parking_sessions
+       set status = 'closed', exit_time = now(), amount_charged = 9000,
+           payment_method = 'cash', gross_amount = 9000, fare_adjustments = '[]'::jsonb
+     where id = session_row;
+
+    select * into account from public.loyalty_accounts a
+     where a.lot_id = lot and a.plate = 'LYL01';
+    select * into visit from public.loyalty_visits v where v.session_id = session_row;
+    if not found or account.progress <> 1 then
+        raise exception 'the first visit did not count: %', account.progress;
+    end if;
+    if visit.status <> 'counted' or visit.progress_before <> 0
+       or visit.amount <> 9000 then
+        raise exception 'the counted visit shape is wrong';
+    end if;
+end $$;
+
+
+-- loyalty: success reward at fifth visit
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    day_offset integer;
+    exit_at timestamptz;
+    session_row integer;
+    account public.loyalty_accounts%rowtype;
+    reward public.loyalty_rewards%rowtype;
+    fifth_session integer;
+begin
+    for day_offset in 1..4 loop
+        exit_at := ((current_date - day_offset) + time '12:00') at time zone 'America/Bogota';
+        insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+        select v.id, 1, lot, exit_at - interval '2 hours', 'open'
+          from public.vehicles v where v.plate = 'LYL01'
+        returning id into session_row;
+        update public.parking_sessions
+           set status = 'closed', exit_time = exit_at, amount_charged = 9000,
+               payment_method = 'cash', gross_amount = 9000, fare_adjustments = '[]'::jsonb
+         where id = session_row;
+        if day_offset = 4 then
+            fifth_session := session_row;
+        end if;
+    end loop;
+
+    select * into account from public.loyalty_accounts a
+     where a.lot_id = lot and a.plate = 'LYL01';
+    if account.progress <> 0 or account.earned_total <> 1 then
+        raise exception 'the fifth visit did not reset the progress: % / %',
+            account.progress, account.earned_total;
+    end if;
+
+    select * into reward from public.loyalty_rewards r
+     where r.lot_id = lot and r.plate = 'LYL01' and r.status = 'available';
+    if not found then
+        raise exception 'the fifth visit did not earn a reward';
+    end if;
+    if reward.kind <> 'free_stay' or reward.visits_required <> 5
+       or reward.max_amount is not null or reward.fixed_amount <> 0
+       or reward.earned_session_id <> fifth_session then
+        raise exception 'the reward snapshot is wrong: %', to_jsonb(reward);
+    end if;
+    if reward.expires_at < now() + interval '89 days'
+       or reward.expires_at > now() + interval '91 days' then
+        raise exception 'the reward expiry is wrong: %', reward.expires_at;
+    end if;
+    if (select earned_reward_id from public.loyalty_visits where session_id = fifth_session)
+       is distinct from reward.id then
+        raise exception 'the earning visit does not point at the reward';
+    end if;
+    perform set_config('app.loy_reward', reward.id::text, true);
+    perform set_config('app.loy_fifth', fifth_session::text, true);
+end $$;
+
+-- loyalty: same day skipped
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+    visit public.loyalty_visits%rowtype;
+begin
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '4 hours', 'open'
+      from public.vehicles v where v.plate = 'LYL02'
+    returning id into session_row;
+    update public.parking_sessions
+       set status = 'closed', exit_time = now() - interval '2 hours',
+           amount_charged = 9000, payment_method = 'cash'
+     where id = session_row;
+
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '1 hour', 'open'
+      from public.vehicles v where v.plate = 'LYL02'
+    returning id into session_row;
+    update public.parking_sessions
+       set status = 'closed', exit_time = now(), amount_charged = 9000,
+           payment_method = 'cash'
+     where id = session_row;
+
+    select * into visit from public.loyalty_visits v where v.session_id = session_row;
+    if visit.status <> 'skipped' or visit.skip_reason <> 'same_day' then
+        raise exception 'the second visit of the day was not skipped: %',
+            to_jsonb(visit);
+    end if;
+    if (select progress from public.loyalty_accounts
+         where lot_id = lot and plate = 'LYL02') <> 1 then
+        raise exception 'the skipped visit changed the progress';
+    end if;
+end $$;
+
+-- loyalty: below minutes and below amount
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+    short_exit timestamptz := ((current_date - 3) + time '10:00') at time zone 'America/Bogota';
+begin
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, short_exit - interval '10 minutes', 'open'
+      from public.vehicles v where v.plate = 'LYL03'
+    returning id into session_row;
+    update public.parking_sessions
+       set status = 'closed', exit_time = short_exit, amount_charged = 9000,
+           payment_method = 'cash'
+     where id = session_row;
+    if (select skip_reason from public.loyalty_visits where session_id = session_row)
+       <> 'below_minutes' then
+        raise exception 'a 10 minute visit was not skipped as too short';
+    end if;
+
+    short_exit := ((current_date - 2) + time '10:00') at time zone 'America/Bogota';
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, short_exit - interval '2 hours', 'open'
+      from public.vehicles v where v.plate = 'LYL03'
+    returning id into session_row;
+    update public.parking_sessions
+       set status = 'closed', exit_time = short_exit, amount_charged = 1000,
+           payment_method = 'cash'
+     where id = session_row;
+    if (select skip_reason from public.loyalty_visits where session_id = session_row)
+       <> 'below_amount' then
+        raise exception 'a 1000 visit was not skipped as below the minimum';
+    end if;
+end $$;
+
+-- loyalty: zero charge never counts
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+begin
+    update public.parking_settings set loyalty_min_amount = 0 where lot_id = lot;
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '2 hours', 'open'
+      from public.vehicles v where v.plate = 'LYL04'
+    returning id into session_row;
+    update public.parking_sessions
+       set status = 'closed', exit_time = now(), amount_charged = 0,
+           payment_method = 'cash'
+     where id = session_row;
+    if (select skip_reason from public.loyalty_visits where session_id = session_row)
+       <> 'below_amount' then
+        raise exception 'a zero charge counted as a visit';
+    end if;
+    update public.parking_settings set loyalty_min_amount = 3000 where lot_id = lot;
+end $$;
+
+-- loyalty: pass lost exempt skipped
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+    expected text;
+    method text;
+    lost boolean;
+    n integer;
+begin
+    for n in 1..3 loop
+        expected := case n when 1 then 'pass' when 2 then 'lost_ticket' else 'exempt' end;
+        method := case n when 1 then 'monthly_pass' when 3 then 'exempt' else 'cash' end;
+        lost := n = 2;
+        insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+        select v.id, 1, lot, now() - interval '3 hours', 'open'
+          from public.vehicles v where v.plate = 'LYL05'
+        returning id into session_row;
+        update public.parking_sessions
+           set status = 'closed', exit_time = now() - make_interval(mins => (4 - n) * 10),
+               amount_charged = 9000, payment_method = method, lost_ticket = lost
+         where id = session_row;
+        if (select skip_reason from public.loyalty_visits where session_id = session_row)
+           <> expected then
+            raise exception 'visit % was not skipped as %: %', n, expected,
+                (select skip_reason from public.loyalty_visits where session_id = session_row);
+        end if;
+    end loop;
+    if (select progress from public.loyalty_accounts
+         where lot_id = lot and plate = 'LYL05') <> 0 then
+        raise exception 'a skipped visit changed the progress';
+    end if;
+end $$;
+
+-- loyalty: business day lot timezone
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    exit_at timestamptz;
+    session_row integer;
+begin
+    exit_at := ((current_date - 2) + time '23:30') at time zone 'America/Bogota';
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, exit_at - interval '2 hours', 'open'
+      from public.vehicles v where v.plate = 'LYL06'
+    returning id into session_row;
+    update public.parking_sessions
+       set status = 'closed', exit_time = exit_at, amount_charged = 9000,
+           payment_method = 'cash'
+     where id = session_row;
+
+    exit_at := ((current_date - 1) + time '00:10') at time zone 'America/Bogota';
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, exit_at - interval '2 hours', 'open'
+      from public.vehicles v where v.plate = 'LYL06'
+    returning id into session_row;
+    update public.parking_sessions
+       set status = 'closed', exit_time = exit_at, amount_charged = 9000,
+           payment_method = 'cash'
+     where id = session_row;
+
+    if (select count(*) from public.loyalty_visits v
+         where v.lot_id = lot and v.plate = 'LYL06' and v.status = 'counted') <> 2 then
+        raise exception 'the business day did not follow the lot timezone';
+    end if;
+    if (select progress from public.loyalty_accounts
+         where lot_id = lot and plate = 'LYL06') <> 2 then
+        raise exception 'the two local days did not both count';
+    end if;
+end $$;
+
+-- loyalty: lot isolation
+insert into public.parking_lots (code, name, address, timezone)
+values ('LY2', 'Loyalty Lot 2', 'Calle 5', 'America/Bogota');
+do $$
+begin
+    perform set_config('app.loyalty_lot2', (
+        select id::text from public.parking_lots where code = 'LY2'
+    ), true);
+end $$;
+insert into public.parking_settings (lot_id, name, address, car_capacity, moto_capacity)
+select current_setting('app.loyalty_lot2')::integer, 'Loyalty Lot 2', 'Calle 5', 5, 0;
+insert into public.lot_members (lot_id, user_id, role)
+select current_setting('app.loyalty_lot2')::integer, 1, 'admin';
+update public.parking_settings
+   set loyalty_enabled = true, loyalty_min_amount = 3000, loyalty_min_minutes = 30
+ where lot_id = current_setting('app.loyalty_lot2')::integer;
+
+do $$
+declare
+    lot1 integer := current_setting('app.loyalty_lot')::integer;
+    lot2 integer := current_setting('app.loyalty_lot2')::integer;
+    session_row integer;
+begin
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot2, now() - interval '2 hours', 'open'
+      from public.vehicles v where v.plate = 'LYL01'
+    returning id into session_row;
+    update public.parking_sessions
+       set status = 'closed', exit_time = now(), amount_charged = 9000,
+           payment_method = 'cash'
+     where id = session_row;
+
+    if (select progress from public.loyalty_accounts a
+         where a.lot_id = lot2 and a.plate = 'LYL01') <> 1 then
+        raise exception 'lot 2 did not create its own account';
+    end if;
+    if (select progress from public.loyalty_accounts a
+         where a.lot_id = lot1 and a.plate = 'LYL01') <> 0 then
+        raise exception 'lot 2 progress leaked into lot 1';
+    end if;
+end $$;
+
+-- loyalty: disabled writes nothing
+do $$
+declare
+    lot2 integer := current_setting('app.loyalty_lot2')::integer;
+    before_visits integer;
+    before_progress integer;
+    session_row integer;
+begin
+    select count(*) into before_visits from public.loyalty_visits where lot_id = lot2;
+    select progress into before_progress from public.loyalty_accounts
+     where lot_id = lot2 and plate = 'LYL01';
+    update public.parking_settings set loyalty_enabled = false where lot_id = lot2;
+
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot2, now() - interval '2 hours', 'open'
+      from public.vehicles v where v.plate = 'LYL02'
+    returning id into session_row;
+    update public.parking_sessions
+       set status = 'closed', exit_time = now(), amount_charged = 9000,
+           payment_method = 'cash'
+     where id = session_row;
+
+    if (select count(*) from public.loyalty_visits where lot_id = lot2) <> before_visits then
+        raise exception 'a disabled lot wrote a visit';
+    end if;
+    if (select progress from public.loyalty_accounts
+         where lot_id = lot2 and plate = 'LYL01') <> before_progress then
+        raise exception 'a disabled lot changed the progress';
+    end if;
+end $$;
+
+-- loyalty: settings change keeps snapshot
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    reward public.loyalty_rewards%rowtype;
+begin
+    update public.parking_settings
+       set loyalty_reward_kind = 'fixed_amount',
+           loyalty_reward_fixed_amount = 5000
+     where lot_id = lot;
+    select * into reward from public.loyalty_rewards r
+     where r.id = current_setting('app.loy_reward')::bigint;
+    if reward.kind <> 'free_stay' or reward.fixed_amount <> 0 then
+        raise exception 'the earned reward was rewritten by the settings: %',
+            to_jsonb(reward);
+    end if;
+    update public.parking_settings
+       set loyalty_reward_kind = 'free_stay',
+           loyalty_reward_fixed_amount = 0
+     where lot_id = lot;
+end $$;
+
+-- loyalty: trigger never blocks check_out
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+begin
+    alter table public.loyalty_visits
+        add constraint tmp_loyalty_fail check (false) not valid;
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '2 hours', 'open'
+      from public.vehicles v where v.plate = 'LYL07'
+    returning id into session_row;
+    update public.parking_sessions
+       set status = 'closed', exit_time = now(), amount_charged = 9000,
+           payment_method = 'cash'
+     where id = session_row;
+    if (select status from public.parking_sessions where id = session_row) <> 'closed' then
+        raise exception 'a loyalty failure blocked the check-out';
+    end if;
+    alter table public.loyalty_visits drop constraint tmp_loyalty_fail;
+end $$;
+
+-- loyalty: concurrent plate lock key
+do $$
+begin
+    if not exists (
+        select 1 from pg_proc p
+         where p.proname = 'loyalty_on_session_closed'
+           and p.prosrc like '%pg_advisory_xact_lock(hashtext(''loyalty:''%'
+    ) then
+        raise exception 'the trigger lost its per-plate advisory lock';
+    end if;
+end $$;
+
+
+-- loyalty: extra fixtures for the hook
+insert into public.vehicles (plate, category_id)
+select 'LYL' || n,
+       (select id from public.categories
+         where lot_id = current_setting('app.loyalty_lot')::integer)
+  from unnest(array['15','16','17','18','19','20','21','22']) as n;
+
+-- loyalty: hook off returns no-op
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+    quote jsonb;
+    base integer;
+begin
+    update public.parking_settings set loyalty_enabled = false where lot_id = lot;
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '2 hours', 'open'
+      from public.vehicles v where v.plate = 'LYL15'
+    returning id into session_row;
+    quote := public.fare_quote(session_row, now(), 0, false);
+    base := (quote ->> 'base_amount')::integer;
+    if (quote -> 'reward') is not null and (quote -> 'reward') <> 'null'::jsonb then
+        raise exception 'a disabled program returned a reward';
+    end if;
+    if (quote ->> 'gross')::integer <> base
+       or (quote ->> 'amount_due')::integer <> base then
+        raise exception 'a disabled program changed the fare';
+    end if;
+    delete from public.parking_sessions where id = session_row;
+    update public.parking_settings set loyalty_enabled = true where lot_id = lot;
+end $$;
+
+-- loyalty: free stay no cap midnight
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+    quote jsonb;
+begin
+    insert into public.loyalty_rewards (lot_id, plate, kind, visits_required, expires_at)
+    values (lot, 'LYL15', 'free_stay', 5, now() + interval '30 days');
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot,
+           ((current_date - 1) + time '23:00') at time zone 'America/Bogota', 'open'
+      from public.vehicles v where v.plate = 'LYL15'
+    returning id into session_row;
+    quote := public.fare_quote(
+        session_row,
+        (current_date + time '02:00') at time zone 'America/Bogota',
+        0, false
+    );
+    if (quote ->> 'base_amount')::integer <> 6000
+       or (quote ->> 'gross')::integer <> 6000 then
+        raise exception 'the midnight base is wrong: %', quote;
+    end if;
+    if (quote -> 'adjustments' -> 0 ->> 'type') <> 'reward'
+       or (quote -> 'adjustments' -> 0 ->> 'amount')::integer <> 6000
+       or (quote ->> 'amount_due')::integer <> 0 then
+        raise exception 'the free stay was not applied: %', quote;
+    end if;
+    if (quote -> 'reward' ->> 'applied')::boolean is not true then
+        raise exception 'the reward info does not report the application';
+    end if;
+    delete from public.parking_sessions where id = session_row;
+end $$;
+
+-- loyalty: fixed on capped day
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+    quote jsonb;
+begin
+    insert into public.loyalty_rewards (
+        lot_id, plate, kind, fixed_amount, visits_required, expires_at
+    ) values (lot, 'LYL16', 'fixed_amount', 5000, 5, now() + interval '30 days');
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot,
+           ((current_date - 1) + time '08:00') at time zone 'America/Bogota', 'open'
+      from public.vehicles v where v.plate = 'LYL16'
+    returning id into session_row;
+    quote := public.fare_quote(
+        session_row,
+        (current_date - 1 + time '18:00') at time zone 'America/Bogota',
+        0, false
+    );
+    if (quote ->> 'base_amount')::integer <> 20000
+       or (quote ->> 'amount_due')::integer <> 15000
+       or (quote -> 'adjustments' -> 0 ->> 'amount')::integer <> 5000 then
+        raise exception 'the fixed reward on the daily cap is wrong: %', quote;
+    end if;
+    delete from public.parking_sessions where id = session_row;
+end $$;
+
+-- loyalty: free stay cap
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+    quote jsonb;
+begin
+    insert into public.loyalty_rewards (
+        lot_id, plate, kind, max_amount, visits_required, expires_at
+    ) values (lot, 'LYL17', 'free_stay', 8000, 5, now() + interval '30 days');
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot,
+           ((current_date - 1) + time '20:00') at time zone 'America/Bogota', 'open'
+      from public.vehicles v where v.plate = 'LYL17'
+    returning id into session_row;
+    quote := public.fare_quote(
+        session_row,
+        (current_date - 1 + time '23:30') at time zone 'America/Bogota',
+        0, false
+    );
+    if (quote ->> 'base_amount')::integer <> 10000
+       or (quote ->> 'amount_due')::integer <> 2000
+       or (quote -> 'adjustments' -> 0 ->> 'amount')::integer <> 8000 then
+        raise exception 'the free stay cap is wrong: %', quote;
+    end if;
+    delete from public.parking_sessions where id = session_row;
+end $$;
+
+-- loyalty: lost ticket no reward
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+    quote jsonb;
+begin
+    insert into public.loyalty_rewards (lot_id, plate, kind, visits_required, expires_at)
+    values (lot, 'LYL18', 'free_stay', 5, now() + interval '30 days');
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot,
+           ((current_date - 1) + time '09:00') at time zone 'America/Bogota', 'open'
+      from public.vehicles v where v.plate = 'LYL18'
+    returning id into session_row;
+    quote := public.fare_quote(
+        session_row,
+        (current_date - 1 + time '11:00') at time zone 'America/Bogota',
+        0, true
+    );
+    if (quote ->> 'gross')::integer <> public.lost_ticket_amount(
+           session_row,
+           (current_date - 1 + time '11:00') at time zone 'America/Bogota')
+       or (quote ->> 'amount_due')::integer <> (quote ->> 'gross')::integer
+       or jsonb_array_length(quote -> 'adjustments') <> 0 then
+        raise exception 'a lost ticket received a reward: %', quote;
+    end if;
+    if (select status from public.loyalty_rewards
+         where lot_id = lot and plate = 'LYL18') <> 'available' then
+        raise exception 'the lost ticket consumed the reward';
+    end if;
+    delete from public.parking_sessions where id = session_row;
+end $$;
+
+-- loyalty: pass no reward
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+    quote jsonb;
+begin
+    insert into public.monthly_passes (vehicle_id, lot_id, start_date, end_date, amount)
+    select v.id, lot, current_date - 1, current_date + 30, 150000
+      from public.vehicles v where v.plate = 'LYL18';
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot,
+           ((current_date - 1) + time '09:00') at time zone 'America/Bogota', 'open'
+      from public.vehicles v where v.plate = 'LYL18'
+    returning id into session_row;
+    quote := public.fare_quote(
+        session_row,
+        (current_date - 1 + time '11:00') at time zone 'America/Bogota',
+        0, false
+    );
+    if (quote ->> 'gross')::integer <> 0
+       or (quote ->> 'amount_due')::integer <> 0
+       or jsonb_array_length(quote -> 'adjustments') <> 0 then
+        raise exception 'a pass holder received a reward: %', quote;
+    end if;
+    delete from public.parking_sessions where id = session_row;
+end $$;
+
+-- loyalty: stack canonical with pricing
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+    quote jsonb;
+    merchant_id integer;
+begin
+    insert into public.loyalty_rewards (
+        lot_id, plate, kind, fixed_amount, visits_required, expires_at
+    ) values (lot, 'LYL19', 'fixed_amount', 2000, 5, now() + interval '30 days');
+    insert into public.parking_sessions (
+        vehicle_id, operator_id, lot_id, entry_time, status, pricing_lock
+    )
+    select v.id, 1, lot,
+           ((current_date - 1) + time '09:00') at time zone 'America/Bogota', 'open',
+           jsonb_build_object(
+               'v', 1, 'rule_id', null, 'rule_name', 'Alta ocupacion',
+               'kind', 'multiplier', 'multiplier_bps', 12000,
+               'surcharge_amount', 0, 'floor_bps', 10000, 'ceiling_bps', 15000,
+               'round_to', 1, 'occupancy_pct', 85, 'locked_at', now(),
+               'source', 'checkin'
+           )
+      from public.vehicles v where v.plate = 'LYL19'
+    returning id into session_row;
+
+    merchant_id := (public.save_merchant(
+        'Convenio fidelidad', 'percentage', 50, null, 'merchant_paid',
+        null, null, true, null
+    ) -> 'merchant' ->> 'id')::integer;
+    perform public.create_merchant_validation(merchant_id, session_row, 'public', null);
+
+    quote := public.fare_quote(
+        session_row,
+        (current_date - 1 + time '11:30') at time zone 'America/Bogota',
+        400, false
+    );
+    if (quote ->> 'base_amount')::integer <> 9000
+       or (quote ->> 'gross')::integer <> 10800 then
+        raise exception 'the canonical stack base is wrong: %', quote;
+    end if;
+    if (quote -> 'adjustments' -> 0 ->> 'amount')::integer <> 5400
+       or (quote -> 'adjustments' -> 1 ->> 'type') <> 'reward'
+       or (quote -> 'adjustments' -> 1 ->> 'amount')::integer <> 2000 then
+        raise exception 'the canonical stack lines are wrong: %', quote;
+    end if;
+    if (quote ->> 'amount_due')::integer <> 3000 then
+        raise exception 'the canonical stack due is wrong: %', quote;
+    end if;
+    perform set_config('app.loy_stack_session', session_row::text, true);
+end $$;
+
+-- loyalty: not stacked with merchant when off
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer := current_setting('app.loy_stack_session')::integer;
+    quote jsonb;
+begin
+    update public.parking_settings set loyalty_stack_with_merchant = false
+     where lot_id = lot;
+    quote := public.fare_quote(
+        session_row,
+        (current_date - 1 + time '11:30') at time zone 'America/Bogota',
+        400, false
+    );
+    if (quote ->> 'amount_due')::integer <> 5000
+       or (quote -> 'reward' ->> 'reason') <> 'merchant'
+       or (quote -> 'reward' ->> 'applied')::boolean is not false then
+        raise exception 'the merchant stack switch is wrong: %', quote;
+    end if;
+    if (select status from public.loyalty_rewards
+         where lot_id = lot and plate = 'LYL19') <> 'available' then
+        raise exception 'a skipped reward was consumed';
+    end if;
+    update public.parking_settings set loyalty_stack_with_merchant = true
+     where lot_id = lot;
+end $$;
+
+-- loyalty: floor zero skipped
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+    quote jsonb;
+    merchant_id integer;
+begin
+    insert into public.loyalty_rewards (
+        lot_id, plate, kind, fixed_amount, visits_required, expires_at
+    ) values (lot, 'LYL20', 'fixed_amount', 2000, 5, now() + interval '30 days');
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot,
+           ((current_date - 1) + time '10:00') at time zone 'America/Bogota', 'open'
+      from public.vehicles v where v.plate = 'LYL20'
+    returning id into session_row;
+    merchant_id := (public.save_merchant(
+        'Convenio cero', 'fixed_amount', 5000, null, 'merchant_paid',
+        null, null, true, null
+    ) -> 'merchant' ->> 'id')::integer;
+    perform public.create_merchant_validation(merchant_id, session_row, 'public', null);
+
+    quote := public.fare_quote(
+        session_row,
+        (current_date - 1 + time '11:00') at time zone 'America/Bogota',
+        0, false
+    );
+    if (quote ->> 'base_amount')::integer <> 3000
+       or (quote ->> 'amount_due')::integer <> 0 then
+        raise exception 'the zero floor is wrong: %', quote;
+    end if;
+    if (quote -> 'reward' ->> 'reason') <> 'zero'
+       or (quote -> 'reward' ->> 'applied')::boolean is not false then
+        raise exception 'the reward was not skipped at the floor: %', quote;
+    end if;
+    delete from public.parking_sessions where id = session_row;
+end $$;
+
+-- loyalty: online paid cap
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+    quote jsonb;
+begin
+    insert into public.loyalty_rewards (
+        lot_id, plate, kind, fixed_amount, visits_required, expires_at
+    ) values (lot, 'LYL21', 'fixed_amount', 2000, 5, now() + interval '30 days');
+    insert into public.parking_sessions (
+        vehicle_id, operator_id, lot_id, entry_time, status, online_paid_amount
+    )
+    select v.id, 1, lot, now() - interval '3 hours', 'open', 9000
+      from public.vehicles v where v.plate = 'LYL21'
+    returning id into session_row;
+    quote := public.fare_quote(session_row, now(), 0, false);
+    if (quote -> 'reward' ->> 'reason') <> 'zero'
+       or (quote ->> 'amount_due')::integer <> 9000 then
+        raise exception 'a fully paid online session got a reward: %', quote;
+    end if;
+
+    update public.parking_sessions set online_paid_amount = 6000 where id = session_row;
+    quote := public.fare_quote(session_row, now(), 0, false);
+    if (quote ->> 'amount_due')::integer <> 7000
+       or (quote -> 'adjustments' -> 0 ->> 'amount')::integer <> 2000 then
+        raise exception 'the partial online cap is wrong: %', quote;
+    end if;
+    delete from public.parking_sessions where id = session_row;
+end $$;
+
+-- loyalty: oldest reward first
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    older bigint;
+    session_row integer;
+    quote jsonb;
+begin
+    insert into public.loyalty_rewards (
+        lot_id, plate, kind, visits_required, expires_at, created_at
+    ) values (lot, 'LYL22', 'free_stay', 5, now() + interval '30 days',
+              now() - interval '2 days')
+    returning id into older;
+    insert into public.loyalty_rewards (
+        lot_id, plate, kind, visits_required, expires_at, created_at
+    ) values (lot, 'LYL22', 'free_stay', 5, now() + interval '30 days',
+              now() - interval '1 day');
+
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '2 hours', 'open'
+      from public.vehicles v where v.plate = 'LYL22'
+    returning id into session_row;
+    quote := public.fare_quote(session_row, now(), 0, false);
+    if (quote -> 'adjustments' -> 0 ->> 'ref_id')::bigint <> older then
+        raise exception 'the newest reward was consumed first: %', quote;
+    end if;
+    if jsonb_array_length(quote -> 'adjustments') <> 1 then
+        raise exception 'two rewards were applied to one session: %', quote;
+    end if;
+    delete from public.parking_sessions where id = session_row;
+end $$;
+
+-- loyalty: expired reward not applied
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+    quote jsonb;
+begin
+    insert into public.loyalty_rewards (
+        lot_id, plate, kind, visits_required, expires_at
+    ) values (lot, 'LYL15', 'free_stay', 5, now() - interval '1 day');
+    delete from public.loyalty_rewards
+     where lot_id = lot and plate = 'LYL15' and expires_at > now();
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '2 hours', 'open'
+      from public.vehicles v where v.plate = 'LYL15'
+    returning id into session_row;
+    quote := public.fare_quote(session_row, now(), 0, false);
+    if (quote -> 'reward' ->> 'available')::boolean is not false
+       or jsonb_array_length(quote -> 'adjustments') <> 0 then
+        raise exception 'an expired reward was applied: %', quote;
+    end if;
+    delete from public.parking_sessions where id = session_row;
+end $$;
+
+-- loyalty: preview has no side effect
+do $$
+declare
+    session_row integer := current_setting('app.loy_stack_session')::integer;
+    before_rewards integer;
+    before_visits integer;
+begin
+    select count(*) into before_rewards from public.loyalty_rewards;
+    select count(*) into before_visits from public.loyalty_visits;
+    perform public.check_out_preview(session_row);
+    perform public.check_out_preview(session_row);
+    if (select count(*) from public.loyalty_rewards) <> before_rewards
+       or (select count(*) from public.loyalty_visits) <> before_visits then
+        raise exception 'the preview wrote loyalty rows';
+    end if;
+end $$;
+
+-- loyalty: redeem marks reward and skips visit
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+    reward_id bigint;
+    result jsonb;
+    visit public.loyalty_visits%rowtype;
+begin
+    insert into public.loyalty_rewards (
+        lot_id, plate, kind, visits_required, expires_at
+    ) values (lot, 'LYL15', 'free_stay', 5, now() + interval '30 days')
+    returning id into reward_id;
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '2 hours', 'open'
+      from public.vehicles v where v.plate = 'LYL15'
+    returning id into session_row;
+
+    result := public.check_out(session_row);
+    if (result ->> 'amount_charged')::integer <> 0 then
+        raise exception 'the free stay was not free: %', result;
+    end if;
+    if (select status from public.loyalty_rewards where id = reward_id) <> 'redeemed' then
+        raise exception 'the reward was not marked as redeemed';
+    end if;
+    if (select redeemed_amount from public.loyalty_rewards where id = reward_id) <> 6000 then
+        raise exception 'the redeemed amount is wrong';
+    end if;
+    select * into visit from public.loyalty_visits v where v.session_id = session_row;
+    if visit.status <> 'skipped' or visit.skip_reason <> 'reward_redeemed' then
+        raise exception 'the redeeming visit was not skipped: %', to_jsonb(visit);
+    end if;
+    if (select redeemed_total from public.loyalty_accounts
+         where lot_id = lot and plate = 'LYL15') <> 1 then
+        raise exception 'redeemed_total was not raised';
+    end if;
+    perform set_config('app.loy_redeem_session', session_row::text, true);
+    perform set_config('app.loy_redeem_reward', reward_id::text, true);
+end $$;
+
+-- loyalty: operator mode waits for choice
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+    quote jsonb;
+begin
+    update public.parking_settings set loyalty_redeem_mode = 'operator' where lot_id = lot;
+    delete from public.loyalty_rewards where lot_id = lot and plate = 'LYL16';
+    insert into public.loyalty_rewards (
+        lot_id, plate, kind, fixed_amount, visits_required, expires_at
+    ) values (lot, 'LYL16', 'fixed_amount', 2000, 5, now() + interval '30 days');
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '2 hours', 'open'
+      from public.vehicles v where v.plate = 'LYL16'
+    returning id into session_row;
+
+    quote := public.fare_quote(session_row, now(), 0, false);
+    if (quote -> 'reward' ->> 'reason') <> 'operator_choice_pending'
+       or jsonb_array_length(quote -> 'adjustments') <> 0 then
+        raise exception 'the operator mode applied a reward early: %', quote;
+    end if;
+
+    if (public.choose_loyalty_redemption(session_row, 'redeem') ->> 'choice')
+       is distinct from 'redeem' then
+        raise exception 'the redemption choice was not stored';
+    end if;
+    quote := public.fare_quote(session_row, now(), 0, false);
+    if (quote ->> 'amount_due')::integer <> 4000
+       or (quote -> 'reward' ->> 'applied')::boolean is not true then
+        raise exception 'the operator choice did not apply the reward: %', quote;
+    end if;
+    update public.parking_settings set loyalty_redeem_mode = 'auto' where lot_id = lot;
+end $$;
+
+-- loyalty: choice skip in auto
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+    quote jsonb;
+    result jsonb;
+begin
+    delete from public.loyalty_rewards where lot_id = lot and plate = 'LYL17';
+    insert into public.loyalty_rewards (
+        lot_id, plate, kind, fixed_amount, visits_required, expires_at
+    ) values (lot, 'LYL17', 'fixed_amount', 2000, 5, now() + interval '30 days');
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '2 hours', 'open'
+      from public.vehicles v where v.plate = 'LYL17'
+    returning id into session_row;
+
+    perform public.choose_loyalty_redemption(session_row, 'skip');
+    quote := public.fare_quote(session_row, now(), 0, false);
+    if (quote -> 'reward' ->> 'reason') <> 'skipped'
+       or jsonb_array_length(quote -> 'adjustments') <> 0 then
+        raise exception 'the automatic mode ignored the skip: %', quote;
+    end if;
+    result := public.check_out(session_row);
+    if (result ->> 'amount_charged')::integer <> 6000 then
+        raise exception 'the skipped reward was applied anyway: %', result;
+    end if;
+    if (select status from public.loyalty_visits where session_id = session_row) <> 'counted' then
+        raise exception 'a skipped reward still counted the visit as redeeming';
+    end if;
+end $$;
+
+-- loyalty: choose redeem without reward
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+begin
+    delete from public.loyalty_rewards where lot_id = lot and plate = 'LYL18';
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '2 hours', 'open'
+      from public.vehicles v where v.plate = 'LYL18'
+    returning id into session_row;
+    begin
+        perform public.choose_loyalty_redemption(session_row, 'redeem');
+        raise exception 'a redemption without a reward was accepted';
+    exception when others then
+        if sqlerrm not like '%NoRewardAvailableError%' then raise; end if;
+    end;
+end $$;
+
+-- loyalty: choose invalid
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+begin
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '2 hours', 'open'
+      from public.vehicles v where v.plate = 'LYL20'
+    returning id into session_row;
+    begin
+        perform public.choose_loyalty_redemption(session_row, 'later');
+        raise exception 'an invalid redemption choice was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidLoyaltyChoiceError%' then raise; end if;
+    end;
+end $$;
+
+-- loyalty: choose closed session
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+begin
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '2 hours', 'open'
+      from public.vehicles v where v.plate = 'LYL21'
+    returning id into session_row;
+    update public.parking_sessions set status = 'closed', exit_time = now()
+     where id = session_row;
+    begin
+        perform public.choose_loyalty_redemption(session_row, 'skip');
+        raise exception 'a closed session accepted a choice';
+    exception when others then
+        if sqlerrm not like '%SessionAlreadyClosedError%' then raise; end if;
+    end;
+end $$;
+
+
+-- loyalty: status counts
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    payload jsonb;
+begin
+    insert into public.loyalty_accounts (lot_id, plate, progress, earned_total)
+    values (lot, 'ST001', 3, 1);
+    payload := public.loyalty_plate_status('st 001');
+    if (payload ->> 'enabled')::boolean is not true
+       or (payload ->> 'visits')::integer <> 3
+       or (payload ->> 'next_visit')::integer <> 4
+       or (payload ->> 'required')::integer <> 5
+       or (payload ->> 'reward_count')::integer <> 0
+       or (payload ->> 'counted_today')::boolean is not false then
+        raise exception 'the plate status counts are wrong: %', payload;
+    end if;
+end $$;
+
+-- loyalty: status reward and expiry
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    payload jsonb;
+    soonest timestamptz;
+begin
+    insert into public.loyalty_rewards (
+        lot_id, plate, kind, visits_required, expires_at
+    ) values (lot, 'ST001', 'free_stay', 5, now() + interval '10 days'),
+             (lot, 'ST001', 'fixed_amount', 5, now() + interval '5 days');
+    select min(expires_at) into soonest from public.loyalty_rewards
+     where lot_id = lot and plate = 'ST001' and status = 'available';
+    payload := public.loyalty_plate_status('ST001');
+    if (payload ->> 'reward_count')::integer <> 2 then
+        raise exception 'the plate status reward count is wrong: %', payload;
+    end if;
+    if (payload ->> 'reward_expires_at')::timestamptz <> soonest then
+        raise exception 'the plate status expiry is not the soonest: %', payload;
+    end if;
+end $$;
+
+-- loyalty: status disabled
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+begin
+    update public.parking_settings set loyalty_enabled = false where lot_id = lot;
+    if public.loyalty_plate_status('ST001') <> '{"enabled": false}'::jsonb then
+        raise exception 'the disabled status is not a single key';
+    end if;
+    update public.parking_settings set loyalty_enabled = true where lot_id = lot;
+end $$;
+
+-- loyalty: status creates no account
+do $$
+begin
+    perform public.loyalty_plate_status('ZZZ99');
+    if exists (select 1 from public.loyalty_accounts where plate = 'ZZZ99') then
+        raise exception 'the status created an account';
+    end if;
+end $$;
+
+-- loyalty: status invalid plate
+do $$
+begin
+    begin
+        perform public.loyalty_plate_status('X');
+        raise exception 'a one-character plate was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidPlateError%' then raise; end if;
+    end;
+end $$;
+
+-- loyalty: status anon denied
+set local role anon;
+do $$
+begin
+    begin
+        perform public.loyalty_plate_status('ST001');
+        raise exception 'anon read the loyalty status';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
+-- loyalty: settings get and set
+do $$
+declare
+    settings jsonb;
+begin
+    settings := public.get_loyalty_settings();
+    if (settings ->> 'visits_required')::integer <> 5
+       or (settings ->> 'reward_kind') <> 'free_stay'
+       or (settings ->> 'redeem_mode') <> 'auto' then
+        raise exception 'the settings shape is wrong: %', settings;
+    end if;
+
+    settings := public.set_loyalty_settings(
+        jsonb_build_object('visits_required', 6, 'reward_max_amount', 5000)
+    );
+    if (settings ->> 'visits_required')::integer <> 6
+       or (settings ->> 'reward_max_amount')::integer <> 5000 then
+        raise exception 'the settings were not saved: %', settings;
+    end if;
+    if not exists (
+        select 1 from public.audit_log a
+         where a.table_name = 'parking_settings' and a.action = 'update'
+           and a.lot_id = current_setting('app.loyalty_lot')::integer
+    ) then
+        raise exception 'the settings change was not audited';
+    end if;
+
+    settings := public.set_loyalty_settings(
+        jsonb_build_object('reward_max_amount', null)
+    );
+    if settings -> 'reward_max_amount' <> 'null'::jsonb then
+        raise exception 'a null cap did not clear the maximum: %', settings;
+    end if;
+
+    settings := public.set_loyalty_settings(
+        jsonb_build_object('visits_required', 5, 'reward_kind', 'free_stay',
+                           'reward_fixed_amount', 0)
+    );
+    if (settings ->> 'visits_required')::integer <> 5 then
+        raise exception 'the visits required were not restored';
+    end if;
+end $$;
+
+-- loyalty: settings invalid
+do $$
+begin
+    begin
+        perform public.set_loyalty_settings(jsonb_build_object('visits_required', 1));
+        raise exception 'an invalid program was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidLoyaltySettingsError%' then raise; end if;
+    end;
+    begin
+        perform public.set_loyalty_settings(jsonb_build_object(
+            'reward_kind', 'fixed_amount', 'reward_fixed_amount', 0));
+        raise exception 'a fixed reward worth zero was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidLoyaltySettingsError%' then raise; end if;
+    end;
+end $$;
+
+-- loyalty: settings admin only
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    begin
+        perform public.get_loyalty_settings();
+        raise exception 'an operator read the loyalty settings';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+    begin
+        perform public.set_loyalty_settings(jsonb_build_object('enabled', true));
+        raise exception 'an operator wrote the loyalty settings';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- loyalty: adjust ok
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    result jsonb;
+begin
+    result := public.adjust_loyalty_progress('ST001', 1, 'Ajuste manual');
+    if (result ->> 'progress')::integer <> 4
+       or (result ->> 'required')::integer <> 5 then
+        raise exception 'the adjustment shape is wrong: %', result;
+    end if;
+    if not exists (
+        select 1 from public.loyalty_adjustments a
+         where a.lot_id = lot and a.plate = 'ST001'
+           and a.delta = 1 and a.actor_id = (
+               select id from public.users
+                where auth_user_id = '00000000-0000-0000-0000-000000000001')
+    ) then
+        raise exception 'the adjustment was not recorded with its actor';
+    end if;
+end $$;
+
+-- loyalty: adjust range
+do $$
+begin
+    begin
+        perform public.adjust_loyalty_progress('ST001', 1, 'Fuera de rango');
+        raise exception 'an adjustment to N was accepted';
+    exception when others then
+        if sqlerrm not like '%LoyaltyAdjustRangeError%' then raise; end if;
+    end;
+    begin
+        perform public.adjust_loyalty_progress('ST001', -10, 'Bajo cero');
+        raise exception 'an adjustment below zero was accepted';
+    exception when others then
+        if sqlerrm not like '%LoyaltyAdjustRangeError%' then raise; end if;
+    end;
+end $$;
+
+-- loyalty: adjust reason
+do $$
+begin
+    begin
+        perform public.adjust_loyalty_progress('ST001', -1, 'ab');
+        raise exception 'a two-character reason was accepted';
+    exception when others then
+        if sqlerrm not like '%LoyaltyReasonRequiredError%' then raise; end if;
+    end;
+end $$;
+
+-- loyalty: adjust no account
+do $$
+begin
+    begin
+        perform public.adjust_loyalty_progress('NOACC1', 1, 'Sin cuenta');
+        raise exception 'an adjustment without an account was accepted';
+    exception when others then
+        if sqlerrm not like '%LoyaltyAccountNotFoundError%' then raise; end if;
+    end;
+end $$;
+
+-- loyalty: adjust disabled
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+begin
+    update public.parking_settings set loyalty_enabled = false where lot_id = lot;
+    begin
+        perform public.adjust_loyalty_progress('ST001', 1, 'Programa apagado');
+        raise exception 'a disabled program accepted an adjustment';
+    exception when others then
+        if sqlerrm not like '%LoyaltyDisabledError%' then raise; end if;
+    end;
+    update public.parking_settings set loyalty_enabled = true where lot_id = lot;
+end $$;
+
+-- loyalty: adjust operator denied
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    begin
+        perform public.adjust_loyalty_progress('ST001', -1, 'Operador');
+        raise exception 'an operator adjusted the progress';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- loyalty: reverse earning visit
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    fifth integer := current_setting('app.loy_fifth')::integer;
+    reward_id bigint := current_setting('app.loy_reward')::bigint;
+    result jsonb;
+begin
+    result := public.loyalty_reverse_visit(fifth);
+    if (result ->> 'reversed')::boolean is not true
+       or (result ->> 'reward_reversed')::boolean is not true
+       or (result ->> 'progress')::integer <> 4 then
+        raise exception 'the earning visit reversal is wrong: %', result;
+    end if;
+    if (select status from public.loyalty_rewards where id = reward_id) <> 'reversed' then
+        raise exception 'the earned reward was not reversed';
+    end if;
+    if (select earned_total from public.loyalty_accounts
+         where lot_id = lot and plate = 'LYL01') <> 0 then
+        raise exception 'the earned total did not drop';
+    end if;
+end $$;
+
+-- loyalty: reverse restores redeemed reward
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer := current_setting('app.loy_redeem_session')::integer;
+    reward_id bigint := current_setting('app.loy_redeem_reward')::bigint;
+    result jsonb;
+begin
+    result := public.loyalty_reverse_visit(session_row);
+    if (result ->> 'reversed')::boolean is not true
+       or (result ->> 'reward_restored')::boolean is not true then
+        raise exception 'the redeeming visit reversal is wrong: %', result;
+    end if;
+    if (select status from public.loyalty_rewards where id = reward_id) <> 'available' then
+        raise exception 'the redeemed reward was not restored';
+    end if;
+    if (select redeemed_total from public.loyalty_accounts
+         where lot_id = lot and plate = 'LYL15') <> 0 then
+        raise exception 'the redeemed total did not drop';
+    end if;
+end $$;
+
+-- loyalty: reverse plain visit
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+    result jsonb;
+begin
+    select session_id into session_row
+      from public.loyalty_visits v
+     where v.lot_id = lot and v.plate = 'LYL02' and v.status = 'counted'
+     order by v.id limit 1;
+    result := public.loyalty_reverse_visit(session_row);
+    if (result ->> 'progress')::integer <> 0 then
+        raise exception 'a plain visit did not decrement the progress: %', result;
+    end if;
+end $$;
+
+-- loyalty: reverse skipped visit
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+    result jsonb;
+begin
+    select session_id into session_row
+      from public.loyalty_visits v
+     where v.lot_id = lot and v.plate = 'LYL03' and v.status = 'skipped'
+     order by v.id limit 1;
+    result := public.loyalty_reverse_visit(session_row);
+    if (result ->> 'reversed')::boolean is not true
+       or (result ->> 'progress')::integer <> 0 then
+        raise exception 'the skipped visit reversal is wrong: %', result;
+    end if;
+end $$;
+
+-- loyalty: reverse idempotent
+do $$
+declare
+    session_row integer := current_setting('app.loy_redeem_session')::integer;
+    result jsonb;
+begin
+    result := public.loyalty_reverse_visit(session_row);
+    if (result ->> 'reversed')::boolean is not false then
+        raise exception 'a second reversal was accepted: %', result;
+    end if;
+end $$;
+
+-- loyalty: reverse never mints
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    before_rewards integer;
+    session_row integer;
+begin
+    select count(*) into before_rewards from public.loyalty_rewards where lot_id = lot;
+    select v.session_id into session_row
+      from public.loyalty_visits v
+     where v.lot_id = lot and v.plate = 'LYL06' and v.status = 'counted'
+     order by v.id limit 1;
+    perform public.loyalty_reverse_visit(session_row);
+    if (select count(*) from public.loyalty_rewards where lot_id = lot) <> before_rewards then
+        raise exception 'a reversal created a reward';
+    end if;
+end $$;
+
+-- loyalty: reverse denied to api roles
+set local role authenticated;
+do $$
+begin
+    begin
+        perform public.loyalty_reverse_visit(
+            current_setting('app.loy_redeem_session')::integer);
+        raise exception 'an api role reversed a visit';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
+-- loyalty: expire job
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    reward_id bigint;
+    expired integer;
+begin
+    insert into public.loyalty_rewards (
+        lot_id, plate, kind, visits_required, expires_at
+    ) values (lot, 'ST001', 'free_stay', 5, now() - interval '1 day')
+    returning id into reward_id;
+    expired := public.loyalty_expire_rewards();
+    if expired < 1 then
+        raise exception 'the expiry job expired nothing';
+    end if;
+    if (select status from public.loyalty_rewards where id = reward_id) <> 'expired' then
+        raise exception 'the past reward was not expired';
+    end if;
+end $$;
+
+-- loyalty: expire job service role only
+set local role authenticated;
+do $$
+begin
+    begin
+        perform public.loyalty_expire_rewards();
+        raise exception 'an api role ran the expiry job';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
+-- loyalty: report counts
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    tz text;
+    window_start timestamptz;
+    window_end timestamptz;
+    report jsonb;
+    expected integer;
+begin
+    select coalesce(business_timezone, 'America/Bogota') into tz
+      from public.parking_settings where lot_id = lot;
+    window_start := current_date::timestamp at time zone tz;
+    window_end := (current_date + 1)::timestamp at time zone tz;
+
+    report := public.report_loyalty(current_date, current_date);
+
+    select count(*) into expected from public.loyalty_visits v
+     where v.lot_id = lot and v.status = 'counted'
+       and v.created_at >= window_start and v.created_at < window_end;
+    if (report -> 'visits' ->> 'counted')::integer <> expected then
+        raise exception 'the counted visits are wrong: % <> %',
+            report -> 'visits' ->> 'counted', expected;
+    end if;
+
+    select count(*) into expected from public.loyalty_visits v
+     where v.lot_id = lot and v.status = 'skipped'
+       and v.created_at >= window_start and v.created_at < window_end;
+    if (report -> 'visits' ->> 'skipped')::integer <> expected then
+        raise exception 'the skipped visits are wrong';
+    end if;
+
+    select count(*) into expected from public.loyalty_visits v
+     where v.lot_id = lot and v.status = 'reversed'
+       and v.created_at >= window_start and v.created_at < window_end;
+    if (report -> 'visits' ->> 'reversed')::integer <> expected then
+        raise exception 'the reversed visits are wrong';
+    end if;
+
+    select count(*) into expected from public.loyalty_rewards r
+     where r.lot_id = lot and r.created_at >= window_start and r.created_at < window_end;
+    if (report -> 'rewards' ->> 'earned')::integer <> expected then
+        raise exception 'the earned rewards are wrong';
+    end if;
+
+    select count(*) into expected from public.loyalty_rewards r
+     where r.lot_id = lot and r.redeemed_at >= window_start and r.redeemed_at < window_end;
+    if (report -> 'rewards' ->> 'redeemed')::integer <> expected then
+        raise exception 'the redeemed rewards are wrong';
+    end if;
+
+    select coalesce(sum(r.redeemed_amount), 0) into expected
+      from public.loyalty_rewards r
+     where r.lot_id = lot and r.redeemed_at >= window_start and r.redeemed_at < window_end;
+    if (report ->> 'discount_given')::integer <> expected then
+        raise exception 'the discount given is wrong: % <> %',
+            report ->> 'discount_given', expected;
+    end if;
+
+    select count(distinct v.plate) into expected from public.loyalty_visits v
+     where v.lot_id = lot and v.status = 'counted'
+       and v.created_at >= window_start and v.created_at < window_end;
+    if (report ->> 'active_members')::integer <> expected then
+        raise exception 'the active members are wrong';
+    end if;
+
+    if jsonb_array_length(report -> 'top_plates') > 10 then
+        raise exception 'more than ten plates were reported';
+    end if;
+    if jsonb_array_length(report -> 'top_plates') > 0 then
+        if (report -> 'top_plates' -> 0 ->> 'plate') <> (
+            select v.plate from public.loyalty_visits v
+             where v.lot_id = lot and v.status = 'counted'
+               and v.created_at >= window_start and v.created_at < window_end
+             group by v.plate
+             order by count(*) desc, v.plate
+             limit 1
+        ) then
+            raise exception 'the top plates are not ordered';
+        end if;
+    end if;
+end $$;
+
+-- loyalty: report range boundaries
+do $$
+declare
+    report jsonb;
+begin
+    report := public.report_loyalty(current_date - 1, current_date - 1);
+    if (report -> 'visits' ->> 'counted')::integer <> 0 then
+        raise exception 'yesterday reported today visits: %', report;
+    end if;
+end $$;
+
+-- loyalty: report invalid range
+do $$
+begin
+    begin
+        perform public.report_loyalty(current_date, current_date - 1);
+        raise exception 'an inverted range was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidReportRangeError%' then raise; end if;
+    end;
+    begin
+        perform public.report_loyalty(current_date - 400, current_date);
+        raise exception 'a 400 day range was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidReportRangeError%' then raise; end if;
+    end;
+end $$;
+
+-- loyalty: report admin only
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    begin
+        perform public.report_loyalty(current_date, current_date);
+        raise exception 'an operator ran the loyalty report';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- loyalty: report lot isolation
+do $$
+declare
+    report jsonb;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    report := public.report_loyalty(current_date, current_date);
+    if (report -> 'visits' ->> 'counted')::integer <> 0
+       or (report -> 'rewards' ->> 'earned')::integer <> 0 then
+        raise exception 'the report leaked another lot: %', report;
+    end if;
+    perform set_config('request.headers',
+        jsonb_build_object('x-lot-id', current_setting('app.loyalty_lot'))::text, true);
+end $$;
+
+-- loyalty: members list search
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    accounts jsonb;
+    expected text;
+begin
+    accounts := public.list_loyalty_accounts('lyl0', 50);
+    if jsonb_array_length(accounts) < 1 then
+        raise exception 'the prefix search found nothing: %', accounts;
+    end if;
+    if (accounts -> 0 ->> 'plate') not like 'LYL0%' then
+        raise exception 'the prefix search returned another plate: %', accounts;
+    end if;
+    if accounts -> 0 -> 'reward_count' is null then
+        raise exception 'the account shape is missing the reward count';
+    end if;
+
+    accounts := public.list_loyalty_accounts(null, 0);
+    if jsonb_array_length(accounts) <> 1 then
+        raise exception 'the limit was not clamped to one: %', jsonb_array_length(accounts);
+    end if;
+
+    accounts := public.list_loyalty_accounts(null, 500);
+    if jsonb_array_length(accounts) > 200 then
+        raise exception 'the limit was not clamped to 200';
+    end if;
+
+    select a.plate into expected from public.loyalty_accounts a
+     where a.lot_id = lot
+     order by a.updated_at desc, a.id desc
+     limit 1;
+    accounts := public.list_loyalty_accounts(null, 200);
+    if (accounts -> 0 ->> 'plate') <> expected then
+        raise exception 'the members list is not newest first: %', accounts -> 0;
+    end if;
+end $$;
+
+-- loyalty: members admin only
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    begin
+        perform public.list_loyalty_accounts(null, 10);
+        raise exception 'an operator listed the loyalty accounts';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+
+-- loyalty: choose other lot
+do $$
+declare
+    lot2 integer := current_setting('app.loyalty_lot2')::integer;
+    session_row integer;
+begin
+    update public.parking_settings set loyalty_enabled = true where lot_id = lot2;
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot2, now() - interval '1 hour', 'open'
+      from public.vehicles v where v.plate = 'LYL02'
+    returning id into session_row;
+    begin
+        perform public.choose_loyalty_redemption(session_row, 'skip');
+        raise exception 'a session of another lot accepted a choice';
+    exception when others then
+        if sqlerrm not like '%LotRequiredError%' then raise; end if;
+    end;
+    delete from public.parking_sessions where id = session_row;
+end $$;
+
+-- loyalty: choose disabled
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+begin
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '1 hour', 'open'
+      from public.vehicles v where v.plate = 'LYL03'
+    returning id into session_row;
+    update public.parking_settings set loyalty_enabled = false where lot_id = lot;
+    begin
+        perform public.choose_loyalty_redemption(session_row, 'skip');
+        raise exception 'a disabled program accepted a choice';
+    exception when others then
+        if sqlerrm not like '%LoyaltyDisabledError%' then raise; end if;
+    end;
+    update public.parking_settings set loyalty_enabled = true where lot_id = lot;
+    delete from public.parking_sessions where id = session_row;
+end $$;
+
+-- loyalty: choose anon denied
+set local role anon;
+do $$
+begin
+    begin
+        perform public.choose_loyalty_redemption(1, 'skip');
+        raise exception 'anon chose a redemption';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
+-- loyalty: hook not callable by api roles
+set local role authenticated;
+do $$
+begin
+    begin
+        perform public.fare_reward_step(1, 1000, 0);
+        raise exception 'an api role called the reward hook';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
+-- loyalty: reverse after redeemed keeps the reward
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    day_offset integer;
+    exit_at timestamptz;
+    session_row integer;
+    fifth_session integer;
+    reward_id bigint;
+    redeem_session integer;
+    result jsonb;
+begin
+    insert into public.vehicles (plate, category_id)
+    select 'REV02', c.id from public.categories c where c.lot_id = lot;
+
+    for day_offset in 1..5 loop
+        exit_at := ((current_date - day_offset) + time '12:00') at time zone 'America/Bogota';
+        insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+        select v.id, 1, lot, exit_at - interval '2 hours', 'open'
+          from public.vehicles v where v.plate = 'REV02'
+        returning id into session_row;
+        update public.parking_sessions
+           set status = 'closed', exit_time = exit_at, amount_charged = 9000,
+               payment_method = 'cash'
+         where id = session_row;
+        if day_offset = 5 then
+            fifth_session := session_row;
+        end if;
+    end loop;
+
+    select id into reward_id from public.loyalty_rewards r
+     where r.lot_id = lot and r.plate = 'REV02' and r.status = 'available'
+     order by r.id limit 1;
+    if reward_id is null then
+        raise exception 'the fifth visit did not earn a reward for REV02';
+    end if;
+
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '2 hours', 'open'
+      from public.vehicles v where v.plate = 'REV02'
+    returning id into redeem_session;
+    perform public.check_out(redeem_session);
+
+    if (select status from public.loyalty_rewards where id = reward_id) <> 'redeemed' then
+        raise exception 'the reward was not redeemed by REV02';
+    end if;
+
+    result := public.loyalty_reverse_visit(fifth_session);
+    if (result ->> 'reversed')::boolean is not true
+       or (result ->> 'reward_reversed')::boolean is not false then
+        raise exception 'reversing an earning visit touched a redeemed reward: %', result;
+    end if;
+    if (select status from public.loyalty_rewards where id = reward_id) <> 'redeemed' then
+        raise exception 'a redeemed reward was clawed back';
+    end if;
+    if (select progress from public.loyalty_accounts
+         where lot_id = lot and plate = 'REV02') <> 0 then
+        raise exception 'reversing after redemption changed the progress';
+    end if;
+end $$;
+
 set local request.headers = '{"x-lot-id":"1"}';
 
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';

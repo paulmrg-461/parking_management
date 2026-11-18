@@ -54,6 +54,28 @@ void main() {
     },
   );
 
+  test('Success: every loyalty code has a localized text in es and en', () async {
+    final en = await AppLocalizations.delegate.load(const Locale('en'));
+    const codes = [
+      'LoyaltyDisabledError',
+      'InvalidLoyaltySettingsError',
+      'InvalidLoyaltyChoiceError',
+      'NoRewardAvailableError',
+      'LoyaltyReasonRequiredError',
+      'LoyaltyAdjustRangeError',
+      'LoyaltyAccountNotFoundError',
+    ];
+    for (final code in codes) {
+      final failure = ValidationFailure(code, code);
+      expect(es.failure(failure), isNot(code), reason: code);
+      expect(en.failure(failure), isNot(code), reason: code);
+    }
+    expect(
+      codes.map((code) => es.failure(ValidationFailure(code, code))).toSet(),
+      hasLength(codes.length),
+    );
+  });
+
   test('Failure: unknown code falls back to the backend detail', () {
     const failure = ValidationFailure('PIN must be 4 to 6 digits', 'Weird');
     expect(es.failure(failure), 'PIN must be 4 to 6 digits');

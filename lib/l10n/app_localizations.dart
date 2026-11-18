@@ -9301,6 +9301,372 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Demasiadas entradas: elige menos dias.'**
   String get errorPricingSimulationTooLarge;
+
+  /// No description provided for @loyaltyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Fidelización'**
+  String get loyaltyTitle;
+
+  /// No description provided for @loyaltyTabProgram.
+  ///
+  /// In es, this message translates to:
+  /// **'Programa'**
+  String get loyaltyTabProgram;
+
+  /// No description provided for @loyaltyTabMembers.
+  ///
+  /// In es, this message translates to:
+  /// **'Clientes'**
+  String get loyaltyTabMembers;
+
+  /// No description provided for @loyaltyTabReport.
+  ///
+  /// In es, this message translates to:
+  /// **'Reporte'**
+  String get loyaltyTabReport;
+
+  /// No description provided for @loyaltyEnabled.
+  ///
+  /// In es, this message translates to:
+  /// **'Programa activo'**
+  String get loyaltyEnabled;
+
+  /// No description provided for @loyaltyVisitsRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'Visitas para ganar'**
+  String get loyaltyVisitsRequired;
+
+  /// No description provided for @loyaltyRewardKind.
+  ///
+  /// In es, this message translates to:
+  /// **'Tipo de recompensa'**
+  String get loyaltyRewardKind;
+
+  /// No description provided for @loyaltyKindFreeStay.
+  ///
+  /// In es, this message translates to:
+  /// **'Estadía gratis'**
+  String get loyaltyKindFreeStay;
+
+  /// No description provided for @loyaltyKindFixed.
+  ///
+  /// In es, this message translates to:
+  /// **'Descuento fijo'**
+  String get loyaltyKindFixed;
+
+  /// No description provided for @loyaltyRewardMax.
+  ///
+  /// In es, this message translates to:
+  /// **'Tope de la estadía gratis'**
+  String get loyaltyRewardMax;
+
+  /// No description provided for @loyaltyRewardFixed.
+  ///
+  /// In es, this message translates to:
+  /// **'Valor del descuento'**
+  String get loyaltyRewardFixed;
+
+  /// No description provided for @loyaltyMinAmount.
+  ///
+  /// In es, this message translates to:
+  /// **'Pago mínimo por visita'**
+  String get loyaltyMinAmount;
+
+  /// No description provided for @loyaltyMinMinutes.
+  ///
+  /// In es, this message translates to:
+  /// **'Minutos mínimos por visita'**
+  String get loyaltyMinMinutes;
+
+  /// No description provided for @loyaltyRedeemMode.
+  ///
+  /// In es, this message translates to:
+  /// **'Canje'**
+  String get loyaltyRedeemMode;
+
+  /// No description provided for @loyaltyModeAuto.
+  ///
+  /// In es, this message translates to:
+  /// **'Automático'**
+  String get loyaltyModeAuto;
+
+  /// No description provided for @loyaltyModeOperator.
+  ///
+  /// In es, this message translates to:
+  /// **'Lo decide el operador'**
+  String get loyaltyModeOperator;
+
+  /// No description provided for @loyaltyStackMerchant.
+  ///
+  /// In es, this message translates to:
+  /// **'Acumular con convenios'**
+  String get loyaltyStackMerchant;
+
+  /// No description provided for @loyaltyValidDays.
+  ///
+  /// In es, this message translates to:
+  /// **'Vigencia de la recompensa (días)'**
+  String get loyaltyValidDays;
+
+  /// No description provided for @loyaltySave.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardar programa'**
+  String get loyaltySave;
+
+  /// No description provided for @loyaltySaved.
+  ///
+  /// In es, this message translates to:
+  /// **'Programa guardado'**
+  String get loyaltySaved;
+
+  /// No description provided for @loyaltyVisitOf.
+  ///
+  /// In es, this message translates to:
+  /// **'Visita {current} de {total}'**
+  String loyaltyVisitOf(int current, int total);
+
+  /// No description provided for @loyaltyRewardAvailable.
+  ///
+  /// In es, this message translates to:
+  /// **'Recompensa disponible'**
+  String get loyaltyRewardAvailable;
+
+  /// No description provided for @loyaltyRewardEarned.
+  ///
+  /// In es, this message translates to:
+  /// **'¡Recompensa ganada!'**
+  String get loyaltyRewardEarned;
+
+  /// No description provided for @loyaltyUseReward.
+  ///
+  /// In es, this message translates to:
+  /// **'Usar recompensa'**
+  String get loyaltyUseReward;
+
+  /// No description provided for @loyaltyDontUseNow.
+  ///
+  /// In es, this message translates to:
+  /// **'No usar ahora'**
+  String get loyaltyDontUseNow;
+
+  /// No description provided for @loyaltyRewardLine.
+  ///
+  /// In es, this message translates to:
+  /// **'Recompensa de fidelidad'**
+  String get loyaltyRewardLine;
+
+  /// No description provided for @loyaltyRewardExpires.
+  ///
+  /// In es, this message translates to:
+  /// **'Vence el {date}'**
+  String loyaltyRewardExpires(String date);
+
+  /// No description provided for @loyaltyMembersEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no hay clientes con visitas'**
+  String get loyaltyMembersEmpty;
+
+  /// No description provided for @loyaltyEnableCta.
+  ///
+  /// In es, this message translates to:
+  /// **'Activar el programa'**
+  String get loyaltyEnableCta;
+
+  /// No description provided for @loyaltySearchPlate.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscar placa'**
+  String get loyaltySearchPlate;
+
+  /// No description provided for @loyaltyAdjust.
+  ///
+  /// In es, this message translates to:
+  /// **'Corregir progreso'**
+  String get loyaltyAdjust;
+
+  /// No description provided for @loyaltyAdjustDelta.
+  ///
+  /// In es, this message translates to:
+  /// **'Cambio (+/-)'**
+  String get loyaltyAdjustDelta;
+
+  /// No description provided for @loyaltyAdjustReason.
+  ///
+  /// In es, this message translates to:
+  /// **'Motivo (obligatorio)'**
+  String get loyaltyAdjustReason;
+
+  /// No description provided for @loyaltyReportMembers.
+  ///
+  /// In es, this message translates to:
+  /// **'Clientes'**
+  String get loyaltyReportMembers;
+
+  /// No description provided for @loyaltyReportCounted.
+  ///
+  /// In es, this message translates to:
+  /// **'Visitas contadas'**
+  String get loyaltyReportCounted;
+
+  /// No description provided for @loyaltyReportSkipped.
+  ///
+  /// In es, this message translates to:
+  /// **'Visitas no contadas'**
+  String get loyaltyReportSkipped;
+
+  /// No description provided for @loyaltyReportEarned.
+  ///
+  /// In es, this message translates to:
+  /// **'Recompensas ganadas'**
+  String get loyaltyReportEarned;
+
+  /// No description provided for @loyaltyReportRedeemed.
+  ///
+  /// In es, this message translates to:
+  /// **'Recompensas canjeadas'**
+  String get loyaltyReportRedeemed;
+
+  /// No description provided for @loyaltyReportDiscount.
+  ///
+  /// In es, this message translates to:
+  /// **'Descuento otorgado'**
+  String get loyaltyReportDiscount;
+
+  /// No description provided for @loyaltyReportTopPlates.
+  ///
+  /// In es, this message translates to:
+  /// **'Placas frecuentes'**
+  String get loyaltyReportTopPlates;
+
+  /// No description provided for @loyaltySkip_pass.
+  ///
+  /// In es, this message translates to:
+  /// **'Pase mensual'**
+  String get loyaltySkip_pass;
+
+  /// No description provided for @loyaltySkip_lost_ticket.
+  ///
+  /// In es, this message translates to:
+  /// **'Ticket perdido'**
+  String get loyaltySkip_lost_ticket;
+
+  /// No description provided for @loyaltySkip_exempt.
+  ///
+  /// In es, this message translates to:
+  /// **'Exento'**
+  String get loyaltySkip_exempt;
+
+  /// No description provided for @loyaltySkip_below_amount.
+  ///
+  /// In es, this message translates to:
+  /// **'Pago bajo el mínimo'**
+  String get loyaltySkip_below_amount;
+
+  /// No description provided for @loyaltySkip_below_minutes.
+  ///
+  /// In es, this message translates to:
+  /// **'Estadía muy corta'**
+  String get loyaltySkip_below_minutes;
+
+  /// No description provided for @loyaltySkip_same_day.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya contó hoy'**
+  String get loyaltySkip_same_day;
+
+  /// No description provided for @loyaltySkip_reward_redeemed.
+  ///
+  /// In es, this message translates to:
+  /// **'Usó recompensa'**
+  String get loyaltySkip_reward_redeemed;
+
+  /// No description provided for @loyaltySkip_error.
+  ///
+  /// In es, this message translates to:
+  /// **'Error interno'**
+  String get loyaltySkip_error;
+
+  /// No description provided for @loyaltyRefreshReport.
+  ///
+  /// In es, this message translates to:
+  /// **'Actualizar reporte'**
+  String get loyaltyRefreshReport;
+
+  /// No description provided for @loyaltyCopyCsv.
+  ///
+  /// In es, this message translates to:
+  /// **'Copiar CSV'**
+  String get loyaltyCopyCsv;
+
+  /// No description provided for @loyaltyCsvCopied.
+  ///
+  /// In es, this message translates to:
+  /// **'CSV copiado'**
+  String get loyaltyCsvCopied;
+
+  /// No description provided for @loyaltySharePdf.
+  ///
+  /// In es, this message translates to:
+  /// **'Compartir PDF'**
+  String get loyaltySharePdf;
+
+  /// No description provided for @errorLoyaltyDisabled.
+  ///
+  /// In es, this message translates to:
+  /// **'El programa de fidelización está desactivado'**
+  String get errorLoyaltyDisabled;
+
+  /// No description provided for @errorLoyaltySettings.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisa los valores del programa'**
+  String get errorLoyaltySettings;
+
+  /// No description provided for @errorLoyaltyChoice.
+  ///
+  /// In es, this message translates to:
+  /// **'Opción de canje no válida'**
+  String get errorLoyaltyChoice;
+
+  /// No description provided for @errorNoRewardAvailable.
+  ///
+  /// In es, this message translates to:
+  /// **'Esta placa no tiene recompensa disponible'**
+  String get errorNoRewardAvailable;
+
+  /// No description provided for @errorLoyaltyReason.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe un motivo de 3 a 200 caracteres'**
+  String get errorLoyaltyReason;
+
+  /// No description provided for @errorLoyaltyAdjustRange.
+  ///
+  /// In es, this message translates to:
+  /// **'El ajuste dejaría el progreso fuera de rango'**
+  String get errorLoyaltyAdjustRange;
+
+  /// No description provided for @errorLoyaltyAccountNotFound.
+  ///
+  /// In es, this message translates to:
+  /// **'Esa placa no tiene cuenta de fidelización'**
+  String get errorLoyaltyAccountNotFound;
+
+  /// No description provided for @loyaltyReportEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no hay datos en el periodo'**
+  String get loyaltyReportEmpty;
+
+  /// No description provided for @navLoyalty.
+  ///
+  /// In es, this message translates to:
+  /// **'Fidelización'**
+  String get navLoyalty;
 }
 
 class _AppLocalizationsDelegate

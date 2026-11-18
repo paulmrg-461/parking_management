@@ -61,6 +61,15 @@ void main() {
       );
     });
 
+    test('Security: loyalty is admin only', () {
+      expect(canAccess(UserRole.operator, '/loyalty'), isFalse);
+      expect(
+        authRedirect(_as(UserRole.operator), '/loyalty'),
+        homePath,
+      );
+      expect(canAccess(UserRole.admin, '/loyalty'), isTrue);
+    });
+
     test('Security: dynamic pricing is admin only', () {
       expect(canAccess(UserRole.operator, '/pricing'), isFalse);
       expect(

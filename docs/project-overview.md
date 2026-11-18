@@ -44,11 +44,12 @@ WhatsApp (manual or automated).
 | Pass auto-renewal | Complete, inert without Wompi keys (`/renew` link, reminders, online settlement) | SQL + Deno + widget tests |
 | Merchant agreements | Complete (`/merchants`, `/validate` link + PIN, settlement, fare_quote) | SQL + widget tests |
 | Dynamic pricing | Complete, inert by default (rules, locked rate at entry, simulation, impact) | SQL + widget tests |
+| Loyalty rewards | Complete, inert by default (visit accrual, reward redemption, `/loyalty`, expiry job) | SQL + widget tests |
 | Backups / restore | Complete, with a safe drill | Drill executed against a real backup |
 | Secrets / PIN operations | Complete (scripts + runbook) | PIN rotation verified live |
 | E2E and CI | Complete (API + Flutter client, real stack) | CI job `supabase-e2e` |
 
-Quality snapshot (2026-11-17, local stack): **1656 Flutter tests + 1 integration
+Quality snapshot (2026-11-18, local stack): **1727 Flutter tests + 1 integration
 test**, SQL/RLS suite green, web build green, analyzer with **0 errors and 0
 warnings** (only SDK deprecation infos from the pinned beta channel), restore
 drill green.
@@ -82,6 +83,7 @@ the main data it touches.
 | `pass_renewal` | Public token-keyed renewal page (`/renew?t=`) and the admin "send renewal link" action | `pass_renewal_offers`, `public_pass_renewal`, `pass-renewal-intent` (Edge Function), `settle_pass_renewal`, `queue_pass_renewal_reminders` |
 | `merchants` | Agreements, show-once credentials, per-vehicle policy, settlement and the public `/validate?m=` page | `merchants`, `merchant_credentials`, `merchant_validations`, `fare_quote`, `save_merchant`, `merchant_validate`, `report_merchant_settlement` |
 | `pricing` | Dynamic rates: rules, guard rails, simulation, impact and the check-in price chip | `pricing_rules`, `pricing_lock`, `pricing_quote`, `pricing_simulate`, `report_pricing_impact`, `public_availability` price keys |
+| `loyalty` | Visit program, reward redemption, member corrections and the impact report (`/loyalty`) | `loyalty_accounts`, `loyalty_rewards`, `loyalty_visits`, `loyalty_adjustments`, `fare_reward_step`, `loyalty_plate_status`, `choose_loyalty_redemption`, `report_loyalty`, `list_loyalty_accounts` |
 | `emergency` | One-tap call to the nearest police quadrant (123 fallback) | `parking_settings.police_phone` |
 | `users` | Admin user management | `admin-users` Edge Function |
 | `lots` | Sites and membership | `my_lots`, `create_lot`, `set_lot_member`, `list_lot_members` |
@@ -133,6 +135,7 @@ session as paid. See
 | Restore | `supabase/restore.sh` (+ runbook) |
 | Prove a backup | `supabase/restore-drill.sh` (monthly) |
 | Retention | cron: reservations, notifications, client errors, audit, WhatsApp, idempotency |
+| Loyalty expiry | cron: `loyalty_expire_rewards` marks rewards past their validity `expired` |
 | Evidence files | `evidence-archive` function, daily, per-site window |
 | Health | `supabase/healthcheck.sh` (+ webhook), `diagnostics.sh` |
 | Observability | `client_error_reports` + `/diagnostics`, structured function logs |
@@ -222,6 +225,25 @@ receipt cannot be used to score a visit that has not ended. The admin page
 lot's check-outs, the count of low ratings (≤ 3), the 1..5 distribution and the
 latest comments, for 7, 30 or 90 days. The survey is online-only and there is no
 moderation, reply or export yet.
+
+## 7.08 Loyalty rewards (implemented)
+
+Every N paid visits a plate earns one reward, per lot and inert until
+`loyalty_enabled` is on. A visit counts only when the stay closes with real
+money (`amount_charged > 0` and at or above `loyalty_min_amount`), at least
+`loyalty_min_minutes` long, not a pass/lost/exempt settlement, not the second
+visit of the same business day, and not the visit that just redeemed a reward.
+Progress is a counter (`0`..`N-1`) with a ledger (`loyalty_visits`) that
+explains every number; a reward snapshots its kind and value when earned, so
+later settings changes cannot inflate or cheat old rewards. The reward is one
+server-computed line of `fare_quote` (after merchant benefits, capped so it
+never subsidises an online payment already made) and one reward per session,
+oldest first, non-expired. `auto` mode applies it unless the operator taps “No
+usar ahora”; `operator` mode applies it only on “Usar recompensa”. The trigger
+that writes the ledger never blocks a check-out: a loyalty failure is stored as
+a skipped visit with reason `error`. `/loyalty` shows the program, the members
+with a bounded, reasoned progress correction, and the impact report. A manual
+correction can move progress but can never mint a reward.
 
 ## 7.1 Offline conflicts (implemented)
 

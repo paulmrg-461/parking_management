@@ -27,6 +27,9 @@ class ReceiptLabels {
     required this.gross,
     required this.benefit,
     required this.pricingRule,
+    required this.loyaltyVisit,
+    required this.loyaltyReward,
+    required this.loyaltyRewardEarned,
   });
 
   final String checkInTitle;
@@ -67,6 +70,15 @@ class ReceiptLabels {
   /// Prefix of the locked dynamic-pricing rate (`Tarifa` / `Rate`).
   final String pricingRule;
 
+  /// "Visita n de N" on the paper receipt.
+  final String Function(int current, int total) loyaltyVisit;
+
+  /// The reward adjustment line (`Recompensa` / `Reward`).
+  final String loyaltyReward;
+
+  /// The visit that earned a reward.
+  final String loyaltyRewardEarned;
+
   /// Localizes a wire value (`cash`, `card`, `transfer`, `monthly_pass`,
   /// `exempt`, `online`) plus the optional card type (`debit`/`credit`).
   final String Function(String method, String? cardType) paymentMethod;
@@ -96,6 +108,9 @@ class ReceiptLabels {
     gross: 'Tarifa',
     benefit: 'Convenio',
     pricingRule: 'Tarifa',
+    loyaltyVisit: _loyaltyVisitEs,
+    loyaltyReward: 'Recompensa',
+    loyaltyRewardEarned: 'Recompensa ganada',
     paymentMethod: _paymentEs,
   );
 
@@ -123,6 +138,9 @@ class ReceiptLabels {
     gross: 'Fare',
     benefit: 'Agreement',
     pricingRule: 'Rate',
+    loyaltyVisit: _loyaltyVisitEn,
+    loyaltyReward: 'Reward',
+    loyaltyRewardEarned: 'Reward earned',
     paymentMethod: _paymentEn,
   );
 
@@ -154,3 +172,7 @@ class ReceiptLabels {
     _ => method,
   };
 }
+
+String _loyaltyVisitEs(int current, int total) => 'Visita $current de $total';
+
+String _loyaltyVisitEn(int current, int total) => 'Visit $current of $total';

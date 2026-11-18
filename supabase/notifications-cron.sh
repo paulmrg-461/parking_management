@@ -64,6 +64,9 @@ curl -fsS -X POST "${API_URL:-http://localhost:8000}/functions/v1/payments-recon
 
 curl -fsS -X POST "${API_URL:-http://localhost:8000}/functions/v1/push-dispatch" \
   -H "Authorization: Bearer ${SERVICE_KEY}" >/dev/null
+# Loyalty rewards past their validity become `expired`.
+docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
+  "select public.loyalty_expire_rewards();" >/dev/null
 # No-op ({configured:false}) until WHATSAPP_TOKEN/PHONE_NUMBER_ID are set.
 curl -fsS -X POST "${API_URL:-http://localhost:8000}/functions/v1/whatsapp-dispatch" \
   -H "Authorization: Bearer ${SERVICE_KEY}" >/dev/null

@@ -4,16 +4,16 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-11-18 (dynamic pricing).
+Last updated: 2026-11-18 (loyalty rewards).
 
 ## Where we are
 
 - Stack: Flutter (android + web) + self-hosted Supabase only. No FastAPI,
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
-- `supabase/migrations/0001..0121` are the schema owner (applied by
+- `supabase/migrations/0001..0123` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 1656 tests green (coverage 79.0% global; application 91.0%,
-  domain 60.5%, infrastructure 45.9%), `flutter analyze` reports only SDK
+- Flutter: 1727 tests green (coverage 79.1% global; application 90.6%,
+  domain 61.4%, infrastructure 46.2%), `flutter analyze` reports only SDK
   deprecation infos from the pinned beta channel (0 errors/warnings). Web
   build green. Deno tests for the Edge Functions: 30 green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
@@ -23,6 +23,82 @@ Last updated: 2026-11-18 (dynamic pricing).
 
 
 
+
+
+## Loyalty rewards (2026-11-18, `0122`-`0123`)
+
+- Accrual and redemption live in `trg_loyalty_session_closed` (AFTER UPDATE of
+  `status`, `open -> closed`), so `check_out` stays at 11 arguments. The
+  trigger sees the final stored row (`amount_charged`, `payment_method`,
+  `lost_ticket`, `fare_adjustments`, `exit_time`); the merchant-validation
+  updates happen in the same transaction before the trigger's statement ends.
+- The trigger **never blocks a check-out**: steps 2-6 sit in a block whose
+  `exception when others` writes a `skipped(error)` visit (itself guarded) and
+  raises a warning. A test installs a `check (false) not valid` constraint to
+  prove the session still closes.
+- The reward is a line of `fare_quote` computed by `fare_reward_step` (the
+  no-op hook of `add-merchant-validations`, replaced with the same signature).
+  Order: tariff -> pricing -> merchant lines -> reward -> manual discount. The
+  hook only reads: the preview must have no side effect.
+- Value: `free_stay` is the running amount (or its `max_amount`), `fixed_amount`
+  is its snapshot; then capped to `greatest(R - online_paid_amount, 0)` so a
+  reward never subsidises money already paid online. A zero result is skipped
+  with reason `zero` and the reward stays `available` (this deliberately
+  overrides the design's earlier `p_running <= 0` short-circuit; the worked
+  example F7 expects `zero`).
+- Modes: `auto` applies unless the session's `loyalty_choice = 'skip'`;
+  `operator` applies only on `'redeem'` (null -> `operator_choice_pending`).
+  `choose_loyalty_redemption` stores the choice before check-out; `auto` is
+  stored as NULL. A skipped reward does not make the visit a redeeming visit.
+- Anti-abuse: one counted visit per plate per business day (`exit_time` in the
+  lot timezone), paid-only (`amount_charged > 0` and >= `loyalty_min_amount`),
+  minimum minutes, pass/lost/exempt excluded, a redeeming visit does not count.
+  The plate key is `pg_advisory_xact_lock(hashtext('loyalty:' || lot || ':' ||
+  plate))`, so two concurrent closes cannot double count.
+- Progress is a counter, the ledger is the audit: `loyalty_accounts.progress`
+  (0..N-1), `loyalty_visits` explains every number. A reward snapshots kind and
+  value at earn time, so later settings changes do not inflate or cheat old
+  rewards. Settings changes of N apply from the next counted visit.
+- `loyalty_reverse_visit` is internal (no void feature exists today). A reward
+  redeemed by the reversed session is restored only before expiry (else it
+  becomes `expired`); a still-available earned reward goes `reversed` and
+  progress returns to `N-1`; a reward already redeemed is KEPT (no clawback) and
+  progress is unchanged. Reversal never mints a reward.
+- One policy per loyalty table, admin of the active lot only; operators read
+  counts through `loyalty_plate_status`. No grant to `anon`, no public page:
+  a plate plus visits is personal data.
+- `anomaly_zero_charge_excluded` is type-agnostic (sum of `fare_adjustments`
+  equals `gross_amount`), so a free-stay reward explains a zero charge without
+  touching that function. `add-electronic-invoicing` must compute its discount
+  as `gross_amount - amount_charged` (rule A.10) when it lands.
+- Jobs: `jobs.sh` and `notifications-cron.sh` now call
+  `loyalty_expire_rewards()` (granted to `service_role`; `jobs.sh` connects as
+  postgres). Append only, no reordering.
+- Test gotchas: PL/pgSQL variables shadowing column names (`plate`,
+  `business_day`, `status`, `progress`) raise "column reference is ambiguous";
+  all trigger/hook/RPC variables use `*_value`/`*_count` names. The SQL suite
+  appends the loyalty blocks before the final `rollback;` and uses direct
+  `update ... set status = 'closed', exit_time = ...` to backdate business days
+  (check_out caps a replayed exit at 12 h). A past entry is an offline pricing
+  replay, so a "surcharge" test needs a recent entry or an explicit lock.
+- Flutter: `LoyaltyStatusCubit` (check-in chip; short plates and
+  `NetworkFailure` hide it, stale answers are dropped) and `LoyaltyAdminCubit`
+  (program/members/report). `/loyalty` is deferred and admin-only (NOT added to
+  `operatorRoutes`). The check-in chip and the check-out reward section are
+  registered only when the DI module is present, so isolated tests and the
+  public pages work without it.
+- Gatekeeper (2026-11-18): migrations `0122`-`0123` applied live (program off,
+  5 visits, free stay, auto, 90 days), **1727 tests** green, coverage 79.1%
+  global, `flutter analyze` clean, SQL suite green over `0001`-`0123`, Deno 30
+  green, web release + debug APK built. Live smoke: `loyalty_plate_status`
+  answers `{"enabled": false}`, settings report 5/90, `loyalty_expire_rewards`
+  0, report and members list answer empty shapes.
+- Pending: the manual reward smoke with two devices and a real promotion to
+  `available` (tasks 8.3/9.3 remain unchecked where they need a device), the
+  check-out receipt prints progress only when the plate status was loaded in
+  time (no blocking spinner), and the design's open questions (N/kind defaults,
+  pass days counting, operator vs auto default, stacking default, replay expiry,
+  retention, void balance, one visit per day vs per exit) stay with the owner.
 
 ## Dynamic pricing (2026-11-18, `0120`-`0121`)
 

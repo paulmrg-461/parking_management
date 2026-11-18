@@ -419,4 +419,107 @@ void main() {
       await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
     });
   });
+
+  group('loyalty', () {
+    testWidgets('entry receipt prints visit n of N when known', (tester) async {
+      final data = ReceiptData(
+        kind: ReceiptKind.checkIn,
+        plate: 'ABC123',
+        entryTime: DateTime(2026, 1, 1, 8, 30),
+        loyaltyVisits: 3,
+        loyaltyRequired: 5,
+      );
+      await tester.pumpWidget(
+        testApp(
+          Scaffold(body: SingleChildScrollView(child: ReceiptCard(data: data))),
+        ),
+      );
+
+      expect(find.text('Visita 4 de 5'), findsOneWidget);
+    });
+
+    testWidgets('exit receipt prints reward earned', (tester) async {
+      final data = ReceiptData(
+        kind: ReceiptKind.checkOut,
+        plate: 'ABC123',
+        entryTime: DateTime(2026, 1, 1, 8, 30),
+        exitTime: DateTime(2026, 1, 1, 10, 30),
+        amountCharged: 6000,
+        loyaltyVisits: 0,
+        loyaltyRequired: 5,
+        loyaltyRewardEarned: true,
+      );
+      await tester.pumpWidget(
+        testApp(
+          Scaffold(body: SingleChildScrollView(child: ReceiptCard(data: data))),
+        ),
+      );
+
+      expect(find.text('¡Recompensa ganada!'), findsOneWidget);
+      expect(find.text('Visita 1 de 5'), findsNothing);
+    });
+
+    testWidgets('no loyalty line without data', (tester) async {
+      await tester.pumpWidget(
+        testApp(
+          Scaffold(
+            body: SingleChildScrollView(child: ReceiptCard(data: _checkOutData())),
+          ),
+        ),
+      );
+
+      expect(find.textContaining('Visita'), findsNothing);
+      expect(find.text('¡Recompensa ganada!'), findsNothing);
+    });
+
+    testWidgets('Security: a pending sync receipt prints no loyalty line', (
+      tester,
+    ) async {
+      final data = ReceiptData(
+        kind: ReceiptKind.checkOut,
+        plate: 'ABC123',
+        entryTime: DateTime(2026, 1, 1, 8, 30),
+        exitTime: DateTime(2026, 1, 1, 10, 30),
+        amountCharged: 6000,
+        loyaltyVisits: 3,
+        loyaltyRequired: 5,
+        pendingSync: true,
+      );
+      await tester.pumpWidget(
+        testApp(
+          Scaffold(body: SingleChildScrollView(child: ReceiptCard(data: data))),
+        ),
+      );
+
+      expect(find.textContaining('Visita'), findsNothing);
+      expect(find.textContaining('sin conexión'), findsOneWidget);
+    });
+
+    testWidgets('a reward adjustment uses its own label', (tester) async {
+      final data = ReceiptData(
+        kind: ReceiptKind.checkOut,
+        plate: 'ABC123',
+        entryTime: DateTime(2026, 1, 1, 8, 30),
+        exitTime: DateTime(2026, 1, 1, 10, 30),
+        amountCharged: 0,
+        grossAmount: 6000,
+        adjustments: const [
+          FareAdjustment(
+            type: FareAdjustmentType.reward,
+            refId: 7,
+            label: 'loyalty',
+            kind: 'free_stay',
+            amount: 6000,
+          ),
+        ],
+      );
+      await tester.pumpWidget(
+        testApp(
+          Scaffold(body: SingleChildScrollView(child: ReceiptCard(data: data))),
+        ),
+      );
+
+      expect(find.text('Recompensa de fidelidad'), findsOneWidget);
+    });
+  });
 }

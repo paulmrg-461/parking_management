@@ -41,6 +41,7 @@ String _audit(AppLocalizations l) => l.navAudit;
 String _diagnostics(AppLocalizations l) => l.navDiagnostics;
 String _merchants(AppLocalizations l) => l.navMerchants;
 String _pricing(AppLocalizations l) => l.navPricing;
+String _loyalty(AppLocalizations l) => l.navLoyalty;
 
 const primaryDestinations = [
   AppDestination(homePath, _home, Icons.home_outlined, Icons.home),
@@ -67,6 +68,12 @@ const primaryDestinations = [
 ];
 
 const managementDestinations = [
+  AppDestination(
+    '/loyalty',
+    _loyalty,
+    Icons.loyalty_outlined,
+    Icons.loyalty,
+  ),
   AppDestination(
     '/pricing',
     _pricing,

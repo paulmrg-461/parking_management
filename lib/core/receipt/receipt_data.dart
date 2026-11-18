@@ -26,6 +26,9 @@ class ReceiptData {
     this.adjustments = const [],
     this.pricingLabel,
     this.pricingDelta = 0,
+    this.loyaltyVisits,
+    this.loyaltyRequired,
+    this.loyaltyRewardEarned = false,
     this.pendingSync = false,
     this.evidenceUrl,
     this.feedbackUrl,
@@ -62,6 +65,13 @@ class ReceiptData {
 
   /// Signed difference of the locked rate against the base fare.
   final int pricingDelta;
+
+  /// Loyalty progress at the moment of the receipt (null = unknown).
+  final int? loyaltyVisits;
+  final int? loyaltyRequired;
+
+  /// The visit being registered earned a reward.
+  final bool loyaltyRewardEarned;
   final bool pendingSync;
 
   /// Public page (plate is the key) with the session's photos and videos.

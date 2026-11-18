@@ -28,6 +28,9 @@ import 'package:parking_management/features/merchants/application/merchants_cubi
 import 'package:parking_management/features/merchants/domain/repositories/merchant_repository.dart';
 import 'package:parking_management/features/merchants/domain/repositories/public_merchant_repository.dart';
 import 'package:parking_management/features/pass_renewal/domain/repositories/pass_renewal_repository.dart';
+import 'package:parking_management/features/loyalty/application/loyalty_admin_cubit.dart';
+import 'package:parking_management/features/loyalty/application/loyalty_status_cubit.dart';
+import 'package:parking_management/features/loyalty/domain/repositories/loyalty_repository.dart';
 import 'package:parking_management/features/pricing/application/price_quote_cubit.dart';
 import 'package:parking_management/features/pricing/application/pricing_cubit.dart';
 import 'package:parking_management/features/pricing/application/pricing_simulation_cubit.dart';
@@ -119,6 +122,14 @@ void main() {
     expect(sl<PricingCubit>(), isA<PricingCubit>());
     expect(sl<PricingSimulationCubit>(), isA<PricingSimulationCubit>());
     expect(sl<PriceQuoteCubit>(), isA<PriceQuoteCubit>());
+  });
+
+  test('Success: registers the loyalty module', () {
+    _register(sl);
+
+    expect(sl<LoyaltyRepository>(), isA<LoyaltyRepository>());
+    expect(sl<LoyaltyStatusCubit>(), isA<LoyaltyStatusCubit>());
+    expect(sl<LoyaltyAdminCubit>(), isA<LoyaltyAdminCubit>());
   });
 
   test('Success: registers the merchants module', () {

@@ -5316,4 +5316,192 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get errorPricingSimulationTooLarge =>
       'Too many sessions: pick fewer days.';
+
+  @override
+  String get loyaltyTitle => 'Loyalty';
+
+  @override
+  String get loyaltyTabProgram => 'Program';
+
+  @override
+  String get loyaltyTabMembers => 'Members';
+
+  @override
+  String get loyaltyTabReport => 'Report';
+
+  @override
+  String get loyaltyEnabled => 'Program enabled';
+
+  @override
+  String get loyaltyVisitsRequired => 'Visits to earn';
+
+  @override
+  String get loyaltyRewardKind => 'Reward type';
+
+  @override
+  String get loyaltyKindFreeStay => 'Free stay';
+
+  @override
+  String get loyaltyKindFixed => 'Fixed discount';
+
+  @override
+  String get loyaltyRewardMax => 'Free stay cap';
+
+  @override
+  String get loyaltyRewardFixed => 'Discount value';
+
+  @override
+  String get loyaltyMinAmount => 'Minimum paid per visit';
+
+  @override
+  String get loyaltyMinMinutes => 'Minimum minutes per visit';
+
+  @override
+  String get loyaltyRedeemMode => 'Redemption';
+
+  @override
+  String get loyaltyModeAuto => 'Automatic';
+
+  @override
+  String get loyaltyModeOperator => 'Operator decides';
+
+  @override
+  String get loyaltyStackMerchant => 'Combine with merchant benefits';
+
+  @override
+  String get loyaltyValidDays => 'Reward validity (days)';
+
+  @override
+  String get loyaltySave => 'Save program';
+
+  @override
+  String get loyaltySaved => 'Program saved';
+
+  @override
+  String loyaltyVisitOf(int current, int total) {
+    return 'Visit $current of $total';
+  }
+
+  @override
+  String get loyaltyRewardAvailable => 'Reward available';
+
+  @override
+  String get loyaltyRewardEarned => 'Reward earned!';
+
+  @override
+  String get loyaltyUseReward => 'Use reward';
+
+  @override
+  String get loyaltyDontUseNow => 'Do not use now';
+
+  @override
+  String get loyaltyRewardLine => 'Loyalty reward';
+
+  @override
+  String loyaltyRewardExpires(String date) {
+    return 'Expires $date';
+  }
+
+  @override
+  String get loyaltyMembersEmpty => 'No members with visits yet';
+
+  @override
+  String get loyaltyEnableCta => 'Enable the program';
+
+  @override
+  String get loyaltySearchPlate => 'Search plate';
+
+  @override
+  String get loyaltyAdjust => 'Adjust progress';
+
+  @override
+  String get loyaltyAdjustDelta => 'Change (+/-)';
+
+  @override
+  String get loyaltyAdjustReason => 'Reason (required)';
+
+  @override
+  String get loyaltyReportMembers => 'Members';
+
+  @override
+  String get loyaltyReportCounted => 'Counted visits';
+
+  @override
+  String get loyaltyReportSkipped => 'Skipped visits';
+
+  @override
+  String get loyaltyReportEarned => 'Rewards earned';
+
+  @override
+  String get loyaltyReportRedeemed => 'Rewards redeemed';
+
+  @override
+  String get loyaltyReportDiscount => 'Discount given';
+
+  @override
+  String get loyaltyReportTopPlates => 'Top plates';
+
+  @override
+  String get loyaltySkip_pass => 'Monthly pass';
+
+  @override
+  String get loyaltySkip_lost_ticket => 'Lost ticket';
+
+  @override
+  String get loyaltySkip_exempt => 'Exempt';
+
+  @override
+  String get loyaltySkip_below_amount => 'Below minimum paid';
+
+  @override
+  String get loyaltySkip_below_minutes => 'Stay too short';
+
+  @override
+  String get loyaltySkip_same_day => 'Already counted today';
+
+  @override
+  String get loyaltySkip_reward_redeemed => 'Used a reward';
+
+  @override
+  String get loyaltySkip_error => 'Internal error';
+
+  @override
+  String get loyaltyRefreshReport => 'Refresh report';
+
+  @override
+  String get loyaltyCopyCsv => 'Copy CSV';
+
+  @override
+  String get loyaltyCsvCopied => 'CSV copied';
+
+  @override
+  String get loyaltySharePdf => 'Share PDF';
+
+  @override
+  String get errorLoyaltyDisabled => 'The loyalty program is disabled';
+
+  @override
+  String get errorLoyaltySettings => 'Check the program values';
+
+  @override
+  String get errorLoyaltyChoice => 'Invalid redemption option';
+
+  @override
+  String get errorNoRewardAvailable => 'This plate has no reward available';
+
+  @override
+  String get errorLoyaltyReason => 'Write a reason of 3 to 200 characters';
+
+  @override
+  String get errorLoyaltyAdjustRange =>
+      'The adjustment would leave progress out of range';
+
+  @override
+  String get errorLoyaltyAccountNotFound => 'That plate has no loyalty account';
+
+  @override
+  String get loyaltyReportEmpty => 'No data in that period';
+
+  @override
+  String get navLoyalty => 'Loyalty';
 }

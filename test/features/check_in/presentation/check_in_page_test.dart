@@ -18,6 +18,7 @@ import 'package:parking_management/features/check_in/domain/entities/new_vehicle
 import 'package:parking_management/features/check_in/domain/entities/parking_session.dart';
 import 'package:parking_management/features/check_in/domain/repositories/check_in_repository.dart';
 import 'package:parking_management/features/check_in/presentation/check_in_page.dart';
+import 'package:parking_management/features/loyalty/application/loyalty_status_cubit.dart';
 import 'package:parking_management/app/di/injection.dart';
 import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/core/storage/key_value_store.dart';
@@ -36,6 +37,7 @@ import 'package:parking_management/features/vehicles/domain/repositories/vehicle
 import '../../../helpers/fake_check_out_repository.dart';
 import '../../../helpers/fake_reservation_repository.dart';
 import '../../../helpers/fake_key_value_store.dart';
+import '../../../helpers/fake_loyalty_repository.dart';
 import '../../../helpers/test_app.dart';
 import '../../../helpers/test_png.dart';
 
@@ -232,6 +234,7 @@ void main() {
     int? initialSpotId,
     List<Category>? categories,
     Size size = const Size(800, 1600),
+    LoyaltyStatusCubit? loyalty,
   }) async {
     // Tall viewport: the form, the keys switch and the sessions accordion must
     // fit without fighting the CustomScrollView while tapping.
@@ -267,6 +270,8 @@ void main() {
               create: (_) =>
                   PlateScanningCubit(scanner ?? _FakeScanner(plate: 'ABC123')),
             ),
+            if (loyalty != null)
+              BlocProvider<LoyaltyStatusCubit>.value(value: loyalty),
           ],
           child: CheckInPage(
             capture: _FakeCapture(returnsPhoto: photos),
@@ -1200,6 +1205,52 @@ void main() {
       await tapSubmit(tester);
 
       expect(checkIns.lastSpotId, isNull);
+    });
+  });
+
+  group('loyalty chip', () {
+    testWidgets('shows the chip for a known plate', (tester) async {
+      final cubit = LoyaltyStatusCubit(FakeLoyaltyRepository());
+      serviceLocator.registerSingleton<LoyaltyStatusCubit>(cubit);
+      addTearDown(serviceLocator.reset);
+      addTearDown(cubit.close);
+      await pumpPage(tester, loyalty: cubit);
+
+      await enterPlate(tester, 'ABC123');
+
+      expect(find.text('Visita 4 de 5'), findsOneWidget);
+      expect(find.byKey(const Key('loyalty_progress_chip')), findsOneWidget);
+    });
+
+    testWidgets('a chip failure does not block check-in confirmation', (
+      tester,
+    ) async {
+      final repository = FakeLoyaltyRepository()
+        ..statusError = const ValidationFailure(
+          'InvalidPlateError',
+          'InvalidPlateError',
+        );
+      final cubit = LoyaltyStatusCubit(repository);
+      serviceLocator.registerSingleton<LoyaltyStatusCubit>(cubit);
+      addTearDown(serviceLocator.reset);
+      addTearDown(cubit.close);
+      await pumpPage(tester, loyalty: cubit);
+
+      await enterPlate(tester, 'ABC123');
+      expect(find.byKey(const Key('loyalty_chip_retry')), findsOneWidget);
+
+      await tapSubmit(tester);
+      expect(checkIns.createCalls, 1);
+    });
+
+    testWidgets('no chip when the repository is not registered', (
+      tester,
+    ) async {
+      await pumpPage(tester);
+      await enterPlate(tester, 'ABC123');
+
+      expect(find.byKey(const Key('loyalty_progress_chip')), findsNothing);
+      expect(find.textContaining('Visita'), findsNothing);
     });
   });
 }

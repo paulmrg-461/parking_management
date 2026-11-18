@@ -39,6 +39,7 @@ import '../../features/merchants/application/merchant_validation_cubit.dart';
 import '../../features/merchants/presentation/public_validation_page.dart';
 import '../../features/pass_renewal/application/pass_renewal_cubit.dart';
 import '../../features/pricing/application/price_quote_cubit.dart';
+import '../../features/loyalty/application/loyalty_status_cubit.dart';
 import '../../features/pass_renewal/presentation/pass_renewal_page.dart';
 import '../../features/policies/application/policies_cubit.dart';
 import '../../features/policies/presentation/policies_page.dart';
@@ -70,6 +71,7 @@ import 'deferred/contact_entry.dart' deferred as contact;
 import 'deferred/monthly_passes_entry.dart' deferred as monthly_passes;
 import 'deferred/merchants_entry.dart' deferred as merchants;
 import 'deferred/pricing_entry.dart' deferred as pricing;
+import 'deferred/loyalty_entry.dart' deferred as loyalty;
 import 'deferred/reports_entry.dart' deferred as reports;
 import 'deferred/settings_entry.dart' deferred as settings;
 import 'deferred/spots_entry.dart' deferred as spots;
@@ -240,6 +242,10 @@ GoRoute _homeRoute(AuthCubit auth) => GoRoute(
           BlocProvider<PriceQuoteCubit>(
             create: (_) => serviceLocator<PriceQuoteCubit>(),
           ),
+          if (serviceLocator.isRegistered<LoyaltyStatusCubit>())
+            BlocProvider<LoyaltyStatusCubit>(
+              create: (_) => serviceLocator<LoyaltyStatusCubit>(),
+            ),
         ],
         child: CheckInPage(
           capture: serviceLocator<PlateImageCapture>(),
@@ -253,8 +259,16 @@ GoRoute _homeRoute(AuthCubit auth) => GoRoute(
     ),
     GoRoute(
       path: 'check-out',
-      builder: (context, state) => BlocProvider<CheckOutCubit>(
-        create: (_) => serviceLocator<CheckOutCubit>(),
+      builder: (context, state) => MultiBlocProvider(
+        providers: [
+          BlocProvider<CheckOutCubit>(
+            create: (_) => serviceLocator<CheckOutCubit>(),
+          ),
+          if (serviceLocator.isRegistered<LoyaltyStatusCubit>())
+            BlocProvider<LoyaltyStatusCubit>(
+              create: (_) => serviceLocator<LoyaltyStatusCubit>(),
+            ),
+        ],
         child: CheckOutPage(
           initialQuery: state.uri.queryParameters['plate'],
           scanPlate: state.uri.queryParameters['scan'],
@@ -354,6 +368,11 @@ GoRoute _homeRoute(AuthCubit auth) => GoRoute(
       'pricing',
       pricing.loadLibrary,
       () => pricing.buildPricingEntry(),
+    ),
+    _deferred(
+      'loyalty',
+      loyalty.loadLibrary,
+      () => loyalty.buildLoyaltyEntry(),
     ),
     _deferred('users', users.loadLibrary, () => users.buildUsersEntry()),
     _deferred(

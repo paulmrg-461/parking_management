@@ -5359,4 +5359,195 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get errorPricingSimulationTooLarge =>
       'Demasiadas entradas: elige menos dias.';
+
+  @override
+  String get loyaltyTitle => 'Fidelización';
+
+  @override
+  String get loyaltyTabProgram => 'Programa';
+
+  @override
+  String get loyaltyTabMembers => 'Clientes';
+
+  @override
+  String get loyaltyTabReport => 'Reporte';
+
+  @override
+  String get loyaltyEnabled => 'Programa activo';
+
+  @override
+  String get loyaltyVisitsRequired => 'Visitas para ganar';
+
+  @override
+  String get loyaltyRewardKind => 'Tipo de recompensa';
+
+  @override
+  String get loyaltyKindFreeStay => 'Estadía gratis';
+
+  @override
+  String get loyaltyKindFixed => 'Descuento fijo';
+
+  @override
+  String get loyaltyRewardMax => 'Tope de la estadía gratis';
+
+  @override
+  String get loyaltyRewardFixed => 'Valor del descuento';
+
+  @override
+  String get loyaltyMinAmount => 'Pago mínimo por visita';
+
+  @override
+  String get loyaltyMinMinutes => 'Minutos mínimos por visita';
+
+  @override
+  String get loyaltyRedeemMode => 'Canje';
+
+  @override
+  String get loyaltyModeAuto => 'Automático';
+
+  @override
+  String get loyaltyModeOperator => 'Lo decide el operador';
+
+  @override
+  String get loyaltyStackMerchant => 'Acumular con convenios';
+
+  @override
+  String get loyaltyValidDays => 'Vigencia de la recompensa (días)';
+
+  @override
+  String get loyaltySave => 'Guardar programa';
+
+  @override
+  String get loyaltySaved => 'Programa guardado';
+
+  @override
+  String loyaltyVisitOf(int current, int total) {
+    return 'Visita $current de $total';
+  }
+
+  @override
+  String get loyaltyRewardAvailable => 'Recompensa disponible';
+
+  @override
+  String get loyaltyRewardEarned => '¡Recompensa ganada!';
+
+  @override
+  String get loyaltyUseReward => 'Usar recompensa';
+
+  @override
+  String get loyaltyDontUseNow => 'No usar ahora';
+
+  @override
+  String get loyaltyRewardLine => 'Recompensa de fidelidad';
+
+  @override
+  String loyaltyRewardExpires(String date) {
+    return 'Vence el $date';
+  }
+
+  @override
+  String get loyaltyMembersEmpty => 'Aún no hay clientes con visitas';
+
+  @override
+  String get loyaltyEnableCta => 'Activar el programa';
+
+  @override
+  String get loyaltySearchPlate => 'Buscar placa';
+
+  @override
+  String get loyaltyAdjust => 'Corregir progreso';
+
+  @override
+  String get loyaltyAdjustDelta => 'Cambio (+/-)';
+
+  @override
+  String get loyaltyAdjustReason => 'Motivo (obligatorio)';
+
+  @override
+  String get loyaltyReportMembers => 'Clientes';
+
+  @override
+  String get loyaltyReportCounted => 'Visitas contadas';
+
+  @override
+  String get loyaltyReportSkipped => 'Visitas no contadas';
+
+  @override
+  String get loyaltyReportEarned => 'Recompensas ganadas';
+
+  @override
+  String get loyaltyReportRedeemed => 'Recompensas canjeadas';
+
+  @override
+  String get loyaltyReportDiscount => 'Descuento otorgado';
+
+  @override
+  String get loyaltyReportTopPlates => 'Placas frecuentes';
+
+  @override
+  String get loyaltySkip_pass => 'Pase mensual';
+
+  @override
+  String get loyaltySkip_lost_ticket => 'Ticket perdido';
+
+  @override
+  String get loyaltySkip_exempt => 'Exento';
+
+  @override
+  String get loyaltySkip_below_amount => 'Pago bajo el mínimo';
+
+  @override
+  String get loyaltySkip_below_minutes => 'Estadía muy corta';
+
+  @override
+  String get loyaltySkip_same_day => 'Ya contó hoy';
+
+  @override
+  String get loyaltySkip_reward_redeemed => 'Usó recompensa';
+
+  @override
+  String get loyaltySkip_error => 'Error interno';
+
+  @override
+  String get loyaltyRefreshReport => 'Actualizar reporte';
+
+  @override
+  String get loyaltyCopyCsv => 'Copiar CSV';
+
+  @override
+  String get loyaltyCsvCopied => 'CSV copiado';
+
+  @override
+  String get loyaltySharePdf => 'Compartir PDF';
+
+  @override
+  String get errorLoyaltyDisabled =>
+      'El programa de fidelización está desactivado';
+
+  @override
+  String get errorLoyaltySettings => 'Revisa los valores del programa';
+
+  @override
+  String get errorLoyaltyChoice => 'Opción de canje no válida';
+
+  @override
+  String get errorNoRewardAvailable =>
+      'Esta placa no tiene recompensa disponible';
+
+  @override
+  String get errorLoyaltyReason => 'Escribe un motivo de 3 a 200 caracteres';
+
+  @override
+  String get errorLoyaltyAdjustRange =>
+      'El ajuste dejaría el progreso fuera de rango';
+
+  @override
+  String get errorLoyaltyAccountNotFound =>
+      'Esa placa no tiene cuenta de fidelización';
+
+  @override
+  String get loyaltyReportEmpty => 'Aún no hay datos en el periodo';
+
+  @override
+  String get navLoyalty => 'Fidelización';
 }

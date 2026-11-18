@@ -5,6 +5,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
+import '../../../core/fare/fare_adjustment.dart';
 import '../../../core/receipt/receipt_data.dart';
 import '../../../core/receipt/receipt_labels.dart';
 import '../../../core/utils/cop_formatter.dart';
@@ -91,12 +92,25 @@ class SystemDialogReceiptPrinter implements ReceiptPrinter {
           _row(context, labels.photos, '${data.photoCount}'),
         if (data.isCheckOut && !data.pendingSync && data.pricingLabel != null)
           _row(context, labels.pricingRule, data.pricingLabel!),
+        if (!data.pendingSync && data.loyaltyRequired != null)
+          _row(
+            context,
+            '',
+            data.loyaltyRewardEarned
+                ? labels.loyaltyRewardEarned
+                : labels.loyaltyVisit(
+                    (data.loyaltyVisits ?? 0) + 1,
+                    data.loyaltyRequired!,
+                  ),
+          ),
         if (data.isCheckOut && !data.pendingSync && data.grossAmount != null) ...[
           _row(context, labels.gross, CopFormatter.format(data.grossAmount!)),
           for (final line in data.adjustments)
             _row(
               context,
-              '${labels.benefit} ${line.label}',
+              line.type == FareAdjustmentType.reward
+                  ? labels.loyaltyReward
+                  : '${labels.benefit} ${line.label}',
               '-${CopFormatter.format(line.amount)}',
             ),
         ],

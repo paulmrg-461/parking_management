@@ -6,6 +6,7 @@ import '../../../core/theme/tokens.dart';
 import '../../../core/money/money.dart';
 import '../../../core/money/money_input.dart';
 import '../../../core/receipt/payment_method.dart';
+import '../../loyalty/presentation/desk_loyalty_section.dart';
 import '../../merchants/presentation/desk_merchant_section.dart';
 import '../domain/entities/check_out_preview.dart';
 import 'widgets/fare_breakdown_view.dart';
@@ -43,6 +44,7 @@ Future<CheckoutChoice?> showCheckoutDialog(
   CheckOutPreview? preview,
   PaymentMethod initialMethod = PaymentMethod.cash,
   MerchantDeskOptions? merchants,
+  LoyaltyDeskOptions? loyalty,
 }) => showDialog<CheckoutChoice>(
   context: context,
   builder: (_) => _CheckoutDialog(
@@ -51,6 +53,7 @@ Future<CheckoutChoice?> showCheckoutDialog(
     preview: preview,
     initialMethod: initialMethod,
     merchants: merchants,
+    loyalty: loyalty,
   ),
 );
 
@@ -61,6 +64,7 @@ class _CheckoutDialog extends StatefulWidget {
     this.preview,
     this.initialMethod = PaymentMethod.cash,
     this.merchants,
+    this.loyalty,
   });
 
   final String plate;
@@ -68,6 +72,7 @@ class _CheckoutDialog extends StatefulWidget {
   final CheckOutPreview? preview;
   final PaymentMethod initialMethod;
   final MerchantDeskOptions? merchants;
+  final LoyaltyDeskOptions? loyalty;
 
   @override
   State<_CheckoutDialog> createState() => _CheckoutDialogState();
@@ -222,6 +227,13 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
                 ),
               if (_paidOnline) _buildOnlineBox(context),
               if (due != null && _discount > 0) _buildDueRow(context, due),
+              if (widget.loyalty case final loyalty?
+                  when !_lostTicket && !(_preview?.hasPass ?? false))
+                DeskLoyaltySection(
+                  options: loyalty,
+                  preview: _preview,
+                  onChanged: (preview) => setState(() => _preview = preview),
+                ),
               if (widget.merchants case final merchants?
                   when !_lostTicket &&
                       !(_preview?.hasPass ?? false) &&
