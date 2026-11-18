@@ -84,8 +84,9 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
     header from the device. The route table is ready for the camera, barrier
     and sensor changes.
   - Flutter `/devices` (admin, deferred): list with status, register with
-    show-once key, rotate, enable/disable, rename, delete, event history and
-    the offline threshold; notification routes for device alerts.
+    show-once key, rotate, enable/disable, delete, event history and the
+    offline threshold; notification routes for device alerts. Rename exists in
+    the cubit/API and awaits a UI affordance.
 
 - **Damage comparison (backend, `0127`)**
   (`openspec/changes/add-ai-damage-comparison`). Exit evidence and the

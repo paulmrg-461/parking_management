@@ -57,7 +57,8 @@ Last updated: 2026-11-18 (device gateway).
   green over `0001`-`0129`, **84 Deno tests** green, `/v1/time` answers 200.
   Flutter tests unchanged (1866).
 - Flutter shipped: `/devices` (admin/deferred) with list + status, register
-  with show-once key, rotate, toggle, rename dialog path, delete confirmation,
+  with show-once key, rotate, toggle, delete confirmation (rename lives in the
+  cubit/API and has no UI control yet),
   event history sheet and the offline threshold in the list header; notification
   routes for `device_offline`/`device_online`/`device_auth_failed`.
 - Pending: the manual device smoke (real ESP32/Jetson with `/v1/time` and
