@@ -26,6 +26,7 @@ Future<CheckoutChoice? Function()> pumpDialog(
   LoyaltyDeskOptions? loyalty,
   FiscalConfig? fiscal,
   bool online = true,
+  bool exitPhotosEnabled = false,
 }) async {
   CheckoutChoice? result;
   tester.view.physicalSize = size;
@@ -46,6 +47,7 @@ Future<CheckoutChoice? Function()> pumpDialog(
                 loyalty: loyalty,
                 fiscal: fiscal,
                 online: online,
+                exitPhotosEnabled: exitPhotosEnabled,
               );
             },
             child: const Text('open'),
@@ -567,5 +569,13 @@ void main() {
       expect(result(), isNotNull);
       expect(result()?.fiscalCustomer, isNull);
     });
+  });
+
+  testWidgets('exit photos section shows when enabled and hides offline', (
+    tester,
+  ) async {
+    await pumpDialog(tester, exitPhotosEnabled: false);
+    expect(find.text('Las fotos de salida necesitan conexión.'), findsOneWidget);
+    expect(find.byKey(const Key('damage_add_exit_photo')), findsNothing);
   });
 }

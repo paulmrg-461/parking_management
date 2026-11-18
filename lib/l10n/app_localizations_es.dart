@@ -5901,4 +5901,123 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get errorAiQuestionInvalid => 'Escribe una pregunta válida';
+
+  @override
+  String get damageTitle => 'Comparación de daños';
+
+  @override
+  String get damageAdvisoryTitle => 'Análisis orientativo con IA';
+
+  @override
+  String get damageAdvisoryBody =>
+      'Puede pasar por alto daños o confundir reflejos y suciedad con daños. Verifica cada punto en el vehículo: la decisión es de una persona.';
+
+  @override
+  String get damageVerdictNone =>
+      'No se detectaron daños nuevos en las fotos comparadas';
+
+  @override
+  String get damageVerdictPossible => 'Posible daño nuevo: verifica';
+
+  @override
+  String get damageVerdictInsufficient =>
+      'Evidencia insuficiente para comparar';
+
+  @override
+  String get damageClassPre => 'Ya existía';
+
+  @override
+  String get damageClassNew => 'Posible daño nuevo: verifica';
+
+  @override
+  String get damageClassUncertain => 'Incierto';
+
+  @override
+  String get damageRun => 'Comparar con las fotos de entrada';
+
+  @override
+  String get damageRerun => 'Volver a analizar';
+
+  @override
+  String get damageRunning => 'Analizando fotos…';
+
+  @override
+  String get damageEmptyTitle => 'Aún no hay comparación';
+
+  @override
+  String get damageEmptyNeedExit =>
+      'Toma fotos de salida en el check-out para poder comparar.';
+
+  @override
+  String get damageEmptyNeedEntry =>
+      'Esta entrada no tiene fotos para comparar.';
+
+  @override
+  String get damageNotConfigured =>
+      'El análisis con IA no está activado en el servidor.';
+
+  @override
+  String get damageReviewConfirm => 'Confirmar';
+
+  @override
+  String get damageReviewDismiss => 'Descartar';
+
+  @override
+  String get damageReviewNoteLabel => 'Nota (obligatoria)';
+
+  @override
+  String get damageReviewAudited =>
+      'La decisión y la nota quedan en la auditoría.';
+
+  @override
+  String get damageExitSection => 'Fotos de salida (opcional)';
+
+  @override
+  String get damageExitHint =>
+      'Sirven para resolver reclamos de daños. Usa los mismos ángulos que a la entrada.';
+
+  @override
+  String get damageExitOffline => 'Las fotos de salida necesitan conexión.';
+
+  @override
+  String get damageExitSaved => 'Fotos de salida guardadas';
+
+  @override
+  String get damageExitFailed => 'No se pudieron guardar las fotos de salida';
+
+  @override
+  String get damageExitSkippedOffline =>
+      'Salida registrada sin conexión: las fotos de salida no se guardaron.';
+
+  @override
+  String get damageAddPhoto => 'Tomar foto';
+
+  @override
+  String damagePhotosCount(int count) {
+    return '$count foto(s)';
+  }
+
+  @override
+  String get errorInsufficientEvidence =>
+      'Faltan fotos de entrada o de salida para comparar';
+
+  @override
+  String get errorComparisonInProgress =>
+      'Ya hay un análisis en curso para este vehículo';
+
+  @override
+  String get errorComparisonExists =>
+      'Ya se analizó esta salida; un administrador puede repetirla';
+
+  @override
+  String get errorEvidenceUnreadable => 'No se pudieron leer las fotos';
+
+  @override
+  String get errorEvidenceLimit => 'Máximo 5 fotos de salida por vehículo';
+
+  @override
+  String get errorFindingNotFound => 'Hallazgo no encontrado';
+
+  @override
+  String get errorComparisonNotFound => 'Comparación no encontrada';
 }

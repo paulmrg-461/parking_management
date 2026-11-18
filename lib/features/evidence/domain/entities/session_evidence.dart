@@ -1,5 +1,13 @@
 import 'package:equatable/equatable.dart';
 
+enum EvidencePhase {
+  entry,
+  exit;
+
+  static EvidencePhase fromWire(Object? raw) =>
+      raw == 'exit' ? EvidencePhase.exit : EvidencePhase.entry;
+}
+
 enum EvidenceKind {
   photo,
   video;
@@ -17,6 +25,7 @@ class SessionEvidence extends Equatable {
     required this.path,
     required this.kind,
     required this.takenAt,
+    this.phase = EvidencePhase.entry,
     this.durationSeconds,
     this.url,
   });
@@ -25,6 +34,7 @@ class SessionEvidence extends Equatable {
   final String path;
   final EvidenceKind kind;
   final DateTime takenAt;
+  final EvidencePhase phase;
   final int? durationSeconds;
   final String? url;
 
@@ -40,11 +50,14 @@ class SessionEvidence extends Equatable {
       takenAt: rawDate is String && rawDate.isNotEmpty
           ? DateTime.tryParse(rawDate)?.toLocal() ?? DateTime(1970)
           : DateTime(1970),
+      phase: EvidencePhase.fromWire(json['phase']),
       durationSeconds: (json['duration_seconds'] as num?)?.toInt(),
       url: json['url'] as String?,
     );
   }
 
   @override
-  List<Object?> get props => [id, path, kind, takenAt, durationSeconds, url];
+  List<Object?> get props => [
+    id, path, kind, takenAt, phase, durationSeconds, url,
+  ];
 }

@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:cross_file/cross_file.dart';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
@@ -36,6 +38,7 @@ import '../../evidence/domain/repositories/session_evidence_repository.dart';
 import '../../evidence/presentation/session_evidence_sheet.dart';
 import '../../../core/network/connectivity_cubit.dart';
 import '../../invoicing/application/issue_fiscal_document.dart';
+import '../../damage_comparison/application/attach_exit_evidence.dart';
 import '../../invoicing/domain/entities/fiscal_customer.dart';
 import '../../invoicing/domain/entities/fiscal_document.dart';
 import '../../invoicing/domain/entities/fiscal_resolution.dart';
@@ -104,6 +107,8 @@ class CheckOutPage extends StatefulWidget {
 class _CheckOutPageState extends State<CheckOutPage> {
   FiscalConfig? _fiscalConfig;
   FiscalCustomer? _pendingFiscalCustomer;
+  List<XFile> _pendingExitPhotos = const [];
+  String? _exitClientRef;
   static const _prefsBox = 'preferences';
   static const _lastPaymentKey = 'last_payment_method';
 
@@ -369,6 +374,8 @@ class _CheckOutPageState extends State<CheckOutPage> {
       loyalty: loyalty,
       fiscal: _fiscalConfig,
       online: _online(context),
+      exitPhotosEnabled: _online(context),
+      capture: widget.capture,
       initialMethod: (preview?.hasPass ?? false)
           ? PaymentMethod.monthlyPass
           : _basePaymentMethod(_rememberedMethod),
@@ -377,6 +384,10 @@ class _CheckOutPageState extends State<CheckOutPage> {
       return;
     }
     _pendingFiscalCustomer = choice.fiscalCustomer;
+    _pendingExitPhotos = choice.exitPhotos;
+    if (_pendingExitPhotos.isNotEmpty) {
+      _exitClientRef ??= DateTime.now().microsecondsSinceEpoch.toString();
+    }
     _chooseMethod(choice.method);
     _setOpening(session.id);
     await cubit.checkOut(
@@ -534,11 +545,45 @@ class _CheckOutPageState extends State<CheckOutPage> {
     BuildContext context,
     CheckOutReceipt receipt,
   ) async {
+    await _attachExitEvidence(context, receipt);
     final fiscal = await _issueFiscal(receipt);
     if (!mounted) {
       return;
     }
     await _showReceipt(context, receipt, fiscal: fiscal);
+  }
+
+  Future<void> _attachExitEvidence(
+    BuildContext context,
+    CheckOutReceipt receipt,
+  ) async {
+    final photos = _pendingExitPhotos;
+    final clientRef = _exitClientRef;
+    _pendingExitPhotos = const [];
+    _exitClientRef = null;
+    if (photos.isEmpty) {
+      return;
+    }
+    if (receipt.pendingSync) {
+      if (context.mounted) showInfoSnack(context, context.l10n.damageExitSkippedOffline);
+      return;
+    }
+    if (!serviceLocator.isRegistered<AttachExitEvidence>()) {
+      return;
+    }
+    final count = await serviceLocator<AttachExitEvidence>()(
+      sessionId: receipt.id,
+      photos: photos,
+      clientRef: clientRef ?? DateTime.now().microsecondsSinceEpoch.toString(),
+    );
+    if (!context.mounted) {
+      return;
+    }
+    if (count == null) {
+      showErrorSnack(context, context.l10n.damageExitFailed);
+    } else {
+      showInfoSnack(context, context.l10n.damageExitSaved);
+    }
   }
 
   /// Best effort: a fiscal failure never delays or breaks the receipt.

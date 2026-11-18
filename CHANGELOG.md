@@ -82,8 +82,12 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
     code-side normalisation (new -> uncertain when unsupported, 12-finding cap,
     overall verdict computed in code) and service-role store. Additive to the
     shared AI budget (`damage_compare`). Inert without the key.
-  - Flutter UI (exit photo capture, side-by-side review, guidance) is the next
-    batch; the backend and its SQL/Deno tests are already in place.
+  - Flutter: optional exit-photo capture in the settlement dialog, upload after
+    a successful online check-out (same `clientRef` on retry), the
+    `/damage-comparison` page (session-scoped, operator-accessible) with the
+    advisory banner, verdict, findings, confirm/dismiss with a mandatory note
+    and an admin re-run. Angle guidance and the evidence-sheet phase grouping
+    remain pending.
 
 - **Report assistant** (`0126_ai_usage`, `openspec/changes/add-report-assistant`).
   Admins ask a report question in Spanish or English and receive figures

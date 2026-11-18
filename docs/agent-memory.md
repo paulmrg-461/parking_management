@@ -4,7 +4,7 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-11-18 (damage comparison backend).
+Last updated: 2026-11-18 (damage comparison UI).
 
 ## Where we are
 
@@ -12,9 +12,8 @@ Last updated: 2026-11-18 (damage comparison backend).
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
 - `supabase/migrations/0001..0127` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 1840 tests green (coverage 79.1% global; application 90.4%,
-  domain 61.7%, infrastructure 48.1%) — unchanged by this backend batch;
-  `flutter analyze` reports only SDK
+- Flutter: 1866 tests green (coverage 79.1% global; application 90.3%,
+  domain 62.7%, infrastructure 47.9%), `flutter analyze` reports only SDK
   deprecation infos from the pinned beta channel (0 errors/warnings). Web
   build green. Deno tests for the Edge Functions: 30 green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
@@ -61,10 +60,14 @@ Last updated: 2026-11-18 (damage comparison backend).
   60/1.2M), SQL suite green over `0001`-`0127`, **79 Deno tests** green, the
   function answers 200 `{configured:false}` without a key. Flutter tests are
   unchanged (1840).
-- Pending: the whole Flutter surface (guidance, exit photo capture,
-  side-by-side page, review UI, evidence sheet grouping, `/damage-comparison`
-  route), the 16 replay fixtures and the live eval, plus the manual photo smoke.
-  This is the next batch; nothing in the DB or Edge layer depends on it.
+- Flutter shipped: `evidence_photos.phase` parsing, exit-photo capture in the
+  settlement dialog (online only), `AttachExitEvidence` upload after a
+  successful online check-out (409 retry is success, same `clientRef`), and the
+  `/damage-comparison` page (operator route) with the advisory banner, verdict,
+  findings, confirm/dismiss note dialog, admin re-run and the four states.
+- Pending: the angle guidance (capture guide, check-in/out chips), the evidence
+  sheet phase grouping/compare button, the 16 replay fixtures and live eval,
+  and the manual photo smoke. They are UI-only; the backend is complete.
 
 ## Report assistant (2026-11-18, `0126`)
 

@@ -61,6 +61,11 @@ void main() {
       );
     });
 
+    test('Success: operators can open the damage comparison', () {
+      expect(canAccess(UserRole.operator, '/damage-comparison'), isTrue);
+      expect(canAccess(UserRole.operator, '/report-assistant'), isFalse);
+    });
+
     test('Security: the report assistant is admin only', () {
       expect(canAccess(UserRole.operator, '/report-assistant'), isFalse);
       expect(

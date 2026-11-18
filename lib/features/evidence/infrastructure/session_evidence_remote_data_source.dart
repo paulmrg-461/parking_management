@@ -24,7 +24,7 @@ class SupabaseSessionEvidenceRemoteDataSource
     try {
       final rows = await _client
           .from(_table)
-          .select('id, file_path, kind, duration_seconds, taken_at')
+          .select('id, file_path, kind, duration_seconds, taken_at, phase')
           .eq('session_id', sessionId)
           .order('taken_at');
       final result = <SessionEvidence>[];

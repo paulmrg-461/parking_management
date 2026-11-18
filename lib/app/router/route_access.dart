@@ -24,6 +24,7 @@ const operatorRoutes = {
   homePath,
   '/check-in',
   '/check-out',
+  '/damage-comparison',
   '/notifications',
   '/history',
   '/records',

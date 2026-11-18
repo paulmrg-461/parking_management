@@ -47,7 +47,7 @@ WhatsApp (manual or automated).
 | Loyalty rewards | Complete, inert by default (visit accrual, reward redemption, `/loyalty`, expiry job) | SQL + widget tests |
 | Electronic invoicing | Complete, inert by default (`mode = off`, provider optional; every DIAN rule an ASSUMPTION) | SQL + Deno + widget tests |
 | Report assistant | Complete, inert without `DEEPSEEK_API_KEY` (tool allowlist, verified figures, budget) | SQL + Deno + widget tests |
-| Damage comparison | Backend complete, UI pending (exit photos, advisory AI comparison, human review) | SQL + Deno tests |
+| Damage comparison | Complete, inert without a key (exit photos, advisory AI comparison, human review) | SQL + Deno + widget tests |
 | Backups / restore | Complete, with a safe drill | Drill executed against a real backup |
 | Secrets / PIN operations | Complete (scripts + runbook) | PIN rotation verified live |
 | E2E and CI | Complete (API + Flutter client, real stack) | CI job `supabase-e2e` |
@@ -269,8 +269,10 @@ same-vehicle answer to "uncertain", caps the list at 12 and computes the overall
 verdict itself. The result is stored by the service role only, so operators
 cannot forge a finding; operators confirm or dismiss each finding with a
 mandatory note (audited), and an admin can re-run. The comparison is advisory:
-it never changes the charge, the discount or the blacklist. Flutter surface is
-the next batch.
+it never changes the charge, the discount or the blacklist. The settlement dialog captures optional exit photos, the
+`/damage-comparison` page shows the verdict and findings, and each finding is
+confirmed or dismissed with a mandatory note (audited). Angle guidance and the
+evidence-sheet phase grouping are pending.
 
 ## 7.10 Report assistant (implemented, inert without a key)
 

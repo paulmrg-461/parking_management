@@ -5846,4 +5846,119 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get errorAiQuestionInvalid => 'Write a valid question';
+
+  @override
+  String get damageTitle => 'Damage comparison';
+
+  @override
+  String get damageAdvisoryTitle => 'Advisory AI analysis';
+
+  @override
+  String get damageAdvisoryBody =>
+      'It can miss damage or mistake reflections and dirt for damage. Verify each point on the vehicle: a person decides.';
+
+  @override
+  String get damageVerdictNone =>
+      'No new damage detected in the compared photos';
+
+  @override
+  String get damageVerdictPossible => 'Possible new damage: verify';
+
+  @override
+  String get damageVerdictInsufficient => 'Not enough evidence to compare';
+
+  @override
+  String get damageClassPre => 'Pre-existing';
+
+  @override
+  String get damageClassNew => 'Possible new damage: verify';
+
+  @override
+  String get damageClassUncertain => 'Uncertain';
+
+  @override
+  String get damageRun => 'Compare with entry photos';
+
+  @override
+  String get damageRerun => 'Run again';
+
+  @override
+  String get damageRunning => 'Analyzing photos…';
+
+  @override
+  String get damageEmptyTitle => 'No comparison yet';
+
+  @override
+  String get damageEmptyNeedExit => 'Take exit photos at check-out to compare.';
+
+  @override
+  String get damageEmptyNeedEntry => 'This entry has no photos to compare.';
+
+  @override
+  String get damageNotConfigured => 'AI analysis is not enabled on the server.';
+
+  @override
+  String get damageReviewConfirm => 'Confirm';
+
+  @override
+  String get damageReviewDismiss => 'Dismiss';
+
+  @override
+  String get damageReviewNoteLabel => 'Note (required)';
+
+  @override
+  String get damageReviewAudited =>
+      'The decision and note are recorded in the audit log.';
+
+  @override
+  String get damageExitSection => 'Exit photos (optional)';
+
+  @override
+  String get damageExitHint =>
+      'They help settle damage claims. Use the same angles as at entry.';
+
+  @override
+  String get damageExitOffline => 'Exit photos need a connection.';
+
+  @override
+  String get damageExitSaved => 'Exit photos saved';
+
+  @override
+  String get damageExitFailed => 'Exit photos could not be saved';
+
+  @override
+  String get damageExitSkippedOffline =>
+      'Exit registered offline: exit photos were not saved.';
+
+  @override
+  String get damageAddPhoto => 'Take photo';
+
+  @override
+  String damagePhotosCount(int count) {
+    return '$count photo(s)';
+  }
+
+  @override
+  String get errorInsufficientEvidence =>
+      'Entry or exit photos are missing for the comparison';
+
+  @override
+  String get errorComparisonInProgress =>
+      'An analysis is already running for this vehicle';
+
+  @override
+  String get errorComparisonExists =>
+      'This exit was already analyzed; an admin can run it again';
+
+  @override
+  String get errorEvidenceUnreadable => 'The photos could not be read';
+
+  @override
+  String get errorEvidenceLimit => 'At most 5 exit photos per vehicle';
+
+  @override
+  String get errorFindingNotFound => 'Finding not found';
+
+  @override
+  String get errorComparisonNotFound => 'Comparison not found';
 }

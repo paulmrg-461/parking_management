@@ -40,6 +40,8 @@ import '../../features/merchants/presentation/public_validation_page.dart';
 import '../../features/pass_renewal/application/pass_renewal_cubit.dart';
 import '../../features/pricing/application/price_quote_cubit.dart';
 import '../../features/loyalty/application/loyalty_status_cubit.dart';
+import '../../features/damage_comparison/application/damage_comparison_cubit.dart';
+import '../../features/damage_comparison/presentation/damage_comparison_page.dart';
 import '../../features/pass_renewal/presentation/pass_renewal_page.dart';
 import '../../features/policies/application/policies_cubit.dart';
 import '../../features/policies/presentation/policies_page.dart';
@@ -258,6 +260,20 @@ GoRoute _homeRoute(AuthCubit auth) => GoRoute(
           vehicles: serviceLocator<VehicleRepository>(),
         ),
       ),
+    ),
+    GoRoute(
+      path: 'damage-comparison',
+      builder: (context, state) {
+        final sessionId = int.tryParse(
+              state.uri.queryParameters['session'] ?? '',
+            ) ??
+            0;
+        return BlocProvider<DamageComparisonCubit>(
+          create: (_) =>
+              serviceLocator<DamageComparisonCubit>(param1: sessionId),
+          child: DamageComparisonPage(sessionId: sessionId),
+        );
+      },
     ),
     GoRoute(
       path: 'check-out',

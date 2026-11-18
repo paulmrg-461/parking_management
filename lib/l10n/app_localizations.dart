@@ -10273,6 +10273,216 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Escribe una pregunta válida'**
   String get errorAiQuestionInvalid;
+
+  /// No description provided for @damageTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Comparación de daños'**
+  String get damageTitle;
+
+  /// No description provided for @damageAdvisoryTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Análisis orientativo con IA'**
+  String get damageAdvisoryTitle;
+
+  /// No description provided for @damageAdvisoryBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Puede pasar por alto daños o confundir reflejos y suciedad con daños. Verifica cada punto en el vehículo: la decisión es de una persona.'**
+  String get damageAdvisoryBody;
+
+  /// No description provided for @damageVerdictNone.
+  ///
+  /// In es, this message translates to:
+  /// **'No se detectaron daños nuevos en las fotos comparadas'**
+  String get damageVerdictNone;
+
+  /// No description provided for @damageVerdictPossible.
+  ///
+  /// In es, this message translates to:
+  /// **'Posible daño nuevo: verifica'**
+  String get damageVerdictPossible;
+
+  /// No description provided for @damageVerdictInsufficient.
+  ///
+  /// In es, this message translates to:
+  /// **'Evidencia insuficiente para comparar'**
+  String get damageVerdictInsufficient;
+
+  /// No description provided for @damageClassPre.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya existía'**
+  String get damageClassPre;
+
+  /// No description provided for @damageClassNew.
+  ///
+  /// In es, this message translates to:
+  /// **'Posible daño nuevo: verifica'**
+  String get damageClassNew;
+
+  /// No description provided for @damageClassUncertain.
+  ///
+  /// In es, this message translates to:
+  /// **'Incierto'**
+  String get damageClassUncertain;
+
+  /// No description provided for @damageRun.
+  ///
+  /// In es, this message translates to:
+  /// **'Comparar con las fotos de entrada'**
+  String get damageRun;
+
+  /// No description provided for @damageRerun.
+  ///
+  /// In es, this message translates to:
+  /// **'Volver a analizar'**
+  String get damageRerun;
+
+  /// No description provided for @damageRunning.
+  ///
+  /// In es, this message translates to:
+  /// **'Analizando fotos…'**
+  String get damageRunning;
+
+  /// No description provided for @damageEmptyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no hay comparación'**
+  String get damageEmptyTitle;
+
+  /// No description provided for @damageEmptyNeedExit.
+  ///
+  /// In es, this message translates to:
+  /// **'Toma fotos de salida en el check-out para poder comparar.'**
+  String get damageEmptyNeedExit;
+
+  /// No description provided for @damageEmptyNeedEntry.
+  ///
+  /// In es, this message translates to:
+  /// **'Esta entrada no tiene fotos para comparar.'**
+  String get damageEmptyNeedEntry;
+
+  /// No description provided for @damageNotConfigured.
+  ///
+  /// In es, this message translates to:
+  /// **'El análisis con IA no está activado en el servidor.'**
+  String get damageNotConfigured;
+
+  /// No description provided for @damageReviewConfirm.
+  ///
+  /// In es, this message translates to:
+  /// **'Confirmar'**
+  String get damageReviewConfirm;
+
+  /// No description provided for @damageReviewDismiss.
+  ///
+  /// In es, this message translates to:
+  /// **'Descartar'**
+  String get damageReviewDismiss;
+
+  /// No description provided for @damageReviewNoteLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Nota (obligatoria)'**
+  String get damageReviewNoteLabel;
+
+  /// No description provided for @damageReviewAudited.
+  ///
+  /// In es, this message translates to:
+  /// **'La decisión y la nota quedan en la auditoría.'**
+  String get damageReviewAudited;
+
+  /// No description provided for @damageExitSection.
+  ///
+  /// In es, this message translates to:
+  /// **'Fotos de salida (opcional)'**
+  String get damageExitSection;
+
+  /// No description provided for @damageExitHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Sirven para resolver reclamos de daños. Usa los mismos ángulos que a la entrada.'**
+  String get damageExitHint;
+
+  /// No description provided for @damageExitOffline.
+  ///
+  /// In es, this message translates to:
+  /// **'Las fotos de salida necesitan conexión.'**
+  String get damageExitOffline;
+
+  /// No description provided for @damageExitSaved.
+  ///
+  /// In es, this message translates to:
+  /// **'Fotos de salida guardadas'**
+  String get damageExitSaved;
+
+  /// No description provided for @damageExitFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudieron guardar las fotos de salida'**
+  String get damageExitFailed;
+
+  /// No description provided for @damageExitSkippedOffline.
+  ///
+  /// In es, this message translates to:
+  /// **'Salida registrada sin conexión: las fotos de salida no se guardaron.'**
+  String get damageExitSkippedOffline;
+
+  /// No description provided for @damageAddPhoto.
+  ///
+  /// In es, this message translates to:
+  /// **'Tomar foto'**
+  String get damageAddPhoto;
+
+  /// No description provided for @damagePhotosCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} foto(s)'**
+  String damagePhotosCount(int count);
+
+  /// No description provided for @errorInsufficientEvidence.
+  ///
+  /// In es, this message translates to:
+  /// **'Faltan fotos de entrada o de salida para comparar'**
+  String get errorInsufficientEvidence;
+
+  /// No description provided for @errorComparisonInProgress.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya hay un análisis en curso para este vehículo'**
+  String get errorComparisonInProgress;
+
+  /// No description provided for @errorComparisonExists.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya se analizó esta salida; un administrador puede repetirla'**
+  String get errorComparisonExists;
+
+  /// No description provided for @errorEvidenceUnreadable.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudieron leer las fotos'**
+  String get errorEvidenceUnreadable;
+
+  /// No description provided for @errorEvidenceLimit.
+  ///
+  /// In es, this message translates to:
+  /// **'Máximo 5 fotos de salida por vehículo'**
+  String get errorEvidenceLimit;
+
+  /// No description provided for @errorFindingNotFound.
+  ///
+  /// In es, this message translates to:
+  /// **'Hallazgo no encontrado'**
+  String get errorFindingNotFound;
+
+  /// No description provided for @errorComparisonNotFound.
+  ///
+  /// In es, this message translates to:
+  /// **'Comparación no encontrada'**
+  String get errorComparisonNotFound;
 }
 
 class _AppLocalizationsDelegate
