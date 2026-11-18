@@ -78,6 +78,21 @@ Last updated: 2026-11-18 (report assistant).
   `0001`-`0126`, **73 Deno tests** green, web release + web-public + debug APK
   built. Live function status without a key: 200 `{configured:false}`.
 
+
+### Damage comparison provider decision (2026-11-18)
+
+The owner approved sending **vehicle photos** to DeepSeek for the advisory
+damage comparison (`add-ai-damage-comparison`). DeepSeek's chat API accepts
+image content parts (`image_url` with `detail: low|high|original`) on
+`deepseek-flash`, so the change can reuse `DEEPSEEK_API_KEY` and `_shared/ai`
+without Anthropic. This is a stronger privacy decision than the report
+assistant (photos may show plates, people and the surroundings): the banner,
+the privacy note and the retention rules of the design remain mandatory, and
+the feature stays inert without the key. Implementation starts with migration
+`0127_damage_comparison.sql` (exit evidence phase + comparison tables/RPCs),
+then the `damage-compare` Edge Function, then the Flutter exit-photo and
+review flows.
+
 ## Electronic invoicing (2026-11-18, `0124`-`0125`)
 
 - **Decision 0.2 (recorded as required):** the change ships with `mode = 'off'`
