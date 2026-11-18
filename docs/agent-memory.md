@@ -4,16 +4,16 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-11-17 (merchant agreements).
+Last updated: 2026-11-18 (dynamic pricing).
 
 ## Where we are
 
 - Stack: Flutter (android + web) + self-hosted Supabase only. No FastAPI,
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
-- `supabase/migrations/0001..0119` are the schema owner (applied by
+- `supabase/migrations/0001..0121` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 1601 tests green (coverage 79.2% global; application 91.2%,
-  domain 60.8%, infrastructure 46.1%), `flutter analyze` reports only SDK
+- Flutter: 1656 tests green (coverage 79.0% global; application 91.0%,
+  domain 60.5%, infrastructure 45.9%), `flutter analyze` reports only SDK
   deprecation infos from the pinned beta channel (0 errors/warnings). Web
   build green. Deno tests for the Edge Functions: 30 green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
@@ -22,6 +22,51 @@ Last updated: 2026-11-17 (merchant agreements).
 
 
 
+
+
+## Dynamic pricing (2026-11-18, `0120`-`0121`)
+
+- The lock is written by a **BEFORE INSERT trigger** on `parking_sessions`
+  (`lock_session_price`), not by `check_in`: the 11-argument signature stays
+  intact and offline replays are covered. `pricing_lock` is immutable
+  afterwards (`PricingLockImmutableError`).
+- `fare_pricing_step` is the hook owned by `add-merchant-validations`; this
+  change only replaces its body (`create or replace`, same signature). It reads
+  the stored lock and never settings/rules, so previews, check-out, the public
+  page and a reprint agree forever.
+- Rule selection: highest priority, lowest id; one winner (no stacking).
+  `priced = round_half_up(base * multiplier_bps / 10000) + surcharge`, clamped
+  to the floor/ceiling snapshot, then rounded to `round_to` (last).
+- Occupancy = `floor(100 * (open + active holds of the group) / capacity)`,
+  capacity from drawn active bays or `usable_capacity`; `heavy` is unknown and
+  never matches an occupancy band. Windows use the lot timezone; an overnight
+  window's after-midnight part uses the previous weekday bit.
+- Offline (entry older than 5 minutes): only a lock whose hourly price is `<=`
+  the tariff is kept (`source = 'offline'`); surcharges are dropped.
+  A public hold stores its own lock (identity when nothing matched) and the
+  session keeps the cheaper of hold and current at the hourly reference; an
+  identity winner stores no lock.
+- `public_availability` was already a wrapper since `0109`, so this is Case A:
+  the wrapper now calls `pricing_decorate_availability` before adding the
+  forecast block. The forecast change must NOT rename again.
+- Test gotcha: the merchant test `quote: hook replaced is honoured` used to
+  restore a hardcoded no-op body; it now captures `pg_get_functiondef` first and
+  re-executes it, otherwise it silently removed the dynamic-pricing hook.
+- Test gotcha: a pricing test that inserts a session with an entry older than
+  5 minutes is an *offline* entry and correctly gets no surcharge; use a recent
+  entry (or write the lock explicitly) to test a surcharge.
+- Settings columns live in `parking_settings` (versioned); `pricing_rules` is
+  NOT versioned and never enters the outbox (admin CRUD is online only).
+- Gatekeeper (2026-11-18): migrations `0120`-`0121` applied live (switch off,
+  floor 10000, ceiling 15000, round 1), **1656 tests** green, coverage 79.0%
+  global, `flutter analyze` clean, SQL suite green over `0001`-`0121`, web
+  release + debug APK built. Live smoke: `public_availability(1)` answers
+  `pricing.enabled = false` and keeps `hourly_amount`; `pricing_apply` with a
+  12000 lock on 9000 returns 10800.
+- Pending: the manual two-device smoke (task 5.4), the public booking
+  "usual price" line and the history reprint rate line (wired in the design but
+  not implemented in this batch); the owner's open questions (ceilings,
+  stacking, holds locking cheap rates).
 
 ## Merchant agreements (2026-11-17, `0117`-`0119`)
 

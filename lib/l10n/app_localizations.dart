@@ -8929,6 +8929,378 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Escribe un motivo de 3 a 200 caracteres.'**
   String get errorRevokeReasonRequired;
+
+  /// No description provided for @navPricing.
+  ///
+  /// In es, this message translates to:
+  /// **'Tarifas dinamicas'**
+  String get navPricing;
+
+  /// No description provided for @pricingTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tarifas dinamicas'**
+  String get pricingTitle;
+
+  /// No description provided for @pricingEnabled.
+  ///
+  /// In es, this message translates to:
+  /// **'Activar tarifas dinamicas'**
+  String get pricingEnabled;
+
+  /// No description provided for @pricingEnabledHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Con la opcion apagada se cobra siempre la tarifa normal.'**
+  String get pricingEnabledHint;
+
+  /// No description provided for @pricingFloor.
+  ///
+  /// In es, this message translates to:
+  /// **'Minimo (% de la tarifa)'**
+  String get pricingFloor;
+
+  /// No description provided for @pricingCeiling.
+  ///
+  /// In es, this message translates to:
+  /// **'Maximo (% de la tarifa)'**
+  String get pricingCeiling;
+
+  /// No description provided for @pricingRoundTo.
+  ///
+  /// In es, this message translates to:
+  /// **'Redondear a'**
+  String get pricingRoundTo;
+
+  /// No description provided for @pricingSettingsSaved.
+  ///
+  /// In es, this message translates to:
+  /// **'Ajustes guardados'**
+  String get pricingSettingsSaved;
+
+  /// No description provided for @pricingRulesTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Reglas'**
+  String get pricingRulesTitle;
+
+  /// No description provided for @pricingNoRules.
+  ///
+  /// In es, this message translates to:
+  /// **'Aun no hay reglas'**
+  String get pricingNoRules;
+
+  /// No description provided for @pricingNoRulesHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Crea una regla para subir o bajar la tarifa segun ocupacion u horario.'**
+  String get pricingNoRulesHint;
+
+  /// No description provided for @pricingAddRule.
+  ///
+  /// In es, this message translates to:
+  /// **'Agregar regla'**
+  String get pricingAddRule;
+
+  /// No description provided for @pricingEditRule.
+  ///
+  /// In es, this message translates to:
+  /// **'Editar regla'**
+  String get pricingEditRule;
+
+  /// No description provided for @pricingRuleName.
+  ///
+  /// In es, this message translates to:
+  /// **'Nombre'**
+  String get pricingRuleName;
+
+  /// No description provided for @pricingRulePriority.
+  ///
+  /// In es, this message translates to:
+  /// **'Prioridad (mayor gana)'**
+  String get pricingRulePriority;
+
+  /// No description provided for @pricingRuleGroup.
+  ///
+  /// In es, this message translates to:
+  /// **'Tipo de vehiculo'**
+  String get pricingRuleGroup;
+
+  /// No description provided for @pricingRuleGroupAll.
+  ///
+  /// In es, this message translates to:
+  /// **'Todos'**
+  String get pricingRuleGroupAll;
+
+  /// No description provided for @pricingRuleOccupancyFrom.
+  ///
+  /// In es, this message translates to:
+  /// **'Ocupacion desde (%)'**
+  String get pricingRuleOccupancyFrom;
+
+  /// No description provided for @pricingRuleOccupancyTo.
+  ///
+  /// In es, this message translates to:
+  /// **'Ocupacion hasta (%)'**
+  String get pricingRuleOccupancyTo;
+
+  /// No description provided for @pricingRuleWeekdays.
+  ///
+  /// In es, this message translates to:
+  /// **'Dias'**
+  String get pricingRuleWeekdays;
+
+  /// No description provided for @pricingRuleFromTime.
+  ///
+  /// In es, this message translates to:
+  /// **'Desde'**
+  String get pricingRuleFromTime;
+
+  /// No description provided for @pricingRuleToTime.
+  ///
+  /// In es, this message translates to:
+  /// **'Hasta'**
+  String get pricingRuleToTime;
+
+  /// No description provided for @pricingRuleMultiplier.
+  ///
+  /// In es, this message translates to:
+  /// **'Multiplicador (%)'**
+  String get pricingRuleMultiplier;
+
+  /// No description provided for @pricingRuleSurcharge.
+  ///
+  /// In es, this message translates to:
+  /// **'Recargo fijo'**
+  String get pricingRuleSurcharge;
+
+  /// No description provided for @pricingRuleActive.
+  ///
+  /// In es, this message translates to:
+  /// **'Activa'**
+  String get pricingRuleActive;
+
+  /// No description provided for @pricingRuleSummary.
+  ///
+  /// In es, this message translates to:
+  /// **'{group}, {when}: {effect}'**
+  String pricingRuleSummary(String group, String when, String effect);
+
+  /// No description provided for @pricingRuleSaved.
+  ///
+  /// In es, this message translates to:
+  /// **'Regla guardada'**
+  String get pricingRuleSaved;
+
+  /// No description provided for @pricingRuleDeleted.
+  ///
+  /// In es, this message translates to:
+  /// **'Regla eliminada'**
+  String get pricingRuleDeleted;
+
+  /// No description provided for @pricingRuleDeleteConfirm.
+  ///
+  /// In es, this message translates to:
+  /// **'Las entradas ya registradas conservan su tarifa. Eliminar esta regla?'**
+  String get pricingRuleDeleteConfirm;
+
+  /// No description provided for @pricingSimulate.
+  ///
+  /// In es, this message translates to:
+  /// **'Simular'**
+  String get pricingSimulate;
+
+  /// No description provided for @pricingSimulateDays.
+  ///
+  /// In es, this message translates to:
+  /// **'Ultimos {days} dias'**
+  String pricingSimulateDays(int days);
+
+  /// No description provided for @pricingSimIncludeDraft.
+  ///
+  /// In es, this message translates to:
+  /// **'Incluir la regla sin guardar'**
+  String get pricingSimIncludeDraft;
+
+  /// No description provided for @pricingSimBase.
+  ///
+  /// In es, this message translates to:
+  /// **'Cobro con tarifa normal'**
+  String get pricingSimBase;
+
+  /// No description provided for @pricingSimTotal.
+  ///
+  /// In es, this message translates to:
+  /// **'Cobro simulado'**
+  String get pricingSimTotal;
+
+  /// No description provided for @pricingSimDelta.
+  ///
+  /// In es, this message translates to:
+  /// **'Diferencia'**
+  String get pricingSimDelta;
+
+  /// No description provided for @pricingSimAffected.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} entradas afectadas'**
+  String pricingSimAffected(int count);
+
+  /// No description provided for @pricingSimAtLimits.
+  ///
+  /// In es, this message translates to:
+  /// **'{floor} en el minimo, {ceiling} en el maximo'**
+  String pricingSimAtLimits(int floor, int ceiling);
+
+  /// No description provided for @pricingSimByRule.
+  ///
+  /// In es, this message translates to:
+  /// **'Por regla'**
+  String get pricingSimByRule;
+
+  /// No description provided for @pricingSimByHour.
+  ///
+  /// In es, this message translates to:
+  /// **'Por hora de entrada'**
+  String get pricingSimByHour;
+
+  /// No description provided for @pricingSimEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay entradas cobradas en ese periodo.'**
+  String get pricingSimEmpty;
+
+  /// No description provided for @pricingSimNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Usa tarifas y capacidad actuales y no cuenta reservas.'**
+  String get pricingSimNote;
+
+  /// No description provided for @pricingReportTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Impacto de tarifas dinamicas'**
+  String get pricingReportTitle;
+
+  /// No description provided for @pricingReportLocked.
+  ///
+  /// In es, this message translates to:
+  /// **'Entradas con tarifa fijada'**
+  String get pricingReportLocked;
+
+  /// No description provided for @pricingReportExtra.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingreso adicional'**
+  String get pricingReportExtra;
+
+  /// No description provided for @pricingReportDiscount.
+  ///
+  /// In es, this message translates to:
+  /// **'Descuentos por tarifa'**
+  String get pricingReportDiscount;
+
+  /// No description provided for @pricingReportNet.
+  ///
+  /// In es, this message translates to:
+  /// **'Efecto neto'**
+  String get pricingReportNet;
+
+  /// No description provided for @priceQuoteNow.
+  ///
+  /// In es, this message translates to:
+  /// **'Tarifa ahora: {amount}/h'**
+  String priceQuoteNow(String amount);
+
+  /// No description provided for @priceQuoteUsually.
+  ///
+  /// In es, this message translates to:
+  /// **'Normal: {amount}/h'**
+  String priceQuoteUsually(String amount);
+
+  /// No description provided for @priceQuoteHigher.
+  ///
+  /// In es, this message translates to:
+  /// **'Mas alta'**
+  String get priceQuoteHigher;
+
+  /// No description provided for @priceQuoteLower.
+  ///
+  /// In es, this message translates to:
+  /// **'Mas baja'**
+  String get priceQuoteLower;
+
+  /// No description provided for @priceQuoteOffline.
+  ///
+  /// In es, this message translates to:
+  /// **'La tarifa se confirma al sincronizar.'**
+  String get priceQuoteOffline;
+
+  /// No description provided for @publicPriceNow.
+  ///
+  /// In es, this message translates to:
+  /// **'Ahora {amount}/h'**
+  String publicPriceNow(String amount);
+
+  /// No description provided for @publicPriceUsually.
+  ///
+  /// In es, this message translates to:
+  /// **'Precio normal {amount}/h'**
+  String publicPriceUsually(String amount);
+
+  /// No description provided for @publicRateLocked.
+  ///
+  /// In es, this message translates to:
+  /// **'Tarifa fijada: {amount}/h hasta tu llegada'**
+  String publicRateLocked(String amount);
+
+  /// No description provided for @farePricingRule.
+  ///
+  /// In es, this message translates to:
+  /// **'Tarifa dinamica: {name} ({percent})'**
+  String farePricingRule(String name, String percent);
+
+  /// No description provided for @receiptRateLine.
+  ///
+  /// In es, this message translates to:
+  /// **'Tarifa: {name}'**
+  String receiptRateLine(String name);
+
+  /// No description provided for @fareRateLocked.
+  ///
+  /// In es, this message translates to:
+  /// **'Tarifa fijada a la entrada'**
+  String get fareRateLocked;
+
+  /// No description provided for @errorInvalidPricingRule.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisa la regla: hay valores fuera de rango.'**
+  String get errorInvalidPricingRule;
+
+  /// No description provided for @errorDuplicatePricingRule.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya existe una regla con ese nombre.'**
+  String get errorDuplicatePricingRule;
+
+  /// No description provided for @errorPricingRuleNotFound.
+  ///
+  /// In es, this message translates to:
+  /// **'La regla ya no existe.'**
+  String get errorPricingRuleNotFound;
+
+  /// No description provided for @errorInvalidPricingSettings.
+  ///
+  /// In es, this message translates to:
+  /// **'Minimo, maximo o redondeo fuera de rango.'**
+  String get errorInvalidPricingSettings;
+
+  /// No description provided for @errorPricingSimulationTooLarge.
+  ///
+  /// In es, this message translates to:
+  /// **'Demasiadas entradas: elige menos dias.'**
+  String get errorPricingSimulationTooLarge;
 }
 
 class _AppLocalizationsDelegate

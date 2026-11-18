@@ -55,6 +55,9 @@ erDiagram
   merchants ||--|| merchant_credentials : "authenticated by"
   merchants ||--o{ merchant_validations : "grants"
   parking_sessions ||--o{ merchant_validations : "validated by"
+
+  parking_lots ||--o{ pricing_rules : "rules"
+  pricing_rules ||--o{ parking_sessions : "locks at entry"
 ```
 
 ## 2. Tables
@@ -80,6 +83,7 @@ erDiagram
 | `parking_spot_events` | Maintenance history of a bay: status transition, optional reason, actor and timestamp; written by `save_parking_spot`, lot-scoped RLS. | yes |
 | `parking_settings` (`car_capacity`, `moto_capacity`, `key_capacity`) | Per-site branding (name, address, schedule, contacts, police quadrant, logo version/path) + `business_timezone`, `overstay_hours`, `lost_ticket_fee`, `evidence_retention_days`, online-payment switch/window/minimum. | yes |
 | `payment_intents` | Frozen amount for a gateway checkout: `reference` (random `PM-…`), `amount`, `currency` (COP only), `gateway` (`wompi`), `status` (`pending`/`approved`/`declined`/`voided`/`error`/`expired`), transaction id/method, `expires_at`. Written only by the service RPCs. | yes |
+| `pricing_rules` | Dynamic-pricing rule: name, active, priority, vehicle group, occupancy band, weekday mask, local window, multiplier bps, flat surcharge. Audited; admin RPCs only. | yes |
 | `merchants` | Agreement of the lot: name, one benefit rule (`free_minutes`/`percentage`/`fixed_amount` + optional per-validation cap), billing mode, daily/monthly caps, `active`, `credentials_version`. Audited. | yes |
 | `merchant_credentials` | SHA-256 `token_hash`, bcrypt `pin_hash`, failure counter, lock. RLS on with no policy and no grant: only the definer RPCs read it. | via merchant |
 | `merchant_validations` | One row per (merchant, session): source, actor, `status` (pending/applied/forfeited/revoked), `terms` snapshot, `amount`, timestamps and revoke reason. | yes |
@@ -353,6 +357,18 @@ discount; `save_merchant` / `list_merchants` / `list_active_merchants` /
 internal `create_merchant_validation`, `merchant_hash_token`, `merchant_summary`,
 `rotate_merchant_credentials`.
 
+**Dynamic pricing (`0120`–`0121`)**
+`pricing_apply_detail` / `pricing_apply` (pure), `pricing_group_capacity`,
+`pricing_group_occupancy`, `pricing_rule_matches`, `pricing_identity_lock`,
+`pricing_lock_for` (internal); triggers `trg_parking_sessions_pricing_lock`
+(BEFORE INSERT: writes the lock; never blocks the entry),
+`trg_parking_sessions_pricing_lock_guard` (immutable),
+`trg_category_reservations_pricing_lock` (+ `_claim`);
+`get/set_pricing_settings`, `list/save/delete_pricing_rule`,
+`pricing_quote`, `pricing_session_lock`, `public_reservation_pricing`,
+`pricing_simulate`, `report_pricing_impact`,
+`pricing_decorate_availability`; `fare_pricing_step` is now the real hook.
+
 ## 4. Access control (RLS)
 
 | Table | Read | Write |
@@ -372,6 +388,7 @@ internal `create_merchant_validation`, `merchant_hash_token`, `merchant_summary`
 | `payment_events` | nobody (RLS on, no policy, no grant) | `apply_payment_event` / service role |
 | `pass_renewal_offers` | lot admins of the active lot | RPCs only (cron/admin/service) |
 | `merchants` | active lot (staff need the desk picker) | RPCs (lot admins) |
+| `pricing_rules` | lot admins of the active lot | RPCs (lot admins) |
 | `merchant_credentials` | nobody (RLS on, no policy, no grant) | definer RPCs only |
 | `merchant_validations` | active lot | RPCs (desk/admin/public) |
 | `notifications` | own rows, active lot (or global) | RPCs/triggers |
@@ -481,6 +498,13 @@ offer is `late_closed` plus an admin review. The new period starts at
 `greatest(offer.start, lot today)`: a late payment is not retroactive.
 Reminders are deduped by `(offer|pass, cadence window)` through
 `whatsapp_messages.dedupe_key`; the URL button parameter is the offer token.
+
+**Dynamic pricing.** The lock is a versioned JSON snapshot written once at
+insert (rule effect + floor/ceiling/round + occupancy); `fare_pricing_step`
+never reads rules or settings again, so previews, check-out and reprints agree.
+Base = tariff → pricing → merchant lines → reward → manual discount. A
+pass holder or lost ticket is excluded. Offline entries may only keep a cheaper
+lock; a public hold's promise wins when it is cheaper.
 
 **Merchant agreements.** Benefits apply at check-out, never while the session
 is open. `fare_quote` walks the `pending` validations ordered by

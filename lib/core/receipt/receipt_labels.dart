@@ -26,6 +26,7 @@ class ReceiptLabels {
     required this.onlinePaid,
     required this.gross,
     required this.benefit,
+    required this.pricingRule,
   });
 
   final String checkInTitle;
@@ -63,6 +64,9 @@ class ReceiptLabels {
   /// Prefix of one automatic line (`Convenio` / `Agreement`).
   final String benefit;
 
+  /// Prefix of the locked dynamic-pricing rate (`Tarifa` / `Rate`).
+  final String pricingRule;
+
   /// Localizes a wire value (`cash`, `card`, `transfer`, `monthly_pass`,
   /// `exempt`, `online`) plus the optional card type (`debit`/`credit`).
   final String Function(String method, String? cardType) paymentMethod;
@@ -91,6 +95,7 @@ class ReceiptLabels {
     onlinePaid: 'Pagado en linea',
     gross: 'Tarifa',
     benefit: 'Convenio',
+    pricingRule: 'Tarifa',
     paymentMethod: _paymentEs,
   );
 
@@ -117,6 +122,7 @@ class ReceiptLabels {
     onlinePaid: 'Paid online',
     gross: 'Fare',
     benefit: 'Agreement',
+    pricingRule: 'Rate',
     paymentMethod: _paymentEn,
   );
 

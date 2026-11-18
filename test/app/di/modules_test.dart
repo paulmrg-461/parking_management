@@ -28,6 +28,11 @@ import 'package:parking_management/features/merchants/application/merchants_cubi
 import 'package:parking_management/features/merchants/domain/repositories/merchant_repository.dart';
 import 'package:parking_management/features/merchants/domain/repositories/public_merchant_repository.dart';
 import 'package:parking_management/features/pass_renewal/domain/repositories/pass_renewal_repository.dart';
+import 'package:parking_management/features/pricing/application/price_quote_cubit.dart';
+import 'package:parking_management/features/pricing/application/pricing_cubit.dart';
+import 'package:parking_management/features/pricing/application/pricing_simulation_cubit.dart';
+import 'package:parking_management/features/pricing/domain/repositories/price_quote_repository.dart';
+import 'package:parking_management/features/pricing/domain/repositories/pricing_repository.dart';
 import 'package:parking_management/features/online_payments/domain/repositories/online_payment_repository.dart';
 import 'package:parking_management/features/monthly_passes/application/monthly_passes_cubit.dart';
 import 'package:parking_management/features/plate_scanning/domain/repositories/plate_image_capture.dart';
@@ -104,6 +109,16 @@ void main() {
 
     expect(sl<OnlinePaymentRepository>(), isA<OnlinePaymentRepository>());
     expect(sl<OnlinePaymentCubit>(), isA<OnlinePaymentCubit>());
+  });
+
+  test('Success: registers the pricing module', () {
+    _register(sl);
+
+    expect(sl<PricingRepository>(), isA<PricingRepository>());
+    expect(sl<PriceQuoteRepository>(), isA<PriceQuoteRepository>());
+    expect(sl<PricingCubit>(), isA<PricingCubit>());
+    expect(sl<PricingSimulationCubit>(), isA<PricingSimulationCubit>());
+    expect(sl<PriceQuoteCubit>(), isA<PriceQuoteCubit>());
   });
 
   test('Success: registers the merchants module', () {

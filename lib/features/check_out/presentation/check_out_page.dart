@@ -48,6 +48,7 @@ import '../../../core/storage/key_value_store.dart';
 import '../domain/entities/open_session.dart';
 import '../../merchants/domain/entities/merchant.dart';
 import '../domain/entities/check_out_preview.dart';
+import '../../pricing/domain/entities/fare_pricing.dart';
 import '../../merchants/domain/repositories/merchant_repository.dart';
 import '../../merchants/presentation/desk_merchant_section.dart';
 import 'payment_method_dialog.dart';
@@ -500,6 +501,16 @@ class _CheckOutPageState extends State<CheckOutPage> {
     );
   }
 
+  static String? _pricingLabel(FarePricing? pricing) {
+    if (pricing == null) {
+      return null;
+    }
+    final percent = (pricing.multiplierBps / 100).toStringAsFixed(
+      pricing.multiplierBps % 100 == 0 ? 0 : 2,
+    );
+    return '${pricing.ruleName} x$percent';
+  }
+
   ReceiptData _receiptData(CheckOutReceipt receipt) => ReceiptData(
     kind: ReceiptKind.checkOut,
     plate: receipt.plate,
@@ -517,6 +528,8 @@ class _CheckOutPageState extends State<CheckOutPage> {
     onlinePaidAmount: receipt.onlinePaidAmount,
     grossAmount: receipt.grossAmount,
     adjustments: receipt.adjustments,
+    pricingLabel: _pricingLabel(receipt.pricing),
+    pricingDelta: receipt.pricing?.delta ?? 0,
     evidenceUrl: receipt.pendingSync ? null : publicEvidenceUrl(receipt.id),
     feedbackUrl: receipt.pendingSync
         ? null

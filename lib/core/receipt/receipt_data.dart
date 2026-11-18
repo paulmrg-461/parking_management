@@ -24,6 +24,8 @@ class ReceiptData {
     this.onlinePaidAmount = 0,
     this.grossAmount,
     this.adjustments = const [],
+    this.pricingLabel,
+    this.pricingDelta = 0,
     this.pendingSync = false,
     this.evidenceUrl,
     this.feedbackUrl,
@@ -54,6 +56,12 @@ class ReceiptData {
 
   /// Merchant (and later reward) reductions applied by the server.
   final List<FareAdjustment> adjustments;
+
+  /// Formatted dynamic-pricing label (built by the feature, never here).
+  final String? pricingLabel;
+
+  /// Signed difference of the locked rate against the base fare.
+  final int pricingDelta;
   final bool pendingSync;
 
   /// Public page (plate is the key) with the session's photos and videos.

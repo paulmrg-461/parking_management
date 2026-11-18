@@ -1,6 +1,7 @@
 import 'package:json_annotation/json_annotation.dart';
 
 import '../../../../core/fare/fare_adjustment.dart';
+import '../../../pricing/domain/entities/fare_pricing.dart';
 import '../../domain/entities/check_out_receipt.dart';
 
 part 'check_out_receipt_dto.g.dart';
@@ -24,6 +25,7 @@ class CheckOutReceiptDto {
     this.onlinePaidAmount = 0,
     this.grossAmount,
     this.fareAdjustments = const [],
+    this.pricing,
   });
 
   factory CheckOutReceiptDto.fromJson(Map<String, dynamic> json) =>
@@ -74,6 +76,8 @@ class CheckOutReceiptDto {
   @JsonKey(name: 'fare_adjustments', defaultValue: [])
   final List<dynamic> fareAdjustments;
 
+  final Map<String, dynamic>? pricing;
+
   Map<String, dynamic> toJson() => _$CheckOutReceiptDtoToJson(this);
 
   CheckOutReceipt toDomain() => CheckOutReceipt(
@@ -93,5 +97,6 @@ class CheckOutReceiptDto {
     onlinePaidAmount: onlinePaidAmount,
     grossAmount: grossAmount,
     adjustments: FareAdjustment.listFromJson(fareAdjustments),
+    pricing: pricing == null ? null : FarePricing.fromMap(pricing),
   );
 }

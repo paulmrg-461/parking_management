@@ -89,6 +89,8 @@ class SystemDialogReceiptPrinter implements ReceiptPrinter {
           ),
         ] else if (data.photoCount != null)
           _row(context, labels.photos, '${data.photoCount}'),
+        if (data.isCheckOut && !data.pendingSync && data.pricingLabel != null)
+          _row(context, labels.pricingRule, data.pricingLabel!),
         if (data.isCheckOut && !data.pendingSync && data.grossAmount != null) ...[
           _row(context, labels.gross, CopFormatter.format(data.grossAmount!)),
           for (final line in data.adjustments)

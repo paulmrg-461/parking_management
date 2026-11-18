@@ -130,6 +130,19 @@ class ReceiptSummaryDialog extends StatelessWidget {
               const SizedBox(height: Space.md),
               if (data.isCheckOut &&
                   !data.pendingSync &&
+                  data.pricingLabel != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: Space.md),
+                  child: ReceiptRow(
+                    label: l10n.receiptRateLine(data.pricingLabel!),
+                    value: data.pricingDelta == 0
+                        ? ''
+                        : '${data.pricingDelta > 0 ? '+' : '-'}'
+                              '${Formatters.money(data.pricingDelta.abs())}',
+                  ),
+                ),
+              if (data.isCheckOut &&
+                  !data.pendingSync &&
                   data.grossAmount != null) ...[
                 Padding(
                   padding: const EdgeInsets.only(top: Space.md),
@@ -375,6 +388,14 @@ class ReceiptCard extends StatelessWidget {
               value: l10n.sessionPhotos(data.photoCount!),
             ),
         ],
+        if (data.isCheckOut && !data.pendingSync && data.pricingLabel != null)
+          ReceiptRow(
+            label: l10n.receiptRateLine(data.pricingLabel!),
+            value: data.pricingDelta == 0
+                ? ''
+                : '${data.pricingDelta > 0 ? '+' : '-'}'
+                      '${Formatters.money(data.pricingDelta.abs())}',
+          ),
         if (data.isCheckOut && !data.pendingSync && data.grossAmount != null) ...[
           ReceiptRow(
             label: l10n.fareGross,

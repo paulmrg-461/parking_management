@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 
 import '../../../../core/fare/fare_quote.dart';
+import '../../../pricing/domain/entities/fare_pricing.dart';
 
 /// Fare preview for an open session (`rpc/check_out_preview`): the same math
 /// the server uses when closing, without side effects. It carries the billing
@@ -65,6 +66,9 @@ class CheckOutPreview extends Equatable {
 
   /// Benefits applied right now (merchant agreements and, later, rewards).
   final FareQuote? quote;
+
+  /// The locked dynamic-pricing rule, when there is one.
+  FarePricing? get pricing => FarePricing.fromMap(quote?.pricing);
 
   /// Desk balance, falling back to the full fare on old servers.
   int get deskDue => amountDue ?? amount;

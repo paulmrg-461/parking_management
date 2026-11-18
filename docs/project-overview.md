@@ -43,11 +43,12 @@ WhatsApp (manual or automated).
 | Online payments | Complete, inert without Wompi keys (`/evidence` pay panel, webhook, reconcile job, settlement) | SQL + Deno + widget tests |
 | Pass auto-renewal | Complete, inert without Wompi keys (`/renew` link, reminders, online settlement) | SQL + Deno + widget tests |
 | Merchant agreements | Complete (`/merchants`, `/validate` link + PIN, settlement, fare_quote) | SQL + widget tests |
+| Dynamic pricing | Complete, inert by default (rules, locked rate at entry, simulation, impact) | SQL + widget tests |
 | Backups / restore | Complete, with a safe drill | Drill executed against a real backup |
 | Secrets / PIN operations | Complete (scripts + runbook) | PIN rotation verified live |
 | E2E and CI | Complete (API + Flutter client, real stack) | CI job `supabase-e2e` |
 
-Quality snapshot (2026-11-17, local stack): **1601 Flutter tests + 1 integration
+Quality snapshot (2026-11-17, local stack): **1656 Flutter tests + 1 integration
 test**, SQL/RLS suite green, web build green, analyzer with **0 errors and 0
 warnings** (only SDK deprecation infos from the pinned beta channel), restore
 drill green.
@@ -80,6 +81,7 @@ the main data it touches.
 | `online_payments` | Public pay-from-phone panel, intent polling and the pay-online receipts/refunds review | `payment-intent`, `payment-webhook`, `payments-reconcile` (Edge Functions), `session_settlement`, `payment_intent_status`, `report_online_payments` |
 | `pass_renewal` | Public token-keyed renewal page (`/renew?t=`) and the admin "send renewal link" action | `pass_renewal_offers`, `public_pass_renewal`, `pass-renewal-intent` (Edge Function), `settle_pass_renewal`, `queue_pass_renewal_reminders` |
 | `merchants` | Agreements, show-once credentials, per-vehicle policy, settlement and the public `/validate?m=` page | `merchants`, `merchant_credentials`, `merchant_validations`, `fare_quote`, `save_merchant`, `merchant_validate`, `report_merchant_settlement` |
+| `pricing` | Dynamic rates: rules, guard rails, simulation, impact and the check-in price chip | `pricing_rules`, `pricing_lock`, `pricing_quote`, `pricing_simulate`, `report_pricing_impact`, `public_availability` price keys |
 | `emergency` | One-tap call to the nearest police quadrant (123 fallback) | `parking_settings.police_phone` |
 | `users` | Admin user management | `admin-users` Edge Function |
 | `lots` | Sites and membership | `my_lots`, `create_lot`, `set_lot_member`, `list_lot_members` |

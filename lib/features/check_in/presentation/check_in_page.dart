@@ -47,6 +47,8 @@ import '../../vehicles/domain/repositories/vehicle_repository.dart';
 import '../../notifications/presentation/notification_bell.dart';
 import '../../notifications/presentation/realtime_activity_listener.dart';
 import '../application/check_in_cubit.dart';
+import '../../pricing/application/price_quote_cubit.dart';
+import '../../pricing/presentation/price_quote_chip.dart';
 import '../application/vehicle_lookup_cubit.dart';
 import '../domain/entities/new_vehicle_info.dart';
 import '../domain/entities/parking_session.dart';
@@ -121,6 +123,7 @@ class _CheckInPageState extends State<CheckInPage> {
   final List<_Photo> _photos = [];
   Timer? _debounce;
   int? _categoryId;
+  int? _quoteCategoryId;
   int? _spotId;
 
   /// Bay requested by the deep link; re-applied when the category changes
@@ -634,11 +637,18 @@ class _CheckInPageState extends State<CheckInPage> {
 
   Widget _buildForm(BuildContext context) {
     return BlocConsumer<VehicleLookupCubit, VehicleLookupState>(
-      listenWhen: (previous, current) => current is VehicleLookupNotFound,
-      listener: (context, _) => setState(() {
-        _categoryId = null;
-        _spotId = _requestedSpotId;
-      }),
+      listenWhen: (previous, current) =>
+          current is VehicleLookupNotFound || current is VehicleLookupFound,
+      listener: (context, lookup) {
+        if (lookup is VehicleLookupFound) {
+          _refreshQuote(lookup.vehicle.categoryId);
+          return;
+        }
+        setState(() {
+          _categoryId = null;
+          _spotId = _requestedSpotId;
+        });
+      },
       builder: (context, lookup) => _buildFormFields(context, lookup),
     );
   }
@@ -1040,10 +1050,27 @@ class _CheckInPageState extends State<CheckInPage> {
   /// to the dropdown so the form does not grow a wall of chips.
   static const _maxCategoryChips = 5;
 
-  void _selectCategory(int? id) => setState(() {
-    _categoryId = id;
-    _spotId = _requestedSpotId;
-  });
+  void _selectCategory(int? id) {
+    setState(() {
+      _categoryId = id;
+      _spotId = _requestedSpotId;
+    });
+    _refreshQuote(id);
+  }
+
+  /// The check-in price chip is a convenience: a missing cubit (isolated
+  /// tests) or a failed quote never blocks the form.
+  void _refreshQuote(int? categoryId) {
+    if (categoryId == null || categoryId == _quoteCategoryId) {
+      return;
+    }
+    _quoteCategoryId = categoryId;
+    try {
+      unawaited(context.read<PriceQuoteCubit>().load(categoryId));
+    } on ProviderNotFoundException {
+      // No chip in this context.
+    }
+  }
 
   String _categoryLabel(Category category, Set<int> full) {
     final l10n = context.l10n;
@@ -1063,6 +1090,7 @@ class _CheckInPageState extends State<CheckInPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const PriceQuoteChip(),
         Text(l10n.fieldCategory, style: theme.textTheme.labelLarge),
         const SizedBox(height: Space.xs),
         Wrap(

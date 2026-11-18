@@ -61,6 +61,15 @@ void main() {
       );
     });
 
+    test('Security: dynamic pricing is admin only', () {
+      expect(canAccess(UserRole.operator, '/pricing'), isFalse);
+      expect(
+        authRedirect(_as(UserRole.operator), '/pricing'),
+        homePath,
+      );
+      expect(canAccess(UserRole.admin, '/pricing'), isTrue);
+    });
+
     test('Success: the merchant validation page is public and not an operator route', () {
       expect(authRedirect(const AuthUnauthenticated(), validatePath), isNull);
       expect(

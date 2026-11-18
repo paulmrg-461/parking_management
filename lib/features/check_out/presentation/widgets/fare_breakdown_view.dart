@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/fare/fare_adjustment.dart';
+import '../../../pricing/presentation/applied_rule_tile.dart';
 import '../../../../core/l10n/l10n.dart';
 import '../../../../core/theme/status_colors.dart';
 import '../../../../core/theme/tokens.dart';
@@ -76,6 +77,7 @@ class FareBreakdownView extends StatelessWidget {
             text: l10n.checkOutPassCovered,
             tone: StatusColors.of(context).success,
           ),
+        if (preview.pricing case final pricing?) AppliedRuleTile(pricing: pricing),
         if (preview.quote case final quote?)
           for (final line in quote.adjustments)
             _ValueLine(

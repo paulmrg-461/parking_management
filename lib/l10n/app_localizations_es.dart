@@ -5144,4 +5144,219 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get errorRevokeReasonRequired =>
       'Escribe un motivo de 3 a 200 caracteres.';
+
+  @override
+  String get navPricing => 'Tarifas dinamicas';
+
+  @override
+  String get pricingTitle => 'Tarifas dinamicas';
+
+  @override
+  String get pricingEnabled => 'Activar tarifas dinamicas';
+
+  @override
+  String get pricingEnabledHint =>
+      'Con la opcion apagada se cobra siempre la tarifa normal.';
+
+  @override
+  String get pricingFloor => 'Minimo (% de la tarifa)';
+
+  @override
+  String get pricingCeiling => 'Maximo (% de la tarifa)';
+
+  @override
+  String get pricingRoundTo => 'Redondear a';
+
+  @override
+  String get pricingSettingsSaved => 'Ajustes guardados';
+
+  @override
+  String get pricingRulesTitle => 'Reglas';
+
+  @override
+  String get pricingNoRules => 'Aun no hay reglas';
+
+  @override
+  String get pricingNoRulesHint =>
+      'Crea una regla para subir o bajar la tarifa segun ocupacion u horario.';
+
+  @override
+  String get pricingAddRule => 'Agregar regla';
+
+  @override
+  String get pricingEditRule => 'Editar regla';
+
+  @override
+  String get pricingRuleName => 'Nombre';
+
+  @override
+  String get pricingRulePriority => 'Prioridad (mayor gana)';
+
+  @override
+  String get pricingRuleGroup => 'Tipo de vehiculo';
+
+  @override
+  String get pricingRuleGroupAll => 'Todos';
+
+  @override
+  String get pricingRuleOccupancyFrom => 'Ocupacion desde (%)';
+
+  @override
+  String get pricingRuleOccupancyTo => 'Ocupacion hasta (%)';
+
+  @override
+  String get pricingRuleWeekdays => 'Dias';
+
+  @override
+  String get pricingRuleFromTime => 'Desde';
+
+  @override
+  String get pricingRuleToTime => 'Hasta';
+
+  @override
+  String get pricingRuleMultiplier => 'Multiplicador (%)';
+
+  @override
+  String get pricingRuleSurcharge => 'Recargo fijo';
+
+  @override
+  String get pricingRuleActive => 'Activa';
+
+  @override
+  String pricingRuleSummary(String group, String when, String effect) {
+    return '$group, $when: $effect';
+  }
+
+  @override
+  String get pricingRuleSaved => 'Regla guardada';
+
+  @override
+  String get pricingRuleDeleted => 'Regla eliminada';
+
+  @override
+  String get pricingRuleDeleteConfirm =>
+      'Las entradas ya registradas conservan su tarifa. Eliminar esta regla?';
+
+  @override
+  String get pricingSimulate => 'Simular';
+
+  @override
+  String pricingSimulateDays(int days) {
+    return 'Ultimos $days dias';
+  }
+
+  @override
+  String get pricingSimIncludeDraft => 'Incluir la regla sin guardar';
+
+  @override
+  String get pricingSimBase => 'Cobro con tarifa normal';
+
+  @override
+  String get pricingSimTotal => 'Cobro simulado';
+
+  @override
+  String get pricingSimDelta => 'Diferencia';
+
+  @override
+  String pricingSimAffected(int count) {
+    return '$count entradas afectadas';
+  }
+
+  @override
+  String pricingSimAtLimits(int floor, int ceiling) {
+    return '$floor en el minimo, $ceiling en el maximo';
+  }
+
+  @override
+  String get pricingSimByRule => 'Por regla';
+
+  @override
+  String get pricingSimByHour => 'Por hora de entrada';
+
+  @override
+  String get pricingSimEmpty => 'No hay entradas cobradas en ese periodo.';
+
+  @override
+  String get pricingSimNote =>
+      'Usa tarifas y capacidad actuales y no cuenta reservas.';
+
+  @override
+  String get pricingReportTitle => 'Impacto de tarifas dinamicas';
+
+  @override
+  String get pricingReportLocked => 'Entradas con tarifa fijada';
+
+  @override
+  String get pricingReportExtra => 'Ingreso adicional';
+
+  @override
+  String get pricingReportDiscount => 'Descuentos por tarifa';
+
+  @override
+  String get pricingReportNet => 'Efecto neto';
+
+  @override
+  String priceQuoteNow(String amount) {
+    return 'Tarifa ahora: $amount/h';
+  }
+
+  @override
+  String priceQuoteUsually(String amount) {
+    return 'Normal: $amount/h';
+  }
+
+  @override
+  String get priceQuoteHigher => 'Mas alta';
+
+  @override
+  String get priceQuoteLower => 'Mas baja';
+
+  @override
+  String get priceQuoteOffline => 'La tarifa se confirma al sincronizar.';
+
+  @override
+  String publicPriceNow(String amount) {
+    return 'Ahora $amount/h';
+  }
+
+  @override
+  String publicPriceUsually(String amount) {
+    return 'Precio normal $amount/h';
+  }
+
+  @override
+  String publicRateLocked(String amount) {
+    return 'Tarifa fijada: $amount/h hasta tu llegada';
+  }
+
+  @override
+  String farePricingRule(String name, String percent) {
+    return 'Tarifa dinamica: $name ($percent)';
+  }
+
+  @override
+  String receiptRateLine(String name) {
+    return 'Tarifa: $name';
+  }
+
+  @override
+  String get fareRateLocked => 'Tarifa fijada a la entrada';
+
+  @override
+  String get errorInvalidPricingRule =>
+      'Revisa la regla: hay valores fuera de rango.';
+
+  @override
+  String get errorDuplicatePricingRule => 'Ya existe una regla con ese nombre.';
+
+  @override
+  String get errorPricingRuleNotFound => 'La regla ya no existe.';
+
+  @override
+  String get errorInvalidPricingSettings =>
+      'Minimo, maximo o redondeo fuera de rango.';
+
+  @override
+  String get errorPricingSimulationTooLarge =>
+      'Demasiadas entradas: elige menos dias.';
 }

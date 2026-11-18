@@ -38,6 +38,7 @@ import '../../features/online_payments/application/online_payment_cubit.dart';
 import '../../features/merchants/application/merchant_validation_cubit.dart';
 import '../../features/merchants/presentation/public_validation_page.dart';
 import '../../features/pass_renewal/application/pass_renewal_cubit.dart';
+import '../../features/pricing/application/price_quote_cubit.dart';
 import '../../features/pass_renewal/presentation/pass_renewal_page.dart';
 import '../../features/policies/application/policies_cubit.dart';
 import '../../features/policies/presentation/policies_page.dart';
@@ -68,6 +69,7 @@ import 'deferred/feedback_entry.dart' deferred as feedback;
 import 'deferred/contact_entry.dart' deferred as contact;
 import 'deferred/monthly_passes_entry.dart' deferred as monthly_passes;
 import 'deferred/merchants_entry.dart' deferred as merchants;
+import 'deferred/pricing_entry.dart' deferred as pricing;
 import 'deferred/reports_entry.dart' deferred as reports;
 import 'deferred/settings_entry.dart' deferred as settings;
 import 'deferred/spots_entry.dart' deferred as spots;
@@ -235,6 +237,9 @@ GoRoute _homeRoute(AuthCubit auth) => GoRoute(
           BlocProvider<PlateScanningCubit>(
             create: (_) => serviceLocator<PlateScanningCubit>(),
           ),
+          BlocProvider<PriceQuoteCubit>(
+            create: (_) => serviceLocator<PriceQuoteCubit>(),
+          ),
         ],
         child: CheckInPage(
           capture: serviceLocator<PlateImageCapture>(),
@@ -344,6 +349,11 @@ GoRoute _homeRoute(AuthCubit auth) => GoRoute(
       'merchants',
       merchants.loadLibrary,
       () => merchants.buildMerchantsEntry(),
+    ),
+    _deferred(
+      'pricing',
+      pricing.loadLibrary,
+      () => pricing.buildPricingEntry(),
     ),
     _deferred('users', users.loadLibrary, () => users.buildUsersEntry()),
     _deferred(

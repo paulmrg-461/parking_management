@@ -67,6 +67,28 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - Android release build: R8 keep rules for the optional ML Kit scripts.
 
 ### Added
+- **Dynamic pricing** (`0120`–`0121`, `openspec/changes/add-dynamic-pricing`).
+  The lot can charge surge or valley rates without ever surprising the
+  customer:
+  - `pricing_rules` (vehicle group, occupancy band, weekday mask, local time
+    window, multiplier and/or flat surcharge) with a lot floor/ceiling and a
+    rounding step. One winning rule per entry (priority, then id); inert until
+    the lot enables it.
+  - The rate is LOCKED on the session by a `BEFORE INSERT` trigger
+    (`pricing_lock`, immutable afterwards), so `check_in` keeps its 11
+    arguments and offline replays are covered. A queued (offline) entry can
+    never be surcharged, only discounted.
+  - A public hold locks the price it promised; the session that consumes the
+    hold keeps the cheaper of the two.
+  - `fare_pricing_step` (the hook owned by the merchant change) now applies the
+    stored lock; `fare_quote`, check-out, the preview, the public QR page and a
+    reprint all show the same line. Pricing is a price change (`gross_amount`),
+    never an adjustment line.
+  - `/pricing` admin screen: settings, rule CRUD, a read-only simulation over
+    the last 7/30/90 days (optionally with an unsaved candidate rule) and the
+    real impact report. The check-in screen shows "Tarifa ahora" before
+    committing, and the public booking page shows the current vs usual price.
+
 - **Merchant agreements ("convenios")** (`0117`–`0119`,
   `openspec/changes/add-merchant-validations`). A neighbouring business grants
   a benefit to a parked customer without an app account:
@@ -1271,6 +1293,7 @@ Migrations are append-only and applied in filename order by `supabase-migrate`.
 | `0112`–`0114` | Online payments: settings/columns, `payment_intents`/`payment_events`, settlement rule, service RPCs, check-out/preview/summary/shift/report integration |
 | `0115`–`0116` | Pass auto-renewal: settings/`pass_renewal_offers`/WhatsApp columns, reminder job, public page, renewal settlement |
 | `0117`–`0119` | Merchant agreements: schema/credentials, `fare_quote` + hooks, validations, public page, settlement, check-out lines |
+| `0120`–`0121` | Dynamic pricing: rules, session/hold locks, triggers, hook, quote/simulation/impact RPCs, availability price keys |
 
 ## Verification snapshot
 
