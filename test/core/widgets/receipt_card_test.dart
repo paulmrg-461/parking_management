@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/widgets/qr_code.dart';
+import 'package:parking_management/core/fare/fare_adjustment.dart';
+import 'package:parking_management/core/utils/formatters.dart';
 import 'package:parking_management/core/widgets/receipt_card.dart';
 
 import '../../helpers/test_app.dart';
@@ -290,6 +292,35 @@ void main() {
     // The payment method label comes from the l10n, not the wire value.
     expect(find.text('En línea'), findsOneWidget);
     expect(find.text('online'), findsNothing);
+  });
+
+  testWidgets('an agreement line is printed under the fare', (tester) async {
+    final data = ReceiptData(
+      kind: ReceiptKind.checkOut,
+      plate: 'ABC123',
+      entryTime: DateTime(2026, 1, 1, 8, 30),
+      exitTime: DateTime(2026, 1, 1, 11, 45),
+      amountCharged: 4500,
+      grossAmount: 9000,
+      adjustments: const [
+        FareAdjustment(
+          type: FareAdjustmentType.merchant,
+          refId: 4,
+          label: 'Cafe Uno',
+          kind: 'percentage',
+          amount: 4500,
+        ),
+      ],
+      paymentMethod: 'cash',
+      ticketNumber: 'TCK-000042',
+    );
+    await tester.pumpWidget(
+      testApp(Scaffold(body: SingleChildScrollView(child: ReceiptCard(data: data)))),
+    );
+
+    expect(find.text('Tarifa'), findsOneWidget);
+    expect(find.text('Convenio Cafe Uno'), findsOneWidget);
+    expect(find.text('-${Formatters.money(4500)}'), findsOneWidget);
   });
 
   testWidgets('Imprimir closes the receipt before the print sheet', (

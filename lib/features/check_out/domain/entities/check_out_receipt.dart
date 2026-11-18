@@ -1,5 +1,7 @@
 import 'package:equatable/equatable.dart';
 
+import '../../../../core/fare/fare_adjustment.dart';
+
 /// The receipt returned when a parking session is closed via check-out.
 ///
 /// When [pendingSync] is `true` (the check-out was queued offline, see
@@ -22,6 +24,8 @@ class CheckOutReceipt extends Equatable {
     this.lostTicket = false,
     this.pendingSync = false,
     this.onlinePaidAmount = 0,
+    this.grossAmount,
+    this.adjustments = const [],
   });
 
   final int id;
@@ -42,6 +46,12 @@ class CheckOutReceipt extends Equatable {
   /// Part of `amountCharged` the customer paid online (0 = none).
   final int onlinePaidAmount;
 
+  /// Fare before the automatic lines and the manual discount.
+  final int? grossAmount;
+
+  /// Merchant (and later reward) lines applied by the server.
+  final List<FareAdjustment> adjustments;
+
   @override
   List<Object?> get props => [
     id,
@@ -59,5 +69,7 @@ class CheckOutReceipt extends Equatable {
     lostTicket,
     pendingSync,
     onlinePaidAmount,
+    grossAmount,
+    adjustments,
   ];
 }

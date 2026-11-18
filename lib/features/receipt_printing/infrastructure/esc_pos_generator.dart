@@ -69,6 +69,17 @@ class EscPosGenerator {
       _row(bytes, labels.photos, '${data.photoCount}');
     }
 
+    if (data.isCheckOut && !data.pendingSync && data.grossAmount != null) {
+      _row(bytes, labels.gross, CopFormatter.format(data.grossAmount!));
+      for (final line in data.adjustments) {
+        _row(
+          bytes,
+          '${labels.benefit} ${line.label}',
+          '-${CopFormatter.format(line.amount)}',
+        );
+      }
+    }
+
     if (data.pendingSync) {
       _text(bytes, labels.pendingSync, align: 1, bold: true);
     } else if (data.isCheckOut && data.amountCharged != null) {

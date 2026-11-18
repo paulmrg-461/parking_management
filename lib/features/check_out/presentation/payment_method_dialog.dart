@@ -6,6 +6,7 @@ import '../../../core/theme/tokens.dart';
 import '../../../core/money/money.dart';
 import '../../../core/money/money_input.dart';
 import '../../../core/receipt/payment_method.dart';
+import '../../merchants/presentation/desk_merchant_section.dart';
 import '../domain/entities/check_out_preview.dart';
 import 'widgets/fare_breakdown_view.dart';
 
@@ -41,6 +42,7 @@ Future<CheckoutChoice?> showCheckoutDialog(
   required bool canDiscount,
   CheckOutPreview? preview,
   PaymentMethod initialMethod = PaymentMethod.cash,
+  MerchantDeskOptions? merchants,
 }) => showDialog<CheckoutChoice>(
   context: context,
   builder: (_) => _CheckoutDialog(
@@ -48,6 +50,7 @@ Future<CheckoutChoice?> showCheckoutDialog(
     canDiscount: canDiscount,
     preview: preview,
     initialMethod: initialMethod,
+    merchants: merchants,
   ),
 );
 
@@ -57,12 +60,14 @@ class _CheckoutDialog extends StatefulWidget {
     required this.canDiscount,
     this.preview,
     this.initialMethod = PaymentMethod.cash,
+    this.merchants,
   });
 
   final String plate;
   final bool canDiscount;
   final CheckOutPreview? preview;
   final PaymentMethod initialMethod;
+  final MerchantDeskOptions? merchants;
 
   @override
   State<_CheckoutDialog> createState() => _CheckoutDialogState();
@@ -76,6 +81,7 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
   static const _cashShortcuts = 3;
 
   late PaymentMethod _selected = widget.initialMethod;
+  late CheckOutPreview? _preview = widget.preview;
   CardType _cardType = CardType.debit;
   final _cashController = TextEditingController();
   final _discountController = TextEditingController();
@@ -100,7 +106,7 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
   /// Total still due after the admin discount. A lost ticket charges the
   /// server's `lost_ticket_amount` (older servers: the regular fare).
   int? get _due {
-    final preview = widget.preview;
+    final preview = _preview;
     // A lost ticket ignores the online payment (there is no ticket to prove
     // the stay), so its fee is charged in full at the desk.
     final amount = _lostTicket
@@ -113,7 +119,7 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
   }
 
   /// The customer paid online for this session.
-  bool get _paidOnline => (widget.preview?.onlinePaidAmount ?? 0) > 0;
+  bool get _paidOnline => (_preview?.onlinePaidAmount ?? 0) > 0;
 
   /// Paid in full inside the exit window: nothing to collect, no payment
   /// choice to make (the server stores it as `online`).
@@ -207,7 +213,7 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
             children: [
               Text(l10n.checkOutConfirm(widget.plate)),
               const SizedBox(height: Space.sm),
-              if (widget.preview case final preview?)
+              if (_preview case final preview?)
                 FareBreakdownView(preview: preview)
               else
                 Text(
@@ -216,6 +222,18 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
                 ),
               if (_paidOnline) _buildOnlineBox(context),
               if (due != null && _discount > 0) _buildDueRow(context, due),
+              if (widget.merchants case final merchants?
+                  when !_lostTicket &&
+                      !(_preview?.hasPass ?? false) &&
+                      merchants.options.isNotEmpty) ...[
+                const SizedBox(height: Space.sm),
+                DeskMerchantSection(
+                  merchants: merchants,
+                  preview: _preview,
+                  canRevoke: widget.canDiscount,
+                  onChanged: (preview) => setState(() => _preview = preview),
+                ),
+              ],
               const SizedBox(height: Space.sm),
               if (!_nothingDue) ...[
                 ..._buildMethodPicker(context),
@@ -276,7 +294,7 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
   Widget _buildOnlineBox(BuildContext context) {
     final l10n = context.l10n;
     final theme = Theme.of(context);
-    final preview = widget.preview!;
+    final preview = _preview!;
     final due = _due ?? 0;
     return Container(
       key: const Key('checkout_online_box'),

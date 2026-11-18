@@ -1,5 +1,7 @@
 import 'package:equatable/equatable.dart';
 
+import '../../../../core/fare/fare_adjustment.dart';
+
 /// One photo or video of a session, behind a short-lived signed URL.
 class EvidenceMedia extends Equatable {
   const EvidenceMedia({
@@ -84,6 +86,8 @@ class PublicSessionSummary extends Equatable {
     this.amountDue = 0,
     this.graceUntil,
     this.onlineMinAmount = 0,
+    this.gross,
+    this.adjustments = const [],
   });
 
   final int sessionId;
@@ -108,6 +112,12 @@ class PublicSessionSummary extends Equatable {
   /// Smallest amount the gateway accepts; below it the desk charges.
   final int onlineMinAmount;
 
+  /// Fare before the automatic lines.
+  final int? gross;
+
+  /// Merchant (and later reward) lines applied (open sessions: right now).
+  final List<FareAdjustment> adjustments;
+
   Duration get duration => Duration(seconds: durationSeconds);
   bool get isOpen => status == 'open';
 
@@ -124,6 +134,8 @@ class PublicSessionSummary extends Equatable {
         amountDue: (json['amount_due'] as num?)?.toInt() ?? 0,
         graceUntil: DateTime.tryParse(json['grace_until'] as String? ?? ''),
         onlineMinAmount: (json['online_min_amount'] as num?)?.toInt() ?? 0,
+        gross: (json['gross'] as num?)?.toInt(),
+        adjustments: FareAdjustment.listFromJson(json['adjustments']),
       );
 
   @override
@@ -139,6 +151,8 @@ class PublicSessionSummary extends Equatable {
     amountDue,
     graceUntil,
     onlineMinAmount,
+    gross,
+    adjustments,
   ];
 }
 

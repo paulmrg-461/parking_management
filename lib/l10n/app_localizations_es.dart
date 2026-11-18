@@ -4877,4 +4877,271 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get errorPassNotFound => 'Mensualidad no encontrada';
+
+  @override
+  String get navMerchants => 'Convenios';
+
+  @override
+  String get merchantsTitle => 'Convenios con comercios';
+
+  @override
+  String get merchantsEmpty =>
+      'Aún no hay convenios. Crea uno para dar descuento a los clientes de un comercio vecino.';
+
+  @override
+  String get merchantsAdd => 'Nuevo convenio';
+
+  @override
+  String get merchantFormName => 'Nombre del comercio';
+
+  @override
+  String get merchantFormKind => 'Tipo de beneficio';
+
+  @override
+  String get merchantKindFreeMinutes => 'Minutos gratis';
+
+  @override
+  String get merchantKindPercentage => 'Porcentaje';
+
+  @override
+  String get merchantKindFixedAmount => 'Monto fijo';
+
+  @override
+  String get merchantFormValueMinutes => 'Minutos gratis (1-1440)';
+
+  @override
+  String get merchantFormValuePercent => 'Porcentaje (1-100)';
+
+  @override
+  String get merchantFormValueAmount => 'Monto del descuento';
+
+  @override
+  String get merchantFormMaxAmount => 'Tope por validación (opcional)';
+
+  @override
+  String get merchantFormBilling => '¿Quién paga el beneficio?';
+
+  @override
+  String get merchantBillingMerchantPaid => 'El comercio paga';
+
+  @override
+  String get merchantBillingCourtesy => 'Cortesía del parqueadero';
+
+  @override
+  String get merchantFormDailyCap => 'Máximo por día (opcional)';
+
+  @override
+  String get merchantFormMonthlyCap => 'Máximo por mes (opcional)';
+
+  @override
+  String get merchantFormActive => 'Activo';
+
+  @override
+  String merchantUsage(int today, int month) {
+    return 'Hoy $today · Mes $month';
+  }
+
+  @override
+  String merchantPending(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count pendientes',
+      one: '1 pendiente',
+      zero: 'Sin pendientes',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get merchantLocked => 'Bloqueado por PIN';
+
+  @override
+  String get merchantCredentialsTitle => 'Credenciales del comercio';
+
+  @override
+  String get merchantCredentialsHint =>
+      'Se muestran una sola vez. Entrega el enlace y el PIN al cajero del comercio.';
+
+  @override
+  String get merchantCredentialsLink => 'Enlace';
+
+  @override
+  String get merchantCredentialsPin => 'PIN';
+
+  @override
+  String get merchantCredentialsCopy => 'Copiar';
+
+  @override
+  String merchantCredentialsNoAppUrl(String path) {
+    return 'Falta configurar APP_URL: copia solo la ruta $path.';
+  }
+
+  @override
+  String get merchantResetPin => 'Generar nuevo PIN';
+
+  @override
+  String get merchantRotateToken => 'Generar nuevo enlace y PIN';
+
+  @override
+  String merchantDeleteConfirm(String name) {
+    return '¿Eliminar el convenio $name?';
+  }
+
+  @override
+  String get merchantPolicyTitle => 'Convenios por vehículo';
+
+  @override
+  String get merchantPolicyMax =>
+      'Máximo de convenios por vehículo (0 = desactivar)';
+
+  @override
+  String get merchantSettlementTitle => 'Liquidación';
+
+  @override
+  String get merchantSettlementEmpty => 'No hubo convenios en este rango.';
+
+  @override
+  String get merchantSettlementValidations => 'Validaciones';
+
+  @override
+  String get merchantSettlementApplied => 'Aplicadas';
+
+  @override
+  String get merchantSettlementForfeited => 'Sin efecto';
+
+  @override
+  String get merchantSettlementRevoked => 'Revocadas';
+
+  @override
+  String get merchantSettlementDiscounted => 'Descuento otorgado';
+
+  @override
+  String get merchantSettlementOwed => 'A cobrar al comercio';
+
+  @override
+  String get merchantSettlementCourtesy => 'Cortesía del parqueadero';
+
+  @override
+  String get merchantSettlementPdfTitle => 'Liquidación de convenios';
+
+  @override
+  String get validateTitle => 'Validar parqueo';
+
+  @override
+  String get validatePlateLabel => 'Placa del cliente';
+
+  @override
+  String get validateScanQr => 'Escanear QR del recibo';
+
+  @override
+  String get validatePinLabel => 'PIN del comercio';
+
+  @override
+  String get validateSubmit => 'Validar';
+
+  @override
+  String validateBenefitMinutes(int minutes) {
+    return '$minutes minutos gratis';
+  }
+
+  @override
+  String validateBenefitPercent(int percent) {
+    return '$percent% de descuento';
+  }
+
+  @override
+  String validateBenefitAmount(String amount) {
+    return '$amount de descuento';
+  }
+
+  @override
+  String validateSuccess(String benefit) {
+    return 'Convenio registrado: $benefit';
+  }
+
+  @override
+  String validateWrongPin(int left) {
+    return 'PIN incorrecto. Intentos restantes: $left';
+  }
+
+  @override
+  String validateLocked(String time) {
+    return 'Demasiados intentos. Intenta de nuevo a las $time.';
+  }
+
+  @override
+  String get validateInvalidLink =>
+      'Este enlace no es válido. Pide uno nuevo al parqueadero.';
+
+  @override
+  String get validateAnother => 'Validar otra placa';
+
+  @override
+  String get deskMerchantTitle => 'Convenio';
+
+  @override
+  String get deskMerchantPick => 'Elegir comercio';
+
+  @override
+  String get deskMerchantApply => 'Aplicar convenio';
+
+  @override
+  String get deskMerchantRevoke => 'Quitar convenio';
+
+  @override
+  String get deskMerchantRevokeReason => 'Motivo (mínimo 3 caracteres)';
+
+  @override
+  String get deskMerchantOffline => 'Requiere conexión';
+
+  @override
+  String get fareGross => 'Tarifa';
+
+  @override
+  String fareAdjustmentMerchant(String name) {
+    return 'Convenio $name';
+  }
+
+  @override
+  String get fareAmountDue => 'A pagar';
+
+  @override
+  String get errorMerchantNotFound => 'Comercio no encontrado.';
+
+  @override
+  String get errorMerchantInactive => 'Este convenio está desactivado.';
+
+  @override
+  String get errorDuplicateMerchant => 'Ya existe un comercio con ese nombre.';
+
+  @override
+  String get errorMerchantInUse =>
+      'El convenio tiene validaciones: desactívalo en lugar de eliminarlo.';
+
+  @override
+  String get errorAlreadyValidated => 'Este comercio ya validó ese vehículo.';
+
+  @override
+  String get errorMerchantLimit =>
+      'El vehículo ya alcanzó el máximo de convenios.';
+
+  @override
+  String get errorMerchantCap =>
+      'El comercio alcanzó su límite de validaciones.';
+
+  @override
+  String get errorSessionNotEligible =>
+      'Este vehículo tiene mensualidad: no necesita convenio.';
+
+  @override
+  String get errorValidationNotFound => 'Validación no encontrada.';
+
+  @override
+  String get errorValidationNotRevocable =>
+      'Solo se puede quitar una validación pendiente de un vehículo que sigue dentro.';
+
+  @override
+  String get errorRevokeReasonRequired =>
+      'Escribe un motivo de 3 a 200 caracteres.';
 }

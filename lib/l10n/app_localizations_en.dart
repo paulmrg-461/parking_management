@@ -4832,4 +4832,272 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get errorPassNotFound => 'Pass not found';
+
+  @override
+  String get navMerchants => 'Agreements';
+
+  @override
+  String get merchantsTitle => 'Merchant agreements';
+
+  @override
+  String get merchantsEmpty =>
+      'No agreements yet. Create one to give a neighbouring business\'s customers a discount.';
+
+  @override
+  String get merchantsAdd => 'New agreement';
+
+  @override
+  String get merchantFormName => 'Business name';
+
+  @override
+  String get merchantFormKind => 'Benefit type';
+
+  @override
+  String get merchantKindFreeMinutes => 'Free minutes';
+
+  @override
+  String get merchantKindPercentage => 'Percentage';
+
+  @override
+  String get merchantKindFixedAmount => 'Fixed amount';
+
+  @override
+  String get merchantFormValueMinutes => 'Free minutes (1-1440)';
+
+  @override
+  String get merchantFormValuePercent => 'Percentage (1-100)';
+
+  @override
+  String get merchantFormValueAmount => 'Discount amount';
+
+  @override
+  String get merchantFormMaxAmount => 'Cap per validation (optional)';
+
+  @override
+  String get merchantFormBilling => 'Who pays for the benefit?';
+
+  @override
+  String get merchantBillingMerchantPaid => 'The merchant pays';
+
+  @override
+  String get merchantBillingCourtesy => 'Parking lot courtesy';
+
+  @override
+  String get merchantFormDailyCap => 'Daily maximum (optional)';
+
+  @override
+  String get merchantFormMonthlyCap => 'Monthly maximum (optional)';
+
+  @override
+  String get merchantFormActive => 'Active';
+
+  @override
+  String merchantUsage(int today, int month) {
+    return 'Today $today · Month $month';
+  }
+
+  @override
+  String merchantPending(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count pending',
+      one: '1 pending',
+      zero: 'None pending',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get merchantLocked => 'Locked by PIN';
+
+  @override
+  String get merchantCredentialsTitle => 'Merchant credentials';
+
+  @override
+  String get merchantCredentialsHint =>
+      'Shown only once. Give the link and PIN to the merchant\'s cashier.';
+
+  @override
+  String get merchantCredentialsLink => 'Link';
+
+  @override
+  String get merchantCredentialsPin => 'PIN';
+
+  @override
+  String get merchantCredentialsCopy => 'Copy';
+
+  @override
+  String merchantCredentialsNoAppUrl(String path) {
+    return 'APP_URL is not configured: copy the path $path only.';
+  }
+
+  @override
+  String get merchantResetPin => 'Generate new PIN';
+
+  @override
+  String get merchantRotateToken => 'Generate new link and PIN';
+
+  @override
+  String merchantDeleteConfirm(String name) {
+    return 'Delete the agreement $name?';
+  }
+
+  @override
+  String get merchantPolicyTitle => 'Agreements per vehicle';
+
+  @override
+  String get merchantPolicyMax => 'Maximum agreements per vehicle (0 = off)';
+
+  @override
+  String get merchantSettlementTitle => 'Settlement';
+
+  @override
+  String get merchantSettlementEmpty =>
+      'No agreements were used in this range.';
+
+  @override
+  String get merchantSettlementValidations => 'Validations';
+
+  @override
+  String get merchantSettlementApplied => 'Applied';
+
+  @override
+  String get merchantSettlementForfeited => 'Forfeited';
+
+  @override
+  String get merchantSettlementRevoked => 'Revoked';
+
+  @override
+  String get merchantSettlementDiscounted => 'Discount granted';
+
+  @override
+  String get merchantSettlementOwed => 'Owed by the merchant';
+
+  @override
+  String get merchantSettlementCourtesy => 'Parking lot courtesy';
+
+  @override
+  String get merchantSettlementPdfTitle => 'Agreement settlement';
+
+  @override
+  String get validateTitle => 'Validate parking';
+
+  @override
+  String get validatePlateLabel => 'Customer\'s plate';
+
+  @override
+  String get validateScanQr => 'Scan the receipt QR';
+
+  @override
+  String get validatePinLabel => 'Merchant PIN';
+
+  @override
+  String get validateSubmit => 'Validate';
+
+  @override
+  String validateBenefitMinutes(int minutes) {
+    return '$minutes free minutes';
+  }
+
+  @override
+  String validateBenefitPercent(int percent) {
+    return '$percent% discount';
+  }
+
+  @override
+  String validateBenefitAmount(String amount) {
+    return '$amount discount';
+  }
+
+  @override
+  String validateSuccess(String benefit) {
+    return 'Agreement registered: $benefit';
+  }
+
+  @override
+  String validateWrongPin(int left) {
+    return 'Wrong PIN. Attempts left: $left';
+  }
+
+  @override
+  String validateLocked(String time) {
+    return 'Too many attempts. Try again at $time.';
+  }
+
+  @override
+  String get validateInvalidLink =>
+      'This link is not valid. Ask the parking lot for a new one.';
+
+  @override
+  String get validateAnother => 'Validate another plate';
+
+  @override
+  String get deskMerchantTitle => 'Agreement';
+
+  @override
+  String get deskMerchantPick => 'Choose a business';
+
+  @override
+  String get deskMerchantApply => 'Apply agreement';
+
+  @override
+  String get deskMerchantRevoke => 'Remove agreement';
+
+  @override
+  String get deskMerchantRevokeReason => 'Reason (at least 3 characters)';
+
+  @override
+  String get deskMerchantOffline => 'Needs a connection';
+
+  @override
+  String get fareGross => 'Fare';
+
+  @override
+  String fareAdjustmentMerchant(String name) {
+    return 'Agreement $name';
+  }
+
+  @override
+  String get fareAmountDue => 'Amount due';
+
+  @override
+  String get errorMerchantNotFound => 'Business not found.';
+
+  @override
+  String get errorMerchantInactive => 'This agreement is disabled.';
+
+  @override
+  String get errorDuplicateMerchant =>
+      'A business with that name already exists.';
+
+  @override
+  String get errorMerchantInUse =>
+      'The agreement has validations: disable it instead of deleting it.';
+
+  @override
+  String get errorAlreadyValidated =>
+      'This business already validated that vehicle.';
+
+  @override
+  String get errorMerchantLimit =>
+      'The vehicle reached the maximum number of agreements.';
+
+  @override
+  String get errorMerchantCap => 'The business reached its validation limit.';
+
+  @override
+  String get errorSessionNotEligible =>
+      'This vehicle has a monthly pass: it does not need an agreement.';
+
+  @override
+  String get errorValidationNotFound => 'Validation not found.';
+
+  @override
+  String get errorValidationNotRevocable =>
+      'Only a pending validation of a vehicle still inside can be removed.';
+
+  @override
+  String get errorRevokeReasonRequired =>
+      'Write a reason of 3 to 200 characters.';
 }

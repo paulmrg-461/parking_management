@@ -600,6 +600,8 @@ class _SessionTile extends StatelessWidget {
     paymentMethod: session.paymentMethod,
     discountAmount: session.discountAmount,
     discountReason: session.discountReason,
+    grossAmount: session.grossAmount,
+    adjustments: session.adjustments,
     feedbackUrl: publicFeedbackUrl(session.id, plate: plate),
   );
 

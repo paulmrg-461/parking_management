@@ -26,6 +26,9 @@ import 'package:parking_management/features/diagnostics/application/diagnostics_
 import 'package:parking_management/features/evidence/application/evidence_cubit.dart';
 import 'package:parking_management/features/home/application/dashboard_cubit.dart';
 import 'package:parking_management/features/online_payments/application/online_payment_cubit.dart';
+import 'package:parking_management/features/merchants/application/merchant_settlement_cubit.dart';
+import 'package:parking_management/features/merchants/application/merchant_validation_cubit.dart';
+import 'package:parking_management/features/merchants/application/merchants_cubit.dart';
 import 'package:parking_management/features/pass_renewal/application/pass_renewal_cubit.dart';
 import 'package:parking_management/features/lots/application/lots_cubit.dart';
 import 'package:parking_management/features/plate_scanning/domain/repositories/plate_image_capture.dart';
@@ -44,6 +47,7 @@ import 'fake_evidence_repository.dart';
 import 'fake_key_value_store.dart';
 import 'fake_notification_repository.dart';
 import 'fake_online_payment_repository.dart';
+import 'fake_merchant_repository.dart';
 import 'fake_pass_renewal_repository.dart';
 import 'fake_reservation_repository.dart';
 import 'fake_settings_repository.dart';
@@ -139,6 +143,18 @@ Future<AuthCubit> pumpApp(
     // /renew is public and token-keyed.
     ..registerFactory<PassRenewalCubit>(
       () => PassRenewalCubit(FakePassRenewalRepository(offer: sampleOffer())),
+    )
+    // /validate is public and token-keyed; /merchants is admin-only.
+    ..registerFactory<MerchantValidationCubit>(
+      () => MerchantValidationCubit(
+        FakePublicMerchantRepository(portalResult: samplePortal),
+      ),
+    )
+    ..registerFactory<MerchantsCubit>(
+      () => MerchantsCubit(FakeMerchantRepository()),
+    )
+    ..registerFactory<MerchantSettlementCubit>(
+      () => MerchantSettlementCubit(FakeMerchantRepository()),
     );
   addTearDown(serviceLocator.reset);
   final syncOutbox = outbox ?? FakeSyncOutbox();

@@ -385,6 +385,31 @@ class _EvidenceBody extends StatelessWidget {
           ),
         ],
         if (evidence.summary case final summary?
+            when summary.adjustments.isNotEmpty) ...[
+          const SizedBox(height: Space.sm),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(Space.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (final line in summary.adjustments)
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            context.l10n.fareAdjustmentMerchant(line.label),
+                          ),
+                        ),
+                        Text('-${Money.formatAs(summary.currency, line.amount)}'),
+                      ],
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+        if (evidence.summary case final summary?
             when summary.isOpen && summary.onlinePaymentsEnabled)
           PayOnlinePanel(
             summary: summary,

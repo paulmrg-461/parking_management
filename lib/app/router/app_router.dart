@@ -35,6 +35,8 @@ import '../../features/help/presentation/help_page.dart';
 import '../../features/preferences/presentation/preferences_page.dart';
 import '../../features/evidence/presentation/public_evidence_page.dart';
 import '../../features/online_payments/application/online_payment_cubit.dart';
+import '../../features/merchants/application/merchant_validation_cubit.dart';
+import '../../features/merchants/presentation/public_validation_page.dart';
 import '../../features/pass_renewal/application/pass_renewal_cubit.dart';
 import '../../features/pass_renewal/presentation/pass_renewal_page.dart';
 import '../../features/policies/application/policies_cubit.dart';
@@ -65,6 +67,7 @@ import 'deferred/categories_entry.dart' deferred as categories;
 import 'deferred/feedback_entry.dart' deferred as feedback;
 import 'deferred/contact_entry.dart' deferred as contact;
 import 'deferred/monthly_passes_entry.dart' deferred as monthly_passes;
+import 'deferred/merchants_entry.dart' deferred as merchants;
 import 'deferred/reports_entry.dart' deferred as reports;
 import 'deferred/settings_entry.dart' deferred as settings;
 import 'deferred/spots_entry.dart' deferred as spots;
@@ -142,6 +145,15 @@ GoRouter buildRouter(
           sessionId: int.tryParse(state.uri.queryParameters['session'] ?? ''),
           plate: state.uri.queryParameters['plate'],
           payReference: state.uri.queryParameters['pay'],
+        ),
+      ),
+    ),
+    GoRoute(
+      path: validatePath,
+      builder: (context, state) => BlocProvider<MerchantValidationCubit>(
+        create: (_) => serviceLocator<MerchantValidationCubit>(),
+        child: PublicValidationPage(
+          token: state.uri.queryParameters['m'],
         ),
       ),
     ),
@@ -328,6 +340,11 @@ GoRoute _homeRoute(AuthCubit auth) => GoRoute(
       ),
     ),
     // Admin-only sections are deferred: operators never download them.
+    _deferred(
+      'merchants',
+      merchants.loadLibrary,
+      () => merchants.buildMerchantsEntry(),
+    ),
     _deferred('users', users.loadLibrary, () => users.buildUsersEntry()),
     _deferred(
       'categories',

@@ -128,6 +128,25 @@ class ReceiptSummaryDialog extends StatelessWidget {
                   value: l10n.sessionPhotos(data.photoCount!),
                 ),
               const SizedBox(height: Space.md),
+              if (data.isCheckOut &&
+                  !data.pendingSync &&
+                  data.grossAmount != null) ...[
+                Padding(
+                  padding: const EdgeInsets.only(top: Space.md),
+                  child: ReceiptRow(
+                    label: l10n.fareGross,
+                    value: Formatters.money(data.grossAmount!),
+                  ),
+                ),
+                for (final line in data.adjustments)
+                  Padding(
+                    padding: const EdgeInsets.only(top: Space.xs),
+                    child: ReceiptRow(
+                      label: l10n.fareAdjustmentMerchant(line.label),
+                      value: '-${Formatters.money(line.amount)}',
+                    ),
+                  ),
+              ],
               if (data.pendingSync)
                 _PendingNotice(message: l10n.receiptQueued, status: status)
               else if (data.isCheckOut && data.amountCharged != null)
@@ -354,6 +373,17 @@ class ReceiptCard extends StatelessWidget {
             ReceiptRow(
               label: l10n.receiptPhotos,
               value: l10n.sessionPhotos(data.photoCount!),
+            ),
+        ],
+        if (data.isCheckOut && !data.pendingSync && data.grossAmount != null) ...[
+          ReceiptRow(
+            label: l10n.fareGross,
+            value: Formatters.money(data.grossAmount!),
+          ),
+          for (final line in data.adjustments)
+            ReceiptRow(
+              label: l10n.fareAdjustmentMerchant(line.label),
+              value: '-${Formatters.money(line.amount)}',
             ),
         ],
         if (data.pendingSync)

@@ -1,5 +1,7 @@
 import 'package:equatable/equatable.dart';
 
+import '../../../../core/fare/fare_adjustment.dart';
+
 class VehicleHistorySession extends Equatable {
   const VehicleHistorySession({
     required this.id,
@@ -16,6 +18,8 @@ class VehicleHistorySession extends Equatable {
     this.discountAmount = 0,
     this.discountReason,
     this.photoCount = 0,
+    this.grossAmount,
+    this.adjustments = const [],
   });
 
   final int id;
@@ -34,6 +38,12 @@ class VehicleHistorySession extends Equatable {
 
   /// Evidence files captured for this session in the active lot.
   final int photoCount;
+
+  /// Fare before the automatic lines and the manual discount.
+  final int? grossAmount;
+
+  /// Merchant (and later reward) lines applied at check-out.
+  final List<FareAdjustment> adjustments;
 
   bool get isOpen => status == 'open';
 
@@ -55,6 +65,8 @@ class VehicleHistorySession extends Equatable {
         discountAmount: (json['discount_amount'] as num?)?.toInt() ?? 0,
         discountReason: json['discount_reason'] as String?,
         photoCount: (json['photo_count'] as num?)?.toInt() ?? 0,
+        grossAmount: (json['gross_amount'] as num?)?.toInt(),
+        adjustments: FareAdjustment.listFromJson(json['fare_adjustments']),
       );
 
   Map<String, dynamic> toJson() => {
@@ -72,6 +84,21 @@ class VehicleHistorySession extends Equatable {
     'discount_amount': discountAmount,
     'discount_reason': discountReason,
     'photo_count': photoCount,
+    'gross_amount': grossAmount,
+    'fare_adjustments': [
+      for (final line in adjustments)
+        {
+          'type': switch (line.type) {
+            FareAdjustmentType.merchant => 'merchant',
+            FareAdjustmentType.reward => 'reward',
+            FareAdjustmentType.unknown => 'unknown',
+          },
+          'ref_id': line.refId,
+          'label': line.label,
+          'kind': line.kind,
+          'amount': line.amount,
+        },
+    ],
   };
 
   @override
@@ -90,6 +117,8 @@ class VehicleHistorySession extends Equatable {
     discountAmount,
     discountReason,
     photoCount,
+    grossAmount,
+    adjustments,
   ];
 }
 

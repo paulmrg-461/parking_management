@@ -24,6 +24,8 @@ class ReceiptLabels {
     required this.feedbackHint,
     required this.paymentMethod,
     required this.onlinePaid,
+    required this.gross,
+    required this.benefit,
   });
 
   final String checkInTitle;
@@ -55,6 +57,12 @@ class ReceiptLabels {
   /// "Paid online" row on a settled check-out that had a partial payment.
   final String onlinePaid;
 
+  /// Fare before the automatic lines (`Tarifa` / `Fare`).
+  final String gross;
+
+  /// Prefix of one automatic line (`Convenio` / `Agreement`).
+  final String benefit;
+
   /// Localizes a wire value (`cash`, `card`, `transfer`, `monthly_pass`,
   /// `exempt`, `online`) plus the optional card type (`debit`/`credit`).
   final String Function(String method, String? cardType) paymentMethod;
@@ -81,6 +89,8 @@ class ReceiptLabels {
     evidenceHint: 'Evidencias del vehiculo (clave: placa)',
     feedbackHint: 'Califica tu visita',
     onlinePaid: 'Pagado en linea',
+    gross: 'Tarifa',
+    benefit: 'Convenio',
     paymentMethod: _paymentEs,
   );
 
@@ -105,6 +115,8 @@ class ReceiptLabels {
     evidenceHint: 'Vehicle evidence (key: plate)',
     feedbackHint: 'Rate your visit',
     onlinePaid: 'Paid online',
+    gross: 'Fare',
+    benefit: 'Agreement',
     paymentMethod: _paymentEn,
   );
 

@@ -8473,6 +8473,462 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Mensualidad no encontrada'**
   String get errorPassNotFound;
+
+  /// No description provided for @navMerchants.
+  ///
+  /// In es, this message translates to:
+  /// **'Convenios'**
+  String get navMerchants;
+
+  /// No description provided for @merchantsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Convenios con comercios'**
+  String get merchantsTitle;
+
+  /// No description provided for @merchantsEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no hay convenios. Crea uno para dar descuento a los clientes de un comercio vecino.'**
+  String get merchantsEmpty;
+
+  /// No description provided for @merchantsAdd.
+  ///
+  /// In es, this message translates to:
+  /// **'Nuevo convenio'**
+  String get merchantsAdd;
+
+  /// No description provided for @merchantFormName.
+  ///
+  /// In es, this message translates to:
+  /// **'Nombre del comercio'**
+  String get merchantFormName;
+
+  /// No description provided for @merchantFormKind.
+  ///
+  /// In es, this message translates to:
+  /// **'Tipo de beneficio'**
+  String get merchantFormKind;
+
+  /// No description provided for @merchantKindFreeMinutes.
+  ///
+  /// In es, this message translates to:
+  /// **'Minutos gratis'**
+  String get merchantKindFreeMinutes;
+
+  /// No description provided for @merchantKindPercentage.
+  ///
+  /// In es, this message translates to:
+  /// **'Porcentaje'**
+  String get merchantKindPercentage;
+
+  /// No description provided for @merchantKindFixedAmount.
+  ///
+  /// In es, this message translates to:
+  /// **'Monto fijo'**
+  String get merchantKindFixedAmount;
+
+  /// No description provided for @merchantFormValueMinutes.
+  ///
+  /// In es, this message translates to:
+  /// **'Minutos gratis (1-1440)'**
+  String get merchantFormValueMinutes;
+
+  /// No description provided for @merchantFormValuePercent.
+  ///
+  /// In es, this message translates to:
+  /// **'Porcentaje (1-100)'**
+  String get merchantFormValuePercent;
+
+  /// No description provided for @merchantFormValueAmount.
+  ///
+  /// In es, this message translates to:
+  /// **'Monto del descuento'**
+  String get merchantFormValueAmount;
+
+  /// No description provided for @merchantFormMaxAmount.
+  ///
+  /// In es, this message translates to:
+  /// **'Tope por validación (opcional)'**
+  String get merchantFormMaxAmount;
+
+  /// No description provided for @merchantFormBilling.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Quién paga el beneficio?'**
+  String get merchantFormBilling;
+
+  /// No description provided for @merchantBillingMerchantPaid.
+  ///
+  /// In es, this message translates to:
+  /// **'El comercio paga'**
+  String get merchantBillingMerchantPaid;
+
+  /// No description provided for @merchantBillingCourtesy.
+  ///
+  /// In es, this message translates to:
+  /// **'Cortesía del parqueadero'**
+  String get merchantBillingCourtesy;
+
+  /// No description provided for @merchantFormDailyCap.
+  ///
+  /// In es, this message translates to:
+  /// **'Máximo por día (opcional)'**
+  String get merchantFormDailyCap;
+
+  /// No description provided for @merchantFormMonthlyCap.
+  ///
+  /// In es, this message translates to:
+  /// **'Máximo por mes (opcional)'**
+  String get merchantFormMonthlyCap;
+
+  /// No description provided for @merchantFormActive.
+  ///
+  /// In es, this message translates to:
+  /// **'Activo'**
+  String get merchantFormActive;
+
+  /// No description provided for @merchantUsage.
+  ///
+  /// In es, this message translates to:
+  /// **'Hoy {today} · Mes {month}'**
+  String merchantUsage(int today, int month);
+
+  /// No description provided for @merchantPending.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =0{Sin pendientes} =1{1 pendiente} other{{count} pendientes}}'**
+  String merchantPending(int count);
+
+  /// No description provided for @merchantLocked.
+  ///
+  /// In es, this message translates to:
+  /// **'Bloqueado por PIN'**
+  String get merchantLocked;
+
+  /// No description provided for @merchantCredentialsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Credenciales del comercio'**
+  String get merchantCredentialsTitle;
+
+  /// No description provided for @merchantCredentialsHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Se muestran una sola vez. Entrega el enlace y el PIN al cajero del comercio.'**
+  String get merchantCredentialsHint;
+
+  /// No description provided for @merchantCredentialsLink.
+  ///
+  /// In es, this message translates to:
+  /// **'Enlace'**
+  String get merchantCredentialsLink;
+
+  /// No description provided for @merchantCredentialsPin.
+  ///
+  /// In es, this message translates to:
+  /// **'PIN'**
+  String get merchantCredentialsPin;
+
+  /// No description provided for @merchantCredentialsCopy.
+  ///
+  /// In es, this message translates to:
+  /// **'Copiar'**
+  String get merchantCredentialsCopy;
+
+  /// No description provided for @merchantCredentialsNoAppUrl.
+  ///
+  /// In es, this message translates to:
+  /// **'Falta configurar APP_URL: copia solo la ruta {path}.'**
+  String merchantCredentialsNoAppUrl(String path);
+
+  /// No description provided for @merchantResetPin.
+  ///
+  /// In es, this message translates to:
+  /// **'Generar nuevo PIN'**
+  String get merchantResetPin;
+
+  /// No description provided for @merchantRotateToken.
+  ///
+  /// In es, this message translates to:
+  /// **'Generar nuevo enlace y PIN'**
+  String get merchantRotateToken;
+
+  /// No description provided for @merchantDeleteConfirm.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Eliminar el convenio {name}?'**
+  String merchantDeleteConfirm(String name);
+
+  /// No description provided for @merchantPolicyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Convenios por vehículo'**
+  String get merchantPolicyTitle;
+
+  /// No description provided for @merchantPolicyMax.
+  ///
+  /// In es, this message translates to:
+  /// **'Máximo de convenios por vehículo (0 = desactivar)'**
+  String get merchantPolicyMax;
+
+  /// No description provided for @merchantSettlementTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Liquidación'**
+  String get merchantSettlementTitle;
+
+  /// No description provided for @merchantSettlementEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'No hubo convenios en este rango.'**
+  String get merchantSettlementEmpty;
+
+  /// No description provided for @merchantSettlementValidations.
+  ///
+  /// In es, this message translates to:
+  /// **'Validaciones'**
+  String get merchantSettlementValidations;
+
+  /// No description provided for @merchantSettlementApplied.
+  ///
+  /// In es, this message translates to:
+  /// **'Aplicadas'**
+  String get merchantSettlementApplied;
+
+  /// No description provided for @merchantSettlementForfeited.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin efecto'**
+  String get merchantSettlementForfeited;
+
+  /// No description provided for @merchantSettlementRevoked.
+  ///
+  /// In es, this message translates to:
+  /// **'Revocadas'**
+  String get merchantSettlementRevoked;
+
+  /// No description provided for @merchantSettlementDiscounted.
+  ///
+  /// In es, this message translates to:
+  /// **'Descuento otorgado'**
+  String get merchantSettlementDiscounted;
+
+  /// No description provided for @merchantSettlementOwed.
+  ///
+  /// In es, this message translates to:
+  /// **'A cobrar al comercio'**
+  String get merchantSettlementOwed;
+
+  /// No description provided for @merchantSettlementCourtesy.
+  ///
+  /// In es, this message translates to:
+  /// **'Cortesía del parqueadero'**
+  String get merchantSettlementCourtesy;
+
+  /// No description provided for @merchantSettlementPdfTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Liquidación de convenios'**
+  String get merchantSettlementPdfTitle;
+
+  /// No description provided for @validateTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Validar parqueo'**
+  String get validateTitle;
+
+  /// No description provided for @validatePlateLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Placa del cliente'**
+  String get validatePlateLabel;
+
+  /// No description provided for @validateScanQr.
+  ///
+  /// In es, this message translates to:
+  /// **'Escanear QR del recibo'**
+  String get validateScanQr;
+
+  /// No description provided for @validatePinLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'PIN del comercio'**
+  String get validatePinLabel;
+
+  /// No description provided for @validateSubmit.
+  ///
+  /// In es, this message translates to:
+  /// **'Validar'**
+  String get validateSubmit;
+
+  /// No description provided for @validateBenefitMinutes.
+  ///
+  /// In es, this message translates to:
+  /// **'{minutes} minutos gratis'**
+  String validateBenefitMinutes(int minutes);
+
+  /// No description provided for @validateBenefitPercent.
+  ///
+  /// In es, this message translates to:
+  /// **'{percent}% de descuento'**
+  String validateBenefitPercent(int percent);
+
+  /// No description provided for @validateBenefitAmount.
+  ///
+  /// In es, this message translates to:
+  /// **'{amount} de descuento'**
+  String validateBenefitAmount(String amount);
+
+  /// No description provided for @validateSuccess.
+  ///
+  /// In es, this message translates to:
+  /// **'Convenio registrado: {benefit}'**
+  String validateSuccess(String benefit);
+
+  /// No description provided for @validateWrongPin.
+  ///
+  /// In es, this message translates to:
+  /// **'PIN incorrecto. Intentos restantes: {left}'**
+  String validateWrongPin(int left);
+
+  /// No description provided for @validateLocked.
+  ///
+  /// In es, this message translates to:
+  /// **'Demasiados intentos. Intenta de nuevo a las {time}.'**
+  String validateLocked(String time);
+
+  /// No description provided for @validateInvalidLink.
+  ///
+  /// In es, this message translates to:
+  /// **'Este enlace no es válido. Pide uno nuevo al parqueadero.'**
+  String get validateInvalidLink;
+
+  /// No description provided for @validateAnother.
+  ///
+  /// In es, this message translates to:
+  /// **'Validar otra placa'**
+  String get validateAnother;
+
+  /// No description provided for @deskMerchantTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Convenio'**
+  String get deskMerchantTitle;
+
+  /// No description provided for @deskMerchantPick.
+  ///
+  /// In es, this message translates to:
+  /// **'Elegir comercio'**
+  String get deskMerchantPick;
+
+  /// No description provided for @deskMerchantApply.
+  ///
+  /// In es, this message translates to:
+  /// **'Aplicar convenio'**
+  String get deskMerchantApply;
+
+  /// No description provided for @deskMerchantRevoke.
+  ///
+  /// In es, this message translates to:
+  /// **'Quitar convenio'**
+  String get deskMerchantRevoke;
+
+  /// No description provided for @deskMerchantRevokeReason.
+  ///
+  /// In es, this message translates to:
+  /// **'Motivo (mínimo 3 caracteres)'**
+  String get deskMerchantRevokeReason;
+
+  /// No description provided for @deskMerchantOffline.
+  ///
+  /// In es, this message translates to:
+  /// **'Requiere conexión'**
+  String get deskMerchantOffline;
+
+  /// No description provided for @fareGross.
+  ///
+  /// In es, this message translates to:
+  /// **'Tarifa'**
+  String get fareGross;
+
+  /// No description provided for @fareAdjustmentMerchant.
+  ///
+  /// In es, this message translates to:
+  /// **'Convenio {name}'**
+  String fareAdjustmentMerchant(String name);
+
+  /// No description provided for @fareAmountDue.
+  ///
+  /// In es, this message translates to:
+  /// **'A pagar'**
+  String get fareAmountDue;
+
+  /// No description provided for @errorMerchantNotFound.
+  ///
+  /// In es, this message translates to:
+  /// **'Comercio no encontrado.'**
+  String get errorMerchantNotFound;
+
+  /// No description provided for @errorMerchantInactive.
+  ///
+  /// In es, this message translates to:
+  /// **'Este convenio está desactivado.'**
+  String get errorMerchantInactive;
+
+  /// No description provided for @errorDuplicateMerchant.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya existe un comercio con ese nombre.'**
+  String get errorDuplicateMerchant;
+
+  /// No description provided for @errorMerchantInUse.
+  ///
+  /// In es, this message translates to:
+  /// **'El convenio tiene validaciones: desactívalo en lugar de eliminarlo.'**
+  String get errorMerchantInUse;
+
+  /// No description provided for @errorAlreadyValidated.
+  ///
+  /// In es, this message translates to:
+  /// **'Este comercio ya validó ese vehículo.'**
+  String get errorAlreadyValidated;
+
+  /// No description provided for @errorMerchantLimit.
+  ///
+  /// In es, this message translates to:
+  /// **'El vehículo ya alcanzó el máximo de convenios.'**
+  String get errorMerchantLimit;
+
+  /// No description provided for @errorMerchantCap.
+  ///
+  /// In es, this message translates to:
+  /// **'El comercio alcanzó su límite de validaciones.'**
+  String get errorMerchantCap;
+
+  /// No description provided for @errorSessionNotEligible.
+  ///
+  /// In es, this message translates to:
+  /// **'Este vehículo tiene mensualidad: no necesita convenio.'**
+  String get errorSessionNotEligible;
+
+  /// No description provided for @errorValidationNotFound.
+  ///
+  /// In es, this message translates to:
+  /// **'Validación no encontrada.'**
+  String get errorValidationNotFound;
+
+  /// No description provided for @errorValidationNotRevocable.
+  ///
+  /// In es, this message translates to:
+  /// **'Solo se puede quitar una validación pendiente de un vehículo que sigue dentro.'**
+  String get errorValidationNotRevocable;
+
+  /// No description provided for @errorRevokeReasonRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe un motivo de 3 a 200 caracteres.'**
+  String get errorRevokeReasonRequired;
 }
 
 class _AppLocalizationsDelegate

@@ -23,6 +23,7 @@ import 'modules/monthly_passes_module.dart';
 import 'modules/notifications_module.dart';
 import 'modules/observability_module.dart';
 import 'modules/online_payments_module.dart';
+import 'modules/merchants_module.dart';
 import 'modules/pass_renewal_module.dart';
 import 'modules/plate_scanning_module.dart';
 import 'modules/platform_module.dart';
@@ -142,6 +143,7 @@ void registerAllModules(GetIt sl, AppConfig config) {
   registerEvidenceModule(sl);
   registerOnlinePaymentsModule(sl);
   registerPassRenewalModule(sl);
+  registerMerchantsModule(sl);
   registerPublicBookingModule(sl);
   registerWaitlistModule(sl);
   registerAnomaliesModule(sl);

@@ -67,6 +67,34 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - Android release build: R8 keep rules for the optional ML Kit scripts.
 
 ### Added
+- **Merchant agreements ("convenios")** (`0117`–`0119`,
+  `openspec/changes/add-merchant-validations`). A neighbouring business grants
+  a benefit to a parked customer without an app account:
+  - `fare_quote` is now the single composer of what a session owes (base fare →
+    pricing hook → merchant lines → reward hook → manual discount). Check-out,
+    the preview and the public summary call it, so the four views can never
+    drift; `fare_pricing_step` and `fare_reward_step` are no-op hooks for
+    `add-dynamic-pricing` and `add-loyalty-rewards`.
+  - `merchants` (audited, readable by the lot staff) + `merchant_credentials`
+    (RLS with no policy/grant: SHA-256 token hash and bcrypt PIN hash, shown
+    once) + `merchant_validations` (terms snapshot, one per merchant/session,
+    daily/monthly caps, `pending` → `applied`/`forfeited`/`revoked`).
+  - Public page `/validate?m=<token>`: the merchant validates a plate with its
+    6-digit PIN. A wrong PIN returns JSON (the attempt counter must commit) and
+    five in a row lock the merchant for 15 minutes; the page never sees
+    sessions, plates of others or amounts.
+  - Admin screen `/merchants`: CRUD, credentials (link + PIN shown once, with
+    "new PIN" / "new link"), per-vehicle policy and a monthly settlement with
+    CSV/PDF (`amount_owed` for merchant-paid, `courtesy_amount` for the lot).
+  - Desk: the settlement dialog shows a collapsed "Convenio" section (online
+    only, hidden for pass holders and lost tickets) that applies a validation
+    and refreshes the preview; admins can remove a pending one with a reason.
+  - Check-out stores `gross_amount` and `fare_adjustments`; receipts (screen,
+    PDF, thermal), the vehicle history and the public page print the fare and
+    one row per agreement; an explained zero charge stops being a cash anomaly.
+  - Operators can apply a desk validation in their own lot but cannot manage
+    merchants, revoke validations or read the settlement.
+
 - **Monthly pass auto-renewal** (`0115`–`0116`,
   `openspec/changes/add-pass-auto-renewal`). A pass can be renewed from a
   WhatsApp link before it ends, without the desk:
@@ -1242,6 +1270,7 @@ Migrations are append-only and applied in filename order by `supabase-migrate`.
 | `0104`–`0111` | Pass lot scope, occupancy forecast, cash anomalies, customer feedback |
 | `0112`–`0114` | Online payments: settings/columns, `payment_intents`/`payment_events`, settlement rule, service RPCs, check-out/preview/summary/shift/report integration |
 | `0115`–`0116` | Pass auto-renewal: settings/`pass_renewal_offers`/WhatsApp columns, reminder job, public page, renewal settlement |
+| `0117`–`0119` | Merchant agreements: schema/credentials, `fare_quote` + hooks, validations, public page, settlement, check-out lines |
 
 ## Verification snapshot
 

@@ -22,6 +22,11 @@ import 'package:parking_management/features/check_in/application/check_in_cubit.
 import 'package:parking_management/features/check_out/application/check_out_cubit.dart';
 import 'package:parking_management/features/online_payments/application/online_payment_cubit.dart';
 import 'package:parking_management/features/pass_renewal/application/pass_renewal_cubit.dart';
+import 'package:parking_management/features/merchants/application/merchant_settlement_cubit.dart';
+import 'package:parking_management/features/merchants/application/merchant_validation_cubit.dart';
+import 'package:parking_management/features/merchants/application/merchants_cubit.dart';
+import 'package:parking_management/features/merchants/domain/repositories/merchant_repository.dart';
+import 'package:parking_management/features/merchants/domain/repositories/public_merchant_repository.dart';
 import 'package:parking_management/features/pass_renewal/domain/repositories/pass_renewal_repository.dart';
 import 'package:parking_management/features/online_payments/domain/repositories/online_payment_repository.dart';
 import 'package:parking_management/features/monthly_passes/application/monthly_passes_cubit.dart';
@@ -99,6 +104,16 @@ void main() {
 
     expect(sl<OnlinePaymentRepository>(), isA<OnlinePaymentRepository>());
     expect(sl<OnlinePaymentCubit>(), isA<OnlinePaymentCubit>());
+  });
+
+  test('Success: registers the merchants module', () {
+    _register(sl);
+
+    expect(sl<MerchantRepository>(), isA<MerchantRepository>());
+    expect(sl<PublicMerchantRepository>(), isA<PublicMerchantRepository>());
+    expect(sl<MerchantsCubit>(), isA<MerchantsCubit>());
+    expect(sl<MerchantValidationCubit>(), isA<MerchantValidationCubit>());
+    expect(sl<MerchantSettlementCubit>(), isA<MerchantSettlementCubit>());
   });
 
   test('Success: registers the pass renewal module', () {

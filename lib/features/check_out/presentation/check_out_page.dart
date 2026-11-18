@@ -7,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/di/injection.dart';
+import '../../../core/error/failure.dart';
 import '../../../core/l10n/failure_messages.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/realtime/local_activity.dart';
@@ -45,6 +46,10 @@ import '../domain/entities/check_out_receipt.dart';
 import '../../../core/receipt/payment_method.dart';
 import '../../../core/storage/key_value_store.dart';
 import '../domain/entities/open_session.dart';
+import '../../merchants/domain/entities/merchant.dart';
+import '../domain/entities/check_out_preview.dart';
+import '../../merchants/domain/repositories/merchant_repository.dart';
+import '../../merchants/presentation/desk_merchant_section.dart';
 import 'payment_method_dialog.dart';
 
 /// Lists currently open parking sessions (plates resolved by the cubit),
@@ -333,6 +338,7 @@ class _CheckOutPageState extends State<CheckOutPage> {
     final cubit = context.read<CheckOutCubit>();
     _setOpening(session.id);
     final preview = await cubit.preview(session.id);
+    final merchants = await _merchantOptions(context, session.id);
     _setOpening(null);
     if (!context.mounted) {
       return;
@@ -342,6 +348,7 @@ class _CheckOutPageState extends State<CheckOutPage> {
       plate: plate,
       canDiscount: _canDiscount(context),
       preview: preview,
+      merchants: merchants,
       initialMethod: (preview?.hasPass ?? false)
           ? PaymentMethod.monthlyPass
           : _basePaymentMethod(_rememberedMethod),
@@ -360,6 +367,54 @@ class _CheckOutPageState extends State<CheckOutPage> {
       lostTicketReason: choice.lostTicketReason,
       cardType: choice.cardType?.wire,
       cashReceived: choice.cashReceived,
+    );
+  }
+
+  /// Desk agreements: loaded online only (a failure hides the section), and
+  /// every apply/revoke refreshes the server preview.
+  Future<MerchantDeskOptions?> _merchantOptions(
+    BuildContext context,
+    int sessionId,
+  ) async {
+    if (!serviceLocator.isRegistered<MerchantRepository>()) {
+      return null;
+    }
+    final repository = serviceLocator<MerchantRepository>();
+    final List<Merchant> options;
+    try {
+      options = await repository.listActive();
+    } on Failure {
+      return null;
+    }
+    if (options.isEmpty || !context.mounted) {
+      return null;
+    }
+    final cubit = context.read<CheckOutCubit>();
+
+    Future<CheckOutPreview> refresh() async {
+      final updated = await cubit.preview(sessionId);
+      if (updated == null) {
+        throw const NetworkFailure('Unable to refresh the preview');
+      }
+      return updated;
+    }
+
+    return MerchantDeskOptions(
+      options: options,
+      apply: (merchantId) async {
+        await repository.addValidation(
+          merchantId: merchantId,
+          sessionId: sessionId,
+        );
+        return refresh();
+      },
+      revoke: (validationId, reason) async {
+        await repository.revokeValidation(
+          validationId: validationId,
+          reason: reason,
+        );
+        return refresh();
+      },
     );
   }
 
@@ -460,6 +515,8 @@ class _CheckOutPageState extends State<CheckOutPage> {
     discountReason: receipt.discountReason,
     pendingSync: receipt.pendingSync,
     onlinePaidAmount: receipt.onlinePaidAmount,
+    grossAmount: receipt.grossAmount,
+    adjustments: receipt.adjustments,
     evidenceUrl: receipt.pendingSync ? null : publicEvidenceUrl(receipt.id),
     feedbackUrl: receipt.pendingSync
         ? null

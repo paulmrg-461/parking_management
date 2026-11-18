@@ -118,4 +118,35 @@ void main() {
     expect(preview.onlinePaidAmount, 0);
     expect(preview.graceActive, isFalse);
   });
+
+  test('Success: the preview carries the merchant quote', () {
+    final preview = CheckOutPreview.fromJson(const {
+      'session_id': 7,
+      'amount': 9000,
+      'gross': 9000,
+      'adjustments_total': 4500,
+      'amount_due': 4500,
+      'quote': {
+        'session_id': 7,
+        'base_amount': 9000,
+        'gross': 9000,
+        'adjustments': [
+          {
+            'type': 'merchant',
+            'ref_id': 4,
+            'label': 'Cafe Uno',
+            'kind': 'percentage',
+            'amount': 4500,
+          },
+        ],
+        'adjustments_total': 4500,
+        'discount_amount': 0,
+        'amount_due': 4500,
+      },
+    });
+
+    expect(preview.quote, isNotNull);
+    expect(preview.quote!.adjustments.single.amount, 4500);
+    expect(preview.deskDue, 4500);
+  });
 }

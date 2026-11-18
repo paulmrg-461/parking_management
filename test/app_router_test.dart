@@ -16,6 +16,14 @@ void main() {
     expect(find.text('Evidencias del vehículo'), findsOneWidget);
   });
 
+  testWidgets('Security: /validate is public for anonymous users', (tester) async {
+    await pumpApp(tester);
+    await goTo(tester, '/validate?m=${'a' * 48}');
+
+    expect(find.text('Ingresar'), findsNothing);
+    expect(find.text('Validar parqueo'), findsOneWidget);
+  });
+
   testWidgets('Security: /renew is public for anonymous users', (tester) async {
     await pumpApp(tester);
     await goTo(tester, '/renew?t=${'a' * 48}');

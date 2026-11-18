@@ -12,6 +12,7 @@ const helpPath = '/help';
 const preferencesPath = '/preferences';
 const reservePath = '/reserve';
 const renewPath = '/renew';
+const validatePath = '/validate';
 
 /// Operators get an ALLOWLIST (secure by default: any new route is
 /// admin-only until added here). Check-in reads categories/vehicles through
@@ -60,6 +61,7 @@ String? authRedirect(AuthState auth, String location) {
       path == aboutPath ||
       path == reservePath ||
       path == renewPath ||
+      path == validatePath ||
       path == feedbackPath) {
     return null;
   }

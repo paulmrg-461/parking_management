@@ -1,3 +1,5 @@
+import '../fare/fare_adjustment.dart';
+
 /// Whether a receipt describes a vehicle entering or leaving.
 enum ReceiptKind { checkIn, checkOut }
 
@@ -20,6 +22,8 @@ class ReceiptData {
     this.discountAmount = 0,
     this.discountReason,
     this.onlinePaidAmount = 0,
+    this.grossAmount,
+    this.adjustments = const [],
     this.pendingSync = false,
     this.evidenceUrl,
     this.feedbackUrl,
@@ -44,6 +48,12 @@ class ReceiptData {
   /// Part of the charge the customer already paid online (0 = none). The
   /// session's `amount_charged` already includes it.
   final int onlinePaidAmount;
+
+  /// Fare before the automatic lines and the manual discount.
+  final int? grossAmount;
+
+  /// Merchant (and later reward) reductions applied by the server.
+  final List<FareAdjustment> adjustments;
   final bool pendingSync;
 
   /// Public page (plate is the key) with the session's photos and videos.

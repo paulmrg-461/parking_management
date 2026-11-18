@@ -1,5 +1,7 @@
 import 'package:equatable/equatable.dart';
 
+import '../../../../core/fare/fare_quote.dart';
+
 /// Fare preview for an open session (`rpc/check_out_preview`): the same math
 /// the server uses when closing, without side effects. It carries the billing
 /// breakdown so the operator can explain the charge before collecting.
@@ -21,6 +23,7 @@ class CheckOutPreview extends Equatable {
     this.amountDue,
     this.graceActive = false,
     this.graceUntil,
+    this.quote,
   });
 
   final int sessionId;
@@ -60,6 +63,9 @@ class CheckOutPreview extends Equatable {
   final bool graceActive;
   final DateTime? graceUntil;
 
+  /// Benefits applied right now (merchant agreements and, later, rewards).
+  final FareQuote? quote;
+
   /// Desk balance, falling back to the full fare on old servers.
   int get deskDue => amountDue ?? amount;
 
@@ -83,6 +89,11 @@ class CheckOutPreview extends Equatable {
         amountDue: (json['amount_due'] as num?)?.toInt(),
         graceActive: json['grace_active'] as bool? ?? false,
         graceUntil: DateTime.tryParse(json['grace_until'] as String? ?? ''),
+        quote: json['quote'] is Map
+            ? FareQuote.fromJson(
+                Map<String, dynamic>.from(json['quote'] as Map),
+              )
+            : null,
       );
 
   @override
@@ -103,5 +114,6 @@ class CheckOutPreview extends Equatable {
     amountDue,
     graceActive,
     graceUntil,
+    quote,
   ];
 }

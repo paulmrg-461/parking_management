@@ -39,6 +39,7 @@ String _records(AppLocalizations l) => l.navRecords;
 String _anomalies(AppLocalizations l) => l.navAnomalies;
 String _audit(AppLocalizations l) => l.navAudit;
 String _diagnostics(AppLocalizations l) => l.navDiagnostics;
+String _merchants(AppLocalizations l) => l.navMerchants;
 
 const primaryDestinations = [
   AppDestination(homePath, _home, Icons.home_outlined, Icons.home),
@@ -65,6 +66,12 @@ const primaryDestinations = [
 ];
 
 const managementDestinations = [
+  AppDestination(
+    '/merchants',
+    _merchants,
+    Icons.storefront_outlined,
+    Icons.storefront,
+  ),
   AppDestination(
     '/vehicles',
     _vehicles,

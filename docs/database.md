@@ -50,6 +50,11 @@ erDiagram
 
   monthly_passes ||--o{ pass_renewal_offers : "offered by"
   pass_renewal_offers ||--o| payment_intents : "paid by"
+
+  parking_lots ||--o{ merchants : "agrees with"
+  merchants ||--|| merchant_credentials : "authenticated by"
+  merchants ||--o{ merchant_validations : "grants"
+  parking_sessions ||--o{ merchant_validations : "validated by"
 ```
 
 ## 2. Tables
@@ -75,6 +80,9 @@ erDiagram
 | `parking_spot_events` | Maintenance history of a bay: status transition, optional reason, actor and timestamp; written by `save_parking_spot`, lot-scoped RLS. | yes |
 | `parking_settings` (`car_capacity`, `moto_capacity`, `key_capacity`) | Per-site branding (name, address, schedule, contacts, police quadrant, logo version/path) + `business_timezone`, `overstay_hours`, `lost_ticket_fee`, `evidence_retention_days`, online-payment switch/window/minimum. | yes |
 | `payment_intents` | Frozen amount for a gateway checkout: `reference` (random `PM-…`), `amount`, `currency` (COP only), `gateway` (`wompi`), `status` (`pending`/`approved`/`declined`/`voided`/`error`/`expired`), transaction id/method, `expires_at`. Written only by the service RPCs. | yes |
+| `merchants` | Agreement of the lot: name, one benefit rule (`free_minutes`/`percentage`/`fixed_amount` + optional per-validation cap), billing mode, daily/monthly caps, `active`, `credentials_version`. Audited. | yes |
+| `merchant_credentials` | SHA-256 `token_hash`, bcrypt `pin_hash`, failure counter, lock. RLS on with no policy and no grant: only the definer RPCs read it. | via merchant |
+| `merchant_validations` | One row per (merchant, session): source, actor, `status` (pending/applied/forfeited/revoked), `terms` snapshot, `amount`, timestamps and revoke reason. | yes |
 | `pass_renewal_offers` | Token-keyed renewal offer (192-bit `token`, planned period/amount, `status` open/paid/expired/cancelled, `expires_at`, reminder counters, `renewal_pass_id`). The pass is created only when the offer is paid; one open offer per pass. | yes |
 | `payment_events` | Idempotent webhook log: `unique (gateway, gateway_transaction_id, gateway_status)` plus `outcome` (`applied`/`ignored`/`unknown_reference`/`mismatch`/`late_closed`) and the raw payload. Service role only (RLS on, no policy). | via intent |
 | `notifications` | Per-user inbox rows (type, title, body, data, read/pushed state, dedupe key). | optional |
@@ -334,6 +342,17 @@ charge `online`; `settle_payment_intent` delegates `kind = 'pass'`;
 `report_online_payments` adds `kind`/`pass_id`; `queue_whatsapp_message` is the
 internal dedupe-aware queue helper.
 
+**Merchant agreements (`0117`–`0119`)**
+`fare_quote(session, exit, discount, lost)` (internal) composes base fare →
+`fare_pricing_step` → pending merchant lines → `fare_reward_step` → manual
+discount; `save_merchant` / `list_merchants` / `list_active_merchants` /
+`reset_merchant_credentials` / `delete_merchant` / `set_merchant_policy`;
+`add_merchant_validation` / `revoke_merchant_validation`;
+`merchant_portal(token)` (anon) and `merchant_validate(token, pin, plate)`
+(anon; a wrong PIN returns JSON); `report_merchant_settlement(range)` (admin);
+internal `create_merchant_validation`, `merchant_hash_token`, `merchant_summary`,
+`rotate_merchant_credentials`.
+
 ## 4. Access control (RLS)
 
 | Table | Read | Write |
@@ -352,6 +371,9 @@ internal dedupe-aware queue helper.
 | `payment_intents` | lot admins of the active lot | service RPCs only (Edge Functions) |
 | `payment_events` | nobody (RLS on, no policy, no grant) | `apply_payment_event` / service role |
 | `pass_renewal_offers` | lot admins of the active lot | RPCs only (cron/admin/service) |
+| `merchants` | active lot (staff need the desk picker) | RPCs (lot admins) |
+| `merchant_credentials` | nobody (RLS on, no policy, no grant) | definer RPCs only |
+| `merchant_validations` | active lot | RPCs (desk/admin/public) |
 | `notifications` | own rows, active lot (or global) | RPCs/triggers |
 | `audit_log` | platform admins | triggers and the `admin-users` Edge Function |
 | `device_tokens`, `web_push_subscriptions` | own rows | RPCs |
@@ -459,6 +481,18 @@ offer is `late_closed` plus an admin review. The new period starts at
 `greatest(offer.start, lot today)`: a late payment is not retroactive.
 Reminders are deduped by `(offer|pass, cadence window)` through
 `whatsapp_messages.dedupe_key`; the URL button parameter is the offer token.
+
+**Merchant agreements.** Benefits apply at check-out, never while the session
+is open. `fare_quote` walks the `pending` validations ordered by
+`(created_at, id)`: `percentage` rounds half up, `fixed_amount` is fixed,
+`free_minutes` shortens the stay and re-bills it (lumpy because billing rounds
+up hours), each line capped by the running amount and `max_amount`. The terms
+are snapshotted at validation time. `check_out` stores `gross_amount` (after
+pricing, before benefits) and `fare_adjustments`, marks the lines it used
+`applied` and the rest `forfeited`. A pass holder, a lost ticket and a zero
+benefit forfeit instead of charging. The token is 192 bits and hashed with
+SHA-256 (tokens are high entropy); the PIN is server-generated and bcrypt
+hashed; a wrong PIN is a JSON answer so the attempt counter commits.
 
 **Shifts.** Sales, cash movements and cash pass payments attach only to the
 actor's open shift (`closed_at is null`), locked `FOR SHARE`; `close_shift`

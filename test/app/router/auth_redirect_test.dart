@@ -61,6 +61,16 @@ void main() {
       );
     });
 
+    test('Success: the merchant validation page is public and not an operator route', () {
+      expect(authRedirect(const AuthUnauthenticated(), validatePath), isNull);
+      expect(
+        authRedirect(const AuthUnauthenticated(), '/validate?m=${'a' * 48}'),
+        isNull,
+      );
+      expect(canAccess(UserRole.operator, validatePath), isFalse);
+      expect(canAccess(UserRole.operator, '/merchants'), isFalse);
+    });
+
     test('Success: the renewal page needs no session and is not an operator route', () {
       expect(authRedirect(const AuthUnauthenticated(), renewPath), isNull);
       expect(
