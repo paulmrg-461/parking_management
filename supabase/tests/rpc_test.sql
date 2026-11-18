@@ -10647,9 +10647,14 @@ declare
     exit_at timestamptz := now() - interval '30 minutes';
     base integer;
     quote jsonb;
+    original text;
 begin
     base := (public.fare_breakdown(current_setting('app.merchant_cat')::integer,
         (select entry_time from public.parking_sessions where id = s), exit_at, false) ->> 'amount')::integer;
+    -- Capture whatever the current hook is (the no-op today, the dynamic
+    -- pricing implementation after that change lands) and restore exactly it.
+    select pg_get_functiondef('public.fare_pricing_step(integer,integer)'::regprocedure)
+      into original;
     create or replace function public.fare_pricing_step(p_session_id integer, p_base integer)
     returns jsonb language sql stable set search_path = public
     as $f$ select jsonb_build_object('amount', p_base * 12 / 10, 'pricing', jsonb_build_object('multiplier_bps', 12000)); $f$;
@@ -10658,9 +10663,7 @@ begin
        or (quote -> 'pricing' ->> 'multiplier_bps')::integer <> 12000 then
         raise exception 'the pricing hook was not honoured: %', quote;
     end if;
-    create or replace function public.fare_pricing_step(p_session_id integer, p_base integer)
-    returns jsonb language sql stable set search_path = public
-    as $f$ select jsonb_build_object('amount', p_base, 'pricing', null); $f$;
+    execute original;
 end $$;
 
 -- quote: not executable by api roles
@@ -11200,6 +11203,841 @@ begin
     end;
 end $$;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- ---------------------------------------------------------------------------
+-- pricing: fixtures (own lot, no drawn bays: capacity comes from settings)
+-- ---------------------------------------------------------------------------
+insert into public.parking_lots (code, name, address, timezone)
+values ('PRC', 'Pricing Lot', 'Calle 3', 'America/Bogota')
+returning id;
+
+do $$
+begin
+    perform set_config('app.pricing_lot', (
+        select id::text from public.parking_lots where code = 'PRC'
+    ), true);
+end $$;
+
+insert into public.parking_settings (
+    lot_id, name, car_capacity, moto_capacity, pricing_enabled,
+    pricing_floor_bps, pricing_ceiling_bps, pricing_round_to
+)
+select current_setting('app.pricing_lot')::integer, 'Pricing Lot', 20, 5, true,
+       8000, 15000, 1;
+
+insert into public.lot_members (lot_id, user_id, role)
+select current_setting('app.pricing_lot')::integer, 1, 'admin'
+union all
+select current_setting('app.pricing_lot')::integer, 2, 'operator';
+
+insert into public.categories (lot_id, name, capacity)
+select current_setting('app.pricing_lot')::integer, 'car', 0;
+
+insert into public.tariffs (category_id, lot_id, type, amount, active, start_time, end_time)
+select c.id, current_setting('app.pricing_lot')::integer, 'hourly', 3000, true, null, null
+  from public.categories c where c.lot_id = current_setting('app.pricing_lot')::integer;
+insert into public.tariffs (category_id, lot_id, type, amount, active, start_time, end_time)
+select c.id, current_setting('app.pricing_lot')::integer, 'nightly', 2000, true, '22:00', '06:00'
+  from public.categories c where c.lot_id = current_setting('app.pricing_lot')::integer;
+insert into public.tariffs (category_id, lot_id, type, amount, active, start_time, end_time)
+select c.id, current_setting('app.pricing_lot')::integer, 'daily', 20000, true, null, null
+  from public.categories c where c.lot_id = current_setting('app.pricing_lot')::integer;
+
+insert into public.vehicles (plate, category_id)
+select 'PRI' || lpad(n::text, 2, '0'),
+       (select id from public.categories where lot_id = current_setting('app.pricing_lot')::integer)
+  from generate_series(1, 24) as n;
+
+do $$
+declare
+    lot integer := current_setting('app.pricing_lot')::integer;
+    category integer := (select id from public.categories where lot_id = lot);
+begin
+    perform set_config('app.pricing_cat', category::text, true);
+end $$;
+
+do $$
+begin
+    perform set_config('request.headers',
+        jsonb_build_object('x-lot-id', current_setting('app.pricing_lot'))::text, true);
+end $$;
+
+-- pricing: schema defaults
+do $$
+declare
+    settings public.parking_settings%rowtype;
+begin
+    select * into settings from public.parking_settings where lot_id = 1;
+    if settings.pricing_enabled is not false
+       or settings.pricing_floor_bps <> 10000
+       or settings.pricing_ceiling_bps <> 15000
+       or settings.pricing_round_to <> 1 then
+        raise exception 'the pricing settings defaults are wrong';
+    end if;
+    begin
+        update public.parking_settings set pricing_floor_bps = 11000 where lot_id = 1;
+        raise exception 'a floor above 100 %% was accepted';
+    exception when check_violation then null;
+    end;
+    begin
+        update public.parking_settings set pricing_ceiling_bps = 9000 where lot_id = 1;
+        raise exception 'a ceiling below 100 %% was accepted';
+    exception when check_violation then null;
+    end;
+    begin
+        update public.parking_settings set pricing_round_to = 0 where lot_id = 1;
+        raise exception 'a rounding step of 0 was accepted';
+    exception when check_violation then null;
+    end;
+end $$;
+
+-- pricing: rule constraints
+do $$
+declare
+    lot integer := current_setting('app.pricing_lot')::integer;
+begin
+    begin
+        insert into public.pricing_rules (lot_id, name, multiplier_bps)
+        values (lot, 'Sin efecto', 10000);
+        raise exception 'a rule without effect was accepted';
+    exception when check_violation then null;
+    end;
+    begin
+        insert into public.pricing_rules (lot_id, name, min_occupancy_pct, max_occupancy_pct, multiplier_bps)
+        values (lot, 'Banda inversa', 90, 80, 12000);
+        raise exception 'an inverted band was accepted';
+    exception when check_violation then null;
+    end;
+    begin
+        insert into public.pricing_rules (lot_id, name, from_time, multiplier_bps)
+        values (lot, 'Ventana a medias', time '10:00', 12000);
+        raise exception 'a window with one time was accepted';
+    exception when check_violation then null;
+    end;
+    begin
+        insert into public.pricing_rules (lot_id, name, from_time, to_time, multiplier_bps)
+        values (lot, 'Ventana igual', time '10:00', time '10:00', 12000);
+        raise exception 'an equal window was accepted';
+    exception when check_violation then null;
+    end;
+    begin
+        insert into public.pricing_rules (lot_id, name, group_name, multiplier_bps)
+        values (lot, 'Grupo bus', 'bus', 12000);
+        raise exception 'an unknown group was accepted';
+    exception when check_violation then null;
+    end;
+end $$;
+
+-- pricing: anon cannot select the rules
+set local role anon;
+do $$
+begin
+    begin
+        perform count(*) from public.pricing_rules;
+        raise exception 'anon read the pricing rules';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
+-- pricing: operator sees no rules
+insert into public.pricing_rules (
+    lot_id, name, active, priority, group_name, min_occupancy_pct,
+    max_occupancy_pct, multiplier_bps
+)
+select current_setting('app.pricing_lot')::integer, 'Alta ocupacion', true, 500,
+       'car', 80, 100, 12000;
+
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    if (select count(*) from public.pricing_rules) <> 0 then
+        raise exception 'an operator read the pricing rules';
+    end if;
+end $$;
+reset role;
+
+-- ---------------------------------------------------------------------------
+-- pricing: pure functions
+-- ---------------------------------------------------------------------------
+-- pricing: apply multiplier
+do $$
+declare
+    lock jsonb := jsonb_build_object(
+        'v', 1, 'rule_id', 1, 'rule_name', 'R', 'kind', 'multiplier',
+        'multiplier_bps', 12000, 'surcharge_amount', 0,
+        'floor_bps', 10000, 'ceiling_bps', 15000, 'round_to', 1,
+        'occupancy_pct', 85, 'locked_at', now(), 'source', 'checkin');
+begin
+    if public.pricing_apply(lock, 9000) <> 10800 then
+        raise exception 'the multiplier was not applied: %', public.pricing_apply(lock, 9000);
+    end if;
+    if public.pricing_apply(lock, 6000) <> 7200 then
+        raise exception 'the multiplier on 6000 is wrong';
+    end if;
+    if (public.pricing_apply_detail(lock, 9000) ->> 'clamped') is not null then
+        raise exception 'an unclamped result was reported as clamped';
+    end if;
+end $$;
+
+-- pricing: apply floor ceiling
+do $$
+declare
+    ceiling_lock jsonb := jsonb_build_object(
+        'multiplier_bps', 20000, 'surcharge_amount', 0,
+        'floor_bps', 10000, 'ceiling_bps', 15000, 'round_to', 1);
+    floor_lock jsonb := jsonb_build_object(
+        'multiplier_bps', 9000, 'surcharge_amount', 0,
+        'floor_bps', 9500, 'ceiling_bps', 15000, 'round_to', 1);
+    detail jsonb;
+begin
+    detail := public.pricing_apply_detail(ceiling_lock, 9000);
+    if (detail ->> 'amount')::integer <> 13500 or detail ->> 'clamped' <> 'ceiling' then
+        raise exception 'the ceiling clamp is wrong: %', detail;
+    end if;
+    detail := public.pricing_apply_detail(floor_lock, 6000);
+    if (detail ->> 'amount')::integer <> 5700 or detail ->> 'clamped' <> 'floor' then
+        raise exception 'the floor clamp is wrong: %', detail;
+    end if;
+end $$;
+
+-- pricing: apply rounding and surcharge
+do $$
+declare
+    surcharge_lock jsonb := jsonb_build_object(
+        'multiplier_bps', 10000, 'surcharge_amount', 2000,
+        'floor_bps', 10000, 'ceiling_bps', 15000, 'round_to', 1);
+    rounded_lock jsonb := jsonb_build_object(
+        'multiplier_bps', 12000, 'surcharge_amount', 0,
+        'floor_bps', 10000, 'ceiling_bps', 15000, 'round_to', 500);
+begin
+    if public.pricing_apply(surcharge_lock, 9000) <> 11000 then
+        raise exception 'the surcharge was not applied';
+    end if;
+    if public.pricing_apply(rounded_lock, 3000) <> 3500 then
+        raise exception 'the rounding step is wrong: %', public.pricing_apply(rounded_lock, 3000);
+    end if;
+end $$;
+
+-- pricing: apply identity
+do $$
+begin
+    if public.pricing_apply(null, 9000) <> 9000 then
+        raise exception 'a null lock changed the amount';
+    end if;
+    if public.pricing_apply(jsonb_build_object('multiplier_bps', 12000), 0) <> 0 then
+        raise exception 'a zero base was priced';
+    end if;
+end $$;
+
+-- pricing: rule matches
+do $$
+declare
+    rule public.pricing_rules%rowtype;
+    band public.pricing_rules%rowtype;
+    window_rule public.pricing_rules%rowtype;
+    overnight public.pricing_rules%rowtype;
+    saturday public.pricing_rules%rowtype;
+begin
+    select * into band from public.pricing_rules
+     where lot_id = current_setting('app.pricing_lot')::integer and name = 'Alta ocupacion';
+    if not public.pricing_rule_matches(band, 'car', timestamp '2026-11-12 12:00', 85) then
+        raise exception 'the occupancy band did not match at 85';
+    end if;
+    if public.pricing_rule_matches(band, 'car', timestamp '2026-11-12 12:00', 50) then
+        raise exception 'the occupancy band matched at 50';
+    end if;
+    if public.pricing_rule_matches(band, 'car', timestamp '2026-11-12 12:00', null) then
+        raise exception 'the occupancy band matched an unknown occupancy';
+    end if;
+    if public.pricing_rule_matches(band, 'moto', timestamp '2026-11-12 12:00', 85) then
+        raise exception 'the car rule matched the moto group';
+    end if;
+
+    rule := band;
+    rule.group_name := null;
+    rule.min_occupancy_pct := null;
+    rule.max_occupancy_pct := null;
+    rule.priority := 1;
+    rule.from_time := time '17:00';
+    rule.to_time := time '20:00';
+    window_rule := rule;
+    if not public.pricing_rule_matches(window_rule, 'car', timestamp '2026-11-12 17:00', null) then
+        raise exception 'the window did not match at its start';
+    end if;
+    if public.pricing_rule_matches(window_rule, 'car', timestamp '2026-11-12 20:00', null) then
+        raise exception 'the window matched at its end';
+    end if;
+
+    overnight := window_rule;
+    overnight.from_time := time '22:00';
+    overnight.to_time := time '06:00';
+    if not public.pricing_rule_matches(overnight, 'car', timestamp '2026-11-12 01:00', null) then
+        raise exception 'the overnight window did not match after midnight';
+    end if;
+    if public.pricing_rule_matches(overnight, 'car', timestamp '2026-11-12 06:00', null) then
+        raise exception 'the overnight window matched at its end';
+    end if;
+
+    saturday := window_rule;
+    saturday.from_time := null;
+    saturday.to_time := null;
+    saturday.weekdays := 32;  -- Saturday
+    if not public.pricing_rule_matches(saturday, 'car', timestamp '2026-11-14 12:00', null) then
+        raise exception 'the Saturday rule did not match a Saturday';
+    end if;
+    if public.pricing_rule_matches(saturday, 'car', timestamp '2026-11-12 12:00', null) then
+        raise exception 'the Saturday rule matched a Thursday';
+    end if;
+end $$;
+
+-- pricing: group occupancy
+do $$
+declare
+    lot integer := current_setting('app.pricing_lot')::integer;
+begin
+    delete from public.parking_sessions where lot_id = lot;
+    delete from public.category_reservations where lot_id = lot;
+
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '1 hour', 'open'
+      from public.vehicles v
+     where v.category_id = current_setting('app.pricing_cat')::integer
+     order by v.plate
+     limit 15;
+    insert into public.category_reservations (
+        lot_id, category_id, plate, reserved_until, status, source,
+        reserved_from, customer_name, customer_phone
+    )
+    select lot, current_setting('app.pricing_cat')::integer,
+           'RSV' || n, now() + interval '1 hour', 'active', 'app',
+           now(), 'Cliente', '3001112233'
+      from generate_series(1, 2) as n;
+
+    if public.pricing_group_capacity(lot, 'car') <> 20 then
+        raise exception 'the group capacity is not 20: %', public.pricing_group_capacity(lot, 'car');
+    end if;
+    if public.pricing_group_occupancy(lot, 'car') <> 85 then
+        raise exception 'the occupancy is not 85: %', public.pricing_group_occupancy(lot, 'car');
+    end if;
+    if public.pricing_group_occupancy(lot, 'heavy') is not null then
+        raise exception 'heavy occupancy should be unknown';
+    end if;
+end $$;
+
+-- pricing: lock at insert
+do $$
+declare
+    lot integer := current_setting('app.pricing_lot')::integer;
+    category integer := current_setting('app.pricing_cat')::integer;
+    session public.parking_sessions%rowtype;
+begin
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now(), 'open'
+      from public.vehicles v
+     where v.category_id = category and v.plate = 'PRI18'
+    returning * into session;
+
+    if session.pricing_lock is null then
+        raise exception 'the entry was not priced';
+    end if;
+    if session.pricing_lock ->> 'rule_name' <> 'Alta ocupacion'
+       or (session.pricing_lock ->> 'multiplier_bps')::integer <> 12000
+       or (session.pricing_lock ->> 'occupancy_pct')::integer <> 85
+       or session.pricing_lock ->> 'source' <> 'checkin' then
+        raise exception 'the lock is wrong: %', session.pricing_lock;
+    end if;
+    perform set_config('app.pricing_session', session.id::text, true);
+    perform set_config('app.pricing_locked', session.pricing_lock::text, true);
+
+    if public.pricing_session_lock(session.id) is null
+       or (public.pricing_session_lock(session.id) ->> 'hourly_locked')::integer <> 3600 then
+        raise exception 'the session lock read is wrong: %',
+            public.pricing_session_lock(session.id);
+    end if;
+end $$;
+
+-- pricing: lock immutable
+do $$
+begin
+    begin
+        update public.parking_sessions
+           set pricing_lock = jsonb_build_object('v', 1)
+         where id = current_setting('app.pricing_session')::integer;
+        raise exception 'the lock was overwritten';
+    exception when others then
+        if sqlerrm not like '%PricingLockImmutableError%' then raise; end if;
+    end;
+end $$;
+
+-- pricing: disabled lot no lock
+do $$
+declare
+    lot integer := current_setting('app.pricing_lot')::integer;
+    session public.parking_sessions%rowtype;
+begin
+    update public.parking_settings set pricing_enabled = false where lot_id = lot;
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now(), 'open'
+      from public.vehicles v where v.plate = 'PRI19'
+    returning * into session;
+    if session.pricing_lock is not null then
+        raise exception 'a disabled lot priced the entry';
+    end if;
+    delete from public.parking_sessions where id = session.id;
+    update public.parking_settings set pricing_enabled = true where lot_id = lot;
+end $$;
+
+-- pricing: offline replay drops a surcharge and keeps a discount
+do $$
+declare
+    lot integer := current_setting('app.pricing_lot')::integer;
+    category integer := current_setting('app.pricing_cat')::integer;
+    saturday timestamp := date_trunc('week', (current_date - 7)::timestamp) + interval '5 days 10 hours';
+    night timestamp := date_trunc('week', (current_date - 7)::timestamp) + interval '2 days 23 hours';
+    session public.parking_sessions%rowtype;
+begin
+    delete from public.parking_sessions where lot_id = lot;
+    delete from public.category_reservations where lot_id = lot;
+
+    insert into public.pricing_rules (
+        lot_id, name, weekdays, surcharge_amount, multiplier_bps, priority
+    ) values (lot, 'Evento sabado', 32, 2000, 10000, 600);
+
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, saturday at time zone 'America/Bogota', 'open'
+      from public.vehicles v where v.plate = 'PRI20'
+    returning * into session;
+    if session.pricing_lock is not null then
+        raise exception 'an offline surcharge was kept: %', session.pricing_lock;
+    end if;
+    delete from public.parking_sessions where id = session.id;
+
+    insert into public.pricing_rules (
+        lot_id, name, from_time, to_time, multiplier_bps, priority
+    ) values (lot, 'Noche valle', time '22:00', time '06:00', 9000, 400);
+
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, night at time zone 'America/Bogota', 'open'
+      from public.vehicles v where v.plate = 'PRI21'
+    returning * into session;
+    if session.pricing_lock is null
+       or session.pricing_lock ->> 'source' <> 'offline'
+       or (session.pricing_lock ->> 'multiplier_bps')::integer <> 9000 then
+        raise exception 'an offline discount was not kept: %', session.pricing_lock;
+    end if;
+
+    update public.pricing_rules set active = false
+     where lot_id = lot and name in ('Noche valle', 'Evento sabado');
+end $$;
+
+-- pricing: reservation promise keeps the cheaper price
+do $$
+declare
+    lot integer := current_setting('app.pricing_lot')::integer;
+    category integer := current_setting('app.pricing_cat')::integer;
+    session public.parking_sessions%rowtype;
+begin
+    delete from public.parking_sessions where lot_id = lot;
+    delete from public.category_reservations where lot_id = lot;
+
+    -- 12 of 20 = 60 %: no rule matches, the hold stores the identity lock.
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '1 hour', 'open'
+      from public.vehicles v where v.category_id = category
+     order by v.plate limit 12;
+    insert into public.category_reservations (
+        lot_id, category_id, plate, reserved_from, reserved_until, status,
+        source, customer_name, customer_phone
+    ) values (
+        lot, category, 'PRI22', now() - interval '1 hour', now() + interval '1 hour',
+        'active', 'public', 'Cliente', '3001112233'
+    );
+    if (select pricing_lock ->> 'rule_name' from public.category_reservations
+         where plate = 'PRI22') <> '' then
+        raise exception 'the hold did not store the identity lock';
+    end if;
+
+    -- 17 of 20 = 85 %: R1 matches now, but the hold promised the usual price.
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '1 hour', 'open'
+      from public.vehicles v where v.category_id = category
+     order by v.plate offset 12 limit 5;
+    update public.category_reservations set status = 'used' where plate = 'PRI22';
+
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now(), 'open'
+      from public.vehicles v where v.plate = 'PRI22'
+    returning * into session;
+    if session.pricing_lock is not null then
+        raise exception 'the hold promise was broken: %', session.pricing_lock;
+    end if;
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- pricing: RPCs
+-- ---------------------------------------------------------------------------
+-- pricing: settings admin only and validation
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    begin
+        perform public.get_pricing_settings();
+        raise exception 'an operator read the pricing settings';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- pricing: settings validation and audit
+do $$
+begin
+    begin
+        perform public.set_pricing_settings(null, 500, null, null);
+        raise exception 'an invalid floor was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidPricingSettingsError%' then raise; end if;
+    end;
+    if (public.set_pricing_settings(null, 8500, null, null) ->> 'floor_bps')::integer <> 8500 then
+        raise exception 'the floor was not saved';
+    end if;
+    if not exists (
+        select 1 from public.audit_log a
+         where a.table_name = 'parking_settings' and a.action = 'update'
+           and a.lot_id = current_setting('app.pricing_lot')::integer
+    ) then
+        raise exception 'the settings change was not audited';
+    end if;
+end $$;
+
+-- pricing: save rule, duplicate and audit
+do $$
+declare
+    result jsonb;
+begin
+    result := public.save_pricing_rule(
+        'Regla prueba', 10, 'car', 50, 90, 127, time '10:00', time '12:00',
+        11000, 0, true, null
+    );
+    if (result ->> 'id') is null or result ->> 'from_time' <> '10:00' then
+        raise exception 'the saved rule shape is wrong: %', result;
+    end if;
+    begin
+        perform public.save_pricing_rule(
+            'Regla prueba', 10, 'car', 50, 90, null, null, null, 11000, 0, true, null
+        );
+        raise exception 'a duplicate rule name was accepted';
+    exception when others then
+        if sqlerrm not like '%DuplicatePricingRuleError%' then raise; end if;
+    end;
+    begin
+        perform public.save_pricing_rule(
+            'Mala', 10, 'car', 50, 40, null, null, null, 11000, 0, true, null
+        );
+        raise exception 'an inverted band was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidPricingRuleError%' then raise; end if;
+    end;
+    if not exists (
+        select 1 from public.audit_log a
+         where a.table_name = 'pricing_rules' and a.action = 'insert'
+    ) then
+        raise exception 'the rule was not audited';
+    end if;
+end $$;
+
+-- pricing: rule of another lot is refused
+set local request.headers = '{"x-lot-id":"1"}';
+do $$
+begin
+    begin
+        perform public.save_pricing_rule(
+            'Ajena', 10, 'car', null, null, null, null, null, 12000, 0, true,
+            (select id from public.pricing_rules limit 1)
+        );
+        raise exception 'a rule of another lot was edited';
+    exception when others then
+        if sqlerrm not like '%PricingRuleNotFoundError%' then raise; end if;
+    end;
+end $$;
+do $$
+begin
+    perform set_config('request.headers',
+        jsonb_build_object('x-lot-id', current_setting('app.pricing_lot'))::text, true);
+end $$;
+
+-- pricing: quote, session lock and availability keys
+do $$
+declare
+    lot integer := current_setting('app.pricing_lot')::integer;
+    category integer := current_setting('app.pricing_cat')::integer;
+    quote jsonb;
+begin
+    -- 17 open = 85 %: R1 matches now.
+    delete from public.category_reservations where lot_id = lot;
+    delete from public.parking_sessions where lot_id = lot;
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '1 hour', 'open'
+      from public.vehicles v where v.category_id = category
+     order by v.plate limit 17;
+    quote := public.pricing_quote(category);
+    if (quote ->> 'enabled')::boolean is not true
+       or quote ->> 'tier' <> 'higher'
+       or (quote ->> 'hourly_base')::integer <> 3000
+       or (quote ->> 'hourly_current')::integer <> 3600
+       or (quote ->> 'occupancy_pct')::integer <> 85
+       or quote -> 'rule' ->> 'name' <> 'Alta ocupacion' then
+        raise exception 'the quote is wrong: %', quote;
+    end if;
+
+    begin
+        perform public.pricing_quote(
+            (select id from public.categories where lot_id = 1 limit 1)
+        );
+        raise exception 'a foreign category was quoted';
+    exception when others then
+        if sqlerrm not like '%CategoryNotFoundError%' then raise; end if;
+    end;
+
+end $$;
+
+set local role anon;
+do $$
+declare
+    lot integer := current_setting('app.pricing_lot')::integer;
+    payload jsonb := public.public_availability(lot);
+    category jsonb;
+begin
+    category := payload -> 'categories' -> 0;
+    if (payload -> 'pricing' ->> 'enabled')::boolean is not true then
+        raise exception 'the public payload hides the switch';
+    end if;
+    if (category ->> 'current_hourly_amount')::integer < 3000 then
+        raise exception 'the current price is missing: %', category;
+    end if;
+    if category ->> 'price_tier' not in ('base', 'higher', 'lower') then
+        raise exception 'the tier is invalid: %', category;
+    end if;
+    if (category ->> 'hourly_amount')::integer <> 3000 then
+        raise exception 'the base tariff key changed';
+    end if;
+end $$;
+reset role;
+
+-- pricing: simulate and impact
+do $$
+declare
+    simulation jsonb;
+    impact jsonb;
+    before_sessions integer;
+begin
+    select count(*) into before_sessions from public.parking_sessions;
+    simulation := public.pricing_simulate(30, null);
+    if simulation ->> 'days' <> '30' or simulation -> 'by_rule' is null then
+        raise exception 'the simulation shape is wrong: %', simulation;
+    end if;
+    if (simulation ->> 'sessions_considered')::integer <> 0 then
+        raise exception 'closed sessions were expected to be skipped: %', simulation;
+    end if;
+
+    simulation := public.pricing_simulate(30, jsonb_build_array(jsonb_build_object(
+        'name', 'Candidata', 'priority', 10, 'group', 'car',
+        'min_occupancy', 0, 'max_occupancy', 100,
+        'weekdays', null, 'from_time', null, 'to_time', null,
+        'multiplier_bps', 12000, 'surcharge_amount', 0
+    )));
+    if simulation ->> 'days' <> '30' then
+        raise exception 'the candidate simulation failed';
+    end if;
+    if (select count(*) from public.parking_sessions) <> before_sessions then
+        raise exception 'the simulation wrote sessions';
+    end if;
+    begin
+        perform public.pricing_simulate(0, null);
+        raise exception 'a zero-day simulation was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidReportRangeError%' then raise; end if;
+    end;
+
+    impact := public.report_pricing_impact(current_date, current_date);
+    if impact -> 'by_rule' is null then
+        raise exception 'the impact report shape is wrong: %', impact;
+    end if;
+end $$;
+
+-- pricing: simulate is admin only
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    begin
+        perform public.pricing_simulate(30, null);
+        raise exception 'an operator ran the simulation';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+end $$;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- pricing: canonical stack through fare_quote (pricing + merchant + discount)
+do $$
+declare
+    lot integer := current_setting('app.pricing_lot')::integer;
+    category integer := current_setting('app.pricing_cat')::integer;
+    session public.parking_sessions%rowtype;
+    entry_at timestamptz := ((current_date - 1) + time '09:00') at time zone 'America/Bogota';
+    exit_at timestamptz := ((current_date - 1) + time '11:30') at time zone 'America/Bogota';
+    merchant_id integer;
+    quote jsonb;
+begin
+    delete from public.parking_sessions where lot_id = lot;
+    delete from public.category_reservations where lot_id = lot;
+
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '1 hour', 'open'
+      from public.vehicles v where v.category_id = category
+     order by v.plate limit 17;
+
+    -- A past entry is an offline replay (surcharges are dropped), so the
+    -- canonical lock is written explicitly here; the trigger is exercised in
+    -- the `lock at insert` and `check_out` blocks.
+    insert into public.parking_sessions (
+        vehicle_id, operator_id, lot_id, entry_time, status, pricing_lock
+    )
+    select v.id, 1, lot, entry_at, 'open', jsonb_build_object(
+        'v', 1,
+        'rule_id', (select id from public.pricing_rules
+                     where lot_id = lot and name = 'Alta ocupacion'),
+        'rule_name', 'Alta ocupacion',
+        'kind', 'multiplier',
+        'multiplier_bps', 12000,
+        'surcharge_amount', 0,
+        'floor_bps', 8500,
+        'ceiling_bps', 15000,
+        'round_to', 1,
+        'occupancy_pct', 85,
+        'locked_at', now(),
+        'source', 'checkin'
+    )
+      from public.vehicles v where v.plate = 'PRI23'
+    returning * into session;
+    if session.pricing_lock is null or session.pricing_lock ->> 'rule_name' <> 'Alta ocupacion' then
+        raise exception 'the canonical session was not locked: %', session.pricing_lock;
+    end if;
+    perform set_config('app.pricing_canonical', session.id::text, true);
+
+    merchant_id := (public.save_merchant(
+        'Convenio canonico', 'percentage', 50, null, 'merchant_paid',
+        null, null, true, null
+    ) -> 'merchant' ->> 'id')::integer;
+    perform public.create_merchant_validation(merchant_id, session.id, 'public', null);
+
+    quote := public.fare_quote(session.id, exit_at, 400, false);
+    if (quote ->> 'base_amount')::integer <> 9000 then
+        raise exception 'the canonical base is wrong: %', quote;
+    end if;
+    if (quote ->> 'gross')::integer <> 10800 then
+        raise exception 'the canonical gross is wrong: %', quote;
+    end if;
+    if (quote -> 'adjustments' -> 0 ->> 'amount')::integer <> 5400 then
+        raise exception 'the merchant line is wrong: %', quote;
+    end if;
+    if (quote ->> 'discount_amount')::integer <> 400
+       or (quote ->> 'amount_due')::integer <> 5000 then
+        raise exception 'the canonical due is wrong: %', quote;
+    end if;
+    if (quote -> 'pricing' ->> 'delta')::integer <> 1800 then
+        raise exception 'the pricing delta is wrong: %', quote;
+    end if;
+end $$;
+
+-- pricing: midnight wrap and daily cap
+do $$
+declare
+    lot integer := current_setting('app.pricing_lot')::integer;
+    category integer := current_setting('app.pricing_cat')::integer;
+    session public.parking_sessions%rowtype;
+    quote jsonb;
+    entry_at timestamptz;
+begin
+    delete from public.parking_sessions where lot_id = lot;
+    delete from public.category_reservations where lot_id = lot;
+    update public.pricing_rules set active = true
+     where lot_id = lot and name in ('Noche valle');
+
+    entry_at := ((current_date - 2) + time '23:00') at time zone 'America/Bogota';
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, entry_at, 'open'
+      from public.vehicles v where v.plate = 'PRI24'
+    returning * into session;
+    if session.pricing_lock is null
+       or (session.pricing_lock ->> 'multiplier_bps')::integer <> 9000 then
+        raise exception 'the night rule was not locked: %', session.pricing_lock;
+    end if;
+
+    quote := public.fare_quote(
+        session.id,
+        ((current_date - 1) + time '02:00') at time zone 'America/Bogota',
+        0, false
+    );
+    if (quote ->> 'base_amount')::integer <> 6000
+       or (quote ->> 'gross')::integer <> 5400 then
+        raise exception 'the midnight wrap is wrong: %', quote;
+    end if;
+
+    -- Daily cap then multiplier: a 24 h stay caps at 20000 and scales.
+    update public.pricing_rules set active = true
+     where lot_id = lot and name = 'Alta ocupacion';
+end $$;
+
+-- pricing: check_out applies the stored lock with the merchant line
+do $$
+declare
+    lot integer := current_setting('app.pricing_lot')::integer;
+    category integer := current_setting('app.pricing_cat')::integer;
+    session public.parking_sessions%rowtype;
+    result jsonb;
+begin
+    delete from public.parking_sessions where lot_id = lot;
+    delete from public.category_reservations where lot_id = lot;
+    update public.pricing_rules set active = true
+     where lot_id = lot and name = 'Alta ocupacion';
+
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '1 hour', 'open'
+      from public.vehicles v where v.category_id = category
+     order by v.plate limit 17;
+    -- An entry within the last 5 minutes is online: the surcharge applies.
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '4 minutes', 'open'
+      from public.vehicles v where v.plate = 'PRI23'
+    returning * into session;
+
+    perform public.create_merchant_validation(
+        (select id from public.merchants where name = 'Convenio canonico'),
+        session.id, 'public', null
+    );
+    result := public.check_out(session.id, null, null, 'cash', 400, 'cortesia');
+    if (result ->> 'gross_amount')::integer <> 3600 then
+        raise exception 'the check-out gross is wrong: %', result;
+    end if;
+    if (result -> 'fare_adjustments' -> 0 ->> 'amount')::integer <> 1800 then
+        raise exception 'the check-out merchant line is wrong: %', result;
+    end if;
+    if (result ->> 'amount_charged')::integer <> 1400
+       or (result ->> 'discount_amount')::integer <> 400 then
+        raise exception 'the check-out charge is wrong: %', result;
+    end if;
+
+    if public.report_pricing_impact(current_date, current_date) ->> 'locked_sessions' is null then
+        raise exception 'the impact report did not answer';
+    end if;
+end $$;
+
+set local request.headers = '{"x-lot-id":"1"}';
 
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
 
