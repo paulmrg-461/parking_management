@@ -15384,6 +15384,341 @@ begin
     end if;
 end $$;
 
+
+-- ---------------------------------------------------------------------------
+-- damage: fixtures
+-- ---------------------------------------------------------------------------
+do $$
+declare
+    category integer;
+    vehicle integer;
+    session_row integer;
+    uid uuid := '00000000-0000-0000-0000-000000000001';
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    perform set_config('request.jwt.claim.sub',
+        '00000000-0000-0000-0000-000000000001', true);
+    delete from public.damage_comparisons where lot_id = 1;
+    select id into category from public.categories where lot_id = 1 limit 1;
+    insert into public.vehicles (plate, category_id) values ('DMG001', category)
+    on conflict (plate) do update set category_id = excluded.category_id
+    returning id into vehicle;
+    insert into public.parking_sessions (
+        vehicle_id, operator_id, lot_id, entry_time, status
+    ) values (vehicle, 1, 1, now() - interval '2 hours', 'open')
+    returning id into session_row;
+    insert into public.evidence_photos (session_id, file_path, taken_at, kind, phase)
+    values
+        (session_row, 'entry-dmg/1.jpg', now() - interval '2 hours', 'photo', 'entry'),
+        (session_row, 'entry-dmg/2.jpg', now() - interval '2 hours', 'photo', 'entry');
+    insert into storage.objects (bucket_id, name, owner) values
+        ('evidence', 'exit-dmg/1.jpg', uid),
+        ('evidence', 'exit-dmg/2.jpg', uid),
+        ('evidence', 'exit-dmg/3.jpg', uid),
+        ('evidence', 'exit-dmg/4.jpg', uid),
+        ('evidence', 'exit-dmg/5.jpg', uid),
+        ('evidence', 'exit-dmg/6.jpg', uid)
+    on conflict do nothing;
+    perform set_config('app.damage_session', session_row::text, true);
+end $$;
+
+-- damage: existing rows default to entry
+do $$
+begin
+    if (select phase from public.evidence_photos
+         where file_path = 'entry-dmg/1.jpg') <> 'entry' then
+        raise exception 'an existing evidence row did not default to entry';
+    end if;
+end $$;
+
+-- damage: add exit evidence with phase exit
+do $$
+declare
+    session_row integer := current_setting('app.damage_session')::integer;
+    result jsonb;
+begin
+    result := public.add_exit_evidence(session_row, jsonb_build_array(
+        jsonb_build_object('path', 'exit-dmg/1.jpg'),
+        jsonb_build_object('path', 'exit-dmg/2.jpg')
+    ));
+    if (result ->> 'exit_photo_count')::integer <> 2 then
+        raise exception 'the exit photos were not added: %', result;
+    end if;
+    if (select count(*) from public.evidence_photos
+         where session_id = session_row and phase = 'exit') <> 2 then
+        raise exception 'the phase was not stored as exit';
+    end if;
+end $$;
+
+-- damage: exit evidence retry is idempotent
+do $$
+declare
+    session_row integer := current_setting('app.damage_session')::integer;
+    result jsonb;
+begin
+    result := public.add_exit_evidence(session_row, jsonb_build_array(
+        jsonb_build_object('path', 'exit-dmg/1.jpg')
+    ));
+    if (result ->> 'exit_photo_count')::integer <> 2 then
+        raise exception 'the retry duplicated the exit photo: %', result;
+    end if;
+end $$;
+
+-- damage: exit evidence errors
+do $$
+declare
+    session_row integer := current_setting('app.damage_session')::integer;
+begin
+    begin
+        perform public.add_exit_evidence(session_row, jsonb_build_array(
+            jsonb_build_object('path', 'exit-dmg/3.jpg'),
+            jsonb_build_object('path', 'exit-dmg/4.jpg'),
+            jsonb_build_object('path', 'exit-dmg/5.jpg'),
+            jsonb_build_object('path', 'exit-dmg/6.jpg')
+        ));
+        raise exception 'more than five exit photos were accepted';
+    exception when others then
+        if sqlerrm not like '%EvidenceLimitError%' then raise; end if;
+    end;
+    begin
+        perform public.add_exit_evidence(session_row, jsonb_build_array(
+            jsonb_build_object('path', 'missing/1.jpg')));
+        raise exception 'an object that was not uploaded was accepted';
+    exception when others then
+        if sqlerrm not like '%EvidenceNotFoundError%' then raise; end if;
+    end;
+    begin
+        perform public.add_exit_evidence(session_row, '[]'::jsonb);
+        raise exception 'an empty photo list was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+end $$;
+
+-- damage: begin needs both sets and caps them
+do $$
+declare
+    session_row integer := current_setting('app.damage_session')::integer;
+    result jsonb;
+begin
+    result := public.begin_damage_comparison(session_row, 5);
+    if (result ->> 'run_number')::integer <> 1
+       or jsonb_array_length(result -> 'entry_photos') <> 2
+       or jsonb_array_length(result -> 'exit_photos') <> 2 then
+        raise exception 'the begin payload is wrong: %', result;
+    end if;
+    perform set_config('app.damage_comparison', result ->> 'comparison_id', true);
+    begin
+        perform public.begin_damage_comparison(session_row, 5);
+        raise exception 'a second pending comparison was accepted';
+    exception when others then
+        if sqlerrm not like '%ComparisonInProgressError%' then raise; end if;
+    end;
+end $$;
+
+-- damage: store as service role and read with findings
+do $$
+declare
+    comparison bigint := current_setting('app.damage_comparison')::bigint;
+    session_row integer := current_setting('app.damage_session')::integer;
+    result jsonb;
+begin
+    set local role service_role;
+    perform public.store_damage_comparison(comparison, jsonb_build_object(
+        'overall', 'possible_new_damage',
+        'summary', 'Un rayón en la puerta.',
+        'quality', jsonb_build_object('same_vehicle', 'yes', 'issues', '[]'::jsonb),
+        'findings', jsonb_build_array(jsonb_build_object(
+            'zone', 'left', 'description', 'Rayón nuevo',
+            'classification', 'new', 'confidence', 'high',
+            'entry_photo_ids', jsonb_build_array(1),
+            'exit_photo_ids', jsonb_build_array(3)
+        ))
+    ), jsonb_build_object(
+        'model', 'deepseek-flash', 'entry_photo_count', 2, 'exit_photo_count', 2));
+    reset role;
+
+    result := public.get_damage_comparison(session_row, null);
+    if result -> 'comparison' ->> 'status' <> 'completed'
+       or (result -> 'comparison' ->> 'overall') <> 'possible_new_damage'
+       or jsonb_array_length(result -> 'comparison' -> 'findings') <> 1 then
+        raise exception 'the comparison was not stored: %', result;
+    end if;
+    perform set_config('app.damage_finding',
+        result -> 'comparison' -> 'findings' -> 0 ->> 'id', true);
+end $$;
+
+-- damage: review requires a note and audits the change
+do $$
+declare
+    finding bigint := current_setting('app.damage_finding')::bigint;
+    result jsonb;
+begin
+    begin
+        perform public.review_damage_finding(finding, 'confirmed', 'ab');
+        raise exception 'a two-character review note was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+    result := public.review_damage_finding(finding, 'confirmed', 'Verificado en el vehículo');
+    if result ->> 'review_status' <> 'confirmed'
+       or (result ->> 'reviewed_by')::integer <> 1 then
+        raise exception 'the review was not stored: %', result;
+    end if;
+    if not exists (
+        select 1 from public.audit_log a
+         where a.table_name = 'damage_findings' and a.action = 'update'
+    ) then
+        raise exception 'the review was not audited';
+    end if;
+end $$;
+
+-- damage: stale when the exit set changed
+do $$
+declare
+    session_row integer := current_setting('app.damage_session')::integer;
+    result jsonb;
+begin
+    insert into public.evidence_photos (session_id, file_path, taken_at, kind, phase)
+    values (session_row, 'exit-dmg/extra.jpg', now(), 'photo', 'exit');
+    result := public.get_damage_comparison(session_row, null);
+    if (result ->> 'stale')::boolean is not true then
+        raise exception 'the comparison was not marked stale';
+    end if;
+end $$;
+
+-- damage: operator second run is refused, admin re-run is allowed
+do $$
+declare
+    session_row integer := current_setting('app.damage_session')::integer;
+begin
+    set local role authenticated;
+    perform set_config('request.jwt.claim.sub',
+        '00000000-0000-0000-0000-000000000002', true);
+    begin
+        perform public.begin_damage_comparison(session_row, 5);
+        raise exception 'an operator ran a second comparison';
+    exception when others then
+        if sqlerrm not like '%ComparisonAlreadyExistsError%' then raise; end if;
+    end;
+    reset role;
+    perform set_config('request.jwt.claim.sub',
+        '00000000-0000-0000-0000-000000000001', true);
+    if (public.begin_damage_comparison(session_row, 5) ->> 'run_number')::integer <> 2 then
+        raise exception 'the admin re-run did not increment the run';
+    end if;
+end $$;
+
+-- damage: billing is untouched
+do $$
+declare
+    session_row integer := current_setting('app.damage_session')::integer;
+begin
+    if (select amount_charged from public.parking_sessions where id = session_row) is not null
+       or (select discount_amount from public.parking_sessions where id = session_row) <> 0 then
+        raise exception 'the comparison changed the billing';
+    end if;
+    if (select is_blacklisted from public.vehicles v
+         join public.parking_sessions s on s.vehicle_id = v.id
+        where s.id = session_row) then
+        raise exception 'the comparison blacklisted the vehicle';
+    end if;
+end $$;
+
+-- damage: service writers and anon are denied
+set local role authenticated;
+do $$
+begin
+    begin
+        perform public.store_damage_comparison(1, '{}'::jsonb, '{}'::jsonb);
+        raise exception 'an api role stored a comparison';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform public.fail_damage_comparison(1, 'x');
+        raise exception 'an api role failed a comparison';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        insert into public.damage_comparisons (lot_id, session_id, run_number)
+        values (1, 1, 99);
+        raise exception 'an api role inserted a comparison directly';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+set local role anon;
+do $$
+begin
+    begin
+        perform 1 from public.damage_comparisons limit 1;
+        raise exception 'anon read the damage comparisons';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform public.get_damage_comparison(1, null);
+        raise exception 'anon called the damage read';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
+-- damage: lot isolation
+do $$
+declare
+    lot2 integer;
+begin
+    select id into lot2 from public.parking_lots where code = 'LY2';
+    set local role authenticated;
+    perform set_config('request.headers',
+        jsonb_build_object('x-lot-id', lot2)::text, true);
+    begin
+        perform public.get_damage_comparison(
+            current_setting('app.damage_session')::integer, null);
+        raise exception 'a foreign lot read the comparison';
+    exception when others then
+        if sqlerrm not like '%SessionNotFoundError%' then raise; end if;
+    end;
+    reset role;
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    perform set_config('request.jwt.claim.sub',
+        '00000000-0000-0000-0000-000000000001', true);
+end $$;
+
+-- damage: purge respects retention and is internal
+set local role authenticated;
+do $$
+begin
+    begin
+        perform public.purge_damage_comparisons();
+        raise exception 'an api role purged the comparisons';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+do $$
+declare
+    before_count integer;
+    removed integer;
+begin
+    update public.parking_settings set evidence_retention_days = 0 where lot_id = 1;
+    before_count := (select count(*) from public.damage_comparisons where lot_id = 1);
+    perform public.purge_damage_comparisons();
+    if (select count(*) from public.damage_comparisons where lot_id = 1) <> before_count then
+        raise exception 'retention 0 deleted comparisons';
+    end if;
+    update public.parking_settings set evidence_retention_days = 30 where lot_id = 1;
+    update public.damage_comparisons set created_at = now() - interval '31 days' where lot_id = 1;
+    removed := public.purge_damage_comparisons();
+    if removed < 1
+       or exists (select 1 from public.damage_comparisons where lot_id = 1) then
+        raise exception 'the retention purge did not delete the old comparisons';
+    end if;
+    if exists (select 1 from public.damage_findings where lot_id = 1) then
+        raise exception 'the findings were not cascaded';
+    end if;
+end $$;
+
 set local request.headers = '{"x-lot-id":"1"}';
 
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';

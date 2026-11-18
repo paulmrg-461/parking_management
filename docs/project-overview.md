@@ -47,6 +47,7 @@ WhatsApp (manual or automated).
 | Loyalty rewards | Complete, inert by default (visit accrual, reward redemption, `/loyalty`, expiry job) | SQL + widget tests |
 | Electronic invoicing | Complete, inert by default (`mode = off`, provider optional; every DIAN rule an ASSUMPTION) | SQL + Deno + widget tests |
 | Report assistant | Complete, inert without `DEEPSEEK_API_KEY` (tool allowlist, verified figures, budget) | SQL + Deno + widget tests |
+| Damage comparison | Backend complete, UI pending (exit photos, advisory AI comparison, human review) | SQL + Deno tests |
 | Backups / restore | Complete, with a safe drill | Drill executed against a real backup |
 | Secrets / PIN operations | Complete (scripts + runbook) | PIN rotation verified live |
 | E2E and CI | Complete (API + Flutter client, real stack) | CI job `supabase-e2e` |
@@ -85,6 +86,7 @@ the main data it touches.
 | `pass_renewal` | Public token-keyed renewal page (`/renew?t=`) and the admin "send renewal link" action | `pass_renewal_offers`, `public_pass_renewal`, `pass-renewal-intent` (Edge Function), `settle_pass_renewal`, `queue_pass_renewal_reminders` |
 | `merchants` | Agreements, show-once credentials, per-vehicle policy, settlement and the public `/validate?m=` page | `merchants`, `merchant_credentials`, `merchant_validations`, `fare_quote`, `save_merchant`, `merchant_validate`, `report_merchant_settlement` |
 | `pricing` | Dynamic rates: rules, guard rails, simulation, impact and the check-in price chip | `pricing_rules`, `pricing_lock`, `pricing_quote`, `pricing_simulate`, `report_pricing_impact`, `public_availability` price keys |
+| `damage_comparison` | Exit photos, advisory AI comparison of entry/exit photos and the human review (UI pending) | `damage_comparisons`, `damage_findings`, `add_exit_evidence`, `begin/get_damage_comparison`, `review_damage_finding`, `damage-compare` |
 | `report_assistant` | Natural-language questions over the report RPCs with a verified figure/source for each number (`/report-assistant`) | `ai_requests`/`ai_limits`, `ai_budget_*`, `report-assistant` Edge Function, `report_revenue` and the other report RPCs |
 | `invoicing` | Fiscal issuer/resolutions, document outbox, credit notes and the admin list (`/invoicing`) | `fiscal_settings`, `fiscal_resolutions`, `fiscal_documents`, `issue_fiscal_document`, `list_fiscal_documents`, `request_credit_note`, `fiscal-dispatch` |
 | `loyalty` | Visit program, reward redemption, member corrections and the impact report (`/loyalty`) | `loyalty_accounts`, `loyalty_rewards`, `loyalty_visits`, `loyalty_adjustments`, `fare_reward_step`, `loyalty_plate_status`, `choose_loyalty_redemption`, `report_loyalty`, `list_loyalty_accounts` |
@@ -254,6 +256,21 @@ that writes the ledger never blocks a check-out: a loyalty failure is stored as
 a skipped visit with reason `error`. `/loyalty` shows the program, the members
 with a bounded, reasoned progress correction, and the impact report. A manual
 correction can move progress but can never mint a reward.
+
+## 7.11 Damage comparison (backend, inert without a key)
+
+Exit photos are optional evidence rows (`phase = 'exit'`) captured online at
+check-out through `add_exit_evidence`; `check_out` is not modified. A comparison
+reads up to five entry and five exit photos with the caller's JWT, downscales
+them through Storage rendering, and asks the vision model (DeepSeek
+`deepseek-flash`) for a structured list of findings. The code downgrades any
+"new" finding that lacks a clear entry/exit pair, low confidence or a confirmed
+same-vehicle answer to "uncertain", caps the list at 12 and computes the overall
+verdict itself. The result is stored by the service role only, so operators
+cannot forge a finding; operators confirm or dismiss each finding with a
+mandatory note (audited), and an admin can re-run. The comparison is advisory:
+it never changes the charge, the discount or the blacklist. Flutter surface is
+the next batch.
 
 ## 7.10 Report assistant (implemented, inert without a key)
 

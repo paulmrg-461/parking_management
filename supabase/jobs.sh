@@ -53,6 +53,8 @@ while true; do
   run purge_whatsapp_messages
   # Shared AI usage log retention (floor 30 days).
   run purge_ai_requests
+  # Damage comparisons follow the evidence retention window.
+  run purge_damage_comparisons
   run purge_cash_anomalies
   # Pass renewal reminders (queued only when the lot opted in).
   run queue_pass_renewal_reminders

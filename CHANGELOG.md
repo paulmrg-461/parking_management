@@ -67,6 +67,24 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - Android release build: R8 keep rules for the optional ML Kit scripts.
 
 ### Added
+- **Damage comparison (backend, `0127`)**
+  (`openspec/changes/add-ai-damage-comparison`). Exit evidence and the
+  advisory AI comparison record, with a human review workflow:
+  - `evidence_photos.phase` (`entry`/`exit`), `add_exit_evidence` (idempotent,
+    max 5, same upload rule) and `check_out` left untouched.
+  - `damage_comparisons` / `damage_findings`, `begin_damage_comparison`,
+    `get_damage_comparison`, `review_damage_finding` (note required, re-open
+    admin-only, audited) and the retention purge. Results are written only by
+    the service role (`store_damage_comparison` / `fail_damage_comparison`),
+    so an operator cannot forge an AI finding.
+  - `damage-compare` Edge Function: caller-scoped begin, Storage-rendered
+    photos (1024 px), DeepSeek vision (`image_url`) with a JSON answer,
+    code-side normalisation (new -> uncertain when unsupported, 12-finding cap,
+    overall verdict computed in code) and service-role store. Additive to the
+    shared AI budget (`damage_compare`). Inert without the key.
+  - Flutter UI (exit photo capture, side-by-side review, guidance) is the next
+    batch; the backend and its SQL/Deno tests are already in place.
+
 - **Report assistant** (`0126_ai_usage`, `openspec/changes/add-report-assistant`).
   Admins ask a report question in Spanish or English and receive figures
   resolved from the existing read-only report RPCs, each with its source:
@@ -1369,6 +1387,7 @@ Migrations are append-only and applied in filename order by `supabase-migrate`.
 | `0122`–`0123` | Loyalty rewards: program settings, accounts/rewards/visits/adjustments, closed-session trigger, reward hook, status/settings/adjust/reverse/expiry RPCs, report and members list |
 | `0124`–`0125` | Electronic invoicing: fiscal settings/resolutions/documents, numbering, issuance, outbox, credit notes, sweeper, admin list |
 | `0126` | Shared AI platform: features, per-lot limits, request/token ledger, budget RPCs and retention |
+| `0127` | Damage comparison: exit evidence phase, comparisons/findings, begin/get/review, service-role store/fail and retention |
 
 ## Verification snapshot
 

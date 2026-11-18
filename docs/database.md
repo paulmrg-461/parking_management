@@ -100,6 +100,8 @@ erDiagram
 | `parking_spot_events` | Maintenance history of a bay: status transition, optional reason, actor and timestamp; written by `save_parking_spot`, lot-scoped RLS. | yes |
 | `parking_settings` (`car_capacity`, `moto_capacity`, `key_capacity`) | Per-site branding (name, address, schedule, contacts, police quadrant, logo version/path) + `business_timezone`, `overstay_hours`, `lost_ticket_fee`, `evidence_retention_days`, online-payment switch/window/minimum. | yes |
 | `payment_intents` | Frozen amount for a gateway checkout: `reference` (random `PM-…`), `amount`, `currency` (COP only), `gateway` (`wompi`), `status` (`pending`/`approved`/`declined`/`voided`/`error`/`expired`), transaction id/method, `expires_at`. Written only by the service RPCs. | yes |
+| `damage_comparisons` | One advisory comparison run per session (run number, status, overall verdict, summary, quality, model, counts, error). Written by the service role only. | yes |
+| `damage_findings` | One possible finding per comparison: zone, description, classification (`pre_existing`/`new`/`uncertain`), categorical confidence, downgrade marker, photo ids and the human review (status/note/reviewer/time). Audited on update. | yes |
 | `ai_features` | AI feature registry: `admin_only` and the default daily request/token caps. Seeded with `report_assistant`. No API grant. | — |
 | `ai_limits` | Per-lot override of the daily request/token budget, audited. | yes |
 | `ai_requests` | Operational AI usage ledger: feature, actor, status, model, token counters, tool calls, duration, error code, business day. Never stores question/answer text. | yes |
@@ -427,6 +429,17 @@ enforces the lot budget under an advisory lock and inserts the reserved row),
 `purge_ai_requests` (internal, 30-day floor). The report assistant never writes
 through these tables directly; the Edge Function uses the caller's JWT.
 
+**Damage comparison (`0127`)**
+`evidence_photos.phase` (`entry`/`exit`); `add_exit_evidence` (idempotent, max
+5); `begin_damage_comparison` (validates both sets, expires a stale pending
+run, reserves the run number), `get_damage_comparison` (latest/requested run,
+stale detection, reviewer name), `review_damage_finding` (note 3..400,
+re-open admin-only, audited) and `purge_damage_comparisons` (internal; follows
+`evidence_retention_days`). `store_damage_comparison` and
+`fail_damage_comparison` are granted to `service_role` only: the Edge Function
+holds the service key and nothing else does. `photo_count` now includes exit
+photos.
+
 ## 4. Access control (RLS)
 
 | Table | Read | Write |
@@ -451,6 +464,7 @@ through these tables directly; the Edge Function uses the caller's JWT.
 | `fiscal_settings`, `fiscal_resolutions`, `fiscal_documents` | lot admins of the active lot (no operator PII read) | definer RPCs only; no update/delete grant |
 | `ai_features` | nobody (RLS on, no policy, no grant) | seed only |
 | `ai_limits`, `ai_requests` | lot admins of the active lot | definer RPCs only |
+| `damage_comparisons`, `damage_findings` | active lot (RLS) | definer RPCs; the result writers are service-role only |
 | `fiscal_documents` (service role) | — | `claim_fiscal_documents` / `record_fiscal_result` |
 | `merchant_credentials` | nobody (RLS on, no policy, no grant) | definer RPCs only |
 | `merchant_validations` | active lot | RPCs (desk/admin/public) |

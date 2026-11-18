@@ -317,6 +317,37 @@ identity, so a prompt injection cannot reach another lot or a write. Without
 nothing. Every DIAN-style provider decision is out of scope here; the AI
 provider sees only aggregated, field-allowlisted report data.
 
+## 5e. Damage comparison (advisory)
+
+```mermaid
+sequenceDiagram
+  participant O as Operator
+  participant APP as Flutter
+  participant DB as PostgreSQL
+  participant FN as damage-compare
+  participant S as Storage
+  participant M as DeepSeek vision
+
+  O->>APP: check-out + optional exit photos
+  APP->>S: upload exit-<session>-<clientRef>/<i>.jpg
+  APP->>DB: add_exit_evidence(session, paths) (phase=exit, max 5)
+  APP->>DB: begin_damage_comparison(session) (caller JWT)
+  APP->>FN: run session (Authorization, x-lot-id)
+  FN->>DB: ai_budget_reserve('damage_compare')
+  FN->>S: render entry/exit photos at 1024 px (caller JWT)
+  FN->>M: chat/completions with image_url parts, JSON answer
+  M-->>FN: findings (zones, classification, confidence)
+  FN->>FN: normalise + downgrade unsupported "new" + overall verdict
+  FN->>DB: store_damage_comparison (service role only)
+  APP->>DB: get_damage_comparison
+  O->>APP: confirm/dismiss with a note (audited)
+```
+
+The model never writes a verdict: the code downgrades "new" to "uncertain"
+unless a clear entry/exit pair, medium/high confidence and a same-vehicle yes
+support it, and computes the overall result. Exit photos need connectivity in
+v1; billing and the check-out path never change.
+
 ## 6. Shifts and cash
 
 An operator opens one shift per site (`unique (operator_id, lot_id)`), records

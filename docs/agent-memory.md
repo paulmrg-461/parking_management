@@ -4,16 +4,17 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-11-18 (report assistant).
+Last updated: 2026-11-18 (damage comparison backend).
 
 ## Where we are
 
 - Stack: Flutter (android + web) + self-hosted Supabase only. No FastAPI,
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
-- `supabase/migrations/0001..0126` are the schema owner (applied by
+- `supabase/migrations/0001..0127` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
 - Flutter: 1840 tests green (coverage 79.1% global; application 90.4%,
-  domain 61.7%, infrastructure 48.1%), `flutter analyze` reports only SDK
+  domain 61.7%, infrastructure 48.1%) — unchanged by this backend batch;
+  `flutter analyze` reports only SDK
   deprecation infos from the pinned beta channel (0 errors/warnings). Web
   build green. Deno tests for the Edge Functions: 30 green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
@@ -26,6 +27,44 @@ Last updated: 2026-11-18 (report assistant).
 
 
 
+
+
+## Damage comparison backend (2026-11-18, `0127`)
+
+- Owner approved sending **vehicle photos** to DeepSeek for this advisory
+  comparison; the key is the same server-only `DEEPSEEK_API_KEY`.
+- `evidence_photos.phase` (`entry`/`exit`, default entry) + `add_exit_evidence`
+  (1..5, idempotent per session/path, `require_evidence_object`, never touches
+  `check_out`). Existing `photo_count` readers now include exit photos.
+- `damage_comparisons`/`damage_findings`; results are written ONLY by
+  `store_damage_comparison`/`fail_damage_comparison`, granted to `service_role`.
+  An operator cannot call them, so an AI finding cannot be forged. The Edge
+  `store.ts` is the only file that reads `SUPABASE_SERVICE_ROLE_KEY`.
+- `begin_damage_comparison` expires a pending run older than 3 minutes, caps
+  each set at 8 (default 5), needs both sets and gives an operator one run
+  (admin can re-run). `get_damage_comparison` returns the latest/requested run,
+  findings ordered by position and a `stale` flag when the photo counts changed.
+- `review_damage_finding`: confirm/dismiss require a 3..400 character note and
+  write an `audit_log` row; re-open is admin-only. The comparison never changes
+  `amount_charged`, `discount_amount` or `vehicles.is_blacklisted`.
+- `damage-compare` Edge Function: caller-scoped begin, Storage render at 1024 px
+  (caller JWT), DeepSeek vision (`image_url`, JSON output), code-side
+  normalisation (unsupported `new` -> `uncertain` when a photo pair, confidence
+  or same-vehicle confirmation is missing; 12-finding cap; overall verdict
+  computed in code) and service-role store. It reserves `damage_compare` in the
+  shared budget (seed 60 requests / 1.2M tokens) before beginning.
+- Gotchas: the owner's `get_damage_comparison` query uses a nested subquery to
+  return a pending run only when it is the latest; `require_evidence_object`
+  also rejects a path already used by ANY session, so the app must retry with
+  the same paths only (our own retry is skipped before that check).
+- Gatekeeper (2026-11-18): migration `0127` applied live (`damage_compare` seed
+  60/1.2M), SQL suite green over `0001`-`0127`, **79 Deno tests** green, the
+  function answers 200 `{configured:false}` without a key. Flutter tests are
+  unchanged (1840).
+- Pending: the whole Flutter surface (guidance, exit photo capture,
+  side-by-side page, review UI, evidence sheet grouping, `/damage-comparison`
+  route), the 16 replay fixtures and the live eval, plus the manual photo smoke.
+  This is the next batch; nothing in the DB or Edge layer depends on it.
 
 ## Report assistant (2026-11-18, `0126`)
 
