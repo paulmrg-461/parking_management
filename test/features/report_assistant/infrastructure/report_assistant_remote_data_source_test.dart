@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/error/failure.dart';
-import 'package:parking_management/features/report_assistant/domain/entities/assistant_answer.dart';
 import 'package:parking_management/features/report_assistant/domain/entities/assistant_progress.dart';
 import 'package:parking_management/features/report_assistant/domain/entities/assistant_status.dart';
 import 'package:parking_management/features/report_assistant/domain/entities/assistant_turn.dart';
