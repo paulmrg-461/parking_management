@@ -21,6 +21,8 @@ import 'package:parking_management/features/feedback/application/public_feedback
 import 'package:parking_management/features/check_in/application/check_in_cubit.dart';
 import 'package:parking_management/features/check_out/application/check_out_cubit.dart';
 import 'package:parking_management/features/online_payments/application/online_payment_cubit.dart';
+import 'package:parking_management/features/pass_renewal/application/pass_renewal_cubit.dart';
+import 'package:parking_management/features/pass_renewal/domain/repositories/pass_renewal_repository.dart';
 import 'package:parking_management/features/online_payments/domain/repositories/online_payment_repository.dart';
 import 'package:parking_management/features/monthly_passes/application/monthly_passes_cubit.dart';
 import 'package:parking_management/features/plate_scanning/domain/repositories/plate_image_capture.dart';
@@ -97,6 +99,13 @@ void main() {
 
     expect(sl<OnlinePaymentRepository>(), isA<OnlinePaymentRepository>());
     expect(sl<OnlinePaymentCubit>(), isA<OnlinePaymentCubit>());
+  });
+
+  test('Success: registers the pass renewal module', () {
+    _register(sl);
+
+    expect(sl<PassRenewalRepository>(), isA<PassRenewalRepository>());
+    expect(sl<PassRenewalCubit>(), isA<PassRenewalCubit>());
   });
 
   test('Success: the shared outbox kicks a drain on every enqueue', () {

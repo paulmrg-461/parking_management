@@ -16,6 +16,14 @@ void main() {
     expect(find.text('Evidencias del vehículo'), findsOneWidget);
   });
 
+  testWidgets('Security: /renew is public for anonymous users', (tester) async {
+    await pumpApp(tester);
+    await goTo(tester, '/renew?t=${'a' * 48}');
+
+    expect(find.text('Ingresar'), findsNothing);
+    expect(find.text('Renueva tu mensualidad'), findsOneWidget);
+  });
+
   group('Router (F-RT)', () {
     testWidgets('redirects unauthenticated users to the login page', (
       tester,

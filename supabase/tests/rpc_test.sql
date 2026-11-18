@@ -9216,6 +9216,896 @@ begin
         if sqlerrm not like '%AdminRequiredError%' then raise; end if;
     end;
 end $$;
+-- ---------------------------------------------------------------------------
+-- pass-renewal: schema
+-- ---------------------------------------------------------------------------
+insert into public.vehicles (plate, category_id) values
+    ('RENW01', 2), ('RENW02', 2);
+insert into public.vehicles (plate, category_id)
+values ('RENW03', (select id from public.categories where lot_id = 2 order by id limit 1));
+
+insert into public.monthly_passes (vehicle_id, lot_id, start_date, end_date, amount, active)
+select id, 1, current_date - 10, current_date + 20, 80000, true
+  from public.vehicles where plate = 'RENW01';
+insert into public.monthly_passes (vehicle_id, lot_id, start_date, end_date, amount, active)
+select id, 2, current_date - 10, current_date + 20, 70000, true
+  from public.vehicles where plate = 'RENW03';
+
+do $$
+begin
+    perform set_config('app.renew_pass1', (
+        select mp.id::text from public.monthly_passes mp
+          join public.vehicles v on v.id = mp.vehicle_id
+         where v.plate = 'RENW01'
+    ), true);
+    perform set_config('app.renew_pass2', (
+        select mp.id::text from public.monthly_passes mp
+          join public.vehicles v on v.id = mp.vehicle_id
+         where v.plate = 'RENW03'
+    ), true);
+end $$;
+
+-- pass-renewal: schema defaults off with cadence 7,3,1
+do $$
+declare
+    settings public.parking_settings%rowtype;
+begin
+    select * into settings from public.parking_settings where lot_id = 1;
+    if settings.pass_renewal_enabled is not false
+       or settings.pass_renewal_payment_links is not false
+       or settings.pass_renewal_cadence <> '7,3,1' then
+        raise exception 'the pass renewal defaults are wrong';
+    end if;
+end $$;
+
+-- pass-renewal: schema whatsapp dedupe key blocks a duplicate
+do $$
+begin
+    insert into public.whatsapp_messages (lot_id, to_phone, template, dedupe_key)
+    values (1, '3001112233', 'pass_expiry', 'renew-test-dedupe');
+    begin
+        insert into public.whatsapp_messages (lot_id, to_phone, template, dedupe_key)
+        values (1, '3001112233', 'pass_expiry', 'renew-test-dedupe');
+        raise exception 'the whatsapp dedupe key was ignored';
+    exception when unique_violation then null;
+    end;
+    delete from public.whatsapp_messages where dedupe_key = 'renew-test-dedupe';
+end $$;
+
+-- pass-renewal: schema monthly pass payments accepts online
+do $$
+declare
+    target bigint := current_setting('app.renew_pass1')::bigint;
+begin
+    update public.monthly_pass_payments
+       set payment_method = 'online'
+     where monthly_pass_id = target;
+    if (select payment_method from public.monthly_pass_payments
+         where monthly_pass_id = target) <> 'online' then
+        raise exception 'online is not accepted for a pass payment';
+    end if;
+    update public.monthly_pass_payments
+       set payment_method = 'cash'
+     where monthly_pass_id = target;
+end $$;
+
+-- pass-renewal: schema cadence with 6 values rejected
+do $$
+begin
+    begin
+        update public.parking_settings
+           set pass_renewal_cadence = '7,3,1,5,2,1'
+         where lot_id = 1;
+        raise exception 'a 6-value cadence was accepted';
+    exception when check_violation then null;
+    end;
+end $$;
+
+-- pass-renewal: schema cadence value 31 rejected
+do $$
+begin
+    begin
+        update public.parking_settings
+           set pass_renewal_cadence = '31'
+         where lot_id = 1;
+        raise exception 'a 31-day cadence was accepted';
+    exception when check_violation then null;
+    end;
+    begin
+        update public.parking_settings
+           set pass_renewal_cadence = '7,abc'
+         where lot_id = 1;
+        raise exception 'a non-numeric cadence was accepted';
+    exception when check_violation then null;
+    end;
+    update public.parking_settings set pass_renewal_cadence = '7,3,1' where lot_id = 1;
+end $$;
+
+-- pass-renewal: schema payment links without online payments rejected
+do $$
+begin
+    update public.parking_settings
+       set online_payments_enabled = false, pass_renewal_payment_links = false
+     where lot_id = 2;
+    begin
+        update public.parking_settings
+           set pass_renewal_payment_links = true
+         where lot_id = 2;
+        raise exception 'payment links were enabled without online payments';
+    exception when check_violation then null;
+    end;
+end $$;
+
+-- pass-renewal: schema two open offers for one pass rejected
+do $$
+declare
+    target bigint := current_setting('app.renew_pass1')::bigint;
+begin
+    insert into public.pass_renewal_offers (
+        lot_id, monthly_pass_id, token, period_start, period_end, amount, expires_at
+    ) values (
+        1, target, repeat('a', 48), current_date + 21, current_date + 50, 80000,
+        now() + interval '8 days'
+    );
+    begin
+        insert into public.pass_renewal_offers (
+            lot_id, monthly_pass_id, token, period_start, period_end, amount, expires_at
+        ) values (
+            1, target, repeat('b', 48), current_date + 21, current_date + 50, 80000,
+            now() + interval '8 days'
+        );
+        raise exception 'a second open offer was accepted';
+    exception when unique_violation then null;
+    end;
+    delete from public.pass_renewal_offers where monthly_pass_id = target;
+end $$;
+
+-- pass-renewal: schema intent kind pass without an offer rejected
+do $$
+begin
+    begin
+        insert into public.payment_intents (
+            lot_id, kind, reference, amount, expires_at
+        ) values (
+            1, 'pass', 'PM-RENEW-NOOFFER', 80000, now() + interval '30 minutes'
+        );
+        raise exception 'a pass intent without an offer was accepted';
+    exception when check_violation then null;
+    end;
+end $$;
+
+-- pass-renewal: schema RLS enabled on offers
+do $$
+begin
+    if not (select relrowsecurity from pg_class
+             where oid = 'public.pass_renewal_offers'::regclass) then
+        raise exception 'RLS is not enabled on the renewal offers';
+    end if;
+end $$;
+
+insert into public.pass_renewal_offers (
+    lot_id, monthly_pass_id, token, period_start, period_end, amount, expires_at
+) values (
+    2, current_setting('app.renew_pass2')::bigint, repeat('c', 48),
+    current_date + 21, current_date + 50, 70000, now() + interval '8 days'
+);
+
+-- pass-renewal: schema operator cannot select offers
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    if (select count(*) from public.pass_renewal_offers) <> 0 then
+        raise exception 'an operator read the renewal offers';
+    end if;
+end $$;
+reset role;
+
+-- pass-renewal: schema admin of lot 1 cannot read offers of lot 2
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+begin
+    if exists (select 1 from public.pass_renewal_offers where token = repeat('c', 48)) then
+        raise exception 'a lot 1 admin read a lot 2 offer';
+    end if;
+end $$;
+reset role;
+
+-- ---------------------------------------------------------------------------
+-- pass-renewal: rpcs
+-- ---------------------------------------------------------------------------
+update public.parking_settings
+   set pass_renewal_enabled = true,
+       pass_renewal_payment_links = false,
+       pass_renewal_cadence = '7,3,1',
+       whatsapp_auto = true,
+       online_payments_enabled = true,
+       online_payment_min_amount = 1500
+ where lot_id = 1;
+update public.parking_settings
+   set pass_renewal_enabled = true,
+       pass_renewal_payment_links = false,
+       pass_renewal_cadence = '7,3,1',
+       whatsapp_auto = true
+ where lot_id = 2;
+
+insert into public.vehicles (plate, category_id, owner_name, owner_phone) values
+    ('RENW10', 2, 'Ana', '3001112233'),
+    ('RENW11', 2, 'Beto', '+57 300 222 3344'),
+    ('RENW12', 2, 'Carla', null),
+    ('RENW13', 2, 'Dora', '3004445566'),
+    ('RENW14', 2, 'Eva', '3005556677'),
+    ('RENW15', 2, 'Fabi', null),
+    ('RENW16', 2, 'Gil', '3006667788'),
+    ('RENW17', 2, 'Hugo', '3007778899');
+insert into public.vehicles (plate, category_id, owner_name, owner_phone)
+values ('RENW18', (select id from public.categories where lot_id = 2 order by id limit 1),
+        'Ivan', '3008889900');
+
+insert into public.monthly_passes (vehicle_id, lot_id, start_date, end_date, amount, active)
+select v.id, 1, current_date - 20, current_date + 7, 80000, true
+  from public.vehicles v where v.plate = 'RENW10';
+insert into public.monthly_passes (vehicle_id, lot_id, start_date, end_date, amount, active)
+select v.id, 1, current_date - 25, current_date + 2, 80000, true
+  from public.vehicles v where v.plate = 'RENW11';
+insert into public.monthly_passes (vehicle_id, lot_id, start_date, end_date, amount, active)
+select v.id, 1, current_date - 20, current_date + 7, 80000, true
+  from public.vehicles v where v.plate = 'RENW12';
+-- ended parent with a child
+insert into public.monthly_passes (vehicle_id, lot_id, start_date, end_date, amount, active)
+select v.id, 1, current_date - 40, current_date - 10, 80000, true
+  from public.vehicles v where v.plate = 'RENW13';
+insert into public.monthly_passes (
+    vehicle_id, lot_id, start_date, end_date, amount, active, renewed_from_id
+)
+select v.id, 1, current_date - 9, current_date + 20, 80000, true, parent.id
+  from public.vehicles v
+  join public.monthly_passes parent
+    on parent.vehicle_id = v.id and parent.end_date = current_date - 10
+ where v.plate = 'RENW13';
+insert into public.monthly_passes (vehicle_id, lot_id, start_date, end_date, amount, active)
+select v.id, 1, current_date - 20, current_date + 7, 80000, true
+  from public.vehicles v where v.plate = 'RENW14';
+insert into public.monthly_passes (vehicle_id, lot_id, start_date, end_date, amount, active)
+select v.id, 1, current_date - 20, current_date + 7, 80000, true
+  from public.vehicles v where v.plate = 'RENW15';
+insert into public.monthly_passes (vehicle_id, lot_id, start_date, end_date, amount, active)
+select v.id, 1, current_date - 40, current_date - 10, 80000, true
+  from public.vehicles v where v.plate = 'RENW16';
+insert into public.monthly_passes (vehicle_id, lot_id, start_date, end_date, amount, active)
+select v.id, 1, current_date - 20, current_date + 7, 80000, true
+  from public.vehicles v where v.plate = 'RENW17';
+insert into public.monthly_passes (vehicle_id, lot_id, start_date, end_date, amount, active)
+select v.id, 2, current_date - 20, current_date + 7, 70000, true
+  from public.vehicles v where v.plate = 'RENW18';
+
+do $$
+declare
+    plates text[] := array['RENW10','RENW11','RENW12','RENW13','RENW14',
+                          'RENW15','RENW16','RENW17','RENW18'];
+    plate_value text;
+begin
+    foreach plate_value in array plates loop
+        perform set_config('app.pr_' || plate_value, (
+            select mp.id::text from public.monthly_passes mp
+              join public.vehicles v on v.id = mp.vehicle_id
+             where v.plate = plate_value
+             order by mp.id
+             limit 1
+        ), true);
+    end loop;
+end $$;
+
+-- pass-renewal: reminders queue pass_expiry when links are off
+do $$
+declare
+    queued integer := public.queue_pass_renewal_reminders();
+begin
+    if queued < 2 then
+        raise exception 'the reminder job queued % messages', queued;
+    end if;
+    if not exists (
+        select 1 from public.whatsapp_messages m
+         where m.template = 'pass_expiry'
+           and m.dedupe_key like 'pass_reminder:%'
+           and m.params ->> 0 = 'RENW10'
+    ) then
+        raise exception 'no pass_expiry reminder for the 7-day window';
+    end if;
+end $$;
+
+-- pass-renewal: reminders second run in the same window queues nothing
+do $$
+declare
+    before_count integer;
+    after_count integer;
+begin
+    select count(*) into before_count from public.whatsapp_messages;
+    perform public.queue_pass_renewal_reminders();
+    select count(*) into after_count from public.whatsapp_messages;
+    if after_count <> before_count then
+        raise exception 'a second run in the window queued again';
+    end if;
+end $$;
+
+-- pass-renewal: reminders late run sends only the nearest missed window
+do $$
+declare
+    pass_id bigint := current_setting('app.pr_RENW11')::bigint;
+begin
+    if not exists (
+        select 1 from public.whatsapp_messages m
+         where m.dedupe_key like 'pass_reminder:' || pass_id || ':%:3'
+    ) then
+        raise exception 'the late run did not use the nearest cadence value';
+    end if;
+    if exists (
+        select 1 from public.whatsapp_messages m
+         where m.dedupe_key like 'pass_reminder:' || pass_id || ':%:7'
+    ) then
+        raise exception 'the late run also sent the wider window';
+    end if;
+end $$;
+
+-- pass-renewal: reminders queues the link with the token as button_param
+do $$
+declare
+    offer public.pass_renewal_offers%rowtype;
+begin
+    update public.parking_settings set pass_renewal_payment_links = true
+     where lot_id = 1;
+    perform public.queue_pass_renewal_reminders();
+
+    select * into offer from public.pass_renewal_offers
+     where monthly_pass_id = current_setting('app.pr_RENW10')::bigint
+       and status = 'open';
+    if not found then
+        raise exception 'the link run did not create an offer';
+    end if;
+    if length(offer.token) <> 48 then
+        raise exception 'the offer token is not 48 hex chars: %', offer.token;
+    end if;
+    if offer.period_start <> current_date + 8
+       or offer.period_end <= offer.period_start then
+        raise exception 'the offered period is wrong: % / %',
+            offer.period_start, offer.period_end;
+    end if;
+    if not exists (
+        select 1 from public.whatsapp_messages m
+         where m.template = 'pass_renewal_link'
+           and m.button_param = offer.token
+           and m.dedupe_key = 'pass_renewal:' || offer.id || ':7'
+           and jsonb_array_length(m.params) = 4
+    ) then
+        raise exception 'the renewal link message is missing or wrong';
+    end if;
+    if not exists (
+        select 1 from public.whatsapp_messages m
+         where m.params ->> 0 = 'Ana'
+           and m.params ->> 1 = 'RENW10'
+    ) then
+        raise exception 'the renewal message params are wrong';
+    end if;
+end $$;
+
+-- pass-renewal: reminders no owner phone skips the pass
+do $$
+begin
+    if exists (
+        select 1 from public.whatsapp_messages m
+         where m.params ->> 1 = 'RENW12'
+    ) then
+        raise exception 'a pass without owner phone was nudged';
+    end if;
+end $$;
+
+-- pass-renewal: reminders ended parent with a child is deactivated
+do $$
+declare
+    parent bigint := current_setting('app.pr_RENW13')::bigint;
+begin
+    if (select active from public.monthly_passes where id = parent) then
+        raise exception 'the ended parent was not deactivated';
+    end if;
+    if not (select active from public.monthly_passes
+             where renewed_from_id = parent) then
+        raise exception 'the child pass was deactivated';
+    end if;
+end $$;
+
+-- pass-renewal: reminders whatsapp_auto off queues nothing
+do $$
+declare
+    before_count integer;
+    after_count integer;
+begin
+    update public.parking_settings set whatsapp_auto = false where lot_id = 1;
+    select count(*) into before_count from public.whatsapp_messages;
+    perform public.queue_pass_renewal_reminders();
+    select count(*) into after_count from public.whatsapp_messages;
+    if after_count <> before_count then
+        raise exception 'reminders were queued with whatsapp_auto off';
+    end if;
+    update public.parking_settings set whatsapp_auto = true where lot_id = 1;
+end $$;
+
+-- pass-renewal: reminders pass_renewal_enabled off queues nothing
+do $$
+declare
+    before_count integer;
+    after_count integer;
+begin
+    update public.parking_settings set pass_renewal_enabled = false where lot_id = 1;
+    select count(*) into before_count from public.whatsapp_messages;
+    perform public.queue_pass_renewal_reminders();
+    select count(*) into after_count from public.whatsapp_messages;
+    if after_count <> before_count then
+        raise exception 'reminders were queued with the switch off';
+    end if;
+    update public.parking_settings set pass_renewal_enabled = true where lot_id = 1;
+end $$;
+
+-- pass-renewal: reminders never enqueue across lots
+do $$
+begin
+    if exists (
+        select 1 from public.whatsapp_messages m
+         where m.params ->> 0 = 'RENW18' and m.lot_id <> 2
+    ) then
+        raise exception 'a reminder was queued for another lot';
+    end if;
+    if not exists (
+        select 1 from public.whatsapp_messages m
+         where m.params ->> 0 = 'RENW18' and m.lot_id = 2
+    ) then
+        raise exception 'the lot 2 pass was not nudged in its own lot';
+    end if;
+end $$;
+
+-- pass-renewal: manual admin send queues once per day
+do $$
+declare
+    pass_id bigint := current_setting('app.pr_RENW14')::bigint;
+    first_result jsonb;
+    second_result jsonb;
+begin
+    first_result := public.send_pass_renewal_link(pass_id);
+    second_result := public.send_pass_renewal_link(pass_id);
+    if (first_result ->> 'queued')::boolean is not true then
+        raise exception 'the manual link was not queued: %', first_result;
+    end if;
+    if (second_result ->> 'queued')::boolean is not false then
+        raise exception 'the manual link was queued twice in a day: %', second_result;
+    end if;
+    if not exists (
+        select 1 from public.whatsapp_messages m
+         where m.template = 'pass_renewal_link'
+           and m.button_param = (
+               select token from public.pass_renewal_offers
+                where monthly_pass_id = pass_id and status = 'open'
+           )
+    ) then
+        raise exception 'the manual link message has no token button';
+    end if;
+end $$;
+
+-- pass-renewal: manual no phone is an error
+do $$
+begin
+    begin
+        perform public.send_pass_renewal_link(current_setting('app.pr_RENW15')::bigint);
+        raise exception 'a pass without phone got a manual link';
+    exception when others then
+        if sqlerrm not like '%MissingOwnerPhoneError%' then raise; end if;
+    end;
+end $$;
+
+-- pass-renewal: manual child exists is an error
+do $$
+begin
+    begin
+        perform public.send_pass_renewal_link(current_setting('app.pr_RENW13')::bigint);
+        raise exception 'a renewed pass got a manual link';
+    exception when others then
+        if sqlerrm not like '%PassAlreadyRenewedError%' then raise; end if;
+    end;
+end $$;
+
+-- pass-renewal: manual switch off is an error
+do $$
+begin
+    update public.parking_settings set pass_renewal_payment_links = false where lot_id = 1;
+    begin
+        perform public.send_pass_renewal_link(current_setting('app.pr_RENW14')::bigint);
+        raise exception 'a manual link was sent with the switch off';
+    exception when others then
+        if sqlerrm not like '%PassRenewalDisabledError%' then raise; end if;
+    end;
+    update public.parking_settings set pass_renewal_payment_links = true where lot_id = 1;
+end $$;
+
+-- pass-renewal: manual operator is refused
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    begin
+        perform public.send_pass_renewal_link(current_setting('app.pr_RENW14')::bigint);
+        raise exception 'an operator sent a renewal link';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+end $$;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- pass-renewal: manual other lot is not found
+do $$
+begin
+    begin
+        perform public.send_pass_renewal_link(current_setting('app.pr_RENW18')::bigint);
+        raise exception 'a pass of another lot was renewed';
+    exception when others then
+        if sqlerrm not like '%PassNotFoundError%' then raise; end if;
+    end;
+end $$;
+
+-- pass-renewal: public page returns masked plate and period
+do $$
+begin
+    perform set_config('app.pr_token10', (
+        select token from public.pass_renewal_offers
+         where monthly_pass_id = current_setting('app.pr_RENW10')::bigint
+           and status = 'open'
+    ), true);
+end $$;
+
+set local role anon;
+do $$
+declare
+    token_value text := current_setting('app.pr_token10');
+    found jsonb;
+begin
+    found := public.public_pass_renewal(token_value);
+    if found is null then
+        raise exception 'the public page did not answer';
+    end if;
+    if found ->> 'plate_masked' <> 'REN***' then
+        raise exception 'the plate mask is wrong: %', found ->> 'plate_masked';
+    end if;
+    if (found ->> 'amount')::integer <> 80000
+       or (found ->> 'payment_links_enabled')::boolean is not true
+       or found ->> 'lot_name' is null then
+        raise exception 'the public offer is wrong: %', found;
+    end if;
+    if found ? 'plate' or found ? 'owner_phone' or found ? 'vehicle_id' then
+        raise exception 'the public page leaked data: %', found;
+    end if;
+    if public.public_pass_renewal(repeat('f', 48)) is not null then
+        raise exception 'an unknown token returned an offer';
+    end if;
+    if public.public_pass_renewal('not-a-token') is not null then
+        raise exception 'a malformed token returned an offer';
+    end if;
+end $$;
+reset role;
+
+-- pass-renewal: anon can call only the public functions
+set local role anon;
+do $$
+begin
+    if not has_function_privilege('anon', 'public.public_pass_renewal(text)', 'execute') then
+        raise exception 'anon cannot read the public renewal page';
+    end if;
+    begin
+        perform public.create_pass_renewal_intent(repeat('a', 48));
+        raise exception 'anon created a renewal intent';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform public.queue_pass_renewal_reminders();
+        raise exception 'anon ran the reminder job';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
+-- The ended pass gets its offer by hand: the cron skips passes older than
+-- three days, and a late payment is exactly the case under test.
+insert into public.pass_renewal_offers (
+    lot_id, monthly_pass_id, token, period_start, period_end, amount, expires_at
+)
+select 1, mp.id, repeat('e', 48), mp.end_date + 1, mp.end_date + 30, mp.amount,
+       now() + interval '8 days'
+  from public.monthly_passes mp
+ where mp.id = current_setting('app.pr_RENW16')::bigint;
+
+-- pass-renewal: intent creates a kind pass intent with the offer amount
+do $$
+declare
+    token_value text;
+    result jsonb;
+begin
+    select token into token_value from public.pass_renewal_offers
+     where monthly_pass_id = current_setting('app.pr_RENW16')::bigint
+       and status = 'open';
+    if token_value is null then
+        raise exception 'the ended pass has no offer';
+    end if;
+    result := public.create_pass_renewal_intent(token_value);
+    if (result ->> 'amount')::integer <> 80000 then
+        raise exception 'the intent amount is wrong: %', result;
+    end if;
+    if (select kind from public.payment_intents
+         where id = (result ->> 'intent_id')::bigint) <> 'pass' then
+        raise exception 'the intent is not a pass intent';
+    end if;
+    perform set_config('app.pr_ref16', result ->> 'reference', true);
+    perform set_config('app.pr_offer16', (
+        select id::text from public.pass_renewal_offers where token = token_value
+    ), true);
+end $$;
+
+-- pass-renewal: intent unknown token
+do $$
+begin
+    begin
+        perform public.create_pass_renewal_intent(repeat('f', 48));
+        raise exception 'an unknown token created an intent';
+    exception when others then
+        if sqlerrm not like '%PassRenewalNotFoundError%' then raise; end if;
+    end;
+    begin
+        perform public.create_pass_renewal_intent('short');
+        raise exception 'a malformed token created an intent';
+    exception when others then
+        if sqlerrm not like '%PassRenewalNotFoundError%' then raise; end if;
+    end;
+end $$;
+
+-- pass-renewal: intent paid and expired offers are refused
+do $$
+declare
+    paid_token text;
+    expired_token text;
+begin
+    select token into paid_token from public.pass_renewal_offers
+     where monthly_pass_id = current_setting('app.pr_RENW14')::bigint;
+    update public.pass_renewal_offers set status = 'paid' where token = paid_token;
+    begin
+        perform public.create_pass_renewal_intent(paid_token);
+        raise exception 'a paid offer created an intent';
+    exception when others then
+        if sqlerrm not like '%PassRenewalPaidError%' then raise; end if;
+    end;
+
+    select token into expired_token from public.pass_renewal_offers
+     where monthly_pass_id = current_setting('app.pr_RENW17')::bigint
+       and status = 'open';
+    update public.pass_renewal_offers
+       set expires_at = now() - interval '1 minute'
+     where token = expired_token;
+    begin
+        perform public.create_pass_renewal_intent(expired_token);
+        raise exception 'an expired offer created an intent';
+    exception when others then
+        if sqlerrm not like '%PassRenewalExpiredError%' then raise; end if;
+    end;
+end $$;
+
+-- pass-renewal: intent throttles the sixth intent in an hour
+do $$
+declare
+    token_value text;
+    offer_id bigint;
+    idx integer;
+begin
+    select o.token, o.id into token_value, offer_id
+      from public.pass_renewal_offers o
+     where o.monthly_pass_id = current_setting('app.pr_RENW17')::bigint
+       and o.status = 'open';
+    update public.pass_renewal_offers
+       set expires_at = now() + interval '8 days'
+     where id = offer_id;
+    for idx in 1 .. 5 loop
+        insert into public.payment_intents (
+            lot_id, kind, pass_renewal_offer_id, reference, amount, status,
+            expires_at
+        ) values (
+            1, 'pass', offer_id, 'PM-PASSTHROTTLE' || idx, 80000, 'expired',
+            now() - interval '1 minute'
+        );
+    end loop;
+    begin
+        perform public.create_pass_renewal_intent(token_value);
+        raise exception 'the sixth renewal intent in an hour was accepted';
+    exception when others then
+        if sqlerrm not like '%PaymentThrottledError%' then raise; end if;
+    end;
+end $$;
+
+-- pass-renewal: settle approved payment creates the linked pass paid online
+do $$
+declare
+    reference_value text := current_setting('app.pr_ref16');
+    offer_id bigint := current_setting('app.pr_offer16')::bigint;
+    parent bigint := current_setting('app.pr_RENW16')::bigint;
+    result jsonb;
+    child public.monthly_passes%rowtype;
+    payment public.monthly_pass_payments%rowtype;
+    offer_rec public.pass_renewal_offers%rowtype;
+begin
+    result := public.apply_payment_event('wompi', jsonb_build_object(
+        'transaction_id', 'TX-PASS-1',
+        'reference', reference_value,
+        'status', 'APPROVED',
+        'amount', 80000,
+        'currency', 'COP',
+        'method', 'CARD'
+    ));
+    if (result ->> 'applied')::boolean is not true then
+        raise exception 'the approved renewal was not applied: %', result;
+    end if;
+
+    select * into offer_rec from public.pass_renewal_offers where id = offer_id;
+    if offer_rec.status <> 'paid' or offer_rec.renewal_pass_id is null then
+        raise exception 'the offer is not paid: %', offer_rec;
+    end if;
+
+    select * into child from public.monthly_passes where id = offer_rec.renewal_pass_id;
+    if child.renewed_from_id <> parent then
+        raise exception 'the child pass does not point to the parent';
+    end if;
+    if child.start_date <> current_date then
+        raise exception 'a late payment did not start today: %', child.start_date;
+    end if;
+    if not child.active then
+        raise exception 'the renewed pass is not active';
+    end if;
+
+    select * into payment from public.monthly_pass_payments
+     where monthly_pass_id = child.id;
+    if payment.status <> 'paid' or payment.payment_method <> 'online'
+       or payment.paid_at is null or payment.paid_by is not null
+       or payment.shift_id is not null then
+        raise exception 'the renewal charge is wrong: %', payment;
+    end if;
+end $$;
+
+-- pass-renewal: settle notifies lot members once
+do $$
+declare
+    offer_id bigint := current_setting('app.pr_offer16')::bigint;
+    members integer;
+    notified integer;
+begin
+    select count(*) into members
+      from public.lot_members lm join public.users u on u.id = lm.user_id
+     where lm.lot_id = 1 and u.is_active;
+    select count(*) into notified
+      from public.notifications n
+     where n.type = 'pass_renewal_paid'
+       and n.dedupe_key like 'pass_renewal_paid:' || offer_id || ':%';
+    if notified <> members then
+        raise exception 'the renewal notified % of % members', notified, members;
+    end if;
+    perform public.apply_payment_event('wompi', jsonb_build_object(
+        'transaction_id', 'TX-PASS-1',
+        'reference', current_setting('app.pr_ref16'),
+        'status', 'APPROVED',
+        'amount', 80000,
+        'currency', 'COP'
+    ));
+    if (select count(*) from public.notifications n
+         where n.type = 'pass_renewal_paid'
+           and n.dedupe_key like 'pass_renewal_paid:' || offer_id || ':%') <> members then
+        raise exception 'a duplicate approval notified twice';
+    end if;
+end $$;
+
+-- pass-renewal: settle child with a pending payment is marked paid, no new pass
+do $$
+declare
+    parent bigint := current_setting('app.pr_RENW13')::bigint;
+    child bigint;
+    offer_id bigint;
+    reference_value text := 'PM-RENEW-CHILD';
+    before_passes integer;
+    result jsonb;
+begin
+    select id into child from public.monthly_passes where renewed_from_id = parent;
+    select count(*) into before_passes from public.monthly_passes;
+
+    insert into public.pass_renewal_offers (
+        lot_id, monthly_pass_id, token, period_start, period_end, amount, expires_at
+    ) values (
+        1, parent, repeat('d', 48), current_date - 9, current_date + 20, 80000,
+        now() + interval '8 days'
+    ) returning id into offer_id;
+
+    insert into public.payment_intents (
+        lot_id, kind, pass_renewal_offer_id, reference, amount, expires_at
+    ) values (
+        1, 'pass', offer_id, reference_value, 80000, now() + interval '30 minutes'
+    );
+
+    result := public.apply_payment_event('wompi', jsonb_build_object(
+        'transaction_id', 'TX-PASS-CHILD',
+        'reference', reference_value,
+        'status', 'APPROVED',
+        'amount', 80000,
+        'currency', 'COP'
+    ));
+    if (result ->> 'applied')::boolean is not true then
+        raise exception 'the child renewal was not applied: %', result;
+    end if;
+    if (select count(*) from public.monthly_passes) <> before_passes then
+        raise exception 'a second child pass was created';
+    end if;
+    if (select status from public.monthly_pass_payments
+         where monthly_pass_id = child) <> 'paid' then
+        raise exception 'the existing charge was not paid';
+    end if;
+end $$;
+
+-- pass-renewal: settle second approval of the same offer is late_closed
+do $$
+declare
+    offer_id bigint := current_setting('app.pr_offer16')::bigint;
+    result jsonb;
+begin
+    insert into public.payment_intents (
+        lot_id, kind, pass_renewal_offer_id, reference, amount, expires_at
+    ) values (
+        1, 'pass', offer_id, 'PM-RENEW-LATE', 80000, now() + interval '30 minutes'
+    );
+    result := public.apply_payment_event('wompi', jsonb_build_object(
+        'transaction_id', 'TX-PASS-LATE',
+        'reference', 'PM-RENEW-LATE',
+        'status', 'APPROVED',
+        'amount', 80000,
+        'currency', 'COP'
+    ));
+    if result ->> 'outcome' <> 'late_closed' then
+        raise exception 'a second approval was not late_closed: %', result;
+    end if;
+    if not exists (
+        select 1 from public.notifications n
+         where n.type = 'online_payment_review'
+           and n.dedupe_key like 'pass_review:' || offer_id || ':%'
+    ) then
+        raise exception 'the duplicate renewal did not notify the admins';
+    end if;
+end $$;
+
+-- pass-renewal: settle late payment starts the period today
+do $$
+declare
+    parent bigint := current_setting('app.pr_RENW16')::bigint;
+    child public.monthly_passes%rowtype;
+begin
+    select * into child from public.monthly_passes where renewed_from_id = parent;
+    if child.start_date <> current_date then
+        raise exception 'the late renewal did not start today: %', child.start_date;
+    end if;
+end $$;
+
+-- pass-renewal: report lists the pass payment with kind pass
+do $$
+declare
+    report jsonb := public.report_online_payments(current_date, current_date);
+begin
+    if not exists (
+        select 1 from jsonb_array_elements(report -> 'items') item
+         where item ->> 'kind' = 'pass'
+           and item ->> 'reference' = current_setting('app.pr_ref16')
+           and item ->> 'plate' = 'RENW16'
+           and (item ->> 'pass_id')::bigint = current_setting('app.pr_RENW16')::bigint
+           and item -> 'ticket_number' = 'null'::jsonb
+    ) then
+        raise exception 'the online report does not list the renewal: %', report;
+    end if;
+end $$;
+
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
 
 rollback;

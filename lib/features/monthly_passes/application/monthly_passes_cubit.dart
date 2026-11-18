@@ -10,6 +10,7 @@ import '../domain/commands/create_monthly_pass_command.dart';
 import '../domain/commands/update_monthly_pass_command.dart';
 import '../domain/entities/monthly_pass.dart';
 import '../domain/entities/monthly_pass_payment.dart';
+import '../domain/entities/pass_renewal_offer_summary.dart';
 import '../domain/repositories/monthly_pass_repository.dart';
 import '../../../core/state/resilient_cubit.dart';
 
@@ -29,7 +30,7 @@ final class MonthlyPassesLoading extends MonthlyPassesState {
 }
 
 /// What the last successful action did, so the page can confirm it.
-enum MonthlyPassAction { created, deleted, payment, renewed }
+enum MonthlyPassAction { created, deleted, payment, renewed, renewalLinkSent }
 
 /// Passes plus the vehicles for the create form and a precomputed
 /// vehicleId → plate map (O(1) per row).
@@ -40,6 +41,7 @@ final class MonthlyPassesLoaded extends MonthlyPassesState {
     this.plates = const {},
     this.pendingPayments = const [],
     this.tariffs = const [],
+    this.offers = const {},
     this.submission = const SubmissionIdle(),
     this.lastAction,
   });
@@ -53,6 +55,9 @@ final class MonthlyPassesLoaded extends MonthlyPassesState {
 
   /// Price catalog; the pass dialog prefills the monthly amount from here.
   final List<Tariff> tariffs;
+
+  /// Renewal offers of the active lot keyed by pass id (online only).
+  final Map<int, PassRenewalOfferSummary> offers;
 
   /// Active monthly tariffs keyed by category, for the pass dialog.
   Map<int, int> get monthlyTariffByCategory => {
@@ -134,12 +139,14 @@ final class MonthlyPassesLoaded extends MonthlyPassesState {
     List<MonthlyPass>? monthlyPasses,
     List<MonthlyPassPayment>? pendingPayments,
     List<Tariff>? tariffs,
+    Map<int, PassRenewalOfferSummary>? offers,
     Submission? submission,
     MonthlyPassAction? lastAction,
   }) => MonthlyPassesLoaded(
     monthlyPasses: monthlyPasses ?? this.monthlyPasses,
     pendingPayments: pendingPayments ?? this.pendingPayments,
     tariffs: tariffs ?? this.tariffs,
+    offers: offers ?? this.offers,
     vehicles: vehicles,
     plates: plates,
     submission: submission ?? this.submission,
@@ -153,6 +160,7 @@ final class MonthlyPassesLoaded extends MonthlyPassesState {
     plates,
     pendingPayments,
     tariffs,
+    offers,
     submission,
     lastAction,
   ];
@@ -188,16 +196,21 @@ class MonthlyPassesCubit extends ResilientCubit<MonthlyPassesState> {
         _repository.pendingPayments(),
         _loadVehicles(),
         _loadTariffs(),
+        _loadOffers(),
       ]);
       final passes = results[0] as List<MonthlyPass>;
       final pending = results[1] as List<MonthlyPassPayment>;
       final loadedVehicles = results[2] as List<Vehicle>;
       final loadedTariffs = results[3] as List<Tariff>;
+      final loadedOffers = results[4] as List<PassRenewalOfferSummary>;
       emit(
         MonthlyPassesLoaded(
           monthlyPasses: sortMonthlyPasses(passes),
           pendingPayments: pending,
           tariffs: loadedTariffs,
+          offers: {
+            for (final offer in loadedOffers) offer.monthlyPassId: offer,
+          },
           vehicles: loadedVehicles,
           plates: {
             for (final vehicle in loadedVehicles)
@@ -246,6 +259,20 @@ class MonthlyPassesCubit extends ResilientCubit<MonthlyPassesState> {
     action: MonthlyPassAction.payment,
   );
 
+  /// Queues the token-keyed renewal link for [pass]. Online only: offline the
+  /// submission fails with the localized `NetworkFailure` and nothing is
+  /// queued in the outbox.
+  Future<void> sendRenewalLink(MonthlyPass pass) {
+    final id = pass.id;
+    if (id == null) {
+      return Future<void>.value();
+    }
+    return _submit(
+      () => _repository.sendRenewalLink(id),
+      action: MonthlyPassAction.renewalLinkSent,
+    );
+  }
+
   /// Reports the outcome as soon as the mutation is committed; the list
   /// refresh is separate so its failure can never turn a saved change into
   /// an error (the previous lists stay on screen).
@@ -280,12 +307,30 @@ class MonthlyPassesCubit extends ResilientCubit<MonthlyPassesState> {
     try {
       final passes = await _repository.list();
       final pending = await _repository.pendingPayments();
+      final offers = await _repository.renewalOffers();
       final latest = state;
       if (latest is MonthlyPassesLoaded) {
-        emit(latest.copyWith(monthlyPasses: passes, pendingPayments: pending));
+        emit(
+          latest.copyWith(
+            monthlyPasses: passes,
+            pendingPayments: pending,
+            offers: {
+              for (final offer in offers) offer.monthlyPassId: offer,
+            },
+          ),
+        );
       }
     } on Failure {
       // Keep the previous lists; the next load refreshes them.
+    }
+  }
+
+  /// Best-effort: the offers are a convenience (chips/action).
+  Future<List<PassRenewalOfferSummary>> _loadOffers() async {
+    try {
+      return await _repository.renewalOffers();
+    } on Failure {
+      return const [];
     }
   }
 

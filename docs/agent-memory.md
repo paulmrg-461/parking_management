@@ -4,22 +4,82 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-11-17 (online payments, Wompi).
+Last updated: 2026-11-17 (pass auto-renewal).
 
 ## Where we are
 
 - Stack: Flutter (android + web) + self-hosted Supabase only. No FastAPI,
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
-- `supabase/migrations/0001..0114` are the schema owner (applied by
+- `supabase/migrations/0001..0116` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 1493 tests green (coverage 80.0% global; application 91.8%,
-  domain 60.8%, infrastructure 45.0%), `flutter analyze` reports only SDK
+- Flutter: 1544 tests green (coverage 80.1% global; application 91.6%,
+  domain 61.3%, infrastructure 45.2%), `flutter analyze` reports only SDK
   deprecation infos from the pinned beta channel (0 errors/warnings). Web
-  build green. Deno tests for the payment functions: 22 green.
+  build green. Deno tests for the Edge Functions: 30 green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
   item is the manual smoke for `add-parking-settings` (task 10.4).
 
+
+
+## Pass auto-renewal (2026-11-17, `0115`-`0116`)
+
+- An offer is **not** a pass: `pass_renewal_offers` freezes the next period and
+  amount behind a 192-bit token, and the child pass is created only when
+  `settle_pass_renewal` runs after an approved payment. An early pass would let
+  the customer park free from its start date (`has_pass` only reads dates).
+- Three switches again: `pass_renewal_enabled` (reminders),
+  `pass_renewal_payment_links` (the link; CHECK requires
+  `online_payments_enabled` and `currency = 'COP'`) and `whatsapp_auto`. Keys
+  are invisible to SQL: with the link on and keys missing, the page says
+  "renew at the desk" (fail soft).
+- Cadence is text (`'7,3,1'`) validated by a regex; SQL picks the smallest
+  `d >= days_left` and dedupes with `pass_renewal:<offer>:<d>` (or
+  `pass_reminder:<pass>:<end>:<d>` without links). A late cron run sends the
+  nearest missed window once, never a burst. Passes ended more than 3 days ago
+  are not nudged.
+- `queue_pass_renewal_reminders` also deactivates ended parents that already
+  have a child: `renew_monthly_passes` never revisits them. It never touches a
+  pass whose dates still cover today. Never use `current_lot_id()` in it.
+- Settlement is idempotent: (a) no child -> create it and mark its pending
+  charge paid `online` (`paid_by`/`shift_id` null, so cash reconciliation is
+  untouched); (b) the expiry job already created the child -> pay that charge,
+  create nothing; (c) offer already paid or the child was already paid by cash
+  -> `late_closed` + `online_payment_review` for the admins. The parent pass is
+  locked and a `unique_violation` on `renewed_from_id` adopts the racing child.
+- Period rule: `start = greatest(offer.period_start, lot today)`, month-aware
+  end via `pass_period_months`. ASSUMPTION: a late payment is not retroactive;
+  the owner must confirm.
+- `settle_payment_intent` returns the pass outcome in `kind` (`applied` /
+  `late_closed` / `ignored`) so `apply_payment_event` (unchanged) records a
+  valid `payment_events.outcome`. Do not return `kind = 'pass'` there.
+- `whatsapp_messages` gained `button_param` and a unique `dedupe_key` (partial
+  index); `queue_whatsapp_message` is the internal dedupe-aware helper (the
+  cron has no actor and no lot header). The dispatcher appends the URL button
+  only when `button_param` exists; the base URL lives in the approved Meta
+  template. `whatsapp-dispatch` is versioned in git now.
+- Public page `/renew?t=<48 hex>`: masked plate, period and amount only;
+  polling every 3 s up to 180 s until `paid`. `renewPath` is public in
+  `authRedirect` and is not an operator route.
+- Gotcha: the page starts polling right after the first load of an open offer
+  (the redirect back is the same URL), so widget tests must use `pump()`, not
+  `pumpAndSettle()`, exactly like the pay-online panel.
+- Gotcha: anon cannot read `pass_renewal_offers`; tests that need a token must
+  read it as the owner (`set_config`) before `set local role anon`.
+- Jobs: `run queue_pass_renewal_reminders` in `jobs.sh` and the matching psql
+  line in `notifications-cron.sh`.
+- Meta template the owner must create/approve: `pass_renewal_link`, es, body
+  "Hola {{1}}, la mensualidad del vehículo {{2}} vence el {{3}}. Renuévala por
+  {{4}} aquí:" plus a URL button `https://<APP_URL>/renew?t={{1}}`.
+- Gatekeeper (2026-11-17): migrations `0115`-`0116` applied live (flags off),
+  **1544 tests** green, coverage 80.1% global, `flutter analyze` clean, SQL
+  suite green over `0001`-`0116`, Deno **30 tests** green, web release + debug
+  APK built, `build/web-public` rebuilt and republished. Live inert smoke:
+  `public_pass_renewal` unknown token -> `null`, `pass-renewal-intent` ->
+  `503 PaymentsNotConfiguredError`, `queue_pass_renewal_reminders()` -> 0 with
+  the flags off.
+- Not verified: a real sandbox renewal payment (no Wompi/Meta credentials) and
+  the approved template (waiting on Meta). Task 7.2 of the change records this.
 
 ## Online payments (2026-11-17, `0112`-`0114`)
 

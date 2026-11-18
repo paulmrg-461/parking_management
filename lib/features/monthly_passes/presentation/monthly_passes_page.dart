@@ -12,6 +12,7 @@ import '../../../core/state/submission.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/receipt/payment_method.dart';
 import '../../../core/utils/formatters.dart';
+import '../../settings/application/pass_renewal_mode.dart';
 import '../../../core/widgets/app_icon_button.dart';
 import '../../../core/widgets/async_view.dart';
 import '../../../core/widgets/confirm_dialog.dart';
@@ -33,6 +34,7 @@ import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/widgets/submission_listener.dart';
 import '../../vehicles/domain/entities/vehicle.dart';
 import '../application/monthly_passes_cubit.dart';
+import '../domain/entities/pass_renewal_offer_summary.dart';
 import '../domain/commands/create_monthly_pass_command.dart';
 import '../domain/commands/update_monthly_pass_command.dart';
 import '../domain/entities/monthly_pass.dart';
@@ -257,6 +259,7 @@ class _MonthlyPassesPageState extends State<MonthlyPassesPage> {
       MonthlyPassAction.deleted => l10n.monthlyPassDeleted,
       MonthlyPassAction.payment => l10n.monthlyPassPaymentDone,
       MonthlyPassAction.renewed => l10n.monthlyPassRenewed,
+      MonthlyPassAction.renewalLinkSent => l10n.passRenewalLinkQueued,
       null => null,
     };
     if (message == null) {
@@ -369,6 +372,32 @@ class _MonthlyPassTile extends StatelessWidget {
         : const {};
   }
 
+  PassRenewalOfferSummary? _offerOf(BuildContext context) {
+    final state = context.read<MonthlyPassesCubit>().state;
+    final id = monthlyPass.id;
+    if (state is! MonthlyPassesLoaded || id == null) {
+      return null;
+    }
+    return state.offers[id];
+  }
+
+  Future<void> _sendRenewalLink(BuildContext context) async {
+    final l10n = context.l10n;
+    final cubit = context.read<MonthlyPassesCubit>();
+    await cubit.sendRenewalLink(monthlyPass);
+    if (!context.mounted) {
+      return;
+    }
+    final state = cubit.state;
+    final submission = state is MonthlyPassesLoaded ? state.submission : null;
+    if (submission is SubmissionFailed) {
+      showErrorSnack(
+        context,
+        l10n.errorText(submission.message, submission.failure),
+      );
+    }
+  }
+
   Future<void> _notify(BuildContext context) async {
     if (whatsappAutoEnabled(context)) {
       await _queueReminder(context);
@@ -441,6 +470,20 @@ class _MonthlyPassTile extends StatelessWidget {
               tone: statusTone,
             ),
           ),
+          const SizedBox(width: Space.sm),
+          if (_offerOf(context) case final offer?)
+            if (offer.isPaid)
+              StatusChip(
+                label: l10n.passRenewalRenewedOnline,
+                tone: StatusTone.success,
+                icon: Icons.autorenew,
+              )
+            else if (offer.isOpen)
+              StatusChip(
+                label: l10n.passRenewalLinkSent,
+                tone: StatusTone.warning,
+                icon: Icons.link,
+              ),
         ],
       ),
       subtitle: Column(
@@ -487,6 +530,15 @@ class _MonthlyPassTile extends StatelessWidget {
               icon: Icons.chat_outlined,
               tooltip: l10n.monthlyPassWhatsapp,
               onPressed: () => _notify(context),
+            ),
+          if (phone != null &&
+              monthlyPass.active &&
+              passRenewalLinksEnabled(context) &&
+              _offerOf(context)?.isPaid != true)
+            AppIconButton(
+              icon: Icons.link,
+              tooltip: l10n.passRenewalSendLink,
+              onPressed: () => unawaited(_sendRenewalLink(context)),
             ),
           AppIconButton(
             icon: Icons.edit_outlined,

@@ -4739,4 +4739,97 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get checkOutConfirmExit => 'Confirm exit';
+
+  @override
+  String get passRenewalTitle => 'Renew your monthly pass';
+
+  @override
+  String passRenewalPlate(String plate) {
+    return 'Vehicle $plate';
+  }
+
+  @override
+  String passRenewalPeriod(String from, String to) {
+    return 'New period: $from to $to';
+  }
+
+  @override
+  String get passRenewalAmount => 'Amount';
+
+  @override
+  String get passRenewalPay => 'Pay and renew';
+
+  @override
+  String get passRenewalChecking => 'Confirming your payment…';
+
+  @override
+  String passRenewalPaid(String date) {
+    return 'Pass renewed until $date.';
+  }
+
+  @override
+  String get passRenewalUnavailable =>
+      'This link is no longer available. Contact the parking lot.';
+
+  @override
+  String get passRenewalPayAtDesk =>
+      'Online payment is unavailable right now; renew at the desk.';
+
+  @override
+  String get passRenewalLinkSent => 'Link sent';
+
+  @override
+  String get passRenewalRenewedOnline => 'Renewed online';
+
+  @override
+  String get passRenewalSendLink => 'Send renewal link';
+
+  @override
+  String get passRenewalLinkQueued => 'Link queued on WhatsApp';
+
+  @override
+  String get settingsPassRenewal => 'Pass renewal';
+
+  @override
+  String get settingsPassRenewalHint =>
+      'Sends WhatsApp reminders before a pass ends.';
+
+  @override
+  String get settingsPassRenewalLinks => 'Include payment link';
+
+  @override
+  String get settingsPassRenewalLinksHint =>
+      'Requires online payments and Wompi credentials.';
+
+  @override
+  String get settingsPassRenewalCadence => 'Reminder days (e.g. 7,3,1)';
+
+  @override
+  String get settingsPassRenewalCadenceInvalid =>
+      'Use up to 5 numbers from 0 to 30 separated by commas';
+
+  @override
+  String get notifTypePassRenewalPaid => 'Pass renewed online';
+
+  @override
+  String get errorPassRenewalNotFound => 'Invalid renewal link';
+
+  @override
+  String get errorPassRenewalPaid => 'This pass was already renewed';
+
+  @override
+  String get errorPassRenewalExpired => 'The renewal link has expired';
+
+  @override
+  String get errorPassRenewalDisabled =>
+      'Online renewal is not enabled at this site';
+
+  @override
+  String get errorMissingOwnerPhone => 'The vehicle has no owner phone';
+
+  @override
+  String get errorPassAlreadyRenewed => 'The pass already has a renewal';
+
+  @override
+  String get errorPassNotFound => 'Pass not found';
 }

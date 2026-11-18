@@ -8,7 +8,9 @@ String? routeForNotification(AppNotification notification) {
       : null;
   return switch (notification.type) {
     'shift_closed' => '/shift',
-    'monthly_pass_expiring' || 'monthly_pass_renewed' => '/monthly-passes',
+    'monthly_pass_expiring' ||
+    'monthly_pass_renewed' ||
+    'pass_renewal_paid' => '/monthly-passes',
     'check_in' || 'check_out' || 'overstay' || 'online_payment' => historyRoute,
     'online_payment_review' => historyRoute,
     'public_reservation' ||

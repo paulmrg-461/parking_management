@@ -36,6 +36,10 @@ ParkingSettingsDto _$ParkingSettingsDtoFromJson(Map<String, dynamic> json) =>
           (json['online_payment_grace_minutes'] as num?)?.toInt() ?? 15,
       onlinePaymentMinAmount:
           (json['online_payment_min_amount'] as num?)?.toInt() ?? 1500,
+      passRenewalEnabled: json['pass_renewal_enabled'] as bool? ?? false,
+      passRenewalPaymentLinks:
+          json['pass_renewal_payment_links'] as bool? ?? false,
+      passRenewalCadence: json['pass_renewal_cadence'] as String? ?? '7,3,1',
       version: (json['version'] as num?)?.toInt() ?? 0,
     );
 
@@ -65,5 +69,8 @@ Map<String, dynamic> _$ParkingSettingsDtoToJson(ParkingSettingsDto instance) =>
       'online_payments_enabled': instance.onlinePaymentsEnabled,
       'online_payment_grace_minutes': instance.onlinePaymentGraceMinutes,
       'online_payment_min_amount': instance.onlinePaymentMinAmount,
+      'pass_renewal_enabled': instance.passRenewalEnabled,
+      'pass_renewal_payment_links': instance.passRenewalPaymentLinks,
+      'pass_renewal_cadence': instance.passRenewalCadence,
       'version': instance.version,
     };

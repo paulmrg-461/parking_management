@@ -52,6 +52,8 @@ while true; do
   run purge_audit_log
   run purge_whatsapp_messages
   run purge_cash_anomalies
+  # Pass renewal reminders (queued only when the lot opted in).
+  run queue_pass_renewal_reminders
   # Online payments: pending -> expired, then ask the gateway for anything the
   # webhook may have missed (both are no-ops without WOMPI_* credentials).
   run expire_payment_intents

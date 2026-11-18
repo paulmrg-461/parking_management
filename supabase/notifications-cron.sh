@@ -53,6 +53,9 @@ docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
   "select public.detect_cash_anomalies();" >/dev/null
 docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
   "select public.purge_cash_anomalies(365);" >/dev/null
+# Monthly pass renewal reminders (queued only when the lot opted in).
+docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
+  "select public.queue_pass_renewal_reminders();" >/dev/null
 # Online payments: expire stale intents, then reconcile with the gateway.
 docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
   "select public.expire_payment_intents();" >/dev/null

@@ -18,6 +18,10 @@ void main() {
     expect(routeForNotification(_n('monthly_pass_renewed')), '/monthly-passes');
   });
 
+  test('Success: a paid renewal opens the passes screen', () {
+    expect(routeForNotification(_n('pass_renewal_paid')), '/monthly-passes');
+  });
+
   test('Success: online payment alerts open the plate history', () {
     expect(
       routeForNotification(_n('online_payment', {'plate': 'ABC123'})),

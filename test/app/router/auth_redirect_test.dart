@@ -61,6 +61,15 @@ void main() {
       );
     });
 
+    test('Success: the renewal page needs no session and is not an operator route', () {
+      expect(authRedirect(const AuthUnauthenticated(), renewPath), isNull);
+      expect(
+        authRedirect(const AuthUnauthenticated(), '/renew?t=${'a' * 48}'),
+        isNull,
+      );
+      expect(canAccess(UserRole.operator, renewPath), isFalse);
+    });
+
     test('Security: the survey page is public (plate-keyed link)', () {
       expect(authRedirect(const AuthUnauthenticated(), feedbackPath), isNull);
       expect(

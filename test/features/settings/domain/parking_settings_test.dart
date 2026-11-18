@@ -18,4 +18,28 @@ void main() {
       0,
     );
   });
+
+  test('Success: pass renewal defaults off with the 7,3,1 cadence', () {
+    const settings = ParkingSettings();
+
+    expect(settings.passRenewalEnabled, isFalse);
+    expect(settings.passRenewalPaymentLinks, isFalse);
+    expect(settings.passRenewalCadence, '7,3,1');
+    expect(settings.toPayload()['pass_renewal_cadence'], '7,3,1');
+  });
+
+  test('Success: copyWith keeps the renewal switches', () {
+    const settings = ParkingSettings(
+      passRenewalEnabled: true,
+      passRenewalCadence: '10,5',
+    );
+
+    final updated = settings.copyWith(name: 'Otro');
+    expect(updated.passRenewalEnabled, isTrue);
+    expect(updated.passRenewalCadence, '10,5');
+    expect(
+      settings.copyWith(passRenewalPaymentLinks: true).passRenewalPaymentLinks,
+      isTrue,
+    );
+  });
 }

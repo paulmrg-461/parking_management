@@ -454,6 +454,9 @@ class ParkingSettingsAdapter extends TypeAdapter<ParkingSettings> {
       onlinePaymentMinAmount: fields[24] == null
           ? 1500
           : (fields[24] as num).toInt(),
+      passRenewalEnabled: fields[25] == null ? false : fields[25] as bool,
+      passRenewalPaymentLinks: fields[26] == null ? false : fields[26] as bool,
+      passRenewalCadence: fields[27] == null ? '7,3,1' : fields[27] as String,
       version: fields[21] == null ? 0 : (fields[21] as num).toInt(),
     );
   }
@@ -461,7 +464,7 @@ class ParkingSettingsAdapter extends TypeAdapter<ParkingSettings> {
   @override
   void write(BinaryWriter writer, ParkingSettings obj) {
     writer
-      ..writeByte(25)
+      ..writeByte(28)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
@@ -511,7 +514,13 @@ class ParkingSettingsAdapter extends TypeAdapter<ParkingSettings> {
       ..writeByte(23)
       ..write(obj.onlinePaymentGraceMinutes)
       ..writeByte(24)
-      ..write(obj.onlinePaymentMinAmount);
+      ..write(obj.onlinePaymentMinAmount)
+      ..writeByte(25)
+      ..write(obj.passRenewalEnabled)
+      ..writeByte(26)
+      ..write(obj.passRenewalPaymentLinks)
+      ..writeByte(27)
+      ..write(obj.passRenewalCadence);
   }
 
   @override

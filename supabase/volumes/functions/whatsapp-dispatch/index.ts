@@ -20,6 +20,9 @@
 //                              (body params: name, plate, lot)
 //   WHATSAPP_TEMPLATE_WAITLIST_OFFER default `waitlist_offer`
 //                              (body params: name, plate, deadline, lot, code)
+//   WHATSAPP_TEMPLATE_PASS_RENEWAL default `pass_renewal_link`
+//                              (body params: name, plate, date, amount;
+//                               URL button parameter: the renewal token)
 //
 // Meta only accepts business-initiated messages as approved templates, so the
 // queue stores a template name + positional parameters (never free text).
@@ -41,15 +44,61 @@ const TEMPLATES: Record<string, string> = {
     Deno.env.get('WHATSAPP_TEMPLATE_CANCELLED') ?? 'reservation_cancelled',
   waitlist_offer:
     Deno.env.get('WHATSAPP_TEMPLATE_WAITLIST_OFFER') ?? 'waitlist_offer',
+  pass_renewal_link:
+    Deno.env.get('WHATSAPP_TEMPLATE_PASS_RENEWAL') ?? 'pass_renewal_link',
 }
 
-type PendingMessage = {
+export type PendingMessage = {
   id: number
   to_phone: string
   template: string
   language: string
   params: string[]
   attempts: number
+  button_param?: string | null
+}
+
+// Exported for the tests: the payload (and the URL button) is pure data.
+export function buildMessagePayload(
+  message: PendingMessage,
+  templates: Record<string, string> = TEMPLATES,
+): { payload?: Record<string, unknown>; error?: string } {
+  const template = templates[message.template]
+  if (!template) {
+    return { error: `Unknown template: ${message.template}` }
+  }
+  const components: Record<string, unknown>[] = [
+    {
+      type: 'body',
+      parameters: (message.params ?? []).map((text) => ({
+        type: 'text',
+        text: String(text),
+      })),
+    },
+  ]
+  const button = (message.button_param ?? '').trim()
+  if (button) {
+    // The fixed base URL lives in the approved Meta template; the parameter
+    // is only the token after it.
+    components.push({
+      type: 'button',
+      sub_type: 'url',
+      index: '0',
+      parameters: [{ type: 'text', text: button }],
+    })
+  }
+  return {
+    payload: {
+      messaging_product: 'whatsapp',
+      to: message.to_phone,
+      type: 'template',
+      template: {
+        name: template,
+        language: { code: message.language || 'es' },
+        components,
+      },
+    },
+  }
 }
 
 const jsonHeaders = {
@@ -68,33 +117,16 @@ async function rest(path: string, init: RequestInit = {}) {
 }
 
 async function send(message: PendingMessage): Promise<{ ok: boolean; error?: string }> {
-  const template = TEMPLATES[message.template]
-  if (!template) {
-    return { ok: false, error: `Unknown template: ${message.template}` }
+  const { payload, error } = buildMessagePayload(message)
+  if (!payload) {
+    return { ok: false, error }
   }
   const response = await fetch(
     `https://graph.facebook.com/${API_VERSION}/${PHONE_ID}/messages`,
     {
       method: 'POST',
       headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        messaging_product: 'whatsapp',
-        to: message.to_phone,
-        type: 'template',
-        template: {
-          name: template,
-          language: { code: message.language || 'es' },
-          components: [
-            {
-              type: 'body',
-              parameters: (message.params ?? []).map((text) => ({
-                type: 'text',
-                text: String(text),
-              })),
-            },
-          ],
-        },
-      }),
+      body: JSON.stringify(payload),
     },
   )
   if (response.ok) return { ok: true }
@@ -103,7 +135,7 @@ async function send(message: PendingMessage): Promise<{ ok: boolean; error?: str
   return { ok: false, error: `${response.status}: ${body.slice(0, 300)}` }
 }
 
-Deno.serve(async (req) => {
+if (import.meta.main) Deno.serve(async (req) => {
   const started = Date.now()
   const done = (body: Record<string, unknown>, status = 200) => {
     console.log(
@@ -130,7 +162,8 @@ Deno.serve(async (req) => {
 
   const { response, body } = await rest(
     'whatsapp_messages?status=eq.pending&attempts=lt.3' +
-      '&select=id,to_phone,template,language,params,attempts&order=created_at&limit=50',
+      '&select=id,to_phone,template,language,params,button_param,attempts' +
+      '&order=created_at&limit=50',
   )
   if (!response.ok || !Array.isArray(body)) {
     return done({ configured: true, error: 'Could not read the queue' }, 500)

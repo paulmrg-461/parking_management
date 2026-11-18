@@ -47,6 +47,9 @@ erDiagram
   parking_lots ||--o{ payment_intents : "bills"
   parking_sessions ||--o{ payment_intents : "paid by"
   payment_intents ||--o{ payment_events : "confirmed by"
+
+  monthly_passes ||--o{ pass_renewal_offers : "offered by"
+  pass_renewal_offers ||--o| payment_intents : "paid by"
 ```
 
 ## 2. Tables
@@ -72,6 +75,7 @@ erDiagram
 | `parking_spot_events` | Maintenance history of a bay: status transition, optional reason, actor and timestamp; written by `save_parking_spot`, lot-scoped RLS. | yes |
 | `parking_settings` (`car_capacity`, `moto_capacity`, `key_capacity`) | Per-site branding (name, address, schedule, contacts, police quadrant, logo version/path) + `business_timezone`, `overstay_hours`, `lost_ticket_fee`, `evidence_retention_days`, online-payment switch/window/minimum. | yes |
 | `payment_intents` | Frozen amount for a gateway checkout: `reference` (random `PM-…`), `amount`, `currency` (COP only), `gateway` (`wompi`), `status` (`pending`/`approved`/`declined`/`voided`/`error`/`expired`), transaction id/method, `expires_at`. Written only by the service RPCs. | yes |
+| `pass_renewal_offers` | Token-keyed renewal offer (192-bit `token`, planned period/amount, `status` open/paid/expired/cancelled, `expires_at`, reminder counters, `renewal_pass_id`). The pass is created only when the offer is paid; one open offer per pass. | yes |
 | `payment_events` | Idempotent webhook log: `unique (gateway, gateway_transaction_id, gateway_status)` plus `outcome` (`applied`/`ignored`/`unknown_reference`/`mismatch`/`late_closed`) and the raw payload. Service role only (RLS on, no policy). | via intent |
 | `notifications` | Per-user inbox rows (type, title, body, data, read/pushed state, dedupe key). | optional |
 | `device_tokens` | FCM tokens per user/device. | no |
@@ -319,6 +323,17 @@ days).
 `online_settlement_amounts(gross, paid, paid_at, exit, grace)` is the pure
 grace-window rule (internal, immutable).
 
+**Monthly pass auto-renewal (`0115`–`0116`)**
+`queue_pass_renewal_reminders()` (cron) expires stale offers, deactivates
+ended parents with a child and queues at most one reminder per pass/window;
+`send_pass_renewal_link(pass)` (lot admin) queues the link now;
+`public_pass_renewal(token)` (anon) returns the masked offer;
+`create_pass_renewal_intent(token)` (service role; 5/hour);
+`settle_pass_renewal(intent)` (internal) creates the child pass and marks its
+charge `online`; `settle_payment_intent` delegates `kind = 'pass'`;
+`report_online_payments` adds `kind`/`pass_id`; `queue_whatsapp_message` is the
+internal dedupe-aware queue helper.
+
 ## 4. Access control (RLS)
 
 | Table | Read | Write |
@@ -332,10 +347,11 @@ grace-window rule (internal, immutable).
 | `shifts`, `cash_movements`, `shift_adjustments` | own shift or lot admin, active lot | RPCs |
 | `monthly_pass_payments`, `category_reservations` | active lot | RPCs |
 | `parking_settings` (`car_capacity`, `moto_capacity`, `key_capacity`) | active lot; anonymous only the first lot (login branding) | lot admins |
-| `whatsapp_messages` | admins | `enqueue_whatsapp_message` + the dispatcher |
+| `whatsapp_messages` | admins | `enqueue_whatsapp_message` / `queue_whatsapp_message` + the dispatcher |
 | `session_feedback` | active lot | only the public RPCs (no client write grant) |
 | `payment_intents` | lot admins of the active lot | service RPCs only (Edge Functions) |
 | `payment_events` | nobody (RLS on, no policy, no grant) | `apply_payment_event` / service role |
+| `pass_renewal_offers` | lot admins of the active lot | RPCs only (cron/admin/service) |
 | `notifications` | own rows, active lot (or global) | RPCs/triggers |
 | `audit_log` | platform admins | triggers and the `admin-users` Edge Function |
 | `device_tokens`, `web_push_subscriptions` | own rows | RPCs |
@@ -434,6 +450,15 @@ and the desk collects `charge - paid`. `check_out` stores
 `online`). `shift_totals` nets the online part out of the desk methods and adds
 `online_sales`; `expected_cash` never includes it. `report_online_payments`
 (lot admin) lists approved/voided intents of a business-date window.
+
+**Pass renewal.** An offer freezes the next period (`end + 1` through the
+month-aware end) and amount. `settle_pass_renewal` creates the child **after**
+the approval; when the expiry job renewed first, it marks that pending charge
+paid instead of creating a second pass, and a second approval of the same
+offer is `late_closed` plus an admin review. The new period starts at
+`greatest(offer.start, lot today)`: a late payment is not retroactive.
+Reminders are deduped by `(offer|pass, cadence window)` through
+`whatsapp_messages.dedupe_key`; the URL button parameter is the offer token.
 
 **Shifts.** Sales, cash movements and cash pass payments attach only to the
 actor's open shift (`closed_at is null`), locked `FOR SHARE`; `close_shift`

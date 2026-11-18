@@ -10,6 +10,7 @@ import 'package:parking_management/features/settings/application/branding_cubit.
 import 'package:parking_management/features/settings/domain/entities/parking_settings.dart';
 import 'package:parking_management/features/monthly_passes/domain/entities/monthly_pass.dart';
 import 'package:parking_management/features/monthly_passes/domain/entities/monthly_pass_payment.dart';
+import 'package:parking_management/features/monthly_passes/domain/entities/pass_renewal_offer_summary.dart';
 import 'package:parking_management/features/tariffs/domain/entities/tariff.dart';
 import 'package:parking_management/features/vehicles/domain/entities/vehicle.dart';
 
@@ -33,8 +34,13 @@ void main() {
     List<MonthlyPassPayment>? pending,
     List<Tariff>? tariffs,
     String? ownerName,
+    bool passRenewalLinks = false,
+    bool onlinePayments = false,
+    List<PassRenewalOfferSummary> offers = const [],
   }) async {
-    repository = FakeMonthlyPassRepository()..listError = listError;
+    repository = FakeMonthlyPassRepository()
+      ..listError = listError
+      ..offers = offers;
     if (passes != null) {
       repository.passes = passes;
     }
@@ -43,7 +49,12 @@ void main() {
     }
     final branding = BrandingCubit(
       FakeParkingSettingsRepository(
-        ParkingSettings(whatsappAuto: whatsappAuto),
+        ParkingSettings(
+          whatsappAuto: whatsappAuto,
+          passRenewalEnabled: passRenewalLinks,
+          passRenewalPaymentLinks: passRenewalLinks,
+          onlinePaymentsEnabled: onlinePayments || passRenewalLinks,
+        ),
       ),
     );
     addTearDown(branding.close);
@@ -366,5 +377,63 @@ void main() {
     await tester.tap(find.text('Agregar mensualidad'));
     await tester.pumpAndSettle();
     expect(find.byType(AlertDialog), findsOneWidget);
+  });
+
+  testWidgets('Success: an open offer shows the link-sent chip', (tester) async {
+    await pumpPage(
+      tester,
+      ownerPhone: '3001112233',
+      passRenewalLinks: true,
+      offers: const [
+        PassRenewalOfferSummary(monthlyPassId: 1, status: 'open'),
+      ],
+    );
+
+    expect(find.text('Enlace enviado'), findsOneWidget);
+  });
+
+  testWidgets('Success: a paid offer shows the renewed-online chip', (
+    tester,
+  ) async {
+    await pumpPage(
+      tester,
+      ownerPhone: '3001112233',
+      passRenewalLinks: true,
+      offers: const [
+        PassRenewalOfferSummary(monthlyPassId: 1, status: 'paid'),
+      ],
+    );
+
+    expect(find.text('Renovada en línea'), findsOneWidget);
+  });
+
+  testWidgets('Security: the renewal action is hidden without a phone', (
+    tester,
+  ) async {
+    await pumpPage(tester, passRenewalLinks: true);
+
+    expect(find.byIcon(Icons.link), findsNothing);
+  });
+
+  testWidgets('Security: the renewal action is hidden when links are off', (
+    tester,
+  ) async {
+    await pumpPage(tester, ownerPhone: '3001112233', whatsappAuto: true);
+
+    expect(find.byIcon(Icons.link), findsNothing);
+  });
+
+  testWidgets('Success: sending the link queues it on WhatsApp', (tester) async {
+    await pumpPage(
+      tester,
+      ownerPhone: '3001112233',
+      passRenewalLinks: true,
+    );
+
+    await tester.tap(find.byIcon(Icons.link));
+    await tester.pumpAndSettle();
+
+    expect(repository.renewalLinks, [1]);
+    expect(find.text('Enlace en cola de WhatsApp'), findsOneWidget);
   });
 }

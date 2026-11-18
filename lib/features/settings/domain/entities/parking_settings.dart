@@ -29,6 +29,9 @@ class ParkingSettings extends Equatable {
     this.onlinePaymentsEnabled = false,
     this.onlinePaymentGraceMinutes = 15,
     this.onlinePaymentMinAmount = 1500,
+    this.passRenewalEnabled = false,
+    this.passRenewalPaymentLinks = false,
+    this.passRenewalCadence = '7,3,1',
     this.version = 0,
   });
 
@@ -97,6 +100,15 @@ class ParkingSettings extends Equatable {
   /// Smallest amount accepted online (minor units); below it the desk charges.
   final int onlinePaymentMinAmount;
 
+  /// WhatsApp reminders before a monthly pass ends.
+  final bool passRenewalEnabled;
+
+  /// The reminder carries a token-keyed renewal link with online payment.
+  final bool passRenewalPaymentLinks;
+
+  /// Comma-separated reminder days (e.g. `7,3,1`), validated server-side.
+  final String passRenewalCadence;
+
   /// Row version from the server (`0` when unknown); an edit sends it so a
   /// concurrent change is a conflict, not an overwrite.
   final int version;
@@ -129,6 +141,9 @@ class ParkingSettings extends Equatable {
     bool? onlinePaymentsEnabled,
     int? onlinePaymentGraceMinutes,
     int? onlinePaymentMinAmount,
+    bool? passRenewalEnabled,
+    bool? passRenewalPaymentLinks,
+    String? passRenewalCadence,
     int? version,
   }) => ParkingSettings(
     name: name ?? this.name,
@@ -159,6 +174,10 @@ class ParkingSettings extends Equatable {
         onlinePaymentGraceMinutes ?? this.onlinePaymentGraceMinutes,
     onlinePaymentMinAmount:
         onlinePaymentMinAmount ?? this.onlinePaymentMinAmount,
+    passRenewalEnabled: passRenewalEnabled ?? this.passRenewalEnabled,
+    passRenewalPaymentLinks:
+        passRenewalPaymentLinks ?? this.passRenewalPaymentLinks,
+    passRenewalCadence: passRenewalCadence ?? this.passRenewalCadence,
     version: version ?? this.version,
   );
 
@@ -185,6 +204,9 @@ class ParkingSettings extends Equatable {
     'online_payments_enabled': onlinePaymentsEnabled,
     'online_payment_grace_minutes': onlinePaymentGraceMinutes,
     'online_payment_min_amount': onlinePaymentMinAmount,
+    'pass_renewal_enabled': passRenewalEnabled,
+    'pass_renewal_payment_links': passRenewalPaymentLinks,
+    'pass_renewal_cadence': passRenewalCadence,
   };
 
   @override
@@ -213,6 +235,9 @@ class ParkingSettings extends Equatable {
     onlinePaymentsEnabled,
     onlinePaymentGraceMinutes,
     onlinePaymentMinAmount,
+    passRenewalEnabled,
+    passRenewalPaymentLinks,
+    passRenewalCadence,
     version,
   ];
 }

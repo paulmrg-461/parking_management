@@ -4782,4 +4782,99 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get checkOutConfirmExit => 'Confirmar salida';
+
+  @override
+  String get passRenewalTitle => 'Renueva tu mensualidad';
+
+  @override
+  String passRenewalPlate(String plate) {
+    return 'Vehículo $plate';
+  }
+
+  @override
+  String passRenewalPeriod(String from, String to) {
+    return 'Nuevo periodo: $from a $to';
+  }
+
+  @override
+  String get passRenewalAmount => 'Valor';
+
+  @override
+  String get passRenewalPay => 'Pagar y renovar';
+
+  @override
+  String get passRenewalChecking => 'Confirmando tu pago…';
+
+  @override
+  String passRenewalPaid(String date) {
+    return 'Mensualidad renovada hasta el $date.';
+  }
+
+  @override
+  String get passRenewalUnavailable =>
+      'Este enlace ya no está disponible. Comunícate con el parqueadero.';
+
+  @override
+  String get passRenewalPayAtDesk =>
+      'El pago en línea no está disponible por ahora; renueva en caja.';
+
+  @override
+  String get passRenewalLinkSent => 'Enlace enviado';
+
+  @override
+  String get passRenewalRenewedOnline => 'Renovada en línea';
+
+  @override
+  String get passRenewalSendLink => 'Enviar enlace de renovación';
+
+  @override
+  String get passRenewalLinkQueued => 'Enlace en cola de WhatsApp';
+
+  @override
+  String get settingsPassRenewal => 'Renovación de mensualidades';
+
+  @override
+  String get settingsPassRenewalHint =>
+      'Envía recordatorios por WhatsApp antes de que venza la mensualidad.';
+
+  @override
+  String get settingsPassRenewalLinks => 'Incluir enlace de pago';
+
+  @override
+  String get settingsPassRenewalLinksHint =>
+      'Requiere pagos en línea activos y credenciales Wompi.';
+
+  @override
+  String get settingsPassRenewalCadence => 'Días de aviso (ej. 7,3,1)';
+
+  @override
+  String get settingsPassRenewalCadenceInvalid =>
+      'Usa hasta 5 números entre 0 y 30 separados por comas';
+
+  @override
+  String get notifTypePassRenewalPaid => 'Mensualidad renovada en línea';
+
+  @override
+  String get errorPassRenewalNotFound => 'Enlace de renovación no válido';
+
+  @override
+  String get errorPassRenewalPaid => 'Esta mensualidad ya fue renovada';
+
+  @override
+  String get errorPassRenewalExpired => 'El enlace de renovación venció';
+
+  @override
+  String get errorPassRenewalDisabled =>
+      'La renovación en línea no está activa en esta sede';
+
+  @override
+  String get errorMissingOwnerPhone =>
+      'El vehículo no tiene teléfono del propietario';
+
+  @override
+  String get errorPassAlreadyRenewed =>
+      'La mensualidad ya tiene una renovación';
+
+  @override
+  String get errorPassNotFound => 'Mensualidad no encontrada';
 }

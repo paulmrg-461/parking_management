@@ -127,7 +127,7 @@ types:
         index: 7
   ParkingSettings:
     typeId: 9
-    nextIndex: 25
+    nextIndex: 28
     fields:
       name:
         index: 0
@@ -179,3 +179,9 @@ types:
         index: 23
       onlinePaymentMinAmount:
         index: 24
+      passRenewalEnabled:
+        index: 25
+      passRenewalPaymentLinks:
+        index: 26
+      passRenewalCadence:
+        index: 27

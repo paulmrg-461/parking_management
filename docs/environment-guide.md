@@ -369,3 +369,15 @@ Cuando necesites acceso fuera de tu red, varios operadores o respaldo serio:
 
 Para detalles técnicos: [`architecture.md`](architecture.md),
 [`infrastructure.md`](infrastructure.md), [`database.md`](database.md).
+
+## Renovación automática de mensualidades (WhatsApp)
+
+Activa `pass_renewal_enabled` en una sede para enviar recordatorios antes de
+que venza una mensualidad (cadencia `7,3,1` por defecto). Enciende
+`pass_renewal_payment_links` solo cuando los pagos en línea (Wompi) funcionen:
+el recordatorio incluye un enlace `/renew?t=...` y el cliente paga desde el
+celular. La plantilla de Meta es `pass_renewal_link` con cuerpo `{{1}}` nombre,
+`{{2}}` placa, `{{3}}` fecha, `{{4}}` valor y un botón URL con base
+`https://<APP_URL>/renew?t=`. Sin la plantilla aprobada los mensajes quedan en
+cola y se ven en `/diagnostics`; el aviso interno a los administradores sigue
+funcionando.

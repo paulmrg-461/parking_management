@@ -67,6 +67,34 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - Android release build: R8 keep rules for the optional ML Kit scripts.
 
 ### Added
+- **Monthly pass auto-renewal** (`0115`–`0116`,
+  `openspec/changes/add-pass-auto-renewal`). A pass can be renewed from a
+  WhatsApp link before it ends, without the desk:
+  - Per-site switches: reminders (`pass_renewal_enabled`), payment links
+    (`pass_renewal_payment_links`, only with online payments and COP) and the
+    reminder cadence as text (`pass_renewal_cadence`, default `7,3,1`; checked
+    by a regex, one message per pass and window).
+  - `pass_renewal_offers` holds the planned next period and amount behind a
+    192-bit token; the pass is created **only after** the payment is approved
+    (an early pass would let the customer park free). The reminder job also
+    expires stale offers and deactivates ended parents that already have a
+    child (which `renew_monthly_passes` never revisits).
+  - Public page `/renew?t=<token>`: masked plate, period, amount, pay button
+    (or "renew at the desk" when links are off), skeleton/empty/error states
+    and polling until the webhook marks it paid. The token only exposes the
+    masked plate, dates and amount.
+  - `pass-renewal-intent` Edge Function (service role) freezes the offer
+    amount; `settle_pass_renewal` creates the child pass, marks its charge
+    `online` (no shift, no cash) and notifies the lot. A second approval, a
+    late approval after a cash renewal or a pass-covered payment raise an
+    `online_payment_review` notification instead of double-charging.
+  - `whatsapp_messages` gains `button_param` and a unique `dedupe_key`; the
+    dispatcher appends the URL button (`pass_renewal_link`) when present. The
+    folder is versioned in git now.
+  - Admin list: "Enlace enviado" / "Renovada en línea" chips and a
+    "Send renewal link" action (hidden without an owner phone or with the
+    switch off); the online report lists pass renewals with `kind = 'pass'`.
+
 - **Online payments with Wompi** (`0112`–`0114`,
   `openspec/changes/add-online-payments`). The customer can pay from the
   receipt QR and the desk closes the session without collecting cash:
@@ -1213,6 +1241,7 @@ Migrations are append-only and applied in filename order by `supabase-migrate`.
 | `0097`–`0103` | Reservation listing/reminders, reports, branding cover, period comparison, row versions, waitlist, public booking protection |
 | `0104`–`0111` | Pass lot scope, occupancy forecast, cash anomalies, customer feedback |
 | `0112`–`0114` | Online payments: settings/columns, `payment_intents`/`payment_events`, settlement rule, service RPCs, check-out/preview/summary/shift/report integration |
+| `0115`–`0116` | Pass auto-renewal: settings/`pass_renewal_offers`/WhatsApp columns, reminder job, public page, renewal settlement |
 
 ## Verification snapshot
 

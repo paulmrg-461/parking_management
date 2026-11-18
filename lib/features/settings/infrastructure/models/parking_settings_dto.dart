@@ -31,6 +31,9 @@ class ParkingSettingsDto {
     this.onlinePaymentsEnabled = false,
     this.onlinePaymentGraceMinutes = 15,
     this.onlinePaymentMinAmount = 1500,
+    this.passRenewalEnabled = false,
+    this.passRenewalPaymentLinks = false,
+    this.passRenewalCadence = '7,3,1',
     this.version = 0,
   });
 
@@ -69,6 +72,15 @@ class ParkingSettingsDto {
 
   @JsonKey(name: 'online_payment_min_amount', defaultValue: 1500)
   final int onlinePaymentMinAmount;
+
+  @JsonKey(name: 'pass_renewal_enabled', defaultValue: false)
+  final bool passRenewalEnabled;
+
+  @JsonKey(name: 'pass_renewal_payment_links', defaultValue: false)
+  final bool passRenewalPaymentLinks;
+
+  @JsonKey(name: 'pass_renewal_cadence', defaultValue: '7,3,1')
+  final String passRenewalCadence;
   final int version;
 
   Map<String, dynamic> toJson() => _$ParkingSettingsDtoToJson(this);
@@ -98,6 +110,9 @@ class ParkingSettingsDto {
     onlinePaymentsEnabled: onlinePaymentsEnabled,
     onlinePaymentGraceMinutes: onlinePaymentGraceMinutes,
     onlinePaymentMinAmount: onlinePaymentMinAmount,
+    passRenewalEnabled: passRenewalEnabled,
+    passRenewalPaymentLinks: passRenewalPaymentLinks,
+    passRenewalCadence: passRenewalCadence,
     version: version,
   );
 }

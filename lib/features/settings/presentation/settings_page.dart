@@ -70,14 +70,18 @@ class _SettingsPageState extends State<SettingsPage> {
   late final TextEditingController _minVersion;
   late final TextEditingController _onlineGrace;
   late final TextEditingController _onlineMin;
+  late final TextEditingController _passCadence;
   String _currency = 'COP';
   bool _onlineEnabled = false;
+  bool _passRenewalEnabled = false;
+  bool _passRenewalLinks = false;
   final _identityKey = GlobalKey();
   final _emergencyKey = GlobalKey();
   final _spacesKey = GlobalKey();
   final _evidenceKey = GlobalKey();
   final _messagingKey = GlobalKey();
   final _onlineKey = GlobalKey();
+  final _passRenewalKey = GlobalKey();
   final _preferencesKey = GlobalKey();
   final _legalKey = GlobalKey();
   var _seeded = false;
@@ -109,6 +113,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _minVersion = TextEditingController();
     _onlineGrace = TextEditingController();
     _onlineMin = TextEditingController();
+    _passCadence = TextEditingController();
     unawaited(context.read<SettingsCubit>().load());
     unawaited(_loadSpotCounts());
   }
@@ -133,6 +138,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _minVersion.dispose();
     _onlineGrace.dispose();
     _onlineMin.dispose();
+    _passCadence.dispose();
     super.dispose();
   }
 
@@ -223,6 +229,9 @@ class _SettingsPageState extends State<SettingsPage> {
     _onlineGrace.text,
     _onlineMin.text,
     '$_onlineEnabled',
+    _passCadence.text,
+    '$_passRenewalEnabled',
+    '$_passRenewalLinks',
   ];
 
   bool get _dirty => _baseline != null && !listEquals(_snapshot(), _baseline!);
@@ -271,6 +280,9 @@ class _SettingsPageState extends State<SettingsPage> {
     _onlineGrace.text = settings.onlinePaymentGraceMinutes.toString();
     _onlineMin.text = settings.onlinePaymentMinAmount.toString();
     _onlineEnabled = settings.onlinePaymentsEnabled;
+    _passCadence.text = settings.passRenewalCadence;
+    _passRenewalEnabled = settings.passRenewalEnabled;
+    _passRenewalLinks = settings.passRenewalPaymentLinks;
     _currency = settings.currency;
     _whatsappAuto = settings.whatsappAuto;
     _baseline = _snapshot();
@@ -588,6 +600,48 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const SizedBox(height: Space.lg),
           SectionHeader(
+            key: _passRenewalKey,
+            icon: Icons.autorenew,
+            title: l10n.settingsPassRenewal,
+          ),
+          SwitchListTile(
+            key: const Key('settings_pass_renewal_enabled'),
+            contentPadding: EdgeInsets.zero,
+            value: _passRenewalEnabled,
+            onChanged: (value) => setState(() {
+              _passRenewalEnabled = value;
+              if (!value) {
+                _passRenewalLinks = false;
+              }
+            }),
+            title: Text(l10n.settingsPassRenewal),
+            subtitle: Text(l10n.settingsPassRenewalHint),
+          ),
+          SwitchListTile(
+            key: const Key('settings_pass_renewal_links'),
+            contentPadding: EdgeInsets.zero,
+            value: _passRenewalLinks,
+            onChanged: _passRenewalEnabled &&
+                    _onlineEnabled &&
+                    _currency == 'COP'
+                ? (value) => setState(() => _passRenewalLinks = value)
+                : null,
+            title: Text(l10n.settingsPassRenewalLinks),
+            subtitle: Text(l10n.settingsPassRenewalLinksHint),
+          ),
+          const SizedBox(height: Space.sm),
+          TextFormField(
+            key: const Key('settings_pass_cadence'),
+            controller: _passCadence,
+            enabled: _passRenewalEnabled,
+            keyboardType: TextInputType.text,
+            decoration: InputDecoration(
+              labelText: l10n.settingsPassRenewalCadence,
+            ),
+            validator: _passCadenceValidator,
+          ),
+          const SizedBox(height: Space.lg),
+          SectionHeader(
             key: _preferencesKey,
             icon: Icons.tune,
             title: l10n.settingsSectionPreferences,
@@ -758,6 +812,11 @@ class _SettingsPageState extends State<SettingsPage> {
       (Icons.photo_camera_outlined, l10n.settingsSectionEvidence, _evidenceKey),
       (Icons.chat_outlined, l10n.settingsSectionMessaging, _messagingKey),
       (Icons.qr_code_2_outlined, l10n.settingsOnlinePayments, _onlineKey),
+      (
+        Icons.autorenew,
+        l10n.settingsPassRenewal,
+        _passRenewalKey,
+      ),
       (Icons.tune, l10n.settingsSectionPreferences, _preferencesKey),
       (Icons.gavel_outlined, l10n.settingsSectionLegal, _legalKey),
     ];
@@ -961,6 +1020,9 @@ class _SettingsPageState extends State<SettingsPage> {
         onlinePaymentGraceMinutes: int.tryParse(_onlineGrace.text.trim()) ?? 15,
         onlinePaymentMinAmount:
             Money.parse(_onlineMin.text.trim()) ?? 1500,
+        passRenewalEnabled: _passRenewalEnabled,
+        passRenewalPaymentLinks: _passRenewalLinks,
+        passRenewalCadence: _passCadence.text.trim(),
       ),
     );
   }
@@ -977,6 +1039,20 @@ class _SettingsPageState extends State<SettingsPage> {
       return context.l10n.settingsOutOfServiceTooMany;
     }
     return null;
+  }
+
+  String? _passCadenceValidator(String? value) {
+    final text = (value ?? '').trim();
+    if (text.isEmpty) {
+      return null;
+    }
+    final parts = text.split(',');
+    final valid = parts.length <= 5 &&
+        parts.every((part) {
+          final days = int.tryParse(part);
+          return days != null && days >= 0 && days <= 30;
+        });
+    return valid ? null : context.l10n.settingsPassRenewalCadenceInvalid;
   }
 
   String? _emergencyPhone(String? value) {

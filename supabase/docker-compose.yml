@@ -484,6 +484,7 @@ services:
       WHATSAPP_TEMPLATE_REMINDER: ${WHATSAPP_TEMPLATE_REMINDER:-reservation_reminder}
       WHATSAPP_TEMPLATE_CANCELLED: ${WHATSAPP_TEMPLATE_CANCELLED:-reservation_cancelled}
       WHATSAPP_TEMPLATE_WAITLIST_OFFER: ${WHATSAPP_TEMPLATE_WAITLIST_OFFER:-waitlist_offer}
+      WHATSAPP_TEMPLATE_PASS_RENEWAL: ${WHATSAPP_TEMPLATE_PASS_RENEWAL:-pass_renewal_link}
       # Optional: Wompi online payments. Empty keeps the payment functions
       # inert ({message: "PaymentsNotConfiguredError"} / {configured:false}) and
       # the lot switch refuses intents, so the system behaves as today.

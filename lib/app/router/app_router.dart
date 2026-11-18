@@ -35,6 +35,8 @@ import '../../features/help/presentation/help_page.dart';
 import '../../features/preferences/presentation/preferences_page.dart';
 import '../../features/evidence/presentation/public_evidence_page.dart';
 import '../../features/online_payments/application/online_payment_cubit.dart';
+import '../../features/pass_renewal/application/pass_renewal_cubit.dart';
+import '../../features/pass_renewal/presentation/pass_renewal_page.dart';
 import '../../features/policies/application/policies_cubit.dart';
 import '../../features/policies/presentation/policies_page.dart';
 import '../../features/records/application/records_cubit.dart';
@@ -141,6 +143,13 @@ GoRouter buildRouter(
           plate: state.uri.queryParameters['plate'],
           payReference: state.uri.queryParameters['pay'],
         ),
+      ),
+    ),
+    GoRoute(
+      path: renewPath,
+      builder: (context, state) => BlocProvider<PassRenewalCubit>(
+        create: (_) => serviceLocator<PassRenewalCubit>(),
+        child: PassRenewalPage(token: state.uri.queryParameters['t']),
       ),
     ),
     GoRoute(

@@ -26,6 +26,7 @@ import 'package:parking_management/features/diagnostics/application/diagnostics_
 import 'package:parking_management/features/evidence/application/evidence_cubit.dart';
 import 'package:parking_management/features/home/application/dashboard_cubit.dart';
 import 'package:parking_management/features/online_payments/application/online_payment_cubit.dart';
+import 'package:parking_management/features/pass_renewal/application/pass_renewal_cubit.dart';
 import 'package:parking_management/features/lots/application/lots_cubit.dart';
 import 'package:parking_management/features/plate_scanning/domain/repositories/plate_image_capture.dart';
 import 'package:parking_management/features/notifications/application/notifications_cubit.dart';
@@ -43,6 +44,7 @@ import 'fake_evidence_repository.dart';
 import 'fake_key_value_store.dart';
 import 'fake_notification_repository.dart';
 import 'fake_online_payment_repository.dart';
+import 'fake_pass_renewal_repository.dart';
 import 'fake_reservation_repository.dart';
 import 'fake_settings_repository.dart';
 import 'fake_lots_repository.dart';
@@ -133,6 +135,10 @@ Future<AuthCubit> pumpApp(
     ..registerFactory<EvidenceCubit>(() => EvidenceCubit(FakeEvidenceRepository()))
     ..registerFactory<OnlinePaymentCubit>(
       () => OnlinePaymentCubit(FakeOnlinePaymentRepository()),
+    )
+    // /renew is public and token-keyed.
+    ..registerFactory<PassRenewalCubit>(
+      () => PassRenewalCubit(FakePassRenewalRepository(offer: sampleOffer())),
     );
   addTearDown(serviceLocator.reset);
   final syncOutbox = outbox ?? FakeSyncOutbox();

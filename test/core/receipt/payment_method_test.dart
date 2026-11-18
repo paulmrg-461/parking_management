@@ -49,4 +49,23 @@ void main() {
       expect(en.failure(failure), isNot(en.errorUnknown), reason: code);
     }
   });
+
+  test('Success: the pass renewal codes are localized in both locales', () {
+    const codes = [
+      'PassRenewalNotFoundError',
+      'PassRenewalPaidError',
+      'PassRenewalExpiredError',
+      'PassRenewalDisabledError',
+      'MissingOwnerPhoneError',
+      'PassAlreadyRenewedError',
+      'PassNotFoundError',
+    ];
+    for (final code in codes) {
+      final failure = mapSupabaseError(
+        sb.PostgrestException(message: code, code: 'P0001'),
+      );
+      expect(es.failure(failure), isNot(es.errorUnknown), reason: code);
+      expect(en.failure(failure), isNot(en.errorUnknown), reason: code);
+    }
+  });
 }

@@ -8311,6 +8311,168 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Confirmar salida'**
   String get checkOutConfirmExit;
+
+  /// No description provided for @passRenewalTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Renueva tu mensualidad'**
+  String get passRenewalTitle;
+
+  /// No description provided for @passRenewalPlate.
+  ///
+  /// In es, this message translates to:
+  /// **'Vehículo {plate}'**
+  String passRenewalPlate(String plate);
+
+  /// No description provided for @passRenewalPeriod.
+  ///
+  /// In es, this message translates to:
+  /// **'Nuevo periodo: {from} a {to}'**
+  String passRenewalPeriod(String from, String to);
+
+  /// No description provided for @passRenewalAmount.
+  ///
+  /// In es, this message translates to:
+  /// **'Valor'**
+  String get passRenewalAmount;
+
+  /// No description provided for @passRenewalPay.
+  ///
+  /// In es, this message translates to:
+  /// **'Pagar y renovar'**
+  String get passRenewalPay;
+
+  /// No description provided for @passRenewalChecking.
+  ///
+  /// In es, this message translates to:
+  /// **'Confirmando tu pago…'**
+  String get passRenewalChecking;
+
+  /// No description provided for @passRenewalPaid.
+  ///
+  /// In es, this message translates to:
+  /// **'Mensualidad renovada hasta el {date}.'**
+  String passRenewalPaid(String date);
+
+  /// No description provided for @passRenewalUnavailable.
+  ///
+  /// In es, this message translates to:
+  /// **'Este enlace ya no está disponible. Comunícate con el parqueadero.'**
+  String get passRenewalUnavailable;
+
+  /// No description provided for @passRenewalPayAtDesk.
+  ///
+  /// In es, this message translates to:
+  /// **'El pago en línea no está disponible por ahora; renueva en caja.'**
+  String get passRenewalPayAtDesk;
+
+  /// No description provided for @passRenewalLinkSent.
+  ///
+  /// In es, this message translates to:
+  /// **'Enlace enviado'**
+  String get passRenewalLinkSent;
+
+  /// No description provided for @passRenewalRenewedOnline.
+  ///
+  /// In es, this message translates to:
+  /// **'Renovada en línea'**
+  String get passRenewalRenewedOnline;
+
+  /// No description provided for @passRenewalSendLink.
+  ///
+  /// In es, this message translates to:
+  /// **'Enviar enlace de renovación'**
+  String get passRenewalSendLink;
+
+  /// No description provided for @passRenewalLinkQueued.
+  ///
+  /// In es, this message translates to:
+  /// **'Enlace en cola de WhatsApp'**
+  String get passRenewalLinkQueued;
+
+  /// No description provided for @settingsPassRenewal.
+  ///
+  /// In es, this message translates to:
+  /// **'Renovación de mensualidades'**
+  String get settingsPassRenewal;
+
+  /// No description provided for @settingsPassRenewalHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Envía recordatorios por WhatsApp antes de que venza la mensualidad.'**
+  String get settingsPassRenewalHint;
+
+  /// No description provided for @settingsPassRenewalLinks.
+  ///
+  /// In es, this message translates to:
+  /// **'Incluir enlace de pago'**
+  String get settingsPassRenewalLinks;
+
+  /// No description provided for @settingsPassRenewalLinksHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Requiere pagos en línea activos y credenciales Wompi.'**
+  String get settingsPassRenewalLinksHint;
+
+  /// No description provided for @settingsPassRenewalCadence.
+  ///
+  /// In es, this message translates to:
+  /// **'Días de aviso (ej. 7,3,1)'**
+  String get settingsPassRenewalCadence;
+
+  /// No description provided for @settingsPassRenewalCadenceInvalid.
+  ///
+  /// In es, this message translates to:
+  /// **'Usa hasta 5 números entre 0 y 30 separados por comas'**
+  String get settingsPassRenewalCadenceInvalid;
+
+  /// No description provided for @notifTypePassRenewalPaid.
+  ///
+  /// In es, this message translates to:
+  /// **'Mensualidad renovada en línea'**
+  String get notifTypePassRenewalPaid;
+
+  /// No description provided for @errorPassRenewalNotFound.
+  ///
+  /// In es, this message translates to:
+  /// **'Enlace de renovación no válido'**
+  String get errorPassRenewalNotFound;
+
+  /// No description provided for @errorPassRenewalPaid.
+  ///
+  /// In es, this message translates to:
+  /// **'Esta mensualidad ya fue renovada'**
+  String get errorPassRenewalPaid;
+
+  /// No description provided for @errorPassRenewalExpired.
+  ///
+  /// In es, this message translates to:
+  /// **'El enlace de renovación venció'**
+  String get errorPassRenewalExpired;
+
+  /// No description provided for @errorPassRenewalDisabled.
+  ///
+  /// In es, this message translates to:
+  /// **'La renovación en línea no está activa en esta sede'**
+  String get errorPassRenewalDisabled;
+
+  /// No description provided for @errorMissingOwnerPhone.
+  ///
+  /// In es, this message translates to:
+  /// **'El vehículo no tiene teléfono del propietario'**
+  String get errorMissingOwnerPhone;
+
+  /// No description provided for @errorPassAlreadyRenewed.
+  ///
+  /// In es, this message translates to:
+  /// **'La mensualidad ya tiene una renovación'**
+  String get errorPassAlreadyRenewed;
+
+  /// No description provided for @errorPassNotFound.
+  ///
+  /// In es, this message translates to:
+  /// **'Mensualidad no encontrada'**
+  String get errorPassNotFound;
 }
 
 class _AppLocalizationsDelegate
