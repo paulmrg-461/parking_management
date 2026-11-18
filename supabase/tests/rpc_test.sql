@@ -10106,6 +10106,1101 @@ begin
     end if;
 end $$;
 
+-- ---------------------------------------------------------------------------
+-- merchants: fixtures (own category with the design's tariffs)
+-- ---------------------------------------------------------------------------
+insert into public.categories (lot_id, name, capacity)
+values (1, 'merchant', 0)
+returning id;
+do $$
+begin
+    perform set_config('app.merchant_cat', (
+        select id::text from public.categories
+         where lot_id = 1 and name = 'merchant'
+    ), true);
+end $$;
+
+insert into public.tariffs (category_id, lot_id, type, amount, active, start_time, end_time)
+select current_setting('app.merchant_cat')::integer, 1, 'hourly', 3000, true, null, null;
+insert into public.tariffs (category_id, lot_id, type, amount, active, start_time, end_time)
+select current_setting('app.merchant_cat')::integer, 1, 'nightly', 2000, true, '22:00', '06:00';
+insert into public.tariffs (category_id, lot_id, type, amount, active, start_time, end_time)
+select current_setting('app.merchant_cat')::integer, 1, 'daily', 20000, true, null, null;
+update public.parking_settings set lost_ticket_fee = 15000 where lot_id = 1;
+
+insert into public.vehicles (plate, category_id)
+select 'MER' || lpad(n::text, 3, '0'), current_setting('app.merchant_cat')::integer
+  from generate_series(1, 12) as n;
+
+-- F1: 09:00 -> 11:30 local yesterday (3 billable hours = 9000).
+insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+select v.id, 1, 1,
+       (((current_date - 1) + time '09:00') at time zone 'America/Bogota'),
+       'open'
+  from public.vehicles v where v.plate = 'MER001';
+-- F2: 23:00 -> 02:00 (all night, 6000).
+insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+select v.id, 1, 1,
+       (((current_date - 2) + time '23:00') at time zone 'America/Bogota'),
+       'open'
+  from public.vehicles v where v.plate = 'MER002';
+-- F3: a full day (daily cap).
+insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+select v.id, 1, 1,
+       (((current_date - 2) + time '08:00') at time zone 'America/Bogota'),
+       'open'
+  from public.vehicles v where v.plate = 'MER003';
+
+-- Every MER vehicle gets an open session: the checkout/validation tests use
+-- them, several get a merchant validation through the public page.
+insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+select v.id, 1, 1, now() - interval '2 hours', 'open'
+  from public.vehicles v
+ where v.plate in ('MER004','MER005','MER006','MER007','MER008','MER009',
+                   'MER010','MER011','MER012');
+
+do $$
+declare
+    plates text[] := array['MER001','MER002','MER003','MER004','MER005','MER006',
+                          'MER007','MER008','MER009','MER010','MER011','MER012'];
+    plate_value text;
+begin
+    foreach plate_value in array plates loop
+        perform set_config('app.mer_' || plate_value, (
+            select s.id::text from public.parking_sessions s
+              join public.vehicles v on v.id = s.vehicle_id
+             where v.plate = plate_value
+        ), true);
+    end loop;
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- merchants: schema and credentials
+-- ---------------------------------------------------------------------------
+-- merchants: defaults
+do $$
+declare
+    settings public.parking_settings%rowtype;
+begin
+    select * into settings from public.parking_settings where lot_id = 1;
+    if settings.merchant_max_per_session <> 1 then
+        raise exception 'merchant_max_per_session does not default to 1';
+    end if;
+end $$;
+
+-- merchants: constraints
+do $$
+begin
+    begin
+        insert into public.merchants (lot_id, name, benefit_kind, benefit_value)
+        values (1, 'Bad pct', 'percentage', 101);
+        raise exception 'a 101 percent benefit was accepted';
+    exception when check_violation then null;
+    end;
+    begin
+        insert into public.merchants (lot_id, name, benefit_kind, benefit_value)
+        values (1, 'Bad minutes', 'free_minutes', 0);
+        raise exception '0 free minutes was accepted';
+    exception when check_violation then null;
+    end;
+    begin
+        insert into public.merchants (lot_id, name, benefit_kind, benefit_value, billing_mode)
+        values (1, 'Bad billing', 'percentage', 10, 'free');
+        raise exception 'an unknown billing mode was accepted';
+    exception when check_violation then null;
+    end;
+    begin
+        insert into public.merchants (lot_id, name, benefit_kind, benefit_value, daily_cap)
+        values (1, 'Bad cap', 'percentage', 10, 0);
+        raise exception 'a daily cap of 0 was accepted';
+    exception when check_violation then null;
+    end;
+end $$;
+
+-- merchants: create returns credentials once
+do $$
+declare
+    result jsonb;
+    saved_id integer;
+    stored public.merchant_credentials%rowtype;
+begin
+    result := public.save_merchant('Cafe Uno', 'percentage', 10, null,
+        'merchant_paid', null, null, true, null);
+    saved_id := (result -> 'merchant' ->> 'id')::integer;
+    if result -> 'credentials' ->> 'token' !~ '^[0-9a-f]{48}$' then
+        raise exception 'the token is not 48 hex chars: %', result;
+    end if;
+    if result -> 'credentials' ->> 'pin' !~ '^[0-9]{6}$' then
+        raise exception 'the PIN is not 6 digits: %', result;
+    end if;
+    if result -> 'credentials' ->> 'link_path'
+       <> '/validate?m=' || (result -> 'credentials' ->> 'token') then
+        raise exception 'the link path is wrong: %', result;
+    end if;
+
+    select * into stored from public.merchant_credentials c where c.merchant_id = saved_id;
+    if stored.token_hash = result -> 'credentials' ->> 'token'
+       or stored.pin_hash = result -> 'credentials' ->> 'pin'
+       or length(stored.token_hash) <> 64 then
+        raise exception 'the credentials are not hashed';
+    end if;
+    if exists (
+        select 1 from jsonb_array_elements(public.list_merchants()) item
+         where item ? 'credentials' or item ? 'pin' or item ? 'token'
+    ) then
+        raise exception 'the merchant list leaks credentials';
+    end if;
+    perform set_config('app.merchant_id', saved_id::text, true);
+    perform set_config('app.merchant_token', result -> 'credentials' ->> 'token', true);
+    perform set_config('app.merchant_pin', result -> 'credentials' ->> 'pin', true);
+end $$;
+
+-- merchants: duplicate name
+do $$
+begin
+    begin
+        perform public.save_merchant('Cafe Uno', 'fixed_amount', 1000, null,
+            'merchant_paid', null, null, true, null);
+        raise exception 'a duplicate name was accepted';
+    exception when others then
+        if sqlerrm not like '%DuplicateMerchantError%' then raise; end if;
+    end;
+    begin
+        perform public.save_merchant('X', 'percentage', 10, null, 'merchant_paid',
+            null, null, true, null);
+        raise exception 'a one-character name was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+end $$;
+
+-- merchants: update keeps credentials
+do $$
+declare
+    saved_id integer := current_setting('app.merchant_id')::integer;
+    before_hash text;
+    result jsonb;
+begin
+    select c.token_hash into before_hash from public.merchant_credentials c
+     where c.merchant_id = saved_id;
+    result := public.save_merchant('Cafe Uno Renombrado', 'fixed_amount', 2000,
+        1500, 'courtesy', 20, 100, true, saved_id);
+    if (result -> 'credentials') <> 'null'::jsonb then
+        raise exception 'an update returned credentials';
+    end if;
+    if (result -> 'merchant' ->> 'name') <> 'Cafe Uno Renombrado'
+       or (result -> 'merchant' ->> 'billing_mode') <> 'courtesy' then
+        raise exception 'the update did not apply: %', result;
+    end if;
+    if (select c.token_hash from public.merchant_credentials c where c.merchant_id = saved_id)
+       <> before_hash then
+        raise exception 'the update rotated the token';
+    end if;
+end $$;
+
+-- merchants: reset pin and rotate token
+do $$
+declare
+    saved_id integer := current_setting('app.merchant_id')::integer;
+    old_token_hash text;
+    result jsonb;
+begin
+    select c.token_hash into old_token_hash from public.merchant_credentials c
+     where c.merchant_id = saved_id;
+    result := public.reset_merchant_credentials(saved_id, false);
+    if result ->> 'pin' !~ '^[0-9]{6}$'
+       or (result -> 'token') <> 'null'::jsonb then
+        raise exception 'a PIN reset returned a token: %', result;
+    end if;
+    if (select c.token_hash from public.merchant_credentials c where c.merchant_id = saved_id)
+       <> old_token_hash then
+        raise exception 'a PIN reset changed the token';
+    end if;
+
+    result := public.reset_merchant_credentials(saved_id, true);
+    if result ->> 'token' !~ '^[0-9a-f]{48}$' then
+        raise exception 'the token rotation did not return a token: %', result;
+    end if;
+    if (select c.token_hash from public.merchant_credentials c where c.merchant_id = saved_id)
+       = old_token_hash then
+        raise exception 'the token rotation kept the old hash';
+    end if;
+    if (select credentials_version from public.merchants where id = saved_id) <> 3 then
+        raise exception 'credentials_version was not bumped';
+    end if;
+    perform set_config('app.merchant_pin', result ->> 'pin', true);
+    perform set_config('app.merchant_token', result ->> 'token', true);
+end $$;
+
+-- merchants: anon cannot read the tables
+set local role anon;
+do $$
+begin
+    begin
+        perform count(*) from public.merchants;
+        raise exception 'anon read the merchants';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform count(*) from public.merchant_validations;
+        raise exception 'anon read the validations';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform count(*) from public.merchant_credentials;
+        raise exception 'anon read the credentials';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
+-- merchants: authenticated cannot read credentials
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+begin
+    begin
+        perform count(*) from public.merchant_credentials;
+        raise exception 'an authenticated user read the credentials';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
+-- merchants: operator cannot manage
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+declare
+    merchant_id integer := current_setting('app.merchant_id')::integer;
+begin
+    begin
+        perform public.save_merchant('Otro', 'percentage', 10, null, 'merchant_paid',
+            null, null, true, null);
+        raise exception 'an operator saved a merchant';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+    begin
+        perform public.list_merchants();
+        raise exception 'an operator listed the merchants admin view';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+    begin
+        perform public.reset_merchant_credentials(merchant_id, true);
+        raise exception 'an operator reset credentials';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+    begin
+        perform public.delete_merchant(merchant_id);
+        raise exception 'an operator deleted a merchant';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+    begin
+        perform public.set_merchant_policy(3);
+        raise exception 'an operator changed the policy';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+    if jsonb_array_length(public.list_active_merchants()) < 1 then
+        raise exception 'an operator cannot list the active merchants';
+    end if;
+end $$;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- merchants: policy
+do $$
+begin
+    if (public.set_merchant_policy(3) ->> 'max_per_session')::integer <> 3 then
+        raise exception 'the policy was not saved';
+    end if;
+    begin
+        perform public.set_merchant_policy(6);
+        raise exception 'a policy of 6 was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+    perform public.set_merchant_policy(1);
+end $$;
+
+-- merchants: audit hides secrets
+do $$
+begin
+    if not exists (
+        select 1 from public.audit_log a
+         where a.table_name = 'merchants' and a.action in ('insert', 'update')
+    ) then
+        raise exception 'the merchant changes were not audited';
+    end if;
+    if exists (
+        select 1 from public.audit_log a
+         where a.table_name = 'merchants'
+           and (a.before::text like '%hash%' or a.after::text like '%hash%'
+                or a.after::text like '%token%')
+    ) then
+        raise exception 'the merchant audit leaked credentials';
+    end if;
+end $$;
+
+-- merchants: member sees own lot only
+insert into public.merchants (lot_id, name, benefit_kind, benefit_value)
+values (2, 'Cafe Dos', 'percentage', 20);
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+begin
+    if exists (select 1 from public.merchants where name = 'Cafe Dos') then
+        raise exception 'a lot 1 admin read a lot 2 merchant';
+    end if;
+end $$;
+reset role;
+
+-- ---------------------------------------------------------------------------
+-- merchants: fare_quote
+-- ---------------------------------------------------------------------------
+-- quote: no merchants equals billing
+do $$
+declare
+    s integer := current_setting('app.mer_MER001')::integer;
+    exit_at timestamptz := ((current_date - 1) + time '11:30') at time zone 'America/Bogota';
+    quote jsonb := public.fare_quote(s, exit_at, 0, false);
+begin
+    if (quote ->> 'base_amount')::integer <> 9000
+       or (quote ->> 'gross')::integer <> 9000 then
+        raise exception 'the base fare is wrong: %', quote;
+    end if;
+    if jsonb_array_length(quote -> 'adjustments') <> 0
+       or (quote ->> 'amount_due')::integer <> 9000 then
+        raise exception 'an empty quote changed the amount: %', quote;
+    end if;
+    if (quote -> 'pricing') <> 'null'::jsonb or (quote -> 'reward') <> 'null'::jsonb then
+        raise exception 'the default hooks are not no-ops: %', quote;
+    end if;
+end $$;
+
+-- quote: percentage rounds half up and clamps to the running amount
+do $$
+declare
+    s integer := current_setting('app.mer_MER001')::integer;
+    exit_at timestamptz := ((current_date - 1) + time '11:30') at time zone 'America/Bogota';
+    merchant_id integer := current_setting('app.merchant_id')::integer;
+    validation jsonb;
+    quote jsonb;
+begin
+    perform public.save_merchant('Media', 'percentage', 50, null, 'merchant_paid',
+        null, null, true, null);
+    select id into merchant_id from public.merchants where name = 'Media';
+    validation := public.create_merchant_validation(merchant_id, s, 'public', null);
+    quote := public.fare_quote(s, exit_at, 0, false);
+    if (quote ->> 'adjustments_total')::integer <> 4500
+       or (quote ->> 'amount_due')::integer <> 4500 then
+        raise exception 'the 50%% benefit is wrong: %', quote;
+    end if;
+    if (quote -> 'adjustments' -> 0 ->> 'type') <> 'merchant'
+       or (quote -> 'adjustments' -> 0 ->> 'ref_id')::bigint <> (validation ->> 'validation_id')::bigint then
+        raise exception 'the adjustment line is wrong: %', quote;
+    end if;
+end $$;
+
+-- quote: fixed amount capped by the running amount and max_amount
+do $$
+declare
+    s integer := current_setting('app.mer_MER002')::integer;
+    exit_at timestamptz := ((current_date - 1) + time '02:00') at time zone 'America/Bogota';
+    merchant_id integer;
+    quote jsonb;
+begin
+    insert into public.merchants (lot_id, name, benefit_kind, benefit_value, max_amount)
+    values (1, 'Tope', 'fixed_amount', 5000, 2000) returning id into merchant_id;
+    perform public.create_merchant_validation(merchant_id, s, 'public', null);
+    quote := public.fare_quote(s, exit_at, 0, false);
+    if (quote ->> 'base_amount')::integer <> 6000 then
+        raise exception 'the night fare is wrong: %', quote;
+    end if;
+    if (quote ->> 'adjustments_total')::integer <> 2000
+       or (quote ->> 'amount_due')::integer <> 4000 then
+        raise exception 'the capped fixed benefit is wrong: %', quote;
+    end if;
+end $$;
+
+-- quote: free minutes shorten the stay
+do $$
+declare
+    s integer;
+    exit_at timestamptz := ((current_date - 1) + time '11:30') at time zone 'America/Bogota';
+    merchant_id integer;
+    quote jsonb;
+begin
+    insert into public.vehicles (plate, category_id)
+    select 'MER013', current_setting('app.merchant_cat')::integer;
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, 1,
+           (((current_date - 1) + time '09:00') at time zone 'America/Bogota'),
+           'open'
+      from public.vehicles v where v.plate = 'MER013'
+    returning id into s;
+
+    insert into public.merchants (lot_id, name, benefit_kind, benefit_value)
+    values (1, 'Minutos', 'free_minutes', 30) returning id into merchant_id;
+    perform public.create_merchant_validation(merchant_id, s, 'public', null);
+    quote := public.fare_quote(s, exit_at, 0, false);
+    if (quote ->> 'base_amount')::integer <> 9000 then
+        raise exception 'the base fare changed: %', quote;
+    end if;
+    if (quote ->> 'adjustments_total')::integer <> 3000
+       or (quote ->> 'amount_due')::integer <> 6000 then
+        raise exception 'the free-minutes benefit is wrong: %', quote;
+    end if;
+end $$;
+
+-- quote: manual discount is applied last
+do $$
+declare
+    s integer := current_setting('app.mer_MER002')::integer;
+    exit_at timestamptz := ((current_date - 1) + time '02:00') at time zone 'America/Bogota';
+    quote jsonb;
+begin
+    quote := public.fare_quote(s, exit_at, 500, false);
+    if (quote ->> 'discount_amount')::integer <> 500
+       or (quote ->> 'amount_due')::integer <> 3500 then
+        raise exception 'the manual discount is wrong: %', quote;
+    end if;
+    begin
+        perform public.fare_quote(s, exit_at, 999999, false);
+        raise exception 'a discount above the running amount was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDiscountError%' then raise; end if;
+    end;
+end $$;
+
+-- quote: only pending validations count
+do $$
+declare
+    s integer := current_setting('app.mer_MER004')::integer;
+    exit_at timestamptz := now();
+    merchant_id integer;
+    created jsonb;
+    quote jsonb;
+begin
+    insert into public.merchants (lot_id, name, benefit_kind, benefit_value)
+    values (1, 'Revocada', 'fixed_amount', 1000) returning id into merchant_id;
+    created := public.create_merchant_validation(merchant_id, s, 'desk', 1);
+    update public.merchant_validations set status = 'revoked',
+           revoked_at = now(), revoke_reason = 'prueba'
+     where id = (created ->> 'validation_id')::bigint;
+    quote := public.fare_quote(s, exit_at, 0, false);
+    if (quote ->> 'adjustments_total')::integer <> 0 then
+        raise exception 'a revoked validation was applied: %', quote;
+    end if;
+end $$;
+
+-- quote: pass holder pays nothing and no line applies
+do $$
+declare
+    s integer := current_setting('app.mer_MER005')::integer;
+    merchant_id integer;
+    quote jsonb;
+begin
+    insert into public.monthly_passes (vehicle_id, lot_id, start_date, end_date, amount, active)
+    select v.id, 1, current_date - 1, current_date + 29, 80000, true
+      from public.vehicles v where v.plate = 'MER005';
+    insert into public.merchants (lot_id, name, benefit_kind, benefit_value)
+    values (1, 'Pasero', 'percentage', 50) returning id into merchant_id;
+    insert into public.merchant_validations (lot_id, merchant_id, session_id, source, terms)
+    select 1, merchant_id, s, 'public',
+           jsonb_build_object('merchant_name', 'Pasero', 'benefit_kind', 'percentage',
+                              'benefit_value', 50, 'max_amount', null,
+                              'billing_mode', 'merchant_paid');
+    quote := public.fare_quote(s, now(), 0, false);
+    if (quote ->> 'has_pass')::boolean is not true
+       or (quote ->> 'amount_due')::integer <> 0
+       or jsonb_array_length(quote -> 'adjustments') <> 0 then
+        raise exception 'a pass holder quote is wrong: %', quote;
+    end if;
+end $$;
+
+-- quote: lost ticket ignores the benefits
+do $$
+declare
+    s integer := current_setting('app.mer_MER006')::integer;
+    quote jsonb;
+begin
+    insert into public.merchant_validations (lot_id, merchant_id, session_id, source, terms)
+    select 1, id, s, 'public',
+           jsonb_build_object('merchant_name', name, 'benefit_kind', benefit_kind,
+                              'benefit_value', benefit_value, 'max_amount', max_amount,
+                              'billing_mode', billing_mode)
+      from public.merchants where name = 'Media';
+    quote := public.fare_quote(s, now(), 0, true);
+    if (quote ->> 'gross')::integer < 15000
+       or jsonb_array_length(quote -> 'adjustments') <> 0 then
+        raise exception 'a lost ticket quote is wrong: %', quote;
+    end if;
+end $$;
+
+-- quote: hook replaced is honoured
+do $$
+declare
+    s integer := current_setting('app.mer_MER007')::integer;
+    exit_at timestamptz := now() - interval '30 minutes';
+    base integer;
+    quote jsonb;
+begin
+    base := (public.fare_breakdown(current_setting('app.merchant_cat')::integer,
+        (select entry_time from public.parking_sessions where id = s), exit_at, false) ->> 'amount')::integer;
+    create or replace function public.fare_pricing_step(p_session_id integer, p_base integer)
+    returns jsonb language sql stable set search_path = public
+    as $f$ select jsonb_build_object('amount', p_base * 12 / 10, 'pricing', jsonb_build_object('multiplier_bps', 12000)); $f$;
+    quote := public.fare_quote(s, exit_at, 0, false);
+    if (quote ->> 'gross')::integer <> base * 12 / 10
+       or (quote -> 'pricing' ->> 'multiplier_bps')::integer <> 12000 then
+        raise exception 'the pricing hook was not honoured: %', quote;
+    end if;
+    create or replace function public.fare_pricing_step(p_session_id integer, p_base integer)
+    returns jsonb language sql stable set search_path = public
+    as $f$ select jsonb_build_object('amount', p_base, 'pricing', null); $f$;
+end $$;
+
+-- quote: not executable by api roles
+set local role authenticated;
+do $$
+begin
+    begin
+        perform public.fare_quote(1, now(), 0, false);
+        raise exception 'an authenticated user called fare_quote';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
+-- quote: unknown session
+do $$
+begin
+    begin
+        perform public.fare_quote(999999, now(), 0, false);
+        raise exception 'an unknown session was quoted';
+    exception when others then
+        if sqlerrm not like '%SessionNotFoundError%' then raise; end if;
+    end;
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- merchants: validations, PIN guard and public page
+-- ---------------------------------------------------------------------------
+-- validate: public registers a pending validation
+do $$
+declare
+    token_value text := current_setting('app.merchant_token');
+    pin_value text := current_setting('app.merchant_pin');
+    result jsonb;
+    stored public.merchant_validations%rowtype;
+begin
+    result := public.merchant_validate(token_value, pin_value, ' mer 009 ');
+    if result ->> 'status' <> 'registered' then
+        raise exception 'the public validation was not registered: %', result;
+    end if;
+    select * into stored from public.merchant_validations
+     where session_id = current_setting('app.mer_MER009')::integer;
+    if stored.status <> 'pending' or stored.source <> 'public'
+       or stored.created_by is not null then
+        raise exception 'the validation row is wrong: %', stored;
+    end if;
+    if stored.terms ->> 'merchant_name' is null then
+        raise exception 'the terms snapshot is missing';
+    end if;
+    if result ? 'session_id' or result ? 'plate' or result ? 'amount' then
+        raise exception 'the public validation leaked data: %', result;
+    end if;
+end $$;
+
+-- validate: wrong PIN persists the counter and locks after five
+do $$
+declare
+    token_value text := current_setting('app.merchant_token');
+    result jsonb;
+    failures integer;
+begin
+    result := public.merchant_validate(token_value, '000000', 'MER009');
+    if result ->> 'status' <> 'invalid_pin'
+       or (result ->> 'attempts_left')::integer <> 4 then
+        raise exception 'a wrong PIN was not counted: %', result;
+    end if;
+    select pin_failures into failures from public.merchant_credentials
+     where token_hash = public.merchant_hash_token(token_value);
+    if failures <> 1 then
+        raise exception 'the PIN failures were rolled back: %', failures;
+    end if;
+
+    perform public.merchant_validate(token_value, '111111', 'MER009');
+    perform public.merchant_validate(token_value, '222222', 'MER009');
+    perform public.merchant_validate(token_value, '333333', 'MER009');
+    result := public.merchant_validate(token_value, '444444', 'MER009');
+    if result ->> 'status' <> 'locked' or result ->> 'locked_until' is null then
+        raise exception 'the merchant was not locked after five: %', result;
+    end if;
+    result := public.merchant_validate(
+        token_value, current_setting('app.merchant_pin'), 'MER009'
+    );
+    if result ->> 'status' <> 'locked' then
+        raise exception 'a locked merchant accepted the right PIN: %', result;
+    end if;
+    update public.merchant_credentials
+       set locked_until = now() - interval '1 second'
+     where token_hash = public.merchant_hash_token(token_value);
+    result := public.merchant_validate(
+        token_value, current_setting('app.merchant_pin'), 'MER010'
+    );
+    if result ->> 'status' <> 'registered' then
+        raise exception 'the unlocked merchant did not validate: %', result;
+    end if;
+end $$;
+
+-- validate: unknown token, portal and grants
+set local role anon;
+do $$
+declare
+    token_value text := current_setting('app.merchant_token');
+    portal jsonb;
+begin
+    begin
+        perform public.merchant_validate(repeat('f', 48), '123456', 'MER009');
+        raise exception 'an unknown token was accepted';
+    exception when others then
+        if sqlerrm not like '%MerchantNotFoundError%' then raise; end if;
+    end;
+    portal := public.merchant_portal(token_value);
+    if portal is null or portal ->> 'merchant_name' is null then
+        raise exception 'the portal did not resolve the token: %', portal;
+    end if;
+    if portal ? 'used_today' or portal ? 'pin' then
+        raise exception 'the portal leaked counters or secrets: %', portal;
+    end if;
+    if public.merchant_portal(repeat('f', 48)) is not null then
+        raise exception 'an unknown token returned a portal';
+    end if;
+    if has_function_privilege('anon', 'public.create_merchant_validation(integer, integer, text, integer)', 'execute')
+       or has_function_privilege('anon', 'public.save_merchant(text, text, integer, integer, text, integer, integer, boolean, integer)', 'execute') then
+        raise exception 'anon can call an internal merchant RPC';
+    end if;
+end $$;
+reset role;
+
+-- validate: no open session, bad plate and pass holder
+do $$
+declare
+    token_value text := current_setting('app.merchant_token');
+    pin_value text := current_setting('app.merchant_pin');
+begin
+    begin
+        perform public.merchant_validate(token_value, pin_value, 'ZZZ999');
+        raise exception 'a plate without a session was validated';
+    exception when others then
+        if sqlerrm not like '%SessionNotFoundError%' then raise; end if;
+    end;
+    begin
+        perform public.merchant_validate(token_value, pin_value, 'x');
+        raise exception 'an invalid plate was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidPlateError%' then raise; end if;
+    end;
+    begin
+        perform public.merchant_validate(token_value, pin_value, 'MER005');
+        raise exception 'a pass holder was validated';
+    exception when others then
+        if sqlerrm not like '%SessionNotEligibleError%' then raise; end if;
+    end;
+end $$;
+
+-- validate: already validated, per session limit and daily cap
+do $$
+declare
+    token_value text := current_setting('app.merchant_token');
+    pin_value text := current_setting('app.merchant_pin');
+    merchant_id integer := current_setting('app.merchant_id')::integer;
+begin
+    begin
+        perform public.merchant_validate(token_value, pin_value, 'MER009');
+        raise exception 'a duplicate validation was accepted';
+    exception when others then
+        if sqlerrm not like '%AlreadyValidatedError%' then raise; end if;
+    end;
+
+    update public.parking_settings set merchant_max_per_session = 0 where lot_id = 1;
+    begin
+        perform public.merchant_validate(token_value, pin_value, 'MER011');
+        raise exception 'the per-vehicle limit was ignored';
+    exception when others then
+        if sqlerrm not like '%MerchantLimitError%' then raise; end if;
+    end;
+    update public.parking_settings set merchant_max_per_session = 1 where lot_id = 1;
+
+    update public.merchants set daily_cap = 1 where id = merchant_id;
+    begin
+        perform public.merchant_validate(token_value, pin_value, 'MER011');
+        raise exception 'the daily cap was ignored';
+    exception when others then
+        if sqlerrm not like '%MerchantCapError%' then raise; end if;
+    end;
+    update public.merchants set daily_cap = null where id = merchant_id;
+end $$;
+
+-- validate: the anonymous page records a validation without an actor
+set local request.jwt.claim.sub = '';
+set local role anon;
+do $$
+declare
+    result jsonb;
+begin
+    result := public.merchant_validate(
+        current_setting('app.merchant_token'),
+        current_setting('app.merchant_pin'),
+        'MER008'
+    );
+    if result ->> 'status' <> 'registered' then
+        raise exception 'the anonymous validation failed: %', result;
+    end if;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+begin
+    if not exists (
+        select 1 from public.audit_log a
+         where a.table_name = 'merchant_validations'
+           and a.action = 'insert'
+           and a.actor_id is null
+           and (a.after ->> 'session_id') = current_setting('app.mer_MER008')
+    ) then
+        raise exception 'the public validation was not audited without an actor';
+    end if;
+end $$;
+
+-- desk: operator adds a validation in own lot and gets the quote
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+declare
+    result jsonb;
+begin
+    result := public.add_merchant_validation(
+        current_setting('app.merchant_id')::integer,
+        current_setting('app.mer_MER011')::integer
+    );
+    if result ->> 'status' <> 'pending' or result -> 'quote' is null then
+        raise exception 'the desk validation is wrong: %', result;
+    end if;
+    if (select source from public.merchant_validations
+         where id = (result ->> 'validation_id')::bigint) <> 'desk' then
+        raise exception 'the desk source was not recorded';
+    end if;
+    if (select created_by from public.merchant_validations
+         where id = (result ->> 'validation_id')::bigint) <> 2 then
+        raise exception 'the desk actor was not recorded';
+    end if;
+end $$;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- desk: other lot session and closed session are refused
+do $$
+begin
+    begin
+        perform public.add_merchant_validation(
+            current_setting('app.merchant_id')::integer,
+            current_setting('app.online_closed')::integer
+        );
+        raise exception 'a closed session got a validation';
+    exception when others then
+        if sqlerrm not like '%SessionNotFoundError%' then raise; end if;
+    end;
+end $$;
+
+-- revoke: reason, state and admin permission
+do $$
+declare
+    validation_id bigint;
+    other_lot_merchant integer;
+begin
+    select id into validation_id
+      from public.merchant_validations
+     where session_id = current_setting('app.mer_MER011')::integer;
+    begin
+        perform public.revoke_merchant_validation(validation_id, 'ab');
+        raise exception 'a 2-character reason was accepted';
+    exception when others then
+        if sqlerrm not like '%RevokeReasonRequiredError%' then raise; end if;
+    end;
+    perform public.revoke_merchant_validation(validation_id, 'prueba de humo');
+    if (select status from public.merchant_validations where id = validation_id) <> 'revoked' then
+        raise exception 'the validation was not revoked';
+    end if;
+    begin
+        perform public.revoke_merchant_validation(validation_id, 'otra vez');
+        raise exception 'a revoked validation was revoked again';
+    exception when others then
+        if sqlerrm not like '%ValidationNotRevocableError%' then raise; end if;
+    end;
+
+    select id into other_lot_merchant from public.merchants where lot_id = 2;
+    begin
+        perform public.revoke_merchant_validation(
+            (select id from public.merchant_validations limit 1) + 1000, 'prueba'
+        );
+        raise exception 'an unknown validation was revoked';
+    exception when others then
+        if sqlerrm not like '%ValidationNotFoundError%' then raise; end if;
+    end;
+end $$;
+
+-- revoke: operator is refused
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    begin
+        perform public.revoke_merchant_validation(
+            (select id from public.merchant_validations where status = 'pending' limit 1),
+            'prueba'
+        );
+        raise exception 'an operator revoked a validation';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+end $$;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- delete: in use and unused
+do $$
+declare
+    used integer := current_setting('app.merchant_id')::integer;
+    fresh integer;
+begin
+    begin
+        perform public.delete_merchant(used);
+        raise exception 'a merchant with validations was deleted';
+    exception when others then
+        if sqlerrm not like '%MerchantInUseError%' then raise; end if;
+    end;
+    insert into public.merchants (lot_id, name, benefit_kind, benefit_value)
+    values (1, 'Temporal', 'percentage', 10) returning id into fresh;
+    perform public.delete_merchant(fresh);
+    if exists (select 1 from public.merchants where id = fresh) then
+        raise exception 'an unused merchant was not deleted';
+    end if;
+    begin
+        perform public.delete_merchant(fresh);
+        raise exception 'a deleted merchant was deleted again';
+    exception when others then
+        if sqlerrm not like '%MerchantNotFoundError%' then raise; end if;
+    end;
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- merchants: check-out integration
+-- ---------------------------------------------------------------------------
+-- checkout: applies the pending validation and stores the lines
+do $$
+declare
+    s integer := current_setting('app.mer_MER009')::integer;
+    merchant_id integer;
+    result jsonb;
+    stored public.parking_sessions%rowtype;
+    line jsonb;
+begin
+    merchant_id := current_setting('app.merchant_id')::integer;
+    result := public.check_out(s, null, null, 'cash');
+    select * into stored from public.parking_sessions where id = s;
+    if stored.gross_amount is null or jsonb_array_length(stored.fare_adjustments) <> 1 then
+        raise exception 'the check-out did not store the lines: %', stored;
+    end if;
+    line := stored.fare_adjustments -> 0;
+    if (line ->> 'type') <> 'merchant' then
+        raise exception 'the stored line is wrong: %', line;
+    end if;
+    if stored.amount_charged <> stored.gross_amount - (line ->> 'amount')::integer then
+        raise exception 'the charge does not match the lines: % / %',
+            stored.amount_charged, stored.gross_amount;
+    end if;
+    if (select status from public.merchant_validations
+         where session_id = s) <> 'applied' then
+        raise exception 'the validation was not marked applied';
+    end if;
+    if (select amount from public.merchant_validations where session_id = s)
+       <> (line ->> 'amount')::integer then
+        raise exception 'the validation amount does not match the line';
+    end if;
+    if (result ->> 'gross_amount')::integer <> stored.gross_amount
+       or jsonb_array_length(result -> 'fare_adjustments') <> 1 then
+        raise exception 'the receipt does not carry the lines: %', result;
+    end if;
+end $$;
+
+-- checkout: the stored terms are the snapshot, not the live merchant
+do $$
+declare
+    s integer := current_setting('app.mer_MER010')::integer;
+    result jsonb;
+begin
+    update public.merchants
+       set benefit_kind = 'fixed_amount', benefit_value = 1
+     where id = current_setting('app.merchant_id')::integer;
+    result := public.check_out(s, null, null, 'cash');
+    if (result -> 'fare_adjustments' -> 0 ->> 'amount')::integer <> 1500 then
+        raise exception 'the snapshot was not used: %', result;
+    end if;
+    if (result ->> 'amount_charged')::integer
+       <> (result ->> 'gross_amount')::integer - 1500 then
+        raise exception 'the charge does not apply the snapshot: %', result;
+    end if;
+end $$;
+
+-- checkout: a benefit that saves nothing forfeits the validation
+do $$
+declare
+    s integer;
+    merchant_id integer;
+    result jsonb;
+begin
+    insert into public.vehicles (plate, category_id)
+    select 'MER014', current_setting('app.merchant_cat')::integer;
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, 1, now() - interval '2 hours 40 minutes', 'open'
+      from public.vehicles v where v.plate = 'MER014'
+    returning id into s;
+    insert into public.merchants (lot_id, name, benefit_kind, benefit_value)
+    values (1, 'Minutos justos', 'free_minutes', 30) returning id into merchant_id;
+    perform public.create_merchant_validation(merchant_id, s, 'public', null);
+
+    result := public.check_out(s, null, null, 'cash');
+    if jsonb_array_length(result -> 'fare_adjustments') <> 0 then
+        raise exception 'a zero benefit produced a line: %', result;
+    end if;
+    if (select status from public.merchant_validations where session_id = s) <> 'forfeited' then
+        raise exception 'a zero benefit did not forfeit the validation';
+    end if;
+end $$;
+
+-- checkout: lost ticket forfeits the validation and keeps the manual discount
+do $$
+declare
+    s integer := current_setting('app.mer_MER012')::integer;
+    merchant_id integer := current_setting('app.merchant_id')::integer;
+    result jsonb;
+begin
+    perform public.create_merchant_validation(merchant_id, s, 'public', null);
+    result := public.check_out(s, null, null, 'cash', 1000, 'cortesia', true, 'perdido');
+    if (result ->> 'gross_amount')::integer < 15000
+       or (result ->> 'discount_amount')::integer <> 1000 then
+        raise exception 'the lost ticket check-out is wrong: %', result;
+    end if;
+    if (select status from public.merchant_validations where session_id = s) <> 'forfeited' then
+        raise exception 'a lost ticket did not forfeit the validation';
+    end if;
+end $$;
+
+-- checkout: preview exposes the quote and the amount due
+do $$
+declare
+    s integer := current_setting('app.mer_MER004')::integer;
+    preview jsonb;
+begin
+    preview := public.check_out_preview(s);
+    if preview -> 'quote' is null
+       or preview ->> 'gross' is null
+       or preview ? 'adjustments' = false then
+        raise exception 'the preview does not carry the quote: %', preview;
+    end if;
+    if (preview ->> 'amount')::integer <> (preview -> 'quote' ->> 'gross')::integer then
+        raise exception 'the preview amount is not the gross: %', preview;
+    end if;
+end $$;
+
+-- checkout: the public summary exposes the adjustments
+set local role anon;
+do $$
+declare
+    s bigint := current_setting('app.mer_MER009')::bigint;
+    summary jsonb;
+begin
+    summary := public.public_session_summary(s, 'MER009');
+    if summary is null then
+        raise exception 'the public summary did not answer';
+    end if;
+    if summary ->> 'adjustments' is null
+       or (summary ->> 'gross')::integer <= 0 then
+        raise exception 'the public summary hides the lines: %', summary;
+    end if;
+    if summary ? 'quote' and summary -> 'quote' <> 'null'::jsonb then
+        raise exception 'a closed summary leaked an open quote: %', summary;
+    end if;
+end $$;
+reset role;
+
+-- checkout: history carries the gross and the lines
+do $$
+declare
+    history jsonb := public.vehicle_history('MER009');
+begin
+    if history -> 'sessions' -> 0 ->> 'gross_amount' is null
+       or history -> 'sessions' -> 0 -> 'fare_adjustments' is null then
+        raise exception 'the history does not carry the fare lines: %', history;
+    end if;
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- merchants: settlement report
+-- ---------------------------------------------------------------------------
+-- settlement: sums by basis and keeps merchants without activity
+do $$
+declare
+    report jsonb;
+    row_item jsonb;
+begin
+    report := public.report_merchant_settlement(current_date - 7, current_date);
+    if report ->> 'from' is null or report -> 'totals' is null then
+        raise exception 'the settlement shape is wrong: %', report;
+    end if;
+    select item into row_item
+      from jsonb_array_elements(report -> 'merchants') item
+     where item ->> 'merchant_id' = current_setting('app.merchant_id');
+    if row_item is null then
+        raise exception 'the merchant is missing from the settlement: %', report;
+    end if;
+    if (row_item ->> 'applied')::integer < 1 then
+        raise exception 'the settlement did not count the applied validations: %', row_item;
+    end if;
+    if (row_item ->> 'pending_now')::integer < 0 then
+        raise exception 'the pending count is wrong: %', row_item;
+    end if;
+    if not exists (
+        select 1 from jsonb_array_elements(report -> 'merchants') item
+         where item ->> 'name' = 'Tope'
+    ) then
+        raise exception 'a merchant without activity is missing: %', report;
+    end if;
+end $$;
+
+-- settlement: bad range, operator and other lot
+do $$
+begin
+    begin
+        perform public.report_merchant_settlement(current_date, current_date - 1);
+        raise exception 'an inverted range was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidReportRangeError%' then raise; end if;
+    end;
+end $$;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    begin
+        perform public.report_merchant_settlement(current_date - 7, current_date);
+        raise exception 'an operator read the settlement';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+end $$;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
 
 rollback;
