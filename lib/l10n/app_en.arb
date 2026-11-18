@@ -1949,5 +1949,8 @@
   "errorDeviceDisabled": "The device is disabled",
   "errorDeviceClockSkew": "Device clock is off",
   "errorDeviceReplay": "Replayed request",
-  "errorDeviceRateLimited": "Too many requests from the device"
+  "errorDeviceRateLimited": "Too many requests from the device",
+  "evidenceSectionEntry": "Entry photos",
+  "evidenceSectionExit": "Exit photos",
+  "damageCompareAction": "Compare with entry photos"
 }

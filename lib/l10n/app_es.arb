@@ -2032,5 +2032,8 @@
   "errorDeviceDisabled": "El dispositivo está deshabilitado",
   "errorDeviceClockSkew": "Reloj del dispositivo desviado",
   "errorDeviceReplay": "Petición repetida",
-  "errorDeviceRateLimited": "Demasiadas peticiones del dispositivo"
+  "errorDeviceRateLimited": "Demasiadas peticiones del dispositivo",
+  "evidenceSectionEntry": "Fotos de entrada",
+  "evidenceSectionExit": "Fotos de salida",
+  "damageCompareAction": "Comparar con las fotos de entrada"
 }

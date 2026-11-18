@@ -15945,6 +15945,71 @@ end $$;
 reset role;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
 
+
+-- ---------------------------------------------------------------------------
+-- reports: pass revenue is isolated per lot (Q3 regression)
+-- ---------------------------------------------------------------------------
+do $$
+declare
+    lot2 integer;
+    lot2_category integer;
+    vehicle2 integer;
+    pass_row integer;
+    payment_row bigint;
+    revenue jsonb;
+    before_pass bigint;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    before_pass := ((public.report_revenue(current_date, current_date))
+                    ->> 'pass_revenue')::bigint;
+
+    insert into public.parking_lots (code, name, address, timezone)
+    values ('PAS2', 'Pass Lot 2', 'Calle 7', 'America/Bogota')
+    returning id into lot2;
+    insert into public.parking_settings (lot_id, name, address, car_capacity)
+    values (lot2, 'Pass Lot 2', 'Calle 7', 5);
+    insert into public.lot_members (lot_id, user_id, role)
+    values (lot2, 1, 'admin');
+    insert into public.categories (lot_id, name, capacity)
+    values (lot2, 'car', 0) returning id into lot2_category;
+    insert into public.vehicles (plate, category_id)
+    values ('PAS2CAR', lot2_category) returning id into vehicle2;
+    insert into public.monthly_passes (
+        vehicle_id, lot_id, start_date, end_date, amount
+    ) values (vehicle2, lot2, current_date, current_date + 30, 50000)
+    returning id into pass_row;
+    select id into payment_row
+      from public.monthly_pass_payments p
+     where p.monthly_pass_id = pass_row;
+    update public.monthly_pass_payments
+       set amount = 50000, payment_method = 'cash', status = 'paid',
+           paid_at = now(), paid_by = 1, lot_id = lot2
+     where id = payment_row;
+
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    revenue := public.report_revenue(current_date, current_date);
+    if (revenue ->> 'pass_revenue')::bigint <> before_pass then
+        raise exception 'the lot 2 pass leaked into lot 1: % <> %',
+            (revenue ->> 'pass_revenue'), before_pass;
+    end if;
+
+    perform set_config('request.headers',
+        jsonb_build_object('x-lot-id', lot2)::text, true);
+    revenue := public.report_revenue(current_date, current_date);
+    if (revenue ->> 'pass_revenue')::bigint <> 50000 then
+        raise exception 'lot 2 did not see its own pass revenue: %', revenue;
+    end if;
+
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    delete from public.monthly_pass_payments where id = payment_row;
+    delete from public.monthly_passes where id = pass_row;
+    delete from public.vehicles where id = vehicle2;
+    delete from public.lot_members where lot_id = lot2 and user_id = 1;
+    delete from public.parking_settings where lot_id = lot2;
+    delete from public.categories where id = lot2_category;
+    delete from public.parking_lots where id = lot2;
+end $$;
+
 set local request.headers = '{"x-lot-id":"1"}';
 
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';

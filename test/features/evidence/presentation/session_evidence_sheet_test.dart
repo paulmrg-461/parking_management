@@ -80,4 +80,48 @@ void main() {
     expect(find.text('Sin fotos ni videos para esta sesión'), findsOneWidget);
     expect(repository.calls, 2);
   });
+
+  testWidgets('groups photos by phase and offers the comparison', (tester) async {
+    await _pump(
+      tester,
+      items: [
+        SessionEvidence(
+          id: 1,
+          path: 'e/0.jpg',
+          kind: EvidenceKind.photo,
+          takenAt: DateTime(2026, 11, 9, 10),
+          phase: EvidencePhase.entry,
+        ),
+        SessionEvidence(
+          id: 2,
+          path: 'x/0.jpg',
+          kind: EvidenceKind.photo,
+          takenAt: DateTime(2026, 11, 9, 12),
+          phase: EvidencePhase.exit,
+        ),
+      ],
+    );
+
+    expect(find.text('Fotos de entrada'), findsOneWidget);
+    expect(find.text('Fotos de salida'), findsOneWidget);
+    expect(find.byKey(const Key('evidence_compare')), findsOneWidget);
+  });
+
+  testWidgets('entry-only keeps the single-section layout', (tester) async {
+    await _pump(
+      tester,
+      items: [
+        SessionEvidence(
+          id: 1,
+          path: 'e/0.jpg',
+          kind: EvidenceKind.photo,
+          takenAt: DateTime(2026, 11, 9, 10),
+          phase: EvidencePhase.entry,
+        ),
+      ],
+    );
+    expect(find.text('Fotos de entrada'), findsOneWidget);
+    expect(find.text('Fotos de salida'), findsNothing);
+    expect(find.byKey(const Key('evidence_compare')), findsNothing);
+  });
 }

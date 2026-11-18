@@ -99,4 +99,21 @@ void main() {
     await tester.pumpAndSettle();
     expect(repository.deleteCalls, 1);
   });
+
+  testWidgets('rename saves a new device name', (tester) async {
+    final repository = FakeDeviceRepository();
+    await _pump(tester, repository);
+
+    await tester.tap(find.byKey(const Key('device_rename_1')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('device_rename_field_1')),
+      'Cámara norte',
+    );
+    await tester.tap(find.byKey(const Key('device_rename_save_1')));
+    await tester.pumpAndSettle();
+
+    expect(repository.updateCalls, 1);
+    expect(find.text('Cámara norte'), findsOneWidget);
+  });
 }

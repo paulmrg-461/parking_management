@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../app/di/injection.dart';
@@ -125,17 +126,50 @@ class _SessionEvidenceSheetState extends State<SessionEvidenceSheet> {
                       message: l10n.sessionEvidenceEmpty,
                     );
                   }
-                  return GridView.builder(
-                    padding: EdgeInsets.zero,
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          mainAxisSpacing: Space.sm,
-                          crossAxisSpacing: Space.sm,
-                        ),
-                    itemCount: items.length,
-                    itemBuilder: (context, index) =>
-                        _EvidenceTile(evidence: items[index], index: index),
+                  final entries = [
+                    for (final item in items)
+                      if (item.phase == EvidencePhase.entry) item,
+                  ];
+                  final exits = [
+                    for (final item in items)
+                      if (item.phase == EvidencePhase.exit) item,
+                  ];
+                  return SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (entries.isNotEmpty) ...[
+                          Text(
+                            l10n.evidenceSectionEntry,
+                            style: Theme.of(context).textTheme.labelLarge,
+                          ),
+                          const SizedBox(height: Space.xs),
+                          _EvidenceGrid(items: entries),
+                          const SizedBox(height: Space.md),
+                        ],
+                        if (exits.isNotEmpty) ...[
+                          Text(
+                            l10n.evidenceSectionExit,
+                            style: Theme.of(context).textTheme.labelLarge,
+                          ),
+                          const SizedBox(height: Space.xs),
+                          _EvidenceGrid(items: exits),
+                          const SizedBox(height: Space.md),
+                        ],
+                        if (entries.isNotEmpty && exits.isNotEmpty)
+                          FilledButton.icon(
+                            key: const Key('evidence_compare'),
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                              context.push(
+                                '/damage-comparison?session=${widget.sessionId}',
+                              );
+                            },
+                            icon: const Icon(Icons.compare_outlined),
+                            label: Text(l10n.damageCompareAction),
+                          ),
+                      ],
+                    ),
                   );
                 },
               ),
@@ -145,6 +179,26 @@ class _SessionEvidenceSheetState extends State<SessionEvidenceSheet> {
       ),
     );
   }
+}
+
+class _EvidenceGrid extends StatelessWidget {
+  const _EvidenceGrid({required this.items});
+
+  final List<SessionEvidence> items;
+
+  @override
+  Widget build(BuildContext context) => GridView.count(
+    shrinkWrap: true,
+    physics: const NeverScrollableScrollPhysics(),
+    padding: EdgeInsets.zero,
+    crossAxisCount: 3,
+    mainAxisSpacing: Space.sm,
+    crossAxisSpacing: Space.sm,
+    children: [
+      for (var index = 0; index < items.length; index++)
+        _EvidenceTile(evidence: items[index], index: index),
+    ],
+  );
 }
 
 class _EvidenceSkeleton extends StatelessWidget {

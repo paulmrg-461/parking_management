@@ -6135,4 +6135,13 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get errorDeviceRateLimited => 'Demasiadas peticiones del dispositivo';
+
+  @override
+  String get evidenceSectionEntry => 'Fotos de entrada';
+
+  @override
+  String get evidenceSectionExit => 'Fotos de salida';
+
+  @override
+  String get damageCompareAction => 'Comparar con las fotos de entrada';
 }

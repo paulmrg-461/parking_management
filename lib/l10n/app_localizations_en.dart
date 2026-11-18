@@ -6076,4 +6076,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get errorDeviceRateLimited => 'Too many requests from the device';
+
+  @override
+  String get evidenceSectionEntry => 'Entry photos';
+
+  @override
+  String get evidenceSectionExit => 'Exit photos';
+
+  @override
+  String get damageCompareAction => 'Compare with entry photos';
 }

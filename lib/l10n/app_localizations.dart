@@ -10699,6 +10699,24 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Demasiadas peticiones del dispositivo'**
   String get errorDeviceRateLimited;
+
+  /// No description provided for @evidenceSectionEntry.
+  ///
+  /// In es, this message translates to:
+  /// **'Fotos de entrada'**
+  String get evidenceSectionEntry;
+
+  /// No description provided for @evidenceSectionExit.
+  ///
+  /// In es, this message translates to:
+  /// **'Fotos de salida'**
+  String get evidenceSectionExit;
+
+  /// No description provided for @damageCompareAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Comparar con las fotos de entrada'**
+  String get damageCompareAction;
 }
 
 class _AppLocalizationsDelegate

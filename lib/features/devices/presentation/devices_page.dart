@@ -108,6 +108,36 @@ class _DevicesPageState extends State<DevicesPage> {
     );
   }
 
+  Future<void> _rename(LotDevice device) async {
+    final controller = TextEditingController(text: device.name);
+    final name = await showDialog<String>(
+      context: context,
+      builder: (_) => AlertDialog(
+        key: Key('device_rename_${device.id}'),
+        title: Text(context.l10n.devicesRename),
+        content: TextField(
+          key: Key('device_rename_field_${device.id}'),
+          controller: controller,
+          maxLength: 60,
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(context.l10n.actionCancel),
+          ),
+          FilledButton(
+            key: Key('device_rename_save_${device.id}'),
+            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
+            child: Text(context.l10n.actionSave),
+          ),
+        ],
+      ),
+    );
+    if (name == null || name == device.name) return;
+    await context.read<DevicesCubit>().rename(device, name);
+  }
+
   Future<void> _delete(LotDevice device) async {
     final confirmed = await ConfirmDialog.show(
       context,
@@ -186,6 +216,7 @@ class _DevicesPageState extends State<DevicesPage> {
                         onToggle: () => context
                             .read<DevicesCubit>()
                             .toggle(device),
+                        onRename: () => _rename(device),
                         onEvents: () => _events(device),
                         onDelete: () => _delete(device),
                       ),
@@ -202,6 +233,7 @@ class _DeviceCard extends StatelessWidget {
     required this.device,
     required this.onRotate,
     required this.onToggle,
+    required this.onRename,
     required this.onEvents,
     required this.onDelete,
   });
@@ -209,6 +241,7 @@ class _DeviceCard extends StatelessWidget {
   final LotDevice device;
   final VoidCallback onRotate;
   final VoidCallback onToggle;
+  final VoidCallback onRename;
   final VoidCallback onEvents;
   final VoidCallback onDelete;
 
@@ -265,6 +298,12 @@ class _DeviceCard extends StatelessWidget {
                         ? Icons.toggle_on_outlined
                         : Icons.toggle_off_outlined,
                   ),
+                ),
+                IconButton(
+                  key: Key('device_rename_${device.id}'),
+                  tooltip: l10n.devicesRename,
+                  onPressed: onRename,
+                  icon: const Icon(Icons.drive_file_rename_outline),
                 ),
                 IconButton(
                   key: Key('device_events_${device.id}'),

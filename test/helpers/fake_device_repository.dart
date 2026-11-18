@@ -6,12 +6,13 @@ LotDevice sampleDevice({
   int id = 1,
   String name = 'Entrada',
   DeviceStatus status = DeviceStatus.online,
+  String keyPrefix = '3fa94c0b12de',
   String? apiKey,
 }) => LotDevice(
   id: id,
   kind: DeviceKind.camera,
   name: name,
-  keyPrefix: '3fa94c0b12de',
+  keyPrefix: keyPrefix,
   status: status,
   apiKey: apiKey,
 );
@@ -65,6 +66,20 @@ class FakeDeviceRepository implements DeviceRepository {
     updateCalls++;
     final error = writeError;
     if (error != null) throw error;
+    if (name != null) {
+      devices = [
+        for (final device in devices)
+          if (device.id == id)
+            sampleDevice(
+              id: id,
+              name: name,
+              status: device.status,
+              keyPrefix: device.keyPrefix,
+            )
+          else
+            device,
+      ];
+    }
     return sampleDevice(id: id, name: name ?? 'Entrada');
   }
 

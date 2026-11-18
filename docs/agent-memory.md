@@ -4,7 +4,7 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-11-18 (device gateway).
+Last updated: 2026-11-18 (hardening batch).
 
 ## Where we are
 
@@ -28,6 +28,33 @@ Last updated: 2026-11-18 (device gateway).
 
 
 
+
+
+## Hardening batch (2026-11-18)
+
+- **Q3 closed:** `report_revenue`/`report_by_payment` `pass_revenue` and
+  `pass_by_payment` ARE lot-scoped in the current body (`0114`); the assistant's
+  design Q3 described the old `0024` body. A regression test
+  (`reports: pass revenue is isolated per lot`) now pins the isolation: a paid
+  pass in a second lot must not change lot 1's `pass_revenue`. No migration
+  was needed.
+- `/devices` gained the **rename** action (dialog + `update_lot_device`); the
+  API/cubit existed, only the affordance was missing.
+- The evidence sheet groups photos by **phase** (`Fotos de entrada` /
+  `Fotos de salida`) and shows a `Comparar` button when both phases exist,
+  navigating to `/damage-comparison?session=<id>`.
+- CI gained the **`edge-functions`** job (`deno test --allow-env --allow-read`,
+  Deno v2.6.3, no network) that the hardware wave requires.
+- `integration_test/app_flow_test.dart` now exists as a wrapper around
+  `test/integration/supabase_flow_test.dart` (it skips without
+  `SUPABASE_URL`/`SUPABASE_ANON_KEY`), so the AGENTS section 6 command runs
+  green; `integration_test` was added to `pubspec.yaml` dev_dependencies.
+- Archived (specs synced): `add-dynamic-pricing`, `add-loyalty-rewards`,
+  `add-electronic-invoicing`, `add-report-assistant`,
+  `add-ai-damage-comparison`, `add-device-gateway`.
+- Still pending: rotate the exposed DeepSeek key (owner), the manual smokes
+  (payments/passes/damage/devices), the angle-guidance widget, the AI replay
+  fixtures/eval and the three hardware changes.
 
 ## Device gateway backend (2026-11-18, `0128`-`0129`)
 

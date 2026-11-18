@@ -140,3 +140,14 @@ jobs:
           export SUPABASE_URL=http://localhost:8000
           export SUPABASE_ANON_KEY=$(grep '^ANON_KEY=' .env | cut -d= -f2-)
           flutter test test/integration
+
+  edge-functions:
+    # Edge Functions (Deno): unit + replay tests, no network required.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.6.3
+      - name: Test Edge Functions
+        run: deno test --allow-env --allow-read supabase/volumes/functions
