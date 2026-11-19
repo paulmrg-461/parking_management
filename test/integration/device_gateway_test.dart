@@ -132,6 +132,88 @@ void main() {
       final recovered = await beat(key: key, seq: 3, timestamp: now);
       expect(recovered.statusCode, 200);
 
+      // LPR routes: assign the direction, read the config and post one read.
+      await client.rpc('set_lpr_camera_direction', params: {
+        'p_device_id': deviceId,
+        'p_direction': 'entry',
+      });
+      final config = await http
+          .get(
+            Uri.parse('$gateway/v1/lpr/config'),
+            headers: {
+              'X-Device-Key': key,
+              'X-Device-Timestamp': '$now',
+              'X-Device-Seq': '4',
+            },
+          )
+          .timeout(const Duration(seconds: 15));
+      expect(config.statusCode, 200);
+      expect(
+        (jsonDecode(config.body) as Map<String, dynamic>)['direction'],
+        'entry',
+      );
+
+      final plate = 'E2E${DateTime.now().millisecondsSinceEpoch % 100000}';
+      Future<Map<String, dynamic>> postRead(int seq) async {
+        final reference = _Uuid().next();
+        final response = await http
+            .post(
+              Uri.parse('$gateway/v1/lpr/reads'),
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Device-Key': key,
+                'X-Device-Timestamp': '$now',
+                'X-Device-Seq': '$seq',
+                'Idempotency-Key': reference,
+              },
+              body: jsonEncode({
+                'client_ref': reference,
+                'plate': plate,
+                'confidence': 0.93,
+                'captured_at': DateTime.now().toUtc().toIso8601String(),
+                'track_id': 'e2e-track',
+              }),
+            )
+            .timeout(const Duration(seconds: 15));
+        expect(response.statusCode, 200);
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+
+      final firstRead = await postRead(5);
+      expect(firstRead['outcome'], 'recorded');
+      expect(firstRead['event'], isNull);
+      await postRead(6);
+      final third = await postRead(7);
+      expect(third['outcome'], 'decided');
+      expect(third['snapshot_wanted'], isTrue);
+      final event = third['event'] as Map<String, dynamic>;
+      expect(event['status'], 'pending');
+      expect(event['reason'], 'assist_mode');
+      expect(event['plate'], plate);
+
+      // 1x1 JPEG: the route checks the magic bytes and Storage keeps it.
+      final jpeg = base64Decode(
+        '/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0a'
+        'HBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAALCAABAAEBAREA/8QAFAABAAAAAAAA'
+        'AAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AKp//2Q==',
+      );
+      final snapshot = await http
+          .put(
+            Uri.parse('$gateway/v1/lpr/events/${event['id']}/snapshot'),
+            headers: {
+              'Content-Type': 'image/jpeg',
+              'X-Device-Key': key,
+              'X-Device-Timestamp': '$now',
+              'X-Device-Seq': '8',
+            },
+            body: jpeg,
+          )
+          .timeout(const Duration(seconds: 20));
+      expect(snapshot.statusCode, 200);
+      final attached = jsonDecode(snapshot.body) as Map<String, dynamic>;
+      expect(attached['event_id'], event['id']);
+      expect(attached['session_id'], isNull);
+
       final events = await client.rpc('list_device_events', params: {
         'p_device_id': deviceId,
         'p_limit': 20,
@@ -147,4 +229,16 @@ void main() {
 String _tamper(String key) {
   final last = key.substring(key.length - 1);
   return key.substring(0, key.length - 1) + (last == '0' ? '1' : '0');
+}
+
+class _Uuid {
+  int _counter = 0;
+
+  String next() {
+    // Deterministic v4-shaped UUID for the read idempotency key.
+    final suffix = (DateTime.now().microsecondsSinceEpoch + _counter++)
+        .toRadixString(16)
+        .padLeft(12, '0');
+    return '0b6f6d5c-3d4e-4a53-9a0e-${suffix.substring(suffix.length - 12)}';
+  }
 }

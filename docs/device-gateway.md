@@ -46,3 +46,20 @@ flutter test -d linux integration_test/app_flow_test.dart
 It skips when the environment is not configured. What still needs real
 hardware: boot behaviour, retry/backoff on a physical network and firmware
 updates.
+
+## LPR routes (cameras only)
+
+- `GET /v1/lpr/config` → `{direction, min_confidence, vote_window_seconds,
+  heartbeat_interval_s}`; `400 LprDirectionNotSetError` until an admin assigns
+  the direction.
+- `POST /v1/lpr/reads` → the read outcome. Body ≤ 4 KiB and the
+  `Idempotency-Key` header **must** equal `client_ref` (400 otherwise).
+- `PUT /v1/lpr/events/:id/snapshot` → `{event_id, session_id}`. Body: JPEG
+  (magic `FF D8 FF`) ≤ 256 KiB; `409 SnapshotAlreadyAttachedError` is success
+  for the device. The object path is built from the authenticated device, never
+  from the request.
+
+All three use the standard headers (key, sequence, timestamp, firmware) and
+answer `403 InvalidDeviceKindError` for a non-camera device. The full path is
+covered by the automated smoke: it registers a camera, assigns the direction,
+posts three reads (one `assist` event) and uploads a small JPEG.

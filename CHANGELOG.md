@@ -77,6 +77,16 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - Android release build: R8 keep rules for the optional ML Kit scripts.
 
 ### Added
+- **LPR gateway routes and snapshot janitor**: the device gateway gained a
+  suffix route matcher and three camera-only routes — `GET /v1/lpr/config`,
+  `POST /v1/lpr/reads` (the `Idempotency-Key` must equal `client_ref`, 4 KiB
+  cap) and `PUT /v1/lpr/events/:id/snapshot` (JPEG magic, 256 KiB, the path
+  is derived from the authenticated device, a refused attach deletes the
+  uploaded object and a Storage 409 means already attached). Every route
+  consumes the device sequence. `evidence-archive` now purges aged LPR events
+  through `purge_lpr_events` and deletes only the orphan snapshot paths.
+  The device E2E drives the whole path (config, three reads, event, JPEG
+  upload, attach) against the live stack.
 - **LPR operator inbox and jobs** (`0133`): `list_lpr_events` filters by
   status with the device name; `confirm_lpr_entry` checks in as the signed-in
   operator (deterministic idempotency key, corrected plate normalized,

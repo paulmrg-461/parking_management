@@ -7,6 +7,30 @@
 // are added by the follow-up hardware changes.
 
 import { json } from '../_shared/ai/sse.ts'
+import { matchRoute } from './routing.ts'
+
+export type LprReadBody = {
+  client_ref: string
+  plate: string
+  confidence: number
+  captured_at: string
+  track_id: string | null
+}
+
+export type LprDeps = {
+  config: (deviceId: number) => Promise<Record<string, unknown>>
+  read: (
+    deviceId: number,
+    body: LprReadBody,
+  ) => Promise<Record<string, unknown>>
+  attach: (
+    deviceId: number,
+    eventId: number,
+    path: string,
+  ) => Promise<Record<string, unknown>>
+  upload: (path: string, bytes: Uint8Array) => Promise<{ status: number }>
+  remove: (path: string) => Promise<void>
+}
 
 export type GatewayDeps = {
   serviceKey: () => string
@@ -23,6 +47,7 @@ export type GatewayDeps = {
   ) => Promise<Record<string, unknown>>
   authFailure: (deviceId: number) => Promise<void>
   now: () => Date
+  lpr: LprDeps
 }
 
 const KEY = /^pkd_([0-9a-f]{12})_([0-9a-f]{64})$/
@@ -51,16 +76,126 @@ function refuse(error: string, status: number): Response {
 }
 
 export function createHandler(deps: GatewayDeps) {
+  const encoder = new TextEncoder()
+  const UUID =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+  function failure(error: unknown): Response {
+    const code = error instanceof Error ? error.message : 'ServiceError'
+    const status = code === 'InvalidDeviceKindError'
+      ? 403
+      : code === 'LprEventNotFoundError'
+      ? 404
+      : code === 'SnapshotAlreadyAttachedError'
+      ? 409
+      : code === 'InvalidPlateError' || code === 'InvalidConfidenceError' ||
+          code === 'InvalidReadTimeError' ||
+          code === 'LprDirectionNotSetError' ||
+          code === 'InvalidSnapshotPathError' || code === 'InvalidDataError'
+      ? 400
+      : 502
+    return refuse(code, status)
+  }
+
+  async function reads(req: Request, deviceId: number): Promise<Response> {
+    const text = await req.text()
+    if (encoder.encode(text).length > 4096) {
+      return refuse('PayloadTooLargeError', 413)
+    }
+    let body: Record<string, unknown>
+    try {
+      body = JSON.parse(text) as Record<string, unknown>
+    } catch (_) {
+      return refuse('InvalidDataError', 400)
+    }
+    const clientRef = String(body.client_ref ?? '')
+    if (!UUID.test(clientRef) ||
+        (req.headers.get('Idempotency-Key') ?? '') !== clientRef) {
+      return refuse('InvalidDataError', 400)
+    }
+    const plate = String(body.plate ?? '')
+    const confidence = Number(body.confidence)
+    const capturedAt = String(body.captured_at ?? '')
+    if (plate === '' || !Number.isFinite(confidence) || capturedAt === '') {
+      return refuse('InvalidDataError', 400)
+    }
+    const track = body.track_id === undefined || body.track_id === null
+      ? null
+      : String(body.track_id)
+    try {
+      return json(await deps.lpr.read(deviceId, {
+        client_ref: clientRef,
+        plate,
+        confidence,
+        captured_at: capturedAt,
+        track_id: track,
+      }))
+    } catch (error) {
+      return failure(error)
+    }
+  }
+
+  async function snapshot(
+    req: Request,
+    deviceId: number,
+    lotId: number,
+    eventIdRaw: string,
+  ): Promise<Response> {
+    if (!/^\d{1,18}$/.test(eventIdRaw)) {
+      return refuse('NotFound', 404)
+    }
+    const eventId = Number(eventIdRaw)
+    const type = (req.headers.get('Content-Type') ?? '').toLowerCase()
+    if (!type.startsWith('image/jpeg')) {
+      return refuse('InvalidDataError', 400)
+    }
+    const declared = Number(req.headers.get('Content-Length') ?? '0')
+    if (Number.isFinite(declared) && declared > 262144) {
+      return refuse('PayloadTooLargeError', 413)
+    }
+    const bytes = new Uint8Array(await req.arrayBuffer())
+    if (bytes.length > 262144) {
+      return refuse('PayloadTooLargeError', 413)
+    }
+    if (bytes.length < 3 || bytes[0] !== 0xFF || bytes[1] !== 0xD8 ||
+        bytes[2] !== 0xFF) {
+      return refuse('InvalidDataError', 400)
+    }
+    // The path is derived from the authenticated device, never from the body.
+    const path = `lpr/${lotId}/${deviceId}/${eventId}.jpg`
+    const upload = await deps.lpr.upload(path, bytes)
+    if (upload.status === 409) {
+      return refuse('SnapshotAlreadyAttachedError', 409)
+    }
+    if (upload.status < 200 || upload.status >= 300) {
+      return refuse('AiUpstreamError', 502)
+    }
+    try {
+      return json(await deps.lpr.attach(deviceId, eventId, path))
+    } catch (error) {
+      const code = error instanceof Error ? error.message : 'ServiceError'
+      if (code !== 'SnapshotAlreadyAttachedError') {
+        try {
+          await deps.lpr.remove(path)
+        } catch (_) {
+          // The janitor will pick up an orphan later.
+        }
+      }
+      return failure(error)
+    }
+  }
+
   return async (req: Request): Promise<Response> => {
     const url = new URL(req.url)
-    if (req.method === 'GET' && url.pathname.endsWith('/v1/time')) {
+    const route = matchRoute(req.method, url.pathname)
+    if (!route) {
+      return refuse('NotFound', 404)
+    }
+    if (route.name === 'time') {
       return json({
         server_time: deps.now().toISOString(),
         max_skew_s: 300,
       })
-    }
-    if (!(req.method === 'POST' && url.pathname.endsWith('/v1/heartbeat'))) {
-      return refuse('NotFound', 404)
     }
     if (deps.serviceKey() === '') {
       return refuse('DeviceUnauthorizedError', 401)
@@ -71,13 +206,11 @@ export function createHandler(deps: GatewayDeps) {
     if (!match) {
       return refuse('DeviceUnauthorizedError', 401)
     }
-    const prefix = match[1]
-    const lookup = await deps.lookup(prefix)
+    const lookup = await deps.lookup(match[1])
     if (!lookup) {
       return refuse('DeviceUnauthorizedError', 401)
     }
-    const hash = await sha256(key)
-    if (!equal(hash, lookup.key_hash)) {
+    if (!equal(await sha256(key), lookup.key_hash)) {
       await deps.authFailure(lookup.id)
       return refuse('DeviceUnauthorizedError', 401)
     }
@@ -103,25 +236,45 @@ export function createHandler(deps: GatewayDeps) {
       return json(accepted, status)
     }
 
-    let status: Record<string, unknown> = {}
-    try {
-      const body = await req.json() as Record<string, unknown>
-      if (body && typeof body.status === 'object' && body.status !== null) {
-        status = body.status as Record<string, unknown>
+    const deviceId = Number(accepted.device_id)
+    if (route.name === 'heartbeat') {
+      let status: Record<string, unknown> = {}
+      try {
+        const body = await req.json() as Record<string, unknown>
+        if (body && typeof body.status === 'object' && body.status !== null) {
+          status = body.status as Record<string, unknown>
+        }
+      } catch (_) {
+        status = {}
       }
-    } catch (_) {
-      status = {}
+      const heartbeat = await deps.heartbeat(lookup.id, status)
+      return json({
+        ...heartbeat,
+        device: {
+          id: accepted.device_id,
+          lot_id: accepted.lot_id,
+          kind: accepted.kind,
+          name: accepted.name,
+        },
+      })
     }
-    const heartbeat = await deps.heartbeat(lookup.id, status)
-    return json({
-      ...heartbeat,
-      device: {
-        id: accepted.device_id,
-        lot_id: accepted.lot_id,
-        kind: accepted.kind,
-        name: accepted.name,
-      },
-    })
+
+    // LPR routes are camera-only.
+    if (accepted.kind !== 'camera') {
+      return refuse('InvalidDeviceKindError', 403)
+    }
+    if (route.name === 'lpr_config') {
+      try {
+        return json(await deps.lpr.config(deviceId))
+      } catch (error) {
+        return failure(error)
+      }
+    }
+    if (route.name === 'lpr_reads') {
+      return reads(req, deviceId)
+    }
+    return snapshot(req, deviceId, Number(accepted.lot_id),
+      route.params['id'] ?? '')
   }
 }
 
@@ -138,8 +291,17 @@ function realDeps(): GatewayDeps {
       },
       body: JSON.stringify(body),
     })
-    if (!response.ok) throw new Error('ServiceError')
     const text = await response.text()
+    if (!response.ok) {
+      let code = 'ServiceError'
+      try {
+        const parsed = JSON.parse(text) as Record<string, unknown>
+        code = String(parsed.message ?? parsed.error ?? code)
+      } catch (_) {
+        // keep the generic code
+      }
+      throw new Error(code)
+    }
     return text ? JSON.parse(text) : null
   }
   return {
@@ -158,6 +320,48 @@ function realDeps(): GatewayDeps {
       await rpc('device_record_auth_failure', { p_device_id: deviceId })
     },
     now: () => new Date(),
+    lpr: {
+      config: (deviceId) => rpc('device_lpr_config', { p_device_id: deviceId }),
+      read: (deviceId, body) => rpc('device_ingest_lpr_read', {
+        p_device_id: deviceId,
+        p_client_ref: body.client_ref,
+        p_plate: body.plate,
+        p_confidence: body.confidence,
+        p_captured_at: body.captured_at,
+        p_track_id: body.track_id,
+      }),
+      attach: (deviceId, eventId, path) =>
+        rpc('device_lpr_attach_snapshot', {
+          p_device_id: deviceId,
+          p_event_id: eventId,
+          p_path: path,
+        }),
+      upload: async (path, bytes) => {
+        const response = await fetch(
+          `${url}/storage/v1/object/evidence/${path}`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${key}`,
+              apikey: key,
+              'Content-Type': 'image/jpeg',
+              'x-upsert': 'false',
+            },
+            body: bytes,
+          },
+        )
+        return { status: response.status }
+      },
+      remove: async (path) => {
+        await fetch(`${url}/storage/v1/object/evidence/${path}`, {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${key}`,
+            apikey: key,
+          },
+        })
+      },
+    },
   }
 }
 

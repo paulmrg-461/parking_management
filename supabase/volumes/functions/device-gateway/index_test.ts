@@ -31,6 +31,23 @@ function deps(options: {
     }),
     authFailure: () => Promise.resolve(),
     now: () => new Date('2026-11-18T12:00:00Z'),
+    lpr: {
+      config: () => Promise.resolve({
+        direction: 'entry',
+        min_confidence: 0.8,
+        vote_window_seconds: 8,
+        heartbeat_interval_s: 60,
+      }),
+      read: () => Promise.resolve({
+        read_id: 1,
+        outcome: 'recorded',
+        event: null,
+        snapshot_wanted: false,
+      }),
+      attach: () => Promise.resolve({ event_id: 1, session_id: null }),
+      upload: () => Promise.resolve({ status: 200 }),
+      remove: () => Promise.resolve(),
+    },
   }
 }
 

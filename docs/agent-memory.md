@@ -255,9 +255,22 @@ until the edge service exists.
 - `expire_lpr_events` runs from `jobs.sh` and `notifications-cron.sh`;
   `purge_lpr_events` is called by `evidence-archive` (task 4.3), not by the
   shell loops.
-- Still to build: the gateway `/v1/lpr/*` routes, the `evidence-archive`
-  purge hook, the Flutter `/gate` inbox and the `edge/lpr` service. Tasks
-  1.1-1.4, 2.1-2.4 and 3.1-3.4 are checked in the change.
+- Gateway routes shipped: `routing.ts` (suffix matcher with `:name` segments,
+  tested) and the three camera-only routes `GET /v1/lpr/config`,
+  `POST /v1/lpr/reads` (Idempotency-Key must equal `client_ref`, 4 KiB cap)
+  and `PUT /v1/lpr/events/:id/snapshot` (JPEG magic, 256 KiB cap, path built
+  from the authenticated device, upload then attach, object removed when the
+  attach refuses, a Storage 409 maps to `SnapshotAlreadyAttachedError`). Each
+  route consumes the device sequence like the heartbeat.
+- `evidence-archive` now calls `purge_lpr_events` and deletes the returned
+  orphan paths (`lpr_janitor.ts`, five tests); the response adds
+  `lpr_snapshots` and `lpr_deleted`.
+- The device E2E now covers the whole LPR path against the live stack:
+  direction, config, three reads → `assist_mode` event, upload of a 1x1 JPEG
+  and the attach answer. No hardware or AI key needed.
+- Still to build: the Flutter `/gate` inbox and settings (tasks 5-6), the
+  `edge/lpr` service (task 7) and the docs pass (task 8). Tasks 1.1-1.4,
+  2.1-2.4, 3.1-3.4 and 4.1-4.5 are checked.
 
 ## Damage comparison backend (2026-11-18, `0127`)
 

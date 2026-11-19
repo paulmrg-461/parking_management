@@ -16,6 +16,8 @@
 // (supabase/backup.sh) are the archive of record; run one before shrinking a
 // retention window.
 
+import { purgeLprSnapshots } from './lpr_janitor.ts'
+
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
@@ -157,11 +159,26 @@ Deno.serve(async (req) => {
     }
   }
 
+  // LPR snapshots: the RPC deletes the aged events and returns only the
+  // orphan paths (no evidence row references them).
+  const lpr = await purgeLprSnapshots({
+    rpc: async (name, body) => {
+      const { response, body: payload } = await rest(`rpc/${name}`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+      })
+      return { ok: response.ok, body: payload }
+    },
+    storageDelete,
+  }, 30, dryRun)
+
   return done({
     configured: true,
     sites,
     deleted_objects: deletedObjects,
     deleted_rows: deletedRows,
-    failed,
+    failed: failed + lpr.failed,
+    lpr_snapshots: lpr.paths,
+    lpr_deleted: lpr.deleted,
   })
 })
