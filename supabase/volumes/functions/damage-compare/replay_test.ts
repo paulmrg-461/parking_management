@@ -10,6 +10,9 @@ type Finding = {
   classification: string
   downgraded_from?: string | null
   description_excludes?: string
+  zone?: string
+  entry_len?: number
+  exit_len?: number
 }
 
 type Fixture = {
@@ -21,6 +24,12 @@ type Fixture = {
     overall: string
     count: number
     findings?: Finding[]
+    same_vehicle?: string
+    issues_count?: number
+    covered_zones_count?: number
+    summary_max?: number
+    summary_excludes?: string
+    summary_excludes_control?: boolean
   }
 }
 
@@ -43,12 +52,44 @@ for (const file of Deno.readDirSync(dir)) {
       if (expected.downgraded_from !== undefined) {
         assertEquals(finding['downgraded_from'], expected.downgraded_from)
       }
+      if (expected.zone !== undefined) assertEquals(finding['zone'], expected.zone)
       if (expected.description_excludes) {
         assertEquals(
           String(finding['description']).includes(expected.description_excludes),
           false,
         )
       }
+      if (expected.entry_len !== undefined) {
+        assertEquals((finding['entry_photo_ids'] as unknown[]).length, expected.entry_len)
+      }
+      if (expected.exit_len !== undefined) {
+        assertEquals((finding['exit_photo_ids'] as unknown[]).length, expected.exit_len)
+      }
+    }
+    const quality = result.quality as Record<string, unknown>
+    if (fixture.expected.same_vehicle !== undefined) {
+      assertEquals(quality['same_vehicle'], fixture.expected.same_vehicle)
+    }
+    if (fixture.expected.issues_count !== undefined) {
+      assertEquals((quality['issues'] as unknown[]).length, fixture.expected.issues_count)
+    }
+    if (fixture.expected.covered_zones_count !== undefined) {
+      assertEquals(
+        (quality['covered_zones'] as unknown[]).length,
+        fixture.expected.covered_zones_count,
+      )
+    }
+    if (fixture.expected.summary_max !== undefined) {
+      assertEquals(String(result.summary).length <= fixture.expected.summary_max, true)
+    }
+    if (fixture.expected.summary_excludes) {
+      assertEquals(
+        String(result.summary).includes(fixture.expected.summary_excludes),
+        false,
+      )
+    }
+    if (fixture.expected.summary_excludes_control) {
+      assertEquals(/[\u0000-\u001f\u007f]/.test(String(result.summary)), false)
     }
   })
 }

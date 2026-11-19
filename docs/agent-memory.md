@@ -90,7 +90,17 @@ Last updated: 2026-11-18 (replay parity).
   falling back to `uncertain`.
 - The report-assistant replay now covers the whole design table (18 cases:
   F1-F18), all hand-authored against the recorded RPC shapes. No live key was
-  needed. Deno suite is 111 tests.
+  needed. The damage replay now has 18 cases too (pairing, foreign photo
+  ids, missing exit photo, sort order, quality caps, control-character
+  stripping, malformed findings, summary truncation, unknown identity).
+  Deno suite is 120 tests.
+- `report-assistant/eval_live.ts` + `deno task eval:live` (manual, needs
+  `DEEPSEEK_API_KEY`, never in CI): runs the same 18 fixtures against the
+  real model, scores tool selection (expected subset of called, with
+  `get_capacity_now` noise allowed), the date arguments and every figure
+  value, and fails under 17/18. It is inert without a key.
+- The damage live eval still needs real photo pairs; there is no image
+  fixture set yet.
 - SQL suite flakiness fixed in `rpc_test.sql`: two blocks were tied to the
   wall clock. The forecast median fixture now anchors on the most recent
   Wednesday strictly before today (the profile window is `today - 8 weeks ..

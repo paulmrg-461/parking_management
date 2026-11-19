@@ -1,0 +1,48 @@
+{
+  "case": "control characters are stripped from the summary and description",
+  "entry_ids": [
+    1
+  ],
+  "exit_ids": [
+    2
+  ],
+  "model_answer": {
+    "summary": "Resumen\u0000 con\ncontrol\u0007 y <b>etiquetas</b>",
+    "quality": {
+      "same_vehicle": "yes",
+      "covered_zones": [
+        "front",
+        "rear",
+        "left",
+        "right"
+      ],
+      "issues": []
+    },
+    "findings": [
+      {
+        "zone": "left",
+        "description": "Golpe\u0000\ncon\tcontrol y <script>x</script>",
+        "classification": "pre_existing",
+        "confidence": "high",
+        "entry_photo_ids": [
+          1
+        ],
+        "exit_photo_ids": [
+          2
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "overall": "no_new_damage",
+    "count": 1,
+    "findings": [
+      {
+        "classification": "pre_existing",
+        "description_excludes": "<script>"
+      }
+    ],
+    "summary_excludes": "<b>",
+    "summary_excludes_control": true
+  }
+}

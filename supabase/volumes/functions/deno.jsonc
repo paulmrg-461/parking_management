@@ -1,4 +1,8 @@
 {
+  "tasks": {
+    "test": "deno test --allow-env --allow-read",
+    "eval:live": "deno run --allow-env --allow-read report-assistant/eval_live.ts"
+  },
   "imports": {
     "@supabase/functions-js": "jsr:@supabase/functions-js@^2",
     "@supabase/server": "npm:@supabase/server@^1"

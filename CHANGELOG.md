@@ -95,6 +95,16 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   relative to the run date) and the loyalty online-cap fixture uses a fixed
   past daytime window instead of `now() - 3 hours`, which crossed the night
   rate boundary and changed the fare depending on the hour of the run.
+- **Damage replay parity**: nine more normaliser cases — multi-photo
+  pairing, foreign photo ids dropped and downgraded, missing exit photo,
+  severity sort order, the quality caps, control-character and tag
+  stripping, malformed `findings`, summary truncation and an unknown
+  vehicle identity.
+- **Live eval task** (`report-assistant/eval_live.ts`, `deno task
+  eval:live`): runs the eighteen fixtures against the real model, scores
+  tool selection, dates and figure values, prints a per-case report and
+  enforces the design's 17/18 bar. Manual only — it refuses to run without
+  `DEEPSEEK_API_KEY` and is not wired into CI.
 
 - **Guided photo capture** (`core/widgets/capture_guide.dart`): a next-angle
   banner and slot chips shown at check-in and in the exit-photo section, plus a
