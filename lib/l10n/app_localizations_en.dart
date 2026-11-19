@@ -6131,4 +6131,101 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get guideShowIllustration => 'See example';
+
+  @override
+  String get navGate => 'Gate';
+
+  @override
+  String get gateTitle => 'Detected plates';
+
+  @override
+  String get gateEmptyTitle => 'No plates to review';
+
+  @override
+  String get gateEmptyBody =>
+      'When the camera reads a plate that needs your confirmation, it will appear here.';
+
+  @override
+  String get gateGoToCheckIn => 'Register entry';
+
+  @override
+  String get gateConfirmEntry => 'Confirm entry';
+
+  @override
+  String get gateDismiss => 'Dismiss';
+
+  @override
+  String get gateOpenCheckOut => 'Open check-out';
+
+  @override
+  String get gateConfirmTitle => 'Confirm plate';
+
+  @override
+  String get gateConfirmBody => 'Review the plate before opening the session.';
+
+  @override
+  String gateConfidence(int percent) {
+    return 'Confidence $percent%';
+  }
+
+  @override
+  String gateVotes(int count) {
+    return '$count reads';
+  }
+
+  @override
+  String gateDevice(String name) {
+    return 'Camera $name';
+  }
+
+  @override
+  String get gateSnapshotMissing => 'No image';
+
+  @override
+  String get gateNeedsConnection => 'Confirming needs a connection';
+
+  @override
+  String get gateConfirmed => 'Entry confirmed';
+
+  @override
+  String get gateDismissed => 'Read dismissed';
+
+  @override
+  String get gateDismissTitle => 'Dismiss read';
+
+  @override
+  String get gateDismissBody => 'Dismiss this read without opening a session?';
+
+  @override
+  String get gateReasonAssist => 'Assist mode';
+
+  @override
+  String get gateReasonLowConfidence => 'Low confidence';
+
+  @override
+  String get gateReasonUnknownPlate => 'Unregistered plate';
+
+  @override
+  String get gateReasonNoSystemOperator => 'No system operator';
+
+  @override
+  String get gateReasonDuplicateSession => 'Already has an open session';
+
+  @override
+  String get gateReasonLotFull => 'Lot full';
+
+  @override
+  String get gateReasonError => 'Could not register';
+
+  @override
+  String get gateReasonBlacklisted => 'Blacklisted vehicle';
+
+  @override
+  String get gateReasonExitUnpaid => 'Leaving with an unpaid session';
+
+  @override
+  String get gateReasonNoOpenSession => 'Leaving without an open session';
+
+  @override
+  String get gateReasonExitPaid => 'Exit already paid';
 }

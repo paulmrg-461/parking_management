@@ -40,6 +40,8 @@ import '../../features/merchants/presentation/public_validation_page.dart';
 import '../../features/pass_renewal/application/pass_renewal_cubit.dart';
 import '../../features/pricing/application/price_quote_cubit.dart';
 import '../../features/loyalty/application/loyalty_status_cubit.dart';
+import '../../features/lpr/application/lpr_inbox_cubit.dart';
+import '../../features/lpr/presentation/gate_page.dart';
 import '../../features/damage_comparison/application/damage_comparison_cubit.dart';
 import '../../features/damage_comparison/presentation/damage_comparison_page.dart';
 import '../../features/pass_renewal/presentation/pass_renewal_page.dart';
@@ -339,6 +341,13 @@ GoRoute _homeRoute(AuthCubit auth) => GoRoute(
           ),
         ],
         child: const ReservationsPage(),
+      ),
+    ),
+    GoRoute(
+      path: 'gate',
+      builder: (context, state) => BlocProvider<LprInboxCubit>(
+        create: (_) => serviceLocator<LprInboxCubit>(),
+        child: const GatePage(),
       ),
     ),
     GoRoute(path: 'help', builder: (context, state) => const HelpPage()),

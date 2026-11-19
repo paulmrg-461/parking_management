@@ -268,9 +268,18 @@ until the edge service exists.
 - The device E2E now covers the whole LPR path against the live stack:
   direction, config, three reads → `assist_mode` event, upload of a 1x1 JPEG
   and the attach answer. No hardware or AI key needed.
-- Still to build: the Flutter `/gate` inbox and settings (tasks 5-6), the
+- Flutter inbox shipped (`lib/features/lpr/`): `LprEvent`/enums, repository
+  port and command, the Supabase data source (reusing the check-in session
+  DTO), the polling `LprInboxCubit` (four states, single-flight submissions,
+  timer cancelled on close) and `/gate` with cards, skeleton, empty/error
+  states, the plate-correction dialog, the offline guard and the unpaid-exit
+  shortcut to `/check-out?scan=`. The gate sits in the drawer ("Portería"):
+  the bottom bar is capped at four routes.
+- `0134` lets `confirm_lpr_entry` fall back to the lot's default category, so
+  an unknown plate can be confirmed from the dialog without a category picker.
+- Still to build: the `/gate-settings` page and its cubit (task 6.1/6.3), the
   `edge/lpr` service (task 7) and the docs pass (task 8). Tasks 1.1-1.4,
-  2.1-2.4, 3.1-3.4 and 4.1-4.5 are checked.
+  2.1-2.4, 3.1-3.4, 4.1-4.5 and 5.1-5.3 are checked.
 
 ## Damage comparison backend (2026-11-18, `0127`)
 

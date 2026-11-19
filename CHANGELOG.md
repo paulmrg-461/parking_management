@@ -77,6 +77,13 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - Android release build: R8 keep rules for the optional ML Kit scripts.
 
 ### Added
+- **Gate inbox (`/gate`)**: the LPR feature now has its entity, repository,
+  Supabase data source, a polling cubit (single-flight confirm/dismiss,
+  timer cancelled on close) and a four-state page with skeleton cards, plate
+  correction, an offline guard and the unpaid-exit shortcut to check-out.
+  Alerts route to the gate, the destination lives in the drawer and the
+  confirmation falls back to the lot's default category for unknown plates
+  (`0134`). New error codes and ES/EN messages included.
 - **LPR gateway routes and snapshot janitor**: the device gateway gained a
   suffix route matcher and three camera-only routes — `GET /v1/lpr/config`,
   `POST /v1/lpr/reads` (the `Idempotency-Key` must equal `client_ref`, 4 KiB

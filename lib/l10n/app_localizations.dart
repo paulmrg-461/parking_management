@@ -10765,6 +10765,186 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Ver ejemplo'**
   String get guideShowIllustration;
+
+  /// No description provided for @navGate.
+  ///
+  /// In es, this message translates to:
+  /// **'Portería'**
+  String get navGate;
+
+  /// No description provided for @gateTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Placas detectadas'**
+  String get gateTitle;
+
+  /// No description provided for @gateEmptyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay placas por revisar'**
+  String get gateEmptyTitle;
+
+  /// No description provided for @gateEmptyBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuando la cámara lea una placa que necesite tu confirmación, aparecerá aquí.'**
+  String get gateEmptyBody;
+
+  /// No description provided for @gateGoToCheckIn.
+  ///
+  /// In es, this message translates to:
+  /// **'Registrar entrada'**
+  String get gateGoToCheckIn;
+
+  /// No description provided for @gateConfirmEntry.
+  ///
+  /// In es, this message translates to:
+  /// **'Confirmar entrada'**
+  String get gateConfirmEntry;
+
+  /// No description provided for @gateDismiss.
+  ///
+  /// In es, this message translates to:
+  /// **'Descartar'**
+  String get gateDismiss;
+
+  /// No description provided for @gateOpenCheckOut.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir salida'**
+  String get gateOpenCheckOut;
+
+  /// No description provided for @gateConfirmTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Confirmar placa'**
+  String get gateConfirmTitle;
+
+  /// No description provided for @gateConfirmBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisa la placa antes de abrir la sesión.'**
+  String get gateConfirmBody;
+
+  /// No description provided for @gateConfidence.
+  ///
+  /// In es, this message translates to:
+  /// **'Confianza {percent}%'**
+  String gateConfidence(int percent);
+
+  /// No description provided for @gateVotes.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} lecturas'**
+  String gateVotes(int count);
+
+  /// No description provided for @gateDevice.
+  ///
+  /// In es, this message translates to:
+  /// **'Cámara {name}'**
+  String gateDevice(String name);
+
+  /// No description provided for @gateSnapshotMissing.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin imagen'**
+  String get gateSnapshotMissing;
+
+  /// No description provided for @gateNeedsConnection.
+  ///
+  /// In es, this message translates to:
+  /// **'Confirmar requiere conexión'**
+  String get gateNeedsConnection;
+
+  /// No description provided for @gateConfirmed.
+  ///
+  /// In es, this message translates to:
+  /// **'Entrada confirmada'**
+  String get gateConfirmed;
+
+  /// No description provided for @gateDismissed.
+  ///
+  /// In es, this message translates to:
+  /// **'Lectura descartada'**
+  String get gateDismissed;
+
+  /// No description provided for @gateDismissTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Descartar lectura'**
+  String get gateDismissTitle;
+
+  /// No description provided for @gateDismissBody.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Descartar esta lectura sin abrir una sesión?'**
+  String get gateDismissBody;
+
+  /// No description provided for @gateReasonAssist.
+  ///
+  /// In es, this message translates to:
+  /// **'Modo asistido'**
+  String get gateReasonAssist;
+
+  /// No description provided for @gateReasonLowConfidence.
+  ///
+  /// In es, this message translates to:
+  /// **'Confianza baja'**
+  String get gateReasonLowConfidence;
+
+  /// No description provided for @gateReasonUnknownPlate.
+  ///
+  /// In es, this message translates to:
+  /// **'Placa no registrada'**
+  String get gateReasonUnknownPlate;
+
+  /// No description provided for @gateReasonNoSystemOperator.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin operador del sistema'**
+  String get gateReasonNoSystemOperator;
+
+  /// No description provided for @gateReasonDuplicateSession.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya tiene una sesión abierta'**
+  String get gateReasonDuplicateSession;
+
+  /// No description provided for @gateReasonLotFull.
+  ///
+  /// In es, this message translates to:
+  /// **'Parqueadero lleno'**
+  String get gateReasonLotFull;
+
+  /// No description provided for @gateReasonError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo registrar'**
+  String get gateReasonError;
+
+  /// No description provided for @gateReasonBlacklisted.
+  ///
+  /// In es, this message translates to:
+  /// **'Vehículo en lista negra'**
+  String get gateReasonBlacklisted;
+
+  /// No description provided for @gateReasonExitUnpaid.
+  ///
+  /// In es, this message translates to:
+  /// **'Sale con la sesión sin cobrar'**
+  String get gateReasonExitUnpaid;
+
+  /// No description provided for @gateReasonNoOpenSession.
+  ///
+  /// In es, this message translates to:
+  /// **'Sale sin sesión abierta'**
+  String get gateReasonNoOpenSession;
+
+  /// No description provided for @gateReasonExitPaid.
+  ///
+  /// In es, this message translates to:
+  /// **'Salida ya pagada'**
+  String get gateReasonExitPaid;
 }
 
 class _AppLocalizationsDelegate

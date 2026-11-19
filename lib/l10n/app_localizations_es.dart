@@ -6190,4 +6190,101 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get guideShowIllustration => 'Ver ejemplo';
+
+  @override
+  String get navGate => 'Portería';
+
+  @override
+  String get gateTitle => 'Placas detectadas';
+
+  @override
+  String get gateEmptyTitle => 'No hay placas por revisar';
+
+  @override
+  String get gateEmptyBody =>
+      'Cuando la cámara lea una placa que necesite tu confirmación, aparecerá aquí.';
+
+  @override
+  String get gateGoToCheckIn => 'Registrar entrada';
+
+  @override
+  String get gateConfirmEntry => 'Confirmar entrada';
+
+  @override
+  String get gateDismiss => 'Descartar';
+
+  @override
+  String get gateOpenCheckOut => 'Abrir salida';
+
+  @override
+  String get gateConfirmTitle => 'Confirmar placa';
+
+  @override
+  String get gateConfirmBody => 'Revisa la placa antes de abrir la sesión.';
+
+  @override
+  String gateConfidence(int percent) {
+    return 'Confianza $percent%';
+  }
+
+  @override
+  String gateVotes(int count) {
+    return '$count lecturas';
+  }
+
+  @override
+  String gateDevice(String name) {
+    return 'Cámara $name';
+  }
+
+  @override
+  String get gateSnapshotMissing => 'Sin imagen';
+
+  @override
+  String get gateNeedsConnection => 'Confirmar requiere conexión';
+
+  @override
+  String get gateConfirmed => 'Entrada confirmada';
+
+  @override
+  String get gateDismissed => 'Lectura descartada';
+
+  @override
+  String get gateDismissTitle => 'Descartar lectura';
+
+  @override
+  String get gateDismissBody => '¿Descartar esta lectura sin abrir una sesión?';
+
+  @override
+  String get gateReasonAssist => 'Modo asistido';
+
+  @override
+  String get gateReasonLowConfidence => 'Confianza baja';
+
+  @override
+  String get gateReasonUnknownPlate => 'Placa no registrada';
+
+  @override
+  String get gateReasonNoSystemOperator => 'Sin operador del sistema';
+
+  @override
+  String get gateReasonDuplicateSession => 'Ya tiene una sesión abierta';
+
+  @override
+  String get gateReasonLotFull => 'Parqueadero lleno';
+
+  @override
+  String get gateReasonError => 'No se pudo registrar';
+
+  @override
+  String get gateReasonBlacklisted => 'Vehículo en lista negra';
+
+  @override
+  String get gateReasonExitUnpaid => 'Sale con la sesión sin cobrar';
+
+  @override
+  String get gateReasonNoOpenSession => 'Sale sin sesión abierta';
+
+  @override
+  String get gateReasonExitPaid => 'Salida ya pagada';
 }

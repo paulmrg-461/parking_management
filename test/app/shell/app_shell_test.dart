@@ -52,7 +52,7 @@ void main() {
 
     final drawer = find.byType(Drawer);
     expect(drawer, findsOneWidget);
-    for (final label in ['Avisos', 'Contacto', 'Vehículos', 'Emergencia']) {
+    for (final label in ['Avisos', 'Contacto', 'Vehículos', 'Emergencia', 'Portería']) {
       expect(
         find.descendant(of: drawer, matching: find.text(label)),
         findsOneWidget,

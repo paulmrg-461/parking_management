@@ -16987,6 +16987,18 @@ begin
         raise exception 'the corrected plate checked in another vehicle';
     end if;
 
+    -- An unknown plate confirmed without a category uses the lot default.
+    response := pg_temp.lpr_triple(entry_camera, 'LPR026', 0.95, now());
+    event_id := (response -> 'event' ->> 'id')::bigint;
+    response := public.confirm_lpr_entry(event_id);
+    if not exists (
+        select 1 from public.vehicles v
+         where v.plate = 'LPR026'
+           and v.category_id = current_setting('app.lpr_car_cat')::integer
+    ) then
+        raise exception 'the default category was not applied on confirm';
+    end if;
+
     -- Dismiss with a note, then refuse to resolve it again.
     response := pg_temp.lpr_triple(entry_camera, 'LPR023', 0.95, now());
     event_id := (response -> 'event' ->> 'id')::bigint;

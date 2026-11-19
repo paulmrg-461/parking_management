@@ -13,6 +13,12 @@ AppNotification _n(String type, [Map<String, dynamic> data = const {}]) =>
     );
 
 void main() {
+  test('Success: lpr alerts open the gate inbox', () {
+    for (final type in ['lpr_pending', 'lpr_exit', 'lpr_blacklisted']) {
+      expect(routeForNotification(_n(type)), '/gate', reason: type);
+    }
+  });
+
   test('Success: shift and pass notifications open their screens', () {
     expect(routeForNotification(_n('shift_closed')), '/shift');
     expect(routeForNotification(_n('monthly_pass_renewed')), '/monthly-passes');

@@ -29,6 +29,7 @@ const operatorRoutes = {
   '/history',
   '/records',
   '/reservations',
+  '/gate',
   '/shift',
   '/scan',
   '/contact',

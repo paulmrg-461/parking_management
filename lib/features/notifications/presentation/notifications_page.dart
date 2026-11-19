@@ -539,6 +539,7 @@ class _NotificationTile extends StatelessWidget {
         'public_reservation' => l10n.notifTypeReservation,
         'online_payment' => l10n.notifTypeOnlinePayment,
         'online_payment_review' => l10n.notifTypeOnlinePaymentReview,
+        'lpr_pending' || 'lpr_exit' || 'lpr_blacklisted' => l10n.gateTitle,
         _ => l10n.notifTypeGeneric,
       };
 
@@ -555,6 +556,7 @@ class _NotificationTile extends StatelessWidget {
     'cash_anomaly' => Icons.report_problem_outlined,
     'online_payment' => Icons.qr_code_2_outlined,
     'online_payment_review' => Icons.pending_actions_outlined,
+    'lpr_pending' || 'lpr_exit' || 'lpr_blacklisted' => Icons.videocam_outlined,
     _ => Icons.notifications,
   };
 }

@@ -1,3 +1,4 @@
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/core/state/submission.dart';
@@ -65,6 +66,54 @@ void main() {
     await Future.wait([first, second]);
     expect(repository.confirmed, hasLength(1));
     await cubit.close();
+  });
+
+  test('a dismiss failure keeps the card and reports it', () async {
+    final cubit = LprInboxCubit(
+      FakeLprRepository()..dismissError = const NetworkFailure('offline'),
+    );
+    await cubit.load();
+    await cubit.dismiss(1);
+    final state = cubit.state as LprInboxLoaded;
+    expect(state.events, hasLength(1));
+    expect(state.submission, isA<SubmissionFailed>());
+    await cubit.close();
+  });
+
+  test('dismiss in the empty state is ignored', () async {
+    final repository = FakeLprRepository()..events = [];
+    final cubit = LprInboxCubit(repository);
+    await cubit.load();
+    await cubit.dismiss(1);
+    expect(repository.dismissed, isEmpty);
+    expect(cubit.state, isA<LprInboxEmpty>());
+    await cubit.close();
+  });
+
+  test('confirm before the first load is ignored', () async {
+    final repository = FakeLprRepository();
+    final cubit = LprInboxCubit(repository);
+    await cubit.confirm(const ConfirmLprEntry(eventId: 1));
+    expect(repository.confirmed, isEmpty);
+    await cubit.close();
+  });
+
+  test('polling refreshes in the background and stops on close', () {
+    fakeAsync((async) {
+      final repository = FakeLprRepository();
+      final cubit = LprInboxCubit(repository);
+      cubit.load();
+      async.flushMicrotasks();
+      expect(repository.listCalls, 1);
+      cubit.startPolling();
+      async.elapse(const Duration(seconds: 10));
+      async.flushMicrotasks();
+      expect(repository.listCalls, 2);
+      cubit.close();
+      async.elapse(const Duration(seconds: 30));
+      async.flushMicrotasks();
+      expect(repository.listCalls, 2);
+    });
   });
 
   test('polling stops when the cubit closes', () async {

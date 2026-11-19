@@ -44,6 +44,7 @@ String _pricing(AppLocalizations l) => l.navPricing;
 String _loyalty(AppLocalizations l) => l.navLoyalty;
 String _invoicing(AppLocalizations l) => l.navInvoicing;
 String _devices(AppLocalizations l) => l.navDevices;
+String _gate(AppLocalizations l) => l.navGate;
 
 const primaryDestinations = [
   AppDestination(homePath, _home, Icons.home_outlined, Icons.home),
@@ -54,6 +55,12 @@ const primaryDestinations = [
     _records,
     Icons.receipt_long_outlined,
     Icons.receipt_long,
+  ),
+  AppDestination(
+    '/gate',
+    _gate,
+    Icons.videocam_outlined,
+    Icons.videocam,
   ),
   AppDestination(
     '/notifications',

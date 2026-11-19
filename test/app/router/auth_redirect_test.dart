@@ -48,6 +48,11 @@ void main() {
       expect(authRedirect(const AuthUnauthenticated(), '/login'), isNull);
     });
 
+    test('Success: operators reach the gate inbox', () {
+      expect(authRedirect(_as(UserRole.operator), '/gate'), isNull);
+      expect(canAccess(UserRole.operator, '/gate'), isTrue);
+    });
+
     test('Success: operators run the reservations board', () {
       expect(authRedirect(_as(UserRole.operator), '/reservations'), isNull);
       expect(canAccess(UserRole.operator, '/reservations'), isTrue);

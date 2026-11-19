@@ -19,6 +19,7 @@ import 'modules/check_out_module.dart';
 import 'modules/core_module.dart';
 import 'modules/customer_messages_module.dart';
 import 'modules/lots_module.dart';
+import 'modules/lpr_module.dart';
 import 'modules/monthly_passes_module.dart';
 import 'modules/notifications_module.dart';
 import 'modules/observability_module.dart';
@@ -156,6 +157,7 @@ void registerAllModules(GetIt sl, AppConfig config) {
   registerReportAssistantModule(sl);
   registerDamageComparisonModule(sl);
   registerDevicesModule(sl);
+  registerLprModule(sl);
   registerPublicBookingModule(sl);
   registerWaitlistModule(sl);
   registerAnomaliesModule(sl);
