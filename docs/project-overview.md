@@ -53,11 +53,11 @@ WhatsApp (manual or automated).
 | Secrets / PIN operations | Complete (scripts + runbook) | PIN rotation verified live |
 | E2E and CI | Complete (API + Flutter client + device protocol, real stack) | CI job `supabase-e2e`; local `integration_test/app_flow_test.dart` |
 
-Quality snapshot (2026-11-19, local stack): **1899 Flutter tests + 1 integration
-test**, **133 Deno tests** (unit, replay and eval guards), SQL/RLS suite green
-over `0001`-`0129`, web builds green, analyzer with **0 errors and 0 warnings**
-(only SDK deprecation infos from the pinned beta channel), restore drill
-green.
+Quality snapshot (2026-11-19, local stack): **1948 Flutter tests + 2 integration
+tests**, **158 Deno tests** (unit, replay, eval guards and the device gateway),
+SQL/RLS suite green over `0001`-`0134`, web builds green, analyzer with **0
+errors and 0 warnings** (only SDK deprecation infos from the pinned beta
+channel), restore drill green.
 
 ## 3. Module map
 
@@ -90,6 +90,7 @@ the main data it touches.
 | `pricing` | Dynamic rates: rules, guard rails, simulation, impact and the check-in price chip | `pricing_rules`, `pricing_lock`, `pricing_quote`, `pricing_simulate`, `report_pricing_impact`, `public_availability` price keys |
 | `devices` | Per-lot hardware registry, key rotation, heartbeat/offline alerts, the `device-gateway` transport and the `/devices` admin screen | `lot_devices`, `device_events`, `register_lot_device`, `device_accept_request`, `device_heartbeat`, `notify_offline_devices` |
 | `damage_comparison` | Exit photos, advisory AI comparison of entry/exit photos, the `/damage-comparison` page and the human review | `damage_comparisons`, `damage_findings`, `add_exit_evidence`, `begin/get_damage_comparison`, `review_damage_finding`, `damage-compare` |
+| `lpr_gate` | Fixed plate camera: server-side voting and decisions, `/gate` inbox, assist/auto settings, snapshot evidence and the device protocol | `lpr_settings`, `lpr_camera_config`, `lpr_reads`, `lpr_events`, `device_ingest_lpr_read`, `confirm_lpr_entry`, `expire_lpr_events`, `device-gateway /v1/lpr/*` |
 | `report_assistant` | Natural-language questions over the report RPCs with a verified figure/source for each number (`/report-assistant`) | `ai_requests`/`ai_limits`, `ai_budget_*`, `report-assistant` Edge Function, `report_revenue` and the other report RPCs |
 | `invoicing` | Fiscal issuer/resolutions, document outbox, credit notes and the admin list (`/invoicing`) | `fiscal_settings`, `fiscal_resolutions`, `fiscal_documents`, `issue_fiscal_document`, `list_fiscal_documents`, `request_credit_note`, `fiscal-dispatch` |
 | `loyalty` | Visit program, reward redemption, member corrections and the impact report (`/loyalty`) | `loyalty_accounts`, `loyalty_rewards`, `loyalty_visits`, `loyalty_adjustments`, `fare_reward_step`, `loyalty_plate_status`, `choose_loyalty_redemption`, `report_loyalty`, `list_loyalty_accounts` |
@@ -294,6 +295,25 @@ discount or the blacklist. The settlement dialog captures optional exit photos
 with angle guidance, the evidence sheet groups photos by phase and offers the
 compare action, and the `/damage-comparison` page shows the verdict and
 findings.
+
+## 7.12 LPR gate (software complete, hardware pending)
+
+A fixed camera posts plate reads to the device gateway; the server owns the
+decision. Reads are serialised per camera, normalised with the same rule as
+`check_in`, stored even when they are late or low-confidence, debounced by
+cooldown and only decided after the configured votes. The decision table covers
+assist mode, automatic check-in attributed to the lot's system operator,
+unknown plates with a default category, blacklist, duplicate sessions, a full
+lot and the error path; an exit only raises an alert and never closes or
+charges a session. Pending and blocked reads notify every active member once,
+and the `/gate` inbox confirms (with plate correction), dismisses or opens the
+check-out for an unpaid exit. Admins configure mode and thresholds and assign
+each camera's direction in `/gate-settings`; auto mode asks for confirmation
+because a spoofed plate could open a session unattended. Snapshots become
+ordinary evidence photos once a session exists and are purged with the events.
+What remains is the Jetson reference service (`edge/lpr/`) and the physical
+validation; the protocol and the rest are covered by SQL, Deno, widget and
+end-to-end tests.
 
 ## 7.10 Report assistant (implemented, inert without a key)
 

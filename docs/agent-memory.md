@@ -285,8 +285,13 @@ until the edge service exists.
   pickers, per-camera direction, save). The page creates its three cubits so
   the router stays free of deferred-heavy imports; the route is admin-only
   and the drawer entry is "Cámara de placas".
-- Still to build: the `edge/lpr` service (task 7) and the docs pass (task 8).
-  Tasks 1.1-1.4, 2.1-2.4, 3.1-3.4, 4.1-4.5, 5.1-5.3 and 6.1-6.4 are checked.
+- Docs shipped: `docs/lpr-gate.md` (decision table, operator flow, settings,
+  protocol, retention, rollback, limits) plus the database/architecture/
+  infrastructure/project-overview/index updates. Mermaid: camera -> edge
+  service -> gateway -> DB -> gate inbox.
+- Remaining: the `edge/lpr` Python service (task 7) and the hardware
+  validation (7.11); the spec, schema, gateway, UI and docs are done. Tasks
+  1.1-6.4 and 8.1-8.3 are checked; `openspec validate --strict` passes.
 
 ## Damage comparison backend (2026-11-18, `0127`)
 

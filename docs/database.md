@@ -660,3 +660,17 @@ Upload the files **before** calling (or replaying) `check_in`.
 **Currency in notifications.** `format_money(amount, currency)` mirrors
 `Money.format`: COP `$5.000` (no decimals), USD `US$1,234.50` (minor units
 / 100), negative `-$1.000`.
+
+**LPR gate (`0131`-`0134`).** `lpr_settings` (one row per lot; mode, thresholds,
+default category, system operator) with a member read policy and the audit
+trigger, written only by `set_lpr_settings`; `lpr_camera_config` (one direction
+per camera, read through `get_lpr_settings`); `lpr_events` and `lpr_reads`
+(no client grants: reads go through `list_lpr_events`). The device RPCs
+(`device_lpr_config`, `device_ingest_lpr_read`,
+`device_lpr_attach_snapshot`) are service-role only; the operator RPCs are
+`list_lpr_events`, `confirm_lpr_entry` (runs `check_in` as the caller, with
+`p_idempotency_key = 'lpr-confirm:<event>'`), `dismiss_lpr_event` and, for the
+jobs, `expire_lpr_events` / `purge_lpr_events`. Auto entry impersonates the
+lot's system operator by setting the request claims inside the ingest
+transaction and restoring them afterwards. `can_read_lpr_snapshot(path)` backs
+the Storage read policy for snapshots that are not yet evidence.

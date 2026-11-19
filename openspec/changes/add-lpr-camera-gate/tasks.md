@@ -58,6 +58,6 @@ Prerequisite: `add-device-gateway` is implemented (its tasks 1 to 6 done). Migra
 
 ## 8. Docs and verification
 
-- [ ] 8.1 Create `docs/lpr-gate.md` (decision table, protocol routes, edge install/run, threat model summary, how to switch assist/auto and roll back). Update `docs/database.md`, `docs/architecture.md` (system context: camera → Jetson → gateway), `docs/infrastructure.md` (jobs, evidence-archive), `docs/project-overview.md`, `docs/agent-memory.md` (system-operator claims primitive; direct `evidence_photos` insert; no `current_lot_id()` in Storage policy; `evidence-archive` now tracked), `CHANGELOG.md`, `docs/README.md`.
-- [ ] 8.2 Gatekeeper (AGENTS §6): `flutter analyze`; `flutter test --coverage`; `dart run tool/check_coverage.dart`; `sh supabase/tests/run.sh`; `flutter test test/integration/supabase_flow_test.dart` only if the stack is up; edge tests (7.10). Commit with Conventional Commits and push.
-- [ ] 8.3 `openspec validate add-lpr-camera-gate --strict` passes.
+- [x] 8.1 Create `docs/lpr-gate.md` (decision table, protocol routes, edge install/run, threat model summary, how to switch assist/auto and roll back). Update `docs/database.md`, `docs/architecture.md` (system context: camera → Jetson → gateway), `docs/infrastructure.md` (jobs, evidence-archive), `docs/project-overview.md`, `docs/agent-memory.md` (system-operator claims primitive; direct `evidence_photos` insert; no `current_lot_id()` in Storage policy; `evidence-archive` now tracked), `CHANGELOG.md`, `docs/README.md`.
+- [x] 8.2 Gatekeeper (AGENTS §6): `flutter analyze`; `flutter test --coverage`; `dart run tool/check_coverage.dart`; `sh supabase/tests/run.sh`; `flutter test test/integration/supabase_flow_test.dart` only if the stack is up; edge tests (7.10). Commit with Conventional Commits and push.
+- [x] 8.3 `openspec validate add-lpr-camera-gate --strict` passes.

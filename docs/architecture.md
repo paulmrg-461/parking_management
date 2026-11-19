@@ -373,6 +373,33 @@ The device never sends a lot id or a user JWT: the gateway derives both from
 the registry. The service key lives only in this function; the follow-up
 hardware changes add routes to the same table and reuse the same checks.
 
+## 5g. LPR gate (plate camera)
+
+A fixed camera runs a small edge service (Jetson/CPU reference in `edge/lpr/`,
+task 7 of the change) that samples RTSP frames, reads plates and posts them to
+the device gateway. The camera is just another device: same key, sequence and
+clock rules as the heartbeat. The server owns the decision — voting, debounce
+and the decision table — because the camera can lie or misread. Auto entries
+impersonate the lot's system operator inside one transaction; exits only raise
+an alert for the desk and never touch a session.
+
+```mermaid
+flowchart LR
+  cam[Fixed camera] -->|RTSP| edge[Jetson edge service]
+  edge -->|X-Device-Key + reads| gw[device-gateway /v1/lpr/*]
+  gw -->|service role| db[(lpr_reads / lpr_events)]
+  db -->|decide| ci[check_in as system operator]
+  db -->|notifications| gate[/gate inbox/]
+  gate -->|confirm / dismiss| db
+  gate -->|unpaid exit| co[Check-out]
+  db -->|snapshot| bucket[(evidence/lpr/...)]
+```
+
+The reference implementation and the hardware validation are the only parts
+not shipped yet; the protocol, the schema, the gateway routes and the UI are
+in place and covered by SQL, Deno and widget tests plus a live end-to-end
+smoke that registers a camera and posts reads without any hardware.
+
 ## 6. Shifts and cash
 
 An operator opens one shift per site (`unique (operator_id, lot_id)`), records
