@@ -110,8 +110,9 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - **Live eval task** (`report-assistant/eval_live.ts`, `deno task
   eval:live`): runs the eighteen fixtures against the real model, scores
   tool selection, dates and figure values, prints a per-case report and
-  enforces the design's 17/18 bar. Manual only — it refuses to run without
-  `DEEPSEEK_API_KEY` and is not wired into CI.
+  enforces the design's 17/18 bar. Manual only: it refuses to run without
+  `DEEPSEEK_API_KEY` or inside CI (`eval_guard.ts`, tested), and is not wired
+  into the workflow.
 
 - **Guided photo capture** (`core/widgets/capture_guide.dart`): a next-angle
   banner and slot chips shown at check-in and in the exit-photo section, plus a

@@ -12,7 +12,8 @@
 //
 // Never wired into CI.
 
-import { isConfigured, loadConfig } from '../_shared/ai/config.ts'
+import { loadConfig } from '../_shared/ai/config.ts'
+import { evalRefusal } from './eval_guard.ts'
 import { createModelClient } from '../_shared/ai/deepseek.ts'
 import { run, type AgentDeps } from './agent.ts'
 import { join } from 'jsr:@std/path@^1'
@@ -33,13 +34,13 @@ type Fixture = {
   }
 }
 
-const cfg = loadConfig(Deno.env.toObject())
-if (!isConfigured(cfg)) {
-  console.error(
-    'eval:live needs DEEPSEEK_API_KEY (manual run only; it spends tokens).',
-  )
+const env = Deno.env.toObject()
+const refusal = evalRefusal(env)
+if (refusal !== null) {
+  console.error(refusal)
   Deno.exit(1)
 }
+const cfg = loadConfig(env)
 
 const dir = join(import.meta.dirname!, 'fixtures')
 const only = Deno.args[0]

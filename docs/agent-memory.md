@@ -96,12 +96,13 @@ Last updated: 2026-11-18 (replay parity).
   The overall verdict now follows the design's safety rule: any `new` finding
   wins; otherwise an all-clear needs `same_vehicle = yes`, at least three
   covered zones (`AI_DAMAGE_MIN_COVERED_ZONES`, default 3) and no uncertain
-  finding. Deno suite is 125 tests.
+  finding. Deno suite is 128 tests.
 - `report-assistant/eval_live.ts` + `deno task eval:live` (manual, needs
   `DEEPSEEK_API_KEY`, never in CI): runs the same 18 fixtures against the
   real model, scores tool selection (expected subset of called, with
   `get_capacity_now` noise allowed), the date arguments and every figure
-  value, and fails under 17/18. It is inert without a key.
+  value, and fails under 17/18. `eval_guard.ts` refuses without a key and
+  inside CI; three tests pin the refusals.
 - The damage live eval still needs real photo pairs; there is no image
   fixture set yet.
 - SQL suite flakiness fixed in `rpc_test.sql`: two blocks were tied to the
