@@ -4,7 +4,7 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-11-18 (replay batch).
+Last updated: 2026-11-18 (damage replay).
 
 ## Where we are
 
@@ -80,9 +80,19 @@ Last updated: 2026-11-18 (replay batch).
   `shifts[0].difference` resolves.
 - The harness serves two recorded bodies for the same RPC (period
   comparisons) keyed by `name|p_start_date`.
+- Damage comparison replay harness: `damage-compare/replay_test.ts` +
+  `fixtures/replay/*.json` push recorded model JSON through the real
+  `normalise` and assert the verdict, the cheap-model downgrades and the
+  sanitisation — no images and no network. Nine cases: identical sets,
+  clear new damage, low-confidence downgrade, pre-existing, glare forcing
+  `insufficient_evidence`, different-vehicle downgrade, the 12-finding cap,
+  hostile HTML stripped from descriptions, and unknown zone/classification
+  falling back to `uncertain`.
+- Deno suite is now 101 tests.
 - Still pending: rotate the exposed DeepSeek key (owner), the manual smokes
-  (payments/passes/damage/devices), the 10 remaining replay fixtures, the
-  `eval:live` tooling and the three hardware changes.
+  (payments/passes/damage/devices), the 10 remaining report-assistant replay
+  fixtures, the damage fixtures 10-16 (two-photo pairing, extra vehicles in
+  frame, photo caps), the `eval:live` tooling and the three hardware changes.
 
 ## Device gateway backend (2026-11-18, `0128`-`0129`)
 

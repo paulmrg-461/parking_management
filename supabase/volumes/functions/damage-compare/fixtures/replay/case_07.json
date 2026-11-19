@@ -1,0 +1,196 @@
+{
+  "case": "fourteen findings are capped at twelve",
+  "entry_ids": [
+    1
+  ],
+  "exit_ids": [
+    2
+  ],
+  "model_answer": {
+    "summary": "Muchos hallazgos.",
+    "quality": {
+      "same_vehicle": "yes",
+      "covered_zones": [
+        "front",
+        "rear",
+        "left",
+        "right"
+      ],
+      "issues": []
+    },
+    "findings": [
+      {
+        "zone": "left",
+        "description": "Hallazgo 0",
+        "classification": "new",
+        "confidence": "high",
+        "entry_photo_ids": [
+          1
+        ],
+        "exit_photo_ids": [
+          2
+        ]
+      },
+      {
+        "zone": "left",
+        "description": "Hallazgo 1",
+        "classification": "new",
+        "confidence": "high",
+        "entry_photo_ids": [
+          1
+        ],
+        "exit_photo_ids": [
+          2
+        ]
+      },
+      {
+        "zone": "left",
+        "description": "Hallazgo 2",
+        "classification": "new",
+        "confidence": "high",
+        "entry_photo_ids": [
+          1
+        ],
+        "exit_photo_ids": [
+          2
+        ]
+      },
+      {
+        "zone": "left",
+        "description": "Hallazgo 3",
+        "classification": "new",
+        "confidence": "high",
+        "entry_photo_ids": [
+          1
+        ],
+        "exit_photo_ids": [
+          2
+        ]
+      },
+      {
+        "zone": "left",
+        "description": "Hallazgo 4",
+        "classification": "new",
+        "confidence": "high",
+        "entry_photo_ids": [
+          1
+        ],
+        "exit_photo_ids": [
+          2
+        ]
+      },
+      {
+        "zone": "left",
+        "description": "Hallazgo 5",
+        "classification": "new",
+        "confidence": "high",
+        "entry_photo_ids": [
+          1
+        ],
+        "exit_photo_ids": [
+          2
+        ]
+      },
+      {
+        "zone": "left",
+        "description": "Hallazgo 6",
+        "classification": "new",
+        "confidence": "high",
+        "entry_photo_ids": [
+          1
+        ],
+        "exit_photo_ids": [
+          2
+        ]
+      },
+      {
+        "zone": "left",
+        "description": "Hallazgo 7",
+        "classification": "new",
+        "confidence": "high",
+        "entry_photo_ids": [
+          1
+        ],
+        "exit_photo_ids": [
+          2
+        ]
+      },
+      {
+        "zone": "left",
+        "description": "Hallazgo 8",
+        "classification": "new",
+        "confidence": "high",
+        "entry_photo_ids": [
+          1
+        ],
+        "exit_photo_ids": [
+          2
+        ]
+      },
+      {
+        "zone": "left",
+        "description": "Hallazgo 9",
+        "classification": "new",
+        "confidence": "high",
+        "entry_photo_ids": [
+          1
+        ],
+        "exit_photo_ids": [
+          2
+        ]
+      },
+      {
+        "zone": "left",
+        "description": "Hallazgo 10",
+        "classification": "new",
+        "confidence": "high",
+        "entry_photo_ids": [
+          1
+        ],
+        "exit_photo_ids": [
+          2
+        ]
+      },
+      {
+        "zone": "left",
+        "description": "Hallazgo 11",
+        "classification": "new",
+        "confidence": "high",
+        "entry_photo_ids": [
+          1
+        ],
+        "exit_photo_ids": [
+          2
+        ]
+      },
+      {
+        "zone": "left",
+        "description": "Hallazgo 12",
+        "classification": "new",
+        "confidence": "high",
+        "entry_photo_ids": [
+          1
+        ],
+        "exit_photo_ids": [
+          2
+        ]
+      },
+      {
+        "zone": "left",
+        "description": "Hallazgo 13",
+        "classification": "new",
+        "confidence": "high",
+        "entry_photo_ids": [
+          1
+        ],
+        "exit_photo_ids": [
+          2
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "overall": "possible_new_damage",
+    "count": 12
+  }
+}

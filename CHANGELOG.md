@@ -67,6 +67,15 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - Android release build: R8 keep rules for the optional ML Kit scripts.
 
 ### Added
+- **Damage comparison replay harness** (`damage-compare/replay_test.ts` +
+  `fixtures/replay/*.json`): recorded model answers go through the real
+  normaliser with no images and no network. Nine cases pin the verdict rules
+  — identical sets, confident new damage, low-confidence downgrade,
+  pre-existing damage, glare forcing `insufficient_evidence`, a
+  different-vehicle answer downgrading every claim, the twelve-finding cap,
+  HTML stripped from descriptions and unknown zone/classification falling
+  back to `uncertain`.
+
 - **AI replay harness** (`report-assistant/replay_test.ts` + fixtures):
   deterministic, network-free regression of the agent loop — recorded RPC
   output and model scripts, expected figure values asserted — runnable in the
