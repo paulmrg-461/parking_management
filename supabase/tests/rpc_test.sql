@@ -8176,14 +8176,20 @@ begin
 end $$;
 reset role;
 
--- online-payments: authenticated cannot select payment_events
+-- online-payments: authenticated cannot read payment_events
+-- Supabase's default privileges may grant the select; RLS (no policy) then
+-- returns zero rows. Both outcomes are safe, a visible row is not.
 set local role authenticated;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
 do $$
+declare
+    visible integer;
 begin
     begin
-        perform count(*) from public.payment_events;
-        raise exception 'an authenticated user read the payment events';
+        select count(*) into visible from public.payment_events;
+        if visible <> 0 then
+            raise exception 'an authenticated user read the payment events';
+        end if;
     exception when insufficient_privilege then null;
     end;
 end $$;

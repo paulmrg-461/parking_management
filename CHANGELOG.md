@@ -94,7 +94,10 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   anchors on the most recent Wednesday before today (the profile window is
   relative to the run date) and the loyalty online-cap fixture uses a fixed
   past daytime window instead of `now() - 3 hours`, which crossed the night
-  rate boundary and changed the fare depending on the hour of the run.
+  rate boundary and changed the fare depending on the hour of the run. The
+  `payment_events` guard now asserts the invariant (an authenticated user
+  sees no rows) instead of assuming a privilege error, which some Supabase
+  images do not produce because of their default grants.
 - **Damage live eval** (`deno task eval:damage`): reads labelled photo
   pairs from `DAMAGE_FIXTURES_DIR` (default `fixtures/pairs/`, no images
   committed), runs the production prompt/vision call/normaliser and scores

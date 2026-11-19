@@ -122,8 +122,11 @@ Last updated: 2026-11-18 (replay parity).
   (the compose container, matching production grants): drop/create `sql_test`
   and run `tests/run.sh` from a `postgres:17-alpine` client on the
   `parking_management_default` network. A standalone `supabase/postgres`
-  container gets the image's default grants (`authenticated` can SELECT every
-  new table), which fails the `payment_events` privilege test.
+  container gets the image's default grants (anon/authenticated can read and
+  execute new objects), so the privilege assertions that expect
+  `insufficient_privilege` fail there; the production-like compose database
+  has no such default ACLs. The `payment_events` block now accepts either a
+  privilege error or zero visible rows (the invariant is no rows).
 - Still pending: rotate the exposed DeepSeek key (owner), the manual smokes
   (payments/passes/damage/devices), the damage fixtures 10-16 (two-photo
   pairing, extra vehicles in frame, photo caps), the `eval:live` tooling and
