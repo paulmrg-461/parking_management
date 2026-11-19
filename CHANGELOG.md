@@ -77,6 +77,13 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - Android release build: R8 keep rules for the optional ML Kit scripts.
 
 ### Added
+- **LPR edge service core** (`edge/lpr/`, `pytest`): strict configuration
+  (unknown keys, HTTPS, `0600` secrets, engine hashes), plate post-processing
+  with the positional confusable fold, the IoU tracker and read schedule, the
+  durable SQLite outbox (`client_ref` before the first send, expiry and cap,
+  crash-safe) and the gateway client (boot-counter sequence, replay/skew
+  retries, bounded backoff, TLS always verified). 31 hardware-free tests; the
+  capture/detector/OCR adapters and the entry point are the next slice.
 - **Gate settings (`/gate-settings`, admin)**: mode assist/auto with the
   spoofing confirmation, the two confidence sliders, the votes/window/cooldown
   steppers, the default category and system-operator pickers and each

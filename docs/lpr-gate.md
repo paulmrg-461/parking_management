@@ -33,6 +33,10 @@ configured number of votes inside the window.
 An exit event never closes, charges or edits a session. `has_pass` records
 whether the vehicle had an active monthly pass at decision time.
 
+The reference edge service lives in `edge/lpr/` (see its README); its
+hardware-free core is implemented and the capture/OCR adapters are the last
+piece.
+
 ## Operator flow (`/gate`)
 
 Operators (and admins) see the pending reads, newest first, and can:

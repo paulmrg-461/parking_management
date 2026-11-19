@@ -1,0 +1,24 @@
+[Unit]
+Description=LPR edge service
+After=network-online.target nvargus-daemon.service
+Wants=network-online.target
+
+[Service]
+Type=notify
+User=lpr
+Group=lpr
+EnvironmentFile=-/etc/lpr-edge/lpr-edge.env
+ExecStart=/opt/lpr-edge/venv/bin/python -m lpr_edge --config /etc/lpr-edge/lpr.yaml
+Restart=always
+RestartSec=3
+WatchdogSec=60
+StateDirectory=lpr-edge
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/lpr-edge
+ProtectHome=true
+PrivateTmp=true
+SupplementaryGroups=video
+
+[Install]
+WantedBy=multi-user.target

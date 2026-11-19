@@ -289,9 +289,18 @@ until the edge service exists.
   protocol, retention, rollback, limits) plus the database/architecture/
   infrastructure/project-overview/index updates. Mermaid: camera -> edge
   service -> gateway -> DB -> gate inbox.
-- Remaining: the `edge/lpr` Python service (task 7) and the hardware
-  validation (7.11); the spec, schema, gateway, UI and docs are done. Tasks
-  1.1-6.4 and 8.1-8.3 are checked; `openspec validate --strict` passes.
+- `edge/lpr/` started (task 7.1 done, 7.2 partial): the hardware-free core
+  is implemented and tested with pytest (31 tests) — `postprocess.py`
+  (confusable fold), `config.py` (strict YAML, HTTPS, 0600 secrets, engine
+  hashes), `tracker.py` (greedy IoU, one read per interval, max reads, best
+  crop), `outbox.py` (durable SQLite, client_ref before send, expiry/cap,
+  crash test via subprocess) and `gateway.py` (seq `boot<<32|n`, replay/skew
+  retries, backoff bounds, TLS always verified). No OpenCV needed for these.
+- Remaining on the edge: `capture.py`/`sampler.py`, the detector/OCR adapters
+  (ONNX/TensorRT), `__main__.py`, the fake gateway and video fixtures
+  (OpenCV/TensorRT not installed here), plus the hardware validation (7.11).
+  The spec, schema, gateway, UI and docs are done. Tasks 1.1-6.4, 7.1 and
+  8.1-8.3 are checked; `openspec validate --strict` passes.
 
 ## Damage comparison backend (2026-11-18, `0127`)
 

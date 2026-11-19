@@ -1,0 +1,10 @@
+*.engine
+*.onnx
+venv/
+.pytest_cache/
+__pycache__/
+*.pyc
+outbox.db
+outbox.db-wal
+outbox.db-shm
+state.json
