@@ -16413,4 +16413,481 @@ begin
     delete from public.lpr_settings where lot_id in (1, current_setting('app.pricing_lot')::integer);
 end $$;
 
+
+-- ---------------------------------------------------------------------------
+-- lpr: ingest, voting, the decision table and snapshots.
+-- ---------------------------------------------------------------------------
+create or replace function pg_temp.lpr_triple(
+    p_device integer, p_plate text, p_confidence numeric, p_at timestamptz)
+returns jsonb
+language plpgsql
+as $$
+begin
+    perform public.device_ingest_lpr_read(
+        p_device, gen_random_uuid(), p_plate, p_confidence, p_at, 'track');
+    perform public.device_ingest_lpr_read(
+        p_device, gen_random_uuid(), p_plate, p_confidence, p_at, 'track');
+    return public.device_ingest_lpr_read(
+        p_device, gen_random_uuid(), p_plate, p_confidence, p_at, 'track');
+end $$;
+
+do $$
+declare
+    entry_camera integer;
+    exit_camera integer;
+    barrier integer;
+    car_category integer;
+    full_category integer;
+    car_vehicle integer;
+    full_vehicle integer;
+    response jsonb;
+    settings public.lpr_settings%rowtype;
+begin
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+    perform set_config('request.jwt.claim.sub',
+        '00000000-0000-0000-0000-000000000001', true);
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    perform set_config('request.jwt.claims', '', true);
+
+    entry_camera := (public.register_lot_device('camera', 'Entrada LPR') ->> 'id')::integer;
+    exit_camera := (public.register_lot_device('camera', 'Salida LPR') ->> 'id')::integer;
+    barrier := (public.register_lot_device('barrier', 'Barrera LPR') ->> 'id')::integer;
+    perform set_config('app.lpr_entry_cam', entry_camera::text, true);
+    perform set_config('app.lpr_exit_cam', exit_camera::text, true);
+    perform set_config('app.lpr_barrier', barrier::text, true);
+    perform public.set_lpr_camera_direction(entry_camera, 'entry');
+    perform public.set_lpr_camera_direction(exit_camera, 'exit');
+
+    insert into public.categories (lot_id, name, capacity)
+    values (1, 'LPR car', 5), (1, 'LPR full', 0);
+    select id into car_category from public.categories
+     where lot_id = 1 and name = 'LPR car';
+    select id into full_category from public.categories
+     where lot_id = 1 and name = 'LPR full';
+    insert into public.tariffs (category_id, lot_id, type, amount, active)
+    values (car_category, 1, 'hourly', 3000, true),
+           (full_category, 1, 'hourly', 3000, true);
+    insert into public.vehicles (plate, category_id)
+    values ('LPR001', car_category), ('LPR002', full_category),
+           ('LPR010', car_category), ('LPR011', car_category),
+           ('LPR012', car_category), ('LPR013', car_category),
+           ('LPR014', car_category), ('LPR015', car_category),
+           ('LPR016', car_category), ('LPR017', car_category),
+           ('LPR018', car_category);
+    select id into car_vehicle from public.vehicles where plate = 'LPR001';
+    select id into full_vehicle from public.vehicles where plate = 'LPR002';
+    perform set_config('app.lpr_car_cat', car_category::text, true);
+    perform set_config('app.lpr_full_cat', full_category::text, true);
+
+    -- config: direction and thresholds; non-camera refused; missing direction
+    response := public.device_lpr_config(entry_camera);
+    if response ->> 'direction' <> 'entry'
+       or (response ->> 'min_confidence')::numeric <> 0.800
+       or (response ->> 'vote_window_seconds')::integer <> 8
+       or (response ->> 'heartbeat_interval_s')::integer <> 60 then
+        raise exception 'the device config is wrong: %', response;
+    end if;
+    begin
+        perform public.device_lpr_config(barrier);
+        raise exception 'a barrier was configured as a camera';
+    exception when others then
+        if sqlerrm not like '%InvalidDeviceKindError%' then raise; end if;
+    end;
+    perform set_config('request.jwt.claim.sub', '', true);
+end $$;
+
+-- lpr ingest: validation, normalization, stale, low confidence and replay
+do $$
+declare
+    entry_camera integer := current_setting('app.lpr_entry_cam')::integer;
+    response jsonb;
+    reference uuid := gen_random_uuid();
+    reads integer;
+begin
+    begin
+        perform public.device_ingest_lpr_read(
+            entry_camera, gen_random_uuid(), 'ABC-123', 0.9, now(), null);
+        raise exception 'an invalid plate was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidPlateError%' then raise; end if;
+    end;
+    begin
+        perform public.device_ingest_lpr_read(
+            entry_camera, gen_random_uuid(), 'LPR999', 0, now(), null);
+        raise exception 'a zero confidence was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidConfidenceError%' then raise; end if;
+    end;
+    begin
+        perform public.device_ingest_lpr_read(
+            entry_camera, gen_random_uuid(), 'LPR999', 1.2, now(), null);
+        raise exception 'a confidence above 1 was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidConfidenceError%' then raise; end if;
+    end;
+    begin
+        perform public.device_ingest_lpr_read(
+            entry_camera, gen_random_uuid(), 'LPR999', 0.9,
+            now() + interval '10 minutes', null);
+        raise exception 'a future read was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidReadTimeError%' then raise; end if;
+    end;
+
+    response := public.device_ingest_lpr_read(
+        entry_camera, gen_random_uuid(), ' lpr 998 ', 0.5, now(), null);
+    if response ->> 'outcome' <> 'ignored_low_confidence' then
+        raise exception 'a low-confidence read became a vote: %', response;
+    end if;
+    response := public.device_ingest_lpr_read(
+        entry_camera, gen_random_uuid(), 'LPR997', 0.9,
+        now() - interval '20 minutes', null);
+    if response ->> 'outcome' <> 'stale' then
+        raise exception 'a stale read was not marked stale: %', response;
+    end if;
+    if exists (select 1 from public.lpr_events where plate = 'LPR997') then
+        raise exception 'a stale read created an event';
+    end if;
+
+    response := public.device_ingest_lpr_read(
+        entry_camera, reference, ' lpr 003 ', 0.95, now(), 'track-1');
+    if response ->> 'outcome' <> 'recorded' then
+        raise exception 'the first read did not record: %', response;
+    end if;
+    select count(*) into reads from public.lpr_reads
+     where device_id = entry_camera and client_ref = reference;
+    response := public.device_ingest_lpr_read(
+        entry_camera, reference, ' lpr 003 ', 0.95, now(), 'track-1');
+    if response ->> 'outcome' <> 'replayed' then
+        raise exception 'a repeated client ref was not replayed: %', response;
+    end if;
+    if (select count(*) from public.lpr_reads
+         where device_id = entry_camera and client_ref = reference) <> reads then
+        raise exception 'a replay created a second read';
+    end if;
+    if not exists (select 1 from public.lpr_reads
+                    where device_id = entry_camera and client_ref = reference
+                      and plate = 'LPR003') then
+        raise exception 'the plate was not normalized';
+    end if;
+end $$;
+
+-- lpr assist: three reads decide one event, notify members once and debounce
+do $$
+declare
+    entry_camera integer := current_setting('app.lpr_entry_cam')::integer;
+    response jsonb;
+    event_id bigint;
+    members integer;
+    notified integer;
+begin
+    response := pg_temp.lpr_triple(entry_camera, 'LPR001', 0.95, now());
+    if response ->> 'outcome' <> 'decided' then
+        raise exception 'three reads did not decide: %', response;
+    end if;
+    event_id := (response -> 'event' ->> 'id')::bigint;
+    if response -> 'event' ->> 'status' <> 'pending'
+       or response -> 'event' ->> 'reason' <> 'assist_mode'
+       or response -> 'event' ->> 'kind' <> 'entry'
+       or (response -> 'event' ->> 'votes')::integer <> 3 then
+        raise exception 'the assist decision is wrong: %', response;
+    end if;
+    if (response ->> 'snapshot_wanted')::boolean is not true then
+        raise exception 'a new event did not want a snapshot';
+    end if;
+    perform public.lpr_notify(event_id);
+    select count(*) into members from public.lot_members lm
+      join public.users u on u.id = lm.user_id
+     where lm.lot_id = 1 and u.is_active;
+    select count(*) into notified from public.notifications
+     where dedupe_key like 'lpr:' || event_id || ':user:%';
+    if notified <> members then
+        raise exception 'notifications % for % members', notified, members;
+    end if;
+    response := public.device_ingest_lpr_read(
+        entry_camera, gen_random_uuid(), 'LPR001', 0.95, now(), null);
+    if response ->> 'outcome' <> 'debounced' then
+        raise exception 'a read inside the cooldown was not debounced: %', response;
+    end if;
+end $$;
+
+-- lpr: votes do not cross cameras
+do $$
+declare
+    entry_camera integer := current_setting('app.lpr_entry_cam')::integer;
+    exit_camera integer := current_setting('app.lpr_exit_cam')::integer;
+    response jsonb;
+begin
+    perform public.device_ingest_lpr_read(
+        entry_camera, gen_random_uuid(), 'LPR900', 0.95, now(), null);
+    perform public.device_ingest_lpr_read(
+        entry_camera, gen_random_uuid(), 'LPR900', 0.95, now(), null);
+    response := public.device_ingest_lpr_read(
+        exit_camera, gen_random_uuid(), 'LPR900', 0.95, now(), null);
+    if response ->> 'outcome' <> 'recorded' then
+        raise exception 'votes crossed cameras: %', response;
+    end if;
+end $$;
+
+-- lpr auto: known plate, unknown plate, low confidence and no operator
+do $$
+declare
+    entry_camera integer := current_setting('app.lpr_entry_cam')::integer;
+    car_category integer := current_setting('app.lpr_car_cat')::integer;
+    response jsonb;
+    session public.parking_sessions%rowtype;
+    event public.lpr_events%rowtype;
+    vehicle public.vehicles%rowtype;
+begin
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    perform public.set_lpr_settings(
+        p_mode => 'auto',
+        p_default_category_id => car_category,
+        p_acting_user_id => 2
+    );
+    perform set_config('request.jwt.claim.sub', '', true);
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+
+    response := pg_temp.lpr_triple(entry_camera, 'LPR010', 0.95, now());
+    if response -> 'event' ->> 'status' <> 'done' then
+        raise exception 'auto did not check in: %', response;
+    end if;
+    select * into session from public.parking_sessions s
+     where s.id = (response -> 'event' ->> 'session_id')::integer;
+    if session.operator_id <> 2 then
+        raise exception 'the session was attributed to % instead of 2',
+            session.operator_id;
+    end if;
+    if current_setting('request.jwt.claim.sub', true) is distinct from '' then
+        raise exception 'the acting claims leaked after an auto check-in';
+    end if;
+
+    response := pg_temp.lpr_triple(entry_camera, 'lpr777', 0.95, now());
+    if response -> 'event' ->> 'status' <> 'done' then
+        raise exception 'an unknown plate with a default category did not check in: %',
+            response;
+    end if;
+    select * into vehicle from public.vehicles where plate = 'LPR777';
+    if vehicle.category_id <> car_category then
+        raise exception 'the unknown plate was not registered with the default category';
+    end if;
+
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    update public.lpr_settings set default_category_id = null where lot_id = 1;
+    perform set_config('request.jwt.claim.sub', '', true);
+    response := pg_temp.lpr_triple(entry_camera, 'LPR555', 0.95, now());
+    if response -> 'event' ->> 'reason' <> 'unknown_plate' then
+        raise exception 'an unknown plate without a category was not pending: %',
+            response;
+    end if;
+
+    response := pg_temp.lpr_triple(entry_camera, 'LPR556', 0.85, now());
+    if response -> 'event' ->> 'reason' <> 'low_confidence' then
+        raise exception 'a low automatic confidence was not pending: %', response;
+    end if;
+
+    update public.lpr_settings set acting_user_id = null where lot_id = 1;
+    response := pg_temp.lpr_triple(entry_camera, 'LPR018', 0.95, now());
+    if response -> 'event' ->> 'reason' <> 'no_system_operator' then
+        raise exception 'auto without a system operator was not pending: %', response;
+    end if;
+
+    -- Restore for the following blocks.
+    update public.lpr_settings
+       set acting_user_id = 2,
+           default_category_id = current_setting('app.lpr_car_cat')::integer
+     where lot_id = 1;
+end $$;
+
+-- lpr: blacklist, duplicate session and lot full
+do $$
+declare
+    entry_camera integer := current_setting('app.lpr_entry_cam')::integer;
+    full_category integer := current_setting('app.lpr_full_cat')::integer;
+    blacklisted_vehicle integer := (select id from public.vehicles where plate = 'LPR011');
+    duplicate_vehicle integer := (select id from public.vehicles where plate = 'LPR012');
+    response jsonb;
+begin
+    update public.vehicles set is_blacklisted = true where id = blacklisted_vehicle;
+    response := pg_temp.lpr_triple(entry_camera, 'LPR011', 0.95, now());
+    if response -> 'event' ->> 'status' <> 'blocked'
+       or response -> 'event' ->> 'reason' <> 'blacklisted' then
+        raise exception 'a blacklisted plate was not blocked: %', response;
+    end if;
+    if exists (select 1 from public.parking_sessions where vehicle_id = blacklisted_vehicle
+                and status = 'open') then
+        raise exception 'a blacklisted vehicle opened a session';
+    end if;
+
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    values (duplicate_vehicle, 1, 1, now(), 'open');
+    response := pg_temp.lpr_triple(entry_camera, 'LPR012', 0.95, now());
+    if response -> 'event' ->> 'reason' <> 'duplicate_session' then
+        raise exception 'a vehicle already inside was not pending: %', response;
+    end if;
+    delete from public.parking_sessions where vehicle_id = duplicate_vehicle;
+
+    -- The plate is known and its category has zero capacity.
+    response := pg_temp.lpr_triple(entry_camera, 'LPR002', 0.99, now());
+    if response -> 'event' ->> 'reason' <> 'lot_full' then
+        raise exception 'a full category was not reported: %', response;
+    end if;
+end $$;
+
+-- lpr exit: unpaid, paid, no session, blacklist and pass
+do $$
+declare
+    exit_camera integer := current_setting('app.lpr_exit_cam')::integer;
+    unpaid_vehicle integer := (select id from public.vehicles where plate = 'LPR013');
+    paid_vehicle integer := (select id from public.vehicles where plate = 'LPR014');
+    pass_vehicle integer := (select id from public.vehicles where plate = 'LPR016');
+    blacklisted_vehicle integer := (select id from public.vehicles where plate = 'LPR015');
+    session_id integer;
+    response jsonb;
+    event_id bigint;
+begin
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    values (unpaid_vehicle, 1, 1, now() - interval '1 hour', 'open')
+    returning id into session_id;
+    response := pg_temp.lpr_triple(exit_camera, 'LPR013', 0.95, now());
+    event_id := (response -> 'event' ->> 'id')::bigint;
+    if response -> 'event' ->> 'reason' <> 'exit_unpaid'
+       or (response -> 'event' ->> 'session_id')::integer <> session_id then
+        raise exception 'an unpaid exit was not pending: %', response;
+    end if;
+    if (select status from public.parking_sessions where id = session_id) <> 'open' then
+        raise exception 'the exit event touched the session';
+    end if;
+    if not exists (select 1 from public.notifications
+                    where dedupe_key like 'lpr:' || event_id || ':user:%'
+                      and type = 'lpr_exit') then
+        raise exception 'an unpaid exit did not notify the desk';
+    end if;
+    insert into public.parking_sessions (
+        vehicle_id, operator_id, lot_id, entry_time, exit_time, status
+    ) values (
+        paid_vehicle, 1, 1, now() - interval '2 hours',
+        now() - interval '3 minutes', 'closed'
+    );
+    response := pg_temp.lpr_triple(exit_camera, 'LPR014', 0.95, now());
+    if response -> 'event' ->> 'reason' <> 'exit_paid'
+       or response -> 'event' ->> 'status' <> 'done' then
+        raise exception 'a paid exit was not done: %', response;
+    end if;
+
+    response := pg_temp.lpr_triple(exit_camera, 'LPR888', 0.95, now());
+    if response -> 'event' ->> 'reason' <> 'no_open_session' then
+        raise exception 'an exit without a session was not pending: %', response;
+    end if;
+
+    update public.vehicles set is_blacklisted = true where id = blacklisted_vehicle;
+    response := pg_temp.lpr_triple(exit_camera, 'LPR015', 0.95, now());
+    if response -> 'event' ->> 'status' <> 'blocked' then
+        raise exception 'a blacklisted exit was not blocked: %', response;
+    end if;
+    update public.vehicles set is_blacklisted = false where id = blacklisted_vehicle;
+
+    insert into public.monthly_passes (vehicle_id, lot_id, start_date, end_date, amount)
+    values (pass_vehicle, 1, current_date, current_date + 10, 150000);
+    response := pg_temp.lpr_triple(exit_camera, 'LPR016', 0.95, now());
+    if (response -> 'event' ->> 'has_pass')::boolean is not true then
+        raise exception 'the exit event did not record the pass: %', response;
+    end if;
+end $$;
+
+-- lpr snapshot: attach, evidence row, conflicts and Storage policy
+do $$
+declare
+    entry_camera integer := current_setting('app.lpr_entry_cam')::integer;
+    exit_camera integer := current_setting('app.lpr_exit_cam')::integer;
+    response jsonb;
+    event_id bigint;
+    evidence_session integer;
+    path text;
+begin
+    response := pg_temp.lpr_triple(entry_camera, 'LPR017', 0.95, now());
+    event_id := (response -> 'event' ->> 'id')::bigint;
+    path := 'lpr/1/' || entry_camera || '/' || event_id || '.jpg';
+
+    begin
+        perform public.device_lpr_attach_snapshot(entry_camera, event_id,
+            'lpr/1/' || entry_camera || '/999999.jpg');
+        raise exception 'a wrong snapshot path was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidSnapshotPathError%' then raise; end if;
+    end;
+    begin
+        perform public.device_lpr_attach_snapshot(exit_camera, event_id, path);
+        raise exception 'another camera attached the snapshot';
+    exception when others then
+        if sqlerrm not like '%LprEventNotFoundError%' then raise; end if;
+    end;
+
+    response := public.device_lpr_attach_snapshot(entry_camera, event_id, path);
+    if response ->> 'event_id' is null then
+        raise exception 'the snapshot was not attached: %', response;
+    end if;
+    evidence_session := (response ->> 'session_id')::integer;
+    if evidence_session is null then
+        raise exception 'the auto event has no session to attach evidence to';
+    end if;
+    if not exists (
+        select 1 from public.evidence_photos p
+         where p.session_id = evidence_session and p.file_path = path
+    ) then
+        raise exception 'the snapshot was not attached as evidence';
+    end if;
+    begin
+        perform public.device_lpr_attach_snapshot(entry_camera, event_id, path);
+        raise exception 'a second snapshot was accepted';
+    exception when others then
+        if sqlerrm not like '%SnapshotAlreadyAttachedError%' then raise; end if;
+    end;
+
+    -- Members of the lot can read it; the policy never uses current_lot_id().
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', true);
+    if not public.can_read_lpr_snapshot(path) then
+        raise exception 'a lot member cannot read the snapshot';
+    end if;
+    -- New profiles join lot 1 automatically; drop that membership to make a
+    -- real outsider for the Storage read test.
+    delete from public.lot_members
+     where lot_id = 1
+       and user_id = (select id from public.users
+                       where auth_user_id = '00000000-0000-0000-0000-000000000099');
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000099', true);
+    if public.can_read_lpr_snapshot(path) then
+        raise exception 'an outsider can read the snapshot';
+    end if;
+    perform set_config('request.jwt.claim.sub', '', true);
+    if (select pg_get_expr(polqual, polrelid) from pg_policy
+         where polname = 'lpr_snapshots_read') like '%current_lot_id%' then
+        raise exception 'the snapshot policy depends on the lot header';
+    end if;
+
+
+end $$;
+
+-- lpr: device RPCs are service-role only
+do $$
+begin
+    if has_function_privilege('authenticated',
+        'public.device_ingest_lpr_read(integer, uuid, text, numeric, timestamptz, text)',
+        'execute') then
+        raise exception 'authenticated can ingest lpr reads';
+    end if;
+    if has_function_privilege('anon',
+        'public.device_lpr_attach_snapshot(integer, bigint, text)',
+        'execute') then
+        raise exception 'anon can attach snapshots';
+    end if;
+    if not has_function_privilege('service_role',
+        'public.device_ingest_lpr_read(integer, uuid, text, numeric, timestamptz, text)',
+        'execute') then
+        raise exception 'service_role cannot ingest lpr reads';
+    end if;
+end $$;
+
 rollback;

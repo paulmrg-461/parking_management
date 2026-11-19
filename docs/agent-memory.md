@@ -219,9 +219,33 @@ until the edge service exists.
 - `lpr_effective_settings` uses a `row(...)` literal in table order; a SQL
   test compares its keys with `information_schema.columns` and fails when a
   column is added without updating the literal.
-- Still to build: ingest/voting/decision (`0132`), operator RPCs and jobs
-  (`0133`), the gateway `/v1/lpr/*` routes, the Flutter `/gate` inbox and the
-  `edge/lpr` service. Tasks 1.1-1.4 are checked in the change.
+- `0132_lpr_ingest.sql`: `lpr_events`, `lpr_reads`, `can_read_lpr_snapshot()`
+  + `lpr_snapshots_read` (the policy never calls `current_lot_id()`),
+  `lpr_event_json()`, `lpr_notify()` (one notification per event and member,
+  deduped), and the three service-role RPCs `device_lpr_config`,
+  `device_ingest_lpr_read`, `device_lpr_attach_snapshot`.
+- Ingest order matters: advisory lock per camera → device/kind/direction →
+  plate and confidence → replay by `(device_id, client_ref)` → insert read →
+  stale (>15 min) → low confidence → debounce (cooldown) → votes (same
+  camera, unattached, window) → decision. Auto entry impersonates the system
+  operator and calls `check_in` with named arguments; the claims are restored
+  in both the success and the exception path (the subtransaction rollback
+  would also restore them, but the explicit restore keeps it obvious).
+- Decision order: blacklist → duplicate open session → assist → low automatic
+  confidence → unknown plate without default category → no system operator →
+  auto `check_in`; exit never writes to the session and `exit_paid` uses
+  `exit_paid_window_minutes`.
+- Snapshot path is exactly `lpr/<lot>/<device>/<event>.jpg`; the attach RPC
+  rejects anything else, inserts `evidence_photos` when the event already has
+  a session and answers `SnapshotAlreadyAttachedError` on a second PUT (the
+  device treats 409 as success).
+- Test gotchas: every new profile auto-joins lot 1, so an "outsider" must have
+  that membership deleted; use a distinct plate per decision scenario (the
+  120 s cooldown would otherwise debounce the next test); `pg_temp.lpr_triple`
+  posts three reads with fresh client refs.
+- Still to build: operator RPCs and jobs (`0133`), the gateway `/v1/lpr/*`
+  routes, the Flutter `/gate` inbox and the `edge/lpr` service. Tasks 1.1-1.4
+  and 2.1-2.4 are checked in the change.
 
 ## Damage comparison backend (2026-11-18, `0127`)
 

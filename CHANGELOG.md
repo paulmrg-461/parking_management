@@ -77,6 +77,17 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - Android release build: R8 keep rules for the optional ML Kit scripts.
 
 ### Added
+- **LPR ingest** (`0132`): cameras post plate reads to
+  `device_ingest_lpr_read`, which serialises per camera, replays a repeated
+  `client_ref`, marks late reads `stale`, ignores low confidence, debounces by
+  cooldown and only decides after the configured votes. The decision table
+  covers assist/inspect, auto check-in attributed to the lot's system
+  operator, unknown plates with a default category, blacklist, duplicate
+  sessions, a full lot, and exits that never touch the session (`exit_unpaid`,
+  `exit_paid`, `no_open_session`) while recording the pass flag. Pending and
+  blocked events notify every active member once. Snapshots are attached by
+  exact path, become `evidence_photos` for a decided entry and stay readable
+  through a membership-based Storage policy.
 - **Specs synced for ten delivered changes**: parking settings, public booking
   CAPTCHA, booking waitlist, offline conflict resolution, period comparison,
   occupancy forecast, cash anomaly detection, online payments, pass
