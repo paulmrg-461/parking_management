@@ -53,10 +53,11 @@ WhatsApp (manual or automated).
 | Secrets / PIN operations | Complete (scripts + runbook) | PIN rotation verified live |
 | E2E and CI | Complete (API + Flutter client, real stack) | CI job `supabase-e2e` |
 
-Quality snapshot (2026-11-18, local stack): **1840 Flutter tests + 1 integration
-test**, SQL/RLS suite green, web build green, analyzer with **0 errors and 0
-warnings** (only SDK deprecation infos from the pinned beta channel), restore
-drill green.
+Quality snapshot (2026-11-19, local stack): **1899 Flutter tests + 1 integration
+test**, **133 Deno tests** (unit, replay and eval guards), SQL/RLS suite green
+over `0001`-`0129`, web builds green, analyzer with **0 errors and 0 warnings**
+(only SDK deprecation infos from the pinned beta channel), restore drill
+green.
 
 ## 3. Module map
 
@@ -87,8 +88,8 @@ the main data it touches.
 | `pass_renewal` | Public token-keyed renewal page (`/renew?t=`) and the admin "send renewal link" action | `pass_renewal_offers`, `public_pass_renewal`, `pass-renewal-intent` (Edge Function), `settle_pass_renewal`, `queue_pass_renewal_reminders` |
 | `merchants` | Agreements, show-once credentials, per-vehicle policy, settlement and the public `/validate?m=` page | `merchants`, `merchant_credentials`, `merchant_validations`, `fare_quote`, `save_merchant`, `merchant_validate`, `report_merchant_settlement` |
 | `pricing` | Dynamic rates: rules, guard rails, simulation, impact and the check-in price chip | `pricing_rules`, `pricing_lock`, `pricing_quote`, `pricing_simulate`, `report_pricing_impact`, `public_availability` price keys |
-| `devices` | Per-lot hardware registry, key rotation, heartbeat/offline alerts and the `device-gateway` transport (admin screen pending) | `lot_devices`, `device_events`, `register_lot_device`, `device_accept_request`, `device_heartbeat`, `notify_offline_devices` |
-| `damage_comparison` | Exit photos, advisory AI comparison of entry/exit photos and the human review (UI pending) | `damage_comparisons`, `damage_findings`, `add_exit_evidence`, `begin/get_damage_comparison`, `review_damage_finding`, `damage-compare` |
+| `devices` | Per-lot hardware registry, key rotation, heartbeat/offline alerts, the `device-gateway` transport and the `/devices` admin screen | `lot_devices`, `device_events`, `register_lot_device`, `device_accept_request`, `device_heartbeat`, `notify_offline_devices` |
+| `damage_comparison` | Exit photos, advisory AI comparison of entry/exit photos, the `/damage-comparison` page and the human review | `damage_comparisons`, `damage_findings`, `add_exit_evidence`, `begin/get_damage_comparison`, `review_damage_finding`, `damage-compare` |
 | `report_assistant` | Natural-language questions over the report RPCs with a verified figure/source for each number (`/report-assistant`) | `ai_requests`/`ai_limits`, `ai_budget_*`, `report-assistant` Edge Function, `report_revenue` and the other report RPCs |
 | `invoicing` | Fiscal issuer/resolutions, document outbox, credit notes and the admin list (`/invoicing`) | `fiscal_settings`, `fiscal_resolutions`, `fiscal_documents`, `issue_fiscal_document`, `list_fiscal_documents`, `request_credit_note`, `fiscal-dispatch` |
 | `loyalty` | Visit program, reward redemption, member corrections and the impact report (`/loyalty`) | `loyalty_accounts`, `loyalty_rewards`, `loyalty_visits`, `loyalty_adjustments`, `fare_reward_step`, `loyalty_plate_status`, `choose_loyalty_redemption`, `report_loyalty`, `list_loyalty_accounts` |
