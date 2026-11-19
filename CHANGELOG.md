@@ -15,7 +15,9 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   Supabase installs pgcrypto in `extensions`, so the first call raised
   `function gen_random_bytes(integer) does not exist` (the SQL suite only saw
   a database where it resolved). `0130` widens both search paths and a
-  regression block asserts it.
+  regression block asserts it. The SQL bootstrap now installs pgcrypto in
+  `extensions` before the migrations, like the Supabase image, so the suite
+  can catch this class of bug from now on.
 - **Settings** no longer shows a bare spinner while loading or a plain text
   with no way out when the load fails: it paints a skeleton and an
   `ErrorState` with **Reintentar**. The vehicle history lookup also paints a

@@ -9,6 +9,13 @@ create table if not exists public.schema_migrations (
 
 create schema if not exists storage;
 
+-- Supabase's image installs pgcrypto in the `extensions` schema, so a fresh
+-- database must mimic that before the migrations run; otherwise migration
+-- 0001 creates it in `public` and the suite cannot catch a function that
+-- only works because pgcrypto happens to resolve from its search_path.
+create schema if not exists extensions;
+create extension if not exists pgcrypto with schema extensions;
+
 create table if not exists auth.users (
     id uuid primary key,
     email text,
