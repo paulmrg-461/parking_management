@@ -67,7 +67,9 @@ void main() {
         }
       });
 
-      final time = await http.get(Uri.parse('$gateway/v1/time'));
+      final time = await http
+          .get(Uri.parse('$gateway/v1/time'))
+          .timeout(const Duration(seconds: 15));
       expect(time.statusCode, 200);
       final timeBody = jsonDecode(time.body) as Map<String, dynamic>;
       expect(timeBody['max_skew_s'], 300);
@@ -79,17 +81,19 @@ void main() {
         required int timestamp,
         Map<String, Object?> status = const {'uptime_s': 5},
       }) {
-        return http.post(
-          Uri.parse('$gateway/v1/heartbeat'),
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Device-Key': key,
-            'X-Device-Timestamp': '$timestamp',
-            'X-Device-Seq': '$seq',
-            'X-Device-Firmware': 'e2e-1.0',
-          },
-          body: jsonEncode({'status': status}),
-        );
+        return http
+            .post(
+              Uri.parse('$gateway/v1/heartbeat'),
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Device-Key': key,
+                'X-Device-Timestamp': '$timestamp',
+                'X-Device-Seq': '$seq',
+                'X-Device-Firmware': 'e2e-1.0',
+              },
+              body: jsonEncode({'status': status}),
+            )
+            .timeout(const Duration(seconds: 15));
       }
 
       final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
