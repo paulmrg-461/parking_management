@@ -494,6 +494,19 @@ class AppLocalizationsEs extends AppLocalizations {
       'Vehículo nuevo: selecciona una categoría';
 
   @override
+  String get errorInvalidPlate => 'La placa no es válida';
+
+  @override
+  String get gateEventResolved => 'Ese evento ya fue resuelto';
+
+  @override
+  String get gateEventKind => 'Ese evento no es una entrada';
+
+  @override
+  String get gateNoSystemOperator =>
+      'Configura un operador del sistema en la cámara de placas';
+
+  @override
   String get errorInvalidPhoto => 'Las fotos deben ser imágenes JPEG o PNG';
 
   @override

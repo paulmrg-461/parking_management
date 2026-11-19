@@ -490,6 +490,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorVehicleNotRegistered => 'New vehicle: pick a category';
 
   @override
+  String get errorInvalidPlate => 'The plate is not valid';
+
+  @override
+  String get gateEventResolved => 'That event was already resolved';
+
+  @override
+  String get gateEventKind => 'That event is not an entry';
+
+  @override
+  String get gateNoSystemOperator =>
+      'Set a system operator in the plate camera settings';
+
+  @override
   String get errorInvalidPhoto => 'Photos must be JPEG or PNG images';
 
   @override

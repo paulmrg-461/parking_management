@@ -926,6 +926,30 @@ abstract class AppLocalizations {
   /// **'Vehículo nuevo: selecciona una categoría'**
   String get errorVehicleNotRegistered;
 
+  /// No description provided for @errorInvalidPlate.
+  ///
+  /// In es, this message translates to:
+  /// **'La placa no es válida'**
+  String get errorInvalidPlate;
+
+  /// No description provided for @gateEventResolved.
+  ///
+  /// In es, this message translates to:
+  /// **'Ese evento ya fue resuelto'**
+  String get gateEventResolved;
+
+  /// No description provided for @gateEventKind.
+  ///
+  /// In es, this message translates to:
+  /// **'Ese evento no es una entrada'**
+  String get gateEventKind;
+
+  /// No description provided for @gateNoSystemOperator.
+  ///
+  /// In es, this message translates to:
+  /// **'Configura un operador del sistema en la cámara de placas'**
+  String get gateNoSystemOperator;
+
   /// No description provided for @errorInvalidPhoto.
   ///
   /// In es, this message translates to:
