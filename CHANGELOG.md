@@ -17,7 +17,9 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   a database where it resolved). `0130` widens both search paths and a
   regression block asserts it. The SQL bootstrap now installs pgcrypto in
   `extensions` before the migrations, like the Supabase image, so the suite
-  can catch this class of bug from now on.
+  can catch this class of bug from now on, and it revokes the image's default
+  grants on new objects so the privilege tests run under the same rules as
+  the compose stack (they now pass against both databases).
 - **Settings** no longer shows a bare spinner while loading or a plain text
   with no way out when the load fails: it paints a skeleton and an
   `ErrorState` with **Reintentar**. The vehicle history lookup also paints a

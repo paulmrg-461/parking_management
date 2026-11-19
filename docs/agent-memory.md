@@ -119,7 +119,10 @@ Last updated: 2026-11-19 (device E2E).
   `supabase/volumes/functions/deno.jsonc`.
 - `tests/bootstrap.sql` now installs pgcrypto in `extensions` before the
   migrations (the image's layout), so the suite stops hiding search_path
-  bugs; migration 0001's `create extension if not exists` then no-ops.
+  bugs; migration 0001's `create extension if not exists` then no-ops. It
+  also revokes the image's default grants on new tables/functions/sequences
+  for `supabase_admin`, which makes the negative privilege tests pass on both
+  the image and the compose cluster (they only passed on one before).
 - Real bug found by the new device E2E: Supabase keeps pgcrypto in the
   `extensions` schema, so the device key functions (`search_path = public`)
   failed live with `gen_random_bytes does not exist`. `0130` sets both search
