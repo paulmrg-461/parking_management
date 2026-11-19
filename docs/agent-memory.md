@@ -331,10 +331,25 @@ barrier are untouched.
 - SQL block `-- barrier` covers the roundtrip, the pairing clear, every range
   and enum, a foreign camera, a non-barrier device, operators read-only, the
   trigger on direct writes, lot isolation, the table grants and the bucket.
-- Next: `barrier_commands`/`barrier_events`, the Ed25519 signing module, the
-  `barrier_issue_command` triggers, the gateway routes, the Flutter `/barrier`
-  page and the ESP32 firmware. Tasks 1.x stay unchecked until the second
-  migration exists.
+- `0136_barrier_commands.sql`: `barrier_commands` (uuid id, nonce, source,
+  status, deliveries, short TTL) and `barrier_events` (unique per device and
+  client_ref), the command/event JSON, `barrier_notify` (members or admins,
+  unique dedupe key) and `barrier_notify_failed`; the service-role RPCs
+  `device_barrier_config`, `device_barrier_next` (oldest first, max 3
+  deliveries at least 5 s apart, skips expired), `device_barrier_ack`
+  (`opened`/`refused`, idempotent, refusal notifies members),
+  `device_barrier_event` (idempotent; obstruction/tamper/power/fault notify
+  admins once per device+event+minute) and `device_firmware_manifest`; plus
+  `expire_barrier_commands` and `purge_barrier_events(365)`, wired into
+  `jobs.sh` and the host cron.
+- SQL block `-- barrier` (commands): config for the edge, delivery and
+  redelivery rules, expired skip, ack opened/refused/idempotent, foreign
+  device, event idempotency, fault audience and dedupe, expiry notifications,
+  firmware manifest, purge and the grants.
+- Next: the Ed25519 signing module, `barrier_issue_command` + the triggers,
+  the gateway routes, the operator RPCs (manual open, config/list, command
+  history), the Flutter `/barrier` page and the ESP32 firmware. Tasks 1.1-1.3
+  and 2.2 are checked.
 
 ## Damage comparison backend (2026-11-18, `0127`)
 

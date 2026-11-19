@@ -60,6 +60,9 @@ while true; do
   run purge_device_events
   # LPR gate: expire pending reads and close unpaid exits already settled.
   run expire_lpr_events
+  # Barrier control: expire commands nobody delivered and drop old history.
+  run expire_barrier_commands
+  run purge_barrier_events
   run purge_cash_anomalies
   # Pass renewal reminders (queued only when the lot opted in).
   run queue_pass_renewal_reminders

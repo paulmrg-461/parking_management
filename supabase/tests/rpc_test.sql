@@ -17270,7 +17270,8 @@ declare
     table_name text;
 begin
     for table_name in
-        select unnest(array['barrier_config', 'device_firmware'])
+        select unnest(array['barrier_config', 'device_firmware',
+                           'barrier_commands', 'barrier_events'])
     loop
         if has_table_privilege('authenticated', 'public.' || table_name, 'select') then
             raise exception 'authenticated can select %', table_name;
@@ -17288,6 +17289,278 @@ begin
     ) then
         raise exception 'a client policy mentions the firmware bucket';
     end if;
+end $$;
+
+
+-- ---------------------------------------------------------------------------
+-- barrier: command delivery, acknowledgements, events, expiry and purge.
+-- ---------------------------------------------------------------------------
+do $$
+declare
+    barrier integer := current_setting('app.barrier')::integer;
+    camera integer := current_setting('app.barrier_camera')::integer;
+    command_id uuid;
+    response jsonb;
+    members integer;
+    notified integer;
+    config jsonb;
+    other integer;
+begin
+    delete from public.barrier_commands where device_id = barrier;
+
+    -- config for the edge
+    config := public.device_barrier_config(barrier);
+    if config ->> 'direction' is null
+       or (config ->> 'open_hold_ms')::integer <> 1500
+       or (config ->> 'command_ttl_seconds')::integer <> 45 then
+        raise exception 'the barrier device config is wrong: %', config;
+    end if;
+    begin
+        perform public.device_barrier_config(camera);
+        raise exception 'a camera received a barrier config';
+    exception when others then
+        if sqlerrm not like '%InvalidDeviceKindError%' then raise; end if;
+    end;
+
+    -- next delivers the oldest queued command, once per 5 s
+    insert into public.barrier_commands (
+        lot_id, device_id, device_name, source, reason, requested_by, expires_at
+    ) values (
+        1, barrier, 'Barrera test', 'manual', 'Cliente sin ticket', 2,
+        now() + interval '30 seconds'
+    ) returning id into command_id;
+    response := public.device_barrier_next(barrier);
+    if response ->> 'id' <> command_id::text
+       or response ->> 'status' <> 'delivered'
+       or (response ->> 'deliveries')::integer <> 1 then
+        raise exception 'next did not deliver the command: %', response;
+    end if;
+    if public.device_barrier_next(barrier) is not null then
+        raise exception 'a command was redelivered inside five seconds';
+    end if;
+    update public.barrier_commands set delivered_at = now() - interval '6 seconds'
+     where id = command_id;
+    response := public.device_barrier_next(barrier);
+    if response is null or (response ->> 'deliveries')::integer <> 2 then
+        raise exception 'the second delivery did not happen: %', response;
+    end if;
+    update public.barrier_commands set delivered_at = now() - interval '6 seconds'
+     where id = command_id;
+    perform public.device_barrier_next(barrier);
+    update public.barrier_commands set delivered_at = now() - interval '6 seconds'
+     where id = command_id;
+    if public.device_barrier_next(barrier) is not null then
+        raise exception 'a fourth delivery happened';
+    end if;
+
+    -- expired commands are skipped
+    delete from public.barrier_commands where device_id = barrier;
+    insert into public.barrier_commands (
+        lot_id, device_id, device_name, source, expires_at
+    ) values (1, barrier, 'Barrera test', 'checkin', now() - interval '1 second');
+    if public.device_barrier_next(barrier) is not null then
+        raise exception 'an expired command was delivered';
+    end if;
+
+    -- ack opened executes and is idempotent
+    delete from public.barrier_commands where device_id = barrier;
+    insert into public.barrier_commands (
+        lot_id, device_id, device_name, source, expires_at
+    ) values (1, barrier, 'Barrera test', 'checkin', now() + interval '30 seconds')
+    returning id into command_id;
+    response := public.device_barrier_ack(
+        barrier, command_id, 'opened', '{"open_ms": 900}'::jsonb);
+    if response ->> 'status' <> 'executed'
+       or response -> 'result' ->> 'open_ms' <> '900' then
+        raise exception 'ack did not execute the command: %', response;
+    end if;
+    response := public.device_barrier_ack(barrier, command_id, 'opened');
+    if response ->> 'status' <> 'executed' then
+        raise exception 'ack was not idempotent: %', response;
+    end if;
+    begin
+        perform public.device_barrier_ack(barrier, command_id, 'maybe');
+        raise exception 'an invalid ack result was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+
+    -- ack refused rejects and notifies every member once
+    insert into public.barrier_commands (
+        lot_id, device_id, device_name, source, expires_at
+    ) values (1, barrier, 'Barrera test', 'checkin', now() + interval '30 seconds')
+    returning id into command_id;
+    perform public.device_barrier_ack(barrier, command_id, 'refused');
+    if (select status from public.barrier_commands where id = command_id) <> 'rejected' then
+        raise exception 'a refused command is not rejected';
+    end if;
+    select count(distinct lm.user_id) into members
+      from public.lot_members lm
+      join public.users u on u.id = lm.user_id
+     where lm.lot_id = 1 and u.is_active;
+    select count(distinct n.user_id) into notified
+      from public.notifications n
+     where n.dedupe_key like 'barrier_command_failed:' || command_id || ':%';
+    if notified <> members then
+        raise exception 'failed command notified % of % members', notified, members;
+    end if;
+    perform public.device_barrier_ack(barrier, command_id, 'refused');
+    select count(*) into notified from public.notifications n
+     where n.dedupe_key like 'barrier_command_failed:' || command_id || ':%';
+    if notified <> members then
+        raise exception 'a repeated ack duplicated the notification';
+    end if;
+
+    -- ack of another device is not found
+    insert into public.lot_devices (lot_id, kind, name, key_prefix, key_hash, created_by)
+    values (1, 'barrier', 'Barrera dos', 'bbbbbbbbbbbb', repeat('b', 64), 1);
+    other := (select id from public.lot_devices where name = 'Barrera dos');
+    begin
+        perform public.device_barrier_ack(other, command_id, 'opened');
+        raise exception 'another device acked the command';
+    exception when others then
+        if sqlerrm not like '%BarrierCommandNotFoundError%' then raise; end if;
+    end;
+    delete from public.lot_devices where name = 'Barrera dos';
+end $$;
+
+-- barrier: device events and the fault notifications
+do $$
+declare
+    barrier integer := current_setting('app.barrier')::integer;
+    reference uuid := gen_random_uuid();
+    admins integer;
+    notified integer;
+    response jsonb;
+begin
+    response := public.device_barrier_event(
+        barrier, reference, 'tamper', now(), '{}'::jsonb);
+    if response ->> 'replayed' <> 'false' then
+        raise exception 'the first event was marked replayed';
+    end if;
+    response := public.device_barrier_event(
+        barrier, reference, 'tamper', now(), '{}'::jsonb);
+    if response ->> 'replayed' <> 'true' then
+        raise exception 'the event was not idempotent: %', response;
+    end if;
+    if (select count(*) from public.barrier_events
+         where device_id = barrier and client_ref = reference) <> 1 then
+        raise exception 'the idempotent event was stored twice';
+    end if;
+    select count(distinct lm.user_id) into admins
+      from public.lot_members lm
+      join public.users u on u.id = lm.user_id
+     where lm.lot_id = 1 and u.is_active and lm.role = 'admin';
+    select count(distinct n.user_id) into notified
+      from public.notifications n
+     where n.dedupe_key like 'barrier_fault:' || barrier || ':tamper:%';
+    if notified <> admins then
+        raise exception 'the tamper alert reached % of % admins', notified, admins;
+    end if;
+    -- Same fault inside the same minute does not notify twice.
+    perform public.device_barrier_event(
+        barrier, gen_random_uuid(), 'tamper', now(), '{}'::jsonb);
+    select count(distinct n.user_id) into notified
+      from public.notifications n
+     where n.dedupe_key like 'barrier_fault:' || barrier || ':tamper:%';
+    if notified <> admins then
+        raise exception 'a repeated fault duplicated the alert';
+    end if;
+    begin
+        perform public.device_barrier_event(
+            barrier, gen_random_uuid(), 'exploded', now(), '{}'::jsonb);
+        raise exception 'an unknown event was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+end $$;
+
+-- barrier: expiry, firmware manifest, purge and grants
+do $$
+declare
+    barrier integer := current_setting('app.barrier')::integer;
+    command_id uuid;
+    expired integer;
+    members integer;
+    notified integer;
+    manifest jsonb;
+begin
+    delete from public.barrier_commands where device_id = barrier;
+    insert into public.barrier_commands (
+        lot_id, device_id, device_name, source, expires_at
+    ) values (1, barrier, 'Barrera test', 'checkin', now() - interval '1 minute')
+    returning id into command_id;
+    expired := public.expire_barrier_commands();
+    if expired <> 1 then
+        raise exception 'expire changed % commands', expired;
+    end if;
+    if (select status from public.barrier_commands where id = command_id) <> 'expired' then
+        raise exception 'the command was not expired';
+    end if;
+    select count(distinct lm.user_id) into members
+      from public.lot_members lm join public.users u on u.id = lm.user_id
+     where lm.lot_id = 1 and u.is_active;
+    select count(distinct n.user_id) into notified
+      from public.notifications n
+     where n.dedupe_key like 'barrier_command_failed:' || command_id || ':%';
+    if notified <> members then
+        raise exception 'the expiry notified % of % members', notified, members;
+    end if;
+    if public.expire_barrier_commands() <> 0 then
+        raise exception 'expire re-expired a command';
+    end if;
+
+    -- firmware manifest
+    insert into public.device_firmware (
+        kind, version, sha256, size_bytes, storage_path, secure_version, released
+    ) values (
+        'barrier', '9.9.9', repeat('c', 64), 1024, 'barrier/9.9.9.bin', 5, true
+    );
+    manifest := public.device_firmware_manifest(barrier, null);
+    if manifest ->> 'version' <> '9.9.9' or manifest ->> 'sha256' <> repeat('c', 64) then
+        raise exception 'the firmware manifest is wrong: %', manifest;
+    end if;
+    if public.device_firmware_manifest(barrier, '9.9.9') is not null then
+        raise exception 'the current version was offered again';
+    end if;
+
+    -- purge keeps recent rows
+    insert into public.barrier_events (
+        lot_id, device_id, client_ref, event, happened_at
+    ) values (
+        1, barrier, gen_random_uuid(), 'opened', now() - interval '400 days'
+    );
+    if public.purge_barrier_events(365) < 1 then
+        raise exception 'the purge removed nothing';
+    end if;
+    if exists (select 1 from public.barrier_events
+                where device_id = barrier and happened_at < now() - interval '365 days') then
+        raise exception 'the purge left an old event';
+    end if;
+    if not exists (select 1 from public.barrier_events where device_id = barrier) then
+        raise exception 'the purge removed a recent event';
+    end if;
+
+    -- grants
+    for i in 1 .. 1 loop
+        if has_function_privilege('authenticated',
+            'public.device_barrier_next(integer)', 'execute') then
+            raise exception 'authenticated can poll barrier commands';
+        end if;
+        if has_function_privilege('anon',
+            'public.device_barrier_event(integer, uuid, text, timestamptz, jsonb)',
+            'execute') then
+            raise exception 'anon can post barrier events';
+        end if;
+        if has_function_privilege('authenticated',
+            'public.expire_barrier_commands()', 'execute') then
+            raise exception 'authenticated can run the barrier jobs';
+        end if;
+        if not has_function_privilege('service_role',
+            'public.device_barrier_ack(integer, uuid, text, jsonb)', 'execute') then
+            raise exception 'service_role cannot ack barrier commands';
+        end if;
+    end loop;
 end $$;
 
 rollback;

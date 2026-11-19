@@ -77,6 +77,14 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - Android release build: R8 keep rules for the optional ML Kit scripts.
 
 ### Added
+- **Barrier commands and device RPCs (`0136`)**: the command queue (nonce,
+  short TTL, delivery counter) and device events, with service-role delivery
+  (oldest first, at most three deliveries five seconds apart, expired ones
+  skipped), idempotent acknowledgements (`opened`/`refused`), idempotent
+  device events, fault alerts to admins deduped per device/event/minute,
+  failed-command alerts to every member, the firmware manifest, and the
+  expiry/purge jobs wired into both schedulers. Nothing issues commands yet:
+  signing and the triggers are the next slice.
 - **Barrier configuration (`0135`)**: per-barrier direction, paired LPR
   camera, which events may open it and the firmware timings, with a trigger
   that only accepts a same-lot camera, an audit trail, admin-only writes and

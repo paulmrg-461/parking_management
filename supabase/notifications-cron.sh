@@ -57,6 +57,11 @@ docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
 # (The snapshot janitor runs from evidence-archive, not here.)
 docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
   "select public.expire_lpr_events();" >/dev/null
+# Barrier control: expired commands must alert quickly; see docs/barrier-control.md.
+docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
+  "select public.expire_barrier_commands();" >/dev/null
+docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
+  "select public.purge_barrier_events(365);" >/dev/null
 # Damage comparisons follow the evidence retention window.
 docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
   "select public.purge_damage_comparisons();" >/dev/null

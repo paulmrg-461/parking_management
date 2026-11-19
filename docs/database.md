@@ -681,5 +681,9 @@ firmware enforces); a check trigger refuses a device that is not a barrier and a
 camera from another lot. Members read through `list_barriers()`, admins write
 through `set_barrier_config()` (a zero camera id clears the pairing).
 `device_firmware` (shared with the sensor wave) and the private `firmware`
-bucket hold signed releases; the bucket has no client policy. Commands,
-signing and the device RPCs are added by the following migrations.
+bucket hold signed releases; the bucket has no client policy. `barrier_commands`
+is the queue and the audit trail (source, nonce, status, deliveries, short
+TTL); `barrier_events` stores the device-reported events (unique per device and
+`client_ref`). The service-role RPCs deliver, acknowledge and record events;
+`expire_barrier_commands` and `purge_barrier_events(365)` run from the jobs.
+Signing and the issuing triggers are the next slice.
