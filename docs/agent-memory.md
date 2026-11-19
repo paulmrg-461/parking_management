@@ -243,9 +243,21 @@ until the edge service exists.
   that membership deleted; use a distinct plate per decision scenario (the
   120 s cooldown would otherwise debounce the next test); `pg_temp.lpr_triple`
   posts three reads with fresh client refs.
-- Still to build: operator RPCs and jobs (`0133`), the gateway `/v1/lpr/*`
-  routes, the Flutter `/gate` inbox and the `edge/lpr` service. Tasks 1.1-1.4
-  and 2.1-2.4 are checked in the change.
+- `0133_lpr_operator_rpcs.sql`: `list_lpr_events` (status filter incl. `all`,
+  clamp 1..200, `device_name`), `confirm_lpr_entry` (member; calls `check_in`
+  as that operator with `p_idempotency_key = 'lpr-confirm:<id>'`, a corrected
+  plate is normalized, attaches the snapshot as evidence and marks the event
+  confirmed; a second call replays the same session), `dismiss_lpr_event`
+  (pending or blocked, note ≤200 chars in `detail.note`), `expire_lpr_events`
+  (pending past the lot's `pending_expire_minutes` → expired; `exit_unpaid`
+  whose session closed → confirmed) and `purge_lpr_events` (deletes old reads
+  and events, returns the orphan snapshot paths for the storage janitor).
+- `expire_lpr_events` runs from `jobs.sh` and `notifications-cron.sh`;
+  `purge_lpr_events` is called by `evidence-archive` (task 4.3), not by the
+  shell loops.
+- Still to build: the gateway `/v1/lpr/*` routes, the `evidence-archive`
+  purge hook, the Flutter `/gate` inbox and the `edge/lpr` service. Tasks
+  1.1-1.4, 2.1-2.4 and 3.1-3.4 are checked in the change.
 
 ## Damage comparison backend (2026-11-18, `0127`)
 

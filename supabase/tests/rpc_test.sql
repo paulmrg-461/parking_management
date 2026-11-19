@@ -16459,7 +16459,7 @@ begin
     perform public.set_lpr_camera_direction(exit_camera, 'exit');
 
     insert into public.categories (lot_id, name, capacity)
-    values (1, 'LPR car', 5), (1, 'LPR full', 0);
+    values (1, 'LPR car', 50), (1, 'LPR full', 0);
     select id into car_category from public.categories
      where lot_id = 1 and name = 'LPR car';
     select id into full_category from public.categories
@@ -16473,7 +16473,10 @@ begin
            ('LPR012', car_category), ('LPR013', car_category),
            ('LPR014', car_category), ('LPR015', car_category),
            ('LPR016', car_category), ('LPR017', car_category),
-           ('LPR018', car_category);
+           ('LPR018', car_category), ('LPR019', car_category),
+           ('LPR020', car_category), ('LPR021', car_category),
+           ('LPR022', car_category), ('LPR023', car_category),
+           ('LPR024', car_category), ('LPR025', car_category);
     select id into car_vehicle from public.vehicles where plate = 'LPR001';
     select id into full_vehicle from public.vehicles where plate = 'LPR002';
     perform set_config('app.lpr_car_cat', car_category::text, true);
@@ -16888,6 +16891,209 @@ begin
         'execute') then
         raise exception 'service_role cannot ingest lpr reads';
     end if;
+end $$;
+
+
+-- ---------------------------------------------------------------------------
+-- lpr: operator inbox, confirmation, dismissal, jobs and purge.
+-- ---------------------------------------------------------------------------
+do $$
+declare
+    entry_camera integer := current_setting('app.lpr_entry_cam')::integer;
+    exit_camera integer := current_setting('app.lpr_exit_cam')::integer;
+    response jsonb;
+    events jsonb;
+    event_id bigint;
+    event public.lpr_events%rowtype;
+    session_row public.parking_sessions%rowtype;
+    path text;
+    first_confirm integer;
+    purge_event bigint;
+    session_vehicle integer;
+    paths jsonb;
+begin
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    perform public.set_lpr_settings(p_mode => 'assist');
+    perform set_config('request.jwt.claim.sub', '', true);
+
+    -- Inbox: pending only, newest first, unknown filter refused.
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', true);
+    events := public.list_lpr_events('pending', 50);
+    if jsonb_array_length(events) = 0 then
+        raise exception 'the pending inbox is empty';
+    end if;
+    if exists (
+        select 1 from jsonb_array_elements(events) e
+         where e ->> 'status' <> 'pending'
+    ) then
+        raise exception 'the pending filter leaked another status';
+    end if;
+    if (events -> 0 ->> 'id')::bigint < (events -> -1 ->> 'id')::bigint then
+        raise exception 'the inbox is not newest first';
+    end if;
+    begin
+        perform public.list_lpr_events('bogus');
+        raise exception 'an unknown status was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+    perform set_config('request.jwt.claim.sub', '', true);
+
+    -- Confirm a pending entry: session as the operator, snapshot as evidence.
+    response := pg_temp.lpr_triple(entry_camera, 'LPR020', 0.95, now());
+    event_id := (response -> 'event' ->> 'id')::bigint;
+    path := 'lpr/1/' || entry_camera || '/' || event_id || '.jpg';
+    perform public.device_lpr_attach_snapshot(entry_camera, event_id, path);
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', true);
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    response := public.confirm_lpr_entry(event_id);
+    first_confirm := (response ->> 'id')::integer;
+    select * into event from public.lpr_events where id = event_id;
+    select * into session_row from public.parking_sessions where id = first_confirm;
+    if event.status <> 'confirmed'
+       or event.session_id <> first_confirm
+       or event.resolved_by <> 2 then
+        raise exception 'the confirmation did not resolve the event: %', event;
+    end if;
+    if session_row.operator_id <> 2 then
+        raise exception 'the confirmed session belongs to another operator';
+    end if;
+    if not exists (
+        select 1 from public.evidence_photos p
+         where p.session_id = first_confirm and p.file_path = path
+    ) then
+        raise exception 'the snapshot did not become evidence on confirm';
+    end if;
+    response := public.confirm_lpr_entry(event_id);
+    if (response ->> 'id')::integer <> first_confirm then
+        raise exception 'a double confirm created another session';
+    end if;
+
+    -- A corrected plate is normalized and applied.
+    response := pg_temp.lpr_triple(entry_camera, 'LPR021', 0.95, now());
+    event_id := (response -> 'event' ->> 'id')::bigint;
+    response := public.confirm_lpr_entry(event_id, ' lpr 022 ');
+    select * into event from public.lpr_events where id = event_id;
+    if event.plate <> 'LPR022' or event.status <> 'confirmed' then
+        raise exception 'the corrected plate was not applied: %', event;
+    end if;
+    select category_id into session_vehicle from public.vehicles where plate = 'LPR022';
+    if not exists (
+        select 1 from public.parking_sessions s
+         join public.vehicles v on v.id = s.vehicle_id
+        where s.id = event.session_id and v.plate = 'LPR022'
+    ) then
+        raise exception 'the corrected plate checked in another vehicle';
+    end if;
+
+    -- Dismiss with a note, then refuse to resolve it again.
+    response := pg_temp.lpr_triple(entry_camera, 'LPR023', 0.95, now());
+    event_id := (response -> 'event' ->> 'id')::bigint;
+    response := public.dismiss_lpr_event(event_id, '  placa ajena  ');
+    select * into event from public.lpr_events where id = event_id;
+    if event.status <> 'dismissed'
+       or event.detail ->> 'note' <> 'placa ajena'
+       or event.resolved_by <> 2 then
+        raise exception 'the dismissal was not recorded: %', event;
+    end if;
+    begin
+        perform public.confirm_lpr_entry(event_id);
+        raise exception 'a dismissed event was confirmed';
+    exception when others then
+        if sqlerrm not like '%LprEventResolvedError%' then raise; end if;
+    end;
+
+    -- An exit event cannot be confirmed as an entry.
+    response := pg_temp.lpr_triple(exit_camera, 'LPR030', 0.95, now());
+    event_id := (response -> 'event' ->> 'id')::bigint;
+    begin
+        perform public.confirm_lpr_entry(event_id);
+        raise exception 'an exit event was confirmed as an entry';
+    exception when others then
+        if sqlerrm not like '%LprEventKindError%' then raise; end if;
+    end;
+
+    -- Another lot cannot see or resolve the event.
+    perform set_config('request.headers',
+        jsonb_build_object('x-lot-id', current_setting('app.pricing_lot'))::text,
+        true);
+    begin
+        perform public.confirm_lpr_entry(event_id);
+        raise exception 'a foreign lot confirmed an event';
+    exception when others then
+        if sqlerrm not like '%LprEventNotFoundError%' then raise; end if;
+    end;
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+
+    -- Jobs: expire old pending, confirm an exit whose session closed.
+    response := pg_temp.lpr_triple(entry_camera, 'LPR024', 0.95, now());
+    event_id := (response -> 'event' ->> 'id')::bigint;
+    update public.lpr_events set created_at = now() - interval '2 hours'
+     where id = event_id;
+    if public.expire_lpr_events() = 0 then
+        raise exception 'the expiry job changed nothing';
+    end if;
+    if (select status from public.lpr_events where id = event_id) <> 'expired' then
+        raise exception 'an old pending event was not expired';
+    end if;
+
+    select e.id into event_id from public.lpr_events e
+     where e.plate = 'LPR013' and e.reason = 'exit_unpaid' and e.status = 'pending'
+     order by e.id desc limit 1;
+    if event_id is null then
+        raise exception 'the unpaid exit fixture is missing';
+    end if;
+    update public.parking_sessions s
+       set status = 'closed', exit_time = now() - interval '1 minute'
+     where s.vehicle_id = (select id from public.vehicles where plate = 'LPR013')
+       and s.status = 'open';
+    perform public.expire_lpr_events();
+    select * into event from public.lpr_events where id = event_id;
+    if event.status <> 'confirmed' then
+        raise exception 'the expiry job left a closed exit %: %',
+            event.status, to_jsonb(event);
+    end if;
+
+    -- Purge: unreferenced snapshot paths only.
+    response := pg_temp.lpr_triple(entry_camera, 'LPR025', 0.95, now());
+    purge_event := (response -> 'event' ->> 'id')::bigint;
+    path := 'lpr/1/' || entry_camera || '/' || purge_event || '.jpg';
+    perform public.device_lpr_attach_snapshot(entry_camera, purge_event, path);
+    update public.lpr_events set created_at = now() - interval '90 days'
+     where id = purge_event;
+    update public.lpr_reads r set created_at = now() - interval '90 days'
+     where r.event_id = purge_event;
+    paths := public.purge_lpr_events(30);
+    if not (paths @> to_jsonb(path)) then
+        raise exception 'an orphan snapshot path was not returned';
+    end if;
+    if exists (select 1 from public.lpr_events where id = purge_event) then
+        raise exception 'the purged event survived';
+    end if;
+
+    -- The confirmed event's snapshot is referenced by evidence and kept.
+    update public.lpr_events set created_at = now() - interval '90 days'
+     where id = (select id from public.lpr_events
+                  where status = 'confirmed' and snapshot_path is not null
+                  order by id limit 1);
+    path := (select snapshot_path from public.lpr_events
+              where status = 'confirmed' and snapshot_path is not null
+              order by id limit 1);
+    paths := public.purge_lpr_events(30);
+    if path is not null and paths @> to_jsonb(path) then
+        raise exception 'a referenced snapshot path was returned for deletion';
+    end if;
+
+    if has_function_privilege('authenticated', 'public.expire_lpr_events()',
+                              'execute') then
+        raise exception 'authenticated can run the lpr jobs';
+    end if;
+    if not has_function_privilege('service_role', 'public.purge_lpr_events(integer)',
+                                  'execute') then
+        raise exception 'service_role cannot purge lpr events';
+    end if;
+    perform set_config('request.jwt.claim.sub', '', true);
 end $$;
 
 rollback;

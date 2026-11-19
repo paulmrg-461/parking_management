@@ -16,10 +16,10 @@ Prerequisite: `add-device-gateway` is implemented (its tasks 1 to 6 done). Migra
 
 ## 3. Database: operator RPCs and jobs
 
-- [ ] 3.1 Write SQL tests first: Success `list_lpr_events_pending_newest_first`, Success `confirm_lpr_entry_opens_session_as_operator_and_attaches_snapshot`, Success `confirm_with_corrected_plate`, Success `confirm_twice_same_session`, Success `dismiss_marks_dismissed`, Success `expire_marks_old_pending_expired_and_closed_exit_confirmed`, Failure `confirm_resolved_event` (`LprEventResolvedError`), Failure `confirm_exit_event` (`LprEventKindError`), Failure `confirm_invalid_plate`, Failure `list_unknown_status` (`InvalidDataError`), Security `other_lot_event_not_found` for confirm/dismiss/list, Security `operator_cannot_execute_job_functions` (`expire_lpr_events`, `purge_lpr_events`), `purge_returns_unreferenced_snapshot_paths_only`.
-- [ ] 3.2 Create `supabase/migrations/<NEXT>_lpr_operator_rpcs.sql` (`list_lpr_events`, `confirm_lpr_entry`, `dismiss_lpr_event`, `get_lpr_settings`, `set_lpr_settings`, `set_lpr_camera_direction`, `expire_lpr_events`, `purge_lpr_events`). `confirm_lpr_entry` calls `check_in` with named arguments and idempotency key `'lpr-confirm:' || p_event_id`.
-- [ ] 3.3 Modify `supabase/jobs.sh` (`run expire_lpr_events`) and `supabase/notifications-cron.sh`. `purge_lpr_events` is called by `evidence-archive` (task 4.3), not by the shell loops, because it returns paths.
-- [ ] 3.4 Acceptance: `sh supabase/tests/run.sh`; `sh -n supabase/jobs.sh`.
+- [x] 3.1 Write SQL tests first: Success `list_lpr_events_pending_newest_first`, Success `confirm_lpr_entry_opens_session_as_operator_and_attaches_snapshot`, Success `confirm_with_corrected_plate`, Success `confirm_twice_same_session`, Success `dismiss_marks_dismissed`, Success `expire_marks_old_pending_expired_and_closed_exit_confirmed`, Failure `confirm_resolved_event` (`LprEventResolvedError`), Failure `confirm_exit_event` (`LprEventKindError`), Failure `confirm_invalid_plate`, Failure `list_unknown_status` (`InvalidDataError`), Security `other_lot_event_not_found` for confirm/dismiss/list, Security `operator_cannot_execute_job_functions` (`expire_lpr_events`, `purge_lpr_events`), `purge_returns_unreferenced_snapshot_paths_only`.
+- [x] 3.2 Create `supabase/migrations/<NEXT>_lpr_operator_rpcs.sql` (`list_lpr_events`, `confirm_lpr_entry`, `dismiss_lpr_event`, `get_lpr_settings`, `set_lpr_settings`, `set_lpr_camera_direction`, `expire_lpr_events`, `purge_lpr_events`). `confirm_lpr_entry` calls `check_in` with named arguments and idempotency key `'lpr-confirm:' || p_event_id`.
+- [x] 3.3 Modify `supabase/jobs.sh` (`run expire_lpr_events`) and `supabase/notifications-cron.sh`. `purge_lpr_events` is called by `evidence-archive` (task 4.3), not by the shell loops, because it returns paths.
+- [x] 3.4 Acceptance: `sh supabase/tests/run.sh`; `sh -n supabase/jobs.sh`.
 
 ## 4. Edge Function routes and evidence janitor
 

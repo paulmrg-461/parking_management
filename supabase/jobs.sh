@@ -58,6 +58,8 @@ while true; do
   # Device gateway: offline alerts and event retention.
   run notify_offline_devices
   run purge_device_events
+  # LPR gate: expire pending reads and close unpaid exits already settled.
+  run expire_lpr_events
   run purge_cash_anomalies
   # Pass renewal reminders (queued only when the lot opted in).
   run queue_pass_renewal_reminders

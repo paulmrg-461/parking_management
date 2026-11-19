@@ -53,6 +53,10 @@ docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
   "select public.notify_offline_devices();" >/dev/null
 docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
   "select public.purge_device_events(180);" >/dev/null
+# LPR gate: expire pending reads and confirm unpaid exits whose session closed.
+# (The snapshot janitor runs from evidence-archive, not here.)
+docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
+  "select public.expire_lpr_events();" >/dev/null
 # Damage comparisons follow the evidence retention window.
 docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
   "select public.purge_damage_comparisons();" >/dev/null

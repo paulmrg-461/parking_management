@@ -77,6 +77,14 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - Android release build: R8 keep rules for the optional ML Kit scripts.
 
 ### Added
+- **LPR operator inbox and jobs** (`0133`): `list_lpr_events` filters by
+  status with the device name; `confirm_lpr_entry` checks in as the signed-in
+  operator (deterministic idempotency key, corrected plate normalized,
+  snapshot attached as evidence) and a double confirmation replays the same
+  session; `dismiss_lpr_event` stores an optional note. `expire_lpr_events`
+  ages out pending reads and confirms unpaid exits whose session the desk
+  closed; `purge_lpr_events` deletes old reads/events and returns the orphan
+  snapshot paths. The expiry job runs from `jobs.sh` and the host cron.
 - **LPR ingest** (`0132`): cameras post plate reads to
   `device_ingest_lpr_read`, which serialises per camera, replays a repeated
   `client_ref`, marks late reads `stale`, ignores low confidence, debounces by
