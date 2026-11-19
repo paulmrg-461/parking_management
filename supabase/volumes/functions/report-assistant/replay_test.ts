@@ -59,8 +59,12 @@ for (const file of Deno.readDirSync(fixtureDir)) {
       },
       rpcGet: (name, args) => {
         rpcNames.push(name)
-        const body = fixture.rpc_outputs[name] ?? {}
-        assertEquals(args['p_start_date'] === undefined || typeof args['p_start_date'] === 'string', true)
+        // Two calls to the same RPC (period comparisons) need two recorded
+        // bodies: prefer the "name|start_date" key, fall back to "name".
+        const key = args['p_start_date'] !== undefined
+          ? `${name}|${args['p_start_date']}`
+          : name
+        const body = fixture.rpc_outputs[key] ?? fixture.rpc_outputs[name] ?? {}
         return Promise.resolve({ ok: true, body })
       },
       restGet: () =>

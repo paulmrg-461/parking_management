@@ -128,7 +128,10 @@ export function validateAnswer(
         failed = true
         break
       }
-      if (leafUnit !== null && unit !== leafUnit) {
+      if (leafUnit !== null && unit !== leafUnit
+          && op !== 'percent_change' && op !== 'share_percent') {
+        // Percent ops read two same-unit operands and produce a percent; the
+        // declared-unit check after computing still guards the final unit.
         problems.push('MIXED_UNITS')
         failed = true
         break

@@ -243,12 +243,12 @@ const shifts: ToolSpec = {
   },
   maxRangeDays: 400,
   enabled: true,
-  project: (raw) => {
-    const rows = Array.isArray(raw) ? raw : []
-    return rows.map((row) => pick(row, [
+  project: (raw) => ({
+    // Wrapped so the path grammar (keys first) can address one shift.
+    shifts: (Array.isArray(raw) ? raw : []).map((row) => pick(row, [
       'id', 'opened_at', 'closed_at', 'session_count', ...SHIFT_MONEY,
-    ]))
-  },
+    ])),
+  }),
   leafUnits: {
     ...Object.fromEntries(SHIFT_MONEY.map((key) => [key, MONEY])),
     session_count: COUNT,

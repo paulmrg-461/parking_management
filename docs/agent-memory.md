@@ -64,13 +64,24 @@ Last updated: 2026-11-18 (replay batch).
   `fixtures/*.json` (question, recorded RPC output, recorded model script and
   the expected figures) and runs the real agent loop with a scripted model and
   a fake PostgREST — no network, so the CI `edge-functions` job runs it.
-  Four cases cover the design table: per-category revenue (F1), two payment
-  methods (F3), the out-of-scope plate question with redaction (F16) and a
-  hostile category name that must not change the figures (F18). The remaining
-  14 recorded cases and `eval:live` still need a manual live run with the
-  owner's key.
+  Eight cases cover the design table: per-category revenue (F1), two payment
+  methods (F3), percent_change between two months (F4), share_percent (F5),
+  busiest hour (F6), shift cash differences (F12), the out-of-scope plate
+  question with redaction (F16) and a hostile category name that must not
+  change the figures (F18). The remaining 10 recorded cases and `eval:live`
+  still need a manual live run with the owner's key.
+- Two real bugs found by the replay fixtures and fixed:
+  (1) `validateAnswer` wrongly rejected a legitimate `percent_change` figure
+  because it compared the DECLARED unit (`percent`) with the leaf unit
+  (`money`) of each operand; percent ops now compare leaf units only against
+  each other and the computed-unit check still guards the declared unit.
+  (2) The shifts tool projected a bare array, which the path grammar (keys
+  first) cannot address; it now wraps the rows in `{"shifts":[...]}` so
+  `shifts[0].difference` resolves.
+- The harness serves two recorded bodies for the same RPC (period
+  comparisons) keyed by `name|p_start_date`.
 - Still pending: rotate the exposed DeepSeek key (owner), the manual smokes
-  (payments/passes/damage/devices), the 14 remaining replay fixtures, the
+  (payments/passes/damage/devices), the 10 remaining replay fixtures, the
   `eval:live` tooling and the three hardware changes.
 
 ## Device gateway backend (2026-11-18, `0128`-`0129`)

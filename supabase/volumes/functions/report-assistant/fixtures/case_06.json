@@ -1,0 +1,125 @@
+{
+  "case": "car share of october revenue",
+  "question": "What share of October revenue came from cars?",
+  "locale": "en",
+  "rpc_outputs": {
+    "report_revenue": {
+      "total": 60000,
+      "pass_revenue": 0,
+      "total_discounts": 0,
+      "discounted_sessions": 0,
+      "start_date": "",
+      "end_date": "",
+      "by_day": [],
+      "by_category": [
+        {
+          "category_id": 1,
+          "category_name": "Car",
+          "amount": 30000
+        }
+      ],
+      "by_payment": [],
+      "pass_by_payment": []
+    }
+  },
+  "model_script": [
+    {
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "s1",
+          "name": "get_revenue_report",
+          "input": {
+            "start_date": "2026-10-01",
+            "end_date": "2026-10-31"
+          }
+        }
+      ],
+      "stop_reason": "tool_use"
+    },
+    {
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "submit",
+          "name": "submit_answer",
+          "input": {
+            "status": "answered",
+            "headline": "Cars were {f1} of {f2}, a share of {f3}.",
+            "explanation": "",
+            "period_start": "2026-10-01",
+            "period_end": "2026-10-31",
+            "figures": [
+              {
+                "id": "f1",
+                "label": "Car revenue",
+                "unit": "money",
+                "op": "value",
+                "operands": [
+                  {
+                    "call_id": "s1",
+                    "path": "by_category[category_name=Car].amount"
+                  }
+                ]
+              },
+              {
+                "id": "f2",
+                "label": "Total revenue",
+                "unit": "money",
+                "op": "value",
+                "operands": [
+                  {
+                    "call_id": "s1",
+                    "path": "total"
+                  }
+                ]
+              },
+              {
+                "id": "f3",
+                "label": "Car share",
+                "unit": "percent",
+                "op": "share_percent",
+                "operands": [
+                  {
+                    "call_id": "s1",
+                    "path": "by_category[category_name=Car].amount"
+                  },
+                  {
+                    "call_id": "s1",
+                    "path": "total"
+                  }
+                ]
+              }
+            ],
+            "caveats": []
+          }
+        }
+      ],
+      "stop_reason": "end_turn"
+    }
+  ],
+  "expected": {
+    "tools": [
+      {
+        "tool": "get_revenue_report"
+      }
+    ],
+    "answer": {
+      "status": "answered",
+      "figures": [
+        {
+          "id": "f1",
+          "value": 30000
+        },
+        {
+          "id": "f2",
+          "value": 60000
+        },
+        {
+          "id": "f3",
+          "value": 5000
+        }
+      ]
+    }
+  }
+}
