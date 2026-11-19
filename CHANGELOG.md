@@ -67,6 +67,12 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - Android release build: R8 keep rules for the optional ML Kit scripts.
 
 ### Added
+- **Guided photo capture** (`core/widgets/capture_guide.dart`): a next-angle
+  banner and slot chips shown at check-in and in the exit-photo section, plus a
+  simple illustration dialog, so the entry and exit sets cover the same four
+  corners plus an optional damage detail. Guidance only: it never blocks
+  capture or submission.
+
 - **Device gateway (`0128`–`0129`)**
   (`openspec/changes/add-device-gateway`). Hardware devices get their own
   per-lot identity, never a user account:

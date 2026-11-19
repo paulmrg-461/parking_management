@@ -24,6 +24,7 @@ import '../../../core/utils/formatters.dart';
 import '../../../core/storage/key_value_store.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/confirm_dialog.dart';
+import '../../../core/widgets/capture_guide.dart';
 import '../../../core/widgets/photo_strip.dart';
 import '../../../core/widgets/plate_input_field.dart';
 import '../../../core/widgets/plate_keypad.dart';
@@ -933,6 +934,10 @@ class _CheckInPageState extends State<CheckInPage> {
           subtitle: l10n.checkInEvidenceHint,
         ),
         const SizedBox(height: Space.sm),
+        AngleGuideBanner(captured: _photos.length),
+        const SizedBox(height: Space.xs),
+        AngleSlotChips(captured: _photos.length),
+        const SizedBox(height: Space.xs),
         PhotoStrip(
           photos: [for (final photo in _photos) photo.bytes],
           max: EvidencePolicy.maxPhotos,

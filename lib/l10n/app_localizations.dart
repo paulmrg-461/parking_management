@@ -10717,6 +10717,30 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Comparar con las fotos de entrada'**
   String get damageCompareAction;
+
+  /// No description provided for @guideNextPhoto.
+  ///
+  /// In es, this message translates to:
+  /// **'Siguiente foto: {slot, select, frontLeft{esquina delantera izquierda} frontRight{esquina delantera derecha} rearRight{esquina trasera derecha} rearLeft{esquina trasera izquierda} detail{detalle de cualquier daño} other{libre}}'**
+  String guideNextPhoto(String slot);
+
+  /// No description provided for @guideRules.
+  ///
+  /// In es, this message translates to:
+  /// **'A unos 3 m, vehículo completo en el cuadro, sin contraluz; repite las mismas esquinas a la salida.'**
+  String get guideRules;
+
+  /// No description provided for @guideSlotChip.
+  ///
+  /// In es, this message translates to:
+  /// **'{slot, select, frontLeft{Del. izq.} frontRight{Del. der.} rearRight{Tras. der.} rearLeft{Tras. izq.} detail{Detalle} other{}}'**
+  String guideSlotChip(String slot);
+
+  /// No description provided for @guideShowIllustration.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver ejemplo'**
+  String get guideShowIllustration;
 }
 
 class _AppLocalizationsDelegate

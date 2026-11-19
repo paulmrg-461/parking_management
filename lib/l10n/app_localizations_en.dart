@@ -6085,4 +6085,37 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get damageCompareAction => 'Compare with entry photos';
+
+  @override
+  String guideNextPhoto(String slot) {
+    String _temp0 = intl.Intl.selectLogic(slot, {
+      'frontLeft': 'front-left corner',
+      'frontRight': 'front-right corner',
+      'rearRight': 'rear-right corner',
+      'rearLeft': 'rear-left corner',
+      'detail': 'close-up of any damage',
+      'other': 'any',
+    });
+    return 'Next photo: $_temp0';
+  }
+
+  @override
+  String get guideRules =>
+      'About 3 m away, whole vehicle in frame, no backlight; repeat the same corners at exit.';
+
+  @override
+  String guideSlotChip(String slot) {
+    String _temp0 = intl.Intl.selectLogic(slot, {
+      'frontLeft': 'Front L',
+      'frontRight': 'Front R',
+      'rearRight': 'Rear R',
+      'rearLeft': 'Rear L',
+      'detail': 'Detail',
+      'other': '',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String get guideShowIllustration => 'See example';
 }

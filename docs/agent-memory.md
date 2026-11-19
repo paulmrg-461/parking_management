@@ -4,7 +4,7 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-11-18 (hardening batch).
+Last updated: 2026-11-18 (guidance batch).
 
 ## Where we are
 
@@ -52,9 +52,17 @@ Last updated: 2026-11-18 (hardening batch).
 - Archived (specs synced): `add-dynamic-pricing`, `add-loyalty-rewards`,
   `add-electronic-invoicing`, `add-report-assistant`,
   `add-ai-damage-comparison`, `add-device-gateway`.
+- Angle guidance shipped: `core/widgets/capture_guide.dart` with `AngleSlot`
+  (4 corners + detail), `AngleGuideBanner`, `AngleSlotChips` and
+  `showAngleIllustration` (a `CustomPainter` car outline using theme colors
+  only, no hardcoded `Color(…)`). Wired into the check-in form above the photo
+  strip and the exit-photo section of the settlement dialog; the guide never
+  blocks capture or submission (the existing check-in/dialog suites stay
+  green). `slotForIndex` clamps negatives to `frontLeft` and overflow to
+  `detail`.
 - Still pending: rotate the exposed DeepSeek key (owner), the manual smokes
-  (payments/passes/damage/devices), the angle-guidance widget, the AI replay
-  fixtures/eval and the three hardware changes.
+  (payments/passes/damage/devices), the AI replay fixtures/eval and the three
+  hardware changes.
 
 ## Device gateway backend (2026-11-18, `0128`-`0129`)
 

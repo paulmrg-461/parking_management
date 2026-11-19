@@ -12,6 +12,7 @@ import '../../invoicing/domain/entities/fiscal_settings.dart';
 import '../../invoicing/presentation/widgets/fiscal_customer_form.dart';
 import '../../loyalty/presentation/desk_loyalty_section.dart';
 import '../../merchants/presentation/desk_merchant_section.dart';
+import '../../../core/widgets/capture_guide.dart';
 import '../../plate_scanning/domain/repositories/plate_image_capture.dart';
 import '../domain/entities/check_out_preview.dart';
 import 'widgets/fare_breakdown_view.dart';
@@ -309,6 +310,11 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
                   l10n.damageExitHint,
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
+                const SizedBox(height: Space.xs),
+                AngleGuideBanner(captured: _exitPhotos.length),
+                const SizedBox(height: Space.xs),
+                AngleSlotChips(captured: _exitPhotos.length),
+                const SizedBox(height: Space.xs),
                 const SizedBox(height: Space.xs),
                 Wrap(
                   spacing: Space.xs,

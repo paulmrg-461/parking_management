@@ -2035,5 +2035,9 @@
   "errorDeviceRateLimited": "Demasiadas peticiones del dispositivo",
   "evidenceSectionEntry": "Fotos de entrada",
   "evidenceSectionExit": "Fotos de salida",
-  "damageCompareAction": "Comparar con las fotos de entrada"
+  "damageCompareAction": "Comparar con las fotos de entrada",
+  "guideNextPhoto": "Siguiente foto: {slot, select, frontLeft{esquina delantera izquierda} frontRight{esquina delantera derecha} rearRight{esquina trasera derecha} rearLeft{esquina trasera izquierda} detail{detalle de cualquier daño} other{libre}}",
+  "guideRules": "A unos 3 m, vehículo completo en el cuadro, sin contraluz; repite las mismas esquinas a la salida.",
+  "guideSlotChip": "{slot, select, frontLeft{Del. izq.} frontRight{Del. der.} rearRight{Tras. der.} rearLeft{Tras. izq.} detail{Detalle} other{}}",
+  "guideShowIllustration": "Ver ejemplo"
 }
