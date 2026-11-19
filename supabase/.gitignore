@@ -57,6 +57,7 @@ volumes/functions/fiscal-dispatch/**
 volumes/functions/report-assistant/**
 !volumes/functions/report-assistant/**/
 !volumes/functions/report-assistant/**/*.ts
+!volumes/functions/report-assistant/**/*.json
 !volumes/functions/_shared/ai/
 volumes/functions/_shared/ai/**
 !volumes/functions/_shared/ai/**/
@@ -65,6 +66,7 @@ volumes/functions/_shared/ai/**
 volumes/functions/damage-compare/**
 !volumes/functions/damage-compare/**/
 !volumes/functions/damage-compare/**/*.ts
+!volumes/functions/damage-compare/**/*.json
 !volumes/functions/device-gateway/
 volumes/functions/device-gateway/**
 !volumes/functions/device-gateway/index.ts

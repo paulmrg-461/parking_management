@@ -1,0 +1,54 @@
+{
+  "case": "cash and card last week",
+  "question": "How much came in cash and card last week?",
+  "locale": "en",
+  "today": "2026-11-10",
+  "timezone": "America/Bogota",
+  "currency": "COP",
+  "rpc_outputs": {
+    "report_revenue": {
+      "total": 19000,
+      "by_payment": [
+        {"payment_method": "cash", "amount": 12000},
+        {"payment_method": "card", "amount": 7000}
+      ],
+      "by_category": [], "by_day": [], "pass_by_payment": []
+    }
+  },
+  "model_script": [
+    {
+      "content": [
+        {"type": "tool_use", "id": "toolu_c2", "name": "get_revenue_report",
+         "input": {"start_date": "2026-11-02", "end_date": "2026-11-08"}}
+      ],
+      "stop_reason": "tool_use"
+    },
+    {
+      "content": [
+        {"type": "tool_use", "id": "submit", "name": "submit_answer",
+         "input": {
+           "status": "answered",
+           "headline": "Cash was {f1} and card was {f2}.",
+           "explanation": "",
+           "period_start": "2026-11-02",
+           "period_end": "2026-11-08",
+           "figures": [
+             {"id": "f1", "label": "Cash", "unit": "money", "op": "value",
+              "operands": [{"call_id": "toolu_c2", "path": "by_payment[payment_method=cash].amount"}]},
+             {"id": "f2", "label": "Card", "unit": "money", "op": "value",
+              "operands": [{"call_id": "toolu_c2", "path": "by_payment[payment_method=card].amount"}]}
+           ],
+           "caveats": []
+         }
+      }
+      ],
+      "stop_reason": "end_turn"
+    }
+  ],
+  "expected": {
+    "tools": [{"tool": "get_revenue_report"}],
+    "answer": {"status": "answered", "figures": [
+      {"id": "f1", "value": 12000}, {"id": "f2", "value": 7000}
+    ]}
+  }
+}
