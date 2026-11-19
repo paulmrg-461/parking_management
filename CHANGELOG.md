@@ -128,7 +128,8 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   key, and `fixtures/pairs/README.md` documents the 24-pair plan, the
   capture protocol and the consent/blur requirement. The vision call is now
   one exported factory (`createVision`) shared by the function and the
-  eval.
+  eval. Two tests pin the vision request itself (system prompt, image
+  parts, `response_format: json_object`, model id) and the 502 mapping.
 
 - **Damage verdicts are conservative by construction**: an all-clear now
   requires a confirmed same vehicle, at least three zones visible in both

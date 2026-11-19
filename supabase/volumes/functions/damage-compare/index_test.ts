@@ -1,7 +1,7 @@
 import { assertEquals } from 'jsr:@std/assert@^1'
 import { AiError } from '../_shared/ai/errors.ts'
 import { loadConfig } from '../_shared/ai/config.ts'
-import { createHandler, normalise, type DamageDeps } from './index.ts'
+import { createHandler, createVision, normalise, SYSTEM_PROMPT, type DamageDeps } from './index.ts'
 
 function deps(options: {
   key?: string
@@ -165,4 +165,61 @@ Deno.test('damage run honours the configured coverage floor', async () => {
     post({ mode: 'run', session_id: 1, locale: 'es' }),
   )).json()
   assertEquals(strict.overall, 'insufficient_evidence')
+})
+
+Deno.test('createVision sends the system prompt, images and json mode', async () => {
+  const original = globalThis.fetch
+  let url = ''
+  let body: Record<string, unknown> = {}
+  globalThis.fetch = ((input: string | URL | Request, init?: RequestInit) => {
+    url = String(input)
+    body = JSON.parse(String(init?.body ?? '{}')) as Record<string, unknown>
+    return Promise.resolve(new Response(JSON.stringify({
+      model: 'deepseek-flash-1',
+      choices: [{ message: { content: '{"ok":true}' } }],
+      usage: { prompt_tokens: 30, completion_tokens: 4 },
+    }), { status: 200, headers: { 'content-type': 'application/json' } }))
+  }) as typeof fetch
+  try {
+    const vision = createVision({ DEEPSEEK_MODEL_DAMAGE_COMPARE: 'deepseek-flash' })
+    const result = await vision(
+      'Compare these.',
+      [{ label: 'E1', dataUrl: 'data:image/jpeg;base64,AA' }],
+      loadConfig({ DEEPSEEK_API_KEY: 'k' }),
+    )
+    assertEquals(url, 'https://api.deepseek.com/chat/completions')
+    assertEquals(body['model'], 'deepseek-flash')
+    assertEquals(body['response_format'], { type: 'json_object' })
+    const messages = body['messages'] as Array<Record<string, unknown>>
+    assertEquals(messages[0]['content'], SYSTEM_PROMPT)
+    const content = messages[1]['content'] as Array<Record<string, unknown>>
+    assertEquals(content[0]['text'], 'Compare these.')
+    assertEquals(content[1]['type'], 'image_url')
+    assertEquals(result.content, '{"ok":true}')
+    assertEquals(result.model, 'deepseek-flash-1')
+    assertEquals(result.usage, { input: 30, output: 4 })
+  } finally {
+    globalThis.fetch = original
+  }
+})
+
+Deno.test('createVision maps an upstream failure to AiUpstreamError', async () => {
+  const original = globalThis.fetch
+  globalThis.fetch = (() =>
+    Promise.resolve(new Response('nope', { status: 500 }))) as typeof fetch
+  try {
+    const vision = createVision({})
+    await vision('p', [], loadConfig({ DEEPSEEK_API_KEY: 'k' })).then(
+      () => {
+        throw new Error('should have thrown')
+      },
+      (error) => {
+        assertEquals(error instanceof AiError, true)
+        assertEquals(error.code, 'AiUpstreamError')
+        assertEquals(error.status, 502)
+      },
+    )
+  } finally {
+    globalThis.fetch = original
+  }
 })

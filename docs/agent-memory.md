@@ -96,7 +96,7 @@ Last updated: 2026-11-19 (device E2E).
   The overall verdict now follows the design's safety rule: any `new` finding
   wins; otherwise an all-clear needs `same_vehicle = yes`, at least three
   covered zones (`AI_DAMAGE_MIN_COVERED_ZONES`, default 3) and no uncertain
-  finding. Deno suite is 136 tests.
+  finding. Deno suite is 138 tests.
 - `report-assistant/eval_live.ts` + `deno task eval:live` (manual, needs
   `DEEPSEEK_API_KEY`, never in CI): runs the same 18 fixtures against the
   real model, scores tool selection (expected subset of called, with
