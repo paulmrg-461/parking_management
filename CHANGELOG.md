@@ -77,6 +77,13 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - Android release build: R8 keep rules for the optional ML Kit scripts.
 
 ### Added
+- **Specs synced for ten delivered changes**: parking settings, public booking
+  CAPTCHA, booking waitlist, offline conflict resolution, period comparison,
+  occupancy forecast, cash anomaly detection, online payments, pass
+  auto-renewal and merchant validations were implemented but still sat as
+  active changes. They are archived and their deltas merged
+  (`openspec/specs` now describes every capability, 41 specs validating);
+  only the three hardware changes remain active.
 - **Automated device-gateway E2E** (`test/integration/device_gateway_test.dart`,
   wired into `integration_test/app_flow_test.dart`): registers a device as a
   lot admin and speaks the firmware protocol against the live stack — `/v1/time`,

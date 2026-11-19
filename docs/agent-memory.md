@@ -49,9 +49,17 @@ Last updated: 2026-11-19 (device E2E).
   `test/integration/supabase_flow_test.dart` (it skips without
   `SUPABASE_URL`/`SUPABASE_ANON_KEY`), so the AGENTS section 6 command runs
   green; `integration_test` was added to `pubspec.yaml` dev_dependencies.
-- Archived (specs synced): `add-dynamic-pricing`, `add-loyalty-rewards`,
-  `add-electronic-invoicing`, `add-report-assistant`,
+- Archived (specs synced), recent waves: `add-dynamic-pricing`,
+  `add-loyalty-rewards`, `add-electronic-invoicing`, `add-report-assistant`,
   `add-ai-damage-comparison`, `add-device-gateway`.
+- Archived on 2026-11-19 (the ten older delivered changes whose specs were
+  never synced): `add-parking-settings`, `add-public-booking-captcha`,
+  `add-booking-waitlist`, `add-offline-conflict-resolution`,
+  `add-period-comparison-reports`, `add-occupancy-forecast`,
+  `add-cash-anomaly-detection`, `add-online-payments`,
+  `add-pass-auto-renewal`, `add-merchant-validations`.
+  `openspec/specs` now has every capability (41 specs, all validating); only
+  the three hardware changes stay active.
 - Angle guidance shipped: `core/widgets/capture_guide.dart` with `AngleSlot`
   (4 corners + detail), `AngleGuideBanner`, `AngleSlotChips` and
   `showAngleIllustration` (a `CustomPainter` car outline using theme colors

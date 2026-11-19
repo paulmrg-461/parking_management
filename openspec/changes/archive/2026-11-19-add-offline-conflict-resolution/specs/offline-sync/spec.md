@@ -81,6 +81,11 @@ against.
 - **THEN** only the changed settings fields are queued, with the settings row's
   base version
 
+#### Scenario: Delete a tariff while offline
+- **WHEN** an admin deletes a tariff while the device has no connectivity
+- **THEN** the system removes the tariff from the local cache, queues the
+  mutation with the row's base version, and completes without raising an error
+
 ### Requirement: Replay queued mutations on reconnect
 The system SHALL replay every queued mutation against the backend once
 connectivity is restored, sending the base version as the write filter and
