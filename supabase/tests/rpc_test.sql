@@ -16070,4 +16070,347 @@ begin
     end if;
 end $$;
 
+
+-- ---------------------------------------------------------------------------
+-- lpr: per-lot settings, camera directions and the acting-user primitive.
+-- ---------------------------------------------------------------------------
+insert into auth.users (id, email, raw_app_meta_data) values
+    ('00000000-0000-0000-0000-000000000099', 'lpr-outsider@parking.local',
+     '{"role": "operator"}'::jsonb)
+on conflict (id) do nothing;
+
+-- lpr: a new lot reads the documented defaults and stores no row
+do $$
+declare
+    settings jsonb;
+begin
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    perform set_config('request.jwt.claims', '', true);
+    delete from public.lpr_settings where lot_id = 1;
+    settings := public.get_lpr_settings();
+    if settings ->> 'mode' <> 'assist'
+       or (settings ->> 'min_confidence')::numeric <> 0.800
+       or (settings ->> 'auto_confidence')::numeric <> 0.920
+       or (settings ->> 'min_votes')::integer <> 3
+       or (settings ->> 'vote_window_seconds')::integer <> 8
+       or (settings ->> 'cooldown_seconds')::integer <> 120
+       or (settings ->> 'pending_expire_minutes')::integer <> 60
+       or (settings ->> 'exit_paid_window_minutes')::integer <> 15
+       or settings -> 'default_category_id' <> 'null'::jsonb
+       or settings -> 'acting_user_id' <> 'null'::jsonb
+       or jsonb_typeof(settings -> 'cameras') <> 'array' then
+        raise exception 'the lpr defaults are wrong: %', settings;
+    end if;
+    if exists (select 1 from public.lpr_settings where lot_id = 1) then
+        raise exception 'reading settings wrote a row';
+    end if;
+end $$;
+
+-- lpr: an admin switches to auto and the change is audited
+do $$
+declare
+    settings jsonb;
+    category integer := (select id from public.categories where lot_id = 1 order by id limit 1);
+begin
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    settings := public.set_lpr_settings(
+        p_mode => 'auto',
+        p_default_category_id => category,
+        p_acting_user_id => 2
+    );
+    if settings ->> 'mode' <> 'auto'
+       or (settings ->> 'acting_user_id')::integer <> 2
+       or (settings ->> 'default_category_id')::integer <> category then
+        raise exception 'the settings were not saved: %', settings;
+    end if;
+    if not exists (
+        select 1 from public.audit_log
+         where table_name = 'lpr_settings' and after ->> 'mode' = 'auto'
+    ) then
+        raise exception 'changing the lpr settings was not audited';
+    end if;
+end $$;
+
+-- lpr: out-of-range values are rejected and leave the row untouched
+do $$
+declare
+    before_row public.lpr_settings%rowtype;
+    after_row public.lpr_settings%rowtype;
+begin
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    select * into before_row from public.lpr_settings where lot_id = 1;
+    begin
+        perform public.set_lpr_settings(p_min_confidence => 0.4);
+        raise exception 'a minimum below 0.5 was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+    begin
+        perform public.set_lpr_settings(p_min_confidence => 1.0);
+        raise exception 'a minimum above 0.99 was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+    begin
+        perform public.set_lpr_settings(p_min_votes => 0);
+        raise exception 'zero votes was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+    begin
+        perform public.set_lpr_settings(p_vote_window_seconds => 61);
+        raise exception 'a window above 60 s was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+    begin
+        perform public.set_lpr_settings(p_cooldown_seconds => 9);
+        raise exception 'a cooldown below 10 s was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+    begin
+        perform public.set_lpr_settings(
+            p_min_confidence => 0.90, p_auto_confidence => 0.85);
+        raise exception 'an automatic confidence below the minimum was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+    begin
+        perform public.set_lpr_settings(p_mode => 'always');
+        raise exception 'an unknown mode was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+    select * into after_row from public.lpr_settings where lot_id = 1;
+    if after_row is distinct from before_row then
+        raise exception 'a rejected update changed the row';
+    end if;
+end $$;
+
+-- lpr: auto mode requires an active system operator in the lot
+do $$
+declare
+    outsider integer := (
+        select id from public.users
+         where auth_user_id = '00000000-0000-0000-0000-000000000099'
+    );
+begin
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    delete from public.lpr_settings where lot_id = 1;
+    begin
+        perform public.set_lpr_settings(p_mode => 'auto');
+        raise exception 'auto was enabled without a system operator';
+    exception when others then
+        if sqlerrm not like '%LprSystemOperatorRequiredError%' then raise; end if;
+    end;
+    if exists (select 1 from public.lpr_settings where lot_id = 1 and mode = 'auto') then
+        raise exception 'the mode changed despite the error';
+    end if;
+    -- A user outside the lot cannot be the system operator.
+    -- Every profile joins lot 1 through the default-membership trigger; use
+    -- a second lot where this user is not a member.
+    perform set_config('request.headers',
+        jsonb_build_object('x-lot-id', current_setting('app.pricing_lot'))::text,
+        true);
+    if exists (
+        select 1 from public.lot_members
+         where lot_id = current_setting('app.pricing_lot')::integer
+           and user_id = outsider
+    ) then
+        raise exception 'fixture: the outsider belongs to the second lot';
+    end if;
+    begin
+        perform public.set_lpr_settings(
+            p_mode => 'auto', p_acting_user_id => outsider);
+        raise exception 'an outsider was accepted as system operator';
+    exception when others then
+        if sqlerrm not like '%UserNotFoundError%' then raise; end if;
+    end;
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+end $$;
+
+-- lpr: categories must belong to the lot
+do $$
+declare
+    foreign_category integer;
+begin
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    select id into foreign_category
+      from public.categories
+     where lot_id = current_setting('app.pricing_lot')::integer
+     order by id limit 1;
+    if foreign_category is null then
+        raise exception 'the pricing lot category fixture is missing';
+    end if;
+    begin
+        perform public.set_lpr_settings(p_default_category_id => foreign_category);
+        raise exception 'a category from another lot was accepted';
+    exception when others then
+        if sqlerrm not like '%CategoryNotFoundError%' then raise; end if;
+    end;
+end $$;
+
+-- lpr: camera directions are admin-only and validate the device
+do $$
+declare
+    camera integer;
+    barrier integer;
+    result jsonb;
+begin
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    camera := (public.register_lot_device('camera', 'LPR entrance') ->> 'id')::integer;
+    barrier := (public.register_lot_device('barrier', 'LPR barrier') ->> 'id')::integer;
+    perform set_config('app.lpr_camera', camera::text, true);
+    perform set_config('app.lpr_barrier', barrier::text, true);
+    result := public.set_lpr_camera_direction(camera, 'entry');
+    if result ->> 'direction' <> 'entry' then
+        raise exception 'the camera direction was not saved: %', result;
+    end if;
+    begin
+        perform public.set_lpr_camera_direction(barrier, 'entry');
+        raise exception 'a barrier accepted a camera direction';
+    exception when others then
+        if sqlerrm not like '%InvalidDeviceKindError%' then raise; end if;
+    end;
+    begin
+        perform public.set_lpr_camera_direction(camera, 'sideways');
+        raise exception 'an unknown direction was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+    begin
+        perform public.set_lpr_camera_direction(999999, 'entry');
+        raise exception 'an unknown device was accepted';
+    exception when others then
+        if sqlerrm not like '%DeviceNotFoundError%' then raise; end if;
+    end;
+end $$;
+
+-- lpr: an operator reads but never writes
+do $$
+declare
+    settings jsonb;
+    camera integer := current_setting('app.lpr_camera')::integer;
+begin
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', true);
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    settings := public.get_lpr_settings();
+    if settings ->> 'mode' is null then
+        raise exception 'an operator could not read the settings';
+    end if;
+    begin
+        perform public.set_lpr_settings(p_mode => 'auto');
+        raise exception 'an operator changed the settings';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+    begin
+        perform public.set_lpr_camera_direction(camera, 'exit');
+        raise exception 'an operator changed a camera direction';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+end $$;
+
+-- lpr: settings are per lot
+do $$
+declare
+    pricing_lot integer := current_setting('app.pricing_lot')::integer;
+begin
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+    perform set_config('request.headers',
+        jsonb_build_object('x-lot-id', pricing_lot)::text, true);
+    perform public.set_lpr_settings(p_mode => 'assist');
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    if public.get_lpr_settings() ->> 'mode' = 'assist'
+       and public.get_lpr_settings() ->> 'mode' is distinct from
+           (select mode from public.lpr_settings where lot_id = pricing_lot) then
+        raise exception 'the lots share one settings row';
+    end if;
+    if (select count(*) from public.lpr_settings where lot_id = pricing_lot) <> 1 then
+        raise exception 'the second lot has no settings row';
+    end if;
+end $$;
+
+-- lpr: the defaults literal lists every column
+do $$
+declare
+    table_columns text[];
+    literal_keys text[];
+begin
+    select array_agg(column_name order by ordinal_position) into table_columns
+      from information_schema.columns
+     where table_schema = 'public' and table_name = 'lpr_settings';
+    select array_agg(key order by key) into literal_keys
+      from jsonb_object_keys(
+          to_jsonb(public.lpr_effective_settings(999))) as key;
+    if array_length(table_columns, 1) <> array_length(literal_keys, 1) then
+        raise exception 'lpr_effective_settings is missing a column: % vs %',
+            table_columns, literal_keys;
+    end if;
+end $$;
+
+-- lpr: claims set inside a security definer resolve the acting user and restore
+create or replace function pg_temp.lpr_claims_probe(p_auth uuid, p_lot integer)
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+    before_sub text := current_setting('request.jwt.claim.sub', true);
+    before_claims text := current_setting('request.jwt.claims', true);
+    before_headers text := current_setting('request.headers', true);
+    app_user integer;
+begin
+    perform set_config('request.jwt.claim.sub', p_auth::text, true);
+    perform set_config('request.jwt.claims',
+        json_build_object('sub', p_auth, 'role', 'authenticated')::text, true);
+    perform set_config('request.headers',
+        json_build_object('x-lot-id', p_lot::text)::text, true);
+    app_user := public.current_app_user_id();
+    perform set_config('request.jwt.claim.sub', coalesce(before_sub, ''), true);
+    perform set_config('request.jwt.claims', coalesce(before_claims, ''), true);
+    perform set_config('request.headers', coalesce(before_headers, ''), true);
+    if current_setting('request.jwt.claim.sub', true) is distinct from before_sub
+       or current_setting('request.jwt.claims', true) is distinct from before_claims
+       or current_setting('request.headers', true) is distinct from before_headers then
+        raise exception 'the claims were not restored';
+    end if;
+    return app_user;
+end $$;
+
+do $$
+declare
+    acting integer;
+begin
+    perform set_config('request.jwt.claim.sub', '', true);
+    perform set_config('request.jwt.claims', '', true);
+    acting := pg_temp.lpr_claims_probe(
+        '00000000-0000-0000-0000-000000000002', 1);
+    if acting <> 2 then
+        raise exception 'the acting user was % instead of 2', acting;
+    end if;
+    if public.current_app_user_id() is not null then
+        raise exception 'the probe leaked the acting user';
+    end if;
+end $$;
+
+-- lpr: cleanup (the temp camera and its direction)
+do $$
+begin
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    perform public.delete_lot_device(current_setting('app.lpr_camera')::integer);
+    perform public.delete_lot_device(current_setting('app.lpr_barrier')::integer);
+    delete from public.lpr_settings where lot_id in (1, current_setting('app.pricing_lot')::integer);
+end $$;
+
 rollback;

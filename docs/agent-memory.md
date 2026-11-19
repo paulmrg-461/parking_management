@@ -4,7 +4,7 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-11-19 (device E2E).
+Last updated: 2026-11-19 (LPR settings slice).
 
 ## Where we are
 
@@ -196,6 +196,32 @@ Last updated: 2026-11-19 (device E2E).
 - Pending: the manual device smoke (real ESP32/Jetson with `/v1/time` and
   `/v1/heartbeat`) and the follow-up hardware changes. The registry, admin
   screen and transport are ready for them.
+
+## LPR camera gate (wave started 2026-11-19, `0131`)
+
+The hardware wave (`add-lpr-camera-gate`, then `add-barrier-control` and
+`add-bay-sensors`) is being built software-first: the camera/Jetson is only
+needed for the physical validation, not for the schema, the gateway routes or
+the Flutter inbox. Progress is committed in slices; the change stays active
+until the edge service exists.
+
+- `0131_lpr_settings.sql`: `lpr_settings` (mode, thresholds, windows, default
+  category, system operator), `lpr_camera_config` (one direction per camera),
+  `lpr_effective_settings()` (the row or the documented defaults),
+  `get_lpr_settings()` (member), `set_lpr_settings()` and
+  `set_lpr_camera_direction()` (admin). Writes are security definer only; the
+  table has an audit trigger and a member read policy.
+- Every profile joins lot 1 automatically (`trg_add_default_lot_member`), so a
+  "user from another lot" fixture must use a second lot; the LPR block does.
+- The acting-user primitive (design D1) is verified in SQL: claims set with
+  `set_config(..., true)` inside a security definer resolve
+  `current_app_user_id()` and are restored afterwards.
+- `lpr_effective_settings` uses a `row(...)` literal in table order; a SQL
+  test compares its keys with `information_schema.columns` and fails when a
+  column is added without updating the literal.
+- Still to build: ingest/voting/decision (`0132`), operator RPCs and jobs
+  (`0133`), the gateway `/v1/lpr/*` routes, the Flutter `/gate` inbox and the
+  `edge/lpr` service. Tasks 1.1-1.4 are checked in the change.
 
 ## Damage comparison backend (2026-11-18, `0127`)
 
