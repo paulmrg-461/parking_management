@@ -1,0 +1,28 @@
+{
+  "case": "a different vehicle never yields an all-clear",
+  "entry_ids": [
+    1
+  ],
+  "exit_ids": [
+    2
+  ],
+  "model_answer": {
+    "summary": "No parece el mismo vehículo.",
+    "quality": {
+      "same_vehicle": "no",
+      "covered_zones": [
+        "front",
+        "rear",
+        "left",
+        "right"
+      ],
+      "issues": []
+    },
+    "findings": []
+  },
+  "expected": {
+    "overall": "insufficient_evidence",
+    "count": 0,
+    "same_vehicle": "no"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "case": "three covered zones with no findings is an all-clear",
+  "entry_ids": [
+    1
+  ],
+  "exit_ids": [
+    2
+  ],
+  "model_answer": {
+    "summary": "Sin cambios.",
+    "quality": {
+      "same_vehicle": "yes",
+      "covered_zones": [
+        "front",
+        "rear",
+        "left"
+      ],
+      "issues": []
+    },
+    "findings": []
+  },
+  "expected": {
+    "overall": "no_new_damage",
+    "count": 0,
+    "covered_zones_count": 3
+  }
+}

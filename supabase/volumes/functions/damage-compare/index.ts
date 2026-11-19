@@ -114,10 +114,24 @@ export function normalise(
     return (order[String(a.classification)] ?? 3) -
       (order[String(b.classification)] ?? 3)
   })
+  const coveredZones = Array.isArray(quality.covered_zones)
+    ? quality.covered_zones.slice(0, 20)
+      .map((zone) => sanitize(zone, 40))
+      .filter((zone) => zone.length > 0)
+    : []
+
+  // A "no new damage" verdict is only safe when the photos actually support
+  // the comparison: the same vehicle, a few zones visible on both sides and
+  // no uncertain finding. Otherwise the honest answer is "not enough
+  // evidence", never a silent all-clear.
   let overall = 'no_new_damage'
   if (findings.some((item) => item.classification === 'new')) {
     overall = 'possible_new_damage'
-  } else if (findings.some((item) => item.classification === 'uncertain')) {
+  } else if (
+    sameVehicle !== 'yes' ||
+    findings.some((item) => item.classification === 'uncertain') ||
+    coveredZones.length < 3
+  ) {
     overall = 'insufficient_evidence'
   }
   return {
@@ -125,9 +139,7 @@ export function normalise(
     summary: sanitize(source.summary || '', 600),
     quality: {
       same_vehicle: sameVehicle,
-      covered_zones: Array.isArray(quality.covered_zones)
-        ? quality.covered_zones.slice(0, 20).map((zone) => sanitize(zone, 40))
-        : [],
+      covered_zones: coveredZones,
       issues,
     },
     findings,

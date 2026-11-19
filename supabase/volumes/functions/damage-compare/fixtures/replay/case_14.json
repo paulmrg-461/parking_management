@@ -103,7 +103,7 @@
     "findings": []
   },
   "expected": {
-    "overall": "no_new_damage",
+    "overall": "insufficient_evidence",
     "count": 0,
     "same_vehicle": "unknown",
     "issues_count": 10,

@@ -93,7 +93,9 @@ Last updated: 2026-11-18 (replay parity).
   needed. The damage replay now has 18 cases too (pairing, foreign photo
   ids, missing exit photo, sort order, quality caps, control-character
   stripping, malformed findings, summary truncation, unknown identity).
-  Deno suite is 120 tests.
+  The overall verdict now follows the design's safety rule: any `new` finding
+  wins; otherwise an all-clear needs `same_vehicle = yes`, at least three
+  covered zones and no uncertain finding. Deno suite is 123 tests.
 - `report-assistant/eval_live.ts` + `deno task eval:live` (manual, needs
   `DEEPSEEK_API_KEY`, never in CI): runs the same 18 fixtures against the
   real model, scores tool selection (expected subset of called, with

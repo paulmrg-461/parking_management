@@ -283,13 +283,16 @@ them through Storage rendering, and asks the vision model (DeepSeek
 `deepseek-flash`) for a structured list of findings. The code downgrades any
 "new" finding that lacks a clear entry/exit pair, low confidence or a confirmed
 same-vehicle answer to "uncertain", caps the list at 12 and computes the overall
-verdict itself. The result is stored by the service role only, so operators
-cannot forge a finding; operators confirm or dismiss each finding with a
-mandatory note (audited), and an admin can re-run. The comparison is advisory:
-it never changes the charge, the discount or the blacklist. The settlement dialog captures optional exit photos, the
-`/damage-comparison` page shows the verdict and findings, and each finding is
-confirmed or dismissed with a mandatory note (audited). Angle guidance and the
-evidence-sheet phase grouping are pending.
+verdict itself. An all-clear is only possible with a confirmed same vehicle, at
+least three zones visible in both sets and no uncertain finding; anything less
+is "insufficient evidence", never a silent "no new damage". The result is
+stored by the service role only, so operators cannot forge a finding; operators
+confirm or dismiss each finding with a mandatory note (audited), and an admin
+can re-run. The comparison is advisory: it never changes the charge, the
+discount or the blacklist. The settlement dialog captures optional exit photos
+with angle guidance, the evidence sheet groups photos by phase and offers the
+compare action, and the `/damage-comparison` page shows the verdict and
+findings.
 
 ## 7.10 Report assistant (implemented, inert without a key)
 

@@ -95,6 +95,12 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   relative to the run date) and the loyalty online-cap fixture uses a fixed
   past daytime window instead of `now() - 3 hours`, which crossed the night
   rate boundary and changed the fare depending on the hour of the run.
+- **Damage verdicts are conservative by construction**: an all-clear now
+  requires a confirmed same vehicle, at least three zones visible in both
+  photo sets and no uncertain finding; otherwise the verdict is
+  `insufficient_evidence`. Three replay cases pin the rule (different
+  vehicle, two covered zones, the three-zone boundary).
+
 - **Damage replay parity**: nine more normaliser cases — multi-photo
   pairing, foreign photo ids dropped and downgraded, missing exit photo,
   severity sort order, the quality caps, control-character and tag
