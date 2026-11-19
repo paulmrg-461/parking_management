@@ -314,6 +314,28 @@ until the edge service exists.
   Tasks 1.1-6.4, 7.1, 7.3, 7.8 and 8.1-8.3 are checked; `openspec validate
   --strict` passes.
 
+## Barrier control (wave started 2026-11-19, `0135`)
+
+The next hardware wave (`add-barrier-control`) is also being built
+software-first. Only the configuration slice exists so far; nothing can open a
+barrier until the command/signing migrations and routes land, so lots without a
+barrier are untouched.
+
+- `0135_barrier_config.sql`: `barrier_config` (direction, paired LPR camera,
+  which events may open it, the firmware timings) with a check trigger that
+  requires a `barrier` device and a same-lot `camera`, an audit trigger and no
+  client grants; `device_firmware` (shared with `add-bay-sensors`) and the
+  private `firmware` bucket with no Storage policy (service role only);
+  `list_barriers()` (member) and `set_barrier_config()` (admin, coalescing
+  upsert, `p_camera_device_id = 0` clears the pairing).
+- SQL block `-- barrier` covers the roundtrip, the pairing clear, every range
+  and enum, a foreign camera, a non-barrier device, operators read-only, the
+  trigger on direct writes, lot isolation, the table grants and the bucket.
+- Next: `barrier_commands`/`barrier_events`, the Ed25519 signing module, the
+  `barrier_issue_command` triggers, the gateway routes, the Flutter `/barrier`
+  page and the ESP32 firmware. Tasks 1.x stay unchecked until the second
+  migration exists.
+
 ## Damage comparison backend (2026-11-18, `0127`)
 
 - Owner approved sending **vehicle photos** to DeepSeek for this advisory

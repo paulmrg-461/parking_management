@@ -77,6 +77,12 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - Android release build: R8 keep rules for the optional ML Kit scripts.
 
 ### Added
+- **Barrier configuration (`0135`)**: per-barrier direction, paired LPR
+  camera, which events may open it and the firmware timings, with a trigger
+  that only accepts a same-lot camera, an audit trail, admin-only writes and
+  member reads through `list_barriers()`. The shared `device_firmware` table
+  and the private `firmware` bucket land with it. Commands, signing and the
+  device routes are the next slice, so nothing opens a barrier yet.
 - **Gate snapshot thumbnail**: a pending read with a snapshot shows the image
   in its card (loaded through the repository, so the Storage membership policy
   decides), with a "no image" placeholder when it is missing or denied. The

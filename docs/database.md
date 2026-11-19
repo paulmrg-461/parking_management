@@ -674,3 +674,12 @@ jobs, `expire_lpr_events` / `purge_lpr_events`. Auto entry impersonates the
 lot's system operator by setting the request claims inside the ingest
 transaction and restoring them afterwards. `can_read_lpr_snapshot(path)` backs
 the Storage read policy for snapshots that are not yet evidence.
+
+**Barrier control (`0135` so far).** `barrier_config` stores one row per
+`barrier` device (direction, paired camera, the event rules and the timings the
+firmware enforces); a check trigger refuses a device that is not a barrier and a
+camera from another lot. Members read through `list_barriers()`, admins write
+through `set_barrier_config()` (a zero camera id clears the pairing).
+`device_firmware` (shared with the sensor wave) and the private `firmware`
+bucket hold signed releases; the bucket has no client policy. Commands,
+signing and the device RPCs are added by the following migrations.

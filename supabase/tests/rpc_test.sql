@@ -17108,4 +17108,186 @@ begin
     perform set_config('request.jwt.claim.sub', '', true);
 end $$;
 
+
+-- ---------------------------------------------------------------------------
+-- barrier: per-barrier configuration, the firmware table and its guards.
+-- ---------------------------------------------------------------------------
+do $$
+declare
+    barrier integer;
+    camera integer;
+    other_camera integer;
+    config jsonb;
+    listed jsonb;
+    pricing_lot integer := current_setting('app.pricing_lot')::integer;
+begin
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    barrier := (public.register_lot_device('barrier', 'Barrera test') ->> 'id')::integer;
+    camera := (public.register_lot_device('camera', 'Cámara barrera') ->> 'id')::integer;
+    perform set_config('app.barrier', barrier::text, true);
+    perform set_config('app.barrier_camera', camera::text, true);
+
+    -- roundtrip through list_barriers
+    config := public.set_barrier_config(
+        p_device_id => barrier,
+        p_direction => 'exit',
+        p_camera_device_id => camera,
+        p_open_on_checkin => 'always',
+        p_open_on_paid_exit => 'never',
+        p_open_for_pass_entry => true,
+        p_open_hold_ms => 1500,
+        p_max_open_seconds => 30,
+        p_post_clear_delay_ms => 2000,
+        p_max_reversals => 4,
+        p_command_ttl_seconds => 45
+    );
+    if config ->> 'direction' <> 'exit'
+       or (config ->> 'camera_device_id')::integer <> camera
+       or config ->> 'open_on_checkin' <> 'always'
+       or config ->> 'open_on_paid_exit' <> 'never'
+       or (config ->> 'open_for_pass_entry')::boolean is not true
+       or (config ->> 'open_hold_ms')::integer <> 1500
+       or (config ->> 'max_open_seconds')::integer <> 30
+       or (config ->> 'post_clear_delay_ms')::integer <> 2000
+       or (config ->> 'max_reversals')::integer <> 4
+       or (config ->> 'command_ttl_seconds')::integer <> 45 then
+        raise exception 'the barrier config roundtrip is wrong: %', config;
+    end if;
+    listed := public.list_barriers();
+    if not exists (
+        select 1 from jsonb_array_elements(listed) item
+         where (item ->> 'device_id')::integer = barrier
+           and item ->> 'direction' = 'exit'
+           and (item ->> 'camera_device_id')::integer = camera
+           and item ->> 'camera_name' = 'Cámara barrera'
+    ) then
+        raise exception 'list_barriers did not return the config: %', listed;
+    end if;
+
+    -- a zero camera clears the pairing
+    config := public.set_barrier_config(
+        p_device_id => barrier,
+        p_camera_device_id => 0
+    );
+    if config -> 'camera_device_id' <> 'null'::jsonb then
+        raise exception 'a zero camera id did not clear the pairing: %', config;
+    end if;
+
+    -- ranges and enums
+    begin
+        perform public.set_barrier_config(p_device_id => barrier, p_direction => 'sideways');
+        raise exception 'an unknown direction was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+    begin
+        perform public.set_barrier_config(p_device_id => barrier, p_open_on_checkin => 'sometimes');
+        raise exception 'an unknown check-in rule was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+    for i in 1 .. 5 loop
+        begin
+            perform public.set_barrier_config(
+                p_device_id => barrier,
+                p_open_hold_ms => case i when 1 then 100 else null end,
+                p_max_open_seconds => case i when 2 then 4 else null end,
+                p_post_clear_delay_ms => case i when 3 then 400 else null end,
+                p_max_reversals => case i when 4 then 0 else null end,
+                p_command_ttl_seconds => case i when 5 then 9 else null end
+            );
+            raise exception 'an out-of-range timing was accepted (case %)', i;
+        exception when others then
+            if sqlerrm not like '%InvalidDataError%' then raise; end if;
+        end;
+    end loop;
+
+    -- a camera from another lot is refused
+    insert into public.lot_devices (lot_id, kind, name, key_prefix, key_hash, created_by)
+    values (pricing_lot, 'camera', 'Cámara ajena', 'aaaaaaaaaaaa', repeat('a', 64), 1);
+    select id into other_camera from public.lot_devices
+     where lot_id = pricing_lot and name = 'Cámara ajena';
+    begin
+        perform public.set_barrier_config(
+            p_device_id => barrier, p_camera_device_id => other_camera);
+        raise exception 'a camera from another lot was paired';
+    exception when others then
+        if sqlerrm not like '%InvalidDeviceKindError%' then raise; end if;
+    end;
+
+    -- a non-barrier device and an unknown device are refused
+    begin
+        perform public.set_barrier_config(p_device_id => camera);
+        raise exception 'a camera was configured as a barrier';
+    exception when others then
+        if sqlerrm not like '%InvalidDeviceKindError%' then raise; end if;
+    end;
+    begin
+        perform public.set_barrier_config(p_device_id => 999999);
+        raise exception 'an unknown device was configured';
+    exception when others then
+        if sqlerrm not like '%DeviceNotFoundError%' then raise; end if;
+    end;
+
+    -- operators read but never write
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', true);
+    if jsonb_array_length(public.list_barriers()) = 0 then
+        raise exception 'an operator cannot list the barriers';
+    end if;
+    begin
+        perform public.set_barrier_config(p_device_id => barrier, p_direction => 'entry');
+        raise exception 'an operator changed the barrier config';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+
+    -- direct writes still run the trigger
+    begin
+        insert into public.barrier_config (device_id, lot_id)
+        values (camera, 1);
+        raise exception 'a camera got a barrier config row';
+    exception when others then
+        if sqlerrm not like '%InvalidDeviceKindError%' then raise; end if;
+    end;
+
+    -- lot isolation: lot 2 does not see lot 1's barrier
+    perform set_config('request.headers',
+        jsonb_build_object('x-lot-id', pricing_lot)::text, true);
+    if exists (
+        select 1 from jsonb_array_elements(public.list_barriers()) item
+         where (item ->> 'device_id')::integer = barrier
+    ) then
+        raise exception 'another lot saw the barrier';
+    end if;
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+end $$;
+
+-- barrier: clients have no grants on the tables, and the bucket is private
+do $$
+declare
+    table_name text;
+begin
+    for table_name in
+        select unnest(array['barrier_config', 'device_firmware'])
+    loop
+        if has_table_privilege('authenticated', 'public.' || table_name, 'select') then
+            raise exception 'authenticated can select %', table_name;
+        end if;
+        if has_table_privilege('anon', 'public.' || table_name, 'select') then
+            raise exception 'anon can select %', table_name;
+        end if;
+    end loop;
+    if not exists (select 1 from storage.buckets where id = 'firmware' and public is false) then
+        raise exception 'the firmware bucket is missing or public';
+    end if;
+    if exists (
+        select 1 from pg_policies
+         where schemaname = 'storage' and coalesce(qual, '') like '%firmware%'
+    ) then
+        raise exception 'a client policy mentions the firmware bucket';
+    end if;
+end $$;
+
 rollback;
