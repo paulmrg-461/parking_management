@@ -84,6 +84,12 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   crash-safe) and the gateway client (boot-counter sequence, replay/skew
   retries, bounded backoff, TLS always verified). 31 hardware-free tests; the
   capture/detector/OCR adapters and the entry point are the next slice.
+- **LPR edge loop and tools**: sampler (idle/active cadence, motion gate, ROI,
+  stale frames), reconnecting capture wrapper, detector/OCR ports with
+  fixture fakes, heartbeat/watchdog, the frame → track → read → outbox →
+  gateway loop with snapshot upload, and a localhost fake gateway used by
+  three HTTP integration tests (decision + snapshot, replay, outage). The
+  systemd unit, env example and `tools/export_models.sh` are included.
 - **Gate settings (`/gate-settings`, admin)**: mode assist/auto with the
   spoofing confirmation, the two confidence sliders, the votes/window/cooldown
   steppers, the default category and system-operator pickers and each

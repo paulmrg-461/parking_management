@@ -14,11 +14,18 @@ This first slice is the hardware-free core, tested with `pytest`:
 | `lpr_edge/tracker.py` | greedy IoU tracker, one read per interval, max reads per track, best crop |
 | `lpr_edge/outbox.py` | durable SQLite queue: `client_ref` before the first send, order, expiry, cap |
 | `lpr_edge/gateway.py` | `seq = boot << 32 | n`, replay/skew retries, backoff, TLS verified |
+| `lpr_edge/capture.py` | `FrameSource` port, OpenCV/GStreamer sources, stall detection and reconnect backoff |
+| `lpr_edge/sampler.py` | idle/active cadence, motion gate, ROI crop, stale frames |
+| `lpr_edge/models.py` | detector/OCR ports and fixture-driven fakes (`expected/*.json`) |
+| `lpr_edge/health.py` | heartbeat payload and the inference watchdog |
+| `lpr_edge/service.py` | the loop: frame → track → read → outbox → gateway, snapshot upload |
+| `lpr_edge/testing.py` | the localhost fake gateway used by the integration tests and `tools/fake_gateway.py` |
 
-The capture/detector/OCR adapters, `__main__.py`, the fake gateway and the
-video fixtures are the next slice (they need OpenCV/TensorRT on the target).
-The protocol and the server side are already complete, so a Jetson service can
-be built against `docs/lpr-gate.md` today.
+The ONNX/TensorRT adapters, `__main__.py` and the recorded video fixtures are
+the next slice: they depend on the owner's exact model shapes and on OpenCV/
+TensorRT, which are not installed on this host. The protocol and the server
+side are already complete, so those adapters only need to implement
+`PlateDetector.detect` and `PlateOcr.read`.
 
 ## Install
 

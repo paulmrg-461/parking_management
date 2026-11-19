@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import json
 import os
+import urllib.error
+import urllib.request
 import random as random_module
 import ssl
 import tempfile
@@ -135,6 +137,29 @@ class GatewayClient:
             raise RetryableError(error or f"HTTP {response.status}")
         raise NonRetryableError("retry exhausted")
 
+    def put_snapshot(self, event_id: int, jpeg: bytes) -> Response:
+        headers = {
+            "X-Device-Key": self.api_key,
+            "X-Device-Seq": str(self.next_seq()),
+            "X-Device-Timestamp": str(self.timestamp()),
+            "X-Device-Firmware": self.config.firmware_version,
+            "Content-Type": "image/jpeg",
+        }
+        response = self.transport(
+            "PUT",
+            f"{self.config.url}/v1/lpr/events/{event_id}/snapshot",
+            headers,
+            jpeg,
+        )
+        if 200 <= response.status < 300:
+            return response
+        error = _error(response)
+        if error == "SnapshotAlreadyAttachedError":
+            return response
+        if 400 <= response.status < 500:
+            raise NonRetryableError(error or f"HTTP {response.status}")
+        raise RetryableError(error or f"HTTP {response.status}")
+
     def backoff(self, attempt: int) -> float:
         base = min(float(2**attempt), 30.0)
         return min(30.0, base * (0.8 + 0.4 * self.jitter()))
@@ -160,6 +185,34 @@ class GatewayClient:
             raise RetryableError("clock sync failed")
         moment = datetime.fromisoformat(server_time.replace("Z", "+00:00"))
         self._offset = moment.timestamp() - self.wall()
+
+
+def urllib_transport(
+    *,
+    timeout: float = 15.0,
+    context: ssl.SSLContext | None = None,
+) -> Transport:
+    """Production transport with TLS verification (system CA or pinned file)."""
+
+    def send(method: str, url: str, headers: dict[str, str], body: bytes | None) -> Response:
+        request = urllib.request.Request(url, data=body, headers=headers, method=method)
+        try:
+            with urllib.request.urlopen(
+                request, timeout=timeout, context=context
+            ) as response:
+                raw = response.read()
+                return Response(response.status, json.loads(raw) if raw else {})
+        except urllib.error.HTTPError as error:
+            raw = error.read()
+            try:
+                parsed = json.loads(raw) if raw else {}
+            except json.JSONDecodeError:
+                parsed = {}
+            return Response(error.code, parsed)
+        except (urllib.error.URLError, TimeoutError) as error:
+            raise RetryableError(str(error)) from error
+
+    return send
 
 
 def _error(response: Response) -> str:

@@ -296,11 +296,20 @@ until the edge service exists.
   crop), `outbox.py` (durable SQLite, client_ref before send, expiry/cap,
   crash test via subprocess) and `gateway.py` (seq `boot<<32|n`, replay/skew
   retries, backoff bounds, TLS always verified). No OpenCV needed for these.
-- Remaining on the edge: `capture.py`/`sampler.py`, the detector/OCR adapters
-  (ONNX/TensorRT), `__main__.py`, the fake gateway and video fixtures
-  (OpenCV/TensorRT not installed here), plus the hardware validation (7.11).
-  The spec, schema, gateway, UI and docs are done. Tasks 1.1-6.4, 7.1 and
-  8.1-8.3 are checked; `openspec validate --strict` passes.
+- Edge additions: `capture.py` (OpenCV/GStreamer source + reconnecting
+  wrapper with stall detection and a 30 s backoff reset), `sampler.py`
+  (idle/active cadence, motion gate, ROI, stale), `models.py` (ports +
+  fixture-driven fakes), `health.py` (heartbeat + watchdog),
+  `service.py` (the loop plus snapshot upload and outbox drain) and
+  `testing.py` (localhost fake gateway). `tools/fake_gateway.py` and
+  `tools/export_models.sh`, systemd unit and env example are in place.
+  pytest is now 43 tests, including a three-case integration test over real
+  HTTP against the fake gateway (decision + snapshot, replay, outage).
+- Remaining on the edge: the ONNX/TensorRT adapters, `__main__.py` and the
+  recorded video fixtures (they need the owner's model shapes and
+  OpenCV/TensorRT, absent here), plus the hardware validation (7.11).
+  Tasks 1.1-6.4, 7.1, 7.3, 7.8 and 8.1-8.3 are checked; `openspec validate
+  --strict` passes.
 
 ## Damage comparison backend (2026-11-18, `0127`)
 
