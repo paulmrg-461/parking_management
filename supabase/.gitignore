@@ -70,5 +70,5 @@ volumes/functions/damage-compare/**
 !volumes/functions/damage-compare/fixtures/pairs/README.md
 !volumes/functions/device-gateway/
 volumes/functions/device-gateway/**
-!volumes/functions/device-gateway/index.ts
-!volumes/functions/device-gateway/index_test.ts
+!volumes/functions/device-gateway/**/
+!volumes/functions/device-gateway/**/*.ts
