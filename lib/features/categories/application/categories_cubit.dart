@@ -38,7 +38,8 @@ final class CategoriesLoaded extends CategoriesState {
 final class CategoriesFailure extends CategoriesState {
   const CategoriesFailure(this.message, {this.failure});
 
-  CategoriesFailure.of(Failure failure) : this(failure.message, failure: failure);
+  CategoriesFailure.of(Failure failure)
+    : this(failure.message, failure: failure);
 
   final String message;
   final Failure? failure;
@@ -97,10 +98,7 @@ class CategoriesCubit extends ResilientCubit<CategoriesState> {
       emit(CategoriesLoaded(await _repository.list()));
     } on Failure catch (failure) {
       emit(
-        CategoriesLoaded(
-          categories,
-          submission: SubmissionFailed.of(failure),
-        ),
+        CategoriesLoaded(categories, submission: SubmissionFailed.of(failure)),
       );
     }
   }

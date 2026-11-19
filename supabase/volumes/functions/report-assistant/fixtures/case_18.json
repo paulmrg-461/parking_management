@@ -1,0 +1,84 @@
+{
+  "case": "case_18.json",
+  "question": "Revenue for last quarter",
+  "locale": "en",
+  "today": "2026-11-10",
+  "timezone": "America/Bogota",
+  "currency": "COP",
+  "rpc_outputs": {
+    "report_revenue": {
+      "total": 15800000,
+      "pass_revenue": 900000,
+      "total_discounts": 0,
+      "discounted_sessions": 0,
+      "by_day": [],
+      "by_category": [],
+      "by_payment": [],
+      "pass_by_payment": []
+    }
+  },
+  "model_script": [
+    {
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "q1",
+          "name": "get_revenue_report",
+          "input": {
+            "start_date": "2026-07-01",
+            "end_date": "2026-09-30"
+          }
+        }
+      ],
+      "stop_reason": "tool_use"
+    },
+    {
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "submit",
+          "name": "submit_answer",
+          "input": {
+            "status": "answered",
+            "headline": "Last quarter brought in {f1}.",
+            "explanation": "",
+            "period_start": "2026-07-01",
+            "period_end": "2026-09-30",
+            "figures": [
+              {
+                "id": "f1",
+                "label": "Quarter revenue",
+                "unit": "money",
+                "op": "value",
+                "operands": [
+                  {
+                    "call_id": "q1",
+                    "path": "total"
+                  }
+                ]
+              }
+            ],
+            "caveats": []
+          }
+        }
+      ],
+      "stop_reason": "end_turn"
+    }
+  ],
+  "expected": {
+    "tools": [
+      {
+        "tool": "get_revenue_report"
+      }
+    ],
+    "answer": {
+      "status": "answered",
+      "figures": [
+        {
+          "id": "f1",
+          "value": 15800000
+        }
+      ]
+    }
+  }
+}

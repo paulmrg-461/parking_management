@@ -3,6 +3,7 @@ import '../domain/commands/create_monthly_pass_command.dart';
 import '../domain/commands/update_monthly_pass_command.dart';
 import '../domain/entities/monthly_pass.dart';
 import '../domain/entities/monthly_pass_payment.dart';
+import '../domain/entities/pass_renewal_offer_summary.dart';
 import '../domain/repositories/monthly_pass_repository.dart';
 import 'monthly_pass_local_data_source.dart';
 import 'monthly_pass_remote_data_source.dart';
@@ -46,6 +47,20 @@ class MonthlyPassRepositoryImpl implements MonthlyPassRepository {
   @override
   Future<MonthlyPassPayment> registerPayment(int id, String method) =>
       _remote.registerPayment(id, method);
+
+  @override
+  Future<List<PassRenewalOfferSummary>> renewalOffers() async {
+    try {
+      return await _remote.renewalOffers();
+    } on NetworkFailure {
+      // Best effort: the chips are a convenience, the list still renders.
+      return const [];
+    }
+  }
+
+  @override
+  Future<bool> sendRenewalLink(int passId) =>
+      _remote.sendRenewalLink(passId);
 
   Map<String, dynamic> _toCreatePayload(CreateMonthlyPassCommand command) => {
     'vehicle_id': command.vehicleId,

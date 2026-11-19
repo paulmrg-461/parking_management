@@ -31,6 +31,13 @@ class NotifyingSyncOutbox implements SyncOutbox {
   Future<List<OutboxEntry>> listDeadLetters() => _inner.listDeadLetters();
 
   @override
+  Future<List<OutboxEntry>> listConflicts() => _inner.listConflicts();
+
+  @override
+  Future<void> settle(int key, PendingMutation expected) =>
+      _inner.settle(key, expected);
+
+  @override
   Future<void> replace(int key, PendingMutation mutation) =>
       _inner.replace(key, mutation);
 

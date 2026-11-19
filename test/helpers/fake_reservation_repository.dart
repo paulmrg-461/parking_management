@@ -13,10 +13,15 @@ class FakeReservationRepository implements ReservationRepository {
   int? createdCategoryId;
   DateTime? createdUntil;
   int? cancelledId;
+  Future<void>? activeGate;
+  int activeCalls = 0;
 
   @override
-  Future<List<Reservation>> listActive() async =>
-      listError == null ? List.of(reservations) : throw listError!;
+  Future<List<Reservation>> listActive() async {
+    activeCalls++;
+    await activeGate;
+    return listError == null ? List.of(reservations) : throw listError!;
+  }
 
   @override
   Future<Reservation> create({
@@ -60,6 +65,10 @@ Reservation sampleReservation({
   String categoryName = 'car',
   String? notes,
   DateTime? reservedUntil,
+  String? customerName,
+  String? customerPhone,
+  String source = 'app',
+  bool inGrace = false,
 }) => Reservation(
   id: id,
   plate: plate,
@@ -67,4 +76,8 @@ Reservation sampleReservation({
   categoryName: categoryName,
   reservedUntil: reservedUntil ?? DateTime.now().add(const Duration(hours: 2)),
   notes: notes,
+  customerName: customerName,
+  customerPhone: customerPhone,
+  source: source,
+  inGrace: inGrace,
 );

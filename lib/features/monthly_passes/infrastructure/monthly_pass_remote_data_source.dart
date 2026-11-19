@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/network/supabase_error_mapper.dart';
 import '../domain/entities/monthly_pass.dart';
 import '../domain/entities/monthly_pass_payment.dart';
+import '../domain/entities/pass_renewal_offer_summary.dart';
 import 'models/monthly_pass_dto.dart';
 
 abstract class MonthlyPassRemoteDataSource {
@@ -17,9 +18,14 @@ abstract class MonthlyPassRemoteDataSource {
   Future<List<MonthlyPassPayment>> pendingPayments();
 
   Future<MonthlyPassPayment> registerPayment(int id, String method);
+
+  Future<List<PassRenewalOfferSummary>> renewalOffers();
+
+  Future<bool> sendRenewalLink(int passId);
 }
 
-class SupabaseMonthlyPassRemoteDataSource implements MonthlyPassRemoteDataSource {
+class SupabaseMonthlyPassRemoteDataSource
+    implements MonthlyPassRemoteDataSource {
   SupabaseMonthlyPassRemoteDataSource(this._client);
 
   final SupabaseClient _client;
@@ -45,11 +51,7 @@ class SupabaseMonthlyPassRemoteDataSource implements MonthlyPassRemoteDataSource
   @override
   Future<MonthlyPass> create(Map<String, dynamic> payload) async {
     try {
-      final row = await _client
-          .from(_table)
-          .insert(payload)
-          .select()
-          .single();
+      final row = await _client.from(_table).insert(payload).select().single();
       return MonthlyPassDto.fromJson(row).toDomain();
     } catch (error) {
       throw mapSupabaseError(error);
@@ -116,6 +118,42 @@ class SupabaseMonthlyPassRemoteDataSource implements MonthlyPassRemoteDataSource
         status: map['status'] as String,
         dueDate: now,
       );
+    } catch (error) {
+      throw mapSupabaseError(error);
+    }
+  }
+
+  @override
+  Future<List<PassRenewalOfferSummary>> renewalOffers() async {
+    try {
+      final rows = await _client
+          .from('pass_renewal_offers')
+          .select(
+            'monthly_pass_id, status, reminders_sent, last_reminder_at',
+          )
+          .order('id', ascending: false);
+      return [
+        for (final row in rows)
+          PassRenewalOfferSummary.fromJson(
+            Map<String, dynamic>.from(row as Map),
+          ),
+      ];
+    } catch (error) {
+      throw mapSupabaseError(error);
+    }
+  }
+
+  @override
+  Future<bool> sendRenewalLink(int passId) async {
+    try {
+      final result = await _client.rpc(
+        'send_pass_renewal_link',
+        params: {'p_pass_id': passId},
+      );
+      if (result is! Map) {
+        return false;
+      }
+      return result['queued'] == true;
     } catch (error) {
       throw mapSupabaseError(error);
     }

@@ -34,20 +34,23 @@ void main() {
     expect(cubit.state.unreadCount, 1);
   });
 
-  test('Success: a realtime insert is prepended and exposed as latest', () async {
-    final repository = FakeNotificationRepository(items: [_notification(1)]);
-    final cubit = NotificationsCubit(repository);
-    addTearDown(cubit.close);
-    addTearDown(repository.dispose);
-    await cubit.start(1);
+  test(
+    'Success: a realtime insert is prepended and exposed as latest',
+    () async {
+      final repository = FakeNotificationRepository(items: [_notification(1)]);
+      final cubit = NotificationsCubit(repository);
+      addTearDown(cubit.close);
+      addTearDown(repository.dispose);
+      await cubit.start(1);
 
-    repository.incoming.add(_notification(2));
-    await Future<void>.delayed(Duration.zero);
+      repository.incoming.add(_notification(2));
+      await Future<void>.delayed(Duration.zero);
 
-    expect(cubit.state.items.first.id, 2);
-    expect(cubit.state.latestArrived?.id, 2);
-    expect(cubit.state.unreadCount, 2);
-  });
+      expect(cubit.state.items.first.id, 2);
+      expect(cubit.state.latestArrived?.id, 2);
+      expect(cubit.state.unreadCount, 2);
+    },
+  );
 
   test('Failure: marking read reverts on a network error', () async {
     final repository = _FailingMarkRepository(items: [_notification(1)]);

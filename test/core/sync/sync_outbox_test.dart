@@ -88,4 +88,36 @@ void main() {
       expect(pending.single.value.entityId, 1);
     },
   );
+
+  test(
+    'Success: conflicts are listed apart from pending and dead letters',
+    () async {
+      final outbox = HiveSyncOutbox();
+      final conflict = _mutation(2)
+          .asConflict(kind: 'edited', serverRow: {'version': 9});
+      await outbox.enqueue(_mutation(1));
+      await outbox.enqueue(conflict);
+
+      expect((await outbox.listPending()).map((e) => e.value.entityId), [1]);
+      expect(await outbox.listDeadLetters(), isEmpty);
+      final parked = await outbox.listConflicts();
+      expect(parked.single.value.entityId, 2);
+      expect(parked.single.value.conflictKind, 'edited');
+    },
+  );
+
+  test('Success: settle removes only an unchanged entry', () async {
+    final outbox = HiveSyncOutbox();
+    await outbox.enqueue(_mutation(1));
+    final entry = (await outbox.listPending()).single;
+
+    // A coalesced edit written while the replay was in flight must survive.
+    final coalesced = entry.value.withPayload('{"color":"green"}');
+    await outbox.replace(entry.key, coalesced);
+    await outbox.settle(entry.key, entry.value);
+    expect((await outbox.listPending()).single.value, coalesced);
+
+    await outbox.settle(entry.key, coalesced);
+    expect(await outbox.listPending(), isEmpty);
+  });
 }

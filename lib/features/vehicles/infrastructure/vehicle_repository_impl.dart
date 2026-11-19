@@ -33,13 +33,13 @@ class VehicleRepositoryImpl implements VehicleRepository {
   Future<PagedResult<Vehicle>> listPage({
     int offset = 0,
     int limit = defaultPageSize,
-    String? plate,
+    String? query,
   }) async {
     try {
       final page = await _remote.listPage(
         limit: limit,
         offset: offset,
-        plate: plate,
+        query: query,
       );
       for (final vehicle in page.items) {
         await _local.upsert(vehicle);
@@ -47,12 +47,15 @@ class VehicleRepositoryImpl implements VehicleRepository {
       return page;
     } on NetworkFailure {
       final cached = await _local.readAll();
-      final term = plate?.trim().toUpperCase() ?? '';
+      final term = query?.trim().toUpperCase() ?? '';
       final filtered = term.isEmpty
           ? cached
           : [
               for (final vehicle in cached)
-                if (vehicle.plate.toUpperCase().contains(term)) vehicle,
+                if (vehicle.plate.toUpperCase().contains(term) ||
+                    (vehicle.ownerName ?? '').toUpperCase().contains(term) ||
+                    (vehicle.ownerPhone ?? '').contains(term))
+                  vehicle,
             ];
       return PagedResult(
         filtered.skip(offset).take(limit).toList(),
@@ -79,10 +82,20 @@ class VehicleRepositoryImpl implements VehicleRepository {
   @override
   Future<Vehicle> update(UpdateVehicleCommand command) async {
     final payload = _toUpdatePayload(command);
+    final cached = await _cachedById(command.id);
+    await _guardPendingConflict(command.id);
+    final base = command.baseVersion ?? cached?.version;
     try {
-      final updated = await _remote.update(command.id, payload);
+      final updated = await _remote.update(
+        command.id,
+        payload,
+        baseVersion: (base ?? 0) > 0 ? base : null,
+      );
       await _local.upsert(updated);
       return updated;
+    } on VersionConflictFailure catch (failure) {
+      await _parkConflict(command.id, payload, cached, failure);
+      rethrow;
     } on NetworkFailure {
       final optimistic = await _applyUpdate(command);
       if (optimistic == null) {
@@ -95,6 +108,8 @@ class VehicleRepositoryImpl implements VehicleRepository {
           entityId: command.id,
           payloadJson: jsonEncode(payload),
           enqueuedAt: DateTime.now(),
+          baseVersion: (base ?? 0) > 0 ? base : null,
+          baseSnapshotJson: cached == null ? null : jsonEncode(_toRow(cached)),
         ),
       );
       return optimistic;
@@ -103,9 +118,15 @@ class VehicleRepositoryImpl implements VehicleRepository {
 
   @override
   Future<void> delete(int id) async {
+    final cached = await _cachedById(id);
+    await _guardPendingConflict(id);
+    final base = cached?.version;
     try {
-      await _remote.delete(id);
+      await _remote.delete(id, baseVersion: (base ?? 0) > 0 ? base : null);
       await _local.remove(id);
+    } on VersionConflictFailure catch (failure) {
+      await _parkConflict(id, null, cached, failure);
+      rethrow;
     } on NetworkFailure {
       await _local.remove(id);
       await _outbox.enqueue(
@@ -115,10 +136,67 @@ class VehicleRepositoryImpl implements VehicleRepository {
           entityId: id,
           payloadJson: null,
           enqueuedAt: DateTime.now(),
+          baseVersion: (base ?? 0) > 0 ? base : null,
+          baseSnapshotJson: cached == null ? null : jsonEncode(_toRow(cached)),
         ),
       );
     }
   }
+
+  /// A row with an unresolved conflict refuses new edits: they would pile up
+  /// behind the same stale base.
+  Future<void> _guardPendingConflict(int id) async {
+    final conflicts = await _outbox.listConflicts();
+    if (conflicts.any(
+      (entry) =>
+          entry.value.entityType == MutationEntity.vehicle &&
+          entry.value.entityId == id,
+    )) {
+      throw const ValidationFailure(
+        'Conflict pending',
+        ClientFailureCodes.conflictPending,
+      );
+    }
+  }
+
+  /// Keeps an online conflict in the queue so the operator can resolve it
+  /// from the same dialog as an offline one.
+  Future<void> _parkConflict(
+    int id,
+    Map<String, dynamic>? payload,
+    Vehicle? cached,
+    VersionConflictFailure failure,
+  ) async {
+    final entry = PendingMutation(
+      entityType: MutationEntity.vehicle,
+      operation: payload == null
+          ? MutationOperation.delete
+          : MutationOperation.update,
+      entityId: id,
+      payloadJson: payload == null ? null : jsonEncode(payload),
+      enqueuedAt: DateTime.now(),
+      baseVersion: cached?.version,
+      baseSnapshotJson: cached == null ? null : jsonEncode(_toRow(cached)),
+    );
+    await _outbox.enqueue(
+      entry.asConflict(
+        kind: failure.serverRow == null ? 'deleted' : 'edited',
+        serverRow: failure.serverRow,
+      ),
+    );
+  }
+
+  /// The cached row as the server returns it (column names), for the merge.
+  Map<String, dynamic> _toRow(Vehicle vehicle) => {
+    'id': vehicle.id,
+    'plate': vehicle.plate,
+    'category_id': vehicle.categoryId,
+    'color': vehicle.color,
+    'brand': vehicle.brand,
+    'owner_phone': vehicle.ownerPhone,
+    'owner_name': vehicle.ownerName,
+    'version': vehicle.version,
+  };
 
   /// Merges [command]'s patch fields onto the cached vehicle client-side
   /// (mirroring the backend's patch-merge shape) so the caller can show an
@@ -137,6 +215,7 @@ class VehicleRepositoryImpl implements VehicleRepository {
       brand: command.brand ?? existing.brand,
       ownerPhone: _mergeOptional(command.ownerPhone, existing.ownerPhone),
       ownerName: _mergeOptional(command.ownerName, existing.ownerName),
+      version: existing.version,
     );
     await _local.upsert(merged);
     return merged;
@@ -198,6 +277,7 @@ class VehicleRepositoryImpl implements VehicleRepository {
     if (command.brand != null) 'brand': command.brand,
     if (command.ownerPhone != null)
       'owner_phone': _optionalPatch(command.ownerPhone),
-    if (command.ownerName != null) 'owner_name': _optionalPatch(command.ownerName),
+    if (command.ownerName != null)
+      'owner_name': _optionalPatch(command.ownerName),
   };
 }

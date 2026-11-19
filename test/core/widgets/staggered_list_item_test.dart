@@ -8,9 +8,7 @@ void main() {
   ) async {
     await tester.pumpWidget(
       const MaterialApp(
-        home: Scaffold(
-          body: StaggeredListItem(child: Text('fila')),
-        ),
+        home: Scaffold(body: StaggeredListItem(child: Text('fila'))),
       ),
     );
 
@@ -30,9 +28,7 @@ void main() {
       const MaterialApp(
         home: MediaQuery(
           data: MediaQueryData(disableAnimations: true),
-          child: Scaffold(
-            body: StaggeredListItem(child: Text('fila')),
-          ),
+          child: Scaffold(body: StaggeredListItem(child: Text('fila'))),
         ),
       ),
     );

@@ -39,6 +39,6 @@ context: |
   - Billing: fractional hours ceil to next hour; daily cap; monthly pass overrides to 0.
   - Evidence photos (dents/scratches) captured at check-in.
   - Offline-first: Hive CE is local source of truth; outbox queue syncs to backend.
-  - Receipt/ticket internal only (no electronic invoicing).
+  - Receipt/ticket internal by default; electronic invoicing is opt-in (`mode = off`) and every DIAN rule is an ASSUMPTION.
 
   TDD: write 3 tests (Success / Failure / Security) BEFORE logic.

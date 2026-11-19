@@ -5,8 +5,37 @@ import 'package:parking_management/features/auth/domain/entities/user.dart';
 import 'helpers/app_harness.dart';
 
 void main() {
+  testWidgets('Security: /evidence is public and accepts the pay reference', (
+    tester,
+  ) async {
+    await pumpApp(tester);
+    await goTo(tester, '/evidence?session=43&pay=PM-1A2B3C4D5E6F');
+
+    // The public route wins over the login redirect and asks for the plate.
+    expect(find.text('Ingresar'), findsNothing);
+    expect(find.text('Evidencias del vehículo'), findsOneWidget);
+  });
+
+  testWidgets('Security: /validate is public for anonymous users', (tester) async {
+    await pumpApp(tester);
+    await goTo(tester, '/validate?m=${'a' * 48}');
+
+    expect(find.text('Ingresar'), findsNothing);
+    expect(find.text('Validar parqueo'), findsOneWidget);
+  });
+
+  testWidgets('Security: /renew is public for anonymous users', (tester) async {
+    await pumpApp(tester);
+    await goTo(tester, '/renew?t=${'a' * 48}');
+
+    expect(find.text('Ingresar'), findsNothing);
+    expect(find.text('Renueva tu mensualidad'), findsOneWidget);
+  });
+
   group('Router (F-RT)', () {
-    testWidgets('redirects unauthenticated users to the login page', (tester) async {
+    testWidgets('redirects unauthenticated users to the login page', (
+      tester,
+    ) async {
       await pumpApp(tester);
 
       expect(find.text('Ingresar'), findsOneWidget);
@@ -29,7 +58,9 @@ void main() {
       expect(find.text('Cerrar sesión'), findsOneWidget);
     });
 
-    testWidgets('Success: logout lands on /login (no infinite spinner)', (tester) async {
+    testWidgets('Success: logout lands on /login (no infinite spinner)', (
+      tester,
+    ) async {
       await pumpApp(tester, role: UserRole.operator);
 
       await tester.tap(find.text('Menú'));
@@ -49,18 +80,21 @@ void main() {
       expect(find.byType(CircularProgressIndicator), findsNothing);
     });
 
-    testWidgets('Success: an expired session (sessionExpired) returns to /login', (tester) async {
-      final auth = await pumpApp(tester, role: UserRole.admin);
+    testWidgets(
+      'Success: an expired session (sessionExpired) returns to /login',
+      (tester) async {
+        final auth = await pumpApp(tester, role: UserRole.admin);
 
-      await auth.sessionExpired();
-      await tester.pumpAndSettle();
+        await auth.sessionExpired();
+        await tester.pumpAndSettle();
 
-      expect(find.text('Ingresar'), findsOneWidget);
-      expect(
-        find.text('Tu sesión expiró. Ingresa de nuevo para continuar.'),
-        findsOneWidget,
-      );
-    });
+        expect(find.text('Ingresar'), findsOneWidget);
+        expect(
+          find.text('Tu sesión expiró. Ingresa de nuevo para continuar.'),
+          findsOneWidget,
+        );
+      },
+    );
 
     testWidgets('Failure: an unknown route shows the friendly error page', (
       tester,
@@ -126,7 +160,10 @@ void main() {
 
       await goTo(tester, '/lots');
 
-      expect(find.widgetWithText(AppBar, 'Sedes del parqueadero'), findsOneWidget);
+      expect(
+        find.widgetWithText(AppBar, 'Sedes del parqueadero'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('Security: operator typing /lots is redirected home', (
@@ -151,18 +188,19 @@ void main() {
       expect(find.widgetWithText(AppBar, 'Reservas de cupo'), findsOneWidget);
     });
 
-    testWidgets('Security: operator typing /reservations is redirected home', (
+    testWidgets('Success: an operator opens the reservations board', (
       tester,
     ) async {
       await pumpApp(tester, role: UserRole.operator);
 
       await goTo(tester, '/reservations');
 
-      expect(find.widgetWithText(AppBar, 'Reservas de cupo'), findsNothing);
-      expect(find.text('Hola, Juan'), findsOneWidget);
+      expect(find.widgetWithText(AppBar, 'Reservas de cupo'), findsOneWidget);
     });
 
-    testWidgets('Security: operator typing /users is redirected home', (tester) async {
+    testWidgets('Security: operator typing /users is redirected home', (
+      tester,
+    ) async {
       await pumpApp(tester, role: UserRole.operator);
 
       await goTo(tester, '/users');
@@ -173,7 +211,9 @@ void main() {
   });
 
   group('Navigation (F-NAV)', () {
-    testWidgets('Success: sub-pages show a back arrow that returns home', (tester) async {
+    testWidgets('Success: sub-pages show a back arrow that returns home', (
+      tester,
+    ) async {
       await pumpApp(tester, role: UserRole.admin);
       await goTo(tester, '/users');
 
@@ -183,15 +223,18 @@ void main() {
       expect(find.text('Hola, Juan'), findsOneWidget);
     });
 
-    testWidgets('Failure: Android back from a sub-page goes home, not out of the app', (tester) async {
-      await pumpApp(tester, role: UserRole.admin);
-      await goTo(tester, '/users');
+    testWidgets(
+      'Failure: Android back from a sub-page goes home, not out of the app',
+      (tester) async {
+        await pumpApp(tester, role: UserRole.admin);
+        await goTo(tester, '/users');
 
-      final handled = await tester.binding.handlePopRoute();
-      await tester.pumpAndSettle();
+        final handled = await tester.binding.handlePopRoute();
+        await tester.pumpAndSettle();
 
-      expect(handled, isTrue);
-      expect(find.text('Hola, Juan'), findsOneWidget);
-    });
+        expect(handled, isTrue);
+        expect(find.text('Hola, Juan'), findsOneWidget);
+      },
+    );
   });
 }

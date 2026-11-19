@@ -53,11 +53,9 @@ class FakeLotsRepository implements LotsRepository {
       throw failure;
     }
     lastUpdated = id;
-    final updated = lots.firstWhere((lot) => lot.id == id).copyWith(
-      name: name,
-      address: address,
-      active: active,
-    );
+    final updated = lots
+        .firstWhere((lot) => lot.id == id)
+        .copyWith(name: name, address: address, active: active);
     lots = [for (final lot in lots) lot.id == id ? updated : lot];
     return updated;
   }

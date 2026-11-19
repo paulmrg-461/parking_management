@@ -1,0 +1,107 @@
+{
+  "case": "busiest entry hour this week",
+  "question": "What hour has the most entries this week?",
+  "locale": "en",
+  "rpc_outputs": {
+    "report_hourly_traffic": {
+      "hours": [
+        {
+          "hour": 7,
+          "entries": 12,
+          "exits": 5
+        },
+        {
+          "hour": 8,
+          "entries": 45,
+          "exits": 20
+        },
+        {
+          "hour": 9,
+          "entries": 10,
+          "exits": 8
+        }
+      ],
+      "timezone": "America/Bogota"
+    }
+  },
+  "model_script": [
+    {
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "h1",
+          "name": "get_hourly_traffic",
+          "input": {
+            "start_date": "2026-11-09",
+            "end_date": "2026-11-10"
+          }
+        }
+      ],
+      "stop_reason": "tool_use"
+    },
+    {
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "submit",
+          "name": "submit_answer",
+          "input": {
+            "status": "answered",
+            "headline": "The busiest hour is {f1} with {f2} entries.",
+            "explanation": "",
+            "period_start": "2026-11-09",
+            "period_end": "2026-11-10",
+            "figures": [
+              {
+                "id": "f1",
+                "label": "Busiest hour",
+                "unit": "hour",
+                "op": "value",
+                "operands": [
+                  {
+                    "call_id": "h1",
+                    "path": "hours[hour=8].hour"
+                  }
+                ]
+              },
+              {
+                "id": "f2",
+                "label": "Entries at that hour",
+                "unit": "count",
+                "op": "value",
+                "operands": [
+                  {
+                    "call_id": "h1",
+                    "path": "hours[hour=8].entries"
+                  }
+                ]
+              }
+            ],
+            "caveats": []
+          }
+        }
+      ],
+      "stop_reason": "end_turn"
+    }
+  ],
+  "expected": {
+    "tools": [
+      {
+        "tool": "get_hourly_traffic"
+      }
+    ],
+    "answer": {
+      "status": "answered",
+      "figures": [
+        {
+          "id": "f1",
+          "value": 8
+        },
+        {
+          "id": "f2",
+          "value": 45
+        }
+      ]
+    }
+  }
+}

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/widgets/qr_code.dart';
+import 'package:parking_management/core/fare/fare_adjustment.dart';
+import 'package:parking_management/core/utils/formatters.dart';
 import 'package:parking_management/core/widgets/receipt_card.dart';
 
 import '../../helpers/test_app.dart';
@@ -268,6 +270,59 @@ void main() {
     expect(find.text(r'$7.500'), findsOneWidget);
   });
 
+  testWidgets('an online payment shows what the customer already paid', (
+    tester,
+  ) async {
+    final data = ReceiptData(
+      kind: ReceiptKind.checkOut,
+      plate: 'ABC123',
+      entryTime: DateTime(2026, 1, 1, 8, 30),
+      exitTime: DateTime(2026, 1, 1, 11, 45),
+      amountCharged: 12500,
+      paymentMethod: 'online',
+      onlinePaidAmount: 12500,
+      ticketNumber: 'TCK-000042',
+    );
+    await tester.pumpWidget(
+      testApp(Scaffold(body: SingleChildScrollView(child: ReceiptCard(data: data)))),
+    );
+
+    expect(find.text('Pagado en línea'), findsOneWidget);
+    expect(find.text(r'$12.500'), findsWidgets);
+    // The payment method label comes from the l10n, not the wire value.
+    expect(find.text('En línea'), findsOneWidget);
+    expect(find.text('online'), findsNothing);
+  });
+
+  testWidgets('an agreement line is printed under the fare', (tester) async {
+    final data = ReceiptData(
+      kind: ReceiptKind.checkOut,
+      plate: 'ABC123',
+      entryTime: DateTime(2026, 1, 1, 8, 30),
+      exitTime: DateTime(2026, 1, 1, 11, 45),
+      amountCharged: 4500,
+      grossAmount: 9000,
+      adjustments: const [
+        FareAdjustment(
+          type: FareAdjustmentType.merchant,
+          refId: 4,
+          label: 'Cafe Uno',
+          kind: 'percentage',
+          amount: 4500,
+        ),
+      ],
+      paymentMethod: 'cash',
+      ticketNumber: 'TCK-000042',
+    );
+    await tester.pumpWidget(
+      testApp(Scaffold(body: SingleChildScrollView(child: ReceiptCard(data: data)))),
+    );
+
+    expect(find.text('Tarifa'), findsOneWidget);
+    expect(find.text('Convenio Cafe Uno'), findsOneWidget);
+    expect(find.text('-${Formatters.money(4500)}'), findsOneWidget);
+  });
+
   testWidgets('Imprimir closes the receipt before the print sheet', (
     tester,
   ) async {
@@ -362,6 +417,169 @@ void main() {
 
       await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
       await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+    });
+  });
+
+  group('loyalty', () {
+    testWidgets('entry receipt prints visit n of N when known', (tester) async {
+      final data = ReceiptData(
+        kind: ReceiptKind.checkIn,
+        plate: 'ABC123',
+        entryTime: DateTime(2026, 1, 1, 8, 30),
+        loyaltyVisits: 3,
+        loyaltyRequired: 5,
+      );
+      await tester.pumpWidget(
+        testApp(
+          Scaffold(body: SingleChildScrollView(child: ReceiptCard(data: data))),
+        ),
+      );
+
+      expect(find.text('Visita 4 de 5'), findsOneWidget);
+    });
+
+    testWidgets('exit receipt prints reward earned', (tester) async {
+      final data = ReceiptData(
+        kind: ReceiptKind.checkOut,
+        plate: 'ABC123',
+        entryTime: DateTime(2026, 1, 1, 8, 30),
+        exitTime: DateTime(2026, 1, 1, 10, 30),
+        amountCharged: 6000,
+        loyaltyVisits: 0,
+        loyaltyRequired: 5,
+        loyaltyRewardEarned: true,
+      );
+      await tester.pumpWidget(
+        testApp(
+          Scaffold(body: SingleChildScrollView(child: ReceiptCard(data: data))),
+        ),
+      );
+
+      expect(find.text('¡Recompensa ganada!'), findsOneWidget);
+      expect(find.text('Visita 1 de 5'), findsNothing);
+    });
+
+    testWidgets('no loyalty line without data', (tester) async {
+      await tester.pumpWidget(
+        testApp(
+          Scaffold(
+            body: SingleChildScrollView(child: ReceiptCard(data: _checkOutData())),
+          ),
+        ),
+      );
+
+      expect(find.textContaining('Visita'), findsNothing);
+      expect(find.text('¡Recompensa ganada!'), findsNothing);
+    });
+
+    testWidgets('Security: a pending sync receipt prints no loyalty line', (
+      tester,
+    ) async {
+      final data = ReceiptData(
+        kind: ReceiptKind.checkOut,
+        plate: 'ABC123',
+        entryTime: DateTime(2026, 1, 1, 8, 30),
+        exitTime: DateTime(2026, 1, 1, 10, 30),
+        amountCharged: 6000,
+        loyaltyVisits: 3,
+        loyaltyRequired: 5,
+        pendingSync: true,
+      );
+      await tester.pumpWidget(
+        testApp(
+          Scaffold(body: SingleChildScrollView(child: ReceiptCard(data: data))),
+        ),
+      );
+
+      expect(find.textContaining('Visita'), findsNothing);
+      expect(find.textContaining('sin conexión'), findsOneWidget);
+    });
+
+    testWidgets('a reward adjustment uses its own label', (tester) async {
+      final data = ReceiptData(
+        kind: ReceiptKind.checkOut,
+        plate: 'ABC123',
+        entryTime: DateTime(2026, 1, 1, 8, 30),
+        exitTime: DateTime(2026, 1, 1, 10, 30),
+        amountCharged: 0,
+        grossAmount: 6000,
+        adjustments: const [
+          FareAdjustment(
+            type: FareAdjustmentType.reward,
+            refId: 7,
+            label: 'loyalty',
+            kind: 'free_stay',
+            amount: 6000,
+          ),
+        ],
+      );
+      await tester.pumpWidget(
+        testApp(
+          Scaffold(body: SingleChildScrollView(child: ReceiptCard(data: data))),
+        ),
+      );
+
+      expect(find.text('Recompensa de fidelidad'), findsOneWidget);
+    });
+  });
+
+  group('fiscal', () {
+    testWidgets('shows the number, CUFE and QR', (tester) async {
+      final data = ReceiptData(
+        kind: ReceiptKind.checkOut,
+        plate: 'ABC123',
+        entryTime: DateTime(2026, 1, 1, 8, 30),
+        exitTime: DateTime(2026, 1, 1, 10, 30),
+        amountCharged: 11900,
+        fiscalNumber: 'SETP7',
+        fiscalType: 'pos',
+        cufe: 'CUFE-7',
+        fiscalQr: 'https://qr.test/7',
+      );
+      await tester.pumpWidget(
+        testApp(
+          Scaffold(body: SingleChildScrollView(child: ReceiptCard(data: data))),
+        ),
+      );
+
+      expect(find.text('SETP7'), findsOneWidget);
+      expect(find.textContaining('CUFE-7'), findsOneWidget);
+      expect(find.text('DOCUMENTO EQUIVALENTE POS'), findsOneWidget);
+      expect(find.byType(QrCode), findsWidgets);
+    });
+
+    testWidgets('shows the pending label while the provider processes', (
+      tester,
+    ) async {
+      final data = ReceiptData(
+        kind: ReceiptKind.checkOut,
+        plate: 'ABC123',
+        entryTime: DateTime(2026, 1, 1, 8, 30),
+        exitTime: DateTime(2026, 1, 1, 10, 30),
+        amountCharged: 11900,
+        fiscalNumber: 'SETP7',
+        fiscalPending: true,
+      );
+      await tester.pumpWidget(
+        testApp(
+          Scaffold(body: SingleChildScrollView(child: ReceiptCard(data: data))),
+        ),
+      );
+
+      expect(find.text('Documento electrónico en proceso'), findsOneWidget);
+    });
+
+    testWidgets('no fiscal block without a document', (tester) async {
+      await tester.pumpWidget(
+        testApp(
+          Scaffold(
+            body: SingleChildScrollView(child: ReceiptCard(data: _checkOutData())),
+          ),
+        ),
+      );
+
+      expect(find.text('DOCUMENTO EQUIVALENTE POS'), findsNothing);
+      expect(find.textContaining('CUFE'), findsNothing);
     });
   });
 }

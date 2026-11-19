@@ -21,7 +21,19 @@ class ReceiptLabels {
     required this.thanks,
     required this.scanHint,
     required this.evidenceHint,
+    required this.feedbackHint,
     required this.paymentMethod,
+    required this.onlinePaid,
+    required this.gross,
+    required this.benefit,
+    required this.pricingRule,
+    required this.loyaltyVisit,
+    required this.loyaltyReward,
+    required this.loyaltyRewardEarned,
+    required this.fiscalInvoice,
+    required this.fiscalPos,
+    required this.cufeLabel,
+    required this.fiscalPendingLabel,
   });
 
   final String checkInTitle;
@@ -47,8 +59,38 @@ class ReceiptLabels {
   /// Caption under the smaller QR that opens the public evidence page.
   final String evidenceHint;
 
+  /// Caption under the QR that opens the customer survey.
+  final String feedbackHint;
+
+  /// "Paid online" row on a settled check-out that had a partial payment.
+  final String onlinePaid;
+
+  /// Fare before the automatic lines (`Tarifa` / `Fare`).
+  final String gross;
+
+  /// Prefix of one automatic line (`Convenio` / `Agreement`).
+  final String benefit;
+
+  /// Prefix of the locked dynamic-pricing rate (`Tarifa` / `Rate`).
+  final String pricingRule;
+
+  /// "Visita n de N" on the paper receipt.
+  final String Function(int current, int total) loyaltyVisit;
+
+  /// The reward adjustment line (`Recompensa` / `Reward`).
+  final String loyaltyReward;
+
+  /// The visit that earned a reward.
+  final String loyaltyRewardEarned;
+
+  /// Fiscal document titles (ASCII only for thermal printers).
+  final String fiscalInvoice;
+  final String fiscalPos;
+  final String cufeLabel;
+  final String fiscalPendingLabel;
+
   /// Localizes a wire value (`cash`, `card`, `transfer`, `monthly_pass`,
-  /// `exempt`) plus the optional card type (`debit`/`credit`).
+  /// `exempt`, `online`) plus the optional card type (`debit`/`credit`).
   final String Function(String method, String? cardType) paymentMethod;
 
   /// Accent-free labels: thermal printers run on a CP437 code page.
@@ -71,6 +113,18 @@ class ReceiptLabels {
     thanks: 'Gracias por su visita',
     scanHint: 'Presente este codigo al salir',
     evidenceHint: 'Evidencias del vehiculo (clave: placa)',
+    feedbackHint: 'Califica tu visita',
+    onlinePaid: 'Pagado en linea',
+    gross: 'Tarifa',
+    benefit: 'Convenio',
+    pricingRule: 'Tarifa',
+    loyaltyVisit: _loyaltyVisitEs,
+    loyaltyReward: 'Recompensa',
+    loyaltyRewardEarned: 'Recompensa ganada',
+    fiscalInvoice: 'FACTURA ELECTRONICA DE VENTA',
+    fiscalPos: 'DOCUMENTO EQUIVALENTE POS',
+    cufeLabel: 'CUFE',
+    fiscalPendingLabel: 'Documento electronico en proceso',
     paymentMethod: _paymentEs,
   );
 
@@ -93,6 +147,18 @@ class ReceiptLabels {
     thanks: 'Thank you for your visit',
     scanHint: 'Show this code at the exit',
     evidenceHint: 'Vehicle evidence (key: plate)',
+    feedbackHint: 'Rate your visit',
+    onlinePaid: 'Paid online',
+    gross: 'Fare',
+    benefit: 'Agreement',
+    pricingRule: 'Rate',
+    loyaltyVisit: _loyaltyVisitEn,
+    loyaltyReward: 'Reward',
+    loyaltyRewardEarned: 'Reward earned',
+    fiscalInvoice: 'ELECTRONIC SALES INVOICE',
+    fiscalPos: 'POS EQUIVALENT DOCUMENT',
+    cufeLabel: 'CUFE',
+    fiscalPendingLabel: 'Electronic document in process',
     paymentMethod: _paymentEn,
   );
 
@@ -108,6 +174,7 @@ class ReceiptLabels {
     'transfer' => 'Transferencia',
     'monthly_pass' => 'Mensualidad',
     'exempt' => 'Exento',
+    'online' => 'En linea',
     _ => method,
   };
 
@@ -119,6 +186,11 @@ class ReceiptLabels {
     'transfer' => 'Transfer',
     'monthly_pass' => 'Monthly pass',
     'exempt' => 'Exempt',
+    'online' => 'Online',
     _ => method,
   };
 }
+
+String _loyaltyVisitEs(int current, int total) => 'Visita $current de $total';
+
+String _loyaltyVisitEn(int current, int total) => 'Visit $current of $total';

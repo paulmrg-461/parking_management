@@ -41,19 +41,22 @@ void main() {
     now = DateTime.utc(2026, 10, 23, 12);
   });
 
-  test('Success: an uncaught error is reported once with its context', () async {
-    final reporterInstance = reporter();
+  test(
+    'Success: an uncaught error is reported once with its context',
+    () async {
+      final reporterInstance = reporter();
 
-    await reporterInstance.report(
-      StateError('boom'),
-      StackTrace.current,
-      context: {'kind': 'uncaught'},
-    );
+      await reporterInstance.report(
+        StateError('boom'),
+        StackTrace.current,
+        context: {'kind': 'uncaught'},
+      );
 
-    expect(sink.sent, hasLength(1));
-    expect(sink.sent.single['message'], contains('boom'));
-    expect(sink.sent.single['context'], {'kind': 'uncaught'});
-  });
+      expect(sink.sent, hasLength(1));
+      expect(sink.sent.single['message'], contains('boom'));
+      expect(sink.sent.single['context'], {'kind': 'uncaught'});
+    },
+  );
 
   test('Security: repeated identical errors are throttled', () async {
     final reporterInstance = reporter();
@@ -82,12 +85,14 @@ void main() {
     expect((sink.sent.single['message']! as String).length, 2000);
   });
 
-  test('Security: reporting is disabled outside production builds by default',
-      () async {
-    final disabled = ErrorReporter(sink, clock: () => now, enabled: false);
+  test(
+    'Security: reporting is disabled outside production builds by default',
+    () async {
+      final disabled = ErrorReporter(sink, clock: () => now, enabled: false);
 
-    await disabled.report(StateError('boom'), StackTrace.current);
+      await disabled.report(StateError('boom'), StackTrace.current);
 
-    expect(sink.sent, isEmpty);
-  });
+      expect(sink.sent, isEmpty);
+    },
+  );
 }

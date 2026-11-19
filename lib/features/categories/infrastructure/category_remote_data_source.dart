@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/network/supabase_error_mapper.dart';
+import '../../../core/network/versioned_write.dart';
 import '../domain/entities/category.dart';
 import 'models/category_dto.dart';
 
@@ -9,11 +10,18 @@ abstract class CategoryRemoteDataSource {
 
   Future<Category> create(String name);
 
-  Future<Category> update(int id, String name);
+  Future<Category> update(int id, String name, {int? baseVersion});
 
-  Future<Category> setCapacity(int id, int capacity);
+  Future<Category> setCapacity(int id, int capacity, {int? baseVersion});
 
-  Future<void> delete(int id);
+  /// Versioned partial update: sends every key in [payload] as one write.
+  Future<Category> patch(
+    int id,
+    Map<String, dynamic> payload, {
+    int? baseVersion,
+  });
+
+  Future<void> delete(int id, {int? baseVersion});
 }
 
 class SupabaseCategoryRemoteDataSource implements CategoryRemoteDataSource {
@@ -27,9 +35,7 @@ class SupabaseCategoryRemoteDataSource implements CategoryRemoteDataSource {
   Future<List<Category>> list() async {
     try {
       final rows = await _client.from(_table).select().order('id');
-      return rows
-          .map((row) => CategoryDto.fromJson(row).toDomain())
-          .toList();
+      return rows.map((row) => CategoryDto.fromJson(row).toDomain()).toList();
     } catch (error) {
       throw mapSupabaseError(error);
     }
@@ -50,21 +56,27 @@ class SupabaseCategoryRemoteDataSource implements CategoryRemoteDataSource {
   }
 
   @override
-  Future<Category> update(int id, String name) =>
-      _patch(id, {'name': name});
+  Future<Category> update(int id, String name, {int? baseVersion}) =>
+      patch(id, {'name': name}, baseVersion: baseVersion);
 
   @override
-  Future<Category> setCapacity(int id, int capacity) =>
-      _patch(id, {'capacity': capacity});
+  Future<Category> setCapacity(int id, int capacity, {int? baseVersion}) =>
+      patch(id, {'capacity': capacity}, baseVersion: baseVersion);
 
-  Future<Category> _patch(int id, Map<String, dynamic> payload) async {
+  @override
+  Future<Category> patch(
+    int id,
+    Map<String, dynamic> payload, {
+    int? baseVersion,
+  }) async {
     try {
-      final row = await _client
-          .from(_table)
-          .update(payload)
-          .eq('id', id)
-          .select()
-          .single();
+      final row = await updateVersioned(
+        _client,
+        _table,
+        payload: payload,
+        match: {'id': id},
+        baseVersion: baseVersion,
+      );
       return CategoryDto.fromJson(row).toDomain();
     } catch (error) {
       throw mapSupabaseError(error);
@@ -72,9 +84,14 @@ class SupabaseCategoryRemoteDataSource implements CategoryRemoteDataSource {
   }
 
   @override
-  Future<void> delete(int id) async {
+  Future<void> delete(int id, {int? baseVersion}) async {
     try {
-      await _client.from(_table).delete().eq('id', id);
+      await deleteVersioned(
+        _client,
+        _table,
+        match: {'id': id},
+        baseVersion: baseVersion,
+      );
     } catch (error) {
       throw mapSupabaseError(error);
     }

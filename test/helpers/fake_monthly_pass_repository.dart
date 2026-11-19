@@ -3,6 +3,7 @@ import 'package:parking_management/features/monthly_passes/domain/commands/creat
 import 'package:parking_management/features/monthly_passes/domain/commands/update_monthly_pass_command.dart';
 import 'package:parking_management/features/monthly_passes/domain/entities/monthly_pass.dart';
 import 'package:parking_management/features/monthly_passes/domain/entities/monthly_pass_payment.dart';
+import 'package:parking_management/features/monthly_passes/domain/entities/pass_renewal_offer_summary.dart';
 import 'package:parking_management/features/monthly_passes/domain/repositories/monthly_pass_repository.dart';
 
 final samplePass = MonthlyPass(
@@ -35,10 +36,23 @@ class FakeMonthlyPassRepository implements MonthlyPassRepository {
   CreateMonthlyPassCommand? created;
   List<MonthlyPassPayment> pending = const [];
   final List<int> paid = [];
+  Future<void>? listGate;
+  Future<void>? pendingGate;
+  int listCalls = 0;
+  int pendingCalls = 0;
+  List<PassRenewalOfferSummary> offers = const [];
+  Failure? offersError;
+  Failure? linkError;
+  final List<int> renewalLinks = [];
+  bool linkQueued = true;
+  int offersCalls = 0;
 
   @override
-  Future<List<MonthlyPass>> list({int? vehicleId}) async =>
-      listError == null ? List.of(passes) : throw listError!;
+  Future<List<MonthlyPass>> list({int? vehicleId}) async {
+    listCalls++;
+    await listGate;
+    return listError == null ? List.of(passes) : throw listError!;
+  }
 
   @override
   Future<MonthlyPass> create(CreateMonthlyPassCommand command) async {
@@ -70,6 +84,8 @@ class FakeMonthlyPassRepository implements MonthlyPassRepository {
 
   @override
   Future<List<MonthlyPassPayment>> pendingPayments() async {
+    pendingCalls++;
+    await pendingGate;
     _throwIfWriteFails();
     return pending;
   }
@@ -79,7 +95,10 @@ class FakeMonthlyPassRepository implements MonthlyPassRepository {
     _throwIfWriteFails();
     paid.add(id);
     final payment = pending.firstWhere((p) => p.id == id);
-    pending = [for (final p in pending) if (p.id != id) p];
+    pending = [
+      for (final p in pending)
+        if (p.id != id) p,
+    ];
     return payment;
   }
 
@@ -87,5 +106,26 @@ class FakeMonthlyPassRepository implements MonthlyPassRepository {
     if (writeError != null) {
       throw writeError!;
     }
+  }
+
+  @override
+  Future<List<PassRenewalOfferSummary>> renewalOffers() async {
+    offersCalls++;
+    final error = offersError;
+    if (error != null) {
+      throw error;
+    }
+    return List.of(offers);
+  }
+
+  @override
+  Future<bool> sendRenewalLink(int passId) async {
+    _throwIfWriteFails();
+    final error = linkError;
+    if (error != null) {
+      throw error;
+    }
+    renewalLinks.add(passId);
+    return linkQueued;
   }
 }

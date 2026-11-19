@@ -7,5 +7,6 @@ abstract class AuditRepository {
     DateTime? to,
     String? table,
     String? actor,
+    String? search,
   });
 }

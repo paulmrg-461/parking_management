@@ -52,7 +52,7 @@ void main() {
 
     final drawer = find.byType(Drawer);
     expect(drawer, findsOneWidget);
-    for (final label in ['Avisos', 'Contacto', 'Vehículos', 'Emergencia']) {
+    for (final label in ['Avisos', 'Contacto', 'Vehículos', 'Emergencia', 'Portería']) {
       expect(
         find.descendant(of: drawer, matching: find.text(label)),
         findsOneWidget,
@@ -360,7 +360,9 @@ void main() {
     expect(find.byIcon(Icons.sync), findsOneWidget);
   });
 
-  testWidgets('Success: the sidebar sets the idle-lock timeout', (tester) async {
+  testWidgets('Success: the sidebar sets the idle-lock timeout', (
+    tester,
+  ) async {
     final lock = AutoLockCubit(FakeKeyValueStore());
     addTearDown(lock.close);
     await pumpApp(
@@ -413,10 +415,7 @@ void main() {
     await tester.tap(find.text('Menú'));
     await tester.pumpAndSettle();
     final drawer = find.byType(Drawer);
-    final about = find.descendant(
-      of: drawer,
-      matching: find.text('Acerca de'),
-    );
+    final about = find.descendant(of: drawer, matching: find.text('Acerca de'));
     await tester.scrollUntilVisible(
       about,
       200,

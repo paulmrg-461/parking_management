@@ -45,6 +45,35 @@ void main() {
     expect(repository.markedIds, [1]);
   });
 
+  testWidgets('Success: an online payment alert uses its own type label', (
+    tester,
+  ) async {
+    final repository = FakeNotificationRepository(
+      items: [
+        AppNotification(
+          id: 9,
+          type: 'online_payment',
+          title: 'Pago en línea',
+          body: r'ABC123 pagó $6.000 en línea.',
+          createdAt: DateTime.utc(2026, 11, 17, 12),
+        ),
+      ],
+    );
+    final cubit = NotificationsCubit(repository);
+    await cubit.start(1);
+    addTearDown(cubit.close);
+    addTearDown(repository.dispose);
+    await tester.pumpWidget(
+      testApp(
+        BlocProvider.value(value: cubit, child: const NotificationsPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Pago en línea'), findsWidgets);
+    expect(find.byIcon(Icons.qr_code_2_outlined), findsWidgets);
+  });
+
   testWidgets('Failure: empty inbox shows its empty state', (tester) async {
     final repository = FakeNotificationRepository();
     final cubit = NotificationsCubit(repository);
@@ -198,9 +227,7 @@ void main() {
       testApp(
         BlocProvider.value(
           value: cubit,
-          child: Scaffold(
-            appBar: AppBar(actions: const [NotificationBell()]),
-          ),
+          child: Scaffold(appBar: AppBar(actions: const [NotificationBell()])),
         ),
       ),
     );

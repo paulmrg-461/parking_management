@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:get_it/get_it.dart';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -18,15 +19,29 @@ import 'modules/check_out_module.dart';
 import 'modules/core_module.dart';
 import 'modules/customer_messages_module.dart';
 import 'modules/lots_module.dart';
+import 'modules/lpr_module.dart';
 import 'modules/monthly_passes_module.dart';
 import 'modules/notifications_module.dart';
 import 'modules/observability_module.dart';
+import 'modules/online_payments_module.dart';
+import 'modules/merchants_module.dart';
+import 'modules/pricing_module.dart';
+import 'modules/loyalty_module.dart';
+import 'modules/invoicing_module.dart';
+import 'modules/report_assistant_module.dart';
+import 'modules/damage_comparison_module.dart';
+import 'modules/devices_module.dart';
+import 'modules/pass_renewal_module.dart';
 import 'modules/plate_scanning_module.dart';
 import 'modules/platform_module.dart';
 import 'modules/receipt_printing_module.dart';
 import 'modules/reports_module.dart';
 import 'modules/evidence_module.dart';
+import 'modules/feedback_module.dart';
 import 'modules/policies_module.dart';
+import 'modules/public_booking_module.dart';
+import 'modules/anomalies_module.dart';
+import 'modules/waitlist_module.dart';
 import 'modules/records_module.dart';
 import 'modules/reservations_module.dart';
 import 'modules/spots_module.dart';
@@ -68,10 +83,21 @@ Future<void> _initSupabase(AppConfig config) async {
     anonKey: config.supabaseAnonKey,
     httpClient: ResilientHttpClient(http.Client()),
     authOptions: FlutterAuthClientOptions(
-      localStorage: SecureSupabaseStorage(),
+      // Keychain/Keystore on mobile. On the web `flutter_secure_storage`
+      // needs a secure context (HTTPS or localhost): over plain HTTP on the
+      // LAN its WebCrypto calls are unavailable and the login hangs, so the
+      // browser falls back to gotrue's localStorage store.
+      localStorage: kIsWeb ? null : SecureSupabaseStorage(),
     ),
   );
   serviceLocator.registerSingleton<SupabaseClient>(supabase.client);
+  // This build sends row versions on table writes, so a lot that turns on
+  // `row_version_required` keeps working. Set before the lot header so both
+  // survive the map rebuild below.
+  supabase.client.headers = {
+    ...supabase.client.headers,
+    'x-versioned-write': '1',
+  };
   // The active lot travels as a header on every request; the client validates
   // membership server-side, so a stale value only fails closed.
   final lotContext = serviceLocator<LotContext>();
@@ -122,6 +148,20 @@ void registerAllModules(GetIt sl, AppConfig config) {
   registerRecordsModule(sl);
   registerPoliciesModule(sl);
   registerEvidenceModule(sl);
+  registerOnlinePaymentsModule(sl);
+  registerPassRenewalModule(sl);
+  registerMerchantsModule(sl);
+  registerPricingModule(sl);
+  registerLoyaltyModule(sl);
+  registerInvoicingModule(sl);
+  registerReportAssistantModule(sl);
+  registerDamageComparisonModule(sl);
+  registerDevicesModule(sl);
+  registerLprModule(sl);
+  registerPublicBookingModule(sl);
+  registerWaitlistModule(sl);
+  registerAnomaliesModule(sl);
+  registerFeedbackModule(sl);
   registerSpotsModule(sl);
   registerSettingsModule(sl);
   registerShiftsModule(sl);

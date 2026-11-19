@@ -1,0 +1,88 @@
+{
+  "case": "case_11.json",
+  "question": "How many holds were cancelled or expired this month?",
+  "locale": "en",
+  "today": "2026-11-10",
+  "timezone": "America/Bogota",
+  "currency": "COP",
+  "rpc_outputs": {
+    "report_reservations": {
+      "total": 20,
+      "public": 5,
+      "app": 15,
+      "used": 12,
+      "used_public": 3,
+      "cancelled": 3,
+      "expired": 2,
+      "active": 1
+    }
+  },
+  "model_script": [
+    {
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "r2",
+          "name": "get_reservations_report",
+          "input": {
+            "start_date": "2026-11-01",
+            "end_date": "2026-11-10"
+          }
+        }
+      ],
+      "stop_reason": "tool_use"
+    },
+    {
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "submit",
+          "name": "submit_answer",
+          "input": {
+            "status": "answered",
+            "headline": "{f1} holds were cancelled or expired.",
+            "explanation": "",
+            "period_start": "2026-11-01",
+            "period_end": "2026-11-10",
+            "figures": [
+              {
+                "id": "f1",
+                "label": "Cancelled or expired",
+                "unit": "count",
+                "op": "sum",
+                "operands": [
+                  {
+                    "call_id": "r2",
+                    "path": "cancelled"
+                  },
+                  {
+                    "call_id": "r2",
+                    "path": "expired"
+                  }
+                ]
+              }
+            ],
+            "caveats": []
+          }
+        }
+      ],
+      "stop_reason": "end_turn"
+    }
+  ],
+  "expected": {
+    "tools": [
+      {
+        "tool": "get_reservations_report"
+      }
+    ],
+    "answer": {
+      "status": "answered",
+      "figures": [
+        {
+          "id": "f1",
+          "value": 5
+        }
+      ]
+    }
+  }
+}

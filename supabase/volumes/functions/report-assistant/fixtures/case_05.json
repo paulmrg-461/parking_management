@@ -1,0 +1,138 @@
+{
+  "case": "revenue change between two months",
+  "question": "Compare this month's revenue with last month's.",
+  "locale": "en",
+  "rpc_outputs": {
+    "report_revenue|2026-11-01": {
+      "total": 45000,
+      "by_category": [],
+      "by_payment": [],
+      "by_day": [],
+      "pass_by_payment": []
+    },
+    "report_revenue|2026-10-01": {
+      "total": 60000,
+      "by_category": [],
+      "by_payment": [],
+      "by_day": [],
+      "pass_by_payment": []
+    }
+  },
+  "model_script": [
+    {
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "a1",
+          "name": "get_revenue_report",
+          "input": {
+            "start_date": "2026-11-01",
+            "end_date": "2026-11-10"
+          }
+        }
+      ],
+      "stop_reason": "tool_use"
+    },
+    {
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "a2",
+          "name": "get_revenue_report",
+          "input": {
+            "start_date": "2026-10-01",
+            "end_date": "2026-10-31"
+          }
+        }
+      ],
+      "stop_reason": "tool_use"
+    },
+    {
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "submit",
+          "name": "submit_answer",
+          "input": {
+            "status": "answered",
+            "headline": "This month is {f1} and last month was {f2}, a change of {f3}.",
+            "explanation": "",
+            "period_start": "2026-11-01",
+            "period_end": "2026-11-10",
+            "figures": [
+              {
+                "id": "f1",
+                "label": "This month",
+                "unit": "money",
+                "op": "value",
+                "operands": [
+                  {
+                    "call_id": "a1",
+                    "path": "total"
+                  }
+                ]
+              },
+              {
+                "id": "f2",
+                "label": "Last month",
+                "unit": "money",
+                "op": "value",
+                "operands": [
+                  {
+                    "call_id": "a2",
+                    "path": "total"
+                  }
+                ]
+              },
+              {
+                "id": "f3",
+                "label": "Change",
+                "unit": "percent",
+                "op": "percent_change",
+                "operands": [
+                  {
+                    "call_id": "a2",
+                    "path": "total"
+                  },
+                  {
+                    "call_id": "a1",
+                    "path": "total"
+                  }
+                ]
+              }
+            ],
+            "caveats": []
+          }
+        }
+      ],
+      "stop_reason": "end_turn"
+    }
+  ],
+  "expected": {
+    "tools": [
+      {
+        "tool": "get_revenue_report"
+      },
+      {
+        "tool": "get_revenue_report"
+      }
+    ],
+    "answer": {
+      "status": "answered",
+      "figures": [
+        {
+          "id": "f1",
+          "value": 45000
+        },
+        {
+          "id": "f2",
+          "value": 60000
+        },
+        {
+          "id": "f3",
+          "value": -2500
+        }
+      ]
+    }
+  }
+}

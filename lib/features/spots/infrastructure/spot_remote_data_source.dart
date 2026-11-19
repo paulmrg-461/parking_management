@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/network/supabase_error_mapper.dart';
 import '../../check_out/domain/entities/slot_board.dart';
 import '../domain/entities/parking_spot.dart';
+import '../domain/entities/spot_event.dart';
 
 abstract class SpotRemoteDataSource {
   Future<List<ParkingSpot>> list();
@@ -14,9 +15,12 @@ abstract class SpotRemoteDataSource {
     required int row,
     required int col,
     bool active,
+    String? reason,
   });
 
   Future<void> delete(int id);
+
+  Future<List<SpotEvent>> listEvents(int spotId);
 }
 
 class SupabaseSpotRemoteDataSource implements SpotRemoteDataSource {
@@ -58,6 +62,7 @@ class SupabaseSpotRemoteDataSource implements SpotRemoteDataSource {
     required int row,
     required int col,
     bool active = true,
+    String? reason,
   }) async {
     try {
       final result = await _client.rpc(
@@ -68,10 +73,27 @@ class SupabaseSpotRemoteDataSource implements SpotRemoteDataSource {
           'p_row': row,
           'p_col': col,
           'p_active': active,
+          'p_reason': ?reason,
           'p_id': ?id,
         },
       );
       return ParkingSpot.fromJson(Map<String, dynamic>.from(result as Map));
+    } catch (error) {
+      throw mapSupabaseError(error);
+    }
+  }
+
+  @override
+  Future<List<SpotEvent>> listEvents(int spotId) async {
+    try {
+      final result = await _client.rpc(
+        'list_spot_events',
+        params: {'p_spot_id': spotId},
+      );
+      return [
+        for (final item in result as List)
+          SpotEvent.fromJson(Map<String, dynamic>.from(item as Map)),
+      ];
     } catch (error) {
       throw mapSupabaseError(error);
     }

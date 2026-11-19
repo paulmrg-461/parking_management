@@ -5,10 +5,8 @@ import '../../helpers/fake_key_value_store.dart';
 
 void main() {
   late DateTime now;
-  AutoLockCubit cubit(FakeKeyValueStore store) => AutoLockCubit(
-    store,
-    clock: () => now,
-  );
+  AutoLockCubit cubit(FakeKeyValueStore store) =>
+      AutoLockCubit(store, clock: () => now);
 
   setUp(() => now = DateTime(2026, 11, 5, 12));
 
@@ -57,20 +55,23 @@ void main() {
     expect(subject.state, isFalse);
   });
 
-  test('Security: the preference persists and invalid values fall back', () async {
-    final store = FakeKeyValueStore();
-    final subject = cubit(store);
-    addTearDown(subject.close);
-    await subject.select(15);
-    expect(store.get('preferences', 'auto_lock_minutes'), 15);
+  test(
+    'Security: the preference persists and invalid values fall back',
+    () async {
+      final store = FakeKeyValueStore();
+      final subject = cubit(store);
+      addTearDown(subject.close);
+      await subject.select(15);
+      expect(store.get('preferences', 'auto_lock_minutes'), 15);
 
-    final restored = cubit(store)..restore();
-    addTearDown(restored.close);
-    expect(restored.minutes, 15);
+      final restored = cubit(store)..restore();
+      addTearDown(restored.close);
+      expect(restored.minutes, 15);
 
-    store.values['preferences/auto_lock_minutes'] = 999;
-    final invalid = AutoLockCubit(store, clock: () => now)..restore();
-    addTearDown(invalid.close);
-    expect(invalid.minutes, 5);
-  });
+      store.values['preferences/auto_lock_minutes'] = 999;
+      final invalid = AutoLockCubit(store, clock: () => now)..restore();
+      addTearDown(invalid.close);
+      expect(invalid.minutes, 5);
+    },
+  );
 }

@@ -22,8 +22,14 @@ import 'package:parking_management/features/check_out/domain/entities/capacity_s
 import 'package:parking_management/features/check_out/domain/entities/occupancy_snapshot.dart';
 import 'package:parking_management/features/check_out/domain/entities/slot_board.dart';
 import 'package:parking_management/features/check_out/domain/entities/today_summary.dart';
+import 'package:parking_management/features/check_out/domain/entities/dashboard_trend.dart';
+import 'package:parking_management/features/check_out/domain/entities/lot_setup_status.dart';
+import 'package:parking_management/features/check_out/domain/entities/occupancy_forecast.dart';
 import 'package:parking_management/features/check_out/domain/repositories/check_out_repository.dart';
 import 'package:parking_management/features/check_out/presentation/check_out_page.dart';
+import 'package:parking_management/features/evidence/domain/repositories/session_evidence_repository.dart';
+import 'package:parking_management/features/invoicing/application/issue_fiscal_document.dart';
+import 'package:parking_management/features/invoicing/domain/repositories/invoicing_repository.dart';
 import 'package:parking_management/features/auth/application/auth_cubit.dart';
 import 'package:parking_management/features/auth/domain/entities/user.dart';
 import 'package:parking_management/features/home/application/dashboard_cubit.dart';
@@ -33,6 +39,8 @@ import '../../../helpers/fake_auth_repository.dart';
 import '../../../helpers/fake_check_out_repository.dart';
 import '../../../helpers/fake_key_value_store.dart';
 import '../../../helpers/fake_notification_repository.dart';
+import '../../../helpers/fake_invoicing_repository.dart';
+import '../../../helpers/fake_session_evidence_repository.dart';
 import '../../../helpers/test_app.dart';
 
 final _confirm = find.byKey(const Key('checkout_confirm'));
@@ -56,6 +64,17 @@ class _FakeCheckOutRepository implements CheckOutRepository {
   Future<TodaySummary> todaySummary() async => TodaySummary.empty;
 
   @override
+  Future<DashboardTrend> dashboardTrend({int days = 7}) async =>
+      DashboardTrend.empty;
+
+  @override
+  Future<LotSetupStatus> lotSetup() async => LotSetupStatus.unknown;
+
+  @override
+  Future<OccupancyForecast> occupancyForecast({int horizon = 12}) async =>
+      OccupancyForecast.unavailable;
+
+  @override
   Future<SlotBoard> slotBoard() async => SlotBoard.empty;
 
   @override
@@ -66,6 +85,7 @@ class _FakeCheckOutRepository implements CheckOutRepository {
       const OccupancySnapshot(totalOpen: 0, totalCapacity: 0);
 
   bool firstHasPass = false;
+  int firstOnlinePaid = 0;
 
   static const _plates = {1: 'ABC123', 2: 'XYZ999'};
 
@@ -88,6 +108,7 @@ class _FakeCheckOutRepository implements CheckOutRepository {
         hasPass: firstHasPass,
         photoCount: 2,
         leftKeys: true,
+        onlinePaidAmount: firstOnlinePaid,
       ),
       OpenSession(
         id: 2,
@@ -162,12 +183,15 @@ void main() {
     String? initialQuery,
     String? initialScan,
     bool firstHasPass = false,
+    int firstOnlinePaid = 0,
     Future<String?> Function(BuildContext context)? scanQr,
     UserRole? role,
     bool empty = false,
+    SessionEvidenceRepository? evidence,
   }) async {
     repository = _FakeCheckOutRepository()
       ..firstHasPass = firstHasPass
+      ..firstOnlinePaid = firstOnlinePaid
       ..empty = empty;
     occupancy = FakeCheckOutRepository();
     notifications = FakeNotificationRepository();
@@ -203,6 +227,7 @@ void main() {
             initialQuery: initialQuery,
             scanPlate: initialScan,
             scanQr: scanQr,
+            evidenceRepository: evidence,
           ),
         ),
       ),
@@ -210,6 +235,14 @@ void main() {
     await tester.pumpAndSettle();
     await notificationsCubit.start(1);
   }
+
+  testWidgets('Success: a paid session shows the paid-online chip', (
+    tester,
+  ) async {
+    await pumpPage(tester, firstOnlinePaid: 6000);
+
+    expect(find.text('Pagado en línea'), findsOneWidget);
+  });
 
   testWidgets('Success: renders the open sessions list resolved to plates', (
     tester,
@@ -223,6 +256,20 @@ void main() {
     // Sessions entered in 2026-01 are long stays by the test clock.
     expect(find.text('Más de 24 h'), findsNWidgets(2));
     expect(find.textContaining('h'), findsWidgets);
+  });
+
+  testWidgets('Success: an open session with photos opens its evidence', (
+    tester,
+  ) async {
+    final evidence = FakeSessionEvidenceRepository();
+    await pumpPage(tester, evidence: evidence);
+
+    expect(find.text('Evidencias (2)'), findsOneWidget);
+    await tester.tap(find.text('Evidencias (2)'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Evidencias de ABC123'), findsOneWidget);
+    expect(evidence.calls, 1);
   });
 
   testWidgets('Success: searching filters the list through the cubit', (
@@ -791,6 +838,56 @@ void main() {
       );
       expect(size.width, greaterThanOrEqualTo(48));
       expect(size.height, greaterThanOrEqualTo(48));
+    });
+  });
+
+  group('fiscal issuance', () {
+    testWidgets('issues the document after a successful check-out', (
+      tester,
+    ) async {
+      final invoicing = FakeInvoicingRepository();
+      serviceLocator.registerSingleton<InvoicingRepository>(invoicing);
+      serviceLocator.registerSingleton<IssueFiscalDocument>(
+        IssueFiscalDocument(invoicing),
+      );
+      addTearDown(serviceLocator.reset);
+      await pumpPage(tester);
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Cobrar').first);
+      await tester.pumpAndSettle();
+      await tester.tap(_confirm);
+      await tester.pumpAndSettle();
+
+      expect(invoicing.issueCalls, 1);
+      await tester.tap(find.text('Ver recibo'));
+      await tester.pumpAndSettle();
+      expect(find.text('SETP7'), findsOneWidget);
+      expect(find.text('Documento electrónico en proceso'), findsOneWidget);
+    });
+
+    testWidgets('an issuance failure does not break the receipt', (
+      tester,
+    ) async {
+      final invoicing = FakeInvoicingRepository()
+        ..writeError = const ValidationFailure(
+          'FiscalResolutionMissingError',
+          'FiscalResolutionMissingError',
+        );
+      serviceLocator.registerSingleton<InvoicingRepository>(invoicing);
+      serviceLocator.registerSingleton<IssueFiscalDocument>(
+        IssueFiscalDocument(invoicing),
+      );
+      addTearDown(serviceLocator.reset);
+      await pumpPage(tester);
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Cobrar').first);
+      await tester.pumpAndSettle();
+      await tester.tap(_confirm);
+      await tester.pumpAndSettle();
+
+      expect(invoicing.issueCalls, 1);
+      expect(find.text('SETP7'), findsNothing);
+      expect(find.text('Ver recibo'), findsOneWidget);
     });
   });
 }

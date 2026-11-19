@@ -1,5 +1,8 @@
 import 'package:equatable/equatable.dart';
 
+import '../../../../core/fare/fare_quote.dart';
+import '../../../pricing/domain/entities/fare_pricing.dart';
+
 /// Fare preview for an open session (`rpc/check_out_preview`): the same math
 /// the server uses when closing, without side effects. It carries the billing
 /// breakdown so the operator can explain the charge before collecting.
@@ -17,6 +20,11 @@ class CheckOutPreview extends Equatable {
     this.dailyRate,
     this.dailyCapApplied = false,
     this.lostTicketAmount,
+    this.onlinePaidAmount = 0,
+    this.amountDue,
+    this.graceActive = false,
+    this.graceUntil,
+    this.quote,
   });
 
   final int sessionId;
@@ -45,6 +53,26 @@ class CheckOutPreview extends Equatable {
   /// on servers that predate `lost_ticket_amount`.
   final int? lostTicketAmount;
 
+  /// Already paid online (minor units); `amount` includes it.
+  final int onlinePaidAmount;
+
+  /// What the desk still collects right now (`null` = unknown, treated as
+  /// `amount`). Inside the grace window it is 0.
+  final int? amountDue;
+
+  /// The customer is still inside the exit window.
+  final bool graceActive;
+  final DateTime? graceUntil;
+
+  /// Benefits applied right now (merchant agreements and, later, rewards).
+  final FareQuote? quote;
+
+  /// The locked dynamic-pricing rule, when there is one.
+  FarePricing? get pricing => FarePricing.fromMap(quote?.pricing);
+
+  /// Desk balance, falling back to the full fare on old servers.
+  int get deskDue => amountDue ?? amount;
+
   Duration get elapsed => Duration(seconds: elapsedSeconds);
 
   factory CheckOutPreview.fromJson(Map<String, dynamic> json) =>
@@ -61,6 +89,15 @@ class CheckOutPreview extends Equatable {
         dailyRate: (json['daily_rate'] as num?)?.toInt(),
         dailyCapApplied: json['daily_cap_applied'] == true,
         lostTicketAmount: (json['lost_ticket_amount'] as num?)?.toInt(),
+        onlinePaidAmount: (json['online_paid_amount'] as num?)?.toInt() ?? 0,
+        amountDue: (json['amount_due'] as num?)?.toInt(),
+        graceActive: json['grace_active'] as bool? ?? false,
+        graceUntil: DateTime.tryParse(json['grace_until'] as String? ?? ''),
+        quote: json['quote'] is Map
+            ? FareQuote.fromJson(
+                Map<String, dynamic>.from(json['quote'] as Map),
+              )
+            : null,
       );
 
   @override
@@ -77,5 +114,10 @@ class CheckOutPreview extends Equatable {
     dailyRate,
     dailyCapApplied,
     lostTicketAmount,
+    onlinePaidAmount,
+    amountDue,
+    graceActive,
+    graceUntil,
+    quote,
   ];
 }

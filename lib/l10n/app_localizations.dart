@@ -296,6 +296,414 @@ abstract class AppLocalizations {
   /// **'Políticas y contrato'**
   String get policiesTitle;
 
+  /// No description provided for @bookingTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Reserva tu espacio'**
+  String get bookingTitle;
+
+  /// No description provided for @bookingSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Elige el tipo de vehículo y asegura tu cupo en segundos.'**
+  String get bookingSubtitle;
+
+  /// No description provided for @bookingOnline.
+  ///
+  /// In es, this message translates to:
+  /// **'Reserva en línea'**
+  String get bookingOnline;
+
+  /// No description provided for @bookingSectionAvailability.
+  ///
+  /// In es, this message translates to:
+  /// **'Disponibilidad ahora'**
+  String get bookingSectionAvailability;
+
+  /// No description provided for @bookingSectionHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Datos en tiempo real del parqueadero'**
+  String get bookingSectionHint;
+
+  /// No description provided for @bookingRefresh.
+  ///
+  /// In es, this message translates to:
+  /// **'Actualizar disponibilidad'**
+  String get bookingRefresh;
+
+  /// No description provided for @bookingAvailable.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 disponible} other{{count} disponibles}}'**
+  String bookingAvailable(int count);
+
+  /// No description provided for @bookingFull.
+  ///
+  /// In es, this message translates to:
+  /// **'Completo'**
+  String get bookingFull;
+
+  /// No description provided for @bookingUnlimited.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin límite'**
+  String get bookingUnlimited;
+
+  /// No description provided for @bookingNoSpaceTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay cupo en este momento'**
+  String get bookingNoSpaceTitle;
+
+  /// No description provided for @bookingNoSpaceHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Se acaba de llenar. Puedes llamar al parqueadero o volver a intentar en unos minutos.'**
+  String get bookingNoSpaceHint;
+
+  /// No description provided for @bookingFromPrice.
+  ///
+  /// In es, this message translates to:
+  /// **'Desde {price}/hora'**
+  String bookingFromPrice(String price);
+
+  /// No description provided for @bookingPriceUndefined.
+  ///
+  /// In es, this message translates to:
+  /// **'Tarifa en recepción'**
+  String get bookingPriceUndefined;
+
+  /// No description provided for @bookingSelectCategory.
+  ///
+  /// In es, this message translates to:
+  /// **'Elige un tipo de vehículo'**
+  String get bookingSelectCategory;
+
+  /// No description provided for @bookingFormTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tus datos'**
+  String get bookingFormTitle;
+
+  /// No description provided for @bookingPhone.
+  ///
+  /// In es, this message translates to:
+  /// **'Celular'**
+  String get bookingPhone;
+
+  /// No description provided for @bookingPhoneHint.
+  ///
+  /// In es, this message translates to:
+  /// **'300 000 0000'**
+  String get bookingPhoneHint;
+
+  /// No description provided for @bookingName.
+  ///
+  /// In es, this message translates to:
+  /// **'Nombre'**
+  String get bookingName;
+
+  /// No description provided for @bookingDuration.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Cuánto tiempo necesitas?'**
+  String get bookingDuration;
+
+  /// No description provided for @bookingDurationHours.
+  ///
+  /// In es, this message translates to:
+  /// **'{hours} h'**
+  String bookingDurationHours(int hours);
+
+  /// No description provided for @bookingSubmit.
+  ///
+  /// In es, this message translates to:
+  /// **'Reservar espacio'**
+  String get bookingSubmit;
+
+  /// No description provided for @bookingSubmitting.
+  ///
+  /// In es, this message translates to:
+  /// **'Reservando…'**
+  String get bookingSubmitting;
+
+  /// No description provided for @bookingLegal.
+  ///
+  /// In es, this message translates to:
+  /// **'Al reservar aceptas las políticas y el contrato del parqueadero.'**
+  String get bookingLegal;
+
+  /// No description provided for @bookingPolicies.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver políticas'**
+  String get bookingPolicies;
+
+  /// No description provided for @bookingSuccessTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¡Reserva confirmada!'**
+  String get bookingSuccessTitle;
+
+  /// No description provided for @bookingSuccessHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Muestra este código al llegar al parqueadero.'**
+  String get bookingSuccessHint;
+
+  /// No description provided for @bookingCode.
+  ///
+  /// In es, this message translates to:
+  /// **'Código de reserva'**
+  String get bookingCode;
+
+  /// No description provided for @bookingPlateDetail.
+  ///
+  /// In es, this message translates to:
+  /// **'Placa'**
+  String get bookingPlateDetail;
+
+  /// No description provided for @bookingCategoryDetail.
+  ///
+  /// In es, this message translates to:
+  /// **'Tipo'**
+  String get bookingCategoryDetail;
+
+  /// No description provided for @bookingUntil.
+  ///
+  /// In es, this message translates to:
+  /// **'Válida hasta'**
+  String get bookingUntil;
+
+  /// No description provided for @bookingAddress.
+  ///
+  /// In es, this message translates to:
+  /// **'Dirección'**
+  String get bookingAddress;
+
+  /// No description provided for @bookingAnother.
+  ///
+  /// In es, this message translates to:
+  /// **'Hacer otra reserva'**
+  String get bookingAnother;
+
+  /// No description provided for @bookingLookupTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Ya reservaste?'**
+  String get bookingLookupTitle;
+
+  /// No description provided for @bookingLookupHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Consulta o cancela con el código y el celular de tu reserva.'**
+  String get bookingLookupHint;
+
+  /// No description provided for @bookingLookupCode.
+  ///
+  /// In es, this message translates to:
+  /// **'Código'**
+  String get bookingLookupCode;
+
+  /// No description provided for @bookingLookupPhone.
+  ///
+  /// In es, this message translates to:
+  /// **'Celular'**
+  String get bookingLookupPhone;
+
+  /// No description provided for @bookingLookupAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Consultar reserva'**
+  String get bookingLookupAction;
+
+  /// No description provided for @bookingLookupChecking.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscando…'**
+  String get bookingLookupChecking;
+
+  /// No description provided for @bookingLookupInvalid.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe el código y un celular válido.'**
+  String get bookingLookupInvalid;
+
+  /// No description provided for @bookingLookupNotFound.
+  ///
+  /// In es, this message translates to:
+  /// **'No encontramos una reserva activa con esos datos. Revisa el código y el celular.'**
+  String get bookingLookupNotFound;
+
+  /// No description provided for @bookingLookupFound.
+  ///
+  /// In es, this message translates to:
+  /// **'Reserva de {plate}'**
+  String bookingLookupFound(String plate);
+
+  /// No description provided for @bookingCancel.
+  ///
+  /// In es, this message translates to:
+  /// **'Cancelar reserva'**
+  String get bookingCancel;
+
+  /// No description provided for @bookingCancelTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Cancelar tu reserva?'**
+  String get bookingCancelTitle;
+
+  /// No description provided for @bookingCancelBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Se liberará el cupo de {plate}. Esta acción no se puede deshacer.'**
+  String bookingCancelBody(String plate);
+
+  /// No description provided for @bookingCancelledTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Reserva cancelada'**
+  String get bookingCancelledTitle;
+
+  /// No description provided for @bookingCancelledHint.
+  ///
+  /// In es, this message translates to:
+  /// **'El cupo volvió a quedar disponible. Gracias por avisar.'**
+  String get bookingCancelledHint;
+
+  /// No description provided for @bookingErrorNotFound.
+  ///
+  /// In es, this message translates to:
+  /// **'No encontramos esa reserva. Revisa el código o llama al parqueadero.'**
+  String get bookingErrorNotFound;
+
+  /// No description provided for @bookingCall.
+  ///
+  /// In es, this message translates to:
+  /// **'Llamar'**
+  String get bookingCall;
+
+  /// No description provided for @bookingWhatsApp.
+  ///
+  /// In es, this message translates to:
+  /// **'WhatsApp'**
+  String get bookingWhatsApp;
+
+  /// No description provided for @bookingWhatsAppMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'Hola, tengo una reserva en {lot}.'**
+  String bookingWhatsAppMessage(String lot);
+
+  /// No description provided for @bookingEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay tipos de vehículo configurados. Llama al parqueadero.'**
+  String get bookingEmpty;
+
+  /// No description provided for @bookingFooter.
+  ///
+  /// In es, this message translates to:
+  /// **'Reserva sujeta a disponibilidad. Si no puedes asistir, avísanos.'**
+  String get bookingFooter;
+
+  /// No description provided for @bookingErrorFull.
+  ///
+  /// In es, this message translates to:
+  /// **'Ese tipo de vehículo ya no tiene espacio. Elige otro o intenta más tarde.'**
+  String get bookingErrorFull;
+
+  /// No description provided for @bookingErrorExists.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya tienes una reserva activa para esta placa.'**
+  String get bookingErrorExists;
+
+  /// No description provided for @bookingErrorLimit.
+  ///
+  /// In es, this message translates to:
+  /// **'Alcanzaste el límite de reservas para este teléfono.'**
+  String get bookingErrorLimit;
+
+  /// No description provided for @bookingErrorInside.
+  ///
+  /// In es, this message translates to:
+  /// **'Este vehículo ya está dentro del parqueadero.'**
+  String get bookingErrorInside;
+
+  /// No description provided for @bookingErrorWindow.
+  ///
+  /// In es, this message translates to:
+  /// **'La hora de la reserva no es válida.'**
+  String get bookingErrorWindow;
+
+  /// No description provided for @bookingErrorPhone.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresa un celular válido de 10 dígitos (empieza por 3).'**
+  String get bookingErrorPhone;
+
+  /// No description provided for @bookingErrorName.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresa tu nombre.'**
+  String get bookingErrorName;
+
+  /// No description provided for @bookingErrorPlate.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresa una placa válida.'**
+  String get bookingErrorPlate;
+
+  /// No description provided for @bookingErrorLot.
+  ///
+  /// In es, this message translates to:
+  /// **'No encontramos este parqueadero.'**
+  String get bookingErrorLot;
+
+  /// No description provided for @bookingCaptchaLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Verificación de seguridad'**
+  String get bookingCaptchaLabel;
+
+  /// No description provided for @bookingCaptchaPending.
+  ///
+  /// In es, this message translates to:
+  /// **'Completa la verificación de seguridad para reservar.'**
+  String get bookingCaptchaPending;
+
+  /// No description provided for @bookingCaptchaExpired.
+  ///
+  /// In es, this message translates to:
+  /// **'La verificación venció. Complétala de nuevo.'**
+  String get bookingCaptchaExpired;
+
+  /// No description provided for @bookingCaptchaFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos verificar que eres una persona. Inténtalo de nuevo.'**
+  String get bookingCaptchaFailed;
+
+  /// No description provided for @bookingCaptchaUnavailable.
+  ///
+  /// In es, this message translates to:
+  /// **'La verificación de seguridad no está disponible en este momento. Intenta en unos minutos o llama al parqueadero.'**
+  String get bookingCaptchaUnavailable;
+
+  /// No description provided for @bookingCaptchaRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'Este parqueadero pide una verificación de seguridad para reservar en línea. Recarga la página o llama al parqueadero.'**
+  String get bookingCaptchaRequired;
+
+  /// No description provided for @bookingErrorThrottled.
+  ///
+  /// In es, this message translates to:
+  /// **'Hay muchas reservas en línea en este momento. Intenta en unos minutos o llama al parqueadero.'**
+  String get bookingErrorThrottled;
+
   /// No description provided for @policiesInvalid.
   ///
   /// In es, this message translates to:
@@ -518,6 +926,30 @@ abstract class AppLocalizations {
   /// **'Vehículo nuevo: selecciona una categoría'**
   String get errorVehicleNotRegistered;
 
+  /// No description provided for @errorInvalidPlate.
+  ///
+  /// In es, this message translates to:
+  /// **'La placa no es válida'**
+  String get errorInvalidPlate;
+
+  /// No description provided for @gateEventResolved.
+  ///
+  /// In es, this message translates to:
+  /// **'Ese evento ya fue resuelto'**
+  String get gateEventResolved;
+
+  /// No description provided for @gateEventKind.
+  ///
+  /// In es, this message translates to:
+  /// **'Ese evento no es una entrada'**
+  String get gateEventKind;
+
+  /// No description provided for @gateNoSystemOperator.
+  ///
+  /// In es, this message translates to:
+  /// **'Configura un operador del sistema en la cámara de placas'**
+  String get gateNoSystemOperator;
+
   /// No description provided for @errorInvalidPhoto.
   ///
   /// In es, this message translates to:
@@ -613,6 +1045,996 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Reintentar ahora'**
   String get syncNow;
+
+  /// No description provided for @syncConflicts.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 conflicto por resolver} other{{count} conflictos por resolver}}'**
+  String syncConflicts(int count);
+
+  /// No description provided for @syncConflictTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Cambio en conflicto'**
+  String get syncConflictTitle;
+
+  /// No description provided for @syncConflictHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Otra persona cambió este registro mientras lo editabas.'**
+  String get syncConflictHint;
+
+  /// No description provided for @syncKeepMine.
+  ///
+  /// In es, this message translates to:
+  /// **'Quedarme con lo mío'**
+  String get syncKeepMine;
+
+  /// No description provided for @syncKeepTheirs.
+  ///
+  /// In es, this message translates to:
+  /// **'Quedarme con lo del servidor'**
+  String get syncKeepTheirs;
+
+  /// No description provided for @conflictTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Resolver conflicto'**
+  String get conflictTitle;
+
+  /// No description provided for @syncConflictSection.
+  ///
+  /// In es, this message translates to:
+  /// **'Requieren tu decisión'**
+  String get syncConflictSection;
+
+  /// No description provided for @syncConflictTileSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Otra persona cambió este registro.'**
+  String get syncConflictTileSubtitle;
+
+  /// No description provided for @conflictIntro.
+  ///
+  /// In es, this message translates to:
+  /// **'Tus cambios sin conexión chocan con cambios de otra persona.'**
+  String get conflictIntro;
+
+  /// No description provided for @conflictColumnBase.
+  ///
+  /// In es, this message translates to:
+  /// **'Antes'**
+  String get conflictColumnBase;
+
+  /// No description provided for @conflictColumnMine.
+  ///
+  /// In es, this message translates to:
+  /// **'Mío'**
+  String get conflictColumnMine;
+
+  /// No description provided for @conflictColumnTheirs.
+  ///
+  /// In es, this message translates to:
+  /// **'Del servidor'**
+  String get conflictColumnTheirs;
+
+  /// No description provided for @conflictAutoMerged.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =0{} =1{1 cambio sin choque se aplicará solo.} other{{count} cambios sin choque se aplicarán solos.}}'**
+  String conflictAutoMerged(int count);
+
+  /// No description provided for @conflictPickEach.
+  ///
+  /// In es, this message translates to:
+  /// **'Elige un valor para cada campo.'**
+  String get conflictPickEach;
+
+  /// No description provided for @conflictApply.
+  ///
+  /// In es, this message translates to:
+  /// **'Aplicar selección'**
+  String get conflictApply;
+
+  /// No description provided for @conflictDeletedTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Otra persona eliminó este registro.'**
+  String get conflictDeletedTitle;
+
+  /// No description provided for @conflictDeletedBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Tus cambios no se pueden aplicar. Puedes aceptar la eliminación y volver a ingresarlos si hace falta.'**
+  String get conflictDeletedBody;
+
+  /// No description provided for @conflictAcceptDeletion.
+  ///
+  /// In es, this message translates to:
+  /// **'Aceptar la eliminación'**
+  String get conflictAcceptDeletion;
+
+  /// No description provided for @conflictEditedTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Otra persona editó este registro mientras lo eliminabas.'**
+  String get conflictEditedTitle;
+
+  /// No description provided for @conflictKeepDelete.
+  ///
+  /// In es, this message translates to:
+  /// **'Eliminar de todos modos'**
+  String get conflictKeepDelete;
+
+  /// No description provided for @conflictKeepRecord.
+  ///
+  /// In es, this message translates to:
+  /// **'Conservar el registro'**
+  String get conflictKeepRecord;
+
+  /// No description provided for @conflictAgain.
+  ///
+  /// In es, this message translates to:
+  /// **'El registro cambió de nuevo. Revisa los valores actuales.'**
+  String get conflictAgain;
+
+  /// No description provided for @conflictEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay conflictos pendientes.'**
+  String get conflictEmpty;
+
+  /// No description provided for @conflictNone.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin valor'**
+  String get conflictNone;
+
+  /// No description provided for @cfYes.
+  ///
+  /// In es, this message translates to:
+  /// **'Sí'**
+  String get cfYes;
+
+  /// No description provided for @cfNo.
+  ///
+  /// In es, this message translates to:
+  /// **'No'**
+  String get cfNo;
+
+  /// No description provided for @waitlistJoinTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Lista de espera'**
+  String get waitlistJoinTitle;
+
+  /// No description provided for @waitlistJoinHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Estamos llenos. Déjanos tus datos y te avisamos cuando se libere un cupo.'**
+  String get waitlistJoinHint;
+
+  /// No description provided for @waitlistJoinAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Unirme a la lista de espera'**
+  String get waitlistJoinAction;
+
+  /// No description provided for @waitlistWaitFor.
+  ///
+  /// In es, this message translates to:
+  /// **'Puedo esperar hasta:'**
+  String get waitlistWaitFor;
+
+  /// No description provided for @waitlistHoldFor.
+  ///
+  /// In es, this message translates to:
+  /// **'Reservar el cupo por:'**
+  String get waitlistHoldFor;
+
+  /// No description provided for @waitlistHoldHours.
+  ///
+  /// In es, this message translates to:
+  /// **'{hours, plural, =1{1 hora} other{{hours} horas}}'**
+  String waitlistHoldHours(int hours);
+
+  /// No description provided for @waitlistJoined.
+  ///
+  /// In es, this message translates to:
+  /// **'Estás en la lista de espera'**
+  String get waitlistJoined;
+
+  /// No description provided for @waitlistPosition.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu turno: {position}'**
+  String waitlistPosition(int position);
+
+  /// No description provided for @waitlistCode.
+  ///
+  /// In es, this message translates to:
+  /// **'Código {code}'**
+  String waitlistCode(int code);
+
+  /// No description provided for @waitlistKeepCode.
+  ///
+  /// In es, this message translates to:
+  /// **'Guarda este código: lo necesitas para reclamar o salir de la lista.'**
+  String get waitlistKeepCode;
+
+  /// No description provided for @waitlistNotifyWhatsapp.
+  ///
+  /// In es, this message translates to:
+  /// **'Te avisaremos por WhatsApp.'**
+  String get waitlistNotifyWhatsapp;
+
+  /// No description provided for @waitlistNotifyScreen.
+  ///
+  /// In es, this message translates to:
+  /// **'Mantén esta página abierta o llámanos: te avisaremos aquí.'**
+  String get waitlistNotifyScreen;
+
+  /// No description provided for @waitlistOfferTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¡Se liberó un cupo!'**
+  String get waitlistOfferTitle;
+
+  /// No description provided for @waitlistOfferBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Resérvalo antes de las {time}.'**
+  String waitlistOfferBody(String time);
+
+  /// No description provided for @waitlistClaim.
+  ///
+  /// In es, this message translates to:
+  /// **'Reclamar mi cupo'**
+  String get waitlistClaim;
+
+  /// No description provided for @waitlistLeave.
+  ///
+  /// In es, this message translates to:
+  /// **'Salir de la lista'**
+  String get waitlistLeave;
+
+  /// No description provided for @waitlistLeft.
+  ///
+  /// In es, this message translates to:
+  /// **'Saliste de la lista de espera'**
+  String get waitlistLeft;
+
+  /// No description provided for @waitlistExpiredTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu oferta venció'**
+  String get waitlistExpiredTitle;
+
+  /// No description provided for @waitlistExpiredHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Puedes volver a unirte a la lista.'**
+  String get waitlistExpiredHint;
+
+  /// No description provided for @waitlistWaitingCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 persona esperando} other{{count} personas esperando}}'**
+  String waitlistWaitingCount(int count);
+
+  /// No description provided for @waitlistLookupLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Código de lista de espera'**
+  String get waitlistLookupLabel;
+
+  /// No description provided for @waitlistDeskTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Lista de espera'**
+  String get waitlistDeskTitle;
+
+  /// No description provided for @waitlistDeskEmptyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Nadie en lista de espera'**
+  String get waitlistDeskEmptyTitle;
+
+  /// No description provided for @waitlistDeskEmptyHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuando el parqueadero se llene, los clientes web podrán anotarse aquí.'**
+  String get waitlistDeskEmptyHint;
+
+  /// No description provided for @waitlistDeskOffered.
+  ///
+  /// In es, this message translates to:
+  /// **'Oferta hasta {time}'**
+  String waitlistDeskOffered(String time);
+
+  /// No description provided for @waitlistDeskCallCustomer.
+  ///
+  /// In es, this message translates to:
+  /// **'Llamar: el cliente no tiene WhatsApp automático'**
+  String get waitlistDeskCallCustomer;
+
+  /// No description provided for @waitlistDeskClaim.
+  ///
+  /// In es, this message translates to:
+  /// **'Dar el cupo'**
+  String get waitlistDeskClaim;
+
+  /// No description provided for @waitlistDeskRemove.
+  ///
+  /// In es, this message translates to:
+  /// **'Quitar de la lista'**
+  String get waitlistDeskRemove;
+
+  /// No description provided for @waitlistDeskRemoveBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Se quitará a {plate} de la lista y se liberará su oferta.'**
+  String waitlistDeskRemoveBody(String plate);
+
+  /// No description provided for @waitlistSettingsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Lista de espera'**
+  String get waitlistSettingsTitle;
+
+  /// No description provided for @waitlistSettingsEnabled.
+  ///
+  /// In es, this message translates to:
+  /// **'Activar lista de espera pública'**
+  String get waitlistSettingsEnabled;
+
+  /// No description provided for @waitlistSettingsClaimMinutes.
+  ///
+  /// In es, this message translates to:
+  /// **'Minutos para reclamar una oferta'**
+  String get waitlistSettingsClaimMinutes;
+
+  /// No description provided for @waitlistSettingsMaxEntries.
+  ///
+  /// In es, this message translates to:
+  /// **'Máximo de personas en lista'**
+  String get waitlistSettingsMaxEntries;
+
+  /// No description provided for @waitlistOfferChip.
+  ///
+  /// In es, this message translates to:
+  /// **'Oferta'**
+  String get waitlistOfferChip;
+
+  /// No description provided for @notifTypeWaitlist.
+  ///
+  /// In es, this message translates to:
+  /// **'Lista de espera'**
+  String get notifTypeWaitlist;
+
+  /// No description provided for @errorWaitlistDisabled.
+  ///
+  /// In es, this message translates to:
+  /// **'La lista de espera no está disponible.'**
+  String get errorWaitlistDisabled;
+
+  /// No description provided for @errorWaitlistNotNeeded.
+  ///
+  /// In es, this message translates to:
+  /// **'Hay cupo disponible: puedes reservar ahora.'**
+  String get errorWaitlistNotNeeded;
+
+  /// No description provided for @errorWaitlistExists.
+  ///
+  /// In es, this message translates to:
+  /// **'Esa placa ya está en la lista de espera.'**
+  String get errorWaitlistExists;
+
+  /// No description provided for @errorWaitlistLimit.
+  ///
+  /// In es, this message translates to:
+  /// **'Este celular ya tiene dos turnos en la lista.'**
+  String get errorWaitlistLimit;
+
+  /// No description provided for @errorWaitlistFull.
+  ///
+  /// In es, this message translates to:
+  /// **'La lista de espera está llena.'**
+  String get errorWaitlistFull;
+
+  /// No description provided for @errorWaitlistWindow.
+  ///
+  /// In es, this message translates to:
+  /// **'Elige un tiempo de espera válido.'**
+  String get errorWaitlistWindow;
+
+  /// No description provided for @errorWaitlistNotFound.
+  ///
+  /// In es, this message translates to:
+  /// **'No encontramos ese turno.'**
+  String get errorWaitlistNotFound;
+
+  /// No description provided for @errorWaitlistNotOffered.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no hay un cupo para ti.'**
+  String get errorWaitlistNotOffered;
+
+  /// No description provided for @errorOfferGone.
+  ///
+  /// In es, this message translates to:
+  /// **'La oferta ya no está disponible.'**
+  String get errorOfferGone;
+
+  /// No description provided for @reportWaitlistTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Lista de espera'**
+  String get reportWaitlistTitle;
+
+  /// No description provided for @reportWaitlistJoined.
+  ///
+  /// In es, this message translates to:
+  /// **'Anotados'**
+  String get reportWaitlistJoined;
+
+  /// No description provided for @reportWaitlistOffered.
+  ///
+  /// In es, this message translates to:
+  /// **'Ofertas'**
+  String get reportWaitlistOffered;
+
+  /// No description provided for @reportWaitlistClaimed.
+  ///
+  /// In es, this message translates to:
+  /// **'Reclamadas'**
+  String get reportWaitlistClaimed;
+
+  /// No description provided for @homeForecastTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Pronóstico de ocupación'**
+  String get homeForecastTitle;
+
+  /// No description provided for @homeForecastHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Próximas 12 horas según el historial'**
+  String get homeForecastHint;
+
+  /// No description provided for @homeForecastFullAt.
+  ///
+  /// In es, this message translates to:
+  /// **'{group}: se llenaría cerca de las {time}'**
+  String homeForecastFullAt(String group, String time);
+
+  /// No description provided for @homeForecastFullNow.
+  ///
+  /// In es, this message translates to:
+  /// **'{group}: ya está lleno'**
+  String homeForecastFullNow(String group);
+
+  /// No description provided for @homeForecastNotFull.
+  ///
+  /// In es, this message translates to:
+  /// **'No se prevé que se llene en las próximas 12 horas'**
+  String get homeForecastNotFull;
+
+  /// No description provided for @homeForecastGroupCar.
+  ///
+  /// In es, this message translates to:
+  /// **'Autos'**
+  String get homeForecastGroupCar;
+
+  /// No description provided for @homeForecastGroupMoto.
+  ///
+  /// In es, this message translates to:
+  /// **'Motos'**
+  String get homeForecastGroupMoto;
+
+  /// No description provided for @homeForecastConfidenceHigh.
+  ///
+  /// In es, this message translates to:
+  /// **'Confianza alta'**
+  String get homeForecastConfidenceHigh;
+
+  /// No description provided for @homeForecastConfidenceMedium.
+  ///
+  /// In es, this message translates to:
+  /// **'Confianza media'**
+  String get homeForecastConfidenceMedium;
+
+  /// No description provided for @homeForecastConfidenceLow.
+  ///
+  /// In es, this message translates to:
+  /// **'Confianza baja'**
+  String get homeForecastConfidenceLow;
+
+  /// No description provided for @homeForecastBarSemantics.
+  ///
+  /// In es, this message translates to:
+  /// **'{hour}:00, se esperan {expected} de {capacity}'**
+  String homeForecastBarSemantics(int hour, int expected, int capacity);
+
+  /// No description provided for @homeForecastInsufficient.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún reunimos historial para pronosticar'**
+  String get homeForecastInsufficient;
+
+  /// No description provided for @homeForecastNoCapacity.
+  ///
+  /// In es, this message translates to:
+  /// **'Configura la capacidad para ver el pronóstico'**
+  String get homeForecastNoCapacity;
+
+  /// No description provided for @homeForecastDisabled.
+  ///
+  /// In es, this message translates to:
+  /// **'El pronóstico está desactivado'**
+  String get homeForecastDisabled;
+
+  /// No description provided for @homeForecastUnavailable.
+  ///
+  /// In es, this message translates to:
+  /// **'Pronóstico no disponible'**
+  String get homeForecastUnavailable;
+
+  /// No description provided for @reportsForecastTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Precisión del pronóstico'**
+  String get reportsForecastTitle;
+
+  /// No description provided for @reportsForecastSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Error medio al repetir el pronóstico sobre las últimas semanas'**
+  String get reportsForecastSubtitle;
+
+  /// No description provided for @reportsForecastRun.
+  ///
+  /// In es, this message translates to:
+  /// **'Calcular precisión'**
+  String get reportsForecastRun;
+
+  /// No description provided for @reportsForecastMae.
+  ///
+  /// In es, this message translates to:
+  /// **'Error medio: {value} vehículos'**
+  String reportsForecastMae(String value);
+
+  /// No description provided for @reportsForecastPriorOnly.
+  ///
+  /// In es, this message translates to:
+  /// **'Solo con el historial: {value}'**
+  String reportsForecastPriorOnly(String value);
+
+  /// No description provided for @reportsForecastBetter.
+  ///
+  /// In es, this message translates to:
+  /// **'{percent} % mejor con datos en vivo'**
+  String reportsForecastBetter(int percent);
+
+  /// No description provided for @reportsForecastLead.
+  ///
+  /// In es, this message translates to:
+  /// **'A {hours} h: {value}'**
+  String reportsForecastLead(int hours, String value);
+
+  /// No description provided for @reportsForecastEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no hay historial suficiente'**
+  String get reportsForecastEmpty;
+
+  /// No description provided for @reportsForecastUnavailable.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo calcular la precisión'**
+  String get reportsForecastUnavailable;
+
+  /// No description provided for @publicForecastTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Cuándo se llena?'**
+  String get publicForecastTitle;
+
+  /// No description provided for @publicForecastFullAt.
+  ///
+  /// In es, this message translates to:
+  /// **'Suele llenarse cerca de las {time}'**
+  String publicForecastFullAt(String time);
+
+  /// No description provided for @publicForecastFullNow.
+  ///
+  /// In es, this message translates to:
+  /// **'Ahora está lleno'**
+  String get publicForecastFullNow;
+
+  /// No description provided for @publicForecastNotFull.
+  ///
+  /// In es, this message translates to:
+  /// **'No suele llenarse en las próximas horas'**
+  String get publicForecastNotFull;
+
+  /// No description provided for @publicForecastGroupCar.
+  ///
+  /// In es, this message translates to:
+  /// **'Autos'**
+  String get publicForecastGroupCar;
+
+  /// No description provided for @publicForecastGroupMoto.
+  ///
+  /// In es, this message translates to:
+  /// **'Motos'**
+  String get publicForecastGroupMoto;
+
+  /// No description provided for @publicForecastLevelFree.
+  ///
+  /// In es, this message translates to:
+  /// **'Con espacio'**
+  String get publicForecastLevelFree;
+
+  /// No description provided for @publicForecastLevelBusy.
+  ///
+  /// In es, this message translates to:
+  /// **'Concurrido'**
+  String get publicForecastLevelBusy;
+
+  /// No description provided for @publicForecastLevelFull.
+  ///
+  /// In es, this message translates to:
+  /// **'Lleno'**
+  String get publicForecastLevelFull;
+
+  /// No description provided for @publicForecastDisclaimer.
+  ///
+  /// In es, this message translates to:
+  /// **'Estimación según días anteriores; puede variar.'**
+  String get publicForecastDisclaimer;
+
+  /// No description provided for @navAnomalies.
+  ///
+  /// In es, this message translates to:
+  /// **'Anomalías'**
+  String get navAnomalies;
+
+  /// No description provided for @anomaliesTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Anomalías de caja'**
+  String get anomaliesTitle;
+
+  /// No description provided for @anomaliesSettings.
+  ///
+  /// In es, this message translates to:
+  /// **'Umbrales'**
+  String get anomaliesSettings;
+
+  /// No description provided for @anomaliesOpenCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 abierta} other{{count} abiertas}}'**
+  String anomaliesOpenCount(int count);
+
+  /// No description provided for @anomaliesStatusOpen.
+  ///
+  /// In es, this message translates to:
+  /// **'Abiertas'**
+  String get anomaliesStatusOpen;
+
+  /// No description provided for @anomaliesStatusAcknowledged.
+  ///
+  /// In es, this message translates to:
+  /// **'Reconocidas'**
+  String get anomaliesStatusAcknowledged;
+
+  /// No description provided for @anomaliesStatusDismissed.
+  ///
+  /// In es, this message translates to:
+  /// **'Descartadas'**
+  String get anomaliesStatusDismissed;
+
+  /// No description provided for @anomaliesStatusAll.
+  ///
+  /// In es, this message translates to:
+  /// **'Todas'**
+  String get anomaliesStatusAll;
+
+  /// No description provided for @anomaliesClearFilters.
+  ///
+  /// In es, this message translates to:
+  /// **'Limpiar filtros'**
+  String get anomaliesClearFilters;
+
+  /// No description provided for @anomaliesRuleLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Regla'**
+  String get anomaliesRuleLabel;
+
+  /// No description provided for @anomaliesSeverityLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Severidad'**
+  String get anomaliesSeverityLabel;
+
+  /// No description provided for @anomaliesSeverityLow.
+  ///
+  /// In es, this message translates to:
+  /// **'Baja'**
+  String get anomaliesSeverityLow;
+
+  /// No description provided for @anomaliesSeverityMedium.
+  ///
+  /// In es, this message translates to:
+  /// **'Media'**
+  String get anomaliesSeverityMedium;
+
+  /// No description provided for @anomaliesSeverityHigh.
+  ///
+  /// In es, this message translates to:
+  /// **'Alta'**
+  String get anomaliesSeverityHigh;
+
+  /// No description provided for @anomalyRuleShiftShortage.
+  ///
+  /// In es, this message translates to:
+  /// **'Faltantes repetidos'**
+  String get anomalyRuleShiftShortage;
+
+  /// No description provided for @anomalyRuleLostTicketRate.
+  ///
+  /// In es, this message translates to:
+  /// **'Tasa alta de ticket perdido'**
+  String get anomalyRuleLostTicketRate;
+
+  /// No description provided for @anomalyRulePostCloseAdjustment.
+  ///
+  /// In es, this message translates to:
+  /// **'Ajuste después del cierre'**
+  String get anomalyRulePostCloseAdjustment;
+
+  /// No description provided for @anomalyRuleZeroCharge.
+  ///
+  /// In es, this message translates to:
+  /// **'Salida sin cobro'**
+  String get anomalyRuleZeroCharge;
+
+  /// No description provided for @anomalyRuleShortLostTicket.
+  ///
+  /// In es, this message translates to:
+  /// **'Ticket perdido con estadía corta'**
+  String get anomalyRuleShortLostTicket;
+
+  /// No description provided for @anomalyRuleDiscountRate.
+  ///
+  /// In es, this message translates to:
+  /// **'Descuentos frecuentes'**
+  String get anomalyRuleDiscountRate;
+
+  /// No description provided for @anomalyRuleShiftOpenLong.
+  ///
+  /// In es, this message translates to:
+  /// **'Turno abierto demasiado tiempo'**
+  String get anomalyRuleShiftOpenLong;
+
+  /// No description provided for @anomalyRuleSessionOpenLong.
+  ///
+  /// In es, this message translates to:
+  /// **'Vehículo dentro por muchos días'**
+  String get anomalyRuleSessionOpenLong;
+
+  /// No description provided for @anomalyDescShiftShortage.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} turnos con faltante, total {amount}'**
+  String anomalyDescShiftShortage(int count, String amount);
+
+  /// No description provided for @anomalyDescLostTicketRate.
+  ///
+  /// In es, this message translates to:
+  /// **'{rate} % de tickets perdidos frente a {baseline} % de la sede'**
+  String anomalyDescLostTicketRate(String rate, String baseline);
+
+  /// No description provided for @anomalyDescPostCloseAdjustment.
+  ///
+  /// In es, this message translates to:
+  /// **'Diferencia {from} → {to} ajustada por {admin}'**
+  String anomalyDescPostCloseAdjustment(String from, String to, String admin);
+
+  /// No description provided for @anomalyDescZeroCharge.
+  ///
+  /// In es, this message translates to:
+  /// **'{plate} salió sin cobro ({method})'**
+  String anomalyDescZeroCharge(String plate, String method);
+
+  /// No description provided for @anomalyDescShortLostTicket.
+  ///
+  /// In es, this message translates to:
+  /// **'{plate}: ticket perdido tras {minutes} min'**
+  String anomalyDescShortLostTicket(String plate, int minutes);
+
+  /// No description provided for @anomalyDescDiscountRate.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} descuentos ({share} % de las salidas)'**
+  String anomalyDescDiscountRate(int count, String share);
+
+  /// No description provided for @anomalyDescShiftOpenLong.
+  ///
+  /// In es, this message translates to:
+  /// **'Abierto desde hace {hours} h'**
+  String anomalyDescShiftOpenLong(int hours);
+
+  /// No description provided for @anomalyDescSessionOpenLong.
+  ///
+  /// In es, this message translates to:
+  /// **'{plate} lleva {days} días dentro'**
+  String anomalyDescSessionOpenLong(String plate, int days);
+
+  /// No description provided for @anomalyAcknowledge.
+  ///
+  /// In es, this message translates to:
+  /// **'Reconocer'**
+  String get anomalyAcknowledge;
+
+  /// No description provided for @anomalyDismiss.
+  ///
+  /// In es, this message translates to:
+  /// **'Descartar'**
+  String get anomalyDismiss;
+
+  /// No description provided for @anomalyNoteLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Nota'**
+  String get anomalyNoteLabel;
+
+  /// No description provided for @anomalyNoteRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe una nota de al menos 3 caracteres'**
+  String get anomalyNoteRequired;
+
+  /// No description provided for @anomalyViewAudit.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver auditoría'**
+  String get anomalyViewAudit;
+
+  /// No description provided for @anomalyViewContext.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver detalle'**
+  String get anomalyViewContext;
+
+  /// No description provided for @anomaliesEmptyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Todo en orden'**
+  String get anomaliesEmptyTitle;
+
+  /// No description provided for @anomaliesEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay anomalías con estos filtros.'**
+  String get anomaliesEmpty;
+
+  /// No description provided for @anomaliesSettingsEnabled.
+  ///
+  /// In es, this message translates to:
+  /// **'Detección activa'**
+  String get anomaliesSettingsEnabled;
+
+  /// No description provided for @anomaliesSettingsSaved.
+  ///
+  /// In es, this message translates to:
+  /// **'Umbrales guardados'**
+  String get anomaliesSettingsSaved;
+
+  /// No description provided for @anomaliesSettingsWindowDays.
+  ///
+  /// In es, this message translates to:
+  /// **'Ventana (días)'**
+  String get anomaliesSettingsWindowDays;
+
+  /// No description provided for @anomaliesSettingsShortageMinAmount.
+  ///
+  /// In es, this message translates to:
+  /// **'Faltante mínimo por turno'**
+  String get anomaliesSettingsShortageMinAmount;
+
+  /// No description provided for @anomaliesSettingsShortageMinShifts.
+  ///
+  /// In es, this message translates to:
+  /// **'Turnos con faltante para alertar'**
+  String get anomaliesSettingsShortageMinShifts;
+
+  /// No description provided for @anomaliesSettingsLostTicketMinClosed.
+  ///
+  /// In es, this message translates to:
+  /// **'Salidas mínimas por operador'**
+  String get anomaliesSettingsLostTicketMinClosed;
+
+  /// No description provided for @anomaliesSettingsLostTicketMinRatePct.
+  ///
+  /// In es, this message translates to:
+  /// **'Tasa mínima de ticket perdido (%)'**
+  String get anomaliesSettingsLostTicketMinRatePct;
+
+  /// No description provided for @anomaliesSettingsLostTicketFactorPct.
+  ///
+  /// In es, this message translates to:
+  /// **'Veces la tasa de la sede (%)'**
+  String get anomaliesSettingsLostTicketFactorPct;
+
+  /// No description provided for @anomaliesSettingsAdjustmentMinAmount.
+  ///
+  /// In es, this message translates to:
+  /// **'Ajuste mínimo tras el cierre'**
+  String get anomaliesSettingsAdjustmentMinAmount;
+
+  /// No description provided for @anomaliesSettingsShortStayMinutes.
+  ///
+  /// In es, this message translates to:
+  /// **'Estadía corta (minutos)'**
+  String get anomaliesSettingsShortStayMinutes;
+
+  /// No description provided for @anomaliesSettingsDiscountMinCount.
+  ///
+  /// In es, this message translates to:
+  /// **'Descuentos mínimos por admin'**
+  String get anomaliesSettingsDiscountMinCount;
+
+  /// No description provided for @anomaliesSettingsDiscountSharePct.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuota de descuentos (%)'**
+  String get anomaliesSettingsDiscountSharePct;
+
+  /// No description provided for @anomaliesSettingsShiftOpenHours.
+  ///
+  /// In es, this message translates to:
+  /// **'Horas para turno abierto'**
+  String get anomaliesSettingsShiftOpenHours;
+
+  /// No description provided for @anomaliesSettingsSessionOpenDays.
+  ///
+  /// In es, this message translates to:
+  /// **'Días para vehículo dentro'**
+  String get anomaliesSettingsSessionOpenDays;
+
+  /// No description provided for @notifTypeCashAnomaly.
+  ///
+  /// In es, this message translates to:
+  /// **'Anomalía de caja'**
+  String get notifTypeCashAnomaly;
+
+  /// No description provided for @errorAnomalyNotFound.
+  ///
+  /// In es, this message translates to:
+  /// **'No encontramos esa anomalía'**
+  String get errorAnomalyNotFound;
+
+  /// No description provided for @errorAnomalyAlreadyResolved.
+  ///
+  /// In es, this message translates to:
+  /// **'Esa anomalía ya fue revisada'**
+  String get errorAnomalyAlreadyResolved;
+
+  /// No description provided for @errorAnomalyNoteRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe una nota de al menos 3 caracteres'**
+  String get errorAnomalyNoteRequired;
+
+  /// No description provided for @errorInvalidAnomalySetting.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisa los valores de los umbrales'**
+  String get errorInvalidAnomalySetting;
 
   /// No description provided for @syncQueued.
   ///
@@ -896,6 +2318,18 @@ abstract class AppLocalizations {
   /// **'Todos'**
   String get auditAllActors;
 
+  /// No description provided for @auditSearch.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscar'**
+  String get auditSearch;
+
+  /// No description provided for @auditSearchHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Placa, usuario, tabla o valor'**
+  String get auditSearchHint;
+
   /// No description provided for @auditTitle.
   ///
   /// In es, this message translates to:
@@ -1015,6 +2449,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Vence en {duration}'**
   String reservationExpiresIn(String duration);
+
+  /// No description provided for @reservationInGrace.
+  ///
+  /// In es, this message translates to:
+  /// **'En tolerancia'**
+  String get reservationInGrace;
 
   /// No description provided for @reservationQuick2h.
   ///
@@ -1838,6 +3278,54 @@ abstract class AppLocalizations {
   /// **'Cobrar en caja'**
   String get vehicleChargeAction;
 
+  /// No description provided for @vehicleEvidenceAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver evidencias ({count})'**
+  String vehicleEvidenceAction(int count);
+
+  /// No description provided for @sessionEvidenceTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Evidencias de {plate}'**
+  String sessionEvidenceTitle(String plate);
+
+  /// No description provided for @sessionEvidenceEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin fotos ni videos para esta sesión'**
+  String get sessionEvidenceEmpty;
+
+  /// No description provided for @sessionEvidencePhotoLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Foto {index}'**
+  String sessionEvidencePhotoLabel(int index);
+
+  /// No description provided for @sessionEvidenceVideoLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Video de {seconds} s'**
+  String sessionEvidenceVideoLabel(int seconds);
+
+  /// No description provided for @sessionEvidenceDurationShort.
+  ///
+  /// In es, this message translates to:
+  /// **'{seconds} s'**
+  String sessionEvidenceDurationShort(int seconds);
+
+  /// No description provided for @sessionEvidenceOpenFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo abrir la evidencia'**
+  String get sessionEvidenceOpenFailed;
+
+  /// No description provided for @sessionEvidenceShort.
+  ///
+  /// In es, this message translates to:
+  /// **'Evidencias ({count})'**
+  String sessionEvidenceShort(int count);
+
   /// No description provided for @vehicleWhatsappReadyAction.
   ///
   /// In es, this message translates to:
@@ -1873,6 +3361,42 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'No se pudo abrir WhatsApp en este dispositivo'**
   String get errorWhatsappUnavailable;
+
+  /// No description provided for @errorVersionConflict.
+  ///
+  /// In es, this message translates to:
+  /// **'Otra persona cambió este registro. Revisa el conflicto desde el ícono de sincronización.'**
+  String get errorVersionConflict;
+
+  /// No description provided for @errorConflictPending.
+  ///
+  /// In es, this message translates to:
+  /// **'Resuelve primero el conflicto pendiente de este registro.'**
+  String get errorConflictPending;
+
+  /// No description provided for @errorVersionRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'Actualiza la aplicación para editar este registro.'**
+  String get errorVersionRequired;
+
+  /// No description provided for @errorMinVersionRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'Define primero la versión mínima de la app.'**
+  String get errorMinVersionRequired;
+
+  /// No description provided for @errorMapsUnavailable.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo abrir el mapa en este dispositivo'**
+  String get errorMapsUnavailable;
+
+  /// No description provided for @bookingDirections.
+  ///
+  /// In es, this message translates to:
+  /// **'Cómo llegar'**
+  String get bookingDirections;
 
   /// No description provided for @vehicleNotes.
   ///
@@ -1945,6 +3469,72 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Historial de vehículo'**
   String get vehicleHistoryTitle;
+
+  /// No description provided for @vehicleHistoryAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver historial'**
+  String get vehicleHistoryAction;
+
+  /// No description provided for @setupTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Primeros pasos'**
+  String get setupTitle;
+
+  /// No description provided for @setupProgress.
+  ///
+  /// In es, this message translates to:
+  /// **'{done} de {total} listos'**
+  String setupProgress(int done, int total);
+
+  /// No description provided for @setupCategories.
+  ///
+  /// In es, this message translates to:
+  /// **'Categorías de vehículos'**
+  String get setupCategories;
+
+  /// No description provided for @setupCategoriesHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Carros, motos y otros tipos'**
+  String get setupCategoriesHint;
+
+  /// No description provided for @setupTariffs.
+  ///
+  /// In es, this message translates to:
+  /// **'Tarifas'**
+  String get setupTariffs;
+
+  /// No description provided for @setupTariffsHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Precios por hora, día y noche'**
+  String get setupTariffsHint;
+
+  /// No description provided for @setupCapacity.
+  ///
+  /// In es, this message translates to:
+  /// **'Espacios y capacidad'**
+  String get setupCapacity;
+
+  /// No description provided for @setupCapacityHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Capacidad en Ajustes o mapa físico'**
+  String get setupCapacityHint;
+
+  /// No description provided for @setupIdentity.
+  ///
+  /// In es, this message translates to:
+  /// **'Datos del parqueadero'**
+  String get setupIdentity;
+
+  /// No description provided for @setupIdentityHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Dirección y teléfono para recibos y QR'**
+  String get setupIdentityHint;
 
   /// No description provided for @vehicleHistoryPrompt.
   ///
@@ -2143,6 +3733,48 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Desactívalo para mantenimiento'**
   String get spotsActiveHint;
+
+  /// No description provided for @spotsReason.
+  ///
+  /// In es, this message translates to:
+  /// **'Motivo del mantenimiento (opcional)'**
+  String get spotsReason;
+
+  /// No description provided for @spotsReasonHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Ej. fuga de aceite, pintura, vidrio roto'**
+  String get spotsReasonHint;
+
+  /// No description provided for @spotsReasonInvalid.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe al menos 3 caracteres o déjalo vacío'**
+  String get spotsReasonInvalid;
+
+  /// No description provided for @spotsHistory.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver historial'**
+  String get spotsHistory;
+
+  /// No description provided for @spotsHistoryTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Historial de {code}'**
+  String spotsHistoryTitle(String code);
+
+  /// No description provided for @spotsHistoryEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin cambios de estado'**
+  String get spotsHistoryEmpty;
+
+  /// No description provided for @spotsHistorySystem.
+  ///
+  /// In es, this message translates to:
+  /// **'Sistema'**
+  String get spotsHistorySystem;
 
   /// No description provided for @spotsDelete.
   ///
@@ -2438,6 +4070,18 @@ abstract class AppLocalizations {
   /// **'Máximo de vehículos con llaves'**
   String get settingsKeyCapacity;
 
+  /// No description provided for @settingsReservationGrace.
+  ///
+  /// In es, this message translates to:
+  /// **'Tolerancia de reservas (min)'**
+  String get settingsReservationGrace;
+
+  /// No description provided for @settingsReservationGraceHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Minutos de gracia tras el vencimiento para que el cliente llegue; 0 la desactiva.'**
+  String get settingsReservationGraceHint;
+
   /// No description provided for @settingsCapacityHint.
   ///
   /// In es, this message translates to:
@@ -2533,6 +4177,30 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Configuración guardada'**
   String get settingsSaved;
+
+  /// No description provided for @settingsCoverSection.
+  ///
+  /// In es, this message translates to:
+  /// **'Portada de la página pública'**
+  String get settingsCoverSection;
+
+  /// No description provided for @settingsCoverHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Una foto ancha del parqueadero se muestra en la página de reservas.'**
+  String get settingsCoverHint;
+
+  /// No description provided for @settingsCoverConfigured.
+  ///
+  /// In es, this message translates to:
+  /// **'Portada configurada. Puedes reemplazarla cuando quieras.'**
+  String get settingsCoverConfigured;
+
+  /// No description provided for @settingsCoverPick.
+  ///
+  /// In es, this message translates to:
+  /// **'Elegir portada'**
+  String get settingsCoverPick;
 
   /// No description provided for @settingsLogoSection.
   ///
@@ -2653,6 +4321,84 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Mensualidades'**
   String get homeTodayPasses;
+
+  /// No description provided for @homeTrend.
+  ///
+  /// In es, this message translates to:
+  /// **'Tendencia'**
+  String get homeTrend;
+
+  /// No description provided for @homeTrendHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Últimos 7 días'**
+  String get homeTrendHint;
+
+  /// No description provided for @homeTrendRange.
+  ///
+  /// In es, this message translates to:
+  /// **'{start} – {end}'**
+  String homeTrendRange(String start, String end);
+
+  /// No description provided for @homeTrendTotal.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresos'**
+  String get homeTrendTotal;
+
+  /// No description provided for @homeTrendEntries.
+  ///
+  /// In es, this message translates to:
+  /// **'Entradas'**
+  String get homeTrendEntries;
+
+  /// No description provided for @homeTrendExits.
+  ///
+  /// In es, this message translates to:
+  /// **'Salidas'**
+  String get homeTrendExits;
+
+  /// No description provided for @homeTrendOpenReports.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir reportes'**
+  String get homeTrendOpenReports;
+
+  /// No description provided for @homeTrendEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin movimientos en los últimos días'**
+  String get homeTrendEmpty;
+
+  /// No description provided for @homeTrendUnavailable.
+  ///
+  /// In es, this message translates to:
+  /// **'Tendencia no disponible'**
+  String get homeTrendUnavailable;
+
+  /// No description provided for @homeTrendDay.
+  ///
+  /// In es, this message translates to:
+  /// **'{date}: {amount} · {entries} entradas · {exits} salidas'**
+  String homeTrendDay(String date, String amount, int entries, int exits);
+
+  /// No description provided for @homeTrendVsPrevious.
+  ///
+  /// In es, this message translates to:
+  /// **'{delta} vs semana anterior'**
+  String homeTrendVsPrevious(String delta);
+
+  /// No description provided for @homeTrendFlat.
+  ///
+  /// In es, this message translates to:
+  /// **'Igual que la semana anterior'**
+  String get homeTrendFlat;
+
+  /// No description provided for @homeStaleData.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin conexión · datos guardados de las {time}'**
+  String homeStaleData(String time);
 
   /// No description provided for @homeCapacityTitle.
   ///
@@ -3247,6 +4993,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Buscar por placa'**
   String get searchPlate;
+
+  /// No description provided for @monthlyPassesSearch.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscar placa o propietario'**
+  String get monthlyPassesSearch;
+
+  /// No description provided for @monthlyPassesSearchHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Placa, nombre o teléfono'**
+  String get monthlyPassesSearchHint;
 
   /// No description provided for @checkOutClearSearch.
   ///
@@ -3887,8 +5645,14 @@ abstract class AppLocalizations {
   /// No description provided for @vehiclesSearch.
   ///
   /// In es, this message translates to:
-  /// **'Buscar placa'**
+  /// **'Buscar placa o propietario'**
   String get vehiclesSearch;
+
+  /// No description provided for @vehiclesSearchHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Placa, nombre o teléfono'**
+  String get vehiclesSearchHint;
 
   /// No description provided for @vehiclesNoMatch.
   ///
@@ -4400,6 +6164,18 @@ abstract class AppLocalizations {
   /// **'30 días'**
   String get reportsLast30;
 
+  /// No description provided for @reportsThisMonth.
+  ///
+  /// In es, this message translates to:
+  /// **'Este mes'**
+  String get reportsThisMonth;
+
+  /// No description provided for @reportsLastMonth.
+  ///
+  /// In es, this message translates to:
+  /// **'Mes anterior'**
+  String get reportsLastMonth;
+
   /// No description provided for @reportsTitle.
   ///
   /// In es, this message translates to:
@@ -4471,6 +6247,90 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Ingresos por día'**
   String get reportsRevenueByDay;
+
+  /// No description provided for @reportsReservationsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Reservas de cupo'**
+  String get reportsReservationsTitle;
+
+  /// No description provided for @reportsReservationsSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuántas se crearon en el periodo y cómo terminaron'**
+  String get reportsReservationsSubtitle;
+
+  /// No description provided for @reportsReservationsPublic.
+  ///
+  /// In es, this message translates to:
+  /// **'Reservas web'**
+  String get reportsReservationsPublic;
+
+  /// No description provided for @reportsReservationsConversion.
+  ///
+  /// In es, this message translates to:
+  /// **'{value}% llegaron a entrar'**
+  String reportsReservationsConversion(int value);
+
+  /// No description provided for @reportsReservationsClosed.
+  ///
+  /// In es, this message translates to:
+  /// **'Canceladas o vencidas'**
+  String get reportsReservationsClosed;
+
+  /// No description provided for @reportsReservationsClosedHint.
+  ///
+  /// In es, this message translates to:
+  /// **'{cancelled, plural, =1{1 cancelada} other{{cancelled} canceladas}} · {expired, plural, =1{1 vencida} other{{expired} vencidas}}'**
+  String reportsReservationsClosedHint(int cancelled, int expired);
+
+  /// No description provided for @reportsReservationsTotal.
+  ///
+  /// In es, this message translates to:
+  /// **'{total} reservas en total · {app} desde recepción · {used} terminaron en entrada'**
+  String reportsReservationsTotal(int total, int app, int used);
+
+  /// No description provided for @reportsHourlyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tráfico por hora'**
+  String get reportsHourlyTitle;
+
+  /// No description provided for @reportsHourlySubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Entradas y salidas en el horario del parqueadero'**
+  String get reportsHourlySubtitle;
+
+  /// No description provided for @reportsHourlyPeak.
+  ///
+  /// In es, this message translates to:
+  /// **'Hora pico: {time} · {count} entradas'**
+  String reportsHourlyPeak(String time, int count);
+
+  /// No description provided for @reportsHourlyCell.
+  ///
+  /// In es, this message translates to:
+  /// **'{time} · {entries} entradas · {exits} salidas'**
+  String reportsHourlyCell(String time, int entries, int exits);
+
+  /// No description provided for @reportsHourlyEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin entradas en el periodo'**
+  String get reportsHourlyEmpty;
+
+  /// No description provided for @reportsHourlyPair.
+  ///
+  /// In es, this message translates to:
+  /// **'{entries} entradas · {exits} salidas'**
+  String reportsHourlyPair(int entries, int exits);
+
+  /// No description provided for @reportsHourlyLegend.
+  ///
+  /// In es, this message translates to:
+  /// **'La barra muestra las entradas; el detalle incluye las salidas.'**
+  String get reportsHourlyLegend;
 
   /// No description provided for @reportsPassRevenue.
   ///
@@ -4883,14 +6743,56 @@ abstract class AppLocalizations {
   /// No description provided for @reservationsSearchHint.
   ///
   /// In es, this message translates to:
-  /// **'Placa'**
+  /// **'Placa, nombre, celular o código'**
   String get reservationsSearchHint;
+
+  /// No description provided for @reservationWeb.
+  ///
+  /// In es, this message translates to:
+  /// **'Web'**
+  String get reservationWeb;
+
+  /// No description provided for @reservationCall.
+  ///
+  /// In es, this message translates to:
+  /// **'Llamar al cliente'**
+  String get reservationCall;
+
+  /// No description provided for @reservationWhatsApp.
+  ///
+  /// In es, this message translates to:
+  /// **'WhatsApp al cliente'**
+  String get reservationWhatsApp;
+
+  /// No description provided for @reservationWhatsAppMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'Hola, te escribimos por tu reserva de la placa {plate}.'**
+  String reservationWhatsAppMessage(String plate);
 
   /// No description provided for @reservationsOnlyExpiring.
   ///
   /// In es, this message translates to:
   /// **'Solo por vencer'**
   String get reservationsOnlyExpiring;
+
+  /// No description provided for @reservationsOnlyPublic.
+  ///
+  /// In es, this message translates to:
+  /// **'Solo web'**
+  String get reservationsOnlyPublic;
+
+  /// No description provided for @reservationsCopyCsv.
+  ///
+  /// In es, this message translates to:
+  /// **'Copiar CSV'**
+  String get reservationsCopyCsv;
+
+  /// No description provided for @reservationsCsvCopied.
+  ///
+  /// In es, this message translates to:
+  /// **'Reservas copiadas en CSV'**
+  String get reservationsCsvCopied;
 
   /// No description provided for @reservationsCount.
   ///
@@ -5012,6 +6914,24 @@ abstract class AppLocalizations {
   /// **'Vehículo'**
   String get checkInVehicleSection;
 
+  /// No description provided for @checkInHoldLookup.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscar reserva ({count})'**
+  String checkInHoldLookup(int count);
+
+  /// No description provided for @checkInHoldLookupTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Reservas activas'**
+  String get checkInHoldLookupTitle;
+
+  /// No description provided for @checkInHoldLookupEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay reservas activas en este momento.'**
+  String get checkInHoldLookupEmpty;
+
   /// No description provided for @checkInVehicleHint.
   ///
   /// In es, this message translates to:
@@ -5059,6 +6979,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Estadía larga'**
   String get notifTypeOverstay;
+
+  /// No description provided for @notifTypeReservation.
+  ///
+  /// In es, this message translates to:
+  /// **'Reserva web'**
+  String get notifTypeReservation;
 
   /// No description provided for @notifTypeShiftClosed.
   ///
@@ -5719,6 +7645,3450 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Ubicación: {location}'**
   String emergencyLocation(String location);
+
+  /// No description provided for @reportsPeriodTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Comparación por periodo'**
+  String get reportsPeriodTitle;
+
+  /// No description provided for @reportsPeriodSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Cada mes frente al mes anterior y al mismo mes del año pasado'**
+  String get reportsPeriodSubtitle;
+
+  /// No description provided for @reportsPeriodActiveLotOnly.
+  ///
+  /// In es, this message translates to:
+  /// **'Solo la sede activa'**
+  String get reportsPeriodActiveLotOnly;
+
+  /// No description provided for @reportsPeriodMonths.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} meses'**
+  String reportsPeriodMonths(int count);
+
+  /// No description provided for @reportsPeriodMetricLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Indicador'**
+  String get reportsPeriodMetricLabel;
+
+  /// No description provided for @reportsPeriodMetricRevenue.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresos'**
+  String get reportsPeriodMetricRevenue;
+
+  /// No description provided for @reportsPeriodMetricEntries.
+  ///
+  /// In es, this message translates to:
+  /// **'Entradas'**
+  String get reportsPeriodMetricEntries;
+
+  /// No description provided for @reportsPeriodMetricExits.
+  ///
+  /// In es, this message translates to:
+  /// **'Salidas'**
+  String get reportsPeriodMetricExits;
+
+  /// No description provided for @reportsPeriodMetricAvgTicket.
+  ///
+  /// In es, this message translates to:
+  /// **'Ticket promedio'**
+  String get reportsPeriodMetricAvgTicket;
+
+  /// No description provided for @reportsPeriodMetricAvgStay.
+  ///
+  /// In es, this message translates to:
+  /// **'Estadía promedio'**
+  String get reportsPeriodMetricAvgStay;
+
+  /// No description provided for @reportsPeriodMetricPassRevenue.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresos por mensualidades'**
+  String get reportsPeriodMetricPassRevenue;
+
+  /// No description provided for @reportsPeriodMetricReservations.
+  ///
+  /// In es, this message translates to:
+  /// **'Reservas'**
+  String get reportsPeriodMetricReservations;
+
+  /// No description provided for @reportsPeriodReservationsUsed.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} usadas'**
+  String reportsPeriodReservationsUsed(int count);
+
+  /// No description provided for @reportsPeriodPartial.
+  ///
+  /// In es, this message translates to:
+  /// **'Mes en curso · {days} de {total} días'**
+  String reportsPeriodPartial(int days, int total);
+
+  /// No description provided for @reportsPeriodPartialChip.
+  ///
+  /// In es, this message translates to:
+  /// **'Parcial'**
+  String get reportsPeriodPartialChip;
+
+  /// No description provided for @reportsPeriodPartialHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Se compara con los primeros {days} días de cada mes'**
+  String reportsPeriodPartialHint(int days);
+
+  /// No description provided for @reportsPeriodVsMonth.
+  ///
+  /// In es, this message translates to:
+  /// **'{delta} vs mes anterior'**
+  String reportsPeriodVsMonth(String delta);
+
+  /// No description provided for @reportsPeriodVsYear.
+  ///
+  /// In es, this message translates to:
+  /// **'{delta} vs año anterior'**
+  String reportsPeriodVsYear(String delta);
+
+  /// No description provided for @reportsPeriodFlatMonth.
+  ///
+  /// In es, this message translates to:
+  /// **'Igual que el mes anterior'**
+  String get reportsPeriodFlatMonth;
+
+  /// No description provided for @reportsPeriodFlatYear.
+  ///
+  /// In es, this message translates to:
+  /// **'Igual que el año anterior'**
+  String get reportsPeriodFlatYear;
+
+  /// No description provided for @reportsPeriodNoBase.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin base de comparación'**
+  String get reportsPeriodNoBase;
+
+  /// No description provided for @reportsPeriodLegendCurrent.
+  ///
+  /// In es, this message translates to:
+  /// **'Mes'**
+  String get reportsPeriodLegendCurrent;
+
+  /// No description provided for @reportsPeriodLegendLastYear.
+  ///
+  /// In es, this message translates to:
+  /// **'Mismo mes del año anterior'**
+  String get reportsPeriodLegendLastYear;
+
+  /// No description provided for @reportsPeriodEmptyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no hay historial'**
+  String get reportsPeriodEmptyTitle;
+
+  /// No description provided for @reportsPeriodEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuando el parqueadero tenga movimiento verás aquí la comparación mensual.'**
+  String get reportsPeriodEmpty;
+
+  /// No description provided for @reportsPeriodUnavailable.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo cargar la comparación.'**
+  String get reportsPeriodUnavailable;
+
+  /// No description provided for @reportsPeriodBarSemantics.
+  ///
+  /// In es, this message translates to:
+  /// **'{month}: {value}; año anterior: {previous}'**
+  String reportsPeriodBarSemantics(String month, String value, String previous);
+
+  /// No description provided for @reportsPeriodPdfPartial.
+  ///
+  /// In es, this message translates to:
+  /// **'{month} ({days})'**
+  String reportsPeriodPdfPartial(String month, String days);
+
+  /// No description provided for @reportsPeriodPdfNoBase.
+  ///
+  /// In es, this message translates to:
+  /// **'n/d'**
+  String get reportsPeriodPdfNoBase;
+
+  /// No description provided for @navSatisfaction.
+  ///
+  /// In es, this message translates to:
+  /// **'Satisfacción'**
+  String get navSatisfaction;
+
+  /// No description provided for @feedbackTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu opinión'**
+  String get feedbackTitle;
+
+  /// No description provided for @feedbackGateTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresa la placa para calificar tu visita'**
+  String get feedbackGateTitle;
+
+  /// No description provided for @feedbackGateHint.
+  ///
+  /// In es, this message translates to:
+  /// **'La placa impresa en el recibo es la clave de acceso.'**
+  String get feedbackGateHint;
+
+  /// No description provided for @feedbackUnlock.
+  ///
+  /// In es, this message translates to:
+  /// **'Continuar'**
+  String get feedbackUnlock;
+
+  /// No description provided for @feedbackHeroTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Cómo fue tu visita a {lot}?'**
+  String feedbackHeroTitle(String lot);
+
+  /// No description provided for @feedbackHeroSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu opinión ayuda a mejorar el servicio. Toma menos de un minuto.'**
+  String get feedbackHeroSubtitle;
+
+  /// No description provided for @feedbackRateLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu calificación'**
+  String get feedbackRateLabel;
+
+  /// No description provided for @feedbackStarLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Calificar con {rating} estrellas'**
+  String feedbackStarLabel(int rating);
+
+  /// No description provided for @feedbackRating1.
+  ///
+  /// In es, this message translates to:
+  /// **'Muy mala'**
+  String get feedbackRating1;
+
+  /// No description provided for @feedbackRating2.
+  ///
+  /// In es, this message translates to:
+  /// **'Mala'**
+  String get feedbackRating2;
+
+  /// No description provided for @feedbackRating3.
+  ///
+  /// In es, this message translates to:
+  /// **'Regular'**
+  String get feedbackRating3;
+
+  /// No description provided for @feedbackRating4.
+  ///
+  /// In es, this message translates to:
+  /// **'Buena'**
+  String get feedbackRating4;
+
+  /// No description provided for @feedbackRating5.
+  ///
+  /// In es, this message translates to:
+  /// **'Excelente'**
+  String get feedbackRating5;
+
+  /// No description provided for @feedbackCommentLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Comentario (opcional)'**
+  String get feedbackCommentLabel;
+
+  /// No description provided for @feedbackCommentHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuéntanos qué podemos mejorar'**
+  String get feedbackCommentHint;
+
+  /// No description provided for @feedbackSubmit.
+  ///
+  /// In es, this message translates to:
+  /// **'Enviar calificación'**
+  String get feedbackSubmit;
+
+  /// No description provided for @feedbackThanksTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¡Gracias por tu opinión!'**
+  String get feedbackThanksTitle;
+
+  /// No description provided for @feedbackThanksBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu calificación ayuda a que el servicio mejore cada día.'**
+  String get feedbackThanksBody;
+
+  /// No description provided for @feedbackCloseHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Puedes cerrar esta página.'**
+  String get feedbackCloseHint;
+
+  /// No description provided for @feedbackAlreadyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya calificaste esta visita'**
+  String get feedbackAlreadyTitle;
+
+  /// No description provided for @feedbackAlreadyBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Gracias. Solo se acepta una calificación por visita.'**
+  String get feedbackAlreadyBody;
+
+  /// No description provided for @feedbackInvalidTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'No encontramos esta visita'**
+  String get feedbackInvalidTitle;
+
+  /// No description provided for @feedbackInvalidBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisa el enlace o el código del recibo. Si el problema continúa, pide ayuda en la recepción.'**
+  String get feedbackInvalidBody;
+
+  /// No description provided for @feedbackPendingTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu visita sigue en curso'**
+  String get feedbackPendingTitle;
+
+  /// No description provided for @feedbackPendingBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Podrás calificarla cuando registres la salida.'**
+  String get feedbackPendingBody;
+
+  /// No description provided for @feedbackReportTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Satisfacción del cliente'**
+  String get feedbackReportTitle;
+
+  /// No description provided for @feedbackReportSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Opiniones de tus clientes en el periodo'**
+  String get feedbackReportSubtitle;
+
+  /// No description provided for @feedbackPeriodSummary.
+  ///
+  /// In es, this message translates to:
+  /// **'{total, plural, =1{1 respuesta} other{{total} respuestas}} · últimos {days} días'**
+  String feedbackPeriodSummary(int total, int days);
+
+  /// No description provided for @feedbackAverage.
+  ///
+  /// In es, this message translates to:
+  /// **'Calificación promedio'**
+  String get feedbackAverage;
+
+  /// No description provided for @feedbackAverageValue.
+  ///
+  /// In es, this message translates to:
+  /// **'{whole},{decimal}'**
+  String feedbackAverageValue(int whole, int decimal);
+
+  /// No description provided for @feedbackAverageCaption.
+  ///
+  /// In es, this message translates to:
+  /// **'{total, plural, =0{Sin respuestas} =1{Basada en 1 respuesta} other{Basada en {total} respuestas}}'**
+  String feedbackAverageCaption(int total);
+
+  /// No description provided for @feedbackResponses.
+  ///
+  /// In es, this message translates to:
+  /// **'Respuestas'**
+  String get feedbackResponses;
+
+  /// No description provided for @feedbackResponseRate.
+  ///
+  /// In es, this message translates to:
+  /// **'{percent}% de las salidas'**
+  String feedbackResponseRate(int percent);
+
+  /// No description provided for @feedbackLowRatings.
+  ///
+  /// In es, this message translates to:
+  /// **'Calificaciones bajas'**
+  String get feedbackLowRatings;
+
+  /// No description provided for @feedbackLowCaption.
+  ///
+  /// In es, this message translates to:
+  /// **'1 a 3 estrellas'**
+  String get feedbackLowCaption;
+
+  /// No description provided for @feedbackLowEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Ninguna'**
+  String get feedbackLowEmpty;
+
+  /// No description provided for @feedbackDistribution.
+  ///
+  /// In es, this message translates to:
+  /// **'Distribución'**
+  String get feedbackDistribution;
+
+  /// No description provided for @feedbackDistributionRow.
+  ///
+  /// In es, this message translates to:
+  /// **'{rating} estrellas'**
+  String feedbackDistributionRow(int rating);
+
+  /// No description provided for @feedbackDistributionSemantics.
+  ///
+  /// In es, this message translates to:
+  /// **'{rating} estrellas: {count} respuestas'**
+  String feedbackDistributionSemantics(int rating, int count);
+
+  /// No description provided for @feedbackRecent.
+  ///
+  /// In es, this message translates to:
+  /// **'Últimos comentarios'**
+  String get feedbackRecent;
+
+  /// No description provided for @feedbackRecentEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin comentarios en el periodo'**
+  String get feedbackRecentEmpty;
+
+  /// No description provided for @feedbackNoComment.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin comentario'**
+  String get feedbackNoComment;
+
+  /// No description provided for @feedbackEmptyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no hay calificaciones'**
+  String get feedbackEmptyTitle;
+
+  /// No description provided for @feedbackEmptyBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuando tus clientes califiquen una visita desde el recibo, verás aquí el promedio y sus comentarios.'**
+  String get feedbackEmptyBody;
+
+  /// No description provided for @feedbackRefresh.
+  ///
+  /// In es, this message translates to:
+  /// **'Actualizar'**
+  String get feedbackRefresh;
+
+  /// No description provided for @errorFeedbackAlready.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya calificaste esta visita. Solo se acepta una calificación por visita.'**
+  String get errorFeedbackAlready;
+
+  /// No description provided for @receiptFeedbackHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Califica tu visita: escanea el código'**
+  String get receiptFeedbackHint;
+
+  /// No description provided for @vehicleWhatsappFeedback.
+  ///
+  /// In es, this message translates to:
+  /// **'Califica tu visita: {url}'**
+  String vehicleWhatsappFeedback(String url);
+
+  /// No description provided for @feedbackPeriodDays.
+  ///
+  /// In es, this message translates to:
+  /// **'{days, plural, =1{1 día} other{{days} días}}'**
+  String feedbackPeriodDays(int days);
+
+  /// No description provided for @paymentOnline.
+  ///
+  /// In es, this message translates to:
+  /// **'En línea'**
+  String get paymentOnline;
+
+  /// No description provided for @onlinePayTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Paga desde tu celular'**
+  String get onlinePayTitle;
+
+  /// No description provided for @onlinePayDue.
+  ///
+  /// In es, this message translates to:
+  /// **'Valor a pagar'**
+  String get onlinePayDue;
+
+  /// No description provided for @onlinePayAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Pagar en línea'**
+  String get onlinePayAction;
+
+  /// No description provided for @onlinePayHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Tarjeta, PSE o Nequi. Después de pagar tienes {minutes} minutos para salir.'**
+  String onlinePayHint(int minutes);
+
+  /// No description provided for @onlinePayChecking.
+  ///
+  /// In es, this message translates to:
+  /// **'Confirmando tu pago…'**
+  String get onlinePayChecking;
+
+  /// No description provided for @onlinePayApproved.
+  ///
+  /// In es, this message translates to:
+  /// **'Pago recibido. Muestra esta pantalla al salir.'**
+  String get onlinePayApproved;
+
+  /// No description provided for @onlinePayDeclined.
+  ///
+  /// In es, this message translates to:
+  /// **'El pago no fue aprobado. Puedes intentarlo de nuevo.'**
+  String get onlinePayDeclined;
+
+  /// No description provided for @onlinePayPending.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no confirmamos tu pago. Si ya pagaste, espera un momento.'**
+  String get onlinePayPending;
+
+  /// No description provided for @onlinePayGraceUntil.
+  ///
+  /// In es, this message translates to:
+  /// **'Sal antes de las {time}'**
+  String onlinePayGraceUntil(String time);
+
+  /// No description provided for @onlinePayLate.
+  ///
+  /// In es, this message translates to:
+  /// **'Si pasas de esa hora, pagas la diferencia en caja.'**
+  String get onlinePayLate;
+
+  /// No description provided for @onlinePayNothingDue.
+  ///
+  /// In es, this message translates to:
+  /// **'No tienes nada por pagar.'**
+  String get onlinePayNothingDue;
+
+  /// No description provided for @checkOutPaidOnline.
+  ///
+  /// In es, this message translates to:
+  /// **'Pagado en línea'**
+  String get checkOutPaidOnline;
+
+  /// No description provided for @checkOutBalanceDue.
+  ///
+  /// In es, this message translates to:
+  /// **'Saldo en caja'**
+  String get checkOutBalanceDue;
+
+  /// No description provided for @checkOutNoCashDue.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin cobro en caja: ya pagó en línea'**
+  String get checkOutNoCashDue;
+
+  /// No description provided for @checkOutGraceExpired.
+  ///
+  /// In es, this message translates to:
+  /// **'Venció la tolerancia de salida; se cobra la diferencia'**
+  String get checkOutGraceExpired;
+
+  /// No description provided for @checkOutOnlineUnknownOffline.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin conexión no se puede confirmar si este vehículo pagó en línea'**
+  String get checkOutOnlineUnknownOffline;
+
+  /// No description provided for @shiftOnlineSales.
+  ///
+  /// In es, this message translates to:
+  /// **'Pagos en línea'**
+  String get shiftOnlineSales;
+
+  /// No description provided for @receiptPaidOnline.
+  ///
+  /// In es, this message translates to:
+  /// **'Pagado en línea'**
+  String get receiptPaidOnline;
+
+  /// No description provided for @settingsOnlinePayments.
+  ///
+  /// In es, this message translates to:
+  /// **'Pagos en línea'**
+  String get settingsOnlinePayments;
+
+  /// No description provided for @settingsOnlinePaymentsHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Permite que el cliente pague desde el QR del recibo. Requiere credenciales Wompi en el servidor.'**
+  String get settingsOnlinePaymentsHint;
+
+  /// No description provided for @settingsOnlineGraceMinutes.
+  ///
+  /// In es, this message translates to:
+  /// **'Minutos para salir después de pagar'**
+  String get settingsOnlineGraceMinutes;
+
+  /// No description provided for @settingsOnlineMinAmount.
+  ///
+  /// In es, this message translates to:
+  /// **'Valor mínimo en línea'**
+  String get settingsOnlineMinAmount;
+
+  /// No description provided for @settingsOnlineCopOnly.
+  ///
+  /// In es, this message translates to:
+  /// **'Solo disponible para sedes en COP'**
+  String get settingsOnlineCopOnly;
+
+  /// No description provided for @notifTypeOnlinePayment.
+  ///
+  /// In es, this message translates to:
+  /// **'Pago en línea'**
+  String get notifTypeOnlinePayment;
+
+  /// No description provided for @notifTypeOnlinePaymentReview.
+  ///
+  /// In es, this message translates to:
+  /// **'Pago en línea por revisar'**
+  String get notifTypeOnlinePaymentReview;
+
+  /// No description provided for @reportOnlinePayments.
+  ///
+  /// In es, this message translates to:
+  /// **'Pagos en línea'**
+  String get reportOnlinePayments;
+
+  /// No description provided for @reportOnlineReference.
+  ///
+  /// In es, this message translates to:
+  /// **'Referencia'**
+  String get reportOnlineReference;
+
+  /// No description provided for @errorOnlinePaymentsDisabled.
+  ///
+  /// In es, this message translates to:
+  /// **'Los pagos en línea no están activos en esta sede'**
+  String get errorOnlinePaymentsDisabled;
+
+  /// No description provided for @errorNothingToPay.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay nada por pagar'**
+  String get errorNothingToPay;
+
+  /// No description provided for @errorAmountTooLow.
+  ///
+  /// In es, this message translates to:
+  /// **'El valor es menor al mínimo para pagar en línea; paga en caja'**
+  String get errorAmountTooLow;
+
+  /// No description provided for @errorPaymentsNotConfigured.
+  ///
+  /// In es, this message translates to:
+  /// **'El pago en línea no está disponible por ahora; paga en caja'**
+  String get errorPaymentsNotConfigured;
+
+  /// No description provided for @errorPaymentThrottled.
+  ///
+  /// In es, this message translates to:
+  /// **'Demasiados intentos de pago. Intenta de nuevo en una hora o paga en caja'**
+  String get errorPaymentThrottled;
+
+  /// No description provided for @errorPaymentEventFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo registrar el pago; intenta más tarde'**
+  String get errorPaymentEventFailed;
+
+  /// No description provided for @errorInvalidLink.
+  ///
+  /// In es, this message translates to:
+  /// **'El enlace no es válido o está incompleto'**
+  String get errorInvalidLink;
+
+  /// No description provided for @checkOutConfirmExit.
+  ///
+  /// In es, this message translates to:
+  /// **'Confirmar salida'**
+  String get checkOutConfirmExit;
+
+  /// No description provided for @passRenewalTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Renueva tu mensualidad'**
+  String get passRenewalTitle;
+
+  /// No description provided for @passRenewalPlate.
+  ///
+  /// In es, this message translates to:
+  /// **'Vehículo {plate}'**
+  String passRenewalPlate(String plate);
+
+  /// No description provided for @passRenewalPeriod.
+  ///
+  /// In es, this message translates to:
+  /// **'Nuevo periodo: {from} a {to}'**
+  String passRenewalPeriod(String from, String to);
+
+  /// No description provided for @passRenewalAmount.
+  ///
+  /// In es, this message translates to:
+  /// **'Valor'**
+  String get passRenewalAmount;
+
+  /// No description provided for @passRenewalPay.
+  ///
+  /// In es, this message translates to:
+  /// **'Pagar y renovar'**
+  String get passRenewalPay;
+
+  /// No description provided for @passRenewalChecking.
+  ///
+  /// In es, this message translates to:
+  /// **'Confirmando tu pago…'**
+  String get passRenewalChecking;
+
+  /// No description provided for @passRenewalPaid.
+  ///
+  /// In es, this message translates to:
+  /// **'Mensualidad renovada hasta el {date}.'**
+  String passRenewalPaid(String date);
+
+  /// No description provided for @passRenewalUnavailable.
+  ///
+  /// In es, this message translates to:
+  /// **'Este enlace ya no está disponible. Comunícate con el parqueadero.'**
+  String get passRenewalUnavailable;
+
+  /// No description provided for @passRenewalPayAtDesk.
+  ///
+  /// In es, this message translates to:
+  /// **'El pago en línea no está disponible por ahora; renueva en caja.'**
+  String get passRenewalPayAtDesk;
+
+  /// No description provided for @passRenewalLinkSent.
+  ///
+  /// In es, this message translates to:
+  /// **'Enlace enviado'**
+  String get passRenewalLinkSent;
+
+  /// No description provided for @passRenewalRenewedOnline.
+  ///
+  /// In es, this message translates to:
+  /// **'Renovada en línea'**
+  String get passRenewalRenewedOnline;
+
+  /// No description provided for @passRenewalSendLink.
+  ///
+  /// In es, this message translates to:
+  /// **'Enviar enlace de renovación'**
+  String get passRenewalSendLink;
+
+  /// No description provided for @passRenewalLinkQueued.
+  ///
+  /// In es, this message translates to:
+  /// **'Enlace en cola de WhatsApp'**
+  String get passRenewalLinkQueued;
+
+  /// No description provided for @settingsPassRenewal.
+  ///
+  /// In es, this message translates to:
+  /// **'Renovación de mensualidades'**
+  String get settingsPassRenewal;
+
+  /// No description provided for @settingsPassRenewalHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Envía recordatorios por WhatsApp antes de que venza la mensualidad.'**
+  String get settingsPassRenewalHint;
+
+  /// No description provided for @settingsPassRenewalLinks.
+  ///
+  /// In es, this message translates to:
+  /// **'Incluir enlace de pago'**
+  String get settingsPassRenewalLinks;
+
+  /// No description provided for @settingsPassRenewalLinksHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Requiere pagos en línea activos y credenciales Wompi.'**
+  String get settingsPassRenewalLinksHint;
+
+  /// No description provided for @settingsPassRenewalCadence.
+  ///
+  /// In es, this message translates to:
+  /// **'Días de aviso (ej. 7,3,1)'**
+  String get settingsPassRenewalCadence;
+
+  /// No description provided for @settingsPassRenewalCadenceInvalid.
+  ///
+  /// In es, this message translates to:
+  /// **'Usa hasta 5 números entre 0 y 30 separados por comas'**
+  String get settingsPassRenewalCadenceInvalid;
+
+  /// No description provided for @notifTypePassRenewalPaid.
+  ///
+  /// In es, this message translates to:
+  /// **'Mensualidad renovada en línea'**
+  String get notifTypePassRenewalPaid;
+
+  /// No description provided for @errorPassRenewalNotFound.
+  ///
+  /// In es, this message translates to:
+  /// **'Enlace de renovación no válido'**
+  String get errorPassRenewalNotFound;
+
+  /// No description provided for @errorPassRenewalPaid.
+  ///
+  /// In es, this message translates to:
+  /// **'Esta mensualidad ya fue renovada'**
+  String get errorPassRenewalPaid;
+
+  /// No description provided for @errorPassRenewalExpired.
+  ///
+  /// In es, this message translates to:
+  /// **'El enlace de renovación venció'**
+  String get errorPassRenewalExpired;
+
+  /// No description provided for @errorPassRenewalDisabled.
+  ///
+  /// In es, this message translates to:
+  /// **'La renovación en línea no está activa en esta sede'**
+  String get errorPassRenewalDisabled;
+
+  /// No description provided for @errorMissingOwnerPhone.
+  ///
+  /// In es, this message translates to:
+  /// **'El vehículo no tiene teléfono del propietario'**
+  String get errorMissingOwnerPhone;
+
+  /// No description provided for @errorPassAlreadyRenewed.
+  ///
+  /// In es, this message translates to:
+  /// **'La mensualidad ya tiene una renovación'**
+  String get errorPassAlreadyRenewed;
+
+  /// No description provided for @errorPassNotFound.
+  ///
+  /// In es, this message translates to:
+  /// **'Mensualidad no encontrada'**
+  String get errorPassNotFound;
+
+  /// No description provided for @navMerchants.
+  ///
+  /// In es, this message translates to:
+  /// **'Convenios'**
+  String get navMerchants;
+
+  /// No description provided for @merchantsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Convenios con comercios'**
+  String get merchantsTitle;
+
+  /// No description provided for @merchantsEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no hay convenios. Crea uno para dar descuento a los clientes de un comercio vecino.'**
+  String get merchantsEmpty;
+
+  /// No description provided for @merchantsAdd.
+  ///
+  /// In es, this message translates to:
+  /// **'Nuevo convenio'**
+  String get merchantsAdd;
+
+  /// No description provided for @merchantFormName.
+  ///
+  /// In es, this message translates to:
+  /// **'Nombre del comercio'**
+  String get merchantFormName;
+
+  /// No description provided for @merchantFormKind.
+  ///
+  /// In es, this message translates to:
+  /// **'Tipo de beneficio'**
+  String get merchantFormKind;
+
+  /// No description provided for @merchantKindFreeMinutes.
+  ///
+  /// In es, this message translates to:
+  /// **'Minutos gratis'**
+  String get merchantKindFreeMinutes;
+
+  /// No description provided for @merchantKindPercentage.
+  ///
+  /// In es, this message translates to:
+  /// **'Porcentaje'**
+  String get merchantKindPercentage;
+
+  /// No description provided for @merchantKindFixedAmount.
+  ///
+  /// In es, this message translates to:
+  /// **'Monto fijo'**
+  String get merchantKindFixedAmount;
+
+  /// No description provided for @merchantFormValueMinutes.
+  ///
+  /// In es, this message translates to:
+  /// **'Minutos gratis (1-1440)'**
+  String get merchantFormValueMinutes;
+
+  /// No description provided for @merchantFormValuePercent.
+  ///
+  /// In es, this message translates to:
+  /// **'Porcentaje (1-100)'**
+  String get merchantFormValuePercent;
+
+  /// No description provided for @merchantFormValueAmount.
+  ///
+  /// In es, this message translates to:
+  /// **'Monto del descuento'**
+  String get merchantFormValueAmount;
+
+  /// No description provided for @merchantFormMaxAmount.
+  ///
+  /// In es, this message translates to:
+  /// **'Tope por validación (opcional)'**
+  String get merchantFormMaxAmount;
+
+  /// No description provided for @merchantFormBilling.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Quién paga el beneficio?'**
+  String get merchantFormBilling;
+
+  /// No description provided for @merchantBillingMerchantPaid.
+  ///
+  /// In es, this message translates to:
+  /// **'El comercio paga'**
+  String get merchantBillingMerchantPaid;
+
+  /// No description provided for @merchantBillingCourtesy.
+  ///
+  /// In es, this message translates to:
+  /// **'Cortesía del parqueadero'**
+  String get merchantBillingCourtesy;
+
+  /// No description provided for @merchantFormDailyCap.
+  ///
+  /// In es, this message translates to:
+  /// **'Máximo por día (opcional)'**
+  String get merchantFormDailyCap;
+
+  /// No description provided for @merchantFormMonthlyCap.
+  ///
+  /// In es, this message translates to:
+  /// **'Máximo por mes (opcional)'**
+  String get merchantFormMonthlyCap;
+
+  /// No description provided for @merchantFormActive.
+  ///
+  /// In es, this message translates to:
+  /// **'Activo'**
+  String get merchantFormActive;
+
+  /// No description provided for @merchantUsage.
+  ///
+  /// In es, this message translates to:
+  /// **'Hoy {today} · Mes {month}'**
+  String merchantUsage(int today, int month);
+
+  /// No description provided for @merchantPending.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =0{Sin pendientes} =1{1 pendiente} other{{count} pendientes}}'**
+  String merchantPending(int count);
+
+  /// No description provided for @merchantLocked.
+  ///
+  /// In es, this message translates to:
+  /// **'Bloqueado por PIN'**
+  String get merchantLocked;
+
+  /// No description provided for @merchantCredentialsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Credenciales del comercio'**
+  String get merchantCredentialsTitle;
+
+  /// No description provided for @merchantCredentialsHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Se muestran una sola vez. Entrega el enlace y el PIN al cajero del comercio.'**
+  String get merchantCredentialsHint;
+
+  /// No description provided for @merchantCredentialsLink.
+  ///
+  /// In es, this message translates to:
+  /// **'Enlace'**
+  String get merchantCredentialsLink;
+
+  /// No description provided for @merchantCredentialsPin.
+  ///
+  /// In es, this message translates to:
+  /// **'PIN'**
+  String get merchantCredentialsPin;
+
+  /// No description provided for @merchantCredentialsCopy.
+  ///
+  /// In es, this message translates to:
+  /// **'Copiar'**
+  String get merchantCredentialsCopy;
+
+  /// No description provided for @merchantCredentialsNoAppUrl.
+  ///
+  /// In es, this message translates to:
+  /// **'Falta configurar APP_URL: copia solo la ruta {path}.'**
+  String merchantCredentialsNoAppUrl(String path);
+
+  /// No description provided for @merchantResetPin.
+  ///
+  /// In es, this message translates to:
+  /// **'Generar nuevo PIN'**
+  String get merchantResetPin;
+
+  /// No description provided for @merchantRotateToken.
+  ///
+  /// In es, this message translates to:
+  /// **'Generar nuevo enlace y PIN'**
+  String get merchantRotateToken;
+
+  /// No description provided for @merchantDeleteConfirm.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Eliminar el convenio {name}?'**
+  String merchantDeleteConfirm(String name);
+
+  /// No description provided for @merchantPolicyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Convenios por vehículo'**
+  String get merchantPolicyTitle;
+
+  /// No description provided for @merchantPolicyMax.
+  ///
+  /// In es, this message translates to:
+  /// **'Máximo de convenios por vehículo (0 = desactivar)'**
+  String get merchantPolicyMax;
+
+  /// No description provided for @merchantSettlementTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Liquidación'**
+  String get merchantSettlementTitle;
+
+  /// No description provided for @merchantSettlementEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'No hubo convenios en este rango.'**
+  String get merchantSettlementEmpty;
+
+  /// No description provided for @merchantSettlementValidations.
+  ///
+  /// In es, this message translates to:
+  /// **'Validaciones'**
+  String get merchantSettlementValidations;
+
+  /// No description provided for @merchantSettlementApplied.
+  ///
+  /// In es, this message translates to:
+  /// **'Aplicadas'**
+  String get merchantSettlementApplied;
+
+  /// No description provided for @merchantSettlementForfeited.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin efecto'**
+  String get merchantSettlementForfeited;
+
+  /// No description provided for @merchantSettlementRevoked.
+  ///
+  /// In es, this message translates to:
+  /// **'Revocadas'**
+  String get merchantSettlementRevoked;
+
+  /// No description provided for @merchantSettlementDiscounted.
+  ///
+  /// In es, this message translates to:
+  /// **'Descuento otorgado'**
+  String get merchantSettlementDiscounted;
+
+  /// No description provided for @merchantSettlementOwed.
+  ///
+  /// In es, this message translates to:
+  /// **'A cobrar al comercio'**
+  String get merchantSettlementOwed;
+
+  /// No description provided for @merchantSettlementCourtesy.
+  ///
+  /// In es, this message translates to:
+  /// **'Cortesía del parqueadero'**
+  String get merchantSettlementCourtesy;
+
+  /// No description provided for @merchantSettlementPdfTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Liquidación de convenios'**
+  String get merchantSettlementPdfTitle;
+
+  /// No description provided for @validateTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Validar parqueo'**
+  String get validateTitle;
+
+  /// No description provided for @validatePlateLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Placa del cliente'**
+  String get validatePlateLabel;
+
+  /// No description provided for @validateScanQr.
+  ///
+  /// In es, this message translates to:
+  /// **'Escanear QR del recibo'**
+  String get validateScanQr;
+
+  /// No description provided for @validatePinLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'PIN del comercio'**
+  String get validatePinLabel;
+
+  /// No description provided for @validateSubmit.
+  ///
+  /// In es, this message translates to:
+  /// **'Validar'**
+  String get validateSubmit;
+
+  /// No description provided for @validateBenefitMinutes.
+  ///
+  /// In es, this message translates to:
+  /// **'{minutes} minutos gratis'**
+  String validateBenefitMinutes(int minutes);
+
+  /// No description provided for @validateBenefitPercent.
+  ///
+  /// In es, this message translates to:
+  /// **'{percent}% de descuento'**
+  String validateBenefitPercent(int percent);
+
+  /// No description provided for @validateBenefitAmount.
+  ///
+  /// In es, this message translates to:
+  /// **'{amount} de descuento'**
+  String validateBenefitAmount(String amount);
+
+  /// No description provided for @validateSuccess.
+  ///
+  /// In es, this message translates to:
+  /// **'Convenio registrado: {benefit}'**
+  String validateSuccess(String benefit);
+
+  /// No description provided for @validateWrongPin.
+  ///
+  /// In es, this message translates to:
+  /// **'PIN incorrecto. Intentos restantes: {left}'**
+  String validateWrongPin(int left);
+
+  /// No description provided for @validateLocked.
+  ///
+  /// In es, this message translates to:
+  /// **'Demasiados intentos. Intenta de nuevo a las {time}.'**
+  String validateLocked(String time);
+
+  /// No description provided for @validateInvalidLink.
+  ///
+  /// In es, this message translates to:
+  /// **'Este enlace no es válido. Pide uno nuevo al parqueadero.'**
+  String get validateInvalidLink;
+
+  /// No description provided for @validateAnother.
+  ///
+  /// In es, this message translates to:
+  /// **'Validar otra placa'**
+  String get validateAnother;
+
+  /// No description provided for @deskMerchantTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Convenio'**
+  String get deskMerchantTitle;
+
+  /// No description provided for @deskMerchantPick.
+  ///
+  /// In es, this message translates to:
+  /// **'Elegir comercio'**
+  String get deskMerchantPick;
+
+  /// No description provided for @deskMerchantApply.
+  ///
+  /// In es, this message translates to:
+  /// **'Aplicar convenio'**
+  String get deskMerchantApply;
+
+  /// No description provided for @deskMerchantRevoke.
+  ///
+  /// In es, this message translates to:
+  /// **'Quitar convenio'**
+  String get deskMerchantRevoke;
+
+  /// No description provided for @deskMerchantRevokeReason.
+  ///
+  /// In es, this message translates to:
+  /// **'Motivo (mínimo 3 caracteres)'**
+  String get deskMerchantRevokeReason;
+
+  /// No description provided for @deskMerchantOffline.
+  ///
+  /// In es, this message translates to:
+  /// **'Requiere conexión'**
+  String get deskMerchantOffline;
+
+  /// No description provided for @fareGross.
+  ///
+  /// In es, this message translates to:
+  /// **'Tarifa'**
+  String get fareGross;
+
+  /// No description provided for @fareAdjustmentMerchant.
+  ///
+  /// In es, this message translates to:
+  /// **'Convenio {name}'**
+  String fareAdjustmentMerchant(String name);
+
+  /// No description provided for @fareAmountDue.
+  ///
+  /// In es, this message translates to:
+  /// **'A pagar'**
+  String get fareAmountDue;
+
+  /// No description provided for @errorMerchantNotFound.
+  ///
+  /// In es, this message translates to:
+  /// **'Comercio no encontrado.'**
+  String get errorMerchantNotFound;
+
+  /// No description provided for @errorMerchantInactive.
+  ///
+  /// In es, this message translates to:
+  /// **'Este convenio está desactivado.'**
+  String get errorMerchantInactive;
+
+  /// No description provided for @errorDuplicateMerchant.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya existe un comercio con ese nombre.'**
+  String get errorDuplicateMerchant;
+
+  /// No description provided for @errorMerchantInUse.
+  ///
+  /// In es, this message translates to:
+  /// **'El convenio tiene validaciones: desactívalo en lugar de eliminarlo.'**
+  String get errorMerchantInUse;
+
+  /// No description provided for @errorAlreadyValidated.
+  ///
+  /// In es, this message translates to:
+  /// **'Este comercio ya validó ese vehículo.'**
+  String get errorAlreadyValidated;
+
+  /// No description provided for @errorMerchantLimit.
+  ///
+  /// In es, this message translates to:
+  /// **'El vehículo ya alcanzó el máximo de convenios.'**
+  String get errorMerchantLimit;
+
+  /// No description provided for @errorMerchantCap.
+  ///
+  /// In es, this message translates to:
+  /// **'El comercio alcanzó su límite de validaciones.'**
+  String get errorMerchantCap;
+
+  /// No description provided for @errorSessionNotEligible.
+  ///
+  /// In es, this message translates to:
+  /// **'Este vehículo tiene mensualidad: no necesita convenio.'**
+  String get errorSessionNotEligible;
+
+  /// No description provided for @errorValidationNotFound.
+  ///
+  /// In es, this message translates to:
+  /// **'Validación no encontrada.'**
+  String get errorValidationNotFound;
+
+  /// No description provided for @errorValidationNotRevocable.
+  ///
+  /// In es, this message translates to:
+  /// **'Solo se puede quitar una validación pendiente de un vehículo que sigue dentro.'**
+  String get errorValidationNotRevocable;
+
+  /// No description provided for @errorRevokeReasonRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe un motivo de 3 a 200 caracteres.'**
+  String get errorRevokeReasonRequired;
+
+  /// No description provided for @navPricing.
+  ///
+  /// In es, this message translates to:
+  /// **'Tarifas dinamicas'**
+  String get navPricing;
+
+  /// No description provided for @pricingTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tarifas dinamicas'**
+  String get pricingTitle;
+
+  /// No description provided for @pricingEnabled.
+  ///
+  /// In es, this message translates to:
+  /// **'Activar tarifas dinamicas'**
+  String get pricingEnabled;
+
+  /// No description provided for @pricingEnabledHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Con la opcion apagada se cobra siempre la tarifa normal.'**
+  String get pricingEnabledHint;
+
+  /// No description provided for @pricingFloor.
+  ///
+  /// In es, this message translates to:
+  /// **'Minimo (% de la tarifa)'**
+  String get pricingFloor;
+
+  /// No description provided for @pricingCeiling.
+  ///
+  /// In es, this message translates to:
+  /// **'Maximo (% de la tarifa)'**
+  String get pricingCeiling;
+
+  /// No description provided for @pricingRoundTo.
+  ///
+  /// In es, this message translates to:
+  /// **'Redondear a'**
+  String get pricingRoundTo;
+
+  /// No description provided for @pricingSettingsSaved.
+  ///
+  /// In es, this message translates to:
+  /// **'Ajustes guardados'**
+  String get pricingSettingsSaved;
+
+  /// No description provided for @pricingRulesTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Reglas'**
+  String get pricingRulesTitle;
+
+  /// No description provided for @pricingNoRules.
+  ///
+  /// In es, this message translates to:
+  /// **'Aun no hay reglas'**
+  String get pricingNoRules;
+
+  /// No description provided for @pricingNoRulesHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Crea una regla para subir o bajar la tarifa segun ocupacion u horario.'**
+  String get pricingNoRulesHint;
+
+  /// No description provided for @pricingAddRule.
+  ///
+  /// In es, this message translates to:
+  /// **'Agregar regla'**
+  String get pricingAddRule;
+
+  /// No description provided for @pricingEditRule.
+  ///
+  /// In es, this message translates to:
+  /// **'Editar regla'**
+  String get pricingEditRule;
+
+  /// No description provided for @pricingRuleName.
+  ///
+  /// In es, this message translates to:
+  /// **'Nombre'**
+  String get pricingRuleName;
+
+  /// No description provided for @pricingRulePriority.
+  ///
+  /// In es, this message translates to:
+  /// **'Prioridad (mayor gana)'**
+  String get pricingRulePriority;
+
+  /// No description provided for @pricingRuleGroup.
+  ///
+  /// In es, this message translates to:
+  /// **'Tipo de vehiculo'**
+  String get pricingRuleGroup;
+
+  /// No description provided for @pricingRuleGroupAll.
+  ///
+  /// In es, this message translates to:
+  /// **'Todos'**
+  String get pricingRuleGroupAll;
+
+  /// No description provided for @pricingRuleOccupancyFrom.
+  ///
+  /// In es, this message translates to:
+  /// **'Ocupacion desde (%)'**
+  String get pricingRuleOccupancyFrom;
+
+  /// No description provided for @pricingRuleOccupancyTo.
+  ///
+  /// In es, this message translates to:
+  /// **'Ocupacion hasta (%)'**
+  String get pricingRuleOccupancyTo;
+
+  /// No description provided for @pricingRuleWeekdays.
+  ///
+  /// In es, this message translates to:
+  /// **'Dias'**
+  String get pricingRuleWeekdays;
+
+  /// No description provided for @pricingRuleFromTime.
+  ///
+  /// In es, this message translates to:
+  /// **'Desde'**
+  String get pricingRuleFromTime;
+
+  /// No description provided for @pricingRuleToTime.
+  ///
+  /// In es, this message translates to:
+  /// **'Hasta'**
+  String get pricingRuleToTime;
+
+  /// No description provided for @pricingRuleMultiplier.
+  ///
+  /// In es, this message translates to:
+  /// **'Multiplicador (%)'**
+  String get pricingRuleMultiplier;
+
+  /// No description provided for @pricingRuleSurcharge.
+  ///
+  /// In es, this message translates to:
+  /// **'Recargo fijo'**
+  String get pricingRuleSurcharge;
+
+  /// No description provided for @pricingRuleActive.
+  ///
+  /// In es, this message translates to:
+  /// **'Activa'**
+  String get pricingRuleActive;
+
+  /// No description provided for @pricingRuleSummary.
+  ///
+  /// In es, this message translates to:
+  /// **'{group}, {when}: {effect}'**
+  String pricingRuleSummary(String group, String when, String effect);
+
+  /// No description provided for @pricingRuleSaved.
+  ///
+  /// In es, this message translates to:
+  /// **'Regla guardada'**
+  String get pricingRuleSaved;
+
+  /// No description provided for @pricingRuleDeleted.
+  ///
+  /// In es, this message translates to:
+  /// **'Regla eliminada'**
+  String get pricingRuleDeleted;
+
+  /// No description provided for @pricingRuleDeleteConfirm.
+  ///
+  /// In es, this message translates to:
+  /// **'Las entradas ya registradas conservan su tarifa. Eliminar esta regla?'**
+  String get pricingRuleDeleteConfirm;
+
+  /// No description provided for @pricingSimulate.
+  ///
+  /// In es, this message translates to:
+  /// **'Simular'**
+  String get pricingSimulate;
+
+  /// No description provided for @pricingSimulateDays.
+  ///
+  /// In es, this message translates to:
+  /// **'Ultimos {days} dias'**
+  String pricingSimulateDays(int days);
+
+  /// No description provided for @pricingSimIncludeDraft.
+  ///
+  /// In es, this message translates to:
+  /// **'Incluir la regla sin guardar'**
+  String get pricingSimIncludeDraft;
+
+  /// No description provided for @pricingSimBase.
+  ///
+  /// In es, this message translates to:
+  /// **'Cobro con tarifa normal'**
+  String get pricingSimBase;
+
+  /// No description provided for @pricingSimTotal.
+  ///
+  /// In es, this message translates to:
+  /// **'Cobro simulado'**
+  String get pricingSimTotal;
+
+  /// No description provided for @pricingSimDelta.
+  ///
+  /// In es, this message translates to:
+  /// **'Diferencia'**
+  String get pricingSimDelta;
+
+  /// No description provided for @pricingSimAffected.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} entradas afectadas'**
+  String pricingSimAffected(int count);
+
+  /// No description provided for @pricingSimAtLimits.
+  ///
+  /// In es, this message translates to:
+  /// **'{floor} en el minimo, {ceiling} en el maximo'**
+  String pricingSimAtLimits(int floor, int ceiling);
+
+  /// No description provided for @pricingSimByRule.
+  ///
+  /// In es, this message translates to:
+  /// **'Por regla'**
+  String get pricingSimByRule;
+
+  /// No description provided for @pricingSimByHour.
+  ///
+  /// In es, this message translates to:
+  /// **'Por hora de entrada'**
+  String get pricingSimByHour;
+
+  /// No description provided for @pricingSimEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay entradas cobradas en ese periodo.'**
+  String get pricingSimEmpty;
+
+  /// No description provided for @pricingSimNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Usa tarifas y capacidad actuales y no cuenta reservas.'**
+  String get pricingSimNote;
+
+  /// No description provided for @pricingReportTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Impacto de tarifas dinamicas'**
+  String get pricingReportTitle;
+
+  /// No description provided for @pricingReportLocked.
+  ///
+  /// In es, this message translates to:
+  /// **'Entradas con tarifa fijada'**
+  String get pricingReportLocked;
+
+  /// No description provided for @pricingReportExtra.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingreso adicional'**
+  String get pricingReportExtra;
+
+  /// No description provided for @pricingReportDiscount.
+  ///
+  /// In es, this message translates to:
+  /// **'Descuentos por tarifa'**
+  String get pricingReportDiscount;
+
+  /// No description provided for @pricingReportNet.
+  ///
+  /// In es, this message translates to:
+  /// **'Efecto neto'**
+  String get pricingReportNet;
+
+  /// No description provided for @priceQuoteNow.
+  ///
+  /// In es, this message translates to:
+  /// **'Tarifa ahora: {amount}/h'**
+  String priceQuoteNow(String amount);
+
+  /// No description provided for @priceQuoteUsually.
+  ///
+  /// In es, this message translates to:
+  /// **'Normal: {amount}/h'**
+  String priceQuoteUsually(String amount);
+
+  /// No description provided for @priceQuoteHigher.
+  ///
+  /// In es, this message translates to:
+  /// **'Mas alta'**
+  String get priceQuoteHigher;
+
+  /// No description provided for @priceQuoteLower.
+  ///
+  /// In es, this message translates to:
+  /// **'Mas baja'**
+  String get priceQuoteLower;
+
+  /// No description provided for @priceQuoteOffline.
+  ///
+  /// In es, this message translates to:
+  /// **'La tarifa se confirma al sincronizar.'**
+  String get priceQuoteOffline;
+
+  /// No description provided for @publicPriceNow.
+  ///
+  /// In es, this message translates to:
+  /// **'Ahora {amount}/h'**
+  String publicPriceNow(String amount);
+
+  /// No description provided for @publicPriceUsually.
+  ///
+  /// In es, this message translates to:
+  /// **'Precio normal {amount}/h'**
+  String publicPriceUsually(String amount);
+
+  /// No description provided for @publicRateLocked.
+  ///
+  /// In es, this message translates to:
+  /// **'Tarifa fijada: {amount}/h hasta tu llegada'**
+  String publicRateLocked(String amount);
+
+  /// No description provided for @farePricingRule.
+  ///
+  /// In es, this message translates to:
+  /// **'Tarifa dinamica: {name} ({percent})'**
+  String farePricingRule(String name, String percent);
+
+  /// No description provided for @receiptRateLine.
+  ///
+  /// In es, this message translates to:
+  /// **'Tarifa: {name}'**
+  String receiptRateLine(String name);
+
+  /// No description provided for @fareRateLocked.
+  ///
+  /// In es, this message translates to:
+  /// **'Tarifa fijada a la entrada'**
+  String get fareRateLocked;
+
+  /// No description provided for @errorInvalidPricingRule.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisa la regla: hay valores fuera de rango.'**
+  String get errorInvalidPricingRule;
+
+  /// No description provided for @errorDuplicatePricingRule.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya existe una regla con ese nombre.'**
+  String get errorDuplicatePricingRule;
+
+  /// No description provided for @errorPricingRuleNotFound.
+  ///
+  /// In es, this message translates to:
+  /// **'La regla ya no existe.'**
+  String get errorPricingRuleNotFound;
+
+  /// No description provided for @errorInvalidPricingSettings.
+  ///
+  /// In es, this message translates to:
+  /// **'Minimo, maximo o redondeo fuera de rango.'**
+  String get errorInvalidPricingSettings;
+
+  /// No description provided for @errorPricingSimulationTooLarge.
+  ///
+  /// In es, this message translates to:
+  /// **'Demasiadas entradas: elige menos dias.'**
+  String get errorPricingSimulationTooLarge;
+
+  /// No description provided for @loyaltyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Fidelización'**
+  String get loyaltyTitle;
+
+  /// No description provided for @loyaltyTabProgram.
+  ///
+  /// In es, this message translates to:
+  /// **'Programa'**
+  String get loyaltyTabProgram;
+
+  /// No description provided for @loyaltyTabMembers.
+  ///
+  /// In es, this message translates to:
+  /// **'Clientes'**
+  String get loyaltyTabMembers;
+
+  /// No description provided for @loyaltyTabReport.
+  ///
+  /// In es, this message translates to:
+  /// **'Reporte'**
+  String get loyaltyTabReport;
+
+  /// No description provided for @loyaltyEnabled.
+  ///
+  /// In es, this message translates to:
+  /// **'Programa activo'**
+  String get loyaltyEnabled;
+
+  /// No description provided for @loyaltyVisitsRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'Visitas para ganar'**
+  String get loyaltyVisitsRequired;
+
+  /// No description provided for @loyaltyRewardKind.
+  ///
+  /// In es, this message translates to:
+  /// **'Tipo de recompensa'**
+  String get loyaltyRewardKind;
+
+  /// No description provided for @loyaltyKindFreeStay.
+  ///
+  /// In es, this message translates to:
+  /// **'Estadía gratis'**
+  String get loyaltyKindFreeStay;
+
+  /// No description provided for @loyaltyKindFixed.
+  ///
+  /// In es, this message translates to:
+  /// **'Descuento fijo'**
+  String get loyaltyKindFixed;
+
+  /// No description provided for @loyaltyRewardMax.
+  ///
+  /// In es, this message translates to:
+  /// **'Tope de la estadía gratis'**
+  String get loyaltyRewardMax;
+
+  /// No description provided for @loyaltyRewardFixed.
+  ///
+  /// In es, this message translates to:
+  /// **'Valor del descuento'**
+  String get loyaltyRewardFixed;
+
+  /// No description provided for @loyaltyMinAmount.
+  ///
+  /// In es, this message translates to:
+  /// **'Pago mínimo por visita'**
+  String get loyaltyMinAmount;
+
+  /// No description provided for @loyaltyMinMinutes.
+  ///
+  /// In es, this message translates to:
+  /// **'Minutos mínimos por visita'**
+  String get loyaltyMinMinutes;
+
+  /// No description provided for @loyaltyRedeemMode.
+  ///
+  /// In es, this message translates to:
+  /// **'Canje'**
+  String get loyaltyRedeemMode;
+
+  /// No description provided for @loyaltyModeAuto.
+  ///
+  /// In es, this message translates to:
+  /// **'Automático'**
+  String get loyaltyModeAuto;
+
+  /// No description provided for @loyaltyModeOperator.
+  ///
+  /// In es, this message translates to:
+  /// **'Lo decide el operador'**
+  String get loyaltyModeOperator;
+
+  /// No description provided for @loyaltyStackMerchant.
+  ///
+  /// In es, this message translates to:
+  /// **'Acumular con convenios'**
+  String get loyaltyStackMerchant;
+
+  /// No description provided for @loyaltyValidDays.
+  ///
+  /// In es, this message translates to:
+  /// **'Vigencia de la recompensa (días)'**
+  String get loyaltyValidDays;
+
+  /// No description provided for @loyaltySave.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardar programa'**
+  String get loyaltySave;
+
+  /// No description provided for @loyaltySaved.
+  ///
+  /// In es, this message translates to:
+  /// **'Programa guardado'**
+  String get loyaltySaved;
+
+  /// No description provided for @loyaltyVisitOf.
+  ///
+  /// In es, this message translates to:
+  /// **'Visita {current} de {total}'**
+  String loyaltyVisitOf(int current, int total);
+
+  /// No description provided for @loyaltyRewardAvailable.
+  ///
+  /// In es, this message translates to:
+  /// **'Recompensa disponible'**
+  String get loyaltyRewardAvailable;
+
+  /// No description provided for @loyaltyRewardEarned.
+  ///
+  /// In es, this message translates to:
+  /// **'¡Recompensa ganada!'**
+  String get loyaltyRewardEarned;
+
+  /// No description provided for @loyaltyUseReward.
+  ///
+  /// In es, this message translates to:
+  /// **'Usar recompensa'**
+  String get loyaltyUseReward;
+
+  /// No description provided for @loyaltyDontUseNow.
+  ///
+  /// In es, this message translates to:
+  /// **'No usar ahora'**
+  String get loyaltyDontUseNow;
+
+  /// No description provided for @loyaltyRewardLine.
+  ///
+  /// In es, this message translates to:
+  /// **'Recompensa de fidelidad'**
+  String get loyaltyRewardLine;
+
+  /// No description provided for @loyaltyRewardExpires.
+  ///
+  /// In es, this message translates to:
+  /// **'Vence el {date}'**
+  String loyaltyRewardExpires(String date);
+
+  /// No description provided for @loyaltyMembersEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no hay clientes con visitas'**
+  String get loyaltyMembersEmpty;
+
+  /// No description provided for @loyaltyEnableCta.
+  ///
+  /// In es, this message translates to:
+  /// **'Activar el programa'**
+  String get loyaltyEnableCta;
+
+  /// No description provided for @loyaltySearchPlate.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscar placa'**
+  String get loyaltySearchPlate;
+
+  /// No description provided for @loyaltyAdjust.
+  ///
+  /// In es, this message translates to:
+  /// **'Corregir progreso'**
+  String get loyaltyAdjust;
+
+  /// No description provided for @loyaltyAdjustDelta.
+  ///
+  /// In es, this message translates to:
+  /// **'Cambio (+/-)'**
+  String get loyaltyAdjustDelta;
+
+  /// No description provided for @loyaltyAdjustReason.
+  ///
+  /// In es, this message translates to:
+  /// **'Motivo (obligatorio)'**
+  String get loyaltyAdjustReason;
+
+  /// No description provided for @loyaltyReportMembers.
+  ///
+  /// In es, this message translates to:
+  /// **'Clientes'**
+  String get loyaltyReportMembers;
+
+  /// No description provided for @loyaltyReportCounted.
+  ///
+  /// In es, this message translates to:
+  /// **'Visitas contadas'**
+  String get loyaltyReportCounted;
+
+  /// No description provided for @loyaltyReportSkipped.
+  ///
+  /// In es, this message translates to:
+  /// **'Visitas no contadas'**
+  String get loyaltyReportSkipped;
+
+  /// No description provided for @loyaltyReportEarned.
+  ///
+  /// In es, this message translates to:
+  /// **'Recompensas ganadas'**
+  String get loyaltyReportEarned;
+
+  /// No description provided for @loyaltyReportRedeemed.
+  ///
+  /// In es, this message translates to:
+  /// **'Recompensas canjeadas'**
+  String get loyaltyReportRedeemed;
+
+  /// No description provided for @loyaltyReportDiscount.
+  ///
+  /// In es, this message translates to:
+  /// **'Descuento otorgado'**
+  String get loyaltyReportDiscount;
+
+  /// No description provided for @loyaltyReportTopPlates.
+  ///
+  /// In es, this message translates to:
+  /// **'Placas frecuentes'**
+  String get loyaltyReportTopPlates;
+
+  /// No description provided for @loyaltySkip_pass.
+  ///
+  /// In es, this message translates to:
+  /// **'Pase mensual'**
+  String get loyaltySkip_pass;
+
+  /// No description provided for @loyaltySkip_lost_ticket.
+  ///
+  /// In es, this message translates to:
+  /// **'Ticket perdido'**
+  String get loyaltySkip_lost_ticket;
+
+  /// No description provided for @loyaltySkip_exempt.
+  ///
+  /// In es, this message translates to:
+  /// **'Exento'**
+  String get loyaltySkip_exempt;
+
+  /// No description provided for @loyaltySkip_below_amount.
+  ///
+  /// In es, this message translates to:
+  /// **'Pago bajo el mínimo'**
+  String get loyaltySkip_below_amount;
+
+  /// No description provided for @loyaltySkip_below_minutes.
+  ///
+  /// In es, this message translates to:
+  /// **'Estadía muy corta'**
+  String get loyaltySkip_below_minutes;
+
+  /// No description provided for @loyaltySkip_same_day.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya contó hoy'**
+  String get loyaltySkip_same_day;
+
+  /// No description provided for @loyaltySkip_reward_redeemed.
+  ///
+  /// In es, this message translates to:
+  /// **'Usó recompensa'**
+  String get loyaltySkip_reward_redeemed;
+
+  /// No description provided for @loyaltySkip_error.
+  ///
+  /// In es, this message translates to:
+  /// **'Error interno'**
+  String get loyaltySkip_error;
+
+  /// No description provided for @loyaltyRefreshReport.
+  ///
+  /// In es, this message translates to:
+  /// **'Actualizar reporte'**
+  String get loyaltyRefreshReport;
+
+  /// No description provided for @loyaltyCopyCsv.
+  ///
+  /// In es, this message translates to:
+  /// **'Copiar CSV'**
+  String get loyaltyCopyCsv;
+
+  /// No description provided for @loyaltyCsvCopied.
+  ///
+  /// In es, this message translates to:
+  /// **'CSV copiado'**
+  String get loyaltyCsvCopied;
+
+  /// No description provided for @loyaltySharePdf.
+  ///
+  /// In es, this message translates to:
+  /// **'Compartir PDF'**
+  String get loyaltySharePdf;
+
+  /// No description provided for @errorLoyaltyDisabled.
+  ///
+  /// In es, this message translates to:
+  /// **'El programa de fidelización está desactivado'**
+  String get errorLoyaltyDisabled;
+
+  /// No description provided for @errorLoyaltySettings.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisa los valores del programa'**
+  String get errorLoyaltySettings;
+
+  /// No description provided for @errorLoyaltyChoice.
+  ///
+  /// In es, this message translates to:
+  /// **'Opción de canje no válida'**
+  String get errorLoyaltyChoice;
+
+  /// No description provided for @errorNoRewardAvailable.
+  ///
+  /// In es, this message translates to:
+  /// **'Esta placa no tiene recompensa disponible'**
+  String get errorNoRewardAvailable;
+
+  /// No description provided for @errorLoyaltyReason.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe un motivo de 3 a 200 caracteres'**
+  String get errorLoyaltyReason;
+
+  /// No description provided for @errorLoyaltyAdjustRange.
+  ///
+  /// In es, this message translates to:
+  /// **'El ajuste dejaría el progreso fuera de rango'**
+  String get errorLoyaltyAdjustRange;
+
+  /// No description provided for @errorLoyaltyAccountNotFound.
+  ///
+  /// In es, this message translates to:
+  /// **'Esa placa no tiene cuenta de fidelización'**
+  String get errorLoyaltyAccountNotFound;
+
+  /// No description provided for @loyaltyReportEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no hay datos en el periodo'**
+  String get loyaltyReportEmpty;
+
+  /// No description provided for @navLoyalty.
+  ///
+  /// In es, this message translates to:
+  /// **'Fidelización'**
+  String get navLoyalty;
+
+  /// No description provided for @navInvoicing.
+  ///
+  /// In es, this message translates to:
+  /// **'Facturación'**
+  String get navInvoicing;
+
+  /// No description provided for @invoicingTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Facturación electrónica'**
+  String get invoicingTitle;
+
+  /// No description provided for @invoicingMode.
+  ///
+  /// In es, this message translates to:
+  /// **'Modo'**
+  String get invoicingMode;
+
+  /// No description provided for @invoicingModeOff.
+  ///
+  /// In es, this message translates to:
+  /// **'Apagada'**
+  String get invoicingModeOff;
+
+  /// No description provided for @invoicingModeOnRequest.
+  ///
+  /// In es, this message translates to:
+  /// **'Solo a solicitud'**
+  String get invoicingModeOnRequest;
+
+  /// No description provided for @invoicingModeAlways.
+  ///
+  /// In es, this message translates to:
+  /// **'Siempre'**
+  String get invoicingModeAlways;
+
+  /// No description provided for @invoicingSettings.
+  ///
+  /// In es, this message translates to:
+  /// **'Datos del emisor'**
+  String get invoicingSettings;
+
+  /// No description provided for @invoicingNit.
+  ///
+  /// In es, this message translates to:
+  /// **'NIT del emisor'**
+  String get invoicingNit;
+
+  /// No description provided for @invoicingLegalName.
+  ///
+  /// In es, this message translates to:
+  /// **'Razón social'**
+  String get invoicingLegalName;
+
+  /// No description provided for @invoicingMunicipality.
+  ///
+  /// In es, this message translates to:
+  /// **'Código de municipio'**
+  String get invoicingMunicipality;
+
+  /// No description provided for @invoicingTaxRate.
+  ///
+  /// In es, this message translates to:
+  /// **'Tarifa de impuesto (puntos básicos)'**
+  String get invoicingTaxRate;
+
+  /// No description provided for @invoicingPricesIncludeTax.
+  ///
+  /// In es, this message translates to:
+  /// **'Los precios ya incluyen el impuesto'**
+  String get invoicingPricesIncludeTax;
+
+  /// No description provided for @invoicingResolutions.
+  ///
+  /// In es, this message translates to:
+  /// **'Resoluciones de numeración'**
+  String get invoicingResolutions;
+
+  /// No description provided for @invoicingResolutionAdd.
+  ///
+  /// In es, this message translates to:
+  /// **'Agregar resolución'**
+  String get invoicingResolutionAdd;
+
+  /// No description provided for @invoicingResolutionRemaining.
+  ///
+  /// In es, this message translates to:
+  /// **'Quedan {count} números'**
+  String invoicingResolutionRemaining(int count);
+
+  /// No description provided for @invoicingDocuments.
+  ///
+  /// In es, this message translates to:
+  /// **'Documentos'**
+  String get invoicingDocuments;
+
+  /// No description provided for @invoicingEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no hay documentos. Configura una resolución para empezar.'**
+  String get invoicingEmpty;
+
+  /// No description provided for @invoicingStatusPending.
+  ///
+  /// In es, this message translates to:
+  /// **'Pendiente'**
+  String get invoicingStatusPending;
+
+  /// No description provided for @invoicingStatusSent.
+  ///
+  /// In es, this message translates to:
+  /// **'Enviado'**
+  String get invoicingStatusSent;
+
+  /// No description provided for @invoicingStatusAccepted.
+  ///
+  /// In es, this message translates to:
+  /// **'Aceptado'**
+  String get invoicingStatusAccepted;
+
+  /// No description provided for @invoicingStatusRejected.
+  ///
+  /// In es, this message translates to:
+  /// **'Rechazado'**
+  String get invoicingStatusRejected;
+
+  /// No description provided for @invoicingStatusFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'Falló'**
+  String get invoicingStatusFailed;
+
+  /// No description provided for @invoicingRetry.
+  ///
+  /// In es, this message translates to:
+  /// **'Reintentar envío'**
+  String get invoicingRetry;
+
+  /// No description provided for @invoicingCreditNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Nota crédito'**
+  String get invoicingCreditNote;
+
+  /// No description provided for @invoicingCreditReason.
+  ///
+  /// In es, this message translates to:
+  /// **'Motivo de la nota crédito'**
+  String get invoicingCreditReason;
+
+  /// No description provided for @invoicingIssue.
+  ///
+  /// In es, this message translates to:
+  /// **'Emitir factura electrónica'**
+  String get invoicingIssue;
+
+  /// No description provided for @invoicingIssued.
+  ///
+  /// In es, this message translates to:
+  /// **'Documento creado: {number}'**
+  String invoicingIssued(String number);
+
+  /// No description provided for @invoicingNotConfigured.
+  ///
+  /// In es, this message translates to:
+  /// **'El proveedor de facturación no está configurado; los documentos quedan pendientes.'**
+  String get invoicingNotConfigured;
+
+  /// No description provided for @invoicingOnlineOnly.
+  ///
+  /// In es, this message translates to:
+  /// **'Requiere conexión'**
+  String get invoicingOnlineOnly;
+
+  /// No description provided for @fiscalCustomerSection.
+  ///
+  /// In es, this message translates to:
+  /// **'Datos para factura (opcional)'**
+  String get fiscalCustomerSection;
+
+  /// No description provided for @fiscalDocType.
+  ///
+  /// In es, this message translates to:
+  /// **'Tipo de documento'**
+  String get fiscalDocType;
+
+  /// No description provided for @fiscalDocNumber.
+  ///
+  /// In es, this message translates to:
+  /// **'Número de documento'**
+  String get fiscalDocNumber;
+
+  /// No description provided for @fiscalName.
+  ///
+  /// In es, this message translates to:
+  /// **'Nombre o razón social'**
+  String get fiscalName;
+
+  /// No description provided for @fiscalEmail.
+  ///
+  /// In es, this message translates to:
+  /// **'Correo electrónico'**
+  String get fiscalEmail;
+
+  /// No description provided for @fiscalInvalidCustomer.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisa los datos del cliente'**
+  String get fiscalInvalidCustomer;
+
+  /// No description provided for @receiptFiscalPending.
+  ///
+  /// In es, this message translates to:
+  /// **'Documento electrónico en proceso'**
+  String get receiptFiscalPending;
+
+  /// No description provided for @notifTypeFiscalFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'Documento electrónico con problema'**
+  String get notifTypeFiscalFailed;
+
+  /// No description provided for @notifTypeFiscalResolutionLow.
+  ///
+  /// In es, this message translates to:
+  /// **'Resolución de numeración por agotarse'**
+  String get notifTypeFiscalResolutionLow;
+
+  /// No description provided for @errorFiscalNotEnabled.
+  ///
+  /// In es, this message translates to:
+  /// **'La facturación electrónica no está activa'**
+  String get errorFiscalNotEnabled;
+
+  /// No description provided for @errorFiscalResolutionMissing.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay resolución de numeración activa'**
+  String get errorFiscalResolutionMissing;
+
+  /// No description provided for @errorFiscalResolutionExpired.
+  ///
+  /// In es, this message translates to:
+  /// **'La resolución de numeración venció'**
+  String get errorFiscalResolutionExpired;
+
+  /// No description provided for @errorFiscalResolutionExhausted.
+  ///
+  /// In es, this message translates to:
+  /// **'Se agotó la numeración autorizada'**
+  String get errorFiscalResolutionExhausted;
+
+  /// No description provided for @errorFiscalSourceNotFound.
+  ///
+  /// In es, this message translates to:
+  /// **'No se encontró la venta a facturar'**
+  String get errorFiscalSourceNotFound;
+
+  /// No description provided for @errorFiscalSourceNotBillable.
+  ///
+  /// In es, this message translates to:
+  /// **'Esta venta no se puede facturar'**
+  String get errorFiscalSourceNotBillable;
+
+  /// No description provided for @errorInvalidFiscalCustomer.
+  ///
+  /// In es, this message translates to:
+  /// **'Datos del cliente no válidos'**
+  String get errorInvalidFiscalCustomer;
+
+  /// No description provided for @errorFiscalDocumentNotFound.
+  ///
+  /// In es, this message translates to:
+  /// **'Documento no encontrado'**
+  String get errorFiscalDocumentNotFound;
+
+  /// No description provided for @errorFiscalDocumentNotAccepted.
+  ///
+  /// In es, this message translates to:
+  /// **'Solo se puede acreditar un documento aceptado'**
+  String get errorFiscalDocumentNotAccepted;
+
+  /// No description provided for @errorFiscalDocumentAlreadyCredited.
+  ///
+  /// In es, this message translates to:
+  /// **'El documento ya tiene una nota crédito'**
+  String get errorFiscalDocumentAlreadyCredited;
+
+  /// No description provided for @errorInvalidFiscalStatus.
+  ///
+  /// In es, this message translates to:
+  /// **'El documento no está en un estado que permita reintentar'**
+  String get errorInvalidFiscalStatus;
+
+  /// No description provided for @errorFiscalSettingsIncomplete.
+  ///
+  /// In es, this message translates to:
+  /// **'Completa NIT, razón social y municipio'**
+  String get errorFiscalSettingsIncomplete;
+
+  /// No description provided for @errorFiscalDocumentImmutable.
+  ///
+  /// In es, this message translates to:
+  /// **'El documento ya está numerado y no se puede modificar'**
+  String get errorFiscalDocumentImmutable;
+
+  /// No description provided for @fiscalInvoiceTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'FACTURA ELECTRÓNICA DE VENTA'**
+  String get fiscalInvoiceTitle;
+
+  /// No description provided for @fiscalPosTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'DOCUMENTO EQUIVALENTE POS'**
+  String get fiscalPosTitle;
+
+  /// No description provided for @fiscalCufe.
+  ///
+  /// In es, this message translates to:
+  /// **'CUFE'**
+  String get fiscalCufe;
+
+  /// No description provided for @assistantTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Asistente de reportes'**
+  String get assistantTitle;
+
+  /// No description provided for @assistantOpenTooltip.
+  ///
+  /// In es, this message translates to:
+  /// **'Preguntar al asistente'**
+  String get assistantOpenTooltip;
+
+  /// No description provided for @assistantInputHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Pregunta sobre ingresos, tráfico o reservas'**
+  String get assistantInputHint;
+
+  /// No description provided for @assistantSend.
+  ///
+  /// In es, this message translates to:
+  /// **'Enviar'**
+  String get assistantSend;
+
+  /// No description provided for @assistantClear.
+  ///
+  /// In es, this message translates to:
+  /// **'Nueva conversación'**
+  String get assistantClear;
+
+  /// No description provided for @assistantEmptyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Pregunta en lenguaje natural'**
+  String get assistantEmptyTitle;
+
+  /// No description provided for @assistantEmptyMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'Las cifras salen de tus reportes y cada una muestra su fuente.'**
+  String get assistantEmptyMessage;
+
+  /// No description provided for @assistantSuggestionsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Prueba con'**
+  String get assistantSuggestionsTitle;
+
+  /// No description provided for @assistantSuggestRevenueMonth.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Cuánto generaron las motos el mes pasado?'**
+  String get assistantSuggestRevenueMonth;
+
+  /// No description provided for @assistantSuggestBusiestHour.
+  ///
+  /// In es, this message translates to:
+  /// **'¿A qué hora entran más vehículos?'**
+  String get assistantSuggestBusiestHour;
+
+  /// No description provided for @assistantSuggestReservations.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Cuántas reservas web terminaron en entrada este mes?'**
+  String get assistantSuggestReservations;
+
+  /// No description provided for @assistantSuggestCompare.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Cómo van los ingresos de esta semana frente a la anterior?'**
+  String get assistantSuggestCompare;
+
+  /// No description provided for @assistantSuggestCash.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Hubo diferencias de caja en los últimos cierres?'**
+  String get assistantSuggestCash;
+
+  /// No description provided for @assistantSuggestFull.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Qué tan lleno está el parqueadero ahora?'**
+  String get assistantSuggestFull;
+
+  /// No description provided for @assistantPrivacyNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu pregunta y datos agregados de tus reportes se envían al proveedor de IA. No escribas placas ni nombres.'**
+  String get assistantPrivacyNote;
+
+  /// No description provided for @assistantRedacted.
+  ///
+  /// In es, this message translates to:
+  /// **'Quitamos datos personales de tu pregunta antes de enviarla.'**
+  String get assistantRedacted;
+
+  /// No description provided for @assistantBudgetLeft.
+  ///
+  /// In es, this message translates to:
+  /// **'Quedan {count} consultas hoy'**
+  String assistantBudgetLeft(int count);
+
+  /// No description provided for @assistantThinking.
+  ///
+  /// In es, this message translates to:
+  /// **'Consultando tus reportes…'**
+  String get assistantThinking;
+
+  /// No description provided for @assistantToolRunning.
+  ///
+  /// In es, this message translates to:
+  /// **'Consultando {report}…'**
+  String assistantToolRunning(String report);
+
+  /// No description provided for @assistantToolDone.
+  ///
+  /// In es, this message translates to:
+  /// **'{report}: listo'**
+  String assistantToolDone(String report);
+
+  /// No description provided for @assistantStatusNeedsClarification.
+  ///
+  /// In es, this message translates to:
+  /// **'Necesito un dato más'**
+  String get assistantStatusNeedsClarification;
+
+  /// No description provided for @assistantStatusOutOfScope.
+  ///
+  /// In es, this message translates to:
+  /// **'Fuera de alcance'**
+  String get assistantStatusOutOfScope;
+
+  /// No description provided for @assistantStatusNoData.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin datos en el periodo'**
+  String get assistantStatusNoData;
+
+  /// No description provided for @assistantFigures.
+  ///
+  /// In es, this message translates to:
+  /// **'Cifras'**
+  String get assistantFigures;
+
+  /// No description provided for @assistantSourceTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'De dónde sale esta cifra'**
+  String get assistantSourceTitle;
+
+  /// No description provided for @assistantSourceReport.
+  ///
+  /// In es, this message translates to:
+  /// **'Reporte: {rpc}'**
+  String assistantSourceReport(String rpc);
+
+  /// No description provided for @assistantSourceArgs.
+  ///
+  /// In es, this message translates to:
+  /// **'Parámetros: {args}'**
+  String assistantSourceArgs(String args);
+
+  /// No description provided for @assistantSourcePath.
+  ///
+  /// In es, this message translates to:
+  /// **'Campo: {path}'**
+  String assistantSourcePath(String path);
+
+  /// No description provided for @assistantSourceRaw.
+  ///
+  /// In es, this message translates to:
+  /// **'Valor en el reporte: {value}'**
+  String assistantSourceRaw(String value);
+
+  /// No description provided for @assistantVerified.
+  ///
+  /// In es, this message translates to:
+  /// **'Cifra verificada con el reporte'**
+  String get assistantVerified;
+
+  /// No description provided for @assistantUnverified.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo verificar esta cifra'**
+  String get assistantUnverified;
+
+  /// No description provided for @assistantUndefinedValue.
+  ///
+  /// In es, this message translates to:
+  /// **'—'**
+  String get assistantUndefinedValue;
+
+  /// No description provided for @assistantCopyAnswer.
+  ///
+  /// In es, this message translates to:
+  /// **'Copiar respuesta'**
+  String get assistantCopyAnswer;
+
+  /// No description provided for @assistantCopyFigures.
+  ///
+  /// In es, this message translates to:
+  /// **'Copiar cifras (CSV)'**
+  String get assistantCopyFigures;
+
+  /// No description provided for @assistantCopied.
+  ///
+  /// In es, this message translates to:
+  /// **'Copiado al portapapeles'**
+  String get assistantCopied;
+
+  /// No description provided for @assistantDisclaimer.
+  ///
+  /// In es, this message translates to:
+  /// **'Respuesta generada por IA a partir de tus reportes. Verifica las cifras en su fuente.'**
+  String get assistantDisclaimer;
+
+  /// No description provided for @assistantNotConfiguredTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'El asistente no está activado'**
+  String get assistantNotConfiguredTitle;
+
+  /// No description provided for @assistantNotConfiguredMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'Falta la clave de la API de IA en el servidor. Consulta el runbook de secretos.'**
+  String get assistantNotConfiguredMessage;
+
+  /// No description provided for @assistantPeriod.
+  ///
+  /// In es, this message translates to:
+  /// **'Periodo: {start} a {end}'**
+  String assistantPeriod(String start, String end);
+
+  /// No description provided for @errorAiBudget.
+  ///
+  /// In es, this message translates to:
+  /// **'Se alcanzó el límite diario de consultas del asistente'**
+  String get errorAiBudget;
+
+  /// No description provided for @errorAiUnavailable.
+  ///
+  /// In es, this message translates to:
+  /// **'El asistente no está disponible en este momento'**
+  String get errorAiUnavailable;
+
+  /// No description provided for @errorAiTimeout.
+  ///
+  /// In es, this message translates to:
+  /// **'El asistente tardó demasiado. Intenta de nuevo'**
+  String get errorAiTimeout;
+
+  /// No description provided for @errorAiUpstream.
+  ///
+  /// In es, this message translates to:
+  /// **'El servicio de IA no respondió. Intenta de nuevo'**
+  String get errorAiUpstream;
+
+  /// No description provided for @errorAiRefused.
+  ///
+  /// In es, this message translates to:
+  /// **'El asistente no pudo responder esta pregunta'**
+  String get errorAiRefused;
+
+  /// No description provided for @errorAiAnswerInvalid.
+  ///
+  /// In es, this message translates to:
+  /// **'La respuesta no pasó la verificación de cifras'**
+  String get errorAiAnswerInvalid;
+
+  /// No description provided for @errorAiLimit.
+  ///
+  /// In es, this message translates to:
+  /// **'La pregunta es demasiado amplia. Prueba con un periodo más corto'**
+  String get errorAiLimit;
+
+  /// No description provided for @errorAiQuestionInvalid.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe una pregunta válida'**
+  String get errorAiQuestionInvalid;
+
+  /// No description provided for @damageTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Comparación de daños'**
+  String get damageTitle;
+
+  /// No description provided for @damageAdvisoryTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Análisis orientativo con IA'**
+  String get damageAdvisoryTitle;
+
+  /// No description provided for @damageAdvisoryBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Puede pasar por alto daños o confundir reflejos y suciedad con daños. Verifica cada punto en el vehículo: la decisión es de una persona.'**
+  String get damageAdvisoryBody;
+
+  /// No description provided for @damageVerdictNone.
+  ///
+  /// In es, this message translates to:
+  /// **'No se detectaron daños nuevos en las fotos comparadas'**
+  String get damageVerdictNone;
+
+  /// No description provided for @damageVerdictPossible.
+  ///
+  /// In es, this message translates to:
+  /// **'Posible daño nuevo: verifica'**
+  String get damageVerdictPossible;
+
+  /// No description provided for @damageVerdictInsufficient.
+  ///
+  /// In es, this message translates to:
+  /// **'Evidencia insuficiente para comparar'**
+  String get damageVerdictInsufficient;
+
+  /// No description provided for @damageClassPre.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya existía'**
+  String get damageClassPre;
+
+  /// No description provided for @damageClassNew.
+  ///
+  /// In es, this message translates to:
+  /// **'Posible daño nuevo: verifica'**
+  String get damageClassNew;
+
+  /// No description provided for @damageClassUncertain.
+  ///
+  /// In es, this message translates to:
+  /// **'Incierto'**
+  String get damageClassUncertain;
+
+  /// No description provided for @damageRun.
+  ///
+  /// In es, this message translates to:
+  /// **'Comparar con las fotos de entrada'**
+  String get damageRun;
+
+  /// No description provided for @damageRerun.
+  ///
+  /// In es, this message translates to:
+  /// **'Volver a analizar'**
+  String get damageRerun;
+
+  /// No description provided for @damageRunning.
+  ///
+  /// In es, this message translates to:
+  /// **'Analizando fotos…'**
+  String get damageRunning;
+
+  /// No description provided for @damageEmptyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no hay comparación'**
+  String get damageEmptyTitle;
+
+  /// No description provided for @damageEmptyNeedExit.
+  ///
+  /// In es, this message translates to:
+  /// **'Toma fotos de salida en el check-out para poder comparar.'**
+  String get damageEmptyNeedExit;
+
+  /// No description provided for @damageEmptyNeedEntry.
+  ///
+  /// In es, this message translates to:
+  /// **'Esta entrada no tiene fotos para comparar.'**
+  String get damageEmptyNeedEntry;
+
+  /// No description provided for @damageNotConfigured.
+  ///
+  /// In es, this message translates to:
+  /// **'El análisis con IA no está activado en el servidor.'**
+  String get damageNotConfigured;
+
+  /// No description provided for @damageReviewConfirm.
+  ///
+  /// In es, this message translates to:
+  /// **'Confirmar'**
+  String get damageReviewConfirm;
+
+  /// No description provided for @damageReviewDismiss.
+  ///
+  /// In es, this message translates to:
+  /// **'Descartar'**
+  String get damageReviewDismiss;
+
+  /// No description provided for @damageReviewNoteLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Nota (obligatoria)'**
+  String get damageReviewNoteLabel;
+
+  /// No description provided for @damageReviewAudited.
+  ///
+  /// In es, this message translates to:
+  /// **'La decisión y la nota quedan en la auditoría.'**
+  String get damageReviewAudited;
+
+  /// No description provided for @damageExitSection.
+  ///
+  /// In es, this message translates to:
+  /// **'Fotos de salida (opcional)'**
+  String get damageExitSection;
+
+  /// No description provided for @damageExitHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Sirven para resolver reclamos de daños. Usa los mismos ángulos que a la entrada.'**
+  String get damageExitHint;
+
+  /// No description provided for @damageExitOffline.
+  ///
+  /// In es, this message translates to:
+  /// **'Las fotos de salida necesitan conexión.'**
+  String get damageExitOffline;
+
+  /// No description provided for @damageExitSaved.
+  ///
+  /// In es, this message translates to:
+  /// **'Fotos de salida guardadas'**
+  String get damageExitSaved;
+
+  /// No description provided for @damageExitFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudieron guardar las fotos de salida'**
+  String get damageExitFailed;
+
+  /// No description provided for @damageExitSkippedOffline.
+  ///
+  /// In es, this message translates to:
+  /// **'Salida registrada sin conexión: las fotos de salida no se guardaron.'**
+  String get damageExitSkippedOffline;
+
+  /// No description provided for @damageAddPhoto.
+  ///
+  /// In es, this message translates to:
+  /// **'Tomar foto'**
+  String get damageAddPhoto;
+
+  /// No description provided for @damagePhotosCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} foto(s)'**
+  String damagePhotosCount(int count);
+
+  /// No description provided for @errorInsufficientEvidence.
+  ///
+  /// In es, this message translates to:
+  /// **'Faltan fotos de entrada o de salida para comparar'**
+  String get errorInsufficientEvidence;
+
+  /// No description provided for @errorComparisonInProgress.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya hay un análisis en curso para este vehículo'**
+  String get errorComparisonInProgress;
+
+  /// No description provided for @errorComparisonExists.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya se analizó esta salida; un administrador puede repetirla'**
+  String get errorComparisonExists;
+
+  /// No description provided for @errorEvidenceUnreadable.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudieron leer las fotos'**
+  String get errorEvidenceUnreadable;
+
+  /// No description provided for @errorEvidenceLimit.
+  ///
+  /// In es, this message translates to:
+  /// **'Máximo 5 fotos de salida por vehículo'**
+  String get errorEvidenceLimit;
+
+  /// No description provided for @errorFindingNotFound.
+  ///
+  /// In es, this message translates to:
+  /// **'Hallazgo no encontrado'**
+  String get errorFindingNotFound;
+
+  /// No description provided for @errorComparisonNotFound.
+  ///
+  /// In es, this message translates to:
+  /// **'Comparación no encontrada'**
+  String get errorComparisonNotFound;
+
+  /// No description provided for @navDevices.
+  ///
+  /// In es, this message translates to:
+  /// **'Dispositivos'**
+  String get navDevices;
+
+  /// No description provided for @devicesTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Dispositivos'**
+  String get devicesTitle;
+
+  /// No description provided for @devicesEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no hay dispositivos'**
+  String get devicesEmpty;
+
+  /// No description provided for @devicesEmptyHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Registra una cámara, barrera o hub para conectarlo.'**
+  String get devicesEmptyHint;
+
+  /// No description provided for @devicesAdd.
+  ///
+  /// In es, this message translates to:
+  /// **'Registrar dispositivo'**
+  String get devicesAdd;
+
+  /// No description provided for @devicesKind.
+  ///
+  /// In es, this message translates to:
+  /// **'Tipo'**
+  String get devicesKind;
+
+  /// No description provided for @devicesName.
+  ///
+  /// In es, this message translates to:
+  /// **'Nombre'**
+  String get devicesName;
+
+  /// No description provided for @devicesRate.
+  ///
+  /// In es, this message translates to:
+  /// **'Peticiones por minuto'**
+  String get devicesRate;
+
+  /// No description provided for @devicesStatusOnline.
+  ///
+  /// In es, this message translates to:
+  /// **'En línea'**
+  String get devicesStatusOnline;
+
+  /// No description provided for @devicesStatusOffline.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin conexión'**
+  String get devicesStatusOffline;
+
+  /// No description provided for @devicesStatusNeverSeen.
+  ///
+  /// In es, this message translates to:
+  /// **'Nunca visto'**
+  String get devicesStatusNeverSeen;
+
+  /// No description provided for @devicesStatusDisabled.
+  ///
+  /// In es, this message translates to:
+  /// **'Deshabilitado'**
+  String get devicesStatusDisabled;
+
+  /// No description provided for @devicesRotate.
+  ///
+  /// In es, this message translates to:
+  /// **'Rotar clave'**
+  String get devicesRotate;
+
+  /// No description provided for @devicesKeyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Guarda esta clave'**
+  String get devicesKeyTitle;
+
+  /// No description provided for @devicesKeyHint.
+  ///
+  /// In es, this message translates to:
+  /// **'No se volverá a mostrar. Configúrala en el dispositivo.'**
+  String get devicesKeyHint;
+
+  /// No description provided for @devicesCopied.
+  ///
+  /// In es, this message translates to:
+  /// **'Copiado'**
+  String get devicesCopied;
+
+  /// No description provided for @devicesEnable.
+  ///
+  /// In es, this message translates to:
+  /// **'Habilitar'**
+  String get devicesEnable;
+
+  /// No description provided for @devicesDisable.
+  ///
+  /// In es, this message translates to:
+  /// **'Deshabilitar'**
+  String get devicesDisable;
+
+  /// No description provided for @devicesRename.
+  ///
+  /// In es, this message translates to:
+  /// **'Renombrar'**
+  String get devicesRename;
+
+  /// No description provided for @devicesDelete.
+  ///
+  /// In es, this message translates to:
+  /// **'Eliminar'**
+  String get devicesDelete;
+
+  /// No description provided for @devicesEvents.
+  ///
+  /// In es, this message translates to:
+  /// **'Historial'**
+  String get devicesEvents;
+
+  /// No description provided for @devicesOfflineMinutes.
+  ///
+  /// In es, this message translates to:
+  /// **'Minutos para marcar sin conexión'**
+  String get devicesOfflineMinutes;
+
+  /// No description provided for @devicesSaved.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardado'**
+  String get devicesSaved;
+
+  /// No description provided for @devicesDeleteConfirm.
+  ///
+  /// In es, this message translates to:
+  /// **'El dispositivo dejará de autenticarse. ¿Eliminar?'**
+  String get devicesDeleteConfirm;
+
+  /// No description provided for @devicesLastSeen.
+  ///
+  /// In es, this message translates to:
+  /// **'Último contacto: {when}'**
+  String devicesLastSeen(String when);
+
+  /// No description provided for @devicesFirmware.
+  ///
+  /// In es, this message translates to:
+  /// **'Firmware: {version}'**
+  String devicesFirmware(String version);
+
+  /// No description provided for @errorInvalidDeviceKind.
+  ///
+  /// In es, this message translates to:
+  /// **'Tipo de dispositivo no válido'**
+  String get errorInvalidDeviceKind;
+
+  /// No description provided for @errorInvalidDeviceName.
+  ///
+  /// In es, this message translates to:
+  /// **'Nombre de dispositivo no válido'**
+  String get errorInvalidDeviceName;
+
+  /// No description provided for @errorDeviceNameTaken.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya existe un dispositivo con ese nombre'**
+  String get errorDeviceNameTaken;
+
+  /// No description provided for @errorDeviceLimit.
+  ///
+  /// In es, this message translates to:
+  /// **'Máximo 50 dispositivos por sede'**
+  String get errorDeviceLimit;
+
+  /// No description provided for @errorDeviceNotFound.
+  ///
+  /// In es, this message translates to:
+  /// **'Dispositivo no encontrado'**
+  String get errorDeviceNotFound;
+
+  /// No description provided for @errorDeviceUnauthorized.
+  ///
+  /// In es, this message translates to:
+  /// **'Clave de dispositivo no válida'**
+  String get errorDeviceUnauthorized;
+
+  /// No description provided for @errorDeviceDisabled.
+  ///
+  /// In es, this message translates to:
+  /// **'El dispositivo está deshabilitado'**
+  String get errorDeviceDisabled;
+
+  /// No description provided for @errorDeviceClockSkew.
+  ///
+  /// In es, this message translates to:
+  /// **'Reloj del dispositivo desviado'**
+  String get errorDeviceClockSkew;
+
+  /// No description provided for @errorDeviceReplay.
+  ///
+  /// In es, this message translates to:
+  /// **'Petición repetida'**
+  String get errorDeviceReplay;
+
+  /// No description provided for @errorDeviceRateLimited.
+  ///
+  /// In es, this message translates to:
+  /// **'Demasiadas peticiones del dispositivo'**
+  String get errorDeviceRateLimited;
+
+  /// No description provided for @evidenceSectionEntry.
+  ///
+  /// In es, this message translates to:
+  /// **'Fotos de entrada'**
+  String get evidenceSectionEntry;
+
+  /// No description provided for @evidenceSectionExit.
+  ///
+  /// In es, this message translates to:
+  /// **'Fotos de salida'**
+  String get evidenceSectionExit;
+
+  /// No description provided for @damageCompareAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Comparar con las fotos de entrada'**
+  String get damageCompareAction;
+
+  /// No description provided for @guideNextPhoto.
+  ///
+  /// In es, this message translates to:
+  /// **'Siguiente foto: {slot, select, frontLeft{esquina delantera izquierda} frontRight{esquina delantera derecha} rearRight{esquina trasera derecha} rearLeft{esquina trasera izquierda} detail{detalle de cualquier daño} other{libre}}'**
+  String guideNextPhoto(String slot);
+
+  /// No description provided for @guideRules.
+  ///
+  /// In es, this message translates to:
+  /// **'A unos 3 m, vehículo completo en el cuadro, sin contraluz; repite las mismas esquinas a la salida.'**
+  String get guideRules;
+
+  /// No description provided for @guideSlotChip.
+  ///
+  /// In es, this message translates to:
+  /// **'{slot, select, frontLeft{Del. izq.} frontRight{Del. der.} rearRight{Tras. der.} rearLeft{Tras. izq.} detail{Detalle} other{}}'**
+  String guideSlotChip(String slot);
+
+  /// No description provided for @guideShowIllustration.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver ejemplo'**
+  String get guideShowIllustration;
+
+  /// No description provided for @navGate.
+  ///
+  /// In es, this message translates to:
+  /// **'Portería'**
+  String get navGate;
+
+  /// No description provided for @gateTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Placas detectadas'**
+  String get gateTitle;
+
+  /// No description provided for @gateEmptyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay placas por revisar'**
+  String get gateEmptyTitle;
+
+  /// No description provided for @gateEmptyBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuando la cámara lea una placa que necesite tu confirmación, aparecerá aquí.'**
+  String get gateEmptyBody;
+
+  /// No description provided for @gateGoToCheckIn.
+  ///
+  /// In es, this message translates to:
+  /// **'Registrar entrada'**
+  String get gateGoToCheckIn;
+
+  /// No description provided for @gateConfirmEntry.
+  ///
+  /// In es, this message translates to:
+  /// **'Confirmar entrada'**
+  String get gateConfirmEntry;
+
+  /// No description provided for @gateDismiss.
+  ///
+  /// In es, this message translates to:
+  /// **'Descartar'**
+  String get gateDismiss;
+
+  /// No description provided for @gateOpenCheckOut.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir salida'**
+  String get gateOpenCheckOut;
+
+  /// No description provided for @gateConfirmTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Confirmar placa'**
+  String get gateConfirmTitle;
+
+  /// No description provided for @gateConfirmBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisa la placa antes de abrir la sesión.'**
+  String get gateConfirmBody;
+
+  /// No description provided for @gateConfidence.
+  ///
+  /// In es, this message translates to:
+  /// **'Confianza {percent}%'**
+  String gateConfidence(int percent);
+
+  /// No description provided for @gateVotes.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} lecturas'**
+  String gateVotes(int count);
+
+  /// No description provided for @gateDevice.
+  ///
+  /// In es, this message translates to:
+  /// **'Cámara {name}'**
+  String gateDevice(String name);
+
+  /// No description provided for @gateSnapshotMissing.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin imagen'**
+  String get gateSnapshotMissing;
+
+  /// No description provided for @gateNeedsConnection.
+  ///
+  /// In es, this message translates to:
+  /// **'Confirmar requiere conexión'**
+  String get gateNeedsConnection;
+
+  /// No description provided for @gateConfirmed.
+  ///
+  /// In es, this message translates to:
+  /// **'Entrada confirmada'**
+  String get gateConfirmed;
+
+  /// No description provided for @gateDismissed.
+  ///
+  /// In es, this message translates to:
+  /// **'Lectura descartada'**
+  String get gateDismissed;
+
+  /// No description provided for @gateDismissTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Descartar lectura'**
+  String get gateDismissTitle;
+
+  /// No description provided for @gateDismissBody.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Descartar esta lectura sin abrir una sesión?'**
+  String get gateDismissBody;
+
+  /// No description provided for @gateReasonAssist.
+  ///
+  /// In es, this message translates to:
+  /// **'Modo asistido'**
+  String get gateReasonAssist;
+
+  /// No description provided for @gateReasonLowConfidence.
+  ///
+  /// In es, this message translates to:
+  /// **'Confianza baja'**
+  String get gateReasonLowConfidence;
+
+  /// No description provided for @gateReasonUnknownPlate.
+  ///
+  /// In es, this message translates to:
+  /// **'Placa no registrada'**
+  String get gateReasonUnknownPlate;
+
+  /// No description provided for @gateReasonNoSystemOperator.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin operador del sistema'**
+  String get gateReasonNoSystemOperator;
+
+  /// No description provided for @gateReasonDuplicateSession.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya tiene una sesión abierta'**
+  String get gateReasonDuplicateSession;
+
+  /// No description provided for @gateReasonLotFull.
+  ///
+  /// In es, this message translates to:
+  /// **'Parqueadero lleno'**
+  String get gateReasonLotFull;
+
+  /// No description provided for @gateReasonError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo registrar'**
+  String get gateReasonError;
+
+  /// No description provided for @gateReasonBlacklisted.
+  ///
+  /// In es, this message translates to:
+  /// **'Vehículo en lista negra'**
+  String get gateReasonBlacklisted;
+
+  /// No description provided for @gateReasonExitUnpaid.
+  ///
+  /// In es, this message translates to:
+  /// **'Sale con la sesión sin cobrar'**
+  String get gateReasonExitUnpaid;
+
+  /// No description provided for @gateReasonNoOpenSession.
+  ///
+  /// In es, this message translates to:
+  /// **'Sale sin sesión abierta'**
+  String get gateReasonNoOpenSession;
+
+  /// No description provided for @gateReasonExitPaid.
+  ///
+  /// In es, this message translates to:
+  /// **'Salida ya pagada'**
+  String get gateReasonExitPaid;
+
+  /// No description provided for @gateSettingsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Cámara de placas'**
+  String get gateSettingsTitle;
+
+  /// No description provided for @gateModeLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Modo'**
+  String get gateModeLabel;
+
+  /// No description provided for @gateModeAssist.
+  ///
+  /// In es, this message translates to:
+  /// **'Asistido: el operador confirma cada entrada'**
+  String get gateModeAssist;
+
+  /// No description provided for @gateModeAuto.
+  ///
+  /// In es, this message translates to:
+  /// **'Automático: la cámara registra la entrada'**
+  String get gateModeAuto;
+
+  /// No description provided for @gateModeAutoConfirm.
+  ///
+  /// In es, this message translates to:
+  /// **'En modo automático, una placa falsa puede abrir una sesión sin que nadie la revise. ¿Activarlo?'**
+  String get gateModeAutoConfirm;
+
+  /// No description provided for @gateMinConfidence.
+  ///
+  /// In es, this message translates to:
+  /// **'Confianza mínima'**
+  String get gateMinConfidence;
+
+  /// No description provided for @gateAutoConfidence.
+  ///
+  /// In es, this message translates to:
+  /// **'Confianza para modo automático'**
+  String get gateAutoConfidence;
+
+  /// No description provided for @gateMinVotes.
+  ///
+  /// In es, this message translates to:
+  /// **'Lecturas mínimas'**
+  String get gateMinVotes;
+
+  /// No description provided for @gateVoteWindow.
+  ///
+  /// In es, this message translates to:
+  /// **'Ventana de lecturas (s)'**
+  String get gateVoteWindow;
+
+  /// No description provided for @gateCooldown.
+  ///
+  /// In es, this message translates to:
+  /// **'Pausa entre eventos de la misma placa (s)'**
+  String get gateCooldown;
+
+  /// No description provided for @gateDefaultCategory.
+  ///
+  /// In es, this message translates to:
+  /// **'Categoría para placas nuevas'**
+  String get gateDefaultCategory;
+
+  /// No description provided for @gateActingUser.
+  ///
+  /// In es, this message translates to:
+  /// **'Operador del sistema'**
+  String get gateActingUser;
+
+  /// No description provided for @gateCameraDirection.
+  ///
+  /// In es, this message translates to:
+  /// **'Sentido de la cámara'**
+  String get gateCameraDirection;
+
+  /// No description provided for @gateDirectionEntry.
+  ///
+  /// In es, this message translates to:
+  /// **'Entrada'**
+  String get gateDirectionEntry;
+
+  /// No description provided for @gateDirectionExit.
+  ///
+  /// In es, this message translates to:
+  /// **'Salida'**
+  String get gateDirectionExit;
+
+  /// No description provided for @gateDirectionMissing.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin sentido asignado'**
+  String get gateDirectionMissing;
+
+  /// No description provided for @gateSave.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardar'**
+  String get gateSave;
+
+  /// No description provided for @gateSaved.
+  ///
+  /// In es, this message translates to:
+  /// **'Ajustes guardados'**
+  String get gateSaved;
+
+  /// No description provided for @gateNoCamerasTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay cámaras registradas'**
+  String get gateNoCamerasTitle;
+
+  /// No description provided for @gateNoCamerasBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Registra una cámara en Dispositivos y asígnale entrada o salida.'**
+  String get gateNoCamerasBody;
+
+  /// No description provided for @gateGoToDevices.
+  ///
+  /// In es, this message translates to:
+  /// **'Ir a Dispositivos'**
+  String get gateGoToDevices;
+
+  /// No description provided for @gateSelectOption.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin asignar'**
+  String get gateSelectOption;
+
+  /// No description provided for @gateModeAssistShort.
+  ///
+  /// In es, this message translates to:
+  /// **'Asistido'**
+  String get gateModeAssistShort;
+
+  /// No description provided for @gateModeAutoShort.
+  ///
+  /// In es, this message translates to:
+  /// **'Automático'**
+  String get gateModeAutoShort;
 }
 
 class _AppLocalizationsDelegate

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../l10n/l10n.dart';
 import '../theme/tokens.dart';
 
-/// A rounded placeholder block. The pulse is driven by [_SkeletonPulse]'s
+/// A rounded placeholder block. The pulse is driven by [SkeletonPulse]'s
 /// single controller so a screen never runs one animation per row.
 class SkeletonBox extends StatelessWidget {
   const SkeletonBox({
@@ -32,16 +32,16 @@ class SkeletonBox extends StatelessWidget {
 
 /// Shared pulse + "loading" semantics. Honors the platform "reduce motion"
 /// setting by rendering a static skeleton.
-class _SkeletonPulse extends StatefulWidget {
-  const _SkeletonPulse({required this.child});
+class SkeletonPulse extends StatefulWidget {
+  const SkeletonPulse({super.key, required this.child});
 
   final Widget child;
 
   @override
-  State<_SkeletonPulse> createState() => _SkeletonPulseState();
+  State<SkeletonPulse> createState() => SkeletonPulseState();
 }
 
-class _SkeletonPulseState extends State<_SkeletonPulse>
+class SkeletonPulseState extends State<SkeletonPulse>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller = AnimationController(
     vsync: this,
@@ -91,7 +91,7 @@ class SkeletonList extends StatelessWidget {
   final int itemCount;
 
   @override
-  Widget build(BuildContext context) => _SkeletonPulse(
+  Widget build(BuildContext context) => SkeletonPulse(
     child: ListView.separated(
       physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.all(Space.md),
@@ -111,13 +111,13 @@ class SkeletonCardList extends StatelessWidget {
   final int itemCount;
 
   @override
-  Widget build(BuildContext context) => _SkeletonPulse(
+  Widget build(BuildContext context) => SkeletonPulse(
     child: ListView.separated(
       physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.all(Space.md),
       itemCount: itemCount,
       separatorBuilder: (_, _) => const SizedBox(height: Space.md),
-      itemBuilder: (_, _) => const _SkeletonCard(),
+      itemBuilder: (_, _) => const SkeletonCard(),
     ),
   );
 }
@@ -129,7 +129,7 @@ class SkeletonTable extends StatelessWidget {
   final int itemCount;
 
   @override
-  Widget build(BuildContext context) => _SkeletonPulse(
+  Widget build(BuildContext context) => SkeletonPulse(
     child: ListView.separated(
       physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.all(Space.md),
@@ -175,8 +175,10 @@ class _SkeletonTile extends StatelessWidget {
   }
 }
 
-class _SkeletonCard extends StatelessWidget {
-  const _SkeletonCard();
+/// Card-shaped placeholder that mirrors a dashboard card (title, headline and
+/// footer), so a loading home does not shift when the data arrives.
+class SkeletonCard extends StatelessWidget {
+  const SkeletonCard({super.key});
 
   @override
   Widget build(BuildContext context) {

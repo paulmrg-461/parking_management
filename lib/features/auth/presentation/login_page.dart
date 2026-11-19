@@ -107,7 +107,12 @@ class _LoginPageState extends State<LoginPage> {
   Widget _compact(BuildContext context) {
     return Center(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(Space.lg, Space.xl, Space.lg, Space.lg),
+        padding: const EdgeInsets.fromLTRB(
+          Space.lg,
+          Space.xl,
+          Space.lg,
+          Space.lg,
+        ),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: _formWidth),
           child: Column(
@@ -156,8 +161,7 @@ class _LoginPageState extends State<LoginPage> {
           children: [
             BlocBuilder<AuthCubit, AuthState>(
               builder: (context, state) {
-                final expired =
-                    state is AuthUnauthenticated && state.expired;
+                final expired = state is AuthUnauthenticated && state.expired;
                 return expired
                     ? const Padding(
                         padding: EdgeInsets.only(bottom: Space.md),
@@ -223,10 +227,13 @@ class _LoginPageState extends State<LoginPage> {
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
                 const SizedBox(width: Space.xs),
-                Text(
-                  l10n.loginSecure,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                Flexible(
+                  child: Text(
+                    l10n.loginSecure,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ),
               ],
@@ -255,10 +262,7 @@ class _FormCard extends StatelessWidget {
       ),
       elevation: 0,
       clipBehavior: Clip.antiAlias,
-      child: Padding(
-        padding: const EdgeInsets.all(Space.lg),
-        child: child,
-      ),
+      child: Padding(padding: const EdgeInsets.all(Space.lg), child: child),
     );
   }
 }
@@ -280,7 +284,10 @@ class _BrandPanel extends StatelessWidget {
           end: Alignment.bottomRight,
           colors: [
             scheme.primary,
-            Color.alphaBlend(scheme.primary.withValues(alpha: 0.72), scheme.surface),
+            Color.alphaBlend(
+              scheme.primary.withValues(alpha: 0.72),
+              scheme.surface,
+            ),
           ],
         ),
       ),
@@ -313,7 +320,10 @@ class _BrandPanel extends StatelessWidget {
             const SizedBox(height: Space.xl),
             _Feature(icon: Icons.login, label: l10n.loginFeatureCheckIn),
             _Feature(icon: Icons.point_of_sale, label: l10n.loginFeatureCash),
-            _Feature(icon: Icons.insights_outlined, label: l10n.loginFeatureReports),
+            _Feature(
+              icon: Icons.insights_outlined,
+              label: l10n.loginFeatureReports,
+            ),
             const Spacer(),
             Text(
               l10n.appTitle,
@@ -379,7 +389,10 @@ class _InlineBrand extends StatelessWidget {
     return BlocBuilder<BrandingCubit, BrandingState>(
       builder: (context, branding) => Column(
         children: [
-          _Logo(size: 64, background: theme.colorScheme.surfaceContainerHighest),
+          _Logo(
+            size: 64,
+            background: theme.colorScheme.surfaceContainerHighest,
+          ),
           const SizedBox(height: Space.md),
           Semantics(
             header: true,

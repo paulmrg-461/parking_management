@@ -14,13 +14,22 @@ import 'package:parking_management/core/qr/qr_decoder.dart';
 import 'package:parking_management/core/sync/sync_status_cubit.dart';
 import 'package:parking_management/core/theme/theme_cubit.dart';
 import 'package:parking_management/features/auth/application/auth_cubit.dart';
+import 'package:parking_management/features/anomalies/application/anomalies_cubit.dart';
+import 'package:parking_management/features/waitlist/application/public_waitlist_cubit.dart';
+import 'package:parking_management/features/waitlist/application/waitlist_cubit.dart';
 import 'package:parking_management/features/auth/domain/entities/auth_session.dart';
 import 'package:parking_management/features/auth/domain/entities/user.dart';
 import 'package:parking_management/core/lot/lot_context.dart';
 import 'package:parking_management/core/lot/lot_session.dart';
 import 'package:parking_management/features/audit/application/audit_cubit.dart';
 import 'package:parking_management/features/diagnostics/application/diagnostics_cubit.dart';
+import 'package:parking_management/features/evidence/application/evidence_cubit.dart';
 import 'package:parking_management/features/home/application/dashboard_cubit.dart';
+import 'package:parking_management/features/online_payments/application/online_payment_cubit.dart';
+import 'package:parking_management/features/merchants/application/merchant_settlement_cubit.dart';
+import 'package:parking_management/features/merchants/application/merchant_validation_cubit.dart';
+import 'package:parking_management/features/merchants/application/merchants_cubit.dart';
+import 'package:parking_management/features/pass_renewal/application/pass_renewal_cubit.dart';
 import 'package:parking_management/features/lots/application/lots_cubit.dart';
 import 'package:parking_management/features/plate_scanning/domain/repositories/plate_image_capture.dart';
 import 'package:parking_management/features/notifications/application/notifications_cubit.dart';
@@ -34,14 +43,21 @@ import 'fake_check_out_repository.dart';
 import 'fake_audit_repository.dart';
 import 'fake_diagnostics_repository.dart';
 import 'fake_category_repository.dart';
+import 'fake_evidence_repository.dart';
 import 'fake_key_value_store.dart';
 import 'fake_notification_repository.dart';
+import 'fake_online_payment_repository.dart';
+import 'fake_merchant_repository.dart';
+import 'fake_pass_renewal_repository.dart';
 import 'fake_reservation_repository.dart';
 import 'fake_settings_repository.dart';
 import 'fake_lots_repository.dart';
 import 'fake_shift_repository.dart';
 import 'fake_user_repository.dart';
 import 'fake_sync_outbox.dart';
+import 'fake_anomaly_repository.dart';
+import 'fake_public_waitlist_repository.dart';
+import 'fake_waitlist_repository.dart';
 
 class _NoopCapture implements PlateImageCapture {
   @override
@@ -108,6 +124,37 @@ Future<AuthCubit> pumpApp(
         FakeReservationRepository(),
         FakeCategoryRepository(),
       ),
+    )
+    // The reservations board mounts the waitlist section next to the holds.
+    ..registerFactory<WaitlistCubit>(
+      () => WaitlistCubit(FakeWaitlistRepository()),
+    )
+    ..registerFactory<PublicWaitlistCubit>(
+      () => PublicWaitlistCubit(FakePublicWaitlistRepository()),
+    )
+    ..registerFactory<AnomaliesCubit>(
+      () => AnomaliesCubit(FakeAnomalyRepository()),
+    )
+    // /evidence is public and now also owns the pay-online panel.
+    ..registerFactory<EvidenceCubit>(() => EvidenceCubit(FakeEvidenceRepository()))
+    ..registerFactory<OnlinePaymentCubit>(
+      () => OnlinePaymentCubit(FakeOnlinePaymentRepository()),
+    )
+    // /renew is public and token-keyed.
+    ..registerFactory<PassRenewalCubit>(
+      () => PassRenewalCubit(FakePassRenewalRepository(offer: sampleOffer())),
+    )
+    // /validate is public and token-keyed; /merchants is admin-only.
+    ..registerFactory<MerchantValidationCubit>(
+      () => MerchantValidationCubit(
+        FakePublicMerchantRepository(portalResult: samplePortal),
+      ),
+    )
+    ..registerFactory<MerchantsCubit>(
+      () => MerchantsCubit(FakeMerchantRepository()),
+    )
+    ..registerFactory<MerchantSettlementCubit>(
+      () => MerchantSettlementCubit(FakeMerchantRepository()),
     );
   addTearDown(serviceLocator.reset);
   final syncOutbox = outbox ?? FakeSyncOutbox();
@@ -123,8 +170,7 @@ Future<AuthCubit> pumpApp(
     ParkingApp(
       authCubit: auth,
       syncStatusCubit: syncStatus,
-      brandingCubit:
-          branding ?? BrandingCubit(FakeParkingSettingsRepository()),
+      brandingCubit: branding ?? BrandingCubit(FakeParkingSettingsRepository()),
       connectivityCubit: connectivity,
       lotsCubit: serviceLocator<LotsCubit>(),
       themeCubit: theme,

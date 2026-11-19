@@ -32,9 +32,7 @@ class SpotPicker extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final theme = Theme.of(context);
-    final occupied = {
-      for (final session in sessions) ?session.spotId: session,
-    };
+    final occupied = {for (final session in sessions) ?session.spotId: session};
     final free = [
       for (final spot in spots)
         if (spot.active && !occupied.containsKey(spot.id)) spot,
@@ -64,9 +62,7 @@ class SpotPicker extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Text(
-              l10n.spotLabel(
-                spots.firstWhere((spot) => spot.id == id).code,
-              ),
+              l10n.spotLabel(spots.firstWhere((spot) => spot.id == id).code),
               style: theme.textTheme.labelMedium?.copyWith(
                 color: theme.colorScheme.primary,
               ),
@@ -99,7 +95,9 @@ class SpotPicker extends StatelessWidget {
                                   session: occupied[spot.id],
                                   selected: selectedId == spot.id,
                                   size: size,
-                                  onTap: spot.active && !occupied.containsKey(spot.id)
+                                  onTap:
+                                      spot.active &&
+                                          !occupied.containsKey(spot.id)
                                       ? () => onSelected(spot.id)
                                       : null,
                                 ),
@@ -107,8 +105,9 @@ class SpotPicker extends StatelessWidget {
                                   width: size,
                                   height: size,
                                   decoration: BoxDecoration(
-                                    borderRadius:
-                                        BorderRadius.circular(Radii.sm),
+                                    borderRadius: BorderRadius.circular(
+                                      Radii.sm,
+                                    ),
                                     border: Border.all(
                                       color: theme.colorScheme.outlineVariant
                                           .withValues(alpha: 0.3),

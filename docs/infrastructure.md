@@ -145,6 +145,11 @@ Recommended crons:
 | Restore drill | `supabase/restore-drill.sh` (scratch DB, no downtime) | monthly |
 | Real restore | `supabase/restore.sh` (see `runbook-restore.md`) | as needed |
 
+- **LPR expiry**: `expire_lpr_events()` runs in `jobs.sh` and the host cron;
+  it ages out stale pending reads and confirms unpaid exits whose session the
+  desk closed. `evidence-archive` calls `purge_lpr_events(30)` daily and
+  deletes the orphan snapshots it returns.
+
 ## 9. Scaling notes
 
 - The DB is the bottleneck for writes (capacity locks are per category).

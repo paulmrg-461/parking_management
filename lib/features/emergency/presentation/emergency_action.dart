@@ -58,9 +58,8 @@ class EmergencyDrawerTile extends StatelessWidget {
           ),
           subtitle: Text(
             l10n.emergencyDrawerHint,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: scheme.onErrorContainer,
-            ),
+            style: Theme.of(context).textTheme.bodySmall
+                ?.copyWith(color: scheme.onErrorContainer),
           ),
           trailing: Icon(Icons.call, color: scheme.onErrorContainer),
           onTap: onTap ?? () => showEmergencyDialog(context),

@@ -41,4 +41,14 @@ class TodaySummary extends Equatable {
     exits,
     openNow,
   ];
+
+  /// Used by the offline dashboard cache; mirrors [TodaySummary.fromJson].
+  Map<String, dynamic> toJson() => {
+    'revenue': revenue,
+    'cash_revenue': cashRevenue,
+    'pass_revenue': passRevenue,
+    'entries': entries,
+    'exits': exits,
+    'open_now': openNow,
+  };
 }

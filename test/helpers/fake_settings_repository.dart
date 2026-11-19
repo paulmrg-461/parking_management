@@ -57,6 +57,16 @@ class FakeParkingSettingsRepository implements ParkingSettingsRepository {
   }
 
   @override
+  Future<ParkingSettings> uploadCover(Uint8List bytes) async {
+    final error = logoError;
+    if (error != null) {
+      throw error;
+    }
+    settings = settings.copyWith(coverPath: 'cover_1', coverVersion: 1);
+    return settings;
+  }
+
+  @override
   Future<ParkingSettings> uploadLogo(Uint8List bytes) async {
     final error = logoError;
     if (error != null) {

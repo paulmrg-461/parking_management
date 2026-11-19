@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/error/failure.dart';
 import '../../../core/lot/lot_session.dart';
 import '../../../core/network/supabase_error_mapper.dart';
+import '../../../core/network/versioned_write.dart';
 import '../domain/entities/parking_settings.dart';
 import 'models/parking_settings_dto.dart';
 
@@ -12,9 +13,18 @@ abstract class ParkingSettingsRemoteDataSource {
   Future<ParkingSettings> fetch();
 
   /// Updates the settings row of [lotId] (the active lot when `null`).
-  Future<ParkingSettings> patch(Map<String, dynamic> fields, {int? lotId});
+  ///
+  /// [fields] may be a partial row: only those keys are written, so a text
+  /// edit never clobbers a logo someone else uploaded.
+  Future<ParkingSettings> patch(
+    Map<String, dynamic> fields, {
+    int? lotId,
+    int? baseVersion,
+  });
 
   Future<ParkingSettings> uploadLogo(Uint8List bytes);
+
+  Future<ParkingSettings> uploadCover(Uint8List bytes);
 
   Future<Uint8List> fetchLogo();
 
@@ -51,18 +61,20 @@ class SupabaseParkingSettingsRemoteDataSource
   Future<ParkingSettings> patch(
     Map<String, dynamic> fields, {
     int? lotId,
+    int? baseVersion,
   }) async {
     try {
       final lot = lotId ?? _lotId;
       // The header must match the filter: RLS reads `current_lot_id()` from
       // it, so a replay for another site would otherwise update 0 rows.
-      final row = await _client
-          .from(_table)
-          .update(fields)
-          .eq('lot_id', lot)
-          .setHeader('x-lot-id', '$lot')
-          .select()
-          .single();
+      final row = await updateVersioned(
+        _client,
+        _table,
+        payload: fields,
+        match: {'lot_id': lot},
+        baseVersion: baseVersion,
+        lotHeader: lot,
+      );
       return ParkingSettingsDto.fromJson(row).toDomain();
     } catch (error) {
       throw mapSupabaseError(error);
@@ -103,6 +115,31 @@ class SupabaseParkingSettingsRemoteDataSource
   }
 
   @override
+  Future<ParkingSettings> uploadCover(Uint8List bytes) async {
+    try {
+      final path = coverPathForLot(_lotId);
+      await _client.storage
+          .from(_bucket)
+          .uploadBinary(
+            path,
+            bytes,
+            fileOptions: FileOptions(
+              contentType: _contentType(bytes),
+              upsert: true,
+            ),
+          );
+      final row = await _client.rpc(
+        'set_branding_cover',
+        params: {'p_path': path},
+      );
+      return ParkingSettingsDto.fromJson(Map<String, dynamic>.from(row as Map))
+          .toDomain();
+    } catch (error) {
+      throw mapSupabaseError(error);
+    }
+  }
+
+  @override
   Future<String> resetLegalPolicy() async {
     try {
       final result = await _client.rpc('reset_legal_policy');
@@ -133,3 +170,5 @@ class SupabaseParkingSettingsRemoteDataSource
 /// One logo object per lot, so uploading a site's logo never overwrites the
 /// other site's branding.
 String logoPathForLot(int lotId) => 'logo_$lotId';
+
+String coverPathForLot(int lotId) => 'cover_$lotId';

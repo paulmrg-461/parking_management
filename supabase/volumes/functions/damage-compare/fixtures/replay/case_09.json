@@ -1,0 +1,36 @@
+{
+  "case": "unknown zone and classification fall back safely",
+  "entry_ids": [
+    1
+  ],
+  "exit_ids": [
+    2
+  ],
+  "model_answer": {
+    "summary": "x",
+    "quality": {},
+    "findings": [
+      {
+        "zone": "bogus",
+        "description": "x",
+        "classification": "bogus",
+        "confidence": "bogus",
+        "entry_photo_ids": [
+          1
+        ],
+        "exit_photo_ids": [
+          2
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "overall": "insufficient_evidence",
+    "count": 1,
+    "findings": [
+      {
+        "classification": "uncertain"
+      }
+    ]
+  }
+}

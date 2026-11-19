@@ -19,9 +19,8 @@ void registerAuthModule(GetIt sl) {
   sl
     ..registerLazySingleton<TokenStore>(SecureTokenStore.new)
     ..registerLazySingleton<CachingAuthLocalDataSource>(
-      () => CachingAuthLocalDataSource(
-        HiveAuthLocalDataSource(sl<TokenStore>()),
-      ),
+      () =>
+          CachingAuthLocalDataSource(HiveAuthLocalDataSource(sl<TokenStore>())),
     )
     // One cached instance serves both the repository and the interceptor.
     ..registerLazySingleton<AuthLocalDataSource>(

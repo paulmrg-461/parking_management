@@ -46,6 +46,14 @@ class WhatsappMessage extends Equatable {
       );
 
   @override
-  List<Object?> get props =>
-      [id, toPhone, template, status, createdAt, attempts, error, sentAt];
+  List<Object?> get props => [
+    id,
+    toPhone,
+    template,
+    status,
+    createdAt,
+    attempts,
+    error,
+    sentAt,
+  ];
 }

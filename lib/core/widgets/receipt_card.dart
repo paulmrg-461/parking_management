@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../fare/fare_adjustment.dart';
 import '../l10n/l10n.dart';
 import '../receipt/receipt_data.dart';
 import '../theme/status_colors.dart';
@@ -128,6 +129,50 @@ class ReceiptSummaryDialog extends StatelessWidget {
                   value: l10n.sessionPhotos(data.photoCount!),
                 ),
               const SizedBox(height: Space.md),
+              if (data.isCheckOut &&
+                  !data.pendingSync &&
+                  data.pricingLabel != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: Space.md),
+                  child: ReceiptRow(
+                    label: l10n.receiptRateLine(data.pricingLabel!),
+                    value: data.pricingDelta == 0
+                        ? ''
+                        : '${data.pricingDelta > 0 ? '+' : '-'}'
+                              '${Formatters.money(data.pricingDelta.abs())}',
+                  ),
+                ),
+              if (data.isCheckOut &&
+                  !data.pendingSync &&
+                  data.grossAmount != null) ...[
+                Padding(
+                  padding: const EdgeInsets.only(top: Space.md),
+                  child: ReceiptRow(
+                    label: l10n.fareGross,
+                    value: Formatters.money(data.grossAmount!),
+                  ),
+                ),
+                for (final line in data.adjustments)
+                  Padding(
+                    padding: const EdgeInsets.only(top: Space.xs),
+                    child: ReceiptRow(
+                      label: line.type == FareAdjustmentType.reward
+                          ? l10n.loyaltyRewardLine
+                          : l10n.fareAdjustmentMerchant(line.label),
+                      value: '-${Formatters.money(line.amount)}',
+                    ),
+                  ),
+              ],
+              if (!data.pendingSync && data.loyaltyRequired != null)
+                ReceiptRow(
+                  label: data.loyaltyRewardEarned
+                      ? l10n.loyaltyRewardEarned
+                      : l10n.loyaltyVisitOf(
+                          (data.loyaltyVisits ?? 0) + 1,
+                          data.loyaltyRequired!,
+                        ),
+                  value: '',
+                ),
               if (data.pendingSync)
                 _PendingNotice(message: l10n.receiptQueued, status: status)
               else if (data.isCheckOut && data.amountCharged != null)
@@ -157,6 +202,16 @@ class ReceiptSummaryDialog extends StatelessWidget {
                       data.paymentMethod,
                       cardType: data.cardType,
                     ),
+                  ),
+                ),
+              if (data.isCheckOut &&
+                  !data.pendingSync &&
+                  data.onlinePaidAmount > 0)
+                Padding(
+                  padding: const EdgeInsets.only(top: Space.md),
+                  child: ReceiptRow(
+                    label: l10n.receiptPaidOnline,
+                    value: Formatters.money(data.onlinePaidAmount),
                   ),
                 ),
               if (data.isCheckOut &&
@@ -346,6 +401,37 @@ class ReceiptCard extends StatelessWidget {
               value: l10n.sessionPhotos(data.photoCount!),
             ),
         ],
+        if (data.isCheckOut && !data.pendingSync && data.pricingLabel != null)
+          ReceiptRow(
+            label: l10n.receiptRateLine(data.pricingLabel!),
+            value: data.pricingDelta == 0
+                ? ''
+                : '${data.pricingDelta > 0 ? '+' : '-'}'
+                      '${Formatters.money(data.pricingDelta.abs())}',
+          ),
+        if (data.isCheckOut && !data.pendingSync && data.grossAmount != null) ...[
+          ReceiptRow(
+            label: l10n.fareGross,
+            value: Formatters.money(data.grossAmount!),
+          ),
+          for (final line in data.adjustments)
+            ReceiptRow(
+              label: line.type == FareAdjustmentType.reward
+                          ? l10n.loyaltyRewardLine
+                          : l10n.fareAdjustmentMerchant(line.label),
+              value: '-${Formatters.money(line.amount)}',
+            ),
+        ],
+        if (!data.pendingSync && data.loyaltyRequired != null)
+          ReceiptRow(
+            label: data.loyaltyRewardEarned
+                ? l10n.loyaltyRewardEarned
+                : l10n.loyaltyVisitOf(
+                    (data.loyaltyVisits ?? 0) + 1,
+                    data.loyaltyRequired!,
+                  ),
+            value: '',
+          ),
         if (data.pendingSync)
           _PendingNotice(message: l10n.receiptQueued, status: status)
         else if (data.isCheckOut && data.amountCharged != null)
@@ -363,6 +449,11 @@ class ReceiptCard extends StatelessWidget {
               data.paymentMethod,
               cardType: data.cardType,
             ),
+          ),
+        if (data.isCheckOut && !data.pendingSync && data.onlinePaidAmount > 0)
+          ReceiptRow(
+            label: l10n.receiptPaidOnline,
+            value: Formatters.money(data.onlinePaidAmount),
           ),
         if (data.isCheckOut && !data.pendingSync && data.cashReceived != null)
           ReceiptRow(
@@ -387,6 +478,36 @@ class ReceiptCard extends StatelessWidget {
               ),
             ),
           ),
+        if (data.isCheckOut &&
+            (data.fiscalNumber != null || data.fiscalPending)) ...[
+          const SizedBox(height: Space.md),
+          Text(
+            data.fiscalType == 'invoice'
+                ? l10n.fiscalInvoiceTitle
+                : l10n.fiscalPosTitle,
+            style: theme.textTheme.labelLarge,
+          ),
+          if (data.fiscalNumber != null)
+            ReceiptRow(label: l10n.receiptTicket, value: data.fiscalNumber!),
+          if (data.cufe != null)
+            Padding(
+              padding: const EdgeInsets.only(top: Space.xs),
+              child: Text(
+                '${l10n.fiscalCufe}: ${data.cufe}',
+                style: theme.textTheme.bodySmall,
+              ),
+            ),
+          if (data.fiscalPending)
+            Padding(
+              padding: const EdgeInsets.only(top: Space.xs),
+              child: Text(l10n.receiptFiscalPending),
+            ),
+          if (data.fiscalQr != null)
+            Padding(
+              padding: const EdgeInsets.only(top: Space.sm),
+              child: QrCode(data: data.fiscalQr!, size: 88),
+            ),
+        ],
         if (!data.isCheckOut) ...[
           const SizedBox(height: Space.md),
           Center(
@@ -423,6 +544,27 @@ class ReceiptCard extends StatelessWidget {
           const SizedBox(height: Space.xs),
           Text(
             l10n.receiptEvidenceHint,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+        if (!data.pendingSync && data.feedbackUrl != null) ...[
+          const SizedBox(height: Space.md),
+          Center(
+            child: Semantics(
+              label: l10n.receiptFeedbackHint,
+              child: QrCode(
+                data: data.feedbackUrl!,
+                size: 88,
+                semanticLabel: l10n.receiptFeedbackHint,
+              ),
+            ),
+          ),
+          const SizedBox(height: Space.xs),
+          Text(
+            l10n.receiptFeedbackHint,
             textAlign: TextAlign.center,
             style: theme.textTheme.bodySmall?.copyWith(
               color: scheme.onSurfaceVariant,

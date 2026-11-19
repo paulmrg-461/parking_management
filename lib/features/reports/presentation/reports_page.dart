@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/l10n/failure_messages.dart';
+import '../../../core/money/money.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/receipt/payment_method.dart';
@@ -18,10 +20,15 @@ import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/widgets/sync_badge.dart';
 import '../../emergency/presentation/emergency_action.dart';
 import '../application/reports_cubit.dart';
+import '../domain/entities/online_payment_report.dart';
+import '../domain/entities/reservation_report.dart';
 import 'report_csv.dart';
 import 'report_pdf.dart';
 import 'widgets/category_bar_list.dart';
+import 'widgets/hourly_traffic_chart.dart';
 import 'widgets/lot_comparison.dart';
+import 'widgets/forecast_accuracy_section.dart';
+import 'widgets/period_comparison_section.dart';
 import 'widgets/revenue_by_day_chart.dart';
 
 /// Admin reports screen: a date-range picker driving a revenue report
@@ -34,9 +41,10 @@ class ReportsPage extends StatefulWidget {
   State<ReportsPage> createState() => _ReportsPageState();
 }
 
-enum _RangePreset { today, last7, last30 }
+enum _RangePreset { today, last7, last30, thisMonth, lastMonth }
 
 class _ReportsPageState extends State<ReportsPage> {
+  int _comparisonMonths = 6;
   late DateTimeRange _range;
   _RangePreset? _preset = _RangePreset.last30;
   bool _allLots = false;
@@ -57,17 +65,28 @@ class _ReportsPageState extends State<ReportsPage> {
   void _selectPreset(_RangePreset preset) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final days = switch (preset) {
-      _RangePreset.today => 0,
-      _RangePreset.last7 => 6,
-      _RangePreset.last30 => 29,
+    final range = switch (preset) {
+      _RangePreset.today => DateTimeRange(start: today, end: today),
+      _RangePreset.last7 => DateTimeRange(
+        start: today.subtract(const Duration(days: 6)),
+        end: today,
+      ),
+      _RangePreset.last30 => DateTimeRange(
+        start: today.subtract(const Duration(days: 29)),
+        end: today,
+      ),
+      _RangePreset.thisMonth => DateTimeRange(
+        start: DateTime(today.year, today.month, 1),
+        end: today,
+      ),
+      _RangePreset.lastMonth => DateTimeRange(
+        start: DateTime(today.year, today.month - 1, 1),
+        end: DateTime(today.year, today.month, 0),
+      ),
     };
     setState(() {
       _preset = preset;
-      _range = DateTimeRange(
-        start: today.subtract(Duration(days: days)),
-        end: today,
-      );
+      _range = range;
     });
     _load();
   }
@@ -77,6 +96,7 @@ class _ReportsPageState extends State<ReportsPage> {
       startDate: _range.start,
       endDate: _range.end,
       allLots: _allLots,
+      comparisonMonths: _comparisonMonths,
     );
   }
 
@@ -109,6 +129,8 @@ class _ReportsPageState extends State<ReportsPage> {
         lotName: _lotName(context, state.allLots),
         previousTotal: state.previousTotal,
         deltaPercent: state.deltaPercent,
+        hourly: state.hourly,
+        comparison: state.comparison,
       );
       if (!context.mounted) {
         return;
@@ -136,6 +158,8 @@ class _ReportsPageState extends State<ReportsPage> {
           revenue: state.revenue,
           previousTotal: state.previousTotal,
           deltaPercent: state.deltaPercent,
+          hourly: state.hourly,
+          comparison: state.comparison,
         ),
       ),
     );
@@ -169,6 +193,12 @@ class _ReportsPageState extends State<ReportsPage> {
         title: Text(l10n.reportsTitle),
         actions: [
           AppIconButton(
+            key: const Key('reports_assistant'),
+            icon: Icons.auto_awesome_outlined,
+            tooltip: l10n.assistantOpenTooltip,
+            onPressed: () => context.push('/report-assistant'),
+          ),
+          AppIconButton(
             icon: Icons.ios_share,
             tooltip: l10n.actionExportPdf,
             onPressed: () => _export(context),
@@ -191,34 +221,27 @@ class _ReportsPageState extends State<ReportsPage> {
                   '${Formatters.date(_range.start)} — '
                   '${Formatters.date(_range.end)}',
               children: [
-                SegmentedButton<_RangePreset>(
-                  segments: [
-                    ButtonSegment(
-                      value: _RangePreset.today,
-                      label: Text(l10n.reportsToday),
+                for (final (preset, label) in [
+                  (_RangePreset.today, l10n.reportsToday),
+                  (_RangePreset.last7, l10n.reportsLast7),
+                  (_RangePreset.last30, l10n.reportsLast30),
+                  (_RangePreset.thisMonth, l10n.reportsThisMonth),
+                  (_RangePreset.lastMonth, l10n.reportsLastMonth),
+                ])
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      minHeight: Layout.minTouch,
                     ),
-                    ButtonSegment(
-                      value: _RangePreset.last7,
-                      label: Text(l10n.reportsLast7),
+                    child: ChoiceChip(
+                      label: Text(label),
+                      selected: _preset == preset,
+                      showCheckmark: false,
+                      materialTapTargetSize: MaterialTapTargetSize.padded,
+                      onSelected: (_) => _selectPreset(preset),
                     ),
-                    ButtonSegment(
-                      value: _RangePreset.last30,
-                      label: Text(l10n.reportsLast30),
-                    ),
-                  ],
-                  selected: {?_preset},
-                  emptySelectionAllowed: true,
-                  showSelectedIcon: false,
-                  onSelectionChanged: (selection) {
-                    if (selection.isNotEmpty) {
-                      _selectPreset(selection.first);
-                    }
-                  },
-                ),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(
-                    minHeight: Layout.minTouch,
                   ),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: Layout.minTouch),
                   child: OutlinedButton.icon(
                     onPressed: () => _pickRange(context),
                     icon: const Icon(Icons.date_range),
@@ -247,8 +270,16 @@ class _ReportsPageState extends State<ReportsPage> {
               child: BlocBuilder<ReportsCubit, ReportsState>(
                 builder: (context, state) => AsyncView<ReportsLoaded>(
                   status: _status(context, state),
-                  builder: (loaded) =>
-                      _ReportsBody(range: _range, loaded: loaded),
+                  builder: (loaded) => _ReportsBody(
+                    range: _range,
+                    loaded: loaded,
+                    onMonthsChanged: (months) {
+                      setState(() => _comparisonMonths = months);
+                      context.read<ReportsCubit>().loadComparison(
+                        months: months,
+                      );
+                    },
+                  ),
                 ),
               ),
             ),
@@ -272,10 +303,15 @@ class _ReportsPageState extends State<ReportsPage> {
 }
 
 class _ReportsBody extends StatelessWidget {
-  const _ReportsBody({required this.range, required this.loaded});
+  const _ReportsBody({
+    required this.range,
+    required this.loaded,
+    required this.onMonthsChanged,
+  });
 
   final DateTimeRange range;
   final ReportsLoaded loaded;
+  final ValueChanged<int> onMonthsChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -284,10 +320,7 @@ class _ReportsBody extends StatelessWidget {
     final revenue = loaded.revenue;
     final occupancy = loaded.occupancy;
     final occupancyLabel = occupancy.totalCapacity > 0
-        ? l10n.reportsOccupancyOf(
-            occupancy.totalOpen,
-            occupancy.totalCapacity,
-          )
+        ? l10n.reportsOccupancyOf(occupancy.totalOpen, occupancy.totalCapacity)
         : l10n.reportsOpenSessions(occupancy.totalOpen);
     return ListView(
       padding: const EdgeInsets.all(Space.md),
@@ -398,13 +431,58 @@ class _ReportsBody extends StatelessWidget {
           ),
         ],
         const SizedBox(height: Space.lg),
-        SectionHeader(
-          icon: Icons.show_chart,
-          title: l10n.reportsRevenueByDay,
-        ),
+        SectionHeader(icon: Icons.show_chart, title: l10n.reportsRevenueByDay),
         const SizedBox(height: Space.sm),
         RevenueByDayChart(byDay: revenue.byDay),
         const SizedBox(height: Space.lg),
+        SectionHeader(
+          icon: Icons.schedule_outlined,
+          title: l10n.reportsHourlyTitle,
+          subtitle: l10n.reportsHourlySubtitle,
+        ),
+        const SizedBox(height: Space.sm),
+        HourlyTrafficChart(traffic: loaded.hourly),
+        const SizedBox(height: Space.lg),
+        const SizedBox(height: Space.lg),
+        PeriodComparisonSection(
+          comparison: loaded.comparison,
+          months: loaded.comparisonMonths,
+          loading: loaded.comparisonLoading,
+          failed: loaded.comparisonFailed,
+          activeLotOnly: loaded.allLots,
+          onMonthsChanged: onMonthsChanged,
+          onRetry: () => context.read<ReportsCubit>().loadComparison(
+            months: loaded.comparisonMonths,
+          ),
+        ),
+        SectionHeader(
+          icon: Icons.event_available_outlined,
+          title: l10n.reportsReservationsTitle,
+          subtitle: l10n.reportsReservationsSubtitle,
+        ),
+        const SizedBox(height: Space.sm),
+        _ReservationMetrics(report: loaded.reservations),
+        if (loaded.reservations.waitlist.hasData) ...[
+          const SizedBox(height: Space.md),
+          SectionHeader(
+            icon: Icons.hourglass_top_outlined,
+            title: l10n.reportWaitlistTitle,
+          ),
+          const SizedBox(height: Space.sm),
+          _WaitlistMetrics(report: loaded.reservations.waitlist),
+        ],
+        if (loaded.onlinePayments.hasData) ...[
+          const SizedBox(height: Space.lg),
+          SectionHeader(
+            icon: Icons.qr_code_2_outlined,
+            title: l10n.reportOnlinePayments,
+          ),
+          const SizedBox(height: Space.sm),
+          _OnlinePaymentsCard(report: loaded.onlinePayments),
+        ],
+        const SizedBox(height: Space.lg),
+        const SizedBox(height: Space.lg),
+        const ForecastAccuracySection(),
         SectionHeader(
           icon: Icons.category_outlined,
           title: l10n.reportsRevenueByCategory,
@@ -440,10 +518,7 @@ class _ReportsBody extends StatelessWidget {
         ],
         if (loaded.whatsapp.hasData) ...[
           const SizedBox(height: Space.lg),
-          SectionHeader(
-            icon: Icons.chat_outlined,
-            title: l10n.reportsWhatsapp,
-          ),
+          SectionHeader(icon: Icons.chat_outlined, title: l10n.reportsWhatsapp),
           const SizedBox(height: Space.sm),
           IntrinsicHeight(
             child: Row(
@@ -544,26 +619,202 @@ class _DeltaRow extends StatelessWidget {
     final sign = delta > 0 ? '+' : '';
     return Semantics(
       label: l10n.reportsVsPrevious('$sign$delta'),
-      child: Row(
+      child: Wrap(
+        spacing: Space.xs,
+        runSpacing: 2,
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           Icon(
             delta >= 0 ? Icons.trending_up : Icons.trending_down,
             size: 18,
             color: color,
           ),
-          const SizedBox(width: 4),
           Text(
             l10n.reportsVsPrevious('$sign$delta'),
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: color),
+            style: Theme.of(context).textTheme.bodySmall
+                ?.copyWith(color: color),
           ),
-          const SizedBox(width: Space.sm),
           Text(
             l10n.reportsPreviousTotal(Formatters.money(previous)),
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// The queue behind those holds: joined, offered and claimed turns.
+class _WaitlistMetrics extends StatelessWidget {
+  const _WaitlistMetrics({required this.report});
+
+  final WaitlistReport report;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final conversion = report.conversion;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          child: MetricCard(
+            icon: Icons.hourglass_top_outlined,
+            label: l10n.reportWaitlistJoined,
+            value: '${report.joined}',
+            caption: l10n.waitlistWaitingCount(report.waiting),
+          ),
+        ),
+        const SizedBox(width: Space.sm),
+        Expanded(
+          child: MetricCard(
+            icon: Icons.assignment_turned_in_outlined,
+            label: l10n.reportWaitlistClaimed,
+            value: '${report.claimed}',
+            caption: conversion == null
+                ? l10n.reportWaitlistOffered
+                : '${l10n.reportWaitlistOffered}: ${report.offered} · '
+                      '$conversion%',
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Holds created in the window: how many, how many came from the web and how
+/// they ended. A quiet lot shows zeros instead of hiding the section, so the
+/// owner can tell "no bookings" from "feature off".
+class _ReservationMetrics extends StatelessWidget {
+  const _ReservationMetrics({required this.report});
+
+  final ReservationReport report;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final conversion = report.publicConversion;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: MetricCard(
+                  icon: Icons.public,
+                  label: l10n.reportsReservationsPublic,
+                  value: '${report.public}',
+                  caption: conversion == null
+                      ? null
+                      : l10n.reportsReservationsConversion(conversion),
+                  tone: MetricTone.primary,
+                ),
+              ),
+              const SizedBox(width: Space.sm),
+              Expanded(
+                child: MetricCard(
+                  icon: Icons.event_busy_outlined,
+                  label: l10n.reportsReservationsClosed,
+                  value: '${report.cancelled + report.expired}',
+                  caption: l10n.reportsReservationsClosedHint(
+                    report.cancelled,
+                    report.expired,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: Space.sm),
+        Text(
+          l10n.reportsReservationsTotal(report.total, report.app, report.used),
+          style: Theme.of(context).textTheme.bodySmall
+              ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+        ),
+      ],
+    );
+  }
+}
+
+
+/// Online money of the window: total approved plus one row per intent, so the
+/// bank statement can be matched by reference.
+class _OnlinePaymentsCard extends StatelessWidget {
+  const _OnlinePaymentsCard({required this.report});
+
+  final OnlinePaymentReport report;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(Space.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    l10n.reportsTotalRevenue,
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ),
+                Text(
+                  Money.format(report.total),
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: Space.lg),
+            for (final item in report.items) ...[
+              Padding(
+                padding: const EdgeInsets.only(bottom: Space.sm),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.plate.isEmpty
+                                ? item.reference
+                                : '${item.plate} · ${item.reference}',
+                            style: theme.textTheme.bodyMedium,
+                          ),
+                          Text(
+                            [
+                              l10n.reportOnlineReference,
+                              if (item.method != null && item.method!.isNotEmpty)
+                                item.method!,
+                              if (item.approvedAt != null)
+                                Formatters.dateTime(item.approvedAt!),
+                            ].join(' · '),
+                            style: theme.textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      Money.format(item.amount),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

@@ -1,0 +1,43 @@
+{
+  "case": "unknown identity downgrades a confident new claim",
+  "entry_ids": [
+    1
+  ],
+  "exit_ids": [
+    2
+  ],
+  "model_answer": {
+    "summary": "No se puede confirmar el vehículo.",
+    "quality": {
+      "same_vehicle": "unknown",
+      "covered_zones": [
+        "front"
+      ],
+      "issues": []
+    },
+    "findings": [
+      {
+        "zone": "left",
+        "description": "Rayón",
+        "classification": "new",
+        "confidence": "high",
+        "entry_photo_ids": [
+          1
+        ],
+        "exit_photo_ids": [
+          2
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "overall": "insufficient_evidence",
+    "count": 1,
+    "findings": [
+      {
+        "classification": "uncertain",
+        "downgraded_from": "new"
+      }
+    ]
+  }
+}

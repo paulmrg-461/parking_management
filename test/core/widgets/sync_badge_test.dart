@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:parking_management/core/sync/conflict/conflict_resolution.dart';
 import 'package:parking_management/core/sync/pending_mutation.dart';
 import 'package:parking_management/core/sync/sync_status_cubit.dart';
 import 'package:parking_management/core/widgets/sync_badge.dart';
@@ -20,9 +21,20 @@ PendingMutation _mutation({bool dead = false}) => PendingMutation(
 
 Future<SyncStatusCubit> _pump(
   WidgetTester tester,
-  FakeSyncOutbox outbox,
-) async {
-  final cubit = SyncStatusCubit(outbox, outbox.remove);
+  FakeSyncOutbox outbox, {
+  List<(int, ConflictResolution)>? resolved,
+}) async {
+  final cubit = SyncStatusCubit(
+    outbox,
+    outbox.remove,
+    null,
+    resolved == null
+        ? null
+        : (key, resolution) async {
+            resolved.add((key, resolution));
+            await outbox.remove(key);
+          },
+  );
   await tester.runAsync(cubit.load);
   await tester.pumpWidget(
     testApp(
@@ -79,5 +91,33 @@ void main() {
     await _pump(tester, FakeSyncOutbox());
 
     expect(find.byType(IconButton), findsNothing);
+  });
+
+  testWidgets('Success: a conflict shows the merge icon and can be resolved', (
+    tester,
+  ) async {
+    final outbox = FakeSyncOutbox();
+    await outbox.enqueue(
+      _mutation().asConflict(
+        kind: 'edited',
+        serverRow: {'id': 5, 'version': 9},
+      ),
+    );
+    final resolved = <(int, ConflictResolution)>[];
+
+    await _pump(tester, outbox, resolved: resolved);
+
+    expect(find.byIcon(Icons.merge_type), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.merge_type));
+    await tester.pumpAndSettle();
+    expect(find.text('Requieren tu decisión'), findsOneWidget);
+    await tester.tap(find.text('Otra persona cambió este registro.'));
+    await tester.pumpAndSettle();
+    expect(find.text('Resolver conflicto'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('conflict-keep-mine')));
+    await tester.pumpAndSettle();
+
+    expect(resolved.single.$2, isA<KeepMine>());
+    expect(await outbox.listConflicts(), isEmpty);
   });
 }

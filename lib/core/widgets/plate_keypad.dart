@@ -20,11 +20,32 @@ class PlateKeypad extends StatelessWidget {
 
   static const _digits = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'];
   static const _letters = [
-    'A', 'B', 'C', 'D', 'E', 'F',
-    'G', 'H', 'I', 'J', 'K', 'L',
-    'M', 'N', 'O', 'P', 'Q', 'R',
-    'S', 'T', 'U', 'V', 'W', 'X',
-    'Y', 'Z',
+    'A',
+    'B',
+    'C',
+    'D',
+    'E',
+    'F',
+    'G',
+    'H',
+    'I',
+    'J',
+    'K',
+    'L',
+    'M',
+    'N',
+    'O',
+    'P',
+    'Q',
+    'R',
+    'S',
+    'T',
+    'U',
+    'V',
+    'W',
+    'X',
+    'Y',
+    'Z',
   ];
 
   void _append(String key) {
@@ -153,9 +174,8 @@ class _KeyButton extends StatelessWidget {
           onPressed: onPressed,
           style: OutlinedButton.styleFrom(
             padding: EdgeInsets.zero,
-            textStyle: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+            textStyle: Theme.of(context).textTheme.titleMedium
+                ?.copyWith(fontWeight: FontWeight.w600),
           ),
           child: Text(label),
         ),
@@ -182,10 +202,7 @@ class _KeyAction extends StatelessWidget {
       child: OutlinedButton(
         onPressed: onPressed,
         style: OutlinedButton.styleFrom(padding: EdgeInsets.zero),
-        child: Tooltip(
-          message: tooltip,
-          child: Icon(icon, size: 20),
-        ),
+        child: Tooltip(message: tooltip, child: Icon(icon, size: 20)),
       ),
     );
   }

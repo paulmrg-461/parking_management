@@ -30,7 +30,9 @@ void main() {
 
     await cubit.load();
 
-    expect((cubit.state as DiagnosticsFailure).failure?.code,
-        'AdminRequiredError');
+    expect(
+      (cubit.state as DiagnosticsFailure).failure?.code,
+      'AdminRequiredError',
+    );
   });
 }

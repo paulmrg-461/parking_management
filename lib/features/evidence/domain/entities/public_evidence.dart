@@ -1,5 +1,7 @@
 import 'package:equatable/equatable.dart';
 
+import '../../../../core/fare/fare_adjustment.dart';
+
 /// One photo or video of a session, behind a short-lived signed URL.
 class EvidenceMedia extends Equatable {
   const EvidenceMedia({
@@ -79,6 +81,13 @@ class PublicSessionSummary extends Equatable {
     required this.currency,
     required this.amount,
     this.hasPass = false,
+    this.onlinePaymentsEnabled = false,
+    this.onlinePaidAmount = 0,
+    this.amountDue = 0,
+    this.graceUntil,
+    this.onlineMinAmount = 0,
+    this.gross,
+    this.adjustments = const [],
   });
 
   final int sessionId;
@@ -87,6 +96,27 @@ class PublicSessionSummary extends Equatable {
   final String currency;
   final int amount;
   final bool hasPass;
+
+  /// The lot lets customers pay from this page (COP + Wompi configured).
+  final bool onlinePaymentsEnabled;
+
+  /// Already paid online for this session.
+  final int onlinePaidAmount;
+
+  /// Desk balance right now (0 when closed or fully paid inside the window).
+  final int amountDue;
+
+  /// Deadline to leave the lot without paying the difference.
+  final DateTime? graceUntil;
+
+  /// Smallest amount the gateway accepts; below it the desk charges.
+  final int onlineMinAmount;
+
+  /// Fare before the automatic lines.
+  final int? gross;
+
+  /// Merchant (and later reward) lines applied (open sessions: right now).
+  final List<FareAdjustment> adjustments;
 
   Duration get duration => Duration(seconds: durationSeconds);
   bool get isOpen => status == 'open';
@@ -99,6 +129,13 @@ class PublicSessionSummary extends Equatable {
         currency: json['currency'] as String? ?? 'COP',
         amount: (json['amount'] as num?)?.toInt() ?? 0,
         hasPass: json['has_pass'] as bool? ?? false,
+        onlinePaymentsEnabled: json['online_payments_enabled'] as bool? ?? false,
+        onlinePaidAmount: (json['online_paid_amount'] as num?)?.toInt() ?? 0,
+        amountDue: (json['amount_due'] as num?)?.toInt() ?? 0,
+        graceUntil: DateTime.tryParse(json['grace_until'] as String? ?? ''),
+        onlineMinAmount: (json['online_min_amount'] as num?)?.toInt() ?? 0,
+        gross: (json['gross'] as num?)?.toInt(),
+        adjustments: FareAdjustment.listFromJson(json['adjustments']),
       );
 
   @override
@@ -109,6 +146,13 @@ class PublicSessionSummary extends Equatable {
     currency,
     amount,
     hasPass,
+    onlinePaymentsEnabled,
+    onlinePaidAmount,
+    amountDue,
+    graceUntil,
+    onlineMinAmount,
+    gross,
+    adjustments,
   ];
 }
 

@@ -124,9 +124,7 @@ class MetricCard extends StatelessWidget {
             side: BorderSide(color: scheme.outlineVariant),
           ),
           clipBehavior: Clip.antiAlias,
-          child: onTap == null
-              ? card
-              : InkWell(onTap: onTap, child: card),
+          child: onTap == null ? card : InkWell(onTap: onTap, child: card),
         ),
       ),
     );

@@ -87,13 +87,13 @@ void main() {
       final report = Map<String, dynamic>.from(
         await client.rpc(
           'report_revenue',
-          params: {
-            'p_start_date': _date(today),
-            'p_end_date': _date(today),
-          },
+          params: {'p_start_date': _date(today), 'p_end_date': _date(today)},
         ) as Map,
       );
-      expect(report['total'], greaterThanOrEqualTo(checkedOut['amount_charged']));
+      expect(
+        report['total'],
+        greaterThanOrEqualTo(checkedOut['amount_charged']),
+      );
 
       final history = Map<String, dynamic>.from(
         await client.rpc('vehicle_history', params: {'p_plate': plate}) as Map,

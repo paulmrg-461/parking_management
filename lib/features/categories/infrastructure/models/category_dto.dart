@@ -6,7 +6,12 @@ part 'category_dto.g.dart';
 
 @JsonSerializable()
 class CategoryDto {
-  const CategoryDto({this.id, required this.name, this.capacity = 0});
+  const CategoryDto({
+    this.id,
+    required this.name,
+    this.capacity = 0,
+    this.version = 0,
+  });
 
   factory CategoryDto.fromJson(Map<String, dynamic> json) =>
       _$CategoryDtoFromJson(json);
@@ -14,8 +19,10 @@ class CategoryDto {
   final int? id;
   final String name;
   final int capacity;
+  final int version;
 
   Map<String, dynamic> toJson() => _$CategoryDtoToJson(this);
 
-  Category toDomain() => Category(id: id, name: name, capacity: capacity);
+  Category toDomain() =>
+      Category(id: id, name: name, capacity: capacity, version: version);
 }

@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/network/supabase_error_mapper.dart';
+import '../../../core/network/versioned_write.dart';
 import '../domain/entities/tariff.dart';
 import 'models/tariff_dto.dart';
 
@@ -9,9 +10,13 @@ abstract class TariffRemoteDataSource {
 
   Future<Tariff> create(Map<String, dynamic> payload);
 
-  Future<Tariff> update(int id, Map<String, dynamic> payload);
+  Future<Tariff> update(
+    int id,
+    Map<String, dynamic> payload, {
+    int? baseVersion,
+  });
 
-  Future<void> delete(int id);
+  Future<void> delete(int id, {int? baseVersion});
 }
 
 class SupabaseTariffRemoteDataSource implements TariffRemoteDataSource {
@@ -34,11 +39,7 @@ class SupabaseTariffRemoteDataSource implements TariffRemoteDataSource {
   @override
   Future<Tariff> create(Map<String, dynamic> payload) async {
     try {
-      final row = await _client
-          .from(_table)
-          .insert(payload)
-          .select()
-          .single();
+      final row = await _client.from(_table).insert(payload).select().single();
       return TariffDto.fromJson(row).toDomain();
     } catch (error) {
       throw mapSupabaseError(error);
@@ -46,14 +47,19 @@ class SupabaseTariffRemoteDataSource implements TariffRemoteDataSource {
   }
 
   @override
-  Future<Tariff> update(int id, Map<String, dynamic> payload) async {
+  Future<Tariff> update(
+    int id,
+    Map<String, dynamic> payload, {
+    int? baseVersion,
+  }) async {
     try {
-      final row = await _client
-          .from(_table)
-          .update(payload)
-          .eq('id', id)
-          .select()
-          .single();
+      final row = await updateVersioned(
+        _client,
+        _table,
+        payload: payload,
+        match: {'id': id},
+        baseVersion: baseVersion,
+      );
       return TariffDto.fromJson(row).toDomain();
     } catch (error) {
       throw mapSupabaseError(error);
@@ -61,9 +67,14 @@ class SupabaseTariffRemoteDataSource implements TariffRemoteDataSource {
   }
 
   @override
-  Future<void> delete(int id) async {
+  Future<void> delete(int id, {int? baseVersion}) async {
     try {
-      await _client.from(_table).delete().eq('id', id);
+      await deleteVersioned(
+        _client,
+        _table,
+        match: {'id': id},
+        baseVersion: baseVersion,
+      );
     } catch (error) {
       throw mapSupabaseError(error);
     }

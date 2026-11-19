@@ -59,14 +59,10 @@ void main() {
     final outbox = FakeSyncOutbox();
     await outbox.enqueue(_mutation());
     var flushed = 0;
-    final cubit = SyncStatusCubit(
-      outbox,
-      outbox.remove,
-      () async {
-        flushed++;
-        await outbox.remove(0);
-      },
-    );
+    final cubit = SyncStatusCubit(outbox, outbox.remove, () async {
+      flushed++;
+      await outbox.remove(0);
+    });
     await cubit.load();
 
     await cubit.syncNow();

@@ -46,15 +46,16 @@ void main() {
     expect(find.text('WhatsApp'), findsOneWidget);
   });
 
-  testWidgets('Failure: falls back to the default name without cached settings', (
-    tester,
-  ) async {
-    await pumpContact(tester, FakeParkingSettingsRepository());
+  testWidgets(
+    'Failure: falls back to the default name without cached settings',
+    (tester) async {
+      await pumpContact(tester, FakeParkingSettingsRepository());
 
-    expect(find.text('Parqueadero'), findsOneWidget);
-    expect(find.text('Teléfono'), findsNothing);
-    expect(find.text('WhatsApp'), findsNothing);
-  });
+      expect(find.text('Parqueadero'), findsOneWidget);
+      expect(find.text('Teléfono'), findsNothing);
+      expect(find.text('WhatsApp'), findsNothing);
+    },
+  );
 
   testWidgets('Security: no WhatsApp action when the number is unconfigured', (
     tester,

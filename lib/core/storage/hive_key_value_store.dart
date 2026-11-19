@@ -31,8 +31,10 @@ class HiveKeyValueStore implements KeyValueStore {
     Hive.init(await _resolvePath());
     // `get()` is synchronous and only reads already-open boxes. Open the
     // preference box here so theme/locale/auto-lock survive a process restart
-    // (previously it only opened lazily on the first `put`).
+    // (previously it only opened lazily on the first `put`). The `cache` box
+    // holds the offline dashboard snapshot and is read on a failed load.
     await Hive.openBox<Object?>('preferences');
+    await Hive.openBox<Object?>('cache');
     _initialized = true;
   }
 

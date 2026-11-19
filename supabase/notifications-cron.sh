@@ -30,6 +30,16 @@ docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
 # Same jobs pg_cron schedules when the extension is available; harmless here.
 docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
   "select public.expire_reservations(24);" >/dev/null
+# Waitlist: expire offers and stale turns, serve the queue, purge old turns.
+docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
+  "select public.waitlist_expire();" >/dev/null
+docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
+  "select public.waitlist_dispatch_all();" >/dev/null
+docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
+  "select public.purge_waitlist(30);" >/dev/null
+# Rebuilds the occupancy profile when it is older than six hours.
+docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
+  "select public.refresh_occupancy_profile();" >/dev/null
 docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
   "select public.purge_stale_notifications(90);" >/dev/null
 docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
@@ -38,8 +48,49 @@ docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
   "select public.purge_audit_log(365);" >/dev/null
 docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
   "select public.purge_whatsapp_messages(90);" >/dev/null
+# Device gateway: offline alerts and event retention.
+docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
+  "select public.notify_offline_devices();" >/dev/null
+docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
+  "select public.purge_device_events(180);" >/dev/null
+# LPR gate: expire pending reads and confirm unpaid exits whose session closed.
+# (The snapshot janitor runs from evidence-archive, not here.)
+docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
+  "select public.expire_lpr_events();" >/dev/null
+# Barrier control: expired commands must alert quickly; see docs/barrier-control.md.
+docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
+  "select public.expire_barrier_commands();" >/dev/null
+docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
+  "select public.purge_barrier_events(365);" >/dev/null
+# Damage comparisons follow the evidence retention window.
+docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
+  "select public.purge_damage_comparisons();" >/dev/null
+# AI usage log retention (floor 30 days).
+docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
+  "select public.purge_ai_requests(90);" >/dev/null
+# Cash anomaly detection and retention.
+docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
+  "select public.detect_cash_anomalies();" >/dev/null
+docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
+  "select public.purge_cash_anomalies(365);" >/dev/null
+# Monthly pass renewal reminders (queued only when the lot opted in).
+docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
+  "select public.queue_pass_renewal_reminders();" >/dev/null
+# Online payments: expire stale intents, then reconcile with the gateway.
+docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
+  "select public.expire_payment_intents();" >/dev/null
+curl -fsS -X POST "${API_URL:-http://localhost:8000}/functions/v1/payments-reconcile" \
+  -H "Authorization: Bearer ${SERVICE_KEY}" >/dev/null
 
 curl -fsS -X POST "${API_URL:-http://localhost:8000}/functions/v1/push-dispatch" \
+  -H "Authorization: Bearer ${SERVICE_KEY}" >/dev/null
+# Loyalty rewards past their validity become `expired`.
+docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
+  "select public.loyalty_expire_rewards();" >/dev/null
+# Electronic invoicing: POS documents in `always` mode, then the dispatcher.
+docker compose exec -T db psql -U postgres -d "$DB_NAME" -tAc \
+  "select public.enqueue_pending_fiscal_documents();" >/dev/null
+curl -fsS -X POST "${API_URL:-http://localhost:8000}/functions/v1/fiscal-dispatch" \
   -H "Authorization: Bearer ${SERVICE_KEY}" >/dev/null
 # No-op ({configured:false}) until WHATSAPP_TOKEN/PHONE_NUMBER_ID are set.
 curl -fsS -X POST "${API_URL:-http://localhost:8000}/functions/v1/whatsapp-dispatch" \

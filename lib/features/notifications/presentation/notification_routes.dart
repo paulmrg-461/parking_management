@@ -8,8 +8,18 @@ String? routeForNotification(AppNotification notification) {
       : null;
   return switch (notification.type) {
     'shift_closed' => '/shift',
-    'monthly_pass_expiring' || 'monthly_pass_renewed' => '/monthly-passes',
-    'check_in' || 'check_out' || 'overstay' => historyRoute,
+    'monthly_pass_expiring' ||
+    'monthly_pass_renewed' ||
+    'pass_renewal_paid' => '/monthly-passes',
+    'check_in' || 'check_out' || 'overstay' || 'online_payment' => historyRoute,
+    'online_payment_review' => historyRoute,
+    'public_reservation' ||
+    'waitlist_joined' ||
+    'waitlist_offer' => '/reservations',
+    'cash_anomaly' => '/anomalies',
+    'fiscal_document_failed' || 'fiscal_resolution_low' => '/invoicing',
+    'device_offline' || 'device_online' || 'device_auth_failed' => '/devices',
+    'lpr_pending' || 'lpr_exit' || 'lpr_blacklisted' => '/gate',
     _ => null,
   };
 }

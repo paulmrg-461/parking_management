@@ -44,6 +44,15 @@ class AuditEntry extends Equatable {
   );
 
   @override
-  List<Object?> get props =>
-      [id, action, tableName, createdAt, actor, entityId, lot, before, after];
+  List<Object?> get props => [
+    id,
+    action,
+    tableName,
+    createdAt,
+    actor,
+    entityId,
+    lot,
+    before,
+    after,
+  ];
 }

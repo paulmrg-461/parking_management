@@ -1,11 +1,11 @@
 {
-    "name": "Parking Management",
-    "short_name": "Parking",
+    "name": "Parqueadero DevPaul",
+    "short_name": "Parqueadero",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0B0D10",
     "theme_color": "#0B0D10",
-    "description": "Parking lot operations: check-in, billing, monthly passes and cash shifts.",
+    "description": "Reserva tu espacio: disponibilidad y precio por hora.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

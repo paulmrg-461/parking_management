@@ -29,14 +29,23 @@ String _categories(AppLocalizations l) => l.navCategories;
 String _monthlyPasses(AppLocalizations l) => l.navMonthlyPasses;
 String _users(AppLocalizations l) => l.navUsers;
 String _reports(AppLocalizations l) => l.navReports;
+String _satisfaction(AppLocalizations l) => l.navSatisfaction;
 String _settings(AppLocalizations l) => l.navSettings;
 String _contact(AppLocalizations l) => l.navContact;
 String _notifications(AppLocalizations l) => l.navNotifications;
 String _reservations(AppLocalizations l) => l.navReservations;
 String _lots(AppLocalizations l) => l.navLots;
 String _records(AppLocalizations l) => l.navRecords;
+String _anomalies(AppLocalizations l) => l.navAnomalies;
 String _audit(AppLocalizations l) => l.navAudit;
 String _diagnostics(AppLocalizations l) => l.navDiagnostics;
+String _merchants(AppLocalizations l) => l.navMerchants;
+String _pricing(AppLocalizations l) => l.navPricing;
+String _loyalty(AppLocalizations l) => l.navLoyalty;
+String _invoicing(AppLocalizations l) => l.navInvoicing;
+String _devices(AppLocalizations l) => l.navDevices;
+String _gate(AppLocalizations l) => l.navGate;
+String _gateSettings(AppLocalizations l) => l.gateSettingsTitle;
 
 const primaryDestinations = [
   AppDestination(homePath, _home, Icons.home_outlined, Icons.home),
@@ -47,6 +56,12 @@ const primaryDestinations = [
     _records,
     Icons.receipt_long_outlined,
     Icons.receipt_long,
+  ),
+  AppDestination(
+    '/gate',
+    _gate,
+    Icons.videocam_outlined,
+    Icons.videocam,
   ),
   AppDestination(
     '/notifications',
@@ -64,17 +79,48 @@ const primaryDestinations = [
 
 const managementDestinations = [
   AppDestination(
+    '/gate-settings',
+    _gateSettings,
+    Icons.settings_outlined,
+    Icons.settings,
+  ),
+  AppDestination(
+    '/devices',
+    _devices,
+    Icons.devices_other_outlined,
+    Icons.devices_other,
+  ),
+  AppDestination(
+    '/invoicing',
+    _invoicing,
+    Icons.request_quote_outlined,
+    Icons.request_quote,
+  ),
+  AppDestination(
+    '/loyalty',
+    _loyalty,
+    Icons.loyalty_outlined,
+    Icons.loyalty,
+  ),
+  AppDestination(
+    '/pricing',
+    _pricing,
+    Icons.trending_up_outlined,
+    Icons.trending_up,
+  ),
+  AppDestination(
+    '/merchants',
+    _merchants,
+    Icons.storefront_outlined,
+    Icons.storefront,
+  ),
+  AppDestination(
     '/vehicles',
     _vehicles,
     Icons.directions_car_outlined,
     Icons.directions_car,
   ),
-  AppDestination(
-    '/tariffs',
-    _tariffs,
-    Icons.payments_outlined,
-    Icons.payments,
-  ),
+  AppDestination('/tariffs', _tariffs, Icons.payments_outlined, Icons.payments),
   AppDestination(
     '/categories',
     _categories,
@@ -88,11 +134,12 @@ const managementDestinations = [
     Icons.monitor_heart,
   ),
   AppDestination(
-    '/audit',
-    _audit,
-    Icons.history_outlined,
-    Icons.history,
+    '/anomalies',
+    _anomalies,
+    Icons.report_problem_outlined,
+    Icons.report_problem,
   ),
+  AppDestination('/audit', _audit, Icons.history_outlined, Icons.history),
   AppDestination(
     '/lots',
     _lots,
@@ -117,6 +164,12 @@ const managementDestinations = [
     _reports,
     Icons.bar_chart_outlined,
     Icons.bar_chart,
+  ),
+  AppDestination(
+    '/satisfaction',
+    _satisfaction,
+    Icons.sentiment_satisfied_alt_outlined,
+    Icons.sentiment_satisfied_alt,
   ),
   AppDestination(
     '/settings',

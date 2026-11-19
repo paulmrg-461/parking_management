@@ -1,0 +1,103 @@
+{
+  "case": "case_13.json",
+  "question": "Is the lot full right now?",
+  "locale": "en",
+  "today": "2026-11-10",
+  "timezone": "America/Bogota",
+  "currency": "COP",
+  "rpc_outputs": {
+    "report_occupancy": {
+      "total_open": 74,
+      "total_reserved": 3,
+      "total_capacity": 80,
+      "by_category": [
+        {
+          "category_id": 1,
+          "category_name": "Car",
+          "count": 74,
+          "capacity": 80,
+          "reserved": 3,
+          "available": 6,
+          "is_full": false
+        }
+      ]
+    }
+  },
+  "model_script": [
+    {
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "o1",
+          "name": "get_occupancy_now",
+          "input": {}
+        }
+      ],
+      "stop_reason": "tool_use"
+    },
+    {
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "submit",
+          "name": "submit_answer",
+          "input": {
+            "status": "answered",
+            "headline": "{f1} of {f2} bays are taken, so it is not full.",
+            "explanation": "",
+            "period_start": "",
+            "period_end": "",
+            "figures": [
+              {
+                "id": "f1",
+                "label": "Open vehicles",
+                "unit": "count",
+                "op": "value",
+                "operands": [
+                  {
+                    "call_id": "o1",
+                    "path": "total_open"
+                  }
+                ]
+              },
+              {
+                "id": "f2",
+                "label": "Total capacity",
+                "unit": "count",
+                "op": "value",
+                "operands": [
+                  {
+                    "call_id": "o1",
+                    "path": "total_capacity"
+                  }
+                ]
+              }
+            ],
+            "caveats": []
+          }
+        }
+      ],
+      "stop_reason": "end_turn"
+    }
+  ],
+  "expected": {
+    "tools": [
+      {
+        "tool": "get_occupancy_now"
+      }
+    ],
+    "answer": {
+      "status": "answered",
+      "figures": [
+        {
+          "id": "f1",
+          "value": 74
+        },
+        {
+          "id": "f2",
+          "value": 80
+        }
+      ]
+    }
+  }
+}

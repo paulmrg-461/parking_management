@@ -1,3 +1,4 @@
+import 'package:cross_file/cross_file.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/l10n/l10n.dart';
@@ -6,6 +7,13 @@ import '../../../core/theme/tokens.dart';
 import '../../../core/money/money.dart';
 import '../../../core/money/money_input.dart';
 import '../../../core/receipt/payment_method.dart';
+import '../../invoicing/domain/entities/fiscal_customer.dart';
+import '../../invoicing/domain/entities/fiscal_settings.dart';
+import '../../invoicing/presentation/widgets/fiscal_customer_form.dart';
+import '../../loyalty/presentation/desk_loyalty_section.dart';
+import '../../merchants/presentation/desk_merchant_section.dart';
+import '../../../core/widgets/capture_guide.dart';
+import '../../plate_scanning/domain/repositories/plate_image_capture.dart';
 import '../domain/entities/check_out_preview.dart';
 import 'widgets/fare_breakdown_view.dart';
 
@@ -18,6 +26,8 @@ class CheckoutChoice {
     this.lostTicketReason,
     this.cardType,
     this.cashReceived,
+    this.fiscalCustomer,
+    this.exitPhotos = const [],
   });
 
   final PaymentMethod method;
@@ -31,6 +41,12 @@ class CheckoutChoice {
 
   /// Cash handed over (null = exact/unknown); only used to show the change.
   final int? cashReceived;
+
+  /// Optional buyer data for the electronic invoice (null = POS document).
+  final FiscalCustomer? fiscalCustomer;
+
+  /// Optional exit photos for the damage comparison.
+  final List<XFile> exitPhotos;
 }
 
 /// Asks how the customer paid (and, for admins, an optional audited
@@ -41,6 +57,12 @@ Future<CheckoutChoice?> showCheckoutDialog(
   required bool canDiscount,
   CheckOutPreview? preview,
   PaymentMethod initialMethod = PaymentMethod.cash,
+  MerchantDeskOptions? merchants,
+  LoyaltyDeskOptions? loyalty,
+  FiscalConfig? fiscal,
+  bool online = true,
+  bool exitPhotosEnabled = false,
+  PlateImageCapture? capture,
 }) => showDialog<CheckoutChoice>(
   context: context,
   builder: (_) => _CheckoutDialog(
@@ -48,6 +70,12 @@ Future<CheckoutChoice?> showCheckoutDialog(
     canDiscount: canDiscount,
     preview: preview,
     initialMethod: initialMethod,
+    merchants: merchants,
+    loyalty: loyalty,
+    fiscal: fiscal,
+    online: online,
+    exitPhotosEnabled: exitPhotosEnabled,
+    capture: capture,
   ),
 );
 
@@ -57,25 +85,38 @@ class _CheckoutDialog extends StatefulWidget {
     required this.canDiscount,
     this.preview,
     this.initialMethod = PaymentMethod.cash,
+    this.merchants,
+    this.loyalty,
+    this.fiscal,
+    this.online = true,
+    this.exitPhotosEnabled = false,
+    this.capture,
   });
 
   final String plate;
   final bool canDiscount;
   final CheckOutPreview? preview;
   final PaymentMethod initialMethod;
+  final MerchantDeskOptions? merchants;
+  final LoyaltyDeskOptions? loyalty;
+  final FiscalConfig? fiscal;
+  final bool online;
+  final bool exitPhotosEnabled;
+  final PlateImageCapture? capture;
 
   @override
   State<_CheckoutDialog> createState() => _CheckoutDialogState();
 }
 
 /// Inputs that can carry an inline validation message.
-enum _Field { cash, discountAmount, discountReason, lostReason }
+enum _Field { cash, discountAmount, discountReason, lostReason, fiscal }
 
 class _CheckoutDialogState extends State<_CheckoutDialog> {
   /// How many bill shortcuts to offer above the cash field.
   static const _cashShortcuts = 3;
 
   late PaymentMethod _selected = widget.initialMethod;
+  late CheckOutPreview? _preview = widget.preview;
   CardType _cardType = CardType.debit;
   final _cashController = TextEditingController();
   final _discountController = TextEditingController();
@@ -83,6 +124,9 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
   final _lostReasonController = TextEditingController();
   bool _lostTicket = false;
   final Map<_Field, String> _errors = {};
+  final _fiscalKey = GlobalKey<FiscalCustomerFormState>();
+  final List<XFile> _exitPhotos = [];
+  bool _capturing = false;
 
   @override
   void dispose() {
@@ -100,15 +144,24 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
   /// Total still due after the admin discount. A lost ticket charges the
   /// server's `lost_ticket_amount` (older servers: the regular fare).
   int? get _due {
-    final preview = widget.preview;
+    final preview = _preview;
+    // A lost ticket ignores the online payment (there is no ticket to prove
+    // the stay), so its fee is charged in full at the desk.
     final amount = _lostTicket
         ? preview?.lostTicketAmount ?? preview?.amount
-        : preview?.amount;
+        : preview?.deskDue ?? preview?.amount;
     if (amount == null) {
       return null;
     }
     return (amount - _discount).clamp(0, amount);
   }
+
+  /// The customer paid online for this session.
+  bool get _paidOnline => (_preview?.onlinePaidAmount ?? 0) > 0;
+
+  /// Paid in full inside the exit window: nothing to collect, no payment
+  /// choice to make (the server stores it as `online`).
+  bool get _nothingDue => _paidOnline && !_lostTicket && (_due ?? 1) == 0;
 
   /// A lost ticket is always charged: a monthly pass cannot cover it
   /// (`LostTicketPassMethodError`), so the method falls back to cash.
@@ -149,6 +202,7 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
       if (_lostTicket && _lostReasonController.text.trim().isEmpty)
         _Field.lostReason: l10n.lostTicketReasonRequired,
       if (_selected == PaymentMethod.cash &&
+          !_nothingDue &&
           received != null &&
           due != null &&
           received < due)
@@ -156,7 +210,25 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
     };
   }
 
+  Future<void> _addExitPhoto() async {
+    final capture = widget.capture;
+    if (capture == null || _capturing) return;
+    setState(() => _capturing = true);
+    try {
+      final image = await capture.capture();
+      if (image != null && mounted) {
+        setState(() => _exitPhotos.add(image));
+      }
+    } finally {
+      if (mounted) setState(() => _capturing = false);
+    }
+  }
+
   void _confirm() {
+    if (!(_fiscalKey.currentState?.isValid ?? true)) {
+      setState(() => _errors[_Field.fiscal] = context.l10n.fiscalInvalidCustomer);
+      return;
+    }
     final errors = _validate();
     if (errors.isNotEmpty) {
       setState(
@@ -179,6 +251,8 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
       lostTicketReason: _lostTicket ? _lostReasonController.text.trim() : null,
       cardType: _selected == PaymentMethod.card ? _cardType : null,
       cashReceived: _selected == PaymentMethod.cash ? _cashReceived : null,
+      fiscalCustomer: _fiscalKey.currentState?.customer,
+      exitPhotos: List.of(_exitPhotos),
     );
   }
 
@@ -197,19 +271,97 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
             children: [
               Text(l10n.checkOutConfirm(widget.plate)),
               const SizedBox(height: Space.sm),
-              if (widget.preview case final preview?)
+              if (_preview case final preview?)
                 FareBreakdownView(preview: preview)
               else
                 Text(
                   l10n.slotEstimateUnavailable,
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
+              if (_paidOnline) _buildOnlineBox(context),
               if (due != null && _discount > 0) _buildDueRow(context, due),
-              const SizedBox(height: Space.sm),
-              ..._buildMethodPicker(context),
-              if (_selected == PaymentMethod.cash && due != null) ...[
+              if (widget.loyalty case final loyalty?
+                  when !_lostTicket && !(_preview?.hasPass ?? false))
+                DeskLoyaltySection(
+                  options: loyalty,
+                  preview: _preview,
+                  onChanged: (preview) => setState(() => _preview = preview),
+                ),
+              if (widget.fiscal case final fiscal?
+                  when widget.online && fiscal.enabled)
+                FiscalCustomerForm(key: _fiscalKey, config: fiscal),
+              if (_errors[_Field.fiscal] case final error?)
+                Padding(
+                  padding: const EdgeInsets.only(top: Space.xs),
+                  child: Text(
+                    error,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ),
+              if (widget.exitPhotosEnabled && widget.capture != null) ...[
                 const SizedBox(height: Space.sm),
-                _buildCashBox(context, due),
+                Text(
+                  l10n.damageExitSection,
+                  style: Theme.of(context).textTheme.labelLarge,
+                ),
+                Text(
+                  l10n.damageExitHint,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: Space.xs),
+                AngleGuideBanner(captured: _exitPhotos.length),
+                const SizedBox(height: Space.xs),
+                AngleSlotChips(captured: _exitPhotos.length),
+                const SizedBox(height: Space.xs),
+                const SizedBox(height: Space.xs),
+                Wrap(
+                  spacing: Space.xs,
+                  runSpacing: Space.xs,
+                  children: [
+                    for (var index = 0; index < _exitPhotos.length; index++)
+                      Chip(
+                        label: Text('${index + 1}'),
+                        onDeleted: () =>
+                            setState(() => _exitPhotos.removeAt(index)),
+                      ),
+                    if (_exitPhotos.length < 5)
+                      OutlinedButton.icon(
+                        key: const Key('damage_add_exit_photo'),
+                        onPressed: _capturing ? null : _addExitPhoto,
+                        icon: const Icon(Icons.photo_camera_outlined),
+                        label: Text(l10n.damageAddPhoto),
+                      ),
+                  ],
+                ),
+              ] else if (!widget.exitPhotosEnabled)
+                Padding(
+                  padding: const EdgeInsets.only(top: Space.xs),
+                  child: Text(
+                    l10n.damageExitOffline,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+              if (widget.merchants case final merchants?
+                  when !_lostTicket &&
+                      !(_preview?.hasPass ?? false) &&
+                      merchants.options.isNotEmpty) ...[
+                const SizedBox(height: Space.sm),
+                DeskMerchantSection(
+                  merchants: merchants,
+                  preview: _preview,
+                  canRevoke: widget.canDiscount,
+                  onChanged: (preview) => setState(() => _preview = preview),
+                ),
+              ],
+              const SizedBox(height: Space.sm),
+              if (!_nothingDue) ...[
+                ..._buildMethodPicker(context),
+                if (_selected == PaymentMethod.cash && due != null) ...[
+                  const SizedBox(height: Space.sm),
+                  _buildCashBox(context, due),
+                ],
               ],
               const SizedBox(height: Space.sm),
               CheckboxListTile(
@@ -248,12 +400,81 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
           onPressed: _confirm,
           icon: const Icon(Icons.check),
           label: Text(
-            due == null
+            _nothingDue
+                ? l10n.checkOutConfirmExit
+                : due == null
                 ? l10n.actionConfirm
                 : l10n.checkoutChargeAmount(Money.format(due)),
           ),
         ),
       ],
+    );
+  }
+
+  /// Paid amount and desk balance, so nobody collects the money twice.
+  Widget _buildOnlineBox(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final preview = _preview!;
+    final due = _due ?? 0;
+    return Container(
+      key: const Key('checkout_online_box'),
+      margin: const EdgeInsets.only(top: Space.sm),
+      padding: const EdgeInsets.all(Space.sm),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primaryContainer,
+        borderRadius: BorderRadius.circular(Radii.md),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.qr_code_2_outlined, color: theme.colorScheme.primary),
+              const SizedBox(width: Space.sm),
+              Expanded(
+                child: Text(
+                  l10n.checkOutPaidOnline,
+                  style: theme.textTheme.titleSmall,
+                ),
+              ),
+              Text(
+                Money.format(preview.onlinePaidAmount),
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: Space.xs),
+          if (_nothingDue)
+            Text(l10n.checkOutNoCashDue)
+          else ...[
+            Row(
+              children: [
+                Expanded(child: Text(l10n.checkOutBalanceDue)),
+                Text(
+                  Money.format(due),
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ],
+            ),
+            if (!preview.graceActive)
+              Padding(
+                padding: const EdgeInsets.only(top: Space.xs),
+                child: Text(
+                  l10n.checkOutGraceExpired,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.error,
+                  ),
+                ),
+              ),
+          ],
+        ],
+      ),
     );
   }
 

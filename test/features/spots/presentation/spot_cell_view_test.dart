@@ -30,10 +30,12 @@ Future<Color> cellColor(WidgetTester tester, {required bool occupied}) async {
   );
   await tester.pumpAndSettle();
   final container = tester.widget<Container>(
-    find.descendant(
-      of: find.byType(SpotCellView),
-      matching: find.byType(Container),
-    ).first,
+    find
+        .descendant(
+          of: find.byType(SpotCellView),
+          matching: find.byType(Container),
+        )
+        .first,
   );
   return (container.decoration! as BoxDecoration).color!;
 }

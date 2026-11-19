@@ -113,24 +113,21 @@ void main() {
     },
   );
 
-  test(
-    'Success: the online first attempt sends an Idempotency-Key',
-    () async {
-      final remote = _FakeRemote(sessionToReturn: session);
-      final repository = CheckInRepositoryImpl(
-        remote,
-        FakeSyncOutbox(),
-        FilePendingPhotoStorage(),
-        LotSession(),
-      );
+  test('Success: the online first attempt sends an Idempotency-Key', () async {
+    final remote = _FakeRemote(sessionToReturn: session);
+    final repository = CheckInRepositoryImpl(
+      remote,
+      FakeSyncOutbox(),
+      FilePendingPhotoStorage(),
+      LotSession(),
+    );
 
-      await repository.createCheckIn(plate: 'ABC123', photos: const []);
+    await repository.createCheckIn(plate: 'ABC123', photos: const []);
 
-      expect(remote.idempotencyKeyUsed, isNotEmpty);
-      // Online check-ins keep the server's `now`; only replays carry a time.
-      expect(remote.clientEntryTimeUsed, isNull);
-    },
-  );
+    expect(remote.idempotencyKeyUsed, isNotEmpty);
+    // Online check-ins keep the server's `now`; only replays carry a time.
+    expect(remote.clientEntryTimeUsed, isNull);
+  });
 
   test(
     'Failure: the queued replay reuses the first attempt Idempotency-Key',
@@ -146,9 +143,9 @@ void main() {
 
       await repository.createCheckIn(plate: 'ABC123', photos: const []);
 
-      final payload =
-          jsonDecode(outbox.enqueued.single.payloadJson!)
-              as Map<String, dynamic>;
+      final payload = jsonDecode(
+        outbox.enqueued.single.payloadJson!,
+      ) as Map<String, dynamic>;
       expect(remote.idempotencyKeyUsed, isNotNull);
       expect(payload['client_ref'], remote.idempotencyKeyUsed);
     },

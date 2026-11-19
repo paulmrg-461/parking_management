@@ -38,7 +38,8 @@ class PlateScanningSuccess extends PlateScanningState {
 class PlateScanningFailure extends PlateScanningState {
   const PlateScanningFailure(this.message, {this.failure});
 
-  PlateScanningFailure.of(Failure failure) : this(failure.message, failure: failure);
+  PlateScanningFailure.of(Failure failure)
+    : this(failure.message, failure: failure);
 
   final String message;
   final Failure? failure;

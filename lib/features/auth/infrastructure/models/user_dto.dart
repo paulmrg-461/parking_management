@@ -31,10 +31,10 @@ class UserDto {
   Map<String, dynamic> toJson() => _$UserDtoToJson(this);
 
   User toDomain() => User(
-        id: id,
-        username: username,
-        displayName: displayName,
-        role: role == 'admin' ? UserRole.admin : UserRole.operator,
-        isActive: isActive,
-      );
+    id: id,
+    username: username,
+    displayName: displayName,
+    role: role == 'admin' ? UserRole.admin : UserRole.operator,
+    isActive: isActive,
+  );
 }

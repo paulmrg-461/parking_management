@@ -42,6 +42,31 @@ void main() {
     expect(find.text('Turno abierto correctamente'), findsOneWidget);
   });
 
+  testWidgets('Success: the open shift shows the online sales row', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final repository = FakeShiftRepository(
+      currentShift: sampleShift(onlineSales: 12000),
+    );
+    final cubit = ShiftCubit(repository);
+    addTearDown(cubit.close);
+    await tester.pumpWidget(
+      testApp(
+        BlocProvider.value(
+          value: cubit,
+          child: const ShiftPage(isAdmin: false),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Pagos en línea'), findsOneWidget);
+    expect(find.text(r'$12.000'), findsWidgets);
+  });
+
   testWidgets('Security: an operator does not see the admin history', (
     tester,
   ) async {

@@ -1,0 +1,110 @@
+{
+  "case": "cash differences in latest shift closes",
+  "question": "Were there cash differences in the latest shift closes?",
+  "locale": "en",
+  "rpc_outputs": {
+    "list_shifts": [
+      {
+        "id": 1,
+        "opened_at": "2026-11-10T06:00:00Z",
+        "closed_at": "2026-11-10T14:00:00Z",
+        "opening_float": 50000,
+        "counted_cash": 120000,
+        "expected_cash": 121000,
+        "difference": -1000,
+        "session_count": 10,
+        "revenue": 90000
+      },
+      {
+        "id": 2,
+        "opened_at": "2026-11-09T06:00:00Z",
+        "closed_at": "2026-11-09T14:00:00Z",
+        "opening_float": 50000,
+        "counted_cash": 130000,
+        "expected_cash": 129000,
+        "difference": 1000,
+        "session_count": 12,
+        "revenue": 95000
+      }
+    ]
+  },
+  "model_script": [
+    {
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "sh1",
+          "name": "get_shift_summaries",
+          "input": {
+            "limit": 20
+          }
+        }
+      ],
+      "stop_reason": "tool_use"
+    },
+    {
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "submit",
+          "name": "submit_answer",
+          "input": {
+            "status": "answered",
+            "headline": "The latest close was short by {f1} and the one before was over by {f2}.",
+            "explanation": "",
+            "period_start": "",
+            "period_end": "",
+            "figures": [
+              {
+                "id": "f1",
+                "label": "Latest difference",
+                "unit": "money",
+                "op": "value",
+                "operands": [
+                  {
+                    "call_id": "sh1",
+                    "path": "shifts[0].difference"
+                  }
+                ]
+              },
+              {
+                "id": "f2",
+                "label": "Previous difference",
+                "unit": "money",
+                "op": "value",
+                "operands": [
+                  {
+                    "call_id": "sh1",
+                    "path": "shifts[1].difference"
+                  }
+                ]
+              }
+            ],
+            "caveats": []
+          }
+        }
+      ],
+      "stop_reason": "end_turn"
+    }
+  ],
+  "expected": {
+    "tools": [
+      {
+        "tool": "get_shift_summaries"
+      }
+    ],
+    "answer": {
+      "status": "answered",
+      "figures": [
+        {
+          "id": "f1",
+          "value": -1000
+        },
+        {
+          "id": "f2",
+          "value": 1000
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "case": "clear new scratch with both photos",
+  "entry_ids": [
+    1
+  ],
+  "exit_ids": [
+    2
+  ],
+  "model_answer": {
+    "summary": "Rayón nuevo en la puerta.",
+    "quality": {
+      "same_vehicle": "yes",
+      "covered_zones": [
+        "front",
+        "rear",
+        "left",
+        "right"
+      ],
+      "issues": []
+    },
+    "findings": [
+      {
+        "zone": "left",
+        "description": "Rayón",
+        "classification": "new",
+        "confidence": "high",
+        "entry_photo_ids": [
+          1
+        ],
+        "exit_photo_ids": [
+          2
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "overall": "possible_new_damage",
+    "count": 1,
+    "findings": [
+      {
+        "classification": "new",
+        "downgraded_from": null
+      }
+    ]
+  }
+}

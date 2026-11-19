@@ -60,9 +60,8 @@ class _Bar extends StatelessWidget {
                 Expanded(
                   child: Text(
                     context.l10n.offlineBanner,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: scheme.onInverseSurface,
-                    ),
+                    style: Theme.of(context).textTheme.bodyMedium
+                        ?.copyWith(color: scheme.onInverseSurface),
                   ),
                 ),
               ],

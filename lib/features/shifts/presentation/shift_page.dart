@@ -440,6 +440,11 @@ class _OpenShiftCard extends StatelessWidget {
             ),
             _MetricRow(label: l10n.shiftSales, amount: shift.revenue),
             _MetricRow(label: l10n.shiftCashSales, amount: shift.cashSales),
+            if (shift.onlineSales > 0)
+              _MetricRow(
+                label: l10n.shiftOnlineSales,
+                amount: shift.onlineSales,
+              ),
             _MetricRow(
               label: l10n.shiftPassPayments,
               amount: shift.passPayments,

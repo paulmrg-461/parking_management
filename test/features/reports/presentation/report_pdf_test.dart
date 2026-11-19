@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/l10n/l10n.dart';
+import 'package:parking_management/features/reports/domain/entities/hourly_traffic.dart';
 import 'package:parking_management/features/reports/domain/entities/revenue_report.dart';
 import 'package:parking_management/features/reports/presentation/report_pdf.dart';
 
@@ -11,12 +12,8 @@ final _revenue = RevenueReport(
   byCategory: const [
     CategoryRevenue(categoryId: 1, categoryName: 'Car', amount: 100000),
   ],
-  byPayment: const [
-    PaymentRevenue(paymentMethod: 'cash', amount: 100000),
-  ],
-  byLot: const [
-    LotRevenue(lotId: 1, lotName: 'Central', amount: 100000),
-  ],
+  byPayment: const [PaymentRevenue(paymentMethod: 'cash', amount: 100000)],
+  byLot: const [LotRevenue(lotId: 1, lotName: 'Central', amount: 100000)],
 );
 
 void main() {
@@ -54,14 +51,86 @@ void main() {
     expect(rows, isEmpty);
   });
 
-  test('Security: a zero previous total never yields a division result', () async {
-    final rows = reportComparisonRows(
-      l10n: await AppLocalizations.delegate.load(defaultLocale),
-      previousTotal: 0,
-      deltaPercent: null,
-    );
+  test(
+    'Security: a zero previous total never yields a division result',
+    () async {
+      final rows = reportComparisonRows(
+        l10n: await AppLocalizations.delegate.load(defaultLocale),
+        previousTotal: 0,
+        deltaPercent: null,
+      );
 
-    expect(rows, isEmpty);
+      expect(rows, isEmpty);
+    },
+  );
+
+  test(
+    'Success: only hours with movement reach the hourly PDF table',
+    () async {
+      final rows = reportHourlyRows(
+        l10n: await AppLocalizations.delegate.load(defaultLocale),
+        hourly: const HourlyTraffic(
+          hours: [
+            HourlyTrafficPoint(hour: 8, entries: 2, exits: 1),
+            HourlyTrafficPoint(hour: 9),
+          ],
+        ),
+      );
+
+      expect(rows, hasLength(1));
+      expect(rows.single.label, '08:00');
+      expect(rows.single.value, '2 entradas · 1 salidas');
+    },
+  );
+
+  test('Success: the daily chart scales to the best day', () {
+    final heights = revenueBarHeights([
+      DailyRevenue(date: DateTime(2026, 1, 1), amount: 0),
+      DailyRevenue(date: DateTime(2026, 1, 2), amount: 100),
+      DailyRevenue(date: DateTime(2026, 1, 3), amount: 50),
+    ], height: 68);
+
+    expect(heights, [0, 68, 34]);
+  });
+
+  test('Failure: a quiet period has no bars', () {
+    expect(
+      revenueBarHeights([
+        DailyRevenue(date: DateTime(2026, 1, 1), amount: 0),
+        DailyRevenue(date: DateTime(2026, 1, 2), amount: 0),
+      ]),
+      [0, 0],
+    );
+    expect(revenueBarHeights(const []), isEmpty);
+  });
+
+  test('Success: the hourly chart scales to the busiest hour', () {
+    final heights = hourlyBarHeights([
+      for (var hour = 0; hour < 24; hour++)
+        HourlyTrafficPoint(
+          hour: hour,
+          entries: hour == 8
+              ? 10
+              : hour == 9
+              ? 5
+              : 0,
+        ),
+    ]);
+
+    expect(heights, hasLength(24));
+    expect(heights[8], 68);
+    expect(heights[9], 34);
+    expect(heights[0], 0);
+  });
+
+  test('Failure: a quiet day has no traffic bars', () {
+    expect(
+      hourlyBarHeights([
+        for (var hour = 0; hour < 24; hour++) HourlyTrafficPoint(hour: hour),
+      ]),
+      everyElement(0),
+    );
+    expect(hourlyBarHeights(const []), isEmpty);
   });
 
   test('Security: an empty report still produces a readable PDF', () async {

@@ -38,6 +38,21 @@ void main() {
       expect(receipt.cashChange, isNull);
     });
 
+    test('Success: the receipt carries the online paid amount', () {
+      final receipt = CheckOutReceiptDto.fromJson(
+        _receiptJson({'payment_method': 'online', 'online_paid_amount': 6000}),
+      ).toDomain();
+
+      expect(receipt.paymentMethod, 'online');
+      expect(receipt.onlinePaidAmount, 6000);
+    });
+
+    test('Failure: an older server defaults the online amount to zero', () {
+      final receipt = CheckOutReceiptDto.fromJson(_receiptJson()).toDomain();
+
+      expect(receipt.onlinePaidAmount, 0);
+    });
+
     test('Security: receipts differing only in cash change are not equal', () {
       CheckOutReceipt withChange(int change) => CheckOutReceipt(
         id: 1,
@@ -72,12 +87,29 @@ void main() {
       expect(session.leftKeys, isTrue);
     });
 
+    test('Success: carries the online paid amount and grace deadline', () {
+      final session = OpenSessionDto.fromJson(
+        json({
+          'online_paid_amount': 8000,
+          'online_grace_until': '2026-01-01T12:15:00.000Z',
+        }),
+      ).toDomain();
+
+      expect(session.onlinePaidAmount, 8000);
+      expect(
+        session.onlineGraceUntil,
+        DateTime.parse('2026-01-01T12:15:00.000Z'),
+      );
+    });
+
     test('Failure: missing optional columns fall back to defaults', () {
       final session = OpenSessionDto.fromJson(json({})).toDomain();
 
       expect(session.plate, '');
       expect(session.photoCount, 0);
       expect(session.leftKeys, isFalse);
+      expect(session.onlinePaidAmount, 0);
+      expect(session.onlineGraceUntil, isNull);
     });
   });
 }

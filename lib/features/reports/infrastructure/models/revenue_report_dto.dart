@@ -50,10 +50,7 @@ class CategoryRevenueDto {
 
 @JsonSerializable()
 class PaymentRevenueDto {
-  const PaymentRevenueDto({
-    required this.paymentMethod,
-    required this.amount,
-  });
+  const PaymentRevenueDto({required this.paymentMethod, required this.amount});
 
   factory PaymentRevenueDto.fromJson(Map<String, dynamic> json) =>
       _$PaymentRevenueDtoFromJson(json);

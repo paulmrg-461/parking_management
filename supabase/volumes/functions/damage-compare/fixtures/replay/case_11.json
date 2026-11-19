@@ -1,0 +1,48 @@
+{
+  "case": "foreign photo ids are dropped and the claim is downgraded",
+  "entry_ids": [
+    1
+  ],
+  "exit_ids": [
+    2
+  ],
+  "model_answer": {
+    "summary": "Golpe.",
+    "quality": {
+      "same_vehicle": "yes",
+      "covered_zones": [
+        "front",
+        "rear",
+        "left",
+        "right"
+      ],
+      "issues": []
+    },
+    "findings": [
+      {
+        "zone": "left",
+        "description": "Rayón",
+        "classification": "new",
+        "confidence": "high",
+        "entry_photo_ids": [
+          999
+        ],
+        "exit_photo_ids": [
+          2
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "overall": "insufficient_evidence",
+    "count": 1,
+    "findings": [
+      {
+        "classification": "uncertain",
+        "downgraded_from": "new",
+        "entry_len": 0,
+        "exit_len": 1
+      }
+    ]
+  }
+}

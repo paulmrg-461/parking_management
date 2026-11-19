@@ -1,0 +1,112 @@
+{
+  "case": "quality issues and covered zones are capped",
+  "entry_ids": [
+    1
+  ],
+  "exit_ids": [
+    2
+  ],
+  "model_answer": {
+    "summary": "x",
+    "quality": {
+      "same_vehicle": "unknown",
+      "covered_zones": [
+        "zone0",
+        "zone1",
+        "zone2",
+        "zone3",
+        "zone4",
+        "zone5",
+        "zone6",
+        "zone7",
+        "zone8",
+        "zone9",
+        "zone10",
+        "zone11",
+        "zone12",
+        "zone13",
+        "zone14",
+        "zone15",
+        "zone16",
+        "zone17",
+        "zone18",
+        "zone19",
+        "zone20",
+        "zone21",
+        "zone22",
+        "zone23",
+        "zone24"
+      ],
+      "issues": [
+        {
+          "photo": "E0",
+          "issue": "glare"
+        },
+        {
+          "photo": "E1",
+          "issue": "glare"
+        },
+        {
+          "photo": "E2",
+          "issue": "glare"
+        },
+        {
+          "photo": "E3",
+          "issue": "glare"
+        },
+        {
+          "photo": "E4",
+          "issue": "glare"
+        },
+        {
+          "photo": "E5",
+          "issue": "glare"
+        },
+        {
+          "photo": "E6",
+          "issue": "glare"
+        },
+        {
+          "photo": "E7",
+          "issue": "glare"
+        },
+        {
+          "photo": "E8",
+          "issue": "glare"
+        },
+        {
+          "photo": "E9",
+          "issue": "glare"
+        },
+        {
+          "photo": "E10",
+          "issue": "glare"
+        },
+        {
+          "photo": "E11",
+          "issue": "glare"
+        },
+        {
+          "photo": "E12",
+          "issue": "glare"
+        },
+        {
+          "photo": "E13",
+          "issue": "glare"
+        },
+        {
+          "photo": "E14",
+          "issue": "glare"
+        }
+      ]
+    },
+    "findings": []
+  },
+  "expected": {
+    "overall": "insufficient_evidence",
+    "count": 0,
+    "same_vehicle": "unknown",
+    "issues_count": 10,
+    "covered_zones_count": 20
+  }
+}

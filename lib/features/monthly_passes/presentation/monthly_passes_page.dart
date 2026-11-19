@@ -12,6 +12,7 @@ import '../../../core/state/submission.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/receipt/payment_method.dart';
 import '../../../core/utils/formatters.dart';
+import '../../settings/application/pass_renewal_mode.dart';
 import '../../../core/widgets/app_icon_button.dart';
 import '../../../core/widgets/async_view.dart';
 import '../../../core/widgets/confirm_dialog.dart';
@@ -22,6 +23,11 @@ import '../../../core/widgets/metric_card.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/search_field.dart';
 import '../../../app/di/injection.dart';
+import '../../invoicing/application/issue_fiscal_document.dart';
+import '../../invoicing/domain/entities/fiscal_customer.dart';
+import '../../invoicing/domain/entities/fiscal_settings.dart';
+import '../../invoicing/domain/repositories/invoicing_repository.dart';
+import '../../invoicing/presentation/widgets/fiscal_customer_form.dart';
 import '../../../core/utils/whatsapp_launcher.dart';
 import '../../../core/widgets/plate_text.dart';
 import '../../../core/widgets/status_chip.dart';
@@ -33,6 +39,7 @@ import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/widgets/submission_listener.dart';
 import '../../vehicles/domain/entities/vehicle.dart';
 import '../application/monthly_passes_cubit.dart';
+import '../domain/entities/pass_renewal_offer_summary.dart';
 import '../domain/commands/create_monthly_pass_command.dart';
 import '../domain/commands/update_monthly_pass_command.dart';
 import '../domain/entities/monthly_pass.dart';
@@ -89,7 +96,7 @@ class _MonthlyPassesPageState extends State<MonthlyPassesPage> {
                         summary: context.l10n.monthlyPassesCount(
                           [
                             for (final pass in loaded.monthlyPasses)
-                              if (_matches(loaded.plateOf(pass)) &&
+                              if (loaded.matchesPass(pass, _query) &&
                                   (!_onlyActive || _isActive(pass)))
                                 pass,
                           ].length,
@@ -102,7 +109,8 @@ class _MonthlyPassesPageState extends State<MonthlyPassesPage> {
                           SizedBox(
                             width: 240,
                             child: SearchField(
-                              label: context.l10n.searchPlate,
+                              label: context.l10n.monthlyPassesSearch,
+                              hint: context.l10n.monthlyPassesSearchHint,
                               onChanged: (value) =>
                                   setState(() => _query = value),
                             ),
@@ -118,9 +126,7 @@ class _MonthlyPassesPageState extends State<MonthlyPassesPage> {
                                 Icons.verified_outlined,
                                 size: 18,
                               ),
-                              label: Text(
-                                context.l10n.monthlyPassesOnlyActive,
-                              ),
+                              label: Text(context.l10n.monthlyPassesOnlyActive),
                               onSelected: (value) =>
                                   setState(() => _onlyActive = value),
                             ),
@@ -139,13 +145,9 @@ class _MonthlyPassesPageState extends State<MonthlyPassesPage> {
     );
   }
 
-  bool _matches(String plate) =>
-      _query.trim().isEmpty ||
-      plate.toLowerCase().contains(_query.trim().toLowerCase());
-
   bool _isActive(MonthlyPass pass) =>
-      pass.active && monthlyPassStatus(pass, DateTime.now()) ==
-          MonthlyPassStatus.active;
+      pass.active &&
+      monthlyPassStatus(pass, DateTime.now()) == MonthlyPassStatus.active;
 
   void _clearFilters() => setState(() {
     _query = '';
@@ -156,11 +158,11 @@ class _MonthlyPassesPageState extends State<MonthlyPassesPage> {
     final l10n = context.l10n;
     final payments = [
       for (final payment in loaded.pendingPayments)
-        if (_matches(payment.plate)) payment,
+        if (loaded.matchesPayment(payment, _query)) payment,
     ];
     final passes = [
       for (final pass in loaded.monthlyPasses)
-        if (_matches(loaded.plateOf(pass)) &&
+        if (loaded.matchesPass(pass, _query) &&
             (!_onlyActive || _isActive(pass)))
           pass,
     ];
@@ -262,6 +264,7 @@ class _MonthlyPassesPageState extends State<MonthlyPassesPage> {
       MonthlyPassAction.deleted => l10n.monthlyPassDeleted,
       MonthlyPassAction.payment => l10n.monthlyPassPaymentDone,
       MonthlyPassAction.renewed => l10n.monthlyPassRenewed,
+      MonthlyPassAction.renewalLinkSent => l10n.passRenewalLinkQueued,
       null => null,
     };
     if (message == null) {
@@ -374,6 +377,32 @@ class _MonthlyPassTile extends StatelessWidget {
         : const {};
   }
 
+  PassRenewalOfferSummary? _offerOf(BuildContext context) {
+    final state = context.read<MonthlyPassesCubit>().state;
+    final id = monthlyPass.id;
+    if (state is! MonthlyPassesLoaded || id == null) {
+      return null;
+    }
+    return state.offers[id];
+  }
+
+  Future<void> _sendRenewalLink(BuildContext context) async {
+    final l10n = context.l10n;
+    final cubit = context.read<MonthlyPassesCubit>();
+    await cubit.sendRenewalLink(monthlyPass);
+    if (!context.mounted) {
+      return;
+    }
+    final state = cubit.state;
+    final submission = state is MonthlyPassesLoaded ? state.submission : null;
+    if (submission is SubmissionFailed) {
+      showErrorSnack(
+        context,
+        l10n.errorText(submission.message, submission.failure),
+      );
+    }
+  }
+
   Future<void> _notify(BuildContext context) async {
     if (whatsappAutoEnabled(context)) {
       await _queueReminder(context);
@@ -420,7 +449,10 @@ class _MonthlyPassTile extends StatelessWidget {
     );
     final status = monthlyPassStatus(monthlyPass, DateTime.now());
     final (statusLabel, statusTone) = switch (status) {
-      MonthlyPassStatus.active => (l10n.monthlyPassStatusActive, StatusTone.success),
+      MonthlyPassStatus.active => (
+        l10n.monthlyPassStatusActive,
+        StatusTone.success,
+      ),
       MonthlyPassStatus.upcoming => (
         l10n.monthlyPassStatusUpcoming,
         StatusTone.warning,
@@ -443,6 +475,20 @@ class _MonthlyPassTile extends StatelessWidget {
               tone: statusTone,
             ),
           ),
+          const SizedBox(width: Space.sm),
+          if (_offerOf(context) case final offer?)
+            if (offer.isPaid)
+              StatusChip(
+                label: l10n.passRenewalRenewedOnline,
+                tone: StatusTone.success,
+                icon: Icons.autorenew,
+              )
+            else if (offer.isOpen)
+              StatusChip(
+                label: l10n.passRenewalLinkSent,
+                tone: StatusTone.warning,
+                icon: Icons.link,
+              ),
         ],
       ),
       subtitle: Column(
@@ -489,6 +535,15 @@ class _MonthlyPassTile extends StatelessWidget {
               icon: Icons.chat_outlined,
               tooltip: l10n.monthlyPassWhatsapp,
               onPressed: () => _notify(context),
+            ),
+          if (phone != null &&
+              monthlyPass.active &&
+              passRenewalLinksEnabled(context) &&
+              _offerOf(context)?.isPaid != true)
+            AppIconButton(
+              icon: Icons.link,
+              tooltip: l10n.passRenewalSendLink,
+              onPressed: () => unawaited(_sendRenewalLink(context)),
             ),
           AppIconButton(
             icon: Icons.edit_outlined,
@@ -578,7 +633,6 @@ class _MonthlyPassTile extends StatelessWidget {
   }
 }
 
-
 class _PendingPaymentTile extends StatelessWidget {
   const _PendingPaymentTile({required this.payment});
 
@@ -589,9 +643,7 @@ class _PendingPaymentTile extends StatelessWidget {
     final l10n = context.l10n;
     return ListTile(
       leading: const Icon(Icons.payments_outlined),
-      title: Text(
-        '${payment.plate} · ${Formatters.money(payment.amount)}',
-      ),
+      title: Text('${payment.plate} · ${Formatters.money(payment.amount)}'),
       subtitle: Text(
         '${l10n.monthlyPassDue(Formatters.date(payment.dueDate))} · '
         '${paymentMethodLabel(l10n, payment.paymentMethod)}',
@@ -612,21 +664,54 @@ class _PendingPaymentTile extends StatelessWidget {
   }
 
   Future<void> _pay(BuildContext context) async {
-    final method = await showDialog<PaymentMethod>(
+    final fiscal = await _fiscalConfig();
+    final choice = await showDialog<({PaymentMethod method, FiscalCustomer? customer})>(
       context: context,
-      builder: (_) => const _PaymentMethodDialog(),
+      builder: (_) => _PaymentMethodDialog(fiscal: fiscal),
     );
-    if (method != null && context.mounted) {
+    if (choice != null && context.mounted) {
       await context.read<MonthlyPassesCubit>().registerPayment(
         payment.id,
-        method.wire,
+        choice.method.wire,
       );
+      await _issueFiscal(payment.id, fiscal, choice.customer, context);
     }
+  }
+
+  Future<FiscalConfig?> _fiscalConfig() async {
+    if (!serviceLocator.isRegistered<InvoicingRepository>()) {
+      return null;
+    }
+    try {
+      final config = await serviceLocator<InvoicingRepository>().config();
+      return config.enabled ? config : null;
+    } on Failure {
+      return null;
+    }
+  }
+
+  Future<void> _issueFiscal(
+    int paymentId,
+    FiscalConfig? config,
+    FiscalCustomer? customer,
+    BuildContext context,
+  ) async {
+    if (config == null || !serviceLocator.isRegistered<IssueFiscalDocument>()) {
+      return;
+    }
+    await serviceLocator<IssueFiscalDocument>().forPassPayment(
+      paymentId,
+      config: config,
+      customer: customer,
+      online: _online(context),
+    );
   }
 }
 
 class _PaymentMethodDialog extends StatefulWidget {
-  const _PaymentMethodDialog();
+  const _PaymentMethodDialog({this.fiscal});
+
+  final FiscalConfig? fiscal;
 
   @override
   State<_PaymentMethodDialog> createState() => _PaymentMethodDialogState();
@@ -634,6 +719,7 @@ class _PaymentMethodDialog extends StatefulWidget {
 
 class _PaymentMethodDialogState extends State<_PaymentMethodDialog> {
   PaymentMethod _method = PaymentMethod.cash;
+  final _fiscalKey = GlobalKey<FiscalCustomerFormState>();
 
   @override
   Widget build(BuildContext context) {
@@ -658,6 +744,8 @@ class _PaymentMethodDialogState extends State<_PaymentMethodDialog> {
               title: Text(method.label(context.l10n)),
               secondary: Icon(method.icon),
             ),
+          if (widget.fiscal case final fiscal? when fiscal.enabled)
+            FiscalCustomerForm(key: _fiscalKey, config: fiscal),
         ],
       ),
       actions: [
@@ -666,7 +754,15 @@ class _PaymentMethodDialogState extends State<_PaymentMethodDialog> {
           child: Text(context.l10n.actionCancel),
         ),
         FilledButton(
-          onPressed: () => Navigator.of(context).pop(_method),
+          onPressed: () {
+            final customer = _fiscalKey.currentState?.customer;
+            if (!(_fiscalKey.currentState?.isValid ?? true)) {
+              return;
+            }
+            Navigator.of(context).pop(
+              (method: _method, customer: customer),
+            );
+          },
           child: Text(context.l10n.actionConfirm),
         ),
       ],

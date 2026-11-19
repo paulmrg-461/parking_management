@@ -567,9 +567,11 @@ begin
     end;
 end $$;
 
--- Audit log filters: by actor, and the unfiltered call still works.
+-- Audit log filters: by actor, by free text, and the unfiltered call works.
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
 do $$
+declare
+    marker jsonb;
 begin
     if jsonb_array_length(
            public.list_audit_log(50, null, null, null, 'admin')
@@ -581,7 +583,78 @@ begin
        ) <> 0 then
         raise exception 'audit actor filter ignored the name';
     end if;
+
+    -- Free-text search over the entity, plate, name and actor.
+    insert into public.vehicles (plate, category_id) values ('SRCH01', 2);
+    marker := public.list_audit_log(50, null, null, null, null, 'srch01');
+    if jsonb_array_length(marker) < 1
+       or (marker -> 0 ->> 'table_name') <> 'vehicles' then
+        raise exception 'audit search did not find the vehicle: %', marker;
+    end if;
+    if jsonb_array_length(
+           public.list_audit_log(50, null, null, 'vehicles', null, 'SRCH01')
+       ) < 1 then
+        raise exception 'audit search ignored the table filter';
+    end if;
+    if jsonb_array_length(
+           public.list_audit_log(50, null, null, null, 'admin', 'SRCH01')
+       ) < 1 then
+        raise exception 'audit search broke the actor filter';
+    end if;
+    if jsonb_array_length(
+           public.list_audit_log(50, null, null, null, 'ghost', 'SRCH01')
+       ) <> 0 then
+        raise exception 'audit search ignored the actor';
+    end if;
+    if jsonb_array_length(
+           public.list_audit_log(50, null, null, null, null, 'no-such-value')
+       ) <> 0 then
+        raise exception 'audit search matched a missing term';
+    end if;
+    if jsonb_array_length(
+           public.list_audit_log(1, null, null, null, null, 'SRCH01')
+       ) > 1 then
+        raise exception 'audit search ignored the page limit';
+    end if;
 end $$;
+
+-- Setup checklist: flags match the site's reference data and identity.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+declare
+    setup jsonb := public.lot_setup_status();
+begin
+    if (setup ->> 'categories')::integer < 1 then
+        raise exception 'setup lost the categories: %', setup;
+    end if;
+    if (setup ->> 'tariffs')::integer < 1 then
+        raise exception 'setup lost the active tariffs: %', setup;
+    end if;
+    if (setup ->> 'car_capacity')::integer
+       <> (select coalesce(car_capacity, 0) from public.parking_settings where lot_id = 1) then
+        raise exception 'setup reported a different capacity: %', setup;
+    end if;
+    if (setup ? 'complete') is not true then
+        raise exception 'setup omitted the complete flag: %', setup;
+    end if;
+end $$;
+
+set local request.headers = '{"x-lot-id":"2"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    setup jsonb := public.lot_setup_status();
+begin
+    -- Lot 2 has no phone configured, so it cannot be complete.
+    if (setup ->> 'complete')::boolean then
+        raise exception 'an incomplete site reported complete: %', setup;
+    end if;
+    if (setup ->> 'categories')::integer < 1 then
+        raise exception 'setup lost lot 2 categories: %', setup;
+    end if;
+end $$;
+set local request.headers = '{"x-lot-id":"1"}';
 
 -- Today's dashboard summary reflects the check-outs and entries of the lot.
 set local request.headers = '{"x-lot-id":"1"}';
@@ -600,6 +673,59 @@ begin
         raise exception 'dashboard summary ignored today entries';
     end if;
 end $$;
+
+-- Weekly trend: a contiguous series that ends today and stays lot-scoped.
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+declare
+    trend jsonb := public.dashboard_trend(7);
+    days jsonb := trend -> 'days';
+    today_entry jsonb;
+begin
+    if jsonb_array_length(days) <> 7 then
+        raise exception 'trend did not return one row per day';
+    end if;
+    if jsonb_array_length(public.dashboard_trend(14) -> 'days') <> 14 then
+        raise exception 'trend ignored the requested window length';
+    end if;
+    if trend ->> 'end_date' <> to_char(current_date, 'YYYY-MM-DD') then
+        raise exception 'trend did not end on the business day';
+    end if;
+    select item into today_entry
+      from jsonb_array_elements(days) item
+     where item ->> 'date' = to_char(current_date, 'YYYY-MM-DD');
+    if today_entry is null then
+        raise exception 'trend omitted today';
+    end if;
+    if (today_entry ->> 'revenue')::integer < 1 then
+        raise exception 'trend ignored today revenue';
+    end if;
+    begin
+        perform public.dashboard_trend(0);
+        raise exception 'trend accepted an invalid range';
+    exception when others then
+        if sqlerrm not like '%InvalidTrendRangeError%' then
+            raise;
+        end if;
+    end;
+end $$;
+
+set local request.headers = '{"x-lot-id":"2"}';
+do $$
+declare
+    trend jsonb := public.dashboard_trend(7);
+    total bigint;
+begin
+    if (trend ->> 'lot_id')::integer <> 2 then
+        raise exception 'trend used the wrong lot';
+    end if;
+    select coalesce(sum((item ->> 'revenue')::bigint), 0) into total
+      from jsonb_array_elements(trend -> 'days') item;
+    if total <> 0 then
+        raise exception 'trend leaked revenue from another lot';
+    end if;
+end $$;
+set local request.headers = '{"x-lot-id":"1"}';
 
 -- Consolidated report exposes per-site revenue, tickets and average ticket.
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
@@ -1761,6 +1887,119 @@ begin
     end if;
 end $$;
 
+-- Per-bay maintenance history: transitions are logged with actor and reason.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    spot_id integer;
+    events jsonb;
+    first_event jsonb;
+    refused boolean;
+begin
+    update public.parking_settings
+       set car_capacity = 0, moto_capacity = 0
+     where lot_id = 1;
+    spot_id := (public.save_parking_spot('M1', 'car', 0, 0) ->> 'id')::integer;
+
+    -- Saving the same status again must not pollute the history.
+    perform public.save_parking_spot('M1', 'car', 0, 0, spot_id, true);
+    if jsonb_array_length(public.list_spot_events(spot_id)) <> 0 then
+        raise exception 'a no-op save created a maintenance event';
+    end if;
+
+    perform public.save_parking_spot(
+        'M1', 'car', 0, 0, spot_id, false, 'fuga de aceite'
+    );
+    events := public.list_spot_events(spot_id);
+    if jsonb_array_length(events) <> 1 then
+        raise exception 'the maintenance event was not logged';
+    end if;
+    first_event := events -> 0;
+    if first_event ->> 'status' <> 'out_of_service'
+       or first_event ->> 'reason' <> 'fuga de aceite' then
+        raise exception 'maintenance event lost its status/reason: %', first_event;
+    end if;
+    if coalesce(first_event ->> 'actor_name', '') = '' then
+        raise exception 'maintenance event lost its actor';
+    end if;
+
+    perform public.save_parking_spot('M1', 'car', 0, 0, spot_id, true);
+    events := public.list_spot_events(spot_id);
+    if jsonb_array_length(events) <> 2
+       or (events -> 0 ->> 'status') <> 'active' then
+        raise exception 'the return to service was not logged newest first';
+    end if;
+
+    refused := false;
+    begin
+        perform public.save_parking_spot(
+            'M1', 'car', 0, 0, spot_id, false, 'ab'
+        );
+        raise exception 'a too-short reason was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidSpotReasonError%' then
+            raise;
+        end if;
+        refused := true;
+    end;
+    if not refused then
+        raise exception 'the bay accepted a 2-character reason';
+    end if;
+
+    refused := false;
+    begin
+        perform public.list_spot_events(spot_id, 0);
+        raise exception 'an invalid event limit was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidSpotEventLimitError%' then
+            raise;
+        end if;
+        refused := true;
+    end;
+    if not refused then
+        raise exception 'the bay history accepted limit 0';
+    end if;
+end $$;
+
+-- Operators can read the history but never change a bay status.
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+declare
+    spot_id integer := (
+        select id from public.parking_spots where lot_id = 1 and code = 'M1'
+    );
+begin
+    begin
+        perform public.save_parking_spot(
+            'M1', 'car', 0, 0, spot_id, false, 'prueba'
+        );
+        raise exception 'an operator changed a bay status';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then
+            raise;
+        end if;
+    end;
+    if (select count(*) from public.parking_spot_events where lot_id = 1) < 2 then
+        raise exception 'an operator could not read the maintenance history';
+    end if;
+end $$;
+
+-- The maintenance history is lot-scoped through RLS.
+set local role authenticated;
+set local request.headers = '{"x-lot-id":"2"}';
+do $$
+begin
+    if exists (select 1 from public.parking_spot_events) then
+        raise exception 'maintenance history leaked across lots';
+    end if;
+end $$;
+reset role;
+set local request.headers = '{"x-lot-id":"1"}';
+
+-- Leave the map as the next blocks expect it (no drawn car bays).
+delete from public.parking_spots where lot_id = 1 and code = 'M1';
+
 -- Records log: lot-scoped, plate filter, totals and paging.
 set local request.headers = '{"x-lot-id":"1"}';
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
@@ -1867,6 +2106,8 @@ declare
     entry jsonb;
     vid_session integer;
     board jsonb;
+    hist jsonb;
+    records jsonb;
 begin
     select id into car_cat
       from public.categories
@@ -1900,6 +2141,24 @@ begin
            and (item ->> 'video_count')::integer = 1
     ) then
         raise exception 'board lost the video count: %', board;
+    end if;
+
+    hist := public.vehicle_history('VID001');
+    if not exists (
+        select 1 from jsonb_array_elements(hist -> 'sessions') item
+         where (item ->> 'id')::integer = vid_session
+           and (item ->> 'photo_count')::integer = 1
+    ) then
+        raise exception 'vehicle history lost the evidence count: %', hist;
+    end if;
+
+    records := public.session_records('VID001', 10, 0);
+    if not exists (
+        select 1 from jsonb_array_elements(records -> 'records') item
+         where (item ->> 'id')::integer = vid_session
+           and (item ->> 'photo_count')::integer = 1
+    ) then
+        raise exception 'records lost the evidence count: %', records;
     end if;
 
     perform public.check_out(vid_session, null, null, 'cash');
@@ -2327,16 +2586,21 @@ begin
     end if;
 end $$;
 
--- Fix 4: create_reservation locks the group key before the category key,
--- exactly like check_in -> enforce_category_capacity.
+-- Fix 4: the capacity helper locks the group key before the category key,
+-- exactly like check_in -> enforce_category_capacity, and create_reservation
+-- delegates to it.
 do $$
 declare
-    src text := pg_get_functiondef('public.create_reservation(text,integer,timestamptz,text)'::regprocedure);
+    res_src text := pg_get_functiondef('public.create_reservation(text,integer,timestamptz,text)'::regprocedure);
+    check_src text := pg_get_functiondef('public.reservation_capacity_check(integer,integer,text)'::regprocedure);
 begin
-    if position('''group:''' in src) = 0
-       or position('''category:''' in src) = 0
-       or position('''group:''' in src) > position('''category:''' in src)
-       or src not like '%category_group(category_name)%' then
+    if res_src not like '%reservation_capacity_check%' then
+        raise exception 'fix4: create_reservation does not use the shared capacity check';
+    end if;
+    if position('''group:''' in check_src) = 0
+       or position('''category:''' in check_src) = 0
+       or position('''group:''' in check_src) > position('''category:''' in check_src)
+       or check_src not like '%category_group(category_name)%' then
         raise exception 'fix4: reservation lock keys/order differ from check_in';
     end if;
 end $$;
@@ -2852,6 +3116,14451 @@ begin
     if (select police_phone from public.parking_settings where id = 1) is distinct from '' then
         raise exception 'empty police phone did not clear the field';
     end if;
+end $$;
+
+-- Hourly traffic: entries/exits land in their business-day hour bucket.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    cat integer;
+    v1 integer;
+    v2 integer;
+    v3 integer;
+    result jsonb;
+    h8 jsonb;
+    h9 jsonb;
+    h10 jsonb;
+    h14 jsonb;
+begin
+    update public.parking_settings
+       set car_capacity = 0, moto_capacity = 0, key_capacity = 0
+     where lot_id = 1;
+    delete from public.parking_spots where lot_id = 1;
+
+    insert into public.categories (name, capacity, lot_id)
+    values ('hourly-traffic', 0, 1)
+    returning id into cat;
+    insert into public.vehicles (plate, category_id) values ('HT001', cat)
+    returning id into v1;
+    insert into public.vehicles (plate, category_id) values ('HT002', cat)
+    returning id into v2;
+    insert into public.vehicles (plate, category_id) values ('HT003', cat)
+    returning id into v3;
+
+    insert into public.parking_sessions (
+        vehicle_id, operator_id, entry_time, exit_time, status,
+        amount_charged, ticket_number, lot_id
+    ) values
+        (v1, 1, '2026-11-02 08:15-05', '2026-11-02 09:20-05', 'closed',
+         1000, 'HOUR1', 1),
+        (v2, 1, '2026-11-02 08:45-05', '2026-11-02 10:05-05', 'closed',
+         1000, 'HOUR2', 1),
+        (v3, 1, '2026-11-03 14:10-05', '2026-11-03 15:00-05', 'closed',
+         1000, 'HOUR3', 1);
+
+    result := public.report_hourly_traffic('2026-11-02', '2026-11-02');
+    if jsonb_array_length(result -> 'hours') <> 24 then
+        raise exception 'hourly traffic did not return 24 buckets';
+    end if;
+    if coalesce(result ->> 'timezone', '') = '' then
+        raise exception 'hourly traffic lost the business timezone';
+    end if;
+
+    select item into h8
+      from jsonb_array_elements(result -> 'hours') item
+     where (item ->> 'hour')::integer = 8;
+    select item into h9
+      from jsonb_array_elements(result -> 'hours') item
+     where (item ->> 'hour')::integer = 9;
+    select item into h10
+      from jsonb_array_elements(result -> 'hours') item
+     where (item ->> 'hour')::integer = 10;
+    if (h8 ->> 'entries')::integer <> 2 or (h8 ->> 'exits')::integer <> 0 then
+        raise exception 'hour 8 bucket is wrong: %', h8;
+    end if;
+    if (h9 ->> 'exits')::integer <> 1 then
+        raise exception 'hour 9 exit bucket is wrong: %', h9;
+    end if;
+    if (h10 ->> 'exits')::integer <> 1 then
+        raise exception 'hour 10 exit bucket is wrong: %', h10;
+    end if;
+
+    result := public.report_hourly_traffic('2026-11-02', '2026-11-03');
+    select item into h14
+      from jsonb_array_elements(result -> 'hours') item
+     where (item ->> 'hour')::integer = 14;
+    if (h14 ->> 'entries')::integer <> 1 then
+        raise exception 'the multi-day range lost hour 14: %', h14;
+    end if;
+
+    begin
+        perform public.report_hourly_traffic('2026-11-03', '2026-11-02');
+        raise exception 'an inverted hourly range was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidReportRangeError%' then
+            raise;
+        end if;
+    end;
+end $$;
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    begin
+        perform public.report_hourly_traffic('2026-11-02', '2026-11-02');
+        raise exception 'an operator read the hourly traffic report';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then
+            raise;
+        end if;
+    end;
+end $$;
+
+-- Public booking: anon sees availability, creates guarded holds and cannot read
+-- the reservation table directly.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    cat integer;
+begin
+    update public.parking_settings
+       set car_capacity = 0, moto_capacity = 0, key_capacity = 0
+     where lot_id = 1;
+    delete from public.parking_spots where lot_id = 1;
+    insert into public.categories (name, capacity, lot_id)
+    values ('public-car', 10, 1)
+    returning id into cat;
+    insert into public.tariffs (category_id, type, amount)
+    values (cat, 'hourly', 6500);
+    perform set_config('app.public_cat', cat::text, true);
+end $$;
+
+set local role anon;
+do $$
+declare
+    avail jsonb;
+    first jsonb;
+begin
+    avail := public.public_availability(1);
+    if avail is null or jsonb_array_length(avail -> 'categories') < 1 then
+        raise exception 'public availability is empty: %', avail;
+    end if;
+    if (avail ->> 'max_reservation_hours')::integer <> 24 then
+        raise exception 'public availability lost the window cap';
+    end if;
+    if (avail::text like '%"plate"%') then
+        raise exception 'public availability leaked plates: %', avail;
+    end if;
+    if (
+        select (item ->> 'hourly_amount')::integer
+          from jsonb_array_elements(avail -> 'categories') item
+         where (item ->> 'id')::integer = current_setting('app.public_cat')::integer
+    ) <> 6500 then
+        raise exception 'public availability lost the hourly tariff: %', avail;
+    end if;
+    if (avail -> 'lot' ->> 'cover_path') is distinct from '' then
+        raise exception 'public availability invented a cover: %', avail -> 'lot';
+    end if;
+    if public.public_availability(999999) is not null then
+        raise exception 'an unknown lot returned availability';
+    end if;
+
+    first := public.public_create_reservation(
+        1, 'PUB001', current_setting('app.public_cat')::integer,
+        now() + interval '2 hours', 'Ana', '3001112233'
+    );
+    if first ->> 'plate' <> 'PUB001' or (first ->> 'id')::integer < 1 then
+        raise exception 'public reservation was not created: %', first;
+    end if;
+
+    -- The country code is optional and never stored.
+    perform public.public_create_reservation(
+        1, 'PUB002', current_setting('app.public_cat')::integer,
+        now() + interval '2 hours', 'Ana', '+57 300 111 2233'
+    );
+
+    begin
+        perform public.public_create_reservation(
+            1, 'PUBNAME', current_setting('app.public_cat')::integer,
+            now() + interval '2 hours', '   ', '3005556677'
+        );
+        raise exception 'a reservation without a name was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidNameError%' then
+            raise;
+        end if;
+    end;
+
+    begin
+        perform public.public_create_reservation(
+            1, 'PUBLAND', current_setting('app.public_cat')::integer,
+            now() + interval '2 hours', 'Ana', '6011234567'
+        );
+        raise exception 'a landline was accepted as a mobile';
+    exception when others then
+        if sqlerrm not like '%InvalidPhoneError%' then
+            raise;
+        end if;
+    end;
+
+    begin
+        perform public.public_create_reservation(
+            1, 'PUB002', current_setting('app.public_cat')::integer,
+            now() + interval '2 hours', 'Ana', '3001112233'
+        );
+        raise exception 'a duplicate plate was accepted';
+    exception when others then
+        if sqlerrm not like '%ReservationExistsError%' then
+            raise;
+        end if;
+    end;
+
+    begin
+        perform public.public_create_reservation(
+            1, 'PUB003', current_setting('app.public_cat')::integer,
+            now() + interval '2 hours', 'Ana', '3001112233'
+        );
+        raise exception 'the phone limit was ignored';
+    exception when others then
+        if sqlerrm not like '%ReservationLimitError%' then
+            raise;
+        end if;
+    end;
+
+    begin
+        perform public.public_create_reservation(
+            1, 'PUB004', current_setting('app.public_cat')::integer,
+            now() + interval '5 minutes', 'Ana', '3002223344'
+        );
+        raise exception 'a too-short window was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidReservationWindowError%' then
+            raise;
+        end if;
+    end;
+
+    begin
+        perform public.public_create_reservation(
+            1, 'PUB005', current_setting('app.public_cat')::integer,
+            now() + interval '2 hours', 'Ana', '123'
+        );
+        raise exception 'an invalid phone was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidPhoneError%' then
+            raise;
+        end if;
+    end;
+
+    avail := public.public_availability(1);
+    if (
+        select (item ->> 'available')::integer
+          from jsonb_array_elements(avail -> 'categories') item
+         where (item ->> 'id')::integer = current_setting('app.public_cat')::integer
+    ) <> 8 then
+        raise exception 'public availability ignored the holds: %', avail;
+    end if;
+
+    -- The customer can come back with the code and the mobile.
+    if (
+        public.public_reservation_lookup(
+            1, (first ->> 'id')::integer, '+57 300 111 2233'
+        ) ->> 'plate'
+    ) is distinct from 'PUB001' then
+        raise exception 'the lookup did not find the active hold';
+    end if;
+    if public.public_reservation_lookup(
+        1, (first ->> 'id')::integer, '3000000000'
+    ) is not null then
+        raise exception 'the lookup answered a wrong phone';
+    end if;
+    if public.public_reservation_lookup(
+        1, 999999, '3001112233'
+    ) is not null then
+        raise exception 'the lookup answered an unknown code';
+    end if;
+
+    begin
+        perform public.public_cancel_reservation(
+            1, (first ->> 'id')::integer, 'PUB001', '3000000000'
+        );
+        raise exception 'a wrong phone cancelled the hold';
+    exception when others then
+        if sqlerrm not like '%ReservationNotFoundError%' then
+            raise;
+        end if;
+    end;
+
+    begin
+        perform public.public_cancel_reservation(
+            1, (first ->> 'id')::integer, 'OTHER1', '3001112233'
+        );
+        raise exception 'a wrong plate cancelled the hold';
+    exception when others then
+        if sqlerrm not like '%ReservationNotFoundError%' then
+            raise;
+        end if;
+    end;
+
+    perform public.public_cancel_reservation(
+        1, (first ->> 'id')::integer, 'PUB001', '3001112233'
+    );
+
+    avail := public.public_availability(1);
+    if (
+        select (item ->> 'available')::integer
+          from jsonb_array_elements(avail -> 'categories') item
+         where (item ->> 'id')::integer = current_setting('app.public_cat')::integer
+    ) <> 9 then
+        raise exception 'cancelling did not free the space: %', avail;
+    end if;
+
+    begin
+        perform public.public_cancel_reservation(
+            1, (first ->> 'id')::integer, 'PUB001', '3001112233'
+        );
+        raise exception 'a cancelled hold was cancelled again';
+    exception when others then
+        if sqlerrm not like '%ReservationNotFoundError%' then
+            raise;
+        end if;
+    end;
+
+    if public.public_reservation_lookup(
+        1, (first ->> 'id')::integer, '3001112233'
+    ) is not null then
+        raise exception 'the lookup answered a cancelled hold';
+    end if;
+
+    -- Supabase's default privileges grant anon ALL on new public tables, so
+    -- RLS (no anon policy) is what hides the rows; a bare privilege error
+    -- only happens on a database without those defaults. Accept either, but
+    -- anon must never see a row.
+    begin
+        if exists (select 1 from public.category_reservations) then
+            raise exception 'anon read the reservation table';
+        end if;
+    exception when insufficient_privilege then
+        null;
+    end;
+end $$;
+reset role;
+
+do $$
+begin
+    if (
+        select count(*)
+          from public.category_reservations
+         where source = 'public' and plate like 'PUB%'
+    ) <> 2 then
+        raise exception 'public reservations were not stamped';
+    end if;
+    if (
+        select customer_phone
+          from public.category_reservations
+         where plate = 'PUB002'
+    ) is distinct from '3001112233' then
+        raise exception 'the country code was not stripped from the public phone';
+    end if;
+    if (
+        select status
+          from public.category_reservations
+         where plate = 'PUB001'
+    ) is distinct from 'cancelled' then
+        raise exception 'the customer cancellation was not stored';
+    end if;
+    begin
+        insert into public.category_reservations (
+            plate, category_id, reserved_until, lot_id, source
+        )
+        values (
+            'PUBBAD', current_setting('app.public_cat')::integer,
+            now() + interval '1 hour', 1, 'public'
+        );
+        raise exception 'a public reservation without contact data was stored';
+    exception when check_violation then
+        null;
+    end;
+end $$;
+
+-- Everyone who works the lot hears about the booking (the board is theirs).
+do $$
+begin
+    if (
+        select count(*)
+          from public.notifications n
+         where n.type = 'public_reservation'
+           and n.data ->> 'plate' = 'PUB001'
+    ) <> (
+        select count(*)
+          from public.lot_members lm
+          join public.users u on u.id = lm.user_id
+         where lm.lot_id = 1
+           and u.is_active
+    ) then
+        raise exception 'the public booking did not reach every active member';
+    end if;
+    if exists (
+        select 1
+          from public.notifications n
+         where n.type = 'public_reservation'
+           and n.data ->> 'plate' = 'PUB001'
+         group by n.user_id
+        having count(*) > 1
+    ) then
+        raise exception 'the public booking notified someone twice';
+    end if;
+    if not exists (
+        select 1
+          from public.notifications n
+          join public.users u on u.id = n.user_id
+         where n.type = 'public_reservation'
+           and n.data ->> 'plate' = 'PUB001'
+           and u.role = 'operator'
+    ) then
+        raise exception 'the front desk did not hear about the booking';
+    end if;
+end $$;
+
+-- The front desk sees who booked, and only its own lot's holds.
+set local role authenticated;
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    contact text;
+begin
+    select customer_name || '|' || customer_phone || '|' || source
+      into contact
+      from public.category_reservations
+     where plate = 'PUB002';
+    if contact is distinct from 'Ana|3001112233|public' then
+        raise exception 'the front desk cannot see the public booking contact: %', contact;
+    end if;
+end $$;
+
+set local request.headers = '{"x-lot-id":"2"}';
+do $$
+begin
+    if exists (
+        select 1 from public.category_reservations where plate = 'PUB002'
+    ) then
+        raise exception 'a reservation leaked to another lot';
+    end if;
+end $$;
+reset role;
+
+-- Grace window: a customer who is a few minutes late keeps the slot, and
+-- check-in turns that hold into an occupied one.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    cat integer;
+    available_now integer;
+begin
+    delete from public.parking_spots where lot_id = 1;
+    update public.parking_settings
+       set car_capacity = 0, moto_capacity = 0, key_capacity = 0
+     where lot_id = 1;
+    insert into public.categories (name, capacity, lot_id)
+    values ('grace-car', 3, 1)
+    returning id into cat;
+    perform set_config('app.grace_cat', cat::text, true);
+
+    insert into public.category_reservations (
+        plate, category_id, reserved_from, reserved_until, lot_id, status, source
+    )
+    values (
+        'LATE01', cat, now() - interval '2 hours', now() - interval '5 minutes',
+        1, 'active', 'app'
+    );
+    insert into public.category_reservations (
+        plate, category_id, reserved_from, reserved_until, lot_id, status, source
+    )
+    values (
+        'GONE01', cat, now() - interval '3 hours', now() - interval '20 minutes',
+        1, 'active', 'app'
+    );
+
+    select (item ->> 'available')::integer into available_now
+      from jsonb_array_elements(public.public_availability(1) -> 'categories') item
+     where (item ->> 'id')::integer = cat;
+    if available_now <> 2 then
+        raise exception 'the grace window did not count the late hold: %', available_now;
+    end if;
+
+    -- The window is a setting: 0 turns it off and the hold stops counting.
+    update public.parking_settings
+       set reservation_grace_minutes = 0
+     where lot_id = 1;
+    select (item ->> 'available')::integer into available_now
+      from jsonb_array_elements(public.public_availability(1) -> 'categories') item
+     where (item ->> 'id')::integer = cat;
+    if available_now <> 3 then
+        raise exception 'a zero grace window still counted the hold: %', available_now;
+    end if;
+
+    begin
+        update public.parking_settings
+           set reservation_grace_minutes = 500
+         where lot_id = 1;
+        raise exception 'an out-of-range grace window was accepted';
+    exception when check_violation then
+        null;
+    end;
+    update public.parking_settings
+       set reservation_grace_minutes = 15
+     where lot_id = 1;
+end $$;
+
+-- The board reads the same rule from the server, flag included.
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    late jsonb;
+    gone integer;
+begin
+    select to_jsonb(row) into late
+      from public.list_active_reservations() row
+     where row.plate = 'LATE01';
+    if late is null or (late ->> 'in_grace')::boolean is not true then
+        raise exception 'the board did not flag the late hold: %', late;
+    end if;
+    if (late ->> 'customer_name') is not null then
+        raise exception 'the board invented a customer for an operator hold';
+    end if;
+    select count(*) into gone
+      from public.list_active_reservations() row
+     where row.plate = 'GONE01';
+    if gone <> 0 then
+        raise exception 'the board listed a hold outside the grace window';
+    end if;
+end $$;
+
+do $$
+declare
+    cat integer := current_setting('app.grace_cat')::integer;
+    session_json jsonb;
+begin
+    session_json := public.check_in('LATE01', cat, null, null, '[]'::jsonb, null, null);
+    if session_json ->> 'plate' <> 'LATE01' then
+        raise exception 'a late customer could not check in: %', session_json;
+    end if;
+    if (
+        select status from public.category_reservations where plate = 'LATE01'
+    ) <> 'used' then
+        raise exception 'check-in did not consume the late hold';
+    end if;
+    if (
+        select status from public.category_reservations where plate = 'GONE01'
+    ) <> 'active' then
+        raise exception 'check-in touched a hold outside the grace window';
+    end if;
+end $$;
+
+-- A queue that never drains must not grow forever: pending rows age out.
+do $$
+declare
+    fresh integer;
+begin
+    insert into public.whatsapp_messages (to_phone, template, params, created_at)
+    values ('3001112299', 'receipt', '[]'::jsonb, now() - interval '100 days');
+    select count(*) into fresh
+      from public.whatsapp_messages
+     where created_at > now() - interval '90 days';
+    perform public.purge_whatsapp_messages(90);
+    if exists (
+        select 1 from public.whatsapp_messages where to_phone = '3001112299'
+    ) then
+        raise exception 'a stale pending message survived the purge';
+    end if;
+    if (
+        select count(*)
+          from public.whatsapp_messages
+         where created_at > now() - interval '90 days'
+    ) <> fresh then
+        raise exception 'the purge removed a fresh message';
+    end if;
+end $$;
+
+-- WhatsApp confirmation: queued only when the lot enables automatic messages.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    cat integer;
+begin
+    delete from public.parking_spots where lot_id = 1;
+    update public.parking_settings
+       set car_capacity = 0, moto_capacity = 0, key_capacity = 0,
+           whatsapp_auto = false
+     where lot_id = 1;
+    insert into public.categories (name, capacity, lot_id)
+    values ('wa-car', 5, 1)
+    returning id into cat;
+    perform set_config('app.wa_cat', cat::text, true);
+end $$;
+
+set local role anon;
+do $$
+declare
+    cat integer := current_setting('app.wa_cat')::integer;
+begin
+    perform public.public_create_reservation(
+        1, 'WAOFF1', cat, now() + interval '2 hours', 'Ana', '3004445566'
+    );
+end $$;
+reset role;
+
+do $$
+begin
+    if exists (
+        select 1 from public.whatsapp_messages where to_phone = '3004445566'
+    ) then
+        raise exception 'a message was queued with whatsapp_auto off';
+    end if;
+end $$;
+
+update public.parking_settings set whatsapp_auto = true where lot_id = 1;
+
+set local role anon;
+do $$
+declare
+    cat integer := current_setting('app.wa_cat')::integer;
+begin
+    perform public.public_create_reservation(
+        1, 'WAON01', cat, now() + interval '2 hours', 'Ana', '3004445577'
+    );
+end $$;
+reset role;
+
+do $$
+declare
+    queued public.whatsapp_messages%rowtype;
+begin
+    select * into queued
+      from public.whatsapp_messages
+     where to_phone = '3004445577';
+    if not found then
+        raise exception 'the confirmation was not queued';
+    end if;
+    if queued.template <> 'reservation_confirmed' then
+        raise exception 'wrong template: %', queued.template;
+    end if;
+    if queued.lot_id <> 1 or queued.status <> 'pending' then
+        raise exception 'the queued message is not pending for the lot: %', queued;
+    end if;
+    if jsonb_array_length(queued.params) <> 4
+       or queued.params ->> 0 <> 'Ana'
+       or queued.params ->> 1 <> 'WAON01' then
+        raise exception 'unexpected params: %', queued.params;
+    end if;
+end $$;
+
+-- Reservations report: origin and outcome for the web bookings.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    cat integer := (select id from public.categories where lot_id = 1 order by id limit 1);
+    report jsonb;
+begin
+    insert into public.category_reservations (
+        plate, category_id, reserved_from, reserved_until, lot_id, status,
+        source, customer_name, customer_phone
+    )
+    values
+        ('RPT-WEB1', cat, '2020-03-10 10:00+00', '2020-03-10 12:00+00', 1,
+         'used', 'public', 'Ana', '3001112233'),
+        ('RPT-WEB2', cat, '2020-03-10 11:00+00', '2020-03-10 13:00+00', 1,
+         'cancelled', 'public', 'Ana', '3001112233'),
+        ('RPT-WEB3', cat, '2020-03-10 12:00+00', '2020-03-10 14:00+00', 1,
+         'active', 'public', 'Ana', '3001112233'),
+        ('RPT-APP1', cat, '2020-03-11 09:00+00', '2020-03-11 11:00+00', 1,
+         'used', 'app', null, null),
+        ('RPT-OLD1', cat, '2020-02-01 09:00+00', '2020-02-01 11:00+00', 1,
+         'used', 'app', null, null);
+
+    report := public.report_reservations('2020-03-10', '2020-03-11');
+    if (report ->> 'total')::integer <> 4
+       or (report ->> 'public')::integer <> 3
+       or (report ->> 'app')::integer <> 1 then
+        raise exception 'reservation report mixed the sources: %', report;
+    end if;
+    if (report ->> 'used')::integer <> 2
+       or (report ->> 'used_public')::integer <> 1
+       or (report ->> 'cancelled')::integer <> 1
+       or (report ->> 'active')::integer <> 1
+       or (report ->> 'expired')::integer <> 0 then
+        raise exception 'reservation report mixed the outcomes: %', report;
+    end if;
+    begin
+        perform public.report_reservations('2020-03-11', '2020-03-10');
+        raise exception 'an inverted range was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidReportRangeError%' then
+            raise;
+        end if;
+    end;
+end $$;
+
+-- Reservation reminder: one message per hold, an hour before it lapses.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    cat integer;
+    queued integer;
+begin
+    delete from public.parking_spots where lot_id = 1;
+    update public.parking_settings
+       set car_capacity = 0, moto_capacity = 0, key_capacity = 0,
+           whatsapp_auto = true
+     where lot_id = 1;
+    insert into public.categories (name, capacity, lot_id)
+    values ('rem-car', 5, 1)
+    returning id into cat;
+
+    insert into public.category_reservations (
+        plate, category_id, reserved_from, reserved_until, lot_id, status,
+        source, customer_name, customer_phone
+    )
+    values
+        ('REM-SOON', cat, now() - interval '30 minutes',
+         now() + interval '30 minutes', 1, 'active', 'public',
+         'Ana', '3002221133'),
+        ('REM-LATE', cat, now() - interval '30 minutes',
+         now() + interval '3 hours', 1, 'active', 'public',
+         'Ana', '3002221144');
+
+    queued := public.notify_expiring_reservations(60);
+    if queued <> 1 then
+        raise exception 'the reminder fired for % holds', queued;
+    end if;
+    if not exists (
+        select 1 from public.whatsapp_messages
+         where to_phone = '3002221133'
+           and template = 'reservation_reminder'
+           and jsonb_array_length(params) = 4
+    ) then
+        raise exception 'the reminder was not queued';
+    end if;
+    if exists (
+        select 1 from public.whatsapp_messages where to_phone = '3002221144'
+    ) then
+        raise exception 'a hold outside the window was reminded';
+    end if;
+    if (
+        select reminder_sent_at from public.category_reservations
+         where plate = 'REM-SOON'
+    ) is null then
+        raise exception 'the hold was not stamped as reminded';
+    end if;
+    if public.notify_expiring_reservations(60) <> 0 then
+        raise exception 'the reminder was sent twice';
+    end if;
+    update public.parking_settings set whatsapp_auto = false where lot_id = 1;
+end $$;
+
+-- Cover photo: the lot admin sets it and the public page receives the path.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    updated public.parking_settings%rowtype;
+    avail jsonb;
+begin
+    updated := public.set_branding_cover('cover_1.jpg');
+    if updated.cover_path <> 'cover_1.jpg' or updated.cover_version < 1 then
+        raise exception 'the cover was not stored: %', updated.cover_path;
+    end if;
+    avail := public.public_availability(1);
+    if (avail -> 'lot' ->> 'cover_path') <> 'cover_1.jpg' then
+        raise exception 'the public page did not get the cover: %', avail -> 'lot';
+    end if;
+    begin
+        perform public.set_branding_cover('   ');
+        raise exception 'an empty cover path was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then
+            raise;
+        end if;
+    end;
+end $$;
+
+-- Cancelling a web hold tells the customer; an operator hold has no phone.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    cat integer;
+    web_id bigint;
+    app_id bigint;
+begin
+    update public.parking_settings set whatsapp_auto = true where lot_id = 1;
+    insert into public.categories (name, capacity, lot_id)
+    values ('cancel-car', 5, 1)
+    returning id into cat;
+
+    insert into public.category_reservations (
+        plate, category_id, reserved_from, reserved_until, lot_id, status,
+        source, customer_name, customer_phone
+    )
+    values ('CAN-WEB', cat, now(), now() + interval '2 hours', 1, 'active',
+            'public', 'Ana', '3007778899')
+    returning id into web_id;
+    insert into public.category_reservations (
+        plate, category_id, reserved_from, reserved_until, lot_id, status, source
+    )
+    values ('CAN-APP', cat, now(), now() + interval '2 hours', 1, 'active', 'app')
+    returning id into app_id;
+
+    perform public.cancel_reservation(web_id);
+    perform public.cancel_reservation(app_id);
+
+    if not exists (
+        select 1 from public.whatsapp_messages
+         where to_phone = '3007778899'
+           and template = 'reservation_cancelled'
+           and jsonb_array_length(params) = 3
+    ) then
+        raise exception 'the customer was not told about the cancellation';
+    end if;
+    if (
+        select count(*) from public.whatsapp_messages
+         where template = 'reservation_cancelled'
+    ) <> 1 then
+        raise exception 'an operator hold tried to message a customer';
+    end if;
+    update public.parking_settings set whatsapp_auto = false where lot_id = 1;
+end $$;
+
+-- 0103: bot protection on the public booking. A per-lot hourly ceiling on
+-- public holds (staff holds are free of it), and a captcha switch that closes
+-- the anonymous RPC so only the service-role twin (Edge Function) can book.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    cat integer;
+    cat_two integer;
+    protection jsonb;
+begin
+    update public.parking_settings
+       set car_capacity = 0, moto_capacity = 0, key_capacity = 0,
+           whatsapp_auto = false
+     where lot_id in (1, 2);
+    delete from public.parking_spots where lot_id in (1, 2);
+    -- Earlier sections booked in this same transaction; age those rows so the
+    -- window starts empty (and prove that old holds stop counting).
+    update public.category_reservations
+       set created_at = now() - interval '2 hours'
+     where source = 'public';
+    insert into public.categories (name, capacity, lot_id)
+    values ('guard-car', 50, 1)
+    returning id into cat;
+    insert into public.categories (name, capacity, lot_id)
+    values ('guard-car-two', 50, 2)
+    returning id into cat_two;
+    perform set_config('app.guard_cat', cat::text, true);
+    perform set_config('app.guard_cat_two', cat_two::text, true);
+
+    if (select public_booking_captcha from public.parking_settings where lot_id = 1)
+       or (select public_booking_hourly_limit from public.parking_settings where lot_id = 1) <> 20 then
+        raise exception 'the protection defaults changed (captcha off, 20 per hour)';
+    end if;
+
+    protection := public.set_public_booking_protection(null, 2);
+    if (protection ->> 'hourly_limit')::integer <> 2
+       or (protection ->> 'captcha')::boolean then
+        raise exception 'the hourly limit was not stored: %', protection;
+    end if;
+    if (select public_booking_hourly_limit from public.parking_settings where lot_id = 2) <> 20 then
+        raise exception 'the limit of another lot was changed';
+    end if;
+    begin
+        perform public.set_public_booking_protection(null, 0);
+        raise exception 'a zero hourly limit was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then
+            raise;
+        end if;
+    end;
+end $$;
+
+-- Only a lot admin tunes the protection.
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+set local role authenticated;
+do $$
+begin
+    begin
+        perform public.set_public_booking_protection(true, 500);
+        raise exception 'an operator changed the booking protection';
+    exception when others then
+        if sqlerrm like '%an operator changed%' then
+            raise;
+        end if;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+do $$
+begin
+    if (select public_booking_captcha from public.parking_settings where lot_id = 1)
+       or (select public_booking_hourly_limit from public.parking_settings where lot_id = 1) <> 2 then
+        raise exception 'the operator call leaked into the settings';
+    end if;
+end $$;
+
+set local role anon;
+do $$
+declare
+    cat integer := current_setting('app.guard_cat')::integer;
+    cat_two integer := current_setting('app.guard_cat_two')::integer;
+    booked jsonb;
+begin
+    -- Success: captcha off, under the ceiling, the anonymous RPC still books.
+    booked := public.public_create_reservation(
+        1, 'GUARD1', cat, now() + interval '2 hours', 'Ana', '3101110001'
+    );
+    if booked ->> 'plate' <> 'GUARD1' then
+        raise exception 'the guarded booking failed: %', booked;
+    end if;
+    perform public.public_create_reservation(
+        1, 'GUARD2', cat, now() + interval '2 hours', 'Luis', '3101110002'
+    );
+
+    -- Throttled: the third hold of the hour is refused with a typed error.
+    begin
+        perform public.public_create_reservation(
+            1, 'GUARD3', cat, now() + interval '2 hours', 'Eva', '3101110003'
+        );
+        raise exception 'the hourly ceiling was ignored';
+    exception when others then
+        if sqlerrm not like '%BookingThrottledError%' then
+            raise;
+        end if;
+    end;
+
+    -- Lot isolation: lot 1 being throttled does not close lot 2.
+    perform public.public_create_reservation(
+        2, 'GUARD4', cat_two, now() + interval '2 hours', 'Eva', '3101110003'
+    );
+
+    -- The verified twin is not callable by anon, whatever the settings say.
+    begin
+        perform public.public_create_reservation_verified(
+            2, 'GUARD5', cat_two, now() + interval '2 hours', 'Eva', '3101110004'
+        );
+        raise exception 'anon executed the service-role booking';
+    exception when insufficient_privilege then
+        null;
+    end;
+end $$;
+reset role;
+
+-- Cancelling does not hand the slot back to the window, and staff holds are
+-- outside it: the desk keeps reserving while the public page is throttled.
+update public.category_reservations
+   set status = 'cancelled'
+ where plate = 'GUARD2' and lot_id = 1;
+set local role anon;
+do $$
+begin
+    begin
+        perform public.public_create_reservation(
+            1, 'GUARD6', current_setting('app.guard_cat')::integer,
+            now() + interval '2 hours', 'Eva', '3101110003'
+        );
+        raise exception 'book-and-cancel reset the hourly ceiling';
+    exception when others then
+        if sqlerrm not like '%BookingThrottledError%' then
+            raise;
+        end if;
+    end;
+end $$;
+reset role;
+
+set local role authenticated;
+do $$
+begin
+    perform public.create_reservation(
+        'GUARDSTAFF', current_setting('app.guard_cat')::integer,
+        now() + interval '2 hours'
+    );
+end $$;
+reset role;
+
+do $$
+begin
+    if not exists (
+        select 1 from public.category_reservations
+         where plate = 'GUARDSTAFF' and source = 'app' and status = 'active'
+    ) then
+        raise exception 'a staff hold was blocked by the public throttle';
+    end if;
+    -- Staff holds never fill the public window either.
+    if (
+        select count(*) from public.category_reservations
+         where lot_id = 1 and source = 'public'
+           and created_at > now() - interval '1 hour'
+    ) <> 2 then
+        raise exception 'the public window counted something else';
+    end if;
+end $$;
+
+-- Captcha on: the anonymous RPC is closed for that lot only, and the
+-- service-role twin (what the Edge Function calls after Turnstile) books.
+do $$
+declare
+    protection jsonb;
+begin
+    protection := public.set_public_booking_protection(true, 100);
+    if not (protection ->> 'captcha')::boolean then
+        raise exception 'the captcha switch was not stored: %', protection;
+    end if;
+end $$;
+
+set local role anon;
+do $$
+declare
+    cat integer := current_setting('app.guard_cat')::integer;
+    cat_two integer := current_setting('app.guard_cat_two')::integer;
+begin
+    begin
+        perform public.public_create_reservation(
+            1, 'GUARD7', cat, now() + interval '2 hours', 'Eva', '3101110005'
+        );
+        raise exception 'anon bypassed the captcha with a direct call';
+    exception when others then
+        if sqlerrm not like '%CaptchaRequiredError%' then
+            raise;
+        end if;
+    end;
+    -- Lot 2 never asked for a captcha.
+    perform public.public_create_reservation(
+        2, 'GUARD8', cat_two, now() + interval '2 hours', 'Eva', '3101110005'
+    );
+end $$;
+reset role;
+
+set local role authenticated;
+do $$
+begin
+    begin
+        perform public.public_create_reservation(
+            1, 'GUARD7', current_setting('app.guard_cat')::integer,
+            now() + interval '2 hours', 'Eva', '3101110005'
+        );
+        raise exception 'a signed-in user bypassed the captcha';
+    exception when others then
+        if sqlerrm not like '%CaptchaRequiredError%' then
+            raise;
+        end if;
+    end;
+    begin
+        perform public.public_create_reservation_verified(
+            1, 'GUARD7', current_setting('app.guard_cat')::integer,
+            now() + interval '2 hours', 'Eva', '3101110005'
+        );
+        raise exception 'a signed-in user executed the service-role booking';
+    exception when insufficient_privilege then
+        null;
+    end;
+end $$;
+reset role;
+
+set local role service_role;
+do $$
+declare
+    booked jsonb;
+begin
+    booked := public.public_create_reservation_verified(
+        1, 'GUARD7', current_setting('app.guard_cat')::integer,
+        now() + interval '2 hours', 'Eva', '3101110005'
+    );
+    if booked ->> 'plate' <> 'GUARD7' then
+        raise exception 'the verified booking failed: %', booked;
+    end if;
+end $$;
+reset role;
+
+do $$
+begin
+    if not exists (
+        select 1 from public.category_reservations
+         where plate = 'GUARD7' and source = 'public' and lot_id = 1
+    ) then
+        raise exception 'the verified booking was not stored as a public hold';
+    end if;
+    update public.parking_settings
+       set public_booking_captcha = false, public_booking_hourly_limit = 20
+     where lot_id = 1;
+end $$;
+
+-- Period comparison: months, partial month, covered flag, metrics, security.
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+select public.create_lot('P3', 'Period lot', 'Calle 3', 'America/Bogota');
+select public.create_lot('P4', 'Other lot', 'Calle 4', 'America/Bogota');
+
+do $$
+declare
+    lot3 integer := (select id from public.parking_lots where code = 'P3');
+    lot4 integer := (select id from public.parking_lots where code = 'P4');
+    cat3 integer;
+    car3 integer;
+    pass3 bigint;
+begin
+    insert into public.categories (name, capacity, lot_id)
+    values ('per-car', 10, lot3) returning id into cat3;
+    insert into public.vehicles (plate, category_id)
+    values ('PER001', cat3) returning id into car3;
+    insert into public.vehicles (plate, category_id)
+    values ('PER002', cat3);
+    insert into public.vehicles (plate, category_id)
+    values ('OTH001', cat3);
+
+    -- October revenue: one stay entered in September and closed in October,
+    -- plus a second October exit. Stays: 60 and 120 minutes.
+    insert into public.parking_sessions
+        (vehicle_id, operator_id, entry_time, exit_time, status, amount_charged, lot_id)
+    values
+        -- Bogota time: enters on Sep 30 23:00, leaves on Oct 1 01:00.
+        (car3, 1, '2024-09-30 23:00-05', '2024-10-01 01:00-05', 'closed', 4000, lot3),
+        (car3, 1, '2024-10-10 10:00+00', '2024-10-10 11:00+00', 'closed', 6000, lot3),
+        ((select id from public.vehicles where plate = 'OTH001'), 1,
+         '2024-10-10 10:00+00', '2024-10-10 11:00+00', 'closed', 99000, lot4);
+
+    insert into public.monthly_passes (vehicle_id, start_date, end_date, amount, lot_id)
+    values (car3, '2024-10-01', '2024-10-31', 30000, lot3)
+    returning id into pass3;
+    -- The pass trigger already creates its payment row: mark it paid.
+    update public.monthly_pass_payments
+       set status = 'paid', paid_at = '2024-10-05 12:00+00', amount = 30000
+     where monthly_pass_id = pass3;
+
+    insert into public.category_reservations
+        (plate, category_id, reserved_from, reserved_until, lot_id, status, source)
+    values
+        ('PER001', cat3, '2024-10-04 12:00+00', '2024-10-04 14:00+00', lot3, 'used', 'app'),
+        ('PER002', cat3, '2024-10-06 12:00+00', '2024-10-06 14:00+00', lot3, 'active', 'app');
+    perform set_config('app.period_lot', lot3::text, true);
+    perform set_config('app.period_lot4', lot4::text, true);
+end $$;
+
+-- period: success buckets and windows
+set local request.headers = '{"x-lot-id":"3"}';
+do $$
+declare
+    report jsonb := public.report_period_comparison(3, '2024-11-10');
+    bucket jsonb;
+begin
+    if jsonb_array_length(report -> 'buckets') <> 3 then
+        raise exception 'expected 3 buckets: %', report;
+    end if;
+    if (report -> 'buckets' -> 0 ->> 'month') <> '2024-09'
+       or (report -> 'buckets' -> 2 ->> 'month') <> '2024-11' then
+        raise exception 'buckets are not oldest first: %', report -> 'buckets';
+    end if;
+    bucket := report -> 'buckets' -> 2;
+    if (bucket ->> 'is_partial')::boolean is not true then
+        raise exception 'the running month is not partial: %', bucket;
+    end if;
+    if (bucket -> 'current' ->> 'start_date') <> '2024-11-01'
+       or (bucket -> 'current' ->> 'end_date') <> '2024-11-10'
+       or (bucket -> 'current' ->> 'days')::integer <> 10 then
+        raise exception 'partial current window wrong: %', bucket -> 'current';
+    end if;
+    if (bucket -> 'previous_month' ->> 'start_date') <> '2024-10-01'
+       or (bucket -> 'previous_month' ->> 'end_date') <> '2024-10-10' then
+        raise exception 'partial previous_month wrong: %', bucket -> 'previous_month';
+    end if;
+    if (bucket -> 'previous_year' ->> 'start_date') <> '2023-11-01'
+       or (bucket -> 'previous_year' ->> 'end_date') <> '2023-11-10' then
+        raise exception 'partial previous_year wrong: %', bucket -> 'previous_year';
+    end if;
+    if (report ->> 'as_of') <> '2024-11-10' or (report ->> 'months')::integer <> 3 then
+        raise exception 'header wrong: %', report;
+    end if;
+end $$;
+
+-- period: success metrics
+do $$
+declare
+    report jsonb := public.report_period_comparison(1, '2024-10-31');
+    october jsonb := report -> 'buckets' -> 0;
+    current jsonb := october -> 'current';
+    september jsonb := october -> 'previous_month';
+begin
+    if (current ->> 'revenue')::integer <> 10000
+       or (current ->> 'exits')::integer <> 2
+       or (current ->> 'entries')::integer <> 1 then
+        raise exception 'october sessions wrong: %', current;
+    end if;
+    if (current ->> 'avg_ticket')::integer <> 5000
+       or (current ->> 'avg_stay_minutes')::integer <> 90 then
+        raise exception 'averages wrong: %', current;
+    end if;
+    if (current ->> 'pass_revenue')::integer <> 30000 then
+        raise exception 'pass revenue wrong: %', current;
+    end if;
+    if (current ->> 'reservations')::integer <> 2
+       or (current ->> 'reservations_used')::integer <> 1 then
+        raise exception 'reservations wrong: %', current;
+    end if;
+    if (september ->> 'entries')::integer <> 1 then
+        raise exception 'september entries wrong: %', september;
+    end if;
+    if (current ->> 'covered')::boolean is not true then
+        raise exception 'october should be covered: %', current;
+    end if;
+end $$;
+
+-- period: success quiet month
+do $$
+declare
+    report jsonb := public.report_period_comparison(1, '2024-06-30');
+    quiet jsonb := report -> 'buckets' -> 0;
+begin
+    if (quiet ->> 'month') <> '2024-06' then
+        raise exception 'unexpected bucket: %', quiet;
+    end if;
+    if (quiet -> 'current' ->> 'revenue')::integer <> 0
+       or (quiet -> 'current' ->> 'entries')::integer <> 0
+       or (quiet -> 'current' ->> 'avg_ticket')::integer <> 0 then
+        raise exception 'quiet month is not empty: %', quiet -> 'current';
+    end if;
+end $$;
+
+-- period: success calendar edges
+do $$
+declare
+    march jsonb := public.report_period_comparison(1, '2024-03-31') -> 'buckets' -> 0;
+    leap jsonb := public.report_period_comparison(1, '2024-02-29') -> 'buckets' -> 0;
+begin
+    if (march -> 'previous_month' ->> 'start_date') <> '2024-02-01'
+       or (march -> 'previous_month' ->> 'end_date') <> '2024-02-29'
+       or (march -> 'previous_month' ->> 'full_month')::boolean is not true then
+        raise exception 'february window wrong: %', march -> 'previous_month';
+    end if;
+    if (leap -> 'previous_year' ->> 'start_date') <> '2023-02-01'
+       or (leap -> 'previous_year' ->> 'end_date') <> '2023-02-28' then
+        raise exception 'leap previous_year wrong: %', leap -> 'previous_year';
+    end if;
+    if (march ->> 'is_partial')::boolean is not false then
+        raise exception 'a past, complete month is partial: %', march;
+    end if;
+end $$;
+
+-- period: covered flag
+do $$
+declare
+    report jsonb := public.report_period_comparison(13, '2024-10-31');
+    first jsonb := report -> 'buckets' -> 0;
+begin
+    if (report ->> 'first_activity_date') <> '2024-09-30' then
+        raise exception 'first activity wrong: %', report ->> 'first_activity_date';
+    end if;
+    if (first -> 'current' ->> 'covered')::boolean is not false then
+        raise exception 'a window before the first session is covered: %', first;
+    end if;
+    if (first -> 'previous_year' ->> 'covered')::boolean is not false then
+        raise exception 'last year is covered for a new lot: %', first;
+    end if;
+end $$;
+
+-- period: failure range
+do $$
+begin
+    begin
+        perform public.report_period_comparison(0, '2024-10-31');
+        raise exception 'zero months accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidReportRangeError%' then raise; end if;
+    end;
+    begin
+        perform public.report_period_comparison(25, '2024-10-31');
+        raise exception '25 months accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidReportRangeError%' then raise; end if;
+    end;
+    begin
+        perform public.report_period_comparison(null, '2024-10-31');
+        raise exception 'null months accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidReportRangeError%' then raise; end if;
+    end;
+    begin
+        perform public.report_period_comparison(3, (now() at time zone 'America/Bogota')::date + 1);
+        raise exception 'a future as_of was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidReportRangeError%' then raise; end if;
+    end;
+end $$;
+
+-- period: security operator
+insert into public.lot_members (user_id, lot_id, role)
+select 2, id, 'operator' from public.parking_lots where code = 'P3'
+on conflict do nothing;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    begin
+        perform public.report_period_comparison(3, '2024-10-31');
+        raise exception 'an operator read the comparison';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- period: security anon
+set local role anon;
+do $$
+begin
+    begin
+        perform public.report_period_comparison(3, '2024-10-31');
+        raise exception 'anon executed the comparison';
+    exception when insufficient_privilege then
+        null;
+    end;
+end $$;
+reset role;
+
+-- period: security lot isolation
+do $$
+declare
+    report jsonb := public.report_period_comparison(1, '2024-10-31');
+    other jsonb := public.report_period_comparison(1, '2024-10-31');
+begin
+    if (report -> 'buckets' -> 0 -> 'current' ->> 'revenue')::integer <> 10000 then
+        raise exception 'lot 2 leaked into lot 3: %', report -> 'buckets' -> 0;
+    end if;
+    if (other -> 'buckets' -> 0 -> 'current' ->> 'revenue')::integer <> 10000 then
+        raise exception 'unexpected second read: %', other -> 'buckets' -> 0;
+    end if;
+end $$;
+
+-- A lot with no members: the header is rejected before any read.
+insert into public.parking_lots (code, name) values ('P5', 'No member lot')
+on conflict (code) do nothing;
+set local request.headers = '{"x-lot-id":"5"}';
+do $$
+begin
+    begin
+        perform public.report_period_comparison(3, '2024-10-31');
+        raise exception 'a foreign lot header was accepted';
+    exception when others then
+        if sqlerrm not like '%LotRequiredError%' then raise; end if;
+    end;
+end $$;
+
+-- Row versions: the base an offline edit was written from.
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- row versions: a fresh row starts at 1
+do $$
+declare
+    new_vehicle integer;
+begin
+    insert into public.vehicles (plate, category_id)
+    values ('VRNEW1', (select c.id from public.categories c where c.lot_id = 1 limit 1))
+    returning id into new_vehicle;
+    if (select v.version from public.vehicles v where v.id = new_vehicle) <> 1 then
+        raise exception 'a new row did not start at version 1';
+    end if;
+    delete from public.vehicles v where v.id = new_vehicle;
+end $$;
+
+-- row versions: real change bumps once
+do $$
+declare
+    row_id integer;
+    before_version integer;
+begin
+    select t.id, t.version into row_id, before_version
+      from public.tariffs t
+      join public.categories c on c.id = t.category_id
+     where c.lot_id = 1 limit 1;
+    update public.tariffs set amount = amount + 1 where tariffs.id = row_id;
+    if (select t.version from public.tariffs t where t.id = row_id) <> before_version + 1 then
+        raise exception 'a real change did not bump the version once';
+    end if;
+end $$;
+
+-- row versions: no-op update keeps version
+do $$
+declare
+    row_id integer;
+    before_version integer;
+begin
+    select v.id, v.version into row_id, before_version from public.vehicles v limit 1;
+    update public.vehicles set plate = plate where vehicles.id = row_id;
+    if (select v.version from public.vehicles v where v.id = row_id) <> before_version then
+        raise exception 'a no-op update bumped the version';
+    end if;
+end $$;
+
+-- row versions: client cannot forge version
+do $$
+declare
+    row_id integer;
+    before_version integer;
+begin
+    select t.id, t.version into row_id, before_version
+      from public.tariffs t
+      join public.categories c on c.id = t.category_id
+     where c.lot_id = 1 limit 1;
+    update public.tariffs set version = 99, amount = amount + 1
+     where tariffs.id = row_id;
+    if (select t.version from public.tariffs t where t.id = row_id) <> before_version + 1 then
+        raise exception 'the client forged the version';
+    end if;
+end $$;
+
+-- row versions: insert resets to 1
+do $$
+declare
+    new_category integer;
+begin
+    insert into public.categories (name, capacity, lot_id, version)
+    values ('versioned-insert', 1, 1, 50) returning id into new_category;
+    if (select c.version from public.categories c where c.id = new_category) <> 1 then
+        raise exception 'an insert kept a client version';
+    end if;
+end $$;
+
+-- row versions: stale base matches zero rows, current base updates one
+do $$
+declare
+    row_id integer;
+    current_version integer;
+    changed integer;
+begin
+    select t.id, t.version into row_id, current_version
+      from public.tariffs t
+      join public.categories c on c.id = t.category_id
+     where c.lot_id = 1 limit 1;
+    update public.tariffs set amount = amount + 1
+     where tariffs.id = row_id and version = current_version - 1;
+    get diagnostics changed = row_count;
+    if changed <> 0 then
+        raise exception 'a stale base updated a row';
+    end if;
+    update public.tariffs set amount = amount + 1
+     where tariffs.id = row_id and version = current_version;
+    get diagnostics changed = row_count;
+    if changed <> 1 then
+        raise exception 'the current base did not update the row';
+    end if;
+end $$;
+
+-- row versions: stale delete matches zero rows
+do $$
+declare
+    new_vehicle integer;
+    changed integer;
+begin
+    insert into public.vehicles (plate, category_id)
+    values ('VRDEL1', (select c.id from public.categories c where c.lot_id = 1 limit 1))
+    returning id into new_vehicle;
+    update public.vehicles set plate = 'VRDEL2' where vehicles.id = new_vehicle;
+    delete from public.vehicles where vehicles.id = new_vehicle and version = 1;
+    get diagnostics changed = row_count;
+    if changed <> 0 then
+        raise exception 'a stale delete removed the row';
+    end if;
+    delete from public.vehicles where vehicles.id = new_vehicle and version = 2;
+    get diagnostics changed = row_count;
+    if changed <> 1 then
+        raise exception 'the current base did not delete the row';
+    end if;
+end $$;
+
+-- row versions: policy needs min_app_version, admin only, on and off
+do $$
+begin
+    update public.parking_settings set min_app_version = '' where lot_id = 1;
+    begin
+        perform public.set_row_version_policy(true);
+        raise exception 'the policy turned on without a minimum version';
+    exception when others then
+        if sqlerrm not like '%MinVersionRequiredError%' then raise; end if;
+    end;
+    update public.parking_settings set min_app_version = '1.0.0' where lot_id = 1;
+    if public.set_row_version_policy(true) is not true then
+        raise exception 'the policy did not turn on';
+    end if;
+    if public.set_row_version_policy(false) is not false then
+        raise exception 'the policy did not turn off';
+    end if;
+    update public.parking_settings set min_app_version = '' where lot_id = 1;
+end $$;
+
+-- row versions: enforcement refuses an unaware table write, allows aware/rpc
+do $$
+declare
+    row_id integer;
+begin
+    select v.id into row_id from public.vehicles v limit 1;
+    update public.parking_settings set min_app_version = '1.0.0' where lot_id = 1;
+    perform public.set_row_version_policy(true);
+    perform set_config('request.path', '/vehicles', true);
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    begin
+        update public.vehicles set plate = plate where vehicles.id = row_id;
+        raise exception 'an unaware table write was accepted';
+    exception when others then
+        if sqlerrm not like '%VersionRequiredError%' then raise; end if;
+    end;
+    perform set_config(
+        'request.headers', '{"x-lot-id":"1","x-versioned-write":"1"}', true
+    );
+    update public.vehicles set plate = plate where vehicles.id = row_id;
+    perform set_config('request.path', '/rpc/check_in', true);
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    update public.vehicles set plate = plate where vehicles.id = row_id;
+    perform public.set_row_version_policy(false);
+    perform set_config('request.path', '', true);
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    update public.parking_settings set min_app_version = '' where lot_id = 1;
+end $$;
+
+-- 0106 booking waitlist: schema defaults, RLS and constraints.
+do $$
+begin
+    if (select waitlist_enabled from public.parking_settings where lot_id = 1) then
+        raise exception 'the waitlist started enabled';
+    end if;
+    if (select waitlist_claim_minutes from public.parking_settings where lot_id = 1) <> 15
+       or (select waitlist_max_entries from public.parking_settings where lot_id = 1) <> 30 then
+        raise exception 'the waitlist defaults changed (15 minutes, 30 entries)';
+    end if;
+    begin
+        update public.parking_settings set waitlist_claim_minutes = 4 where lot_id = 1;
+        raise exception 'a four minute claim window was accepted';
+    exception when check_violation then null;
+    end;
+    begin
+        update public.parking_settings set waitlist_max_entries = 0 where lot_id = 1;
+        raise exception 'a zero maximum was accepted';
+    exception when check_violation then null;
+    end;
+    update public.parking_settings
+       set waitlist_claim_minutes = 15, waitlist_max_entries = 30
+     where lot_id = 1;
+end $$;
+
+-- waitlist: anon cannot select reservation_waitlist
+set local role anon;
+do $$
+begin
+    begin
+        perform 1 from public.reservation_waitlist limit 1;
+        raise exception 'anon read the waitlist table';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform 1 from public.waitlist_kicks limit 1;
+        raise exception 'anon read the kick table';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
+-- waitlist: member sees own lot only
+do $$
+declare
+    cat_two integer;
+    entry_one bigint;
+    entry_two bigint;
+    visible integer;
+begin
+    select c.id into cat_two from public.categories c where c.lot_id = 2 limit 1;
+    insert into public.reservation_waitlist (
+        lot_id, category_id, group_name, plate, customer_name, customer_phone,
+        wait_until, hold_minutes
+    )
+    values (2, cat_two, 'car', 'WLONLY2', 'Sofia', '3009990002',
+            now() + interval '2 hours', 60)
+    returning id into entry_two;
+
+    insert into public.reservation_waitlist (
+        lot_id, category_id, group_name, plate, customer_name, customer_phone,
+        wait_until, hold_minutes
+    )
+    select 1, c.id, 'car', 'WLONLY1', 'Ana', '3009990001',
+           now() + interval '2 hours', 60
+      from public.categories c where c.lot_id = 1 limit 1
+    returning id into entry_one;
+
+    perform set_config('app.wl_entry_one', entry_one::text, true);
+    perform set_config('app.wl_entry_two', entry_two::text, true);
+    if (select count(*) from public.reservation_waitlist) <> 2 then
+        raise exception 'the fixture entries were not created';
+    end if;
+end $$;
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+declare
+    visible integer;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    select count(*) into visible from public.reservation_waitlist;
+    if visible <> 1 then
+        raise exception 'the member saw % entries (expected only its lot)', visible;
+    end if;
+    if exists (
+        select 1 from public.reservation_waitlist
+         where id = current_setting('app.wl_entry_two')::bigint
+    ) then
+        raise exception 'the member read another lot entry';
+    end if;
+end $$;
+reset role;
+do $$
+declare
+    visible integer;
+begin
+    select count(*) into visible from public.reservation_waitlist;
+    if visible <> 2 then
+        raise exception 'the waitlist fixture was not visible as owner';
+    end if;
+end $$;
+
+-- waitlist: unique active plate
+do $$
+declare
+    cat integer;
+    first_id bigint;
+begin
+    select c.id into cat from public.categories c where c.lot_id = 1 limit 1;
+    insert into public.reservation_waitlist (
+        lot_id, category_id, group_name, plate, customer_name, customer_phone,
+        wait_until, hold_minutes
+    )
+    values (1, cat, 'car', 'WLDUP1', 'Ana', '3009990003',
+            now() + interval '2 hours', 60)
+    returning id into first_id;
+    begin
+        insert into public.reservation_waitlist (
+            lot_id, category_id, group_name, plate, customer_name, customer_phone,
+            wait_until, hold_minutes
+        )
+        values (1, cat, 'car', 'WLDUP1', 'Ana', '3009990003',
+                now() + interval '2 hours', 60);
+        raise exception 'a second active entry for the plate was accepted';
+    exception when unique_violation then null;
+    end;
+    update public.reservation_waitlist set status = 'left' where id = first_id;
+    insert into public.reservation_waitlist (
+        lot_id, category_id, group_name, plate, customer_name, customer_phone,
+        wait_until, hold_minutes
+    )
+    values (1, cat, 'car', 'WLDUP1', 'Ana', '3009990003',
+            now() + interval '2 hours', 60);
+    if (select count(*) from public.reservation_waitlist
+         where plate = 'WLDUP1' and status in ('waiting', 'offered')) <> 1 then
+        raise exception 'the plate could not rejoin after leaving';
+    end if;
+end $$;
+
+-- waitlist: source waitlist needs contact
+do $$
+declare
+    cat integer;
+begin
+    select c.id into cat from public.categories c where c.lot_id = 1 limit 1;
+    begin
+        insert into public.category_reservations (
+            plate, category_id, reserved_until, lot_id, source, customer_name,
+            customer_phone
+        )
+        values ('WLSRC1', cat, now() + interval '1 hour', 1, 'waitlist', 'Ana', null);
+        raise exception 'a waitlist hold without a phone was accepted';
+    exception when check_violation then null;
+    end;
+    begin
+        insert into public.category_reservations (
+            plate, category_id, reserved_until, lot_id, source
+        )
+        values ('WLSRC2', cat, now() + interval '1 hour', 1, 'bogus');
+        raise exception 'an unknown hold source was accepted';
+    exception when check_violation then null;
+    end;
+end $$;
+
+-- 0106 booking waitlist: the anonymous customer surface.
+do $$
+declare
+    cat integer;
+    roomy integer;
+begin
+    update public.parking_settings
+       set waitlist_enabled = true,
+           waitlist_claim_minutes = 15,
+           waitlist_max_entries = 30,
+           whatsapp_auto = false,
+           car_capacity = 0,
+           moto_capacity = 0,
+           car_out_of_service = 0,
+           moto_out_of_service = 0,
+           reservation_grace_minutes = 15,
+           public_booking_captcha = false,
+           public_booking_hourly_limit = 20
+     where lot_id in (1, 2);
+    delete from public.reservation_waitlist;
+    delete from public.notifications where type in ('waitlist_joined', 'waitlist_offer');
+    insert into public.categories (name, capacity, lot_id)
+    values ('wl-car', 1, 1)
+    returning id into cat;
+    insert into public.categories (name, capacity, lot_id)
+    values ('wl-roomy', 50, 1)
+    returning id into roomy;
+    perform set_config('app.wl_cat', cat::text, true);
+    perform set_config('app.wl_roomy', roomy::text, true);
+    -- Full: one active staff hold counts against the single space.
+    insert into public.category_reservations (
+        plate, category_id, reserved_until, lot_id, source
+    )
+    values ('WLFULL1', cat, now() + interval '3 hours', 1, 'app');
+end $$;
+
+-- waitlist: info reports enabled and channel
+set local role anon;
+do $$
+declare
+    info jsonb;
+begin
+    info := public.public_waitlist_info(1);
+    if not (info ->> 'enabled')::boolean then
+        raise exception 'the waitlist info says disabled: %', info;
+    end if;
+    if (info ->> 'claim_minutes')::integer <> 15
+       or (info ->> 'max_hold_minutes')::integer <> 1440 then
+        raise exception 'the waitlist info windows changed: %', info;
+    end if;
+    if info ->> 'notify_channel' <> 'screen' then
+        raise exception 'whatsapp auto off should be the screen channel: %', info;
+    end if;
+    if public.public_waitlist_info(999) is not null then
+        raise exception 'a missing lot returned info';
+    end if;
+end $$;
+reset role;
+
+-- waitlist: join while full
+set local role anon;
+do $$
+declare
+    cat integer := current_setting('app.wl_cat')::integer;
+    joined jsonb;
+begin
+    joined := public.public_join_waitlist(
+        1, 'WLJOIN1', cat, now() + interval '3 hours', 60, 'Ana', '3101110001'
+    );
+    if joined ->> 'status' <> 'waiting'
+       or (joined ->> 'position')::integer <> 1
+       or joined ->> 'notify_channel' <> 'screen'
+       or (joined ->> 'claim_minutes')::integer <> 15 then
+        raise exception 'the join answer is wrong: %', joined;
+    end if;
+    if joined -> 'lot' ->> 'name' is null then
+        raise exception 'the join answer has no lot: %', joined;
+    end if;
+    perform set_config('app.wl_entry', joined ->> 'id', true);
+end $$;
+reset role;
+
+update public.parking_settings set whatsapp_auto = true where lot_id = 1;
+set local role anon;
+do $$
+declare
+    cat integer := current_setting('app.wl_cat')::integer;
+    later jsonb;
+begin
+    later := public.public_join_waitlist(
+        1, 'WLJOIN2', cat, now() + interval '3 hours', 30, 'Luis', '3101110002'
+    );
+    if later ->> 'notify_channel' <> 'whatsapp' then
+        raise exception 'whatsapp auto on should be the whatsapp channel: %', later;
+    end if;
+end $$;
+reset role;
+update public.parking_settings set whatsapp_auto = false where lot_id = 1;
+
+-- waitlist: join desk notification once per member
+do $$
+declare
+    entry_id bigint := current_setting('app.wl_entry')::bigint;
+    members integer;
+    notified integer;
+begin
+    select count(*) into members
+      from public.lot_members lm join public.users u on u.id = lm.user_id
+     where lm.lot_id = 1 and u.is_active;
+    select count(*) into notified
+      from public.notifications n
+     where n.type = 'waitlist_joined'
+       and n.data ->> 'entry_id' = entry_id::text;
+    if notified <> members then
+        raise exception 'the join notified % of % members', notified, members;
+    end if;
+end $$;
+
+-- waitlist: join not needed
+set local role anon;
+do $$
+declare
+    roomy integer := current_setting('app.wl_roomy')::integer;
+begin
+    begin
+        perform public.public_join_waitlist(
+            1, 'WLNOTNEED', roomy, now() + interval '2 hours', 60, 'Ana', '3101110003'
+        );
+        raise exception 'joined although a space was free';
+    exception when others then
+        if sqlerrm not like '%WaitlistNotNeededError%' then raise; end if;
+    end;
+end $$;
+reset role;
+
+-- waitlist: join disabled
+update public.parking_settings set waitlist_enabled = false where lot_id = 1;
+set local role anon;
+do $$
+declare
+    cat integer := current_setting('app.wl_cat')::integer;
+begin
+    begin
+        perform public.public_join_waitlist(
+            1, 'WLOFF1', cat, now() + interval '2 hours', 60, 'Ana', '3101110004'
+        );
+        raise exception 'joined with the waitlist disabled';
+    exception when others then
+        if sqlerrm not like '%WaitlistDisabledError%' then raise; end if;
+    end;
+end $$;
+reset role;
+update public.parking_settings set waitlist_enabled = true where lot_id = 1;
+
+-- waitlist: join validation and duplicates
+set local role anon;
+do $$
+declare
+    cat integer := current_setting('app.wl_cat')::integer;
+begin
+    begin
+        perform public.public_join_waitlist(
+            1, 'X', cat, now() + interval '2 hours', 60, 'Ana', '3101110005'
+        );
+        raise exception 'an invalid plate was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidPlateError%' then raise; end if;
+    end;
+    begin
+        perform public.public_join_waitlist(
+            1, 'WLVALID1', cat, now() + interval '2 hours', 60, '', '3101110005'
+        );
+        raise exception 'an empty name was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidNameError%' then raise; end if;
+    end;
+    begin
+        perform public.public_join_waitlist(
+            1, 'WLVALID1', cat, now() + interval '2 hours', 60, 'Ana', '12345'
+        );
+        raise exception 'an invalid phone was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidPhoneError%' then raise; end if;
+    end;
+    begin
+        perform public.public_join_waitlist(
+            1, 'WLVALID1', cat, now() + interval '5 minutes', 5, 'Ana', '3101110005'
+        );
+        raise exception 'a five minute window was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidWaitWindowError%' then raise; end if;
+    end;
+    begin
+        perform public.public_join_waitlist(
+            1, 'WLJOIN1', cat, now() + interval '2 hours', 60, 'Ana', '3101110001'
+        );
+        raise exception 'a duplicated plate joined twice';
+    exception when others then
+        if sqlerrm not like '%WaitlistExistsError%' then raise; end if;
+    end;
+    perform public.public_join_waitlist(
+        1, 'WLPHONE1', cat, now() + interval '2 hours', 60, 'Ana', '3101110006'
+    );
+    perform public.public_join_waitlist(
+        1, 'WLPHONE2', cat, now() + interval '2 hours', 60, 'Ana', '3101110006'
+    );
+    begin
+        perform public.public_join_waitlist(
+            1, 'WLPHONE3', cat, now() + interval '2 hours', 60, 'Ana', '3101110006'
+        );
+        raise exception 'a third entry for the same phone was accepted';
+    exception when others then
+        if sqlerrm not like '%WaitlistLimitError%' then raise; end if;
+    end;
+    begin
+        perform public.public_join_waitlist(
+            1, 'WLFULL1', cat, now() + interval '2 hours', 60, 'Ana', '3101110008'
+        );
+        raise exception 'a plate with an active hold joined';
+    exception when others then
+        if sqlerrm not like '%ReservationExistsError%' then raise; end if;
+    end;
+end $$;
+reset role;
+delete from public.reservation_waitlist where plate like 'WLPHONE%';
+
+-- waitlist: join lot cap
+update public.parking_settings set waitlist_max_entries = 1 where lot_id = 1;
+set local role anon;
+do $$
+declare
+    cat integer := current_setting('app.wl_cat')::integer;
+begin
+    begin
+        perform public.public_join_waitlist(
+            1, 'WLCAP1', cat, now() + interval '2 hours', 60, 'Ana', '3101110007'
+        );
+        raise exception 'the lot cap was not enforced';
+    exception when others then
+        if sqlerrm not like '%WaitlistFullError%' then raise; end if;
+    end;
+end $$;
+reset role;
+update public.parking_settings set waitlist_max_entries = 30 where lot_id = 1;
+
+-- waitlist: captcha gate and the verified twin
+update public.parking_settings set public_booking_captcha = true where lot_id = 1;
+set local role anon;
+do $$
+declare
+    cat integer := current_setting('app.wl_cat')::integer;
+begin
+    begin
+        perform public.public_join_waitlist(
+            1, 'WLCAPTCHA', cat, now() + interval '2 hours', 60, 'Ana', '3101110009'
+        );
+        raise exception 'anon joined past the captcha';
+    exception when others then
+        if sqlerrm not like '%CaptchaRequiredError%' then raise; end if;
+    end;
+    begin
+        perform public.public_join_waitlist_verified(
+            1, 'WLCAPTCHA', cat, now() + interval '2 hours', 60, 'Ana', '3101110009'
+        );
+        raise exception 'anon called the verified twin';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+declare
+    cat integer := current_setting('app.wl_cat')::integer;
+begin
+    begin
+        perform public.public_join_waitlist(
+            1, 'WLCAPTCHA', cat, now() + interval '2 hours', 60, 'Ana', '3101110009'
+        );
+        raise exception 'an authenticated caller joined past the captcha';
+    exception when others then
+        if sqlerrm not like '%CaptchaRequiredError%' then raise; end if;
+    end;
+    begin
+        perform public.public_join_waitlist_verified(
+            1, 'WLCAPTCHA', cat, now() + interval '2 hours', 60, 'Ana', '3101110009'
+        );
+        raise exception 'an authenticated caller used the verified twin';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+set local role service_role;
+do $$
+declare
+    cat integer := current_setting('app.wl_cat')::integer;
+    joined jsonb;
+begin
+    joined := public.public_join_waitlist_verified(
+        1, 'WLVERIF1', cat, now() + interval '2 hours', 60, 'Ana', '3101110010'
+    );
+    if joined ->> 'status' <> 'waiting' then
+        raise exception 'the service role could not join: %', joined;
+    end if;
+end $$;
+reset role;
+delete from public.reservation_waitlist where plate = 'WLVERIF1';
+update public.parking_settings set public_booking_captcha = false where lot_id = 1;
+
+-- waitlist: hourly ceiling counts left entries
+update public.parking_settings set public_booking_hourly_limit = 1 where lot_id = 1;
+delete from public.reservation_waitlist where status in ('left', 'cancelled', 'expired');
+set local role anon;
+do $$
+declare
+    cat integer := current_setting('app.wl_cat')::integer;
+begin
+    begin
+        perform public.public_join_waitlist(
+            1, 'WLTHROT1', cat, now() + interval '2 hours', 60, 'Ana', '3101110011'
+        );
+        raise exception 'the ceiling did not count the earlier joins';
+    exception when others then
+        if sqlerrm not like '%BookingThrottledError%' then raise; end if;
+    end;
+end $$;
+reset role;
+-- Age the window: the ceiling must stop counting old entries, not count less.
+update public.reservation_waitlist set created_at = now() - interval '2 hours';
+set local role anon;
+do $$
+declare
+    cat integer := current_setting('app.wl_cat')::integer;
+begin
+    perform public.public_join_waitlist(
+        1, 'WLTHROT2', cat, now() + interval '2 hours', 60, 'Ana', '3101110012'
+    );
+end $$;
+reset role;
+update public.parking_settings set public_booking_hourly_limit = 20 where lot_id = 1;
+
+-- waitlist: lookup and leave
+set local role anon;
+do $$
+declare
+    found jsonb;
+begin
+    found := public.public_waitlist_lookup(
+        1, current_setting('app.wl_entry')::bigint, '3101110001'
+    );
+    if found is null or found ->> 'status' <> 'waiting' then
+        raise exception 'the lookup did not find the entry: %', found;
+    end if;
+    if (found ->> 'position')::integer < 1
+       or found ->> 'category_name' <> 'wl-car' then
+        raise exception 'the lookup answer is wrong: %', found;
+    end if;
+    if public.public_waitlist_lookup(
+        1, current_setting('app.wl_entry')::bigint, '3109999999'
+    ) is not null then
+        raise exception 'the lookup answered for a wrong phone';
+    end if;
+    if public.public_waitlist_lookup(
+        2, current_setting('app.wl_entry')::bigint, '3101110001'
+    ) is not null then
+        raise exception 'the lookup answered for a wrong lot';
+    end if;
+end $$;
+
+do $$
+declare
+    entry_id bigint := current_setting('app.wl_entry')::bigint;
+    left_answer jsonb;
+begin
+    begin
+        perform public.public_leave_waitlist(1, entry_id, '3109999999');
+        raise exception 'leaving with a wrong phone worked';
+    exception when others then
+        if sqlerrm not like '%WaitlistEntryNotFoundError%' then raise; end if;
+    end;
+    left_answer := public.public_leave_waitlist(1, entry_id, '3101110001');
+    if left_answer ->> 'status' <> 'left' then
+        raise exception 'leaving did not mark the entry: %', left_answer;
+    end if;
+    begin
+        perform public.public_leave_waitlist(1, entry_id, '3101110001');
+        raise exception 'leaving twice worked';
+    exception when others then
+        if sqlerrm not like '%WaitlistEntryNotFoundError%' then raise; end if;
+    end;
+end $$;
+reset role;
+
+-- 0106 booking waitlist: dispatch, FIFO and the capacity proof.
+-- The seeded `car` and `camioneta` categories belong to the `car` group; their
+-- capacity is set per test (0 = no limit) and restored at the end.
+do $$
+begin
+    delete from public.reservation_waitlist;
+    delete from public.waitlist_kicks;
+    delete from public.parking_spots where lot_id = 1;
+    delete from public.whatsapp_messages where lot_id = 1;
+    update public.parking_settings
+       set waitlist_enabled = true, waitlist_claim_minutes = 15,
+           waitlist_max_entries = 30, whatsapp_auto = false,
+           car_capacity = 0, moto_capacity = 0,
+           car_out_of_service = 0, moto_out_of_service = 0
+     where lot_id = 1;
+    -- Earlier sections leave open sessions in the seeded `car` category; close
+    -- them so this block controls the occupancy it measures.
+    update public.parking_sessions set status = 'closed'
+     where status = 'open' and lot_id in (1, 2);
+    update public.category_reservations set status = 'cancelled' where status = 'active';
+    perform set_config(
+        'app.wld_cat',
+        (select id from public.categories where lot_id = 1 and name = 'car')::text,
+        true
+    );
+    perform set_config(
+        'app.wld_van',
+        (select id from public.categories where lot_id = 1 and name = 'camioneta')::text,
+        true
+    );
+end $$;
+
+-- waitlist: check-out offers the space
+do $$
+declare
+    cat integer := current_setting('app.wld_cat')::integer;
+    vehicle integer;
+    session_id integer;
+    entry_id bigint;
+    offered public.reservation_waitlist%rowtype;
+    hold public.category_reservations%rowtype;
+begin
+    update public.categories set capacity = 2 where id = cat;
+    -- Two spaces: one open session and one active hold fill the category.
+    insert into public.vehicles (plate, category_id)
+    values ('WLCO1', cat)
+    returning id into vehicle;
+    insert into public.parking_sessions (vehicle_id, operator_id, status, lot_id)
+    values (vehicle, 2, 'open', 1)
+    returning id into session_id;
+    insert into public.category_reservations (
+        plate, category_id, reserved_until, lot_id, source
+    )
+    values ('WLCO2', cat, now() + interval '2 hours', 1, 'app');
+
+    entry_id := (public.public_join_waitlist(
+        1, 'WLCO3', cat, now() + interval '3 hours', 60, 'Ana', '3102220001'
+    ) ->> 'id')::bigint;
+
+    -- check_out closes the session; the trigger offers the freed space.
+    update public.parking_sessions set status = 'closed' where id = session_id;
+
+    select * into offered from public.reservation_waitlist where id = entry_id;
+    if offered.status <> 'offered'
+       or offered.offer_until is null
+       or offered.reservation_id is null then
+        raise exception 'the freed space was not offered: %', offered;
+    end if;
+    select * into hold
+      from public.category_reservations where id = offered.reservation_id;
+    if hold.source <> 'waitlist' or hold.status <> 'active'
+       or hold.customer_phone <> '3102220001' then
+        raise exception 'the offer is not a waitlist hold: %', hold;
+    end if;
+    -- The offer fills the space again.
+    if not exists (
+        select 1
+          from jsonb_array_elements(public.public_availability(1) -> 'categories') item
+         where (item ->> 'id')::integer = cat and (item ->> 'is_full')::boolean
+    ) then
+        raise exception 'the offer did not fill the category again';
+    end if;
+    perform set_config('app.wld_entry', entry_id::text, true);
+end $$;
+
+-- waitlist: fifo
+do $$
+declare
+    cat integer := current_setting('app.wld_cat')::integer;
+    first_id bigint;
+    second_id bigint;
+    first public.reservation_waitlist%rowtype;
+    second public.reservation_waitlist%rowtype;
+begin
+    delete from public.reservation_waitlist;
+    update public.category_reservations set status = 'cancelled'
+     where category_id = cat and status = 'active';
+    update public.categories set capacity = 2 where id = cat;
+    -- Full again: two active holds.
+    insert into public.category_reservations (plate, category_id, reserved_until, lot_id, source)
+    values ('WLF1', cat, now() + interval '2 hours', 1, 'app'),
+           ('WLF2', cat, now() + interval '2 hours', 1, 'app');
+
+    first_id := (public.public_join_waitlist(
+        1, 'WLQ1', cat, now() + interval '3 hours', 60, 'Ana', '3102220002'
+    ) ->> 'id')::bigint;
+    second_id := (public.public_join_waitlist(
+        1, 'WLQ2', cat, now() + interval '3 hours', 60, 'Luis', '3102220003'
+    ) ->> 'id')::bigint;
+
+    update public.category_reservations set status = 'cancelled' where plate = 'WLF1';
+
+    select * into first from public.reservation_waitlist where id = first_id;
+    select * into second from public.reservation_waitlist where id = second_id;
+    if first.status <> 'offered' or second.status <> 'waiting' then
+        raise exception 'FIFO broke: first=% second=%', first.status, second.status;
+    end if;
+end $$;
+
+-- waitlist: two spaces two offers
+do $$
+declare
+    cat integer := current_setting('app.wld_cat')::integer;
+    waiting integer;
+begin
+    -- Clear the queue before releasing holds: otherwise the release would
+    -- serve turns left behind by the previous test and consume the space.
+    delete from public.reservation_waitlist;
+    update public.category_reservations set status = 'cancelled'
+     where category_id = cat and status = 'active';
+    update public.categories set capacity = 2 where id = cat;
+    insert into public.category_reservations (plate, category_id, reserved_until, lot_id, source)
+    values ('WLG1', cat, now() + interval '2 hours', 1, 'app'),
+           ('WLG2', cat, now() + interval '2 hours', 1, 'app');
+    perform public.public_join_waitlist(
+        1, 'WLT1', cat, now() + interval '3 hours', 60, 'Ana', '3102220004'
+    );
+    perform public.public_join_waitlist(
+        1, 'WLT2', cat, now() + interval '3 hours', 60, 'Luis', '3102220005'
+    );
+    update public.category_reservations set status = 'cancelled'
+     where plate in ('WLG1', 'WLG2');
+    select count(*) into waiting
+      from public.reservation_waitlist where status = 'waiting';
+    if waiting <> 0 then
+        raise exception 'two freed spaces left % entries waiting', waiting;
+    end if;
+    if (select count(*) from public.reservation_waitlist where status = 'offered') <> 2 then
+        raise exception 'the second freed space was not offered';
+    end if;
+end $$;
+
+-- waitlist: category full skipped
+do $$
+declare
+    cat_a integer := current_setting('app.wld_cat')::integer;
+    cat_b integer := current_setting('app.wld_van')::integer;
+    entry_a bigint;
+    entry_b bigint;
+begin
+    delete from public.reservation_waitlist;
+    update public.category_reservations set status = 'cancelled' where status = 'active';
+    update public.categories set capacity = 1 where id in (cat_a, cat_b);
+    -- A stays full with its own hold; B is full too, with one hold that frees.
+    insert into public.category_reservations (plate, category_id, reserved_until, lot_id, source)
+    values ('WLA1', cat_a, now() + interval '2 hours', 1, 'app'),
+           ('WLB1', cat_b, now() + interval '2 hours', 1, 'app');
+    entry_a := (public.public_join_waitlist(
+        1, 'WLSA1', cat_a, now() + interval '3 hours', 60, 'Ana', '3102220006'
+    ) ->> 'id')::bigint;
+    entry_b := (public.public_join_waitlist(
+        1, 'WLSB1', cat_b, now() + interval '3 hours', 60, 'Luis', '3102220007'
+    ) ->> 'id')::bigint;
+
+    update public.category_reservations set status = 'cancelled' where plate = 'WLB1';
+
+    if (select status from public.reservation_waitlist where id = entry_a) <> 'waiting' then
+        raise exception 'the entry of the full category was offered';
+    end if;
+    if (select status from public.reservation_waitlist where id = entry_b) <> 'offered' then
+        raise exception 'the entry with free capacity was not offered';
+    end if;
+    update public.categories set capacity = 0 where id in (cat_a, cat_b);
+end $$;
+
+-- waitlist: never overbooks
+do $$
+declare
+    capacity integer;
+    used integer;
+begin
+    update public.categories set capacity = 2
+     where id = current_setting('app.wld_cat')::integer;
+    select c.capacity into capacity
+      from public.categories c where c.id = current_setting('app.wld_cat')::integer;
+    select count(*) into used
+      from public.parking_sessions s
+      join public.vehicles v on v.id = s.vehicle_id
+     where s.status = 'open'
+       and v.category_id = current_setting('app.wld_cat')::integer;
+    select used + count(*) into used
+      from public.category_reservations r
+     where r.category_id = current_setting('app.wld_cat')::integer
+       and r.status = 'active'
+       and r.reserved_until + public.reservation_grace(1) > now();
+    if used > capacity then
+        raise exception 'the queue overbooked: % of %', used, capacity;
+    end if;
+    update public.categories set capacity = 0
+     where id = current_setting('app.wld_cat')::integer;
+end $$;
+
+-- waitlist: hold cancelled cascades
+do $$
+declare
+    cat integer := current_setting('app.wld_cat')::integer;
+    first_id bigint;
+    second_id bigint;
+    offered public.reservation_waitlist%rowtype;
+begin
+    delete from public.reservation_waitlist;
+    update public.category_reservations set status = 'cancelled' where status = 'active';
+    update public.categories set capacity = 2 where id = cat;
+    insert into public.category_reservations (plate, category_id, reserved_until, lot_id, source)
+    values ('WLC1', cat, now() + interval '2 hours', 1, 'app'),
+           ('WLC2', cat, now() + interval '2 hours', 1, 'app');
+    first_id := (public.public_join_waitlist(
+        1, 'WLCC1', cat, now() + interval '3 hours', 60, 'Ana', '3102220008'
+    ) ->> 'id')::bigint;
+    second_id := (public.public_join_waitlist(
+        1, 'WLCC2', cat, now() + interval '3 hours', 60, 'Luis', '3102220009'
+    ) ->> 'id')::bigint;
+    update public.category_reservations set status = 'cancelled' where plate = 'WLC1';
+    select * into offered from public.reservation_waitlist where id = first_id;
+    if offered.status <> 'offered' then
+        raise exception 'the first turn was not offered';
+    end if;
+    -- Releasing the offer (as a desk cancel would) hands it to the next turn.
+    update public.category_reservations set status = 'cancelled'
+     where id = offered.reservation_id;
+    perform public.waitlist_expire();
+    if (select status from public.reservation_waitlist where id = second_id) <> 'offered' then
+        raise exception 'the second turn did not get the released offer';
+    end if;
+end $$;
+
+-- waitlist: bay back in service offers
+do $$
+declare
+    cat integer := current_setting('app.wld_cat')::integer;
+    entry_id bigint;
+begin
+    delete from public.reservation_waitlist;
+    update public.category_reservations set status = 'cancelled' where status = 'active';
+    update public.categories set capacity = 0 where id = cat;
+    -- One usable bay and one in maintenance: the group holds a single car.
+    insert into public.parking_spots (lot_id, code, group_name, grid_row, grid_col, status)
+    values (1, 'WLS1', 'car', 60, 1, 'active'),
+           (1, 'WLS2', 'car', 60, 2, 'out_of_service');
+    insert into public.category_reservations (plate, category_id, reserved_until, lot_id, source)
+    values ('WLSP1', cat, now() + interval '2 hours', 1, 'app');
+    entry_id := (public.public_join_waitlist(
+        1, 'WLSP2', cat, now() + interval '3 hours', 60, 'Ana', '3102220010'
+    ) ->> 'id')::bigint;
+
+    update public.parking_spots set status = 'active' where code = 'WLS2' and lot_id = 1;
+
+    if (select status from public.reservation_waitlist where id = entry_id) <> 'offered' then
+        raise exception 'the repaired bay did not trigger an offer';
+    end if;
+    update public.category_reservations set status = 'cancelled' where plate = 'WLSP1';
+    delete from public.parking_spots where lot_id = 1;
+end $$;
+
+-- waitlist: capacity raised offers
+do $$
+declare
+    cat integer := current_setting('app.wld_cat')::integer;
+    entry_id bigint;
+begin
+    delete from public.reservation_waitlist;
+    update public.category_reservations set status = 'cancelled' where status = 'active';
+    delete from public.parking_spots where lot_id = 1;
+    update public.categories set capacity = 0 where id = cat;
+    update public.parking_settings set car_capacity = 1 where lot_id = 1;
+    insert into public.category_reservations (plate, category_id, reserved_until, lot_id, source)
+    values ('WLCAP2', cat, now() + interval '2 hours', 1, 'app');
+    entry_id := (public.public_join_waitlist(
+        1, 'WLCAP3', cat, now() + interval '3 hours', 60, 'Ana', '3102220011'
+    ) ->> 'id')::bigint;
+
+    update public.parking_settings set car_capacity = 2 where lot_id = 1;
+
+    if (select status from public.reservation_waitlist where id = entry_id) <> 'offered' then
+        raise exception 'a raised group capacity did not trigger an offer';
+    end if;
+    update public.parking_settings set car_capacity = 0 where lot_id = 1;
+    update public.category_reservations set status = 'cancelled' where plate = 'WLCAP2';
+end $$;
+
+-- waitlist: category capacity raised offers
+do $$
+declare
+    cat integer := current_setting('app.wld_cat')::integer;
+    entry_id bigint;
+begin
+    delete from public.reservation_waitlist;
+    update public.category_reservations set status = 'cancelled' where status = 'active';
+    update public.categories set capacity = 1 where id = cat;
+    insert into public.category_reservations (plate, category_id, reserved_until, lot_id, source)
+    values ('WLCC3', cat, now() + interval '2 hours', 1, 'app');
+    entry_id := (public.public_join_waitlist(
+        1, 'WLCC4', cat, now() + interval '3 hours', 60, 'Ana', '3102220012'
+    ) ->> 'id')::bigint;
+
+    update public.categories set capacity = 2 where id = cat;
+
+    if (select status from public.reservation_waitlist where id = entry_id) <> 'offered' then
+        raise exception 'a raised category capacity did not trigger an offer';
+    end if;
+    update public.category_reservations set status = 'cancelled' where plate = 'WLCC3';
+    update public.categories set capacity = 0 where id = cat;
+end $$;
+
+-- waitlist: trigger never breaks the origin write
+do $$
+begin
+    delete from public.waitlist_kicks;
+    -- The wrapper never raises, whatever it is handed: the write that caused
+    -- the dispatch must not fail because the queue could not be served.
+    perform public.waitlist_try_dispatch(999, 'car');
+    perform public.waitlist_try_dispatch(null, 'car');
+    perform public.waitlist_try_dispatch(1, 'bogus-group');
+    perform public.waitlist_try_dispatch(1, 'car');
+    if exists (select 1 from public.waitlist_kicks) then
+        raise exception 'a healthy dispatch queued a kick';
+    end if;
+    -- The kick table accepts a retry row once per (lot, group).
+    insert into public.waitlist_kicks (lot_id, group_name) values (1, 'car');
+    insert into public.waitlist_kicks (lot_id, group_name) values (1, 'car')
+    on conflict do nothing;
+    if (select count(*) from public.waitlist_kicks) <> 1 then
+        raise exception 'the kick table did not keep a single row per group';
+    end if;
+    -- The job drains it (see the expiry test below).
+    perform public.waitlist_dispatch_all();
+    if exists (select 1 from public.waitlist_kicks) then
+        raise exception 'the job did not drain the kicks';
+    end if;
+end $$;
+
+-- waitlist: offer notifies desk and queues whatsapp
+do $$
+declare
+    cat integer := current_setting('app.wld_cat')::integer;
+    entry_id bigint;
+    members integer;
+    notified integer;
+    message public.whatsapp_messages%rowtype;
+begin
+    delete from public.reservation_waitlist;
+    delete from public.notifications where type = 'waitlist_offer';
+    delete from public.whatsapp_messages where lot_id = 1;
+    update public.category_reservations set status = 'cancelled' where status = 'active';
+    update public.categories set capacity = 2 where id = cat;
+    update public.parking_settings set whatsapp_auto = true where lot_id = 1;
+    insert into public.category_reservations (plate, category_id, reserved_until, lot_id, source)
+    values ('WLW1', cat, now() + interval '2 hours', 1, 'app'),
+           ('WLW2', cat, now() + interval '2 hours', 1, 'app');
+    entry_id := (public.public_join_waitlist(
+        1, 'WLW3', cat, now() + interval '3 hours', 60, 'Ana Maria', '3102220013'
+    ) ->> 'id')::bigint;
+
+    update public.category_reservations set status = 'cancelled' where plate = 'WLW1';
+
+    select count(*) into members
+      from public.lot_members lm join public.users u on u.id = lm.user_id
+     where lm.lot_id = 1 and u.is_active;
+    select count(*) into notified
+      from public.notifications n
+     where n.type = 'waitlist_offer' and n.data ->> 'entry_id' = entry_id::text;
+    if notified <> members then
+        raise exception 'the offer notified % of % members', notified, members;
+    end if;
+
+    select * into message
+      from public.whatsapp_messages
+     where lot_id = 1 and template = 'waitlist_offer';
+    if not found then
+        raise exception 'no whatsapp row was queued for the offer';
+    end if;
+    if jsonb_array_length(message.params) <> 5
+       or message.params ->> 0 <> 'Ana Maria'
+       or message.params ->> 1 <> 'WLW3'
+       or message.params ->> 4 <> entry_id::text then
+        raise exception 'the whatsapp params are wrong: %', message.params;
+    end if;
+    update public.parking_settings set whatsapp_auto = false where lot_id = 1;
+    update public.categories set capacity = 0 where id = cat;
+end $$;
+
+-- waitlist: no whatsapp when off
+do $$
+declare
+    cat integer := current_setting('app.wld_cat')::integer;
+    entry_id bigint;
+begin
+    delete from public.reservation_waitlist;
+    delete from public.whatsapp_messages where lot_id = 1;
+    update public.category_reservations set status = 'cancelled' where status = 'active';
+    update public.categories set capacity = 2 where id = cat;
+    update public.parking_settings set whatsapp_auto = false where lot_id = 1;
+    insert into public.category_reservations (plate, category_id, reserved_until, lot_id, source)
+    values ('WLN1', cat, now() + interval '2 hours', 1, 'app'),
+           ('WLN2', cat, now() + interval '2 hours', 1, 'app');
+    entry_id := (public.public_join_waitlist(
+        1, 'WLN3', cat, now() + interval '3 hours', 60, 'Ana', '3102220014'
+    ) ->> 'id')::bigint;
+    update public.category_reservations set status = 'cancelled' where plate = 'WLN1';
+    if exists (select 1 from public.whatsapp_messages where lot_id = 1) then
+        raise exception 'a whatsapp row was queued with the channel off';
+    end if;
+    perform set_config('app.wld_offer_entry', entry_id::text, true);
+    update public.categories set capacity = 0 where id = cat;
+end $$;
+
+-- 0106 booking waitlist: claim, leave, desk, settings and expiry.
+create or replace function pg_temp.wl_reset(p_capacity integer) returns void
+language plpgsql as $$
+begin
+    delete from public.reservation_waitlist;
+    update public.category_reservations set status = 'cancelled'
+     where status = 'active';
+    update public.categories set capacity = p_capacity
+     where lot_id = 1 and name = 'car';
+    update public.parking_settings
+       set waitlist_enabled = true, waitlist_claim_minutes = 15,
+           waitlist_max_entries = 30, whatsapp_auto = false,
+           car_capacity = 0, car_out_of_service = 0
+     where lot_id = 1;
+end $$;
+
+create or replace function pg_temp.wl_join(p_plate text, p_phone text)
+returns bigint
+language plpgsql as $$
+declare
+    entry bigint;
+    cat integer;
+begin
+    select id into cat from public.categories where lot_id = 1 and name = 'car';
+    entry := (public.public_join_waitlist(
+        1, p_plate, cat, now() + interval '3 hours', 60, 'Ana', p_phone
+    ) ->> 'id')::bigint;
+    return entry;
+end $$;
+
+create or replace function pg_temp.wl_release(p_plate text) returns void
+language plpgsql as $$
+begin
+    update public.category_reservations set status = 'cancelled'
+     where lot_id = 1 and plate = p_plate and status = 'active';
+end $$;
+
+create or replace function pg_temp.wl_hold(p_plate text) returns void
+language plpgsql as $$
+begin
+    insert into public.category_reservations (
+        plate, category_id, reserved_until, lot_id, source
+    )
+    select p_plate, c.id, now() + interval '2 hours', 1, 'app'
+      from public.categories c where c.lot_id = 1 and c.name = 'car';
+end $$;
+
+-- waitlist: claim in time
+do $$
+declare
+    entry_id bigint;
+    claim jsonb;
+    hold public.category_reservations%rowtype;
+begin
+    perform pg_temp.wl_reset(1);
+    perform pg_temp.wl_hold('WLKEEP');
+    entry_id := pg_temp.wl_join('WLCLAIM1', '3103330001');
+    perform pg_temp.wl_release('WLKEEP');
+    update public.parking_settings set whatsapp_auto = true where lot_id = 1;
+
+    claim := public.public_claim_waitlist(1, entry_id, '3103330001');
+
+    if claim ->> 'entry_id' <> entry_id::text
+       or claim ->> 'status' <> 'active'
+       or claim ->> 'plate' <> 'WLCLAIM1' then
+        raise exception 'the claim answer is wrong: %', claim;
+    end if;
+    select * into hold
+      from public.category_reservations where id = (claim ->> 'id')::bigint;
+    if hold.source <> 'public'
+       or hold.reserved_until < now() + interval '50 minutes' then
+        raise exception 'the claim did not extend and flip the hold: %', hold;
+    end if;
+    if (select status from public.reservation_waitlist where id = entry_id) <> 'claimed' then
+        raise exception 'the entry was not marked claimed';
+    end if;
+    if not exists (
+        select 1 from public.whatsapp_messages
+         where lot_id = 1 and template = 'reservation_confirmed'
+    ) then
+        raise exception 'the claim did not queue the confirmation';
+    end if;
+    update public.parking_settings set whatsapp_auto = false where lot_id = 1;
+    perform set_config('app.wl_claimed_entry', entry_id::text, true);
+end $$;
+
+-- waitlist: claim idempotent
+do $$
+declare
+    entry_id bigint := current_setting('app.wl_claimed_entry')::bigint;
+    first_id bigint;
+    again jsonb;
+begin
+    select reservation_id into first_id
+      from public.reservation_waitlist where id = entry_id;
+    again := public.public_claim_waitlist(1, entry_id, '3103330001');
+    if (again ->> 'id')::bigint <> first_id then
+        raise exception 'a second claim answered another reservation: %', again;
+    end if;
+end $$;
+
+-- waitlist: claim while waiting
+do $$
+declare
+    entry_id bigint;
+begin
+    perform pg_temp.wl_reset(1);
+    perform pg_temp.wl_hold('WLWAIT');
+    entry_id := pg_temp.wl_join('WLWAIT1', '3103330002');
+    begin
+        perform public.public_claim_waitlist(1, entry_id, '3103330002');
+        raise exception 'a waiting entry was claimed';
+    exception when others then
+        if sqlerrm not like '%WaitlistNotOfferedError%' then raise; end if;
+    end;
+end $$;
+
+-- waitlist: claim expired
+do $$
+declare
+    entry_id bigint;
+begin
+    perform pg_temp.wl_reset(1);
+    perform pg_temp.wl_hold('WLEXP');
+    entry_id := pg_temp.wl_join('WLEXP1', '3103330003');
+    perform pg_temp.wl_release('WLEXP');
+    update public.reservation_waitlist
+       set offer_until = now() - interval '1 minute',
+           offered_at = now() - interval '20 minutes'
+     where id = entry_id;
+    begin
+        perform public.public_claim_waitlist(1, entry_id, '3103330003');
+        raise exception 'an expired offer was claimed';
+    exception when others then
+        if sqlerrm not like '%OfferNoLongerAvailableError%' then raise; end if;
+    end;
+end $$;
+
+-- waitlist: claim wrong phone
+do $$
+declare
+    entry_id bigint;
+begin
+    perform pg_temp.wl_reset(1);
+    perform pg_temp.wl_hold('WLWRONG');
+    entry_id := pg_temp.wl_join('WLWRONG1', '3103330004');
+    perform pg_temp.wl_release('WLWRONG');
+    begin
+        perform public.public_claim_waitlist(1, entry_id, '3109999999');
+        raise exception 'a claim with another phone worked';
+    exception when others then
+        if sqlerrm not like '%WaitlistEntryNotFoundError%' then raise; end if;
+    end;
+end $$;
+
+-- waitlist: leave offered cancels hold and cascades
+do $$
+declare
+    first_id bigint;
+    second_id bigint;
+    hold_id bigint;
+begin
+    perform pg_temp.wl_reset(2);
+    perform pg_temp.wl_hold('WLL1');
+    perform pg_temp.wl_hold('WLL2');
+    first_id := pg_temp.wl_join('WLL3', '3103330005');
+    second_id := pg_temp.wl_join('WLL4', '3103330006');
+    perform pg_temp.wl_release('WLL1');
+    select reservation_id into hold_id
+      from public.reservation_waitlist where id = first_id;
+    if (select status from public.reservation_waitlist where id = first_id) <> 'offered' then
+        raise exception 'the first turn was not offered';
+    end if;
+
+    perform public.public_leave_waitlist(1, first_id, '3103330005');
+
+    if (select status from public.reservation_waitlist where id = first_id) <> 'left' then
+        raise exception 'leaving an offer did not mark it left';
+    end if;
+    if (select status from public.category_reservations where id = hold_id) <> 'cancelled' then
+        raise exception 'leaving an offer did not release its hold';
+    end if;
+    if (select status from public.reservation_waitlist where id = second_id) <> 'offered' then
+        raise exception 'the released offer did not cascade to the next turn';
+    end if;
+end $$;
+
+-- waitlist: desk claim
+do $$
+declare
+    entry_id bigint;
+begin
+    perform pg_temp.wl_reset(1);
+    perform pg_temp.wl_hold('WLDK');
+    entry_id := pg_temp.wl_join('WLDK1', '3103330007');
+    perform pg_temp.wl_release('WLDK');
+    perform set_config('app.wl_desk_entry', entry_id::text, true);
+    if (select status from public.reservation_waitlist where id = entry_id) <> 'offered' then
+        raise exception 'the desk claim fixture was not offered';
+    end if;
+end $$;
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+declare
+    entry_id bigint := current_setting('app.wl_desk_entry')::bigint;
+    claim jsonb;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    claim := public.desk_claim_waitlist(entry_id);
+    if claim ->> 'status' <> 'active' or claim ->> 'plate' <> 'WLDK1' then
+        raise exception 'the desk claim failed: %', claim;
+    end if;
+    if (select status from public.reservation_waitlist where id = entry_id) <> 'claimed' then
+        raise exception 'the desk claim did not mark the entry';
+    end if;
+end $$;
+reset role;
+
+-- waitlist: desk remove
+do $$
+declare
+    entry_id bigint;
+    hold_id bigint;
+begin
+    perform pg_temp.wl_reset(1);
+    perform pg_temp.wl_hold('WLRM');
+    entry_id := pg_temp.wl_join('WLRM1', '3103330008');
+    perform pg_temp.wl_release('WLRM');
+    select reservation_id into hold_id
+      from public.reservation_waitlist where id = entry_id;
+    perform set_config('app.wl_remove_entry', entry_id::text, true);
+    if (select status from public.reservation_waitlist where id = entry_id) <> 'offered' then
+        raise exception 'the entry was not offered before the desk removal';
+    end if;
+end $$;
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+declare
+    entry_id bigint := current_setting('app.wl_remove_entry')::bigint;
+    hold_id bigint;
+    answer jsonb;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    select reservation_id into hold_id
+      from public.reservation_waitlist where id = entry_id;
+    answer := public.desk_remove_waitlist(entry_id);
+    if answer ->> 'status' <> 'cancelled' then
+        raise exception 'the desk removal answered %', answer;
+    end if;
+    if (select status from public.category_reservations where id = hold_id) <> 'cancelled' then
+        raise exception 'the desk removal did not release the hold';
+    end if;
+    begin
+        perform public.desk_remove_waitlist(entry_id);
+        raise exception 'a terminal entry was removed twice';
+    exception when others then
+        if sqlerrm not like '%OfferNoLongerAvailableError%' then raise; end if;
+    end;
+end $$;
+reset role;
+
+-- waitlist: desk other lot
+do $$
+declare
+    cat_two integer;
+    entry_two bigint;
+begin
+    select id into cat_two from public.categories where lot_id = 2 limit 1;
+    insert into public.reservation_waitlist (
+        lot_id, category_id, group_name, plate, customer_name, customer_phone,
+        wait_until, hold_minutes
+    )
+    values (2, cat_two, 'car', 'WLLOT2', 'Sofia', '3103330009',
+            now() + interval '2 hours', 60)
+    returning id into entry_two;
+    perform set_config('app.wl_other_entry', entry_two::text, true);
+end $$;
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    begin
+        perform public.desk_remove_waitlist(current_setting('app.wl_other_entry')::bigint);
+        raise exception 'the desk removed another lot entry';
+    exception when others then
+        if sqlerrm not like '%LotRequiredError%' then raise; end if;
+    end;
+end $$;
+reset role;
+
+-- waitlist: settings admin only
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+set local role authenticated;
+do $$
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    begin
+        perform public.set_waitlist_settings(true, null, null);
+        raise exception 'an operator changed the waitlist settings';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+declare
+    saved jsonb;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    begin
+        perform public.set_waitlist_settings(null, 4, null);
+        raise exception 'an out of range window was stored';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+    saved := public.set_waitlist_settings(true, 20, 10);
+    if not (saved ->> 'enabled')::boolean
+       or (saved ->> 'claim_minutes')::integer <> 20
+       or (saved ->> 'max_entries')::integer <> 10 then
+        raise exception 'the settings answer is wrong: %', saved;
+    end if;
+    perform public.set_waitlist_settings(true, 15, 30);
+end $$;
+reset role;
+
+-- waitlist: list_waitlist positions
+do $$
+begin
+    perform pg_temp.wl_reset(1);
+    perform pg_temp.wl_hold('WLLI1');
+    perform pg_temp.wl_join('WLLI2', '3103330010');
+    perform pg_temp.wl_join('WLLI3', '3103330011');
+end $$;
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+declare
+    rows integer;
+    first_position integer;
+    second_position integer;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    select count(*) into rows from public.list_waitlist();
+    if rows <> 2 then
+        raise exception 'the desk list returned % rows', rows;
+    end if;
+    select "position" into first_position from public.list_waitlist()
+     where plate = 'WLLI2';
+    select "position" into second_position from public.list_waitlist()
+     where plate = 'WLLI3';
+    if first_position <> 1 or second_position <> 2 then
+        raise exception 'the positions are % and %', first_position, second_position;
+    end if;
+end $$;
+reset role;
+
+-- waitlist: expire offer and cascade
+do $$
+declare
+    first_id bigint;
+    second_id bigint;
+    hold_id bigint;
+    expired_count integer;
+begin
+    perform pg_temp.wl_reset(2);
+    perform pg_temp.wl_hold('WLE1');
+    perform pg_temp.wl_hold('WLE2');
+    first_id := pg_temp.wl_join('WLE3', '3103330012');
+    second_id := pg_temp.wl_join('WLE4', '3103330013');
+    perform pg_temp.wl_release('WLE1');
+    select reservation_id into hold_id
+      from public.reservation_waitlist where id = first_id;
+    update public.reservation_waitlist
+       set offer_until = now() - interval '1 minute'
+     where id = first_id;
+
+    expired_count := public.waitlist_expire();
+
+    if expired_count < 1 then
+        raise exception 'the expiry changed nothing';
+    end if;
+    if (select status from public.category_reservations where id = hold_id) <> 'expired' then
+        raise exception 'the expired offer kept its hold';
+    end if;
+    if (select status from public.reservation_waitlist where id = first_id) <> 'expired' then
+        raise exception 'the expired offer kept its turn';
+    end if;
+    if (select status from public.reservation_waitlist where id = second_id) <> 'offered' then
+        raise exception 'the freed space did not cascade to the next turn';
+    end if;
+end $$;
+
+-- waitlist: expire waiting entry
+do $$
+declare
+    entry_id bigint;
+begin
+    perform pg_temp.wl_reset(1);
+    perform pg_temp.wl_hold('WLX');
+    entry_id := pg_temp.wl_join('WLX1', '3103330014');
+    update public.reservation_waitlist
+       set wait_until = now() - interval '1 minute'
+     where id = entry_id;
+    perform public.waitlist_expire();
+    if (select status from public.reservation_waitlist where id = entry_id) <> 'expired' then
+        raise exception 'a stale waiting entry was not expired';
+    end if;
+end $$;
+
+-- waitlist: check-in before expiry reconciles to claimed
+do $$
+declare
+    entry_id bigint;
+    hold_id bigint;
+begin
+    perform pg_temp.wl_reset(1);
+    perform pg_temp.wl_hold('WLCI');
+    entry_id := pg_temp.wl_join('WLCI1', '3103330015');
+    perform pg_temp.wl_release('WLCI');
+    select reservation_id into hold_id
+      from public.reservation_waitlist where id = entry_id;
+    -- What check_in does when the customer walks in inside the grace window.
+    update public.category_reservations set status = 'used' where id = hold_id;
+    perform public.waitlist_expire();
+    if (select status from public.reservation_waitlist where id = entry_id) <> 'claimed' then
+        raise exception 'the arrived customer was not reconciled to claimed';
+    end if;
+end $$;
+
+-- waitlist: job functions are service role only
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+begin
+    begin
+        perform public.waitlist_expire();
+        raise exception 'an operator ran the expiry job';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform public.waitlist_dispatch_all();
+        raise exception 'an operator ran the dispatch job';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform public.purge_waitlist(30);
+        raise exception 'an operator ran the purge job';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
+-- waitlist: purge keeps non-terminal
+do $$
+declare
+    removed integer;
+begin
+    perform pg_temp.wl_reset(1);
+    insert into public.reservation_waitlist (
+        lot_id, category_id, group_name, plate, customer_name, customer_phone,
+        status, wait_until, hold_minutes, created_at
+    )
+    select 1, c.id, 'car', p.plate, 'Ana', p.phone, p.status,
+           now() + interval '2 hours', 60, now() - interval '60 days'
+      from public.categories c,
+           (values ('WLPOLD1', '3103330016', 'left'),
+                   ('WLPOLD2', '3103330017', 'expired'),
+                   ('WLPOLD3', '3103330018', 'waiting')) as p(plate, phone, status)
+     where c.lot_id = 1 and c.name = 'car';
+    removed := public.purge_waitlist(30);
+    if removed <> 2 then
+        raise exception 'the purge removed % rows', removed;
+    end if;
+    if not exists (
+        select 1 from public.reservation_waitlist where plate = 'WLPOLD3'
+    ) then
+        raise exception 'the purge removed a pending turn';
+    end if;
+end $$;
+
+-- waitlist: report counts (0107)
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    perform set_config(
+        'app.wl_report_before',
+        public.report_reservations(
+            (now() at time zone 'America/Bogota')::date,
+            (now() at time zone 'America/Bogota')::date
+        )::text,
+        true
+    );
+end $$;
+reset role;
+
+do $$
+declare
+    cat integer;
+    offer_hold integer;
+begin
+    select id into cat from public.categories where lot_id = 1 and name = 'car';
+    -- One unclaimed offer hold: a hold, not a booking.
+    insert into public.category_reservations (
+        plate, category_id, reserved_until, lot_id, source, customer_name,
+        customer_phone
+    )
+    values ('WLREP1', cat, now() + interval '1 hour', 1, 'waitlist', 'Ana', '3104440001')
+    returning id into offer_hold;
+    insert into public.reservation_waitlist (
+        lot_id, category_id, group_name, plate, customer_name, customer_phone,
+        status, wait_until, hold_minutes, offered_at, offer_until,
+        reservation_id, claimed_at
+    )
+    values (1, cat, 'car', 'WLREP1', 'Ana', '3104440001', 'claimed',
+            now() + interval '2 hours', 60, now(), now() + interval '1 hour',
+            offer_hold, now()),
+           (1, cat, 'car', 'WLREP2', 'Luis', '3104440002', 'waiting',
+            now() + interval '2 hours', 60, null, null, null, null);
+end $$;
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+declare
+    day date := (now() at time zone 'America/Bogota')::date;
+    before_report jsonb := current_setting('app.wl_report_before')::jsonb;
+    after_report jsonb;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    after_report := public.report_reservations(day, day);
+
+    if (after_report ->> 'total')::integer <> (before_report ->> 'total')::integer
+       or (after_report ->> 'public')::integer <> (before_report ->> 'public')::integer then
+        raise exception 'an unclaimed offer was counted as a booking: % vs %',
+            before_report, after_report;
+    end if;
+    if (after_report -> 'waitlist' ->> 'joined')::integer
+           < (before_report -> 'waitlist' ->> 'joined')::integer + 2
+       or (after_report -> 'waitlist' ->> 'claimed')::integer
+           < (before_report -> 'waitlist' ->> 'claimed')::integer + 1
+       or (after_report -> 'waitlist' ->> 'waiting')::integer
+           < (before_report -> 'waitlist' ->> 'waiting')::integer + 1 then
+        raise exception 'the waitlist block did not count the turns: %', after_report;
+    end if;
+end $$;
+reset role;
+
+-- waitlist: report admin only
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+set local role authenticated;
+do $$
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    begin
+        perform public.report_reservations(
+            (now() at time zone 'America/Bogota')::date,
+            (now() at time zone 'America/Bogota')::date
+        );
+        raise exception 'an operator read the reservation report';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- report_revenue: pass income is scoped to the active lot (0108). Before the
+-- fix a lot admin saw the pass payments of every lot in their own report.
+do $$
+declare
+    cat integer := (select min(id) from public.categories);
+    v1 integer;
+    v2 integer;
+    p1 bigint;
+    p2 bigint;
+begin
+    insert into public.vehicles (plate, category_id) values ('PSL001', cat)
+    returning id into v1;
+    insert into public.vehicles (plate, category_id) values ('PSL002', cat)
+    returning id into v2;
+    insert into public.monthly_passes (vehicle_id, start_date, end_date, amount, lot_id)
+    values (v1, '2031-03-01', '2031-03-31', 70000, 1) returning id into p1;
+    insert into public.monthly_passes (vehicle_id, start_date, end_date, amount, lot_id)
+    values (v2, '2031-03-01', '2031-03-31', 30000, 2) returning id into p2;
+    update public.monthly_pass_payments
+       set status = 'paid', paid_at = '2031-03-05 12:00+00',
+           amount = 70000, lot_id = 1
+     where monthly_pass_id = p1;
+    update public.monthly_pass_payments
+       set status = 'paid', paid_at = '2031-03-05 12:00+00',
+           amount = 30000, lot_id = 2
+     where monthly_pass_id = p2;
+end $$;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+declare
+    mine jsonb;
+    other jsonb;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    mine := public.report_revenue('2031-03-01', '2031-03-31');
+    if (mine ->> 'pass_revenue')::bigint <> 70000 then
+        raise exception 'lot 1 pass revenue leaked another lot: %', mine ->> 'pass_revenue';
+    end if;
+    if (select coalesce(sum((i ->> 'amount')::bigint), 0)
+          from jsonb_array_elements(mine -> 'pass_by_payment') i) <> 70000 then
+        raise exception 'lot 1 pass_by_payment leaked another lot: %', mine -> 'pass_by_payment';
+    end if;
+    perform set_config('request.headers', '{"x-lot-id":"2"}', true);
+    other := public.report_revenue('2031-03-01', '2031-03-31');
+    if (other ->> 'pass_revenue')::bigint <> 30000 then
+        raise exception 'lot 2 pass revenue is wrong: %', other ->> 'pass_revenue';
+    end if;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- 0108 Occupancy forecast.
+do $$
+declare
+    cat integer;
+    i integer;
+begin
+    -- A clean slate for the lot: no sessions, holds or bays leak in. Evidence
+    -- photos of earlier sections pin their session, so they go first.
+    delete from public.evidence_photos
+     where session_id in (select id from public.parking_sessions where lot_id = 1);
+    delete from public.parking_sessions where lot_id = 1;
+    delete from public.category_reservations where lot_id = 1;
+    -- The waitlist dispatch runs on capacity changes; an empty queue keeps the
+    -- forecast fixtures free of offers.
+    delete from public.reservation_waitlist;
+    delete from public.parking_spots where lot_id = 1;
+    delete from public.occupancy_profile;
+    delete from public.vehicles where plate like 'FC%';
+    update public.parking_settings
+       set car_capacity = 40, moto_capacity = 0, car_out_of_service = 0,
+           moto_out_of_service = 0, business_timezone = 'America/Bogota'
+     where lot_id = 1;
+    update public.forecast_settings
+       set enabled = true, history_weeks = 8, min_samples = 4,
+           blend_decay_pct = 85, full_threshold_pct = 100, public_enabled = true
+     where lot_id = 1;
+    select id into cat from public.categories where lot_id = 1 and name = 'car';
+    if cat is null then
+        insert into public.categories (name, capacity, lot_id)
+        values ('car', 0, 1) returning id into cat;
+    end if;
+    -- Earlier sections cap this category; the forecast measures the group.
+    update public.categories set capacity = 0 where id = cat;
+    perform set_config('app.fc_cat', cat::text, true);
+    -- 60 spare vehicles for the fixtures below.
+    for i in 1 .. 60 loop
+        insert into public.vehicles (plate, category_id)
+        values ('FC' || lpad(i::text, 3, '0'), cat);
+    end loop;
+end $$;
+
+-- forecast: success grid net occupancy
+do $$
+declare
+    vehicle integer;
+    open_vehicle integer;
+    long_vehicle integer;
+    tz text := 'America/Bogota';
+    yesterday date := date '2026-11-03';
+    occupancy integer;
+    last_hour integer := extract(hour from (now() at time zone 'America/Bogota'))::integer;
+begin
+    select id into vehicle from public.vehicles where plate = 'FC001';
+    insert into public.parking_sessions (vehicle_id, operator_id, status, lot_id,
+                                         entry_time, exit_time)
+    values (vehicle, 2, 'closed', 1,
+            timestamp '2026-11-03 09:30' at time zone tz,
+            timestamp '2026-11-03 11:10' at time zone tz);
+
+    select g.occupancy into occupancy from public.occupancy_grid(1, yesterday, yesterday) g
+     where g.group_name = 'car' and g.day = yesterday and g.hour = 10;
+    if occupancy <> 1 then
+        raise exception '10:00 should be 1, got %', occupancy;
+    end if;
+    select g.occupancy into occupancy from public.occupancy_grid(1, yesterday, yesterday) g
+     where g.group_name = 'car' and g.day = yesterday and g.hour = 11;
+    if occupancy <> 1 then
+        raise exception '11:00 should be 1, got %', occupancy;
+    end if;
+    select g.occupancy into occupancy from public.occupancy_grid(1, yesterday, yesterday) g
+     where g.group_name = 'car' and g.day = yesterday and g.hour = 9;
+    if occupancy <> 0 then
+        raise exception '09:00 should be 0, got %', occupancy;
+    end if;
+    select g.occupancy into occupancy from public.occupancy_grid(1, yesterday, yesterday) g
+     where g.group_name = 'car' and g.day = yesterday and g.hour = 12;
+    if occupancy <> 0 then
+        raise exception '12:00 should be 0, got %', occupancy;
+    end if;
+
+    -- An open session counts up to the last full hour.
+    select id into open_vehicle from public.vehicles where plate = 'FC002';
+    insert into public.parking_sessions (vehicle_id, operator_id, status, lot_id, entry_time)
+    values (open_vehicle, 2, 'open', 1, now() - interval '2 hours');
+    select g.occupancy into occupancy
+      from public.occupancy_grid(1, (now() at time zone tz)::date,
+                                 (now() at time zone tz)::date) g
+     where g.group_name = 'car' and g.day = (now() at time zone tz)::date
+       and g.hour = last_hour - 1;
+    if occupancy < 1 then
+        raise exception 'the open session did not count in the last hour';
+    end if;
+
+    -- A 10 day open session only contributes its first 72 hours.
+    select id into long_vehicle from public.vehicles where plate = 'FC003';
+    insert into public.parking_sessions (vehicle_id, operator_id, status, lot_id, entry_time)
+    values (long_vehicle, 2, 'open', 1, now() - interval '10 days');
+    select g.occupancy into occupancy
+      from public.occupancy_grid(1, (now() at time zone tz)::date - 4,
+                                 (now() at time zone tz)::date - 4) g
+     where g.group_name = 'car' and g.day = (now() at time zone tz)::date - 4
+       and g.hour = 12;
+    if occupancy <> 0 then
+        raise exception 'a 10 day session still counted after 72 hours: %', occupancy;
+    end if;
+
+    delete from public.parking_sessions where lot_id = 1;
+end $$;
+
+-- forecast: success profile median robust
+do $$
+declare
+    week integer;
+    n integer;
+    values integer[] := array[33, 35, 36, 38, 31, 35, 39, 60];
+    median numeric;
+    samples integer;
+    tz text := 'America/Bogota';
+    today date := (now() at time zone tz)::date;
+    anchor date;
+    days_since integer;
+    wed_dow integer;
+begin
+    delete from public.occupancy_profile;
+    -- The profile window is relative to the wall clock (today - 8 weeks ..
+    -- today - 1), so the fixture must be too: anchor on the most recent
+    -- Wednesday strictly before today and walk back one week per sample.
+    days_since := (extract(dow from today)::integer - 3 + 7) % 7;
+    if days_since = 0 then
+        days_since := 7;
+    end if;
+    anchor := today - days_since;
+    wed_dow := extract(dow from anchor)::integer;
+    for week in 1 .. 8 loop
+        n := values[week];
+        insert into public.parking_sessions (
+            vehicle_id, operator_id, status, lot_id, entry_time, exit_time
+        )
+        -- The eight Wednesdays that end before today, so every one of them
+        -- has a sample inside the profile window.
+        select v.id, 2, 'closed', 1,
+               (anchor - 7 * (week - 1))::timestamp + interval '17 hours',
+               (anchor - 7 * (week - 1))::timestamp + interval '18 hours'
+          from public.vehicles v
+         where v.category_id = current_setting('app.fc_cat')::integer
+         order by v.id
+         limit n;
+    end loop;
+
+    perform public.refresh_occupancy_profile(true);
+
+    select p.median_occupancy, p.samples into median, samples
+      from public.occupancy_profile p
+     where p.lot_id = 1 and p.group_name = 'car' and p.dow = wed_dow and p.hour = 17;
+    if median is null then
+        raise exception 'the 17:00 cell was not written';
+    end if;
+    -- 33, 35, 36, 38, 31, 35, 39, 60 sorted: 31, 33, 35, 35, 36, 38, 39, 60.
+    -- The even sample's median is the average of the two middle values
+    -- (35 and 36), which is what percentile_cont(0.5) returns.
+    if median <> 35.50 then
+        raise exception 'the median should be 35.50, got %', median;
+    end if;
+    if samples <> 8 then
+        raise exception 'the cell should have 8 samples, got %', samples;
+    end if;
+    delete from public.parking_sessions where lot_id = 1;
+end $$;
+
+-- forecast: success refresh throttle
+do $$
+declare
+    first_run integer;
+    second_run integer;
+    forced integer;
+    before_ts timestamptz;
+    after_ts timestamptz;
+begin
+    select min(p.computed_at) into before_ts from public.occupancy_profile p where p.lot_id = 1;
+    second_run := public.refresh_occupancy_profile();
+    select min(p.computed_at) into after_ts from public.occupancy_profile p where p.lot_id = 1;
+    if second_run <> 0 then
+        raise exception 'a throttled refresh rewrote % rows', second_run;
+    end if;
+    if after_ts is distinct from before_ts then
+        raise exception 'a throttled refresh touched computed_at';
+    end if;
+    first_run := public.refresh_occupancy_profile(true);
+    if first_run = 0 then
+        raise exception 'a forced refresh wrote nothing';
+    end if;
+end $$;
+
+-- forecast: failure first session date (insufficient samples)
+do $$
+declare
+    result jsonb;
+begin
+    -- A lot whose first session is 16 days old has three Wednesdays in the
+    -- window: Oct 28, Nov 4 and Nov 11. Everything before that date is
+    -- excluded by the grid filter.
+    delete from public.parking_sessions where lot_id = 1;
+    insert into public.parking_sessions (vehicle_id, operator_id, status, lot_id, entry_time, exit_time)
+    select v.id, 2, 'closed', 1,
+           (now() at time zone 'America/Bogota') - interval '16 days',
+           (now() at time zone 'America/Bogota') - interval '16 days' + interval '1 hour'
+      from public.vehicles v
+     where v.plate = 'FC001';
+    perform public.refresh_occupancy_profile(true);
+    result := public.forecast_compute(1, 12, timestamp '2026-11-04 14:20' at time zone 'America/Bogota');
+    if result ->> 'status' <> 'insufficient_history' then
+        raise exception 'three samples should be insufficient: %', result;
+    end if;
+    if jsonb_array_length(result -> 'groups') <> 0 then
+        raise exception 'an insufficient group was returned';
+    end if;
+end $$;
+
+-- forecast: success worked example
+do $$
+declare
+    tz text := 'America/Bogota';
+    result jsonb;
+    grp jsonb;
+    expected jsonb;
+    levels jsonb;
+    v integer;
+    i integer;
+    profile numeric[] := array[24, 27, 31, 35, 38, 36, 30, 22, 15, 10, 7, 6, 5];
+    hours integer[] := array[14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 0, 1, 2];
+    dow_wed integer := extract(dow from date '2026-11-04')::integer;
+    dow_thu integer := extract(dow from date '2026-11-05')::integer;
+begin
+    delete from public.parking_sessions where lot_id = 1;
+    delete from public.occupancy_profile;
+    for i in 1 .. 13 loop
+        insert into public.occupancy_profile
+               (lot_id, group_name, dow, hour, median_occupancy, samples, computed_at)
+        values (1, 'car',
+                case when hours[i] >= 14 then dow_wed else dow_thu end,
+                hours[i], profile[i], 8, now());
+    end loop;
+    -- 31 cars inside: 31 open sessions.
+    insert into public.parking_sessions (vehicle_id, operator_id, status, lot_id, entry_time)
+    select v.id, 2, 'open', 1, timestamp '2026-11-04 13:00' at time zone tz
+      from public.vehicles v
+     where v.category_id = current_setting('app.fc_cat')::integer
+     order by v.id
+     limit 31;
+
+    result := public.forecast_compute(
+        1, 12, timestamp '2026-11-04 14:20' at time zone tz
+    );
+    if result ->> 'status' <> 'ok' then
+        raise exception 'the worked example should be ok: %', result;
+    end if;
+    grp := result -> 'groups' -> 0;
+    expected := jsonb_path_query_array(grp -> 'hours', '$[*].expected');
+    if expected::text <> '[32, 36, 39, 40, 39, 32, 24, 17, 11, 8, 7, 6]' then
+        raise exception 'expected levels are wrong: %', expected;
+    end if;
+    if grp ->> 'full_at' <> '17:30' then
+        raise exception 'full_at should be 17:30, got %', grp ->> 'full_at';
+    end if;
+    if (grp ->> 'full_now')::boolean then
+        raise exception 'full_now should be false';
+    end if;
+    if (grp ->> 'capacity')::integer <> 40 or (grp ->> 'current')::integer <> 31 then
+        raise exception 'capacity/current are wrong: %', grp;
+    end if;
+    if grp ->> 'confidence' <> 'high' or (grp ->> 'samples')::integer <> 8 then
+        raise exception 'confidence should be high/8: %', grp;
+    end if;
+    select h into levels from jsonb_array_elements(grp -> 'hours') h
+     where (h ->> 'hour')::integer = 18;
+    if levels ->> 'level' <> 'full' then
+        raise exception '18:00 should be full: %', levels;
+    end if;
+end $$;
+
+-- forecast: success not full / full now / low confidence / midnight
+do $$
+declare
+    tz text := 'America/Bogota';
+    result jsonb;
+    grp jsonb;
+    v integer;
+begin
+    -- Capacity 80: no crossing in the horizon.
+    update public.parking_settings set car_capacity = 80 where lot_id = 1;
+    result := public.forecast_compute(1, 12, timestamp '2026-11-04 14:20' at time zone tz);
+    grp := result -> 'groups' -> 0;
+    if grp -> 'full_at' <> 'null'::jsonb then
+        raise exception 'full_at should be null with capacity 80: %', grp;
+    end if;
+
+    -- Full now: 40 of 40.
+    update public.parking_settings set car_capacity = 40 where lot_id = 1;
+    delete from public.parking_sessions where lot_id = 1;
+    insert into public.parking_sessions (vehicle_id, operator_id, status, lot_id, entry_time)
+    select v.id, 2, 'open', 1, timestamp '2026-11-04 13:00' at time zone tz
+      from public.vehicles v
+     where v.category_id = current_setting('app.fc_cat')::integer
+     order by v.id
+     limit 40;
+    result := public.forecast_compute(1, 12, timestamp '2026-11-04 14:20' at time zone tz);
+    grp := result -> 'groups' -> 0;
+    if not (grp ->> 'full_now')::boolean then
+        raise exception '40 of 40 should be full now: %', grp;
+    end if;
+
+    -- Low confidence with four samples, medium with six.
+    update public.occupancy_profile set samples = 4 where lot_id = 1;
+    result := public.forecast_compute(1, 12, timestamp '2026-11-04 14:20' at time zone tz);
+    if (result -> 'groups' -> 0 ->> 'confidence') <> 'low' then
+        raise exception 'four samples should be low confidence';
+    end if;
+    update public.occupancy_profile set samples = 6 where lot_id = 1;
+    result := public.forecast_compute(1, 12, timestamp '2026-11-04 14:20' at time zone tz);
+    if (result -> 'groups' -> 0 ->> 'confidence') <> 'medium' then
+        raise exception 'six samples should be medium confidence';
+    end if;
+    update public.occupancy_profile set samples = 8 where lot_id = 1;
+
+    -- Midnight: horizon 6 from 22:30 needs the Thursday cells.
+    insert into public.occupancy_profile
+           (lot_id, group_name, dow, hour, median_occupancy, samples, computed_at)
+    select 1, 'car', extract(dow from date '2026-11-05')::integer, h, 5, 8, now()
+      from generate_series(3, 5) h
+    on conflict (lot_id, group_name, dow, hour) do update
+       set median_occupancy = excluded.median_occupancy;
+    delete from public.parking_sessions where lot_id = 1;
+    result := public.forecast_compute(1, 6, timestamp '2026-11-04 22:30' at time zone tz);
+    grp := result -> 'groups' -> 0;
+    if grp is null then
+        raise exception 'the midnight horizon returned no group: % (profile: %)', result,
+            (select jsonb_agg(jsonb_build_object('dow', p.dow, 'hour', p.hour, 'v', p.median_occupancy))
+               from public.occupancy_profile p where p.lot_id = 1 and p.group_name = 'car'
+                and p.hour in (22, 23, 0, 1, 2, 3, 4));
+    end if;
+    if (grp -> 'hours' -> 0 ->> 'hour')::integer <> 23
+       or (grp -> 'hours' -> 1 ->> 'hour')::integer <> 0 then
+        raise exception 'the midnight hours are wrong: %', grp -> 'hours';
+    end if;
+end $$;
+
+-- forecast: failure no capacity and disabled
+do $$
+declare
+    result jsonb;
+begin
+    update public.parking_settings set car_capacity = 0, moto_capacity = 0 where lot_id = 1;
+    result := public.forecast_compute(1, 12, timestamp '2026-11-04 14:20' at time zone 'America/Bogota');
+    if result ->> 'status' <> 'no_capacity' then
+        raise exception 'no capacity should be reported: %', result;
+    end if;
+    update public.parking_settings set car_capacity = 40 where lot_id = 1;
+    update public.forecast_settings set enabled = false where lot_id = 1;
+    result := public.forecast_compute(1, 12, timestamp '2026-11-04 14:20' at time zone 'America/Bogota');
+    if result ->> 'status' <> 'disabled' then
+        raise exception 'disabled should be reported: %', result;
+    end if;
+    update public.forecast_settings set enabled = true where lot_id = 1;
+end $$;
+
+-- forecast: failure horizon
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    begin
+        perform public.occupancy_forecast(0);
+        raise exception 'a zero horizon was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidForecastHorizonError%' then raise; end if;
+    end;
+    begin
+        perform public.occupancy_forecast(25);
+        raise exception 'a 25 hour horizon was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidForecastHorizonError%' then raise; end if;
+    end;
+    if (public.occupancy_forecast(12) ->> 'status') is null then
+        raise exception 'the staff RPC returned no status';
+    end if;
+end $$;
+reset role;
+
+-- forecast: success group_capacity
+do $$
+declare
+    active integer;
+begin
+    if public.group_capacity(1, 'car') <> 40 then
+        raise exception 'settings capacity should be 40';
+    end if;
+    insert into public.parking_spots (lot_id, code, group_name, grid_row, grid_col, status)
+    values (1, 'FCB1', 'car', 70, 1, 'active'),
+           (1, 'FCB2', 'car', 70, 2, 'active'),
+           (1, 'FCB3', 'car', 70, 3, 'out_of_service');
+    if public.group_capacity(1, 'car') <> 2 then
+        raise exception 'active bays should win: %', public.group_capacity(1, 'car');
+    end if;
+    delete from public.parking_spots where lot_id = 1;
+    if public.group_capacity(1, 'moto') <> 0 then
+        raise exception 'moto capacity should be 0';
+    end if;
+    if public.group_capacity(1, 'heavy') <> 0 then
+        raise exception 'heavy has no capacity';
+    end if;
+    update public.parking_settings set car_capacity = 10, car_out_of_service = 3 where lot_id = 1;
+    if public.group_capacity(1, 'car') <> 7 then
+        raise exception 'out of service bays should be subtracted: %', public.group_capacity(1, 'car');
+    end if;
+    update public.parking_settings set car_capacity = 40, car_out_of_service = 0 where lot_id = 1;
+end $$;
+
+-- forecast: success public block
+do $$
+declare
+    payload jsonb;
+    fc jsonb;
+    grp jsonb;
+    hour jsonb;
+begin
+    -- Rebuild the worked-example profile for the public payload.
+    delete from public.parking_sessions where lot_id = 1;
+    delete from public.occupancy_profile;
+    insert into public.occupancy_profile
+           (lot_id, group_name, dow, hour, median_occupancy, samples, computed_at)
+    select 1, 'car', extract(dow from date '2026-11-04' + (h / 24) * interval '1 day')::integer,
+           h % 24, 20, 8, now()
+      from generate_series(14, 37) h;
+    update public.forecast_settings set public_enabled = true where lot_id = 1;
+
+    payload := public.public_availability(1);
+    fc := payload -> 'forecast';
+    if fc is null then
+        raise exception 'public_availability lost the forecast block';
+    end if;
+    if payload -> 'lot' is null or payload -> 'categories' is null
+       or payload -> 'max_reservation_hours' is null then
+        raise exception 'the wrapper lost existing keys: %', payload;
+    end if;
+    if fc ->> 'status' not in ('ok', 'insufficient_history') then
+        raise exception 'unexpected public status: %', fc;
+    end if;
+    if jsonb_array_length(fc -> 'groups') > 0 then
+        grp := fc -> 'groups' -> 0;
+        if (select array_agg(k order by k) from jsonb_object_keys(grp) k)
+           <> array['confidence', 'full_at', 'full_now', 'group', 'hours'] then
+            raise exception 'the public group leaks keys: %', grp;
+        end if;
+        hour := grp -> 'hours' -> 0;
+        if (select array_agg(k order by k) from jsonb_object_keys(hour) k)
+           <> array['hour', 'level'] then
+            raise exception 'the public hour leaks keys: %', hour;
+        end if;
+        if grp ? 'capacity' or grp ? 'current' or grp ? 'samples'
+           or hour ? 'expected' then
+            raise exception 'the public block leaked a count';
+        end if;
+    end if;
+end $$;
+
+-- forecast: success public hidden and unknown lot
+do $$
+declare
+    payload jsonb;
+begin
+    update public.forecast_settings set public_enabled = false where lot_id = 1;
+    if public.public_forecast_block(1) ->> 'status' <> 'hidden' then
+        raise exception 'public_enabled false did not hide the block';
+    end if;
+    update public.forecast_settings set public_enabled = true where lot_id = 1;
+    if public.public_forecast_block(999999) ->> 'status' <> 'hidden' then
+        raise exception 'an unknown lot should be hidden';
+    end if;
+    if public.public_availability(999999) is not null then
+        raise exception 'an unknown lot returned availability';
+    end if;
+end $$;
+
+-- forecast: security staff rpc
+set local role anon;
+do $$
+begin
+    begin
+        perform public.occupancy_forecast(12);
+        raise exception 'anon read the staff forecast';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+set local role authenticated;
+do $$
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    if (public.occupancy_forecast(12) ->> 'lot_id')::integer <> 1 then
+        raise exception 'the operator forecast answered another lot';
+    end if;
+    perform set_config('request.headers', '{"x-lot-id":"999999"}', true);
+    begin
+        perform public.occupancy_forecast(12);
+        raise exception 'a foreign lot header was accepted';
+    exception when others then
+        if sqlerrm not like '%LotRequiredError%' then raise; end if;
+    end;
+end $$;
+reset role;
+
+-- forecast: security internals
+set local role authenticated;
+do $$
+begin
+    begin
+        perform public.forecast_compute(1, 12, now());
+        raise exception 'authenticated called an internal helper';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform public.public_forecast_block(1);
+        raise exception 'authenticated called the public block';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform public.public_availability_base(1);
+        raise exception 'authenticated called the base availability';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform public.refresh_occupancy_profile(true);
+        raise exception 'authenticated refreshed the profile';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+set local role anon;
+do $$
+begin
+    begin
+        perform public.occupancy_grid(1, current_date - 1, current_date - 1);
+        raise exception 'anon read the grid';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform public.group_capacity(1, 'car');
+        raise exception 'anon read the capacity helper';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
+-- forecast: security rls
+do $$
+begin
+    insert into public.occupancy_profile
+           (lot_id, group_name, dow, hour, median_occupancy, samples)
+    values (2, 'car', 3, 10, 12, 8)
+    on conflict (lot_id, group_name, dow, hour) do nothing;
+end $$;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+set local role authenticated;
+do $$
+declare
+    settings_rows integer;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    if exists (select 1 from public.occupancy_profile p where p.lot_id <> 1) then
+        raise exception 'the operator saw another lot profile';
+    end if;
+    select count(*) into settings_rows from public.forecast_settings;
+    if settings_rows <> 0 then
+        raise exception 'a non-admin read the forecast settings';
+    end if;
+end $$;
+reset role;
+set local role anon;
+do $$
+begin
+    begin
+        perform 1 from public.occupancy_profile limit 1;
+        raise exception 'anon read the profile table';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform 1 from public.forecast_settings limit 1;
+        raise exception 'anon read the settings table';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- forecast: success backtest
+do $$
+declare
+    result jsonb;
+    grp jsonb;
+    first_day date;
+begin
+    delete from public.parking_sessions where lot_id = 1;
+    delete from public.occupancy_profile;
+    -- One old session gives the lot a first day; everything else stays quiet,
+    -- so every point has 0 error.
+    insert into public.parking_sessions (vehicle_id, operator_id, status, lot_id, entry_time, exit_time)
+    select v.id, 2, 'closed', 1,
+           (now() at time zone 'America/Bogota') - interval '70 days',
+           (now() at time zone 'America/Bogota') - interval '70 days' + interval '1 hour'
+      from public.vehicles v
+     where v.plate = 'FC001';
+    result := public.occupancy_forecast_backtest(4);
+    grp := result -> 'groups' -> 0;
+    if grp is null then
+        raise exception 'the backtest returned no group: %', result;
+    end if;
+    if (grp ->> 'points')::integer <= 0 then
+        raise exception 'the backtest evaluated no points: %', grp;
+    end if;
+    if (grp ->> 'mae')::numeric <> 0 then
+        raise exception 'a constant occupancy should give mae 0: %', grp;
+    end if;
+    if jsonb_array_length(grp -> 'by_lead') = 0 then
+        raise exception 'the backtest returned no leads: %', grp;
+    end if;
+end $$;
+
+-- forecast: failure backtest range and admin only, no history
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+set local role authenticated;
+do $$
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    begin
+        perform public.occupancy_forecast_backtest(4);
+        raise exception 'an operator ran the backtest';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    begin
+        perform public.occupancy_forecast_backtest(0);
+        raise exception 'a zero week backtest was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidReportRangeError%' then raise; end if;
+    end;
+    begin
+        perform public.occupancy_forecast_backtest(13);
+        raise exception 'a 13 week backtest was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidReportRangeError%' then raise; end if;
+    end;
+end $$;
+reset role;
+
+-- forecast: failure backtest no history
+do $$
+declare
+    result jsonb;
+begin
+    delete from public.parking_sessions where lot_id = 1;
+    result := public.occupancy_forecast_backtest(4);
+    if jsonb_array_length(result -> 'groups') <> 0 then
+        raise exception 'a lot without history returned groups: %', result;
+    end if;
+end $$;
+
+-- forecast: success settings
+do $$
+begin
+    -- The default-row path is exercised by removing it as the owner.
+    delete from public.forecast_settings where lot_id = 1;
+end $$;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+declare
+    defaults jsonb;
+    saved jsonb;
+    profile_rows integer;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    defaults := public.get_forecast_settings();
+    if (defaults ->> 'history_weeks')::integer <> 8
+       or not (defaults ->> 'enabled')::boolean then
+        raise exception 'the settings defaults changed: %', defaults;
+    end if;
+    saved := public.set_forecast_settings('{"history_weeks": 6}');
+    if (saved ->> 'history_weeks')::integer <> 6
+       or (saved ->> 'min_samples')::integer <> 4 then
+        raise exception 'a partial update failed: %', saved;
+    end if;
+    perform public.set_forecast_settings('{"history_weeks": 8}');
+end $$;
+reset role;
+
+-- Changing a setting invalidates the stored profile (checked as the owner).
+do $$
+declare
+    profile_rows integer;
+begin
+    insert into public.occupancy_profile
+           (lot_id, group_name, dow, hour, median_occupancy, samples)
+    values (1, 'car', 1, 1, 5, 5)
+    on conflict (lot_id, group_name, dow, hour) do nothing;
+    perform set_config('app.fc_profile_seeded', '1', true);
+end $$;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    perform public.set_forecast_settings('{"history_weeks": 7}');
+    perform public.set_forecast_settings('{"history_weeks": 8}');
+end $$;
+reset role;
+do $$
+declare
+    profile_rows integer;
+begin
+    select count(*) into profile_rows from public.occupancy_profile where lot_id = 1;
+    if profile_rows <> 0 then
+        raise exception 'changing the history did not invalidate the profile';
+    end if;
+end $$;
+
+-- forecast: failure settings
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local role authenticated;
+do $$
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    begin
+        perform public.set_forecast_settings('{"history_weeks": 4, "min_samples": 8}');
+        raise exception 'min_samples > history_weeks was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidForecastSettingError%' then raise; end if;
+    end;
+    begin
+        perform public.set_forecast_settings('{"bogus": 1}');
+        raise exception 'an unknown setting was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidForecastSettingError%' then raise; end if;
+    end;
+    begin
+        perform public.set_forecast_settings('{"history_weeks": "eight"}');
+        raise exception 'a string for an integer was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidForecastSettingError%'
+           and sqlerrm not like '%invalid input syntax%' then raise; end if;
+    end;
+    begin
+        perform public.set_forecast_settings('{"blend_decay_pct": 100}');
+        raise exception 'a 100 percent decay was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidForecastSettingError%' then raise; end if;
+    end;
+end $$;
+reset role;
+
+-- forecast: security settings (operator only)
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+set local role authenticated;
+do $$
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    begin
+        perform public.set_forecast_settings('{"enabled": false}');
+        raise exception 'an operator changed the forecast settings';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- forecast: success audit
+set local role authenticated;
+do $$
+declare
+    rows integer;
+    diff jsonb;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    perform public.set_forecast_settings('{"full_threshold_pct": 95}');
+    select count(*) into rows
+      from public.audit_log a
+     where a.table_name = 'forecast_settings'
+       and a.lot_id = 1
+       and a.actor_id = 1;
+    if rows = 0 then
+        raise exception 'the settings change was not audited';
+    end if;
+    select a.after into diff
+      from public.audit_log a
+     where a.table_name = 'forecast_settings' and a.lot_id = 1
+     order by a.id desc limit 1;
+    if diff ->> 'full_threshold_pct' <> '95' then
+        raise exception 'the audit row has no changed column: %', diff;
+    end if;
+    perform public.set_forecast_settings('{"full_threshold_pct": 100}');
+end $$;
+reset role;
+
+
+-- 0110 Cash anomaly detection.
+do $$
+declare
+    cat integer;
+begin
+    delete from public.cash_anomalies;
+    delete from public.notifications where type = 'cash_anomaly';
+    delete from public.shift_adjustments where shift_id in
+        (select id from public.shifts where lot_id = 1);
+    delete from public.evidence_photos where session_id in
+        (select id from public.parking_sessions where lot_id = 1);
+    delete from public.parking_sessions where lot_id = 1;
+    delete from public.shifts where lot_id = 1;
+    delete from public.monthly_passes where lot_id = 1;
+    delete from public.vehicles where plate like 'AN%';
+    update public.anomaly_settings
+       set enabled = true, disabled_rules = '{}',
+           window_days = 14, shortage_min_amount = 5000,
+           shortage_min_shifts = 3, lost_ticket_min_closed = 10,
+           lost_ticket_min_rate_pct = 10, lost_ticket_factor_pct = 200,
+           adjustment_min_amount = 1000, short_stay_minutes = 30,
+           discount_min_count = 3, discount_share_pct = 10,
+           shift_open_hours = 16, session_open_days = 7
+     where lot_id in (1, 2);
+    select id into cat from public.categories where lot_id = 1 and name = 'car';
+    if cat is null then
+        insert into public.categories (name, capacity, lot_id)
+        values ('car', 0, 1) returning id into cat;
+    end if;
+    update public.categories set capacity = 0 where id = cat;
+    perform set_config('app.an_cat', cat::text, true);
+end $$;
+
+-- anomaly: success shift_shortage
+do $$
+declare
+    created integer;
+    rows integer;
+    detail jsonb;
+begin
+    insert into public.shifts (operator_id, opened_at, closed_at, difference, lot_id)
+    values (2, now() - interval '3 days', now() - interval '3 days' + interval '6 hours', -6000, 1),
+           (2, now() - interval '2 days', now() - interval '2 days' + interval '6 hours', -5500, 1),
+           (2, now() - interval '2 days 12 hours', now() - interval '2 days' + interval '8 hours', 0, 1),
+           (2, now() - interval '1 day', now() - interval '1 day' + interval '6 hours', -8000, 1),
+           (2, now() - interval '1 day 2 hours', now() - interval '1 day' + interval '7 hours', -200, 1);
+    created := public.detect_cash_anomalies();
+    select count(*), (array_agg(a.details))[1] into rows, detail
+      from public.cash_anomalies a
+     where a.lot_id = 1 and a.rule = 'shift_shortage';
+    if rows <> 1 then
+        raise exception 'expected one shortage anomaly, got %', rows;
+    end if;
+    if (detail ->> 'total_shortage')::integer <> 19500 then
+        raise exception 'total_shortage should be 19500: %', detail;
+    end if;
+    if (select a.severity from public.cash_anomalies a
+         where a.lot_id = 1 and a.rule = 'shift_shortage') <> 'medium' then
+        raise exception 'three short shifts should be medium';
+    end if;
+    -- Six qualifying shifts become high.
+    insert into public.shifts (operator_id, opened_at, closed_at, difference, lot_id)
+    values (2, now() - interval '5 days', now() - interval '5 days' + interval '6 hours', -6000, 1),
+           (2, now() - interval '6 days', now() - interval '6 days' + interval '6 hours', -7000, 1),
+           (2, now() - interval '7 days', now() - interval '7 days' + interval '6 hours', -6500, 1);
+    perform public.detect_cash_anomalies();
+    if (select a.severity from public.cash_anomalies a
+         where a.lot_id = 1 and a.rule = 'shift_shortage'
+         order by a.id desc limit 1) <> 'high' then
+        raise exception 'six short shifts should be high';
+    end if;
+end $$;
+
+-- anomaly: success dedupe and disabled rule
+do $$
+declare
+    created integer;
+    rows integer;
+begin
+    insert into public.shifts (operator_id, opened_at, closed_at, difference, lot_id)
+    values (2, now() - interval '10 days', now() - interval '10 days' + interval '6 hours', -6000, 1);
+    perform public.detect_cash_anomalies();
+    created := public.detect_cash_anomalies();
+    if created <> 0 then
+        raise exception 'a second run created % rows', created;
+    end if;
+    -- A dismissed row is not recreated.
+    update public.cash_anomalies set status = 'dismissed', resolved_at = now(),
+           resolved_by = 1, note = 'revisado'
+     where lot_id = 1 and rule = 'shift_shortage';
+    perform public.detect_cash_anomalies();
+    select count(*) into rows from public.cash_anomalies
+     where lot_id = 1 and rule = 'shift_shortage' and status = 'open';
+    if rows <> 0 then
+        raise exception 'a dismissed anomaly came back';
+    end if;
+    -- Disabling the rule stops new rows.
+    delete from public.shifts where lot_id = 1 and difference < 0;
+    insert into public.shifts (operator_id, opened_at, closed_at, difference, lot_id)
+    values (2, now() - interval '4 days', now() - interval '4 days' + interval '6 hours', -9000, 1),
+           (2, now() - interval '4 days 8 hours', now() - interval '4 days' + interval '10 hours', -9000, 1),
+           (2, now() - interval '4 days 12 hours', now() - interval '4 days' + interval '14 hours', -9000, 1);
+    update public.anomaly_settings set disabled_rules = '{shift_shortage}' where lot_id = 1;
+    perform public.detect_cash_anomalies();
+    select count(*) into rows from public.cash_anomalies
+     where lot_id = 1 and rule = 'shift_shortage' and status = 'open';
+    if rows <> 0 then
+        raise exception 'a disabled rule created rows';
+    end if;
+    update public.anomaly_settings set disabled_rules = '{}' where lot_id = 1;
+    update public.anomaly_settings set enabled = false where lot_id = 1;
+    perform public.detect_cash_anomalies();
+    update public.anomaly_settings set enabled = true where lot_id = 1;
+end $$;
+
+-- anomaly: success zero_charge, pass exemption and extension point
+do $$
+declare
+    cat integer := current_setting('app.an_cat')::integer;
+    vehicle integer;
+    pass_vehicle integer;
+    session_id integer;
+    excluded_id integer;
+    rows integer;
+begin
+    delete from public.cash_anomalies;
+    insert into public.vehicles (plate, category_id) values ('ANZERO', cat)
+    returning id into vehicle;
+    insert into public.vehicles (plate, category_id) values ('ANPASS', cat)
+    returning id into pass_vehicle;
+    insert into public.parking_sessions (
+        vehicle_id, operator_id, status, lot_id, entry_time, exit_time,
+        amount_charged, payment_method
+    )
+    values (vehicle, 2, 'closed', 1, now() - interval '2 hours', now() - interval '1 hour', 0, 'exempt')
+    returning id into session_id;
+    insert into public.parking_sessions (
+        vehicle_id, operator_id, status, lot_id, entry_time, exit_time,
+        amount_charged, payment_method
+    )
+    values (pass_vehicle, 2, 'closed', 1, now() - interval '3 hours', now() - interval '2 hours', 0, 'monthly_pass');
+    perform public.detect_cash_anomalies();
+    select count(*) into rows from public.cash_anomalies
+     where lot_id = 1 and rule = 'zero_charge';
+    if rows <> 1 then
+        raise exception 'expected one zero charge, got %', rows;
+    end if;
+    if (select severity from public.cash_anomalies
+         where lot_id = 1 and rule = 'zero_charge') <> 'medium' then
+        raise exception 'an exempt zero should be medium';
+    end if;
+    -- The extension point explains a session away.
+    insert into public.parking_sessions (
+        vehicle_id, operator_id, status, lot_id, entry_time, exit_time,
+        amount_charged, payment_method
+    )
+    values (vehicle, 2, 'closed', 1, now() - interval '5 hours', now() - interval '4 hours', 0, 'cash')
+    returning id into excluded_id;
+    create or replace function public.anomaly_zero_charge_excluded(p_session_id integer)
+    returns boolean language sql stable set search_path = public as $fn$ select true $fn$;
+    perform public.detect_cash_anomalies();
+    create or replace function public.anomaly_zero_charge_excluded(p_session_id integer)
+    returns boolean language sql stable set search_path = public as $fn$ select false $fn$;
+    if exists (select 1 from public.cash_anomalies a
+                where a.lot_id = 1 and a.rule = 'zero_charge'
+                  and a.session_id = excluded_id) then
+        raise exception 'the extension point did not exclude the session';
+    end if;
+    delete from public.parking_sessions where vehicle_id in (vehicle, pass_vehicle);
+    delete from public.vehicles where plate in ('ANZERO', 'ANPASS');
+end $$;
+
+-- anomaly: success short_lost_ticket and discount_rate
+do $$
+declare
+    cat integer := current_setting('app.an_cat')::integer;
+    vehicle integer;
+    admin integer := 1;
+    i integer;
+begin
+    delete from public.cash_anomalies;
+    insert into public.vehicles (plate, category_id) values ('ANLOST', cat)
+    returning id into vehicle;
+    insert into public.parking_sessions (
+        vehicle_id, operator_id, status, lot_id, entry_time, exit_time,
+        amount_charged, lost_ticket, payment_method
+    )
+    values (vehicle, 2, 'closed', 1, now() - interval '10 minutes', now() - interval '6 minutes',
+            2000, true, 'cash');
+    -- 30 discounts out of 200 closed sessions by admin 1.
+    insert into public.vehicles (plate, category_id)
+    select 'ANDISC' || lpad(g::text, 3, '0'), cat from generate_series(1, 200) g;
+    insert into public.parking_sessions (
+        vehicle_id, operator_id, status, lot_id, entry_time, exit_time,
+        amount_charged, discount_amount, discount_reason, discount_by, payment_method
+    )
+    select v.id, 2, 'closed', 1, now() - interval '5 hours', now() - interval '4 hours',
+           case when v.plate <= 'ANDISC030' then 1000 else 4000 end,
+           case when v.plate <= 'ANDISC030' then 500 else 0 end,
+           case when v.plate <= 'ANDISC030' then 'cortesia' else null end,
+           case when v.plate <= 'ANDISC030' then admin else null end,
+           'cash'
+      from public.vehicles v
+     where v.plate like 'ANDISC%';
+    perform public.detect_cash_anomalies();
+    if not exists (select 1 from public.cash_anomalies
+                    where lot_id = 1 and rule = 'short_lost_ticket' and severity = 'high') then
+        raise exception 'the short lost ticket was not flagged';
+    end if;
+    if not exists (select 1 from public.cash_anomalies
+                    where lot_id = 1 and rule = 'discount_rate') then
+        raise exception 'the discount rate was not flagged';
+    end if;
+    if (select severity from public.cash_anomalies
+         where lot_id = 1 and rule = 'discount_rate') <> 'medium' then
+        raise exception '15 percent should be medium';
+    end if;
+    delete from public.parking_sessions where vehicle_id in
+        (select id from public.vehicles where plate like 'ANDISC%' or plate = 'ANLOST');
+    delete from public.vehicles where plate like 'ANDISC%' or plate = 'ANLOST';
+end $$;
+
+-- anomaly: success lost_ticket_rate
+do $$
+declare
+    cat integer := current_setting('app.an_cat')::integer;
+    shift_b bigint;
+    shift_a bigint;
+    v integer;
+begin
+    delete from public.cash_anomalies;
+    insert into public.vehicles (plate, category_id)
+    select 'ANLT' || g, cat from generate_series(1, 2) g;
+    insert into public.shifts (operator_id, opened_at, closed_at, difference, lot_id)
+    values (2, now() - interval '1 day', now() - interval '1 day' + interval '8 hours', 0, 1)
+    returning id into shift_b;
+    insert into public.shifts (operator_id, opened_at, closed_at, difference, lot_id)
+    values (3, now() - interval '1 day', now() - interval '1 day' + interval '8 hours', 0, 1)
+    returning id into shift_a;
+    -- B: 40 closed, 8 lost. A: 160 closed, 8 lost.
+    insert into public.parking_sessions (
+        vehicle_id, operator_id, status, lot_id, entry_time, exit_time,
+        amount_charged, lost_ticket, shift_id, payment_method
+    )
+    select (select id from public.vehicles where plate = 'ANLT1'),
+           2, 'closed', 1, now() - interval '20 hours', now() - interval '19 hours',
+           2000, g <= 8, shift_b, 'cash'
+      from generate_series(1, 40) g;
+    insert into public.parking_sessions (
+        vehicle_id, operator_id, status, lot_id, entry_time, exit_time,
+        amount_charged, lost_ticket, shift_id, payment_method
+    )
+    select (select id from public.vehicles where plate = 'ANLT2'),
+           3, 'closed', 1, now() - interval '20 hours', now() - interval '19 hours',
+           2000, g <= 8, shift_a, 'cash'
+      from generate_series(1, 160) g;
+    perform public.detect_cash_anomalies();
+    if not exists (
+        select 1 from public.cash_anomalies
+         where lot_id = 1 and rule = 'lost_ticket_rate'
+           and subject_user_id = 2 and severity = 'high'
+    ) then
+        raise exception 'operator B should be a high lost-ticket rate: %',
+            (select jsonb_agg(a) from public.cash_anomalies a where a.rule = 'lost_ticket_rate');
+    end if;
+    delete from public.parking_sessions s where s.shift_id in (shift_a, shift_b);
+    delete from public.shifts where id in (shift_a, shift_b);
+    delete from public.vehicles where plate like 'ANLT%';
+end $$;
+
+-- anomaly: success post_close_adjustment
+do $$
+declare
+    v_shift bigint;
+begin
+    delete from public.cash_anomalies;
+    insert into public.shifts (operator_id, opened_at, closed_at, difference, lot_id)
+    values (2, now() - interval '2 days', now() - interval '2 days' + interval '6 hours', -6000, 1)
+    returning id into v_shift;
+    insert into public.shift_adjustments (
+        shift_id, old_counted, new_counted, old_difference, new_difference, reason, adjusted_by
+    )
+    values (v_shift, 1000, 6500, -6000, -500, 'conteo revisado', 1);
+    perform public.detect_cash_anomalies();
+    if not exists (select 1 from public.cash_anomalies
+                    where lot_id = 1 and rule = 'post_close_adjustment' and severity = 'high') then
+        raise exception 'the adjustment was not flagged as high';
+    end if;
+    delete from public.shift_adjustments sa where sa.shift_id = v_shift;
+    delete from public.shifts where id = v_shift;
+end $$;
+
+-- anomaly: success shift_open_long and session_open_long
+do $$
+declare
+    cat integer := current_setting('app.an_cat')::integer;
+    vehicle integer;
+begin
+    delete from public.cash_anomalies;
+    insert into public.shifts (operator_id, opened_at, lot_id)
+    values (2, now() - interval '20 hours', 1);
+    insert into public.vehicles (plate, category_id) values ('ANOPEN', cat)
+    returning id into vehicle;
+    insert into public.parking_sessions (vehicle_id, operator_id, status, lot_id, entry_time)
+    values (vehicle, 2, 'open', 1, now() - interval '9 days');
+    perform public.detect_cash_anomalies();
+    if (select severity from public.cash_anomalies
+         where lot_id = 1 and rule = 'shift_open_long') <> 'medium' then
+        raise exception 'a 20 hour shift should be medium';
+    end if;
+    if (select severity from public.cash_anomalies
+         where lot_id = 1 and rule = 'session_open_long') <> 'low' then
+        raise exception 'a 9 day session should be low';
+    end if;
+    -- An active pass explains a long stay.
+    insert into public.monthly_passes (vehicle_id, start_date, end_date, amount, lot_id)
+    values (vehicle, current_date - 10, current_date + 10, 50000, 1);
+    delete from public.cash_anomalies where rule = 'session_open_long';
+    perform public.detect_cash_anomalies();
+    if exists (select 1 from public.cash_anomalies where rule = 'session_open_long') then
+        raise exception 'a session with an active pass was flagged';
+    end if;
+    delete from public.monthly_passes where vehicle_id = vehicle;
+    delete from public.parking_sessions where vehicle_id = vehicle;
+    delete from public.vehicles where id = vehicle;
+    delete from public.shifts where lot_id = 1 and closed_at is null;
+end $$;
+
+-- anomaly: success notification to admins only
+do $$
+declare
+    cat integer := current_setting('app.an_cat')::integer;
+    vehicle integer;
+begin
+    delete from public.cash_anomalies;
+    delete from public.notifications where type = 'cash_anomaly';
+    insert into public.vehicles (plate, category_id) values ('ANNOT', cat)
+    returning id into vehicle;
+    insert into public.parking_sessions (
+        vehicle_id, operator_id, status, lot_id, entry_time, exit_time,
+        amount_charged, payment_method
+    )
+    values (vehicle, 2, 'closed', 1, now() - interval '2 hours', now() - interval '1 hour', 0, 'cash');
+    perform public.detect_cash_anomalies();
+    if not exists (
+        select 1 from public.notifications n
+         where n.type = 'cash_anomaly' and n.user_id = 1 and n.lot_id = 1
+    ) then
+        raise exception 'the admin was not notified';
+    end if;
+    if exists (select 1 from public.notifications n
+                where n.type = 'cash_anomaly' and n.user_id = 2) then
+        raise exception 'the operator was notified';
+    end if;
+    if (select count(*) from public.notifications
+         where type = 'cash_anomaly') <> 1 then
+        raise exception 'the notification was duplicated';
+    end if;
+    perform public.detect_cash_anomalies();
+    if (select count(*) from public.notifications where type = 'cash_anomaly') <> 1 then
+        raise exception 'a second run notified again';
+    end if;
+    delete from public.parking_sessions where vehicle_id = vehicle;
+    delete from public.vehicles where id = vehicle;
+end $$;
+
+-- anomaly: security rls, rpc and job functions
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+set local role authenticated;
+do $$
+declare
+    visible integer;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    select count(*) into visible from public.cash_anomalies;
+    if visible <> 0 then
+        raise exception 'the operator saw % anomalies', visible;
+    end if;
+    select count(*) into visible from public.anomaly_settings;
+    if visible <> 0 then
+        raise exception 'the operator read the thresholds';
+    end if;
+    begin
+        perform public.list_cash_anomalies();
+        raise exception 'the operator listed anomalies';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+    begin
+        perform public.resolve_cash_anomaly(1, 'acknowledged');
+        raise exception 'the operator resolved an anomaly';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+    begin
+        perform public.get_anomaly_settings();
+        raise exception 'the operator read the settings';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+    begin
+        perform public.detect_cash_anomalies();
+        raise exception 'the operator ran the detector';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+set local role anon;
+do $$
+begin
+    begin
+        perform 1 from public.cash_anomalies limit 1;
+        raise exception 'anon read the anomalies';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform public.detect_cash_anomalies();
+        raise exception 'anon ran the detector';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- anomaly: success review
+set local role authenticated;
+do $$
+declare
+    listed jsonb;
+    resolved jsonb;
+    missing jsonb;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    listed := public.list_cash_anomalies('open', null, null, 10);
+    if (listed ->> 'open_count')::integer < 1 then
+        raise exception 'the review fixture has no open anomalies: %', listed;
+    end if;
+    perform set_config(
+        'app.an_id', (listed -> 'items' -> 0 ->> 'id'), true
+    );
+    resolved := public.resolve_cash_anomaly(
+        (listed -> 'items' -> 0 ->> 'id')::bigint, 'acknowledged', null
+    );
+    if resolved ->> 'status' <> 'acknowledged'
+       or resolved ->> 'resolved_at' is null
+       or (resolved ->> 'resolved_by_name') is null then
+        raise exception 'the acknowledge did not stick: %', resolved;
+    end if;
+    begin
+        perform public.resolve_cash_anomaly(
+            (listed -> 'items' -> 0 ->> 'id')::bigint, 'acknowledged', null
+        );
+        raise exception 'an anomaly was resolved twice';
+    exception when others then
+        if sqlerrm not like '%AnomalyAlreadyResolvedError%' then raise; end if;
+    end;
+    begin
+        perform public.resolve_cash_anomaly(
+            (listed -> 'items' -> 0 ->> 'id')::bigint, 'dismissed', '  '
+        );
+        raise exception 'a dismissal without a note was accepted';
+    exception when others then
+        if sqlerrm not like '%AnomalyNoteRequiredError%' then raise; end if;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- anomaly: failure review inputs
+set local role authenticated;
+do $$
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    begin
+        perform public.list_cash_anomalies('someday');
+        raise exception 'an invalid status filter was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+    begin
+        perform public.list_cash_anomalies(null, 'bogus-rule');
+        raise exception 'an invalid rule filter was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+    begin
+        perform public.resolve_cash_anomaly(999999999, 'open');
+        raise exception 'an invalid status was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidAnomalyStatusError%' then raise; end if;
+    end;
+    begin
+        perform public.resolve_cash_anomaly(999999999, 'acknowledged');
+        raise exception 'an unknown anomaly was resolved';
+    exception when others then
+        if sqlerrm not like '%AnomalyNotFoundError%' then raise; end if;
+    end;
+end $$;
+reset role;
+
+-- anomaly: success and failure settings
+set local role authenticated;
+do $$
+declare
+    defaults jsonb;
+    saved jsonb;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    defaults := public.get_anomaly_settings();
+    if (defaults ->> 'window_days')::integer <> 14
+       or (defaults ->> 'shortage_min_shifts')::integer <> 3 then
+        raise exception 'the anomaly defaults changed: %', defaults;
+    end if;
+    saved := public.set_anomaly_settings('{"window_days": 21, "disabled_rules": ["zero_charge"]}');
+    if (saved ->> 'window_days')::integer <> 21
+       or not (saved -> 'disabled_rules' @> '["zero_charge"]'::jsonb) then
+        raise exception 'the partial update failed: %', saved;
+    end if;
+    begin
+        perform public.set_anomaly_settings('{"window_days": 1000}');
+        raise exception 'an out of range window was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidAnomalySettingError%' then raise; end if;
+    end;
+    begin
+        perform public.set_anomaly_settings('{"bogus": 1}');
+        raise exception 'an unknown key was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidAnomalySettingError%' then raise; end if;
+    end;
+    begin
+        perform public.set_anomaly_settings('{"window_days": "many"}');
+        raise exception 'a string for an integer was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidAnomalySettingError%'
+           and sqlerrm not like '%invalid input syntax%' then raise; end if;
+    end;
+    begin
+        perform public.set_anomaly_settings('{"disabled_rules": ["bogus"]}');
+        raise exception 'an unknown rule was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidAnomalySettingError%' then raise; end if;
+    end;
+    perform public.set_anomaly_settings('{"window_days": 14, "disabled_rules": []}');
+end $$;
+reset role;
+
+-- anomaly: success audit and purge
+set local role authenticated;
+do $$
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    perform public.set_anomaly_settings('{"short_stay_minutes": 45}');
+end $$;
+reset role;
+do $$
+declare
+    audits integer;
+    purged integer;
+begin
+    select count(*) into audits
+      from public.audit_log a
+     where a.table_name = 'anomaly_settings' and a.lot_id = 1;
+    if audits = 0 then
+        raise exception 'the settings change was not audited';
+    end if;
+    select count(*) into audits
+      from public.audit_log a
+     where a.table_name = 'cash_anomalies' and a.lot_id = 1 and a.action = 'update';
+    if audits = 0 then
+        raise exception 'the review was not audited';
+    end if;
+    -- Purge: a resolved row older than the window goes, an open row stays.
+    update public.cash_anomalies
+       set resolved_at = now() - interval '400 days'
+     where lot_id = 1 and status <> 'open';
+    purged := public.purge_cash_anomalies(365);
+    if purged < 1 then
+        raise exception 'the purge removed nothing';
+    end if;
+    if exists (select 1 from public.cash_anomalies a
+                where a.lot_id = 1 and a.status <> 'open'
+                  and a.resolved_at < now() - interval '365 days') then
+        raise exception 'an old resolved anomaly survived the purge';
+    end if;
+end $$;
+
+-- anomaly: success job entrypoints and lot isolation
+do $$
+declare
+    created integer;
+    lot2 integer;
+begin
+    created := public.detect_cash_anomalies();
+    perform public.purge_cash_anomalies();
+    -- Lot 2 is invisible through the lot 1 header; a foreign id is not found.
+    select id into lot2 from public.parking_lots where id = 2;
+    insert into public.cash_anomalies (lot_id, rule, severity, dedupe_key, details)
+    values (lot2, 'zero_charge', 'low', 'test:lot2', '{}'::jsonb);
+    perform set_config('app.an_lot2', (select max(id) from public.cash_anomalies
+                                        where lot_id = lot2)::text, true);
+end $$;
+set local role authenticated;
+do $$
+declare
+    visible integer;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    if exists (select 1 from public.cash_anomalies a where a.lot_id <> 1) then
+        raise exception 'the admin saw another lot anomaly';
+    end if;
+    begin
+        perform public.resolve_cash_anomaly(
+            current_setting('app.an_lot2')::bigint, 'acknowledged'
+        );
+        raise exception 'a lot 1 admin resolved a lot 2 anomaly';
+    exception when others then
+        if sqlerrm not like '%AnomalyNotFoundError%' then raise; end if;
+    end;
+    perform set_config('request.headers', '{"x-lot-id":"999999"}', true);
+    begin
+        perform public.list_cash_anomalies();
+        raise exception 'a foreign lot header was accepted';
+    exception when others then
+        if sqlerrm not like '%LotRequiredError%' then raise; end if;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- ---------------------------------------------------------------------------
+-- feedback: fixtures (one closed session per lot and one open session)
+-- ---------------------------------------------------------------------------
+insert into public.vehicles (plate, category_id)
+values ('FEED01', (select id from public.categories where lot_id = 1 order by id limit 1)),
+       ('FEED02', (select id from public.categories where lot_id = 2 order by id limit 1)),
+       ('FEED03', (select id from public.categories where lot_id = 1 order by id limit 1));
+
+insert into public.parking_sessions
+    (vehicle_id, operator_id, lot_id, entry_time, exit_time, status, amount_charged)
+select v.id, 1, 1, now() - interval '3 hours', now() - interval '1 hour', 'closed', 5000
+  from public.vehicles v where v.plate = 'FEED01';
+insert into public.parking_sessions
+    (vehicle_id, operator_id, lot_id, entry_time, exit_time, status, amount_charged)
+select v.id, 2, 2, now() - interval '3 hours', now() - interval '1 hour', 'closed', 4000
+  from public.vehicles v where v.plate = 'FEED02';
+insert into public.parking_sessions
+    (vehicle_id, operator_id, lot_id, entry_time, status)
+select v.id, 1, 1, now() - interval '1 hour', 'open'
+  from public.vehicles v where v.plate = 'FEED03';
+
+do $$
+begin
+    perform set_config('app.fb_closed', (
+        select s.id::text from public.parking_sessions s
+          join public.vehicles v on v.id = s.vehicle_id
+         where v.plate = 'FEED01'
+    ), true);
+    perform set_config('app.fb_lot2', (
+        select s.id::text from public.parking_sessions s
+          join public.vehicles v on v.id = s.vehicle_id
+         where v.plate = 'FEED02'
+    ), true);
+    perform set_config('app.fb_open', (
+        select s.id::text from public.parking_sessions s
+          join public.vehicles v on v.id = s.vehicle_id
+         where v.plate = 'FEED03'
+    ), true);
+end $$;
+
+-- feedback: defaults and constraints
+do $$
+declare
+    closed bigint := current_setting('app.fb_closed')::bigint;
+    stored public.session_feedback%rowtype;
+begin
+    insert into public.session_feedback (lot_id, session_id, rating)
+    values (1, closed, 4)
+    returning * into stored;
+    if stored.comment <> '' or stored.created_at is null then
+        raise exception 'the feedback defaults are wrong';
+    end if;
+    delete from public.session_feedback where id = stored.id;
+
+    begin
+        insert into public.session_feedback (lot_id, session_id, rating)
+        values (1, closed, 0);
+        raise exception 'rating 0 was accepted';
+    exception when check_violation then null;
+    end;
+    begin
+        insert into public.session_feedback (lot_id, session_id, rating)
+        values (1, closed, 6);
+        raise exception 'rating 6 was accepted';
+    exception when check_violation then null;
+    end;
+    begin
+        insert into public.session_feedback (lot_id, session_id, rating, comment)
+        values (1, closed, 5, repeat('x', 501));
+        raise exception 'a 501-character comment was accepted';
+    exception when check_violation then null;
+    end;
+
+    insert into public.session_feedback (lot_id, session_id, rating)
+    values (1, closed, 4);
+    begin
+        insert into public.session_feedback (lot_id, session_id, rating)
+        values (1, closed, 2);
+        raise exception 'a second feedback row was accepted';
+    exception when unique_violation then null;
+    end;
+    delete from public.session_feedback where session_id = closed;
+end $$;
+
+-- feedback: anon cannot read the table
+set local role anon;
+do $$
+begin
+    begin
+        perform count(*) from public.session_feedback;
+        raise exception 'anon read the feedback table';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
+-- feedback: lookup normalises the plate and hides unknown sessions
+set local role anon;
+do $$
+declare
+    closed bigint := current_setting('app.fb_closed')::bigint;
+    open_session bigint := current_setting('app.fb_open')::bigint;
+    found jsonb;
+begin
+    found := public.public_feedback_session(closed, ' feed 01 ');
+    if found is null
+       or (found ->> 'rateable')::boolean is not true
+       or (found ->> 'rated')::boolean is not false
+       or (found ->> 'lot_name') is null then
+        raise exception 'the lookup did not normalise the plate: %', found;
+    end if;
+    if (found ? 'plate') or (found ? 'amount_charged') then
+        raise exception 'the public lookup leaked session data: %', found;
+    end if;
+
+    if public.public_feedback_session(closed, 'FEED02') is not null then
+        raise exception 'a wrong plate resolved the session';
+    end if;
+    if public.public_feedback_session(999999, 'FEED01') is not null then
+        raise exception 'an unknown session resolved';
+    end if;
+
+    found := public.public_feedback_session(open_session, 'FEED03');
+    if found is null or (found ->> 'rateable')::boolean is not false then
+        raise exception 'an open session was reported rateable: %', found;
+    end if;
+end $$;
+reset role;
+
+-- feedback: open session is not rateable
+set local role anon;
+do $$
+begin
+    begin
+        perform public.public_submit_feedback(
+            current_setting('app.fb_open')::bigint, 'FEED03', 5, null
+        );
+        raise exception 'an open session was rated';
+    exception when others then
+        if sqlerrm not like '%SessionNotFoundError%' then raise; end if;
+    end;
+    begin
+        perform public.public_submit_feedback(
+            current_setting('app.fb_closed')::bigint, 'WRONG', 5, null
+        );
+        raise exception 'a wrong plate was accepted';
+    exception when others then
+        if sqlerrm not like '%SessionNotFoundError%' then raise; end if;
+    end;
+end $$;
+reset role;
+
+-- feedback: submit stores one trimmed row and the lookup reflects it
+set local role anon;
+do $$
+declare
+    closed bigint := current_setting('app.fb_closed')::bigint;
+    saved jsonb;
+    found jsonb;
+begin
+    saved := public.public_submit_feedback(closed, 'feed01', 5, '  Muy rápido  ');
+    if (saved ->> 'rating')::integer <> 5 or (saved ->> 'created_at') is null then
+        raise exception 'the submit response is wrong: %', saved;
+    end if;
+    found := public.public_feedback_session(closed, 'FEED01');
+    if (found ->> 'rated')::boolean is not true
+       or (found ->> 'rating')::integer <> 5 then
+        raise exception 'the lookup did not report the stored rating: %', found;
+    end if;
+end $$;
+reset role;
+do $$
+begin
+    if (select comment from public.session_feedback
+         where session_id = current_setting('app.fb_closed')::bigint)
+       is distinct from 'Muy rápido' then
+        raise exception 'the comment was not trimmed';
+    end if;
+end $$;
+
+-- feedback: duplicate and invalid submissions
+set local role anon;
+do $$
+declare
+    closed bigint := current_setting('app.fb_closed')::bigint;
+begin
+    begin
+        perform public.public_submit_feedback(closed, 'FEED01', 4, null);
+        raise exception 'a duplicate submission was accepted';
+    exception when others then
+        if sqlerrm not like '%FeedbackAlreadyError%' then raise; end if;
+    end;
+    begin
+        perform public.public_submit_feedback(closed, 'FEED01', 0, null);
+        raise exception 'rating 0 was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+    begin
+        perform public.public_submit_feedback(closed, 'FEED01', 5, repeat('x', 501));
+        raise exception 'a 501-character comment was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+end $$;
+reset role;
+
+-- feedback: operator reads own lot only
+insert into public.session_feedback (lot_id, session_id, rating, comment)
+values (2, current_setting('app.fb_lot2')::bigint, 2, 'Baño sucio');
+
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+set local request.headers = '{"x-lot-id":"1"}';
+do $$
+begin
+    if (select count(*) from public.session_feedback) = 0 then
+        raise exception 'the operator saw no feedback of its lot';
+    end if;
+    if exists (select 1 from public.session_feedback where lot_id <> 1) then
+        raise exception 'the operator saw another lot feedback';
+    end if;
+end $$;
+reset role;
+
+-- feedback: summary math excludes other lots
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+set local request.headers = '{"x-lot-id":"1"}';
+do $$
+declare
+    summary jsonb;
+    expected_avg integer;
+    expected_total integer;
+    closed integer;
+    recent jsonb;
+begin
+    summary := public.feedback_summary(30);
+    select count(*), coalesce(round(avg(rating) * 10)::integer, 0)
+      into expected_total, expected_avg
+      from public.session_feedback
+     where lot_id = 1
+       and created_at >= now() - interval '30 days';
+
+    if (summary ->> 'total')::integer <> expected_total then
+        raise exception 'total mismatch: % vs %', summary ->> 'total', expected_total;
+    end if;
+    if (summary ->> 'average_x10')::integer <> expected_avg then
+        raise exception 'average mismatch: % vs %', summary ->> 'average_x10', expected_avg;
+    end if;
+    if (summary ->> 'low_count')::integer <> 0 then
+        raise exception 'a 5-star lot reported low ratings';
+    end if;
+    if (summary -> 'distribution') ? '2' is not true
+       or (summary -> 'distribution' ->> '2')::integer <> 0
+       or (summary -> 'distribution' ->> '5')::integer <> 1 then
+        raise exception 'the distribution is wrong: %', summary -> 'distribution';
+    end if;
+    if (summary ->> 'closed_sessions')::integer < 1 then
+        raise exception 'closed sessions were not counted';
+    end if;
+    closed := (summary ->> 'closed_sessions')::integer;
+    if (summary ->> 'response_rate_bp')::integer
+       <> round(expected_total * 10000.0 / closed)::integer then
+        raise exception 'response rate mismatch: %', summary ->> 'response_rate_bp';
+    end if;
+    recent := summary -> 'recent';
+    if jsonb_array_length(recent) <> expected_total then
+        raise exception 'recent length mismatch: %', jsonb_array_length(recent);
+    end if;
+    if (recent -> 0 ->> 'plate') <> 'FEED01'
+       or (recent -> 0 ->> 'comment') <> 'Muy rápido' then
+        raise exception 'the recent row is wrong: %', recent -> 0;
+    end if;
+    if (summary ->> 'timezone') is null then
+        raise exception 'the summary has no timezone';
+    end if;
+end $$;
+reset role;
+
+-- feedback: summary gates and range
+set local role authenticated;
+set local request.headers = '{"x-lot-id":"1"}';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    begin
+        perform public.feedback_summary(30);
+        raise exception 'an operator read the feedback summary';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+end $$;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+begin
+    begin
+        perform public.feedback_summary(0);
+        raise exception 'a zero-day range was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidReportRangeError%' then raise; end if;
+    end;
+    begin
+        perform public.feedback_summary(366);
+        raise exception 'a 366-day range was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidReportRangeError%' then raise; end if;
+    end;
+end $$;
+reset role;
+
+-- feedback: public functions are the only anon entry points
+do $$
+begin
+    if has_table_privilege('anon', 'public.session_feedback', 'select') then
+        raise exception 'anon can select the feedback table';
+    end if;
+    if has_function_privilege(
+        'anon', 'public.feedback_summary(integer)', 'execute'
+    ) then
+        raise exception 'anon can call the feedback summary';
+    end if;
+    if not has_function_privilege(
+        'anon', 'public.public_feedback_session(bigint, text)', 'execute'
+    ) or not has_function_privilege(
+        'anon', 'public.public_submit_feedback(bigint, text, integer, text)', 'execute'
+    ) then
+        raise exception 'the public feedback functions are not callable by anon';
+    end if;
+    if (select count(*) from pg_proc p
+         where p.pronamespace = 'public'::regnamespace
+           and p.proname in ('public_feedback_session', 'public_submit_feedback',
+                             'feedback_summary')) <> 3 then
+        raise exception 'the feedback functions have more than one overload';
+    end if;
+end $$;
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- ---------------------------------------------------------------------------
+-- online-payments: schema
+-- ---------------------------------------------------------------------------
+insert into public.vehicles (plate, category_id)
+values ('PAY001', (select id from public.categories where lot_id = 1 order by id limit 1)),
+       ('PAY002', (select id from public.categories where lot_id = 2 order by id limit 1));
+
+insert into public.parking_sessions
+    (vehicle_id, operator_id, lot_id, entry_time, status)
+select v.id, 1, 1, now() - interval '2 hours', 'open'
+  from public.vehicles v where v.plate = 'PAY001';
+insert into public.parking_sessions
+    (vehicle_id, operator_id, lot_id, entry_time, exit_time, status, amount_charged)
+select v.id, 1, 2, now() - interval '4 hours', now() - interval '1 hour', 'closed', 5000
+  from public.vehicles v where v.plate = 'PAY002';
+
+do $$
+begin
+    perform set_config('app.pay_open', (
+        select s.id::text from public.parking_sessions s
+          join public.vehicles v on v.id = s.vehicle_id
+         where v.plate = 'PAY001'
+    ), true);
+    perform set_config('app.pay_lot2_closed', (
+        select s.id::text from public.parking_sessions s
+          join public.vehicles v on v.id = s.vehicle_id
+         where v.plate = 'PAY002'
+    ), true);
+end $$;
+
+-- online-payments: schema defaults
+do $$
+declare
+    settings public.parking_settings%rowtype;
+    session public.parking_sessions%rowtype;
+begin
+    select * into settings from public.parking_settings where lot_id = 1;
+    if settings.online_payments_enabled is not false
+       or settings.online_payment_grace_minutes <> 15
+       or settings.online_payment_min_amount <> 1500 then
+        raise exception 'the online payment settings defaults are wrong';
+    end if;
+
+    select * into session from public.parking_sessions
+     where id = current_setting('app.pay_open')::integer;
+    if session.online_paid_amount <> 0 or session.online_paid_at is not null then
+        raise exception 'the session online columns do not default to unpaid';
+    end if;
+end $$;
+
+-- online-payments: online is a stored payment method
+do $$
+declare
+    closed bigint := current_setting('app.pay_lot2_closed')::bigint;
+begin
+    update public.parking_sessions
+       set payment_method = 'online'
+     where id = closed;
+    if (select payment_method from public.parking_sessions where id = closed) <> 'online' then
+        raise exception 'online is not accepted as a stored payment method';
+    end if;
+    update public.parking_sessions
+       set payment_method = 'card'
+     where id = closed;
+end $$;
+
+-- online-payments: settings constraints
+do $$
+begin
+    begin
+        update public.parking_settings
+           set online_payment_grace_minutes = 4
+         where lot_id = 1;
+        raise exception 'a 4-minute grace window was accepted';
+    exception when check_violation then null;
+    end;
+    begin
+        update public.parking_settings
+           set online_payment_grace_minutes = 121
+         where lot_id = 1;
+        raise exception 'a 121-minute grace window was accepted';
+    exception when check_violation then null;
+    end;
+
+    update public.parking_settings set currency = 'USD' where lot_id = 2;
+    begin
+        update public.parking_settings
+           set online_payments_enabled = true
+         where lot_id = 2;
+        raise exception 'online payments were enabled on a USD lot';
+    exception when check_violation then null;
+    end;
+    update public.parking_settings set currency = 'COP' where lot_id = 2;
+end $$;
+
+-- online-payments: unknown intent status rejected
+do $$
+begin
+    begin
+        insert into public.payment_intents (lot_id, session_id, reference, amount, status, expires_at)
+        values (1, current_setting('app.pay_open')::integer, 'PM-BADSTATUS', 6000,
+                'paid', now() + interval '30 minutes');
+        raise exception 'an unknown intent status was accepted';
+    exception when check_violation then null;
+    end;
+end $$;
+
+-- online-payments: RLS enabled on payment_intents and payment_events
+do $$
+begin
+    if not (select relrowsecurity from pg_class where oid = 'public.payment_intents'::regclass)
+       or not (select relrowsecurity from pg_class where oid = 'public.payment_events'::regclass) then
+        raise exception 'RLS is not enabled on the payment tables';
+    end if;
+end $$;
+
+-- online-payments: operator cannot select payment_intents
+insert into public.payment_intents (lot_id, session_id, reference, amount, expires_at)
+values (1, current_setting('app.pay_open')::integer, 'PM-OPERATOR', 6000,
+        now() + interval '30 minutes');
+
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    if (select count(*) from public.payment_intents) <> 0 then
+        raise exception 'an operator read the payment intents';
+    end if;
+end $$;
+reset role;
+
+-- online-payments: admin of lot 1 cannot read lot 2 intents
+insert into public.payment_intents (lot_id, session_id, reference, amount, expires_at)
+values (2, current_setting('app.pay_lot2_closed')::integer, 'PM-LOT2', 4000,
+        now() + interval '30 minutes');
+
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+begin
+    if exists (select 1 from public.payment_intents where reference = 'PM-LOT2') then
+        raise exception 'a lot 1 admin read a lot 2 intent';
+    end if;
+    if not exists (select 1 from public.payment_intents where reference = 'PM-OPERATOR') then
+        raise exception 'a lot 1 admin cannot read its own intents';
+    end if;
+end $$;
+reset role;
+
+-- online-payments: authenticated cannot read payment_events
+-- Supabase's default privileges may grant the select; RLS (no policy) then
+-- returns zero rows. Both outcomes are safe, a visible row is not.
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare
+    visible integer;
+begin
+    begin
+        select count(*) into visible from public.payment_events;
+        if visible <> 0 then
+            raise exception 'an authenticated user read the payment events';
+        end if;
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
+-- online-payments: settlement inside grace charges what was paid
+do $$
+declare
+    paid_at timestamptz := now() - interval '5 minutes';
+    result jsonb := public.online_settlement_amounts(
+        9000, 6000, paid_at, paid_at + interval '5 minutes', 15
+    );
+begin
+    if (result ->> 'charged')::integer <> 6000 then
+        raise exception 'inside the window the charge is not the paid amount: %', result;
+    end if;
+    if (result ->> 'desk_due')::integer <> 0 then
+        raise exception 'inside the window the desk still charges: %', result;
+    end if;
+    if (result ->> 'grace_active')::boolean is not true then
+        raise exception 'inside the window grace_active is false: %', result;
+    end if;
+    if (result ->> 'grace_until')::timestamptz <> paid_at + interval '15 minutes' then
+        raise exception 'the grace deadline is wrong: %', result;
+    end if;
+end $$;
+
+-- online-payments: settlement outside grace charges max(gross, paid)
+do $$
+declare
+    paid_at timestamptz := now() - interval '40 minutes';
+    result jsonb := public.online_settlement_amounts(
+        20000, 6000, paid_at, paid_at + interval '20 minutes', 15
+    );
+begin
+    if (result ->> 'charged')::integer <> 20000 then
+        raise exception 'outside the window the charge is not the fare: %', result;
+    end if;
+    if (result ->> 'desk_due')::integer <> 14000 then
+        raise exception 'outside the window the desk due is not the difference: %', result;
+    end if;
+    if (result ->> 'grace_active')::boolean is not false then
+        raise exception 'outside the window grace_active is true: %', result;
+    end if;
+end $$;
+
+-- online-payments: settlement nothing paid keeps gross
+do $$
+declare
+    result jsonb := public.online_settlement_amounts(9000, 0, null, now(), 15);
+begin
+    if (result ->> 'charged')::integer <> 9000
+       or (result ->> 'desk_due')::integer <> 9000
+       or (result ->> 'grace_active')::boolean is not false
+       or (result -> 'grace_until') <> 'null'::jsonb then
+        raise exception 'an unpaid session does not keep the gross fare: %', result;
+    end if;
+end $$;
+
+-- online-payments: settlement is not callable by api roles
+set local role authenticated;
+do $$
+begin
+    begin
+        perform public.online_settlement_amounts(9000, 6000, now(), now(), 15);
+        raise exception 'an authenticated user called the settlement rule';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- ---------------------------------------------------------------------------
+-- online-payments: rpcs
+-- ---------------------------------------------------------------------------
+update public.parking_settings
+   set online_payments_enabled = true, online_payment_min_amount = 1500,
+       online_payment_grace_minutes = 15
+ where lot_id = 1;
+
+insert into public.vehicles (plate, category_id) values
+    ('PAY010', 2), ('PAY011', 2), ('PAY012', 2), ('PAY013', 2),
+    ('PAY014', 2), ('PAY015', 2), ('PAY016', 2), ('PAY017', 2),
+    ('PAY018', 2), ('PAY019', 2);
+
+insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+select v.id, 1, 1, now() - interval '2 hours', 'open'
+  from public.vehicles v
+ where v.plate like 'PAY01%' and v.plate <> 'PAY014';
+
+insert into public.parking_sessions
+    (vehicle_id, operator_id, lot_id, entry_time, exit_time, status, amount_charged)
+select v.id, 1, 1, now() - interval '3 hours', now() - interval '1 hour', 'closed', 10000
+  from public.vehicles v where v.plate = 'PAY014';
+
+insert into public.monthly_passes (vehicle_id, lot_id, start_date, end_date, amount, active)
+select v.id, 1, current_date - 1, current_date + 29, 80000, true
+  from public.vehicles v where v.plate = 'PAY015';
+
+do $$
+declare
+    plates text[] := array['PAY010','PAY011','PAY012','PAY013','PAY015',
+                          'PAY016','PAY017','PAY018','PAY019'];
+    plate_value text;
+begin
+    foreach plate_value in array plates loop
+        perform set_config('app.online_' || plate_value, (
+            select s.id::text from public.parking_sessions s
+              join public.vehicles v on v.id = s.vehicle_id
+             where v.plate = plate_value
+        ), true);
+    end loop;
+    perform set_config('app.online_closed', (
+        select s.id::text from public.parking_sessions s
+          join public.vehicles v on v.id = s.vehicle_id
+         where v.plate = 'PAY014'
+    ), true);
+end $$;
+
+-- online-payments: intent creates a pending intent with the server amount
+do $$
+declare
+    s bigint := current_setting('app.online_PAY010')::bigint;
+    result jsonb := public.create_session_payment_intent(
+        s, ' pay 010 '
+    );
+    stored public.payment_intents%rowtype;
+begin
+    if result ->> 'status' <> 'pending' then
+        raise exception 'the intent is not pending: %', result;
+    end if;
+    if (result ->> 'amount')::integer
+       <> (public.session_settlement(s::integer) ->> 'gross')::integer then
+        raise exception 'the intent amount is not the server fare: %', result;
+    end if;
+    if result ->> 'currency' <> 'COP'
+       or result ->> 'reference' not like 'PM-%'
+       or length(result ->> 'reference') <> 15 then
+        raise exception 'the intent reference is wrong: %', result;
+    end if;
+    if (result ->> 'grace_minutes')::integer <> 15 then
+        raise exception 'the intent does not carry the grace window: %', result;
+    end if;
+
+    select * into stored from public.payment_intents where id = (result ->> 'intent_id')::bigint;
+    if stored.lot_id <> 1 or stored.session_id <> s or stored.expires_at <= now() then
+        raise exception 'the stored intent is wrong: %', stored;
+    end if;
+    perform set_config('app.online_ref1', stored.reference, true);
+    perform set_config('app.online_intent1', stored.id::text, true);
+    perform set_config('app.online_amount1', stored.amount::text, true);
+end $$;
+
+-- online-payments: intent reuses the pending intent with the same amount
+do $$
+declare
+    s bigint := current_setting('app.online_PAY010')::bigint;
+    first_id bigint := current_setting('app.online_intent1')::bigint;
+    second jsonb := public.create_session_payment_intent(s, 'PAY010');
+begin
+    if (second ->> 'intent_id')::bigint <> first_id then
+        raise exception 'a second pending intent was created: %', second;
+    end if;
+    if (select count(*) from public.payment_intents where session_id = s) <> 1 then
+        raise exception 'the reuse left more than one intent';
+    end if;
+end $$;
+
+-- online-payments: event APPROVED stamps online_paid_amount and online_paid_at
+do $$
+declare
+    s bigint := current_setting('app.online_PAY010')::bigint;
+    paid integer := current_setting('app.online_amount1')::integer;
+    reference_value text := current_setting('app.online_ref1');
+    result jsonb := public.apply_payment_event('wompi', jsonb_build_object(
+        'transaction_id', 'TX-PAY-1',
+        'reference', reference_value,
+        'status', 'APPROVED',
+        'amount', paid,
+        'currency', 'COP',
+        'method', 'CARD',
+        'occurred_at', now(),
+        'raw', jsonb_build_object('source', 'test')
+    ));
+    session public.parking_sessions%rowtype;
+begin
+    if (result ->> 'applied')::boolean is not true
+       or result ->> 'outcome' <> 'applied' then
+        raise exception 'the approved event did not apply: %', result;
+    end if;
+    select * into session from public.parking_sessions where id = s;
+    if session.online_paid_amount <> paid or session.online_paid_at is null then
+        raise exception 'the payment was not stored on the session: %', session;
+    end if;
+    if (select status from public.payment_intents where id = (result ->> 'intent_id')::bigint) <> 'approved' then
+        raise exception 'the intent is not approved';
+    end if;
+    if (select gateway_method from public.payment_intents where id = (result ->> 'intent_id')::bigint) <> 'CARD' then
+        raise exception 'the gateway method was not stored';
+    end if;
+end $$;
+
+-- online-payments: event duplicate event is a no-op
+do $$
+declare
+    s bigint := current_setting('app.online_PAY010')::bigint;
+    reference_value text := current_setting('app.online_ref1');
+    result jsonb := public.apply_payment_event('wompi', jsonb_build_object(
+        'transaction_id', 'TX-PAY-1',
+        'reference', reference_value,
+        'status', 'APPROVED',
+        'amount', 10000,
+        'currency', 'COP',
+        'method', 'CARD'
+    ));
+begin
+    if (result ->> 'duplicate')::boolean is not true
+       or (result ->> 'applied')::boolean is not false then
+        raise exception 'a duplicate event was not ignored: %', result;
+    end if;
+    if (select online_paid_amount from public.parking_sessions where id = s)
+       <> current_setting('app.online_amount1')::integer then
+        raise exception 'a duplicate event paid twice';
+    end if;
+    if (select count(*) from public.payment_events
+         where gateway_transaction_id = 'TX-PAY-1') <> 1 then
+        raise exception 'a duplicate event was stored twice';
+    end if;
+end $$;
+
+-- online-payments: event notifies lot members once
+do $$
+declare
+    intent_id bigint := current_setting('app.online_intent1')::bigint;
+    members integer;
+    notified integer;
+begin
+    select count(*) into members
+      from public.lot_members lm join public.users u on u.id = lm.user_id
+     where lm.lot_id = 1 and u.is_active;
+    select count(*) into notified
+      from public.notifications n
+     where n.type = 'online_payment'
+       and (n.data ->> 'intent_id')::bigint = intent_id;
+    if notified <> members then
+        raise exception 'the payment notified % of % members', notified, members;
+    end if;
+    perform public.apply_payment_event('wompi', jsonb_build_object(
+        'transaction_id', 'TX-PAY-1',
+        'reference', current_setting('app.online_ref1'),
+        'status', 'APPROVED',
+        'amount', current_setting('app.online_amount1')::integer,
+        'currency', 'COP'
+    ));
+    if (select count(*) from public.notifications n
+         where n.type = 'online_payment'
+           and (n.data ->> 'intent_id')::bigint = intent_id) <> members then
+        raise exception 'a duplicate event notified twice';
+    end if;
+end $$;
+
+-- online-payments: status returns approved with the right plate
+set local role anon;
+do $$
+declare
+    intent_id bigint := current_setting('app.online_intent1')::bigint;
+    found jsonb := public.payment_intent_status(
+        current_setting('app.online_ref1'), 'pay 010'
+    );
+begin
+    if found is null
+       or found ->> 'status' <> 'approved'
+       or (found ->> 'amount')::integer <> current_setting('app.online_amount1')::integer
+       or (found ->> 'paid_total')::integer <> current_setting('app.online_amount1')::integer
+       or found ->> 'grace_until' is null then
+        raise exception 'the public status is wrong: %', found;
+    end if;
+    if found ? 'plate' or found ? 'reference' then
+        raise exception 'the public status leaks data: %', found;
+    end if;
+    if public.payment_intent_status(current_setting('app.online_ref1'), 'PAY999') is not null then
+        raise exception 'a wrong plate returned the status';
+    end if;
+    if public.payment_intent_status('PM-NOT-A-REFERENCE', 'PAY010') is not null then
+        raise exception 'an unknown reference returned the status';
+    end if;
+end $$;
+reset role;
+
+-- online-payments: event approved after expired still applies
+do $$
+declare
+    s bigint := current_setting('app.online_PAY011')::bigint;
+    created jsonb := public.create_session_payment_intent(s, 'PAY011');
+    result jsonb;
+begin
+    update public.payment_intents
+       set status = 'expired', expires_at = now() - interval '1 minute'
+     where id = (created ->> 'intent_id')::bigint;
+    result := public.apply_payment_event('wompi', jsonb_build_object(
+        'transaction_id', 'TX-PAY-2',
+        'reference', created ->> 'reference',
+        'status', 'APPROVED',
+        'amount', (created ->> 'amount')::integer,
+        'currency', 'COP',
+        'method', 'NEQUI'
+    ));
+    if (result ->> 'applied')::boolean is not true then
+        raise exception 'an approval after expiry was dropped: %', result;
+    end if;
+    perform set_config('app.online_amount2', created ->> 'amount', true);
+    if (select online_paid_amount from public.parking_sessions where id = s)
+       <> current_setting('app.online_amount2')::integer then
+        raise exception 'the late approval did not pay the session';
+    end if;
+end $$;
+
+-- online-payments: expire marks old pending intents expired
+do $$
+declare
+    s bigint := current_setting('app.online_PAY012')::bigint;
+    created jsonb := public.create_session_payment_intent(s, 'PAY012');
+    expired integer;
+begin
+    update public.payment_intents
+       set created_at = now() - interval '2 hours',
+           expires_at = now() - interval '90 minutes'
+     where id = (created ->> 'intent_id')::bigint;
+    expired := public.expire_payment_intents();
+    if expired < 1 then
+        raise exception 'the expiry job expired nothing';
+    end if;
+    if (select status from public.payment_intents where id = (created ->> 'intent_id')::bigint) <> 'expired' then
+        raise exception 'the stale intent is not expired';
+    end if;
+end $$;
+
+-- online-payments: intent unknown session
+do $$
+begin
+    begin
+        perform public.create_session_payment_intent(999999, 'PAY010');
+        raise exception 'an unknown session created an intent';
+    exception when others then
+        if sqlerrm not like '%SessionNotFoundError%' then raise; end if;
+    end;
+    begin
+        perform public.create_session_payment_intent(
+            current_setting('app.online_PAY010')::bigint, 'PAY999'
+        );
+        raise exception 'a wrong plate created an intent';
+    exception when others then
+        if sqlerrm not like '%SessionNotFoundError%' then raise; end if;
+    end;
+end $$;
+
+-- online-payments: intent closed session
+do $$
+begin
+    begin
+        perform public.create_session_payment_intent(
+            current_setting('app.online_closed')::bigint, 'PAY014'
+        );
+        raise exception 'a closed session created an intent';
+    exception when others then
+        if sqlerrm not like '%SessionAlreadyClosedError%' then raise; end if;
+    end;
+end $$;
+
+-- online-payments: intent switch off and currency guard
+do $$
+begin
+    update public.parking_settings set online_payments_enabled = false where lot_id = 1;
+    begin
+        perform public.create_session_payment_intent(
+            current_setting('app.online_PAY010')::bigint, 'PAY010'
+        );
+        raise exception 'a disabled lot created an intent';
+    exception when others then
+        if sqlerrm not like '%OnlinePaymentsDisabledError%' then raise; end if;
+    end;
+    update public.parking_settings set online_payments_enabled = true where lot_id = 1;
+end $$;
+
+-- online-payments: intent nothing due for a pass holder
+do $$
+begin
+    begin
+        perform public.create_session_payment_intent(
+            current_setting('app.online_PAY015')::bigint, 'PAY015'
+        );
+        raise exception 'a pass holder created an intent';
+    exception when others then
+        if sqlerrm not like '%NothingToPayError%' then raise; end if;
+    end;
+end $$;
+
+-- online-payments: intent below the minimum
+do $$
+begin
+    update public.parking_settings set online_payment_min_amount = 20000 where lot_id = 1;
+    begin
+        perform public.create_session_payment_intent(
+            current_setting('app.online_PAY013')::bigint, 'PAY013'
+        );
+        raise exception 'an amount below the minimum created an intent';
+    exception when others then
+        if sqlerrm not like '%AmountTooLowError%' then raise; end if;
+    end;
+    update public.parking_settings set online_payment_min_amount = 1500 where lot_id = 1;
+end $$;
+
+-- online-payments: intent throttles the sixth intent in an hour
+do $$
+declare
+    s bigint := current_setting('app.online_PAY016')::bigint;
+    idx integer;
+begin
+    for idx in 1 .. 5 loop
+        insert into public.payment_intents (
+            lot_id, session_id, reference, amount, expires_at, status
+        ) values (
+            1, s, 'PM-THROTTLE' || idx, 10000, now() - interval '1 minute', 'expired'
+        );
+    end loop;
+    begin
+        perform public.create_session_payment_intent(s, 'PAY016');
+        raise exception 'the sixth intent in an hour was accepted';
+    exception when others then
+        if sqlerrm not like '%PaymentThrottledError%' then raise; end if;
+    end;
+end $$;
+
+-- online-payments: event amount mismatch records mismatch and does not pay
+do $$
+declare
+    s bigint := current_setting('app.online_PAY017')::bigint;
+    created jsonb := public.create_session_payment_intent(s, 'PAY017');
+    result jsonb;
+begin
+    result := public.apply_payment_event('wompi', jsonb_build_object(
+        'transaction_id', 'TX-PAY-MISMATCH',
+        'reference', created ->> 'reference',
+        'status', 'APPROVED',
+        'amount', 9999,
+        'currency', 'COP'
+    ));
+    if (result ->> 'applied')::boolean is not false
+       or result ->> 'outcome' <> 'mismatch' then
+        raise exception 'a mismatched amount was applied: %', result;
+    end if;
+    if (select online_paid_amount from public.parking_sessions where id = s) <> 0 then
+        raise exception 'a mismatched amount paid the session';
+    end if;
+    if (select outcome from public.payment_events
+         where gateway_transaction_id = 'TX-PAY-MISMATCH') <> 'mismatch' then
+        raise exception 'the mismatch was not recorded';
+    end if;
+    if not exists (
+        select 1 from public.notifications n
+         where n.type = 'online_payment_review'
+           and (n.data ->> 'intent_id')::bigint = (created ->> 'intent_id')::bigint
+    ) then
+        raise exception 'the mismatch did not notify the admins';
+    end if;
+end $$;
+
+-- online-payments: event unknown reference
+do $$
+declare
+    result jsonb := public.apply_payment_event('wompi', jsonb_build_object(
+        'transaction_id', 'TX-PAY-UNKNOWN',
+        'reference', 'PM-000000000000',
+        'status', 'APPROVED',
+        'amount', 5000,
+        'currency', 'COP'
+    ));
+begin
+    if (result ->> 'applied')::boolean is not false
+       or result ->> 'outcome' <> 'unknown_reference' then
+        raise exception 'an unknown reference was applied: %', result;
+    end if;
+    if (select outcome from public.payment_events
+         where gateway_transaction_id = 'TX-PAY-UNKNOWN') <> 'unknown_reference' then
+        raise exception 'the unknown reference was not recorded';
+    end if;
+end $$;
+
+-- online-payments: event DECLINED never downgrades an approved intent
+do $$
+declare
+    intent_id bigint := current_setting('app.online_intent1')::bigint;
+    result jsonb := public.apply_payment_event('wompi', jsonb_build_object(
+        'transaction_id', 'TX-PAY-DECLINED',
+        'reference', current_setting('app.online_ref1'),
+        'status', 'DECLINED',
+        'amount', current_setting('app.online_amount1')::integer,
+        'currency', 'COP'
+    ));
+begin
+    if (result ->> 'applied')::boolean is not false then
+        raise exception 'a declined event applied over an approved intent: %', result;
+    end if;
+    if (select status from public.payment_intents where id = intent_id) <> 'approved' then
+        raise exception 'the approved intent was downgraded';
+    end if;
+end $$;
+
+-- online-payments: event VOIDED reduces the paid amount and notifies
+do $$
+declare
+    s bigint := current_setting('app.online_PAY018')::bigint;
+    created jsonb := public.create_session_payment_intent(s, 'PAY018');
+    approved jsonb;
+    voided jsonb;
+begin
+    approved := public.apply_payment_event('wompi', jsonb_build_object(
+        'transaction_id', 'TX-PAY-VOID',
+        'reference', created ->> 'reference',
+        'status', 'APPROVED',
+        'amount', (created ->> 'amount')::integer,
+        'currency', 'COP'
+    ));
+    if (approved ->> 'applied')::boolean is not true then
+        raise exception 'the payment for the void test was not applied: %', approved;
+    end if;
+    voided := public.apply_payment_event('wompi', jsonb_build_object(
+        'transaction_id', 'TX-PAY-VOID',
+        'reference', created ->> 'reference',
+        'status', 'VOIDED',
+        'amount', (created ->> 'amount')::integer,
+        'currency', 'COP'
+    ));
+    if (voided ->> 'applied')::boolean is not true then
+        raise exception 'the void was not applied: %', voided;
+    end if;
+    if (select online_paid_amount from public.parking_sessions where id = s) <> 0 then
+        raise exception 'the void did not reduce the paid amount';
+    end if;
+    if (select status from public.payment_intents
+         where id = (created ->> 'intent_id')::bigint) <> 'voided' then
+        raise exception 'the intent is not voided';
+    end if;
+    if not exists (
+        select 1 from public.notifications n
+         where n.type = 'online_payment_review'
+           and (n.data ->> 'intent_id')::bigint = (created ->> 'intent_id')::bigint
+    ) then
+        raise exception 'the void did not notify the admins';
+    end if;
+end $$;
+
+-- online-payments: event approval on a closed session is late_closed
+do $$
+declare
+    s bigint := current_setting('app.online_PAY019')::bigint;
+    created jsonb := public.create_session_payment_intent(s, 'PAY019');
+    result jsonb;
+begin
+    perform set_config('app.online_amount3', created ->> 'amount', true);
+    update public.parking_sessions
+       set status = 'closed', exit_time = now(),
+           amount_charged = (created ->> 'amount')::integer,
+           payment_method = 'cash'
+     where id = s;
+    result := public.apply_payment_event('wompi', jsonb_build_object(
+        'transaction_id', 'TX-PAY-LATE',
+        'reference', created ->> 'reference',
+        'status', 'APPROVED',
+        'amount', (created ->> 'amount')::integer,
+        'currency', 'COP'
+    ));
+    if result ->> 'outcome' <> 'late_closed' then
+        raise exception 'a closed session was not late_closed: %', result;
+    end if;
+    if (select online_paid_amount from public.parking_sessions where id = s) <> 0 then
+        raise exception 'a late payment was added to a closed session';
+    end if;
+    if not exists (
+        select 1 from public.notifications n
+         where n.type = 'online_payment_review'
+           and (n.data ->> 'intent_id')::bigint = (created ->> 'intent_id')::bigint
+    ) then
+        raise exception 'the late payment did not notify the admins';
+    end if;
+end $$;
+
+-- online-payments: report lists approved intents of the lot
+do $$
+declare
+    result jsonb := public.report_online_payments(current_date, current_date);
+begin
+    if (result ->> 'count')::integer <> 3 then
+        raise exception 'the report does not count the approved intents: %', result;
+    end if;
+    if (result ->> 'total')::integer
+       <> current_setting('app.online_amount1')::integer
+          + current_setting('app.online_amount2')::integer
+          + current_setting('app.online_amount3')::integer then
+        raise exception 'the report total is wrong: %', result;
+    end if;
+    if not exists (
+        select 1 from jsonb_array_elements(result -> 'items') item
+         where item ->> 'reference' = current_setting('app.online_ref1')
+           and item ->> 'plate' = 'PAY010'
+           and item ->> 'status' = 'approved'
+    ) then
+        raise exception 'the report does not list the approved intent: %', result;
+    end if;
+    if exists (
+        select 1 from jsonb_array_elements(result -> 'items') item
+         where item ->> 'reference' = 'PM-LOT2'
+    ) then
+        raise exception 'the report leaked another lot: %', result;
+    end if;
+end $$;
+
+-- online-payments: rpc grants
+do $$
+begin
+    if has_function_privilege('anon', 'public.create_session_payment_intent(bigint, text)', 'execute')
+       or has_function_privilege('authenticated', 'public.create_session_payment_intent(bigint, text)', 'execute')
+       or has_function_privilege('anon', 'public.apply_payment_event(text, jsonb)', 'execute')
+       or has_function_privilege('authenticated', 'public.apply_payment_event(text, jsonb)', 'execute') then
+        raise exception 'a browser role can execute a service payment RPC';
+    end if;
+    if not has_function_privilege('service_role', 'public.apply_payment_event(text, jsonb)', 'execute')
+       or not has_function_privilege('service_role', 'public.create_session_payment_intent(bigint, text)', 'execute')
+       or not has_function_privilege('service_role', 'public.list_reconcilable_payment_intents(integer)', 'execute') then
+        raise exception 'the service role cannot execute the payment RPCs';
+    end if;
+    if not has_function_privilege('anon', 'public.payment_intent_status(text, text)', 'execute') then
+        raise exception 'anon cannot poll the payment status';
+    end if;
+    if (select count(*) from pg_proc p
+         where p.pronamespace = 'public'::regnamespace
+           and p.proname in ('session_settlement', 'create_session_payment_intent',
+                             'apply_payment_event', 'settle_payment_intent',
+                             'payment_intent_status', 'expire_payment_intents',
+                             'list_reconcilable_payment_intents',
+                             'report_online_payments')) <> 8 then
+        raise exception 'a payment RPC has more than one overload';
+    end if;
+end $$;
+
+-- online-payments: report requires a lot admin
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+set local role authenticated;
+do $$
+begin
+    begin
+        perform public.report_online_payments(current_date, current_date);
+        raise exception 'an operator read the online payment report';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- online-payments: anon cannot call the service rpcs
+set local role anon;
+do $$
+begin
+    begin
+        perform public.create_session_payment_intent(1, 'PAY010');
+        raise exception 'anon created a payment intent';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform public.apply_payment_event('wompi', '{}'::jsonb);
+        raise exception 'anon applied a payment event';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- ---------------------------------------------------------------------------
+-- online-payments: checkout
+-- ---------------------------------------------------------------------------
+insert into public.vehicles (plate, category_id) values
+    ('PAY020', 2), ('PAY021', 2), ('PAY022', 2), ('PAY023', 2),
+    ('PAY024', 2), ('PAY025', 2), ('PAY026', 2), ('PAY027', 2),
+    ('PAY028', 2), ('PAY029', 2);
+
+insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+select v.id, 1, 1, now() - interval '2 hours', 'open'
+  from public.vehicles v
+ where v.plate in ('PAY020', 'PAY021', 'PAY022', 'PAY023', 'PAY024',
+                   'PAY026', 'PAY027');
+
+insert into public.parking_sessions
+    (vehicle_id, operator_id, lot_id, entry_time, status, online_paid_amount, online_paid_at)
+values
+    ((select id from public.vehicles where plate = 'PAY025'), 1, 1,
+     now() - interval '2 hours', 'open', 8000, now() - interval '5 minutes'),
+    ((select id from public.vehicles where plate = 'PAY028'), 2, 2,
+     now() - interval '2 hours', 'open', 0, null);
+
+insert into public.monthly_passes (vehicle_id, lot_id, start_date, end_date, amount, active)
+select v.id, 1, current_date - 1, current_date + 29, 80000, true
+  from public.vehicles v where v.plate = 'PAY022';
+
+do $$
+declare
+    plates text[] := array['PAY020','PAY021','PAY022','PAY023','PAY024',
+                          'PAY026','PAY027'];
+    plate_value text;
+begin
+    foreach plate_value in array plates loop
+        perform set_config('app.co_' || plate_value, (
+            select s.id::text from public.parking_sessions s
+              join public.vehicles v on v.id = s.vehicle_id
+             where v.plate = plate_value
+        ), true);
+    end loop;
+    perform set_config('app.co_lot2', (
+        select s.id::text from public.parking_sessions s
+          join public.vehicles v on v.id = s.vehicle_id
+         where v.plate = 'PAY028'
+    ), true);
+end $$;
+
+-- paid sessions: inside the window, after the window and pass-covered
+update public.parking_sessions
+   set online_paid_amount = 8000, online_paid_at = now() - interval '5 minutes'
+ where id = current_setting('app.co_PAY020')::integer;
+update public.parking_sessions
+   set online_paid_amount = 6000, online_paid_at = now() - interval '2 hours'
+ where id = current_setting('app.co_PAY021')::integer;
+update public.parking_sessions
+   set online_paid_amount = 7000, online_paid_at = now() - interval '2 minutes'
+ where id = current_setting('app.co_PAY022')::integer;
+update public.parking_sessions
+   set online_paid_amount = 3000, online_paid_at = now() - interval '1 hour'
+ where id = current_setting('app.co_PAY023')::integer;
+update public.parking_sessions
+   set online_paid_amount = 5000, online_paid_at = now() - interval '30 minutes'
+ where id = current_setting('app.co_PAY024')::integer;
+update public.parking_sessions
+   set online_paid_amount = 6000, online_paid_at = now() - interval '2 hours'
+ where id in (current_setting('app.co_PAY026')::integer,
+              current_setting('app.co_PAY027')::integer);
+
+-- online-payments: preview exposes online_paid_amount and amount_due
+do $$
+declare
+    s integer := current_setting('app.co_PAY023')::integer;
+    preview jsonb := public.check_out_preview(s);
+    gross integer;
+begin
+    gross := (preview ->> 'amount')::integer;
+    if (preview ->> 'online_paid_amount')::integer <> 3000 then
+        raise exception 'the preview does not carry the paid amount: %', preview;
+    end if;
+    if preview ->> 'online_paid_at' is null then
+        raise exception 'the preview does not carry the paid time: %', preview;
+    end if;
+    if (preview ->> 'grace_active')::boolean is not false then
+        raise exception 'the preview says the grace window is active: %', preview;
+    end if;
+    if preview ->> 'grace_until' is null then
+        raise exception 'the preview does not carry the grace deadline: %', preview;
+    end if;
+    if (preview ->> 'amount_due')::integer <> greatest(gross - 3000, 0) then
+        raise exception 'the preview amount due is wrong: %', preview;
+    end if;
+end $$;
+
+-- online-payments: check_out inside grace closes as online with paid amount
+do $$
+declare
+    s integer := current_setting('app.co_PAY020')::integer;
+    result jsonb := public.check_out(s, null, null, 'cash');
+    session public.parking_sessions%rowtype;
+begin
+    if result ->> 'payment_method' <> 'online' then
+        raise exception 'the paid session was not stored as online: %', result;
+    end if;
+    if (result ->> 'amount_charged')::integer <> 8000
+       or (result ->> 'online_paid_amount')::integer <> 8000 then
+        raise exception 'the inside-grace charge is not what was paid: %', result;
+    end if;
+    select * into session from public.parking_sessions where id = s;
+    if session.amount_charged <> 8000 or session.cash_received is not null then
+        raise exception 'the closed session is wrong: %', session;
+    end if;
+end $$;
+
+-- online-payments: check_out after grace charges gross and keeps the desk method
+do $$
+declare
+    s integer := current_setting('app.co_PAY021')::integer;
+    result jsonb := public.check_out(s, null, null, 'card', 0, null, false, null, null, 'debit');
+    gross integer;
+begin
+    gross := (result ->> 'amount_charged')::integer;
+    if result ->> 'payment_method' <> 'card' then
+        raise exception 'the desk method was not kept: %', result;
+    end if;
+    if gross <= 6000 then
+        raise exception 'the charge did not grow after the window: %', result;
+    end if;
+    if (result ->> 'online_paid_amount')::integer <> 6000 then
+        raise exception 'the paid amount was lost: %', result;
+    end if;
+    if (select online_paid_amount from public.parking_sessions where id = s) <> 6000 then
+        raise exception 'the stored paid amount was lost';
+    end if;
+end $$;
+
+-- online-payments: paid plus monthly pass is stored online and reviewed
+do $$
+declare
+    s integer := current_setting('app.co_PAY022')::integer;
+    result jsonb := public.check_out(s, null, null, 'monthly_pass');
+begin
+    if result ->> 'payment_method' <> 'online' then
+        raise exception 'a pass-covered payment was not stored as online: %', result;
+    end if;
+    if (result ->> 'amount_charged')::integer <> 7000 then
+        raise exception 'the pass plus payment charge is wrong: %', result;
+    end if;
+    if not exists (
+        select 1 from public.notifications n
+         where n.type = 'online_payment_review'
+           and n.dedupe_key like 'online_pass:' || s || ':%'
+    ) then
+        raise exception 'the pass plus payment did not notify the admins';
+    end if;
+end $$;
+
+-- online-payments: public summary exposes amount_due and the switch
+set local role anon;
+do $$
+declare
+    s bigint := current_setting('app.co_PAY024')::bigint;
+    found jsonb := public.public_session_summary(s, 'pay 024');
+    gross integer;
+begin
+    if found is null then
+        raise exception 'the public summary did not answer';
+    end if;
+    if (found ->> 'online_payments_enabled')::boolean is not true then
+        raise exception 'the public summary hides the switch: %', found;
+    end if;
+    if (found ->> 'online_paid_amount')::integer <> 5000 then
+        raise exception 'the public summary hides the paid amount: %', found;
+    end if;
+    if (found ->> 'online_min_amount')::integer <> 1500 then
+        raise exception 'the public summary hides the minimum: %', found;
+    end if;
+    if found ->> 'grace_until' is null then
+        raise exception 'the public summary hides the grace deadline: %', found;
+    end if;
+    gross := (found -> 'breakdown' ->> 'amount')::integer;
+    if (found ->> 'amount_due')::integer <> greatest(gross - 5000, 0) then
+        raise exception 'the public amount due is wrong: %', found;
+    end if;
+end $$;
+reset role;
+
+-- online-payments: open_sessions_view shows the paid amount and deadline
+do $$
+declare
+    s integer := current_setting('app.co_PAY024')::integer;
+    row record;
+begin
+    select * into row from public.open_sessions_view where id = s;
+    if row.online_paid_amount <> 5000 then
+        raise exception 'the open sessions view hides the paid amount: %', row;
+    end if;
+    if row.online_grace_until <> (
+        select online_paid_at + interval '15 minutes'
+          from public.parking_sessions where id = s
+    ) then
+        raise exception 'the open sessions view grace deadline is wrong: %', row;
+    end if;
+end $$;
+
+-- online-payments: shift totals split desk and online money
+do $$
+declare
+    shift_id bigint;
+    totals jsonb;
+    paid_cash integer;
+    paid_online integer;
+    paid_card integer;
+begin
+    insert into public.shifts (operator_id, lot_id, opening_float, closed_at)
+    values (1, 1, 1000, now())
+    returning id into shift_id;
+
+    insert into public.parking_sessions
+        (vehicle_id, operator_id, lot_id, entry_time, exit_time, status,
+         amount_charged, payment_method, shift_id, online_paid_amount)
+    values
+        ((select id from public.vehicles where plate = 'PAY025'), 1, 1,
+         now() - interval '3 hours', now() - interval '1 hour', 'closed',
+         10000, 'cash', shift_id, 2000),
+        ((select id from public.vehicles where plate = 'PAY028'), 1, 1,
+         now() - interval '5 hours', now() - interval '2 hours', 'closed',
+         8000, 'online', shift_id, 8000),
+        ((select id from public.vehicles where plate = 'PAY029'), 1, 1,
+         now() - interval '4 hours', now() - interval '1 hour', 'closed',
+         5000, 'card', shift_id, 0);
+
+    paid_cash := 8000;
+    paid_online := 10000;
+    paid_card := 5000;
+
+    totals := public.shift_totals(shift_id);
+    if (totals ->> 'cash_sales')::integer <> paid_cash then
+        raise exception 'cash sales include the online part: %', totals;
+    end if;
+    if (totals ->> 'online_sales')::integer <> paid_online then
+        raise exception 'online sales are wrong: %', totals;
+    end if;
+    if (totals ->> 'card_sales')::integer <> paid_card then
+        raise exception 'card sales are wrong: %', totals;
+    end if;
+    if (totals ->> 'revenue')::integer <> 23000 then
+        raise exception 'revenue is not the gross total: %', totals;
+    end if;
+    if (totals ->> 'expected_cash')::integer <> 9000 then
+        raise exception 'the online money entered expected cash: %', totals;
+    end if;
+    if (totals ->> 'revenue')::integer
+       <> (totals ->> 'cash_sales')::integer
+          + (totals ->> 'card_sales')::integer
+          + (totals ->> 'transfer_sales')::integer
+          + (totals ->> 'pass_sales')::integer
+          + (totals ->> 'exempt_sales')::integer
+          + (totals ->> 'online_sales')::integer then
+        raise exception 'revenue does not equal the sum of its parts: %', totals;
+    end if;
+end $$;
+
+-- online-payments: report revenue splits the online row
+do $$
+declare
+    tz text;
+    window_start timestamptz;
+    window_end timestamptz;
+    expected_total bigint;
+    expected_online bigint;
+    report jsonb;
+begin
+    select coalesce(business_timezone, 'America/Bogota') into tz
+      from public.parking_settings where lot_id = 1;
+    window_start := current_date::timestamp at time zone tz;
+    window_end := (current_date + 1)::timestamp at time zone tz;
+
+    select coalesce(sum(amount_charged), 0), coalesce(sum(online_paid_amount), 0)
+      into expected_total, expected_online
+      from public.parking_sessions
+     where status = 'closed' and lot_id = 1
+       and exit_time >= window_start and exit_time < window_end;
+
+    report := public.report_revenue(current_date, current_date);
+    if (report ->> 'total')::bigint <> expected_total then
+        raise exception 'the report total changed: % vs %', report ->> 'total', expected_total;
+    end if;
+    if not exists (
+        select 1 from jsonb_array_elements(report -> 'by_payment') item
+         where item ->> 'payment_method' = 'online'
+           and (item ->> 'amount')::bigint = expected_online
+    ) then
+        raise exception 'the report has no online row: %', report -> 'by_payment';
+    end if;
+    if (select coalesce(sum((item ->> 'amount')::bigint), 0)
+          from jsonb_array_elements(report -> 'by_payment') item) <> expected_total then
+        raise exception 'the payment rows do not add up to the total: %', report -> 'by_payment';
+    end if;
+end $$;
+
+-- online-payments: check_out rejects the online method from the client
+do $$
+declare
+    s integer := current_setting('app.co_PAY026')::integer;
+begin
+    begin
+        perform public.check_out(s, null, null, 'online');
+        raise exception 'the client sent the online method';
+    exception when others then
+        if sqlerrm not like '%InvalidPaymentMethod%' then raise; end if;
+    end;
+    if (select status from public.parking_sessions where id = s) <> 'open' then
+        raise exception 'the refused check-out closed the session';
+    end if;
+end $$;
+
+-- online-payments: cash received below the desk due is rejected
+do $$
+declare
+    s integer := current_setting('app.co_PAY027')::integer;
+begin
+    begin
+        perform public.check_out(s, null, null, 'cash', 0, null, false, null, null, null, 10);
+        raise exception 'a short cash amount was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidCashReceivedError%' then raise; end if;
+    end;
+end $$;
+
+-- online-payments: a discount above the desk due is rejected
+do $$
+declare
+    s integer := current_setting('app.co_PAY027')::integer;
+begin
+    begin
+        perform public.check_out(s, null, null, 'cash', 999999, 'prueba');
+        raise exception 'a discount above the desk due was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDiscountError%' then raise; end if;
+    end;
+end $$;
+
+-- online-payments: check_out enforces the lot
+do $$
+begin
+    begin
+        perform public.check_out(current_setting('app.co_lot2')::integer, null, null, 'cash');
+        raise exception 'a session of another lot was closed';
+    exception when others then
+        if sqlerrm not like '%LotRequiredError%' then raise; end if;
+    end;
+end $$;
+
+-- online-payments: an operator cannot discount a paid session
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+declare
+    s integer := current_setting('app.co_PAY027')::integer;
+begin
+    begin
+        perform public.check_out(s, null, null, 'cash', 1000, 'prueba');
+        raise exception 'an operator raised a discount on a paid session';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+end $$;
+-- ---------------------------------------------------------------------------
+-- pass-renewal: schema
+-- ---------------------------------------------------------------------------
+insert into public.vehicles (plate, category_id) values
+    ('RENW01', 2), ('RENW02', 2);
+insert into public.vehicles (plate, category_id)
+values ('RENW03', (select id from public.categories where lot_id = 2 order by id limit 1));
+
+insert into public.monthly_passes (vehicle_id, lot_id, start_date, end_date, amount, active)
+select id, 1, current_date - 10, current_date + 20, 80000, true
+  from public.vehicles where plate = 'RENW01';
+insert into public.monthly_passes (vehicle_id, lot_id, start_date, end_date, amount, active)
+select id, 2, current_date - 10, current_date + 20, 70000, true
+  from public.vehicles where plate = 'RENW03';
+
+do $$
+begin
+    perform set_config('app.renew_pass1', (
+        select mp.id::text from public.monthly_passes mp
+          join public.vehicles v on v.id = mp.vehicle_id
+         where v.plate = 'RENW01'
+    ), true);
+    perform set_config('app.renew_pass2', (
+        select mp.id::text from public.monthly_passes mp
+          join public.vehicles v on v.id = mp.vehicle_id
+         where v.plate = 'RENW03'
+    ), true);
+end $$;
+
+-- pass-renewal: schema defaults off with cadence 7,3,1
+do $$
+declare
+    settings public.parking_settings%rowtype;
+begin
+    select * into settings from public.parking_settings where lot_id = 1;
+    if settings.pass_renewal_enabled is not false
+       or settings.pass_renewal_payment_links is not false
+       or settings.pass_renewal_cadence <> '7,3,1' then
+        raise exception 'the pass renewal defaults are wrong';
+    end if;
+end $$;
+
+-- pass-renewal: schema whatsapp dedupe key blocks a duplicate
+do $$
+begin
+    insert into public.whatsapp_messages (lot_id, to_phone, template, dedupe_key)
+    values (1, '3001112233', 'pass_expiry', 'renew-test-dedupe');
+    begin
+        insert into public.whatsapp_messages (lot_id, to_phone, template, dedupe_key)
+        values (1, '3001112233', 'pass_expiry', 'renew-test-dedupe');
+        raise exception 'the whatsapp dedupe key was ignored';
+    exception when unique_violation then null;
+    end;
+    delete from public.whatsapp_messages where dedupe_key = 'renew-test-dedupe';
+end $$;
+
+-- pass-renewal: schema monthly pass payments accepts online
+do $$
+declare
+    target bigint := current_setting('app.renew_pass1')::bigint;
+begin
+    update public.monthly_pass_payments
+       set payment_method = 'online'
+     where monthly_pass_id = target;
+    if (select payment_method from public.monthly_pass_payments
+         where monthly_pass_id = target) <> 'online' then
+        raise exception 'online is not accepted for a pass payment';
+    end if;
+    update public.monthly_pass_payments
+       set payment_method = 'cash'
+     where monthly_pass_id = target;
+end $$;
+
+-- pass-renewal: schema cadence with 6 values rejected
+do $$
+begin
+    begin
+        update public.parking_settings
+           set pass_renewal_cadence = '7,3,1,5,2,1'
+         where lot_id = 1;
+        raise exception 'a 6-value cadence was accepted';
+    exception when check_violation then null;
+    end;
+end $$;
+
+-- pass-renewal: schema cadence value 31 rejected
+do $$
+begin
+    begin
+        update public.parking_settings
+           set pass_renewal_cadence = '31'
+         where lot_id = 1;
+        raise exception 'a 31-day cadence was accepted';
+    exception when check_violation then null;
+    end;
+    begin
+        update public.parking_settings
+           set pass_renewal_cadence = '7,abc'
+         where lot_id = 1;
+        raise exception 'a non-numeric cadence was accepted';
+    exception when check_violation then null;
+    end;
+    update public.parking_settings set pass_renewal_cadence = '7,3,1' where lot_id = 1;
+end $$;
+
+-- pass-renewal: schema payment links without online payments rejected
+do $$
+begin
+    update public.parking_settings
+       set online_payments_enabled = false, pass_renewal_payment_links = false
+     where lot_id = 2;
+    begin
+        update public.parking_settings
+           set pass_renewal_payment_links = true
+         where lot_id = 2;
+        raise exception 'payment links were enabled without online payments';
+    exception when check_violation then null;
+    end;
+end $$;
+
+-- pass-renewal: schema two open offers for one pass rejected
+do $$
+declare
+    target bigint := current_setting('app.renew_pass1')::bigint;
+begin
+    insert into public.pass_renewal_offers (
+        lot_id, monthly_pass_id, token, period_start, period_end, amount, expires_at
+    ) values (
+        1, target, repeat('a', 48), current_date + 21, current_date + 50, 80000,
+        now() + interval '8 days'
+    );
+    begin
+        insert into public.pass_renewal_offers (
+            lot_id, monthly_pass_id, token, period_start, period_end, amount, expires_at
+        ) values (
+            1, target, repeat('b', 48), current_date + 21, current_date + 50, 80000,
+            now() + interval '8 days'
+        );
+        raise exception 'a second open offer was accepted';
+    exception when unique_violation then null;
+    end;
+    delete from public.pass_renewal_offers where monthly_pass_id = target;
+end $$;
+
+-- pass-renewal: schema intent kind pass without an offer rejected
+do $$
+begin
+    begin
+        insert into public.payment_intents (
+            lot_id, kind, reference, amount, expires_at
+        ) values (
+            1, 'pass', 'PM-RENEW-NOOFFER', 80000, now() + interval '30 minutes'
+        );
+        raise exception 'a pass intent without an offer was accepted';
+    exception when check_violation then null;
+    end;
+end $$;
+
+-- pass-renewal: schema RLS enabled on offers
+do $$
+begin
+    if not (select relrowsecurity from pg_class
+             where oid = 'public.pass_renewal_offers'::regclass) then
+        raise exception 'RLS is not enabled on the renewal offers';
+    end if;
+end $$;
+
+insert into public.pass_renewal_offers (
+    lot_id, monthly_pass_id, token, period_start, period_end, amount, expires_at
+) values (
+    2, current_setting('app.renew_pass2')::bigint, repeat('c', 48),
+    current_date + 21, current_date + 50, 70000, now() + interval '8 days'
+);
+
+-- pass-renewal: schema operator cannot select offers
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    if (select count(*) from public.pass_renewal_offers) <> 0 then
+        raise exception 'an operator read the renewal offers';
+    end if;
+end $$;
+reset role;
+
+-- pass-renewal: schema admin of lot 1 cannot read offers of lot 2
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+begin
+    if exists (select 1 from public.pass_renewal_offers where token = repeat('c', 48)) then
+        raise exception 'a lot 1 admin read a lot 2 offer';
+    end if;
+end $$;
+reset role;
+
+-- ---------------------------------------------------------------------------
+-- pass-renewal: rpcs
+-- ---------------------------------------------------------------------------
+update public.parking_settings
+   set pass_renewal_enabled = true,
+       pass_renewal_payment_links = false,
+       pass_renewal_cadence = '7,3,1',
+       whatsapp_auto = true,
+       online_payments_enabled = true,
+       online_payment_min_amount = 1500
+ where lot_id = 1;
+update public.parking_settings
+   set pass_renewal_enabled = true,
+       pass_renewal_payment_links = false,
+       pass_renewal_cadence = '7,3,1',
+       whatsapp_auto = true
+ where lot_id = 2;
+
+insert into public.vehicles (plate, category_id, owner_name, owner_phone) values
+    ('RENW10', 2, 'Ana', '3001112233'),
+    ('RENW11', 2, 'Beto', '+57 300 222 3344'),
+    ('RENW12', 2, 'Carla', null),
+    ('RENW13', 2, 'Dora', '3004445566'),
+    ('RENW14', 2, 'Eva', '3005556677'),
+    ('RENW15', 2, 'Fabi', null),
+    ('RENW16', 2, 'Gil', '3006667788'),
+    ('RENW17', 2, 'Hugo', '3007778899');
+insert into public.vehicles (plate, category_id, owner_name, owner_phone)
+values ('RENW18', (select id from public.categories where lot_id = 2 order by id limit 1),
+        'Ivan', '3008889900');
+
+insert into public.monthly_passes (vehicle_id, lot_id, start_date, end_date, amount, active)
+select v.id, 1, current_date - 20, current_date + 7, 80000, true
+  from public.vehicles v where v.plate = 'RENW10';
+insert into public.monthly_passes (vehicle_id, lot_id, start_date, end_date, amount, active)
+select v.id, 1, current_date - 25, current_date + 2, 80000, true
+  from public.vehicles v where v.plate = 'RENW11';
+insert into public.monthly_passes (vehicle_id, lot_id, start_date, end_date, amount, active)
+select v.id, 1, current_date - 20, current_date + 7, 80000, true
+  from public.vehicles v where v.plate = 'RENW12';
+-- ended parent with a child
+insert into public.monthly_passes (vehicle_id, lot_id, start_date, end_date, amount, active)
+select v.id, 1, current_date - 40, current_date - 10, 80000, true
+  from public.vehicles v where v.plate = 'RENW13';
+insert into public.monthly_passes (
+    vehicle_id, lot_id, start_date, end_date, amount, active, renewed_from_id
+)
+select v.id, 1, current_date - 9, current_date + 20, 80000, true, parent.id
+  from public.vehicles v
+  join public.monthly_passes parent
+    on parent.vehicle_id = v.id and parent.end_date = current_date - 10
+ where v.plate = 'RENW13';
+insert into public.monthly_passes (vehicle_id, lot_id, start_date, end_date, amount, active)
+select v.id, 1, current_date - 20, current_date + 7, 80000, true
+  from public.vehicles v where v.plate = 'RENW14';
+insert into public.monthly_passes (vehicle_id, lot_id, start_date, end_date, amount, active)
+select v.id, 1, current_date - 20, current_date + 7, 80000, true
+  from public.vehicles v where v.plate = 'RENW15';
+insert into public.monthly_passes (vehicle_id, lot_id, start_date, end_date, amount, active)
+select v.id, 1, current_date - 40, current_date - 10, 80000, true
+  from public.vehicles v where v.plate = 'RENW16';
+insert into public.monthly_passes (vehicle_id, lot_id, start_date, end_date, amount, active)
+select v.id, 1, current_date - 20, current_date + 7, 80000, true
+  from public.vehicles v where v.plate = 'RENW17';
+insert into public.monthly_passes (vehicle_id, lot_id, start_date, end_date, amount, active)
+select v.id, 2, current_date - 20, current_date + 7, 70000, true
+  from public.vehicles v where v.plate = 'RENW18';
+
+do $$
+declare
+    plates text[] := array['RENW10','RENW11','RENW12','RENW13','RENW14',
+                          'RENW15','RENW16','RENW17','RENW18'];
+    plate_value text;
+begin
+    foreach plate_value in array plates loop
+        perform set_config('app.pr_' || plate_value, (
+            select mp.id::text from public.monthly_passes mp
+              join public.vehicles v on v.id = mp.vehicle_id
+             where v.plate = plate_value
+             order by mp.id
+             limit 1
+        ), true);
+    end loop;
+end $$;
+
+-- pass-renewal: reminders queue pass_expiry when links are off
+do $$
+declare
+    queued integer := public.queue_pass_renewal_reminders();
+begin
+    if queued < 2 then
+        raise exception 'the reminder job queued % messages', queued;
+    end if;
+    if not exists (
+        select 1 from public.whatsapp_messages m
+         where m.template = 'pass_expiry'
+           and m.dedupe_key like 'pass_reminder:%'
+           and m.params ->> 0 = 'RENW10'
+    ) then
+        raise exception 'no pass_expiry reminder for the 7-day window';
+    end if;
+end $$;
+
+-- pass-renewal: reminders second run in the same window queues nothing
+do $$
+declare
+    before_count integer;
+    after_count integer;
+begin
+    select count(*) into before_count from public.whatsapp_messages;
+    perform public.queue_pass_renewal_reminders();
+    select count(*) into after_count from public.whatsapp_messages;
+    if after_count <> before_count then
+        raise exception 'a second run in the window queued again';
+    end if;
+end $$;
+
+-- pass-renewal: reminders late run sends only the nearest missed window
+do $$
+declare
+    pass_id bigint := current_setting('app.pr_RENW11')::bigint;
+begin
+    if not exists (
+        select 1 from public.whatsapp_messages m
+         where m.dedupe_key like 'pass_reminder:' || pass_id || ':%:3'
+    ) then
+        raise exception 'the late run did not use the nearest cadence value';
+    end if;
+    if exists (
+        select 1 from public.whatsapp_messages m
+         where m.dedupe_key like 'pass_reminder:' || pass_id || ':%:7'
+    ) then
+        raise exception 'the late run also sent the wider window';
+    end if;
+end $$;
+
+-- pass-renewal: reminders queues the link with the token as button_param
+do $$
+declare
+    offer public.pass_renewal_offers%rowtype;
+begin
+    update public.parking_settings set pass_renewal_payment_links = true
+     where lot_id = 1;
+    perform public.queue_pass_renewal_reminders();
+
+    select * into offer from public.pass_renewal_offers
+     where monthly_pass_id = current_setting('app.pr_RENW10')::bigint
+       and status = 'open';
+    if not found then
+        raise exception 'the link run did not create an offer';
+    end if;
+    if length(offer.token) <> 48 then
+        raise exception 'the offer token is not 48 hex chars: %', offer.token;
+    end if;
+    if offer.period_start <> current_date + 8
+       or offer.period_end <= offer.period_start then
+        raise exception 'the offered period is wrong: % / %',
+            offer.period_start, offer.period_end;
+    end if;
+    if not exists (
+        select 1 from public.whatsapp_messages m
+         where m.template = 'pass_renewal_link'
+           and m.button_param = offer.token
+           and m.dedupe_key = 'pass_renewal:' || offer.id || ':7'
+           and jsonb_array_length(m.params) = 4
+    ) then
+        raise exception 'the renewal link message is missing or wrong';
+    end if;
+    if not exists (
+        select 1 from public.whatsapp_messages m
+         where m.params ->> 0 = 'Ana'
+           and m.params ->> 1 = 'RENW10'
+    ) then
+        raise exception 'the renewal message params are wrong';
+    end if;
+end $$;
+
+-- pass-renewal: reminders no owner phone skips the pass
+do $$
+begin
+    if exists (
+        select 1 from public.whatsapp_messages m
+         where m.params ->> 1 = 'RENW12'
+    ) then
+        raise exception 'a pass without owner phone was nudged';
+    end if;
+end $$;
+
+-- pass-renewal: reminders ended parent with a child is deactivated
+do $$
+declare
+    parent bigint := current_setting('app.pr_RENW13')::bigint;
+begin
+    if (select active from public.monthly_passes where id = parent) then
+        raise exception 'the ended parent was not deactivated';
+    end if;
+    if not (select active from public.monthly_passes
+             where renewed_from_id = parent) then
+        raise exception 'the child pass was deactivated';
+    end if;
+end $$;
+
+-- pass-renewal: reminders whatsapp_auto off queues nothing
+do $$
+declare
+    before_count integer;
+    after_count integer;
+begin
+    update public.parking_settings set whatsapp_auto = false where lot_id = 1;
+    select count(*) into before_count from public.whatsapp_messages;
+    perform public.queue_pass_renewal_reminders();
+    select count(*) into after_count from public.whatsapp_messages;
+    if after_count <> before_count then
+        raise exception 'reminders were queued with whatsapp_auto off';
+    end if;
+    update public.parking_settings set whatsapp_auto = true where lot_id = 1;
+end $$;
+
+-- pass-renewal: reminders pass_renewal_enabled off queues nothing
+do $$
+declare
+    before_count integer;
+    after_count integer;
+begin
+    update public.parking_settings set pass_renewal_enabled = false where lot_id = 1;
+    select count(*) into before_count from public.whatsapp_messages;
+    perform public.queue_pass_renewal_reminders();
+    select count(*) into after_count from public.whatsapp_messages;
+    if after_count <> before_count then
+        raise exception 'reminders were queued with the switch off';
+    end if;
+    update public.parking_settings set pass_renewal_enabled = true where lot_id = 1;
+end $$;
+
+-- pass-renewal: reminders never enqueue across lots
+do $$
+begin
+    if exists (
+        select 1 from public.whatsapp_messages m
+         where m.params ->> 0 = 'RENW18' and m.lot_id <> 2
+    ) then
+        raise exception 'a reminder was queued for another lot';
+    end if;
+    if not exists (
+        select 1 from public.whatsapp_messages m
+         where m.params ->> 0 = 'RENW18' and m.lot_id = 2
+    ) then
+        raise exception 'the lot 2 pass was not nudged in its own lot';
+    end if;
+end $$;
+
+-- pass-renewal: manual admin send queues once per day
+do $$
+declare
+    pass_id bigint := current_setting('app.pr_RENW14')::bigint;
+    first_result jsonb;
+    second_result jsonb;
+begin
+    first_result := public.send_pass_renewal_link(pass_id);
+    second_result := public.send_pass_renewal_link(pass_id);
+    if (first_result ->> 'queued')::boolean is not true then
+        raise exception 'the manual link was not queued: %', first_result;
+    end if;
+    if (second_result ->> 'queued')::boolean is not false then
+        raise exception 'the manual link was queued twice in a day: %', second_result;
+    end if;
+    if not exists (
+        select 1 from public.whatsapp_messages m
+         where m.template = 'pass_renewal_link'
+           and m.button_param = (
+               select token from public.pass_renewal_offers
+                where monthly_pass_id = pass_id and status = 'open'
+           )
+    ) then
+        raise exception 'the manual link message has no token button';
+    end if;
+end $$;
+
+-- pass-renewal: manual no phone is an error
+do $$
+begin
+    begin
+        perform public.send_pass_renewal_link(current_setting('app.pr_RENW15')::bigint);
+        raise exception 'a pass without phone got a manual link';
+    exception when others then
+        if sqlerrm not like '%MissingOwnerPhoneError%' then raise; end if;
+    end;
+end $$;
+
+-- pass-renewal: manual child exists is an error
+do $$
+begin
+    begin
+        perform public.send_pass_renewal_link(current_setting('app.pr_RENW13')::bigint);
+        raise exception 'a renewed pass got a manual link';
+    exception when others then
+        if sqlerrm not like '%PassAlreadyRenewedError%' then raise; end if;
+    end;
+end $$;
+
+-- pass-renewal: manual switch off is an error
+do $$
+begin
+    update public.parking_settings set pass_renewal_payment_links = false where lot_id = 1;
+    begin
+        perform public.send_pass_renewal_link(current_setting('app.pr_RENW14')::bigint);
+        raise exception 'a manual link was sent with the switch off';
+    exception when others then
+        if sqlerrm not like '%PassRenewalDisabledError%' then raise; end if;
+    end;
+    update public.parking_settings set pass_renewal_payment_links = true where lot_id = 1;
+end $$;
+
+-- pass-renewal: manual operator is refused
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    begin
+        perform public.send_pass_renewal_link(current_setting('app.pr_RENW14')::bigint);
+        raise exception 'an operator sent a renewal link';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+end $$;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- pass-renewal: manual other lot is not found
+do $$
+begin
+    begin
+        perform public.send_pass_renewal_link(current_setting('app.pr_RENW18')::bigint);
+        raise exception 'a pass of another lot was renewed';
+    exception when others then
+        if sqlerrm not like '%PassNotFoundError%' then raise; end if;
+    end;
+end $$;
+
+-- pass-renewal: public page returns masked plate and period
+do $$
+begin
+    perform set_config('app.pr_token10', (
+        select token from public.pass_renewal_offers
+         where monthly_pass_id = current_setting('app.pr_RENW10')::bigint
+           and status = 'open'
+    ), true);
+end $$;
+
+set local role anon;
+do $$
+declare
+    token_value text := current_setting('app.pr_token10');
+    found jsonb;
+begin
+    found := public.public_pass_renewal(token_value);
+    if found is null then
+        raise exception 'the public page did not answer';
+    end if;
+    if found ->> 'plate_masked' <> 'REN***' then
+        raise exception 'the plate mask is wrong: %', found ->> 'plate_masked';
+    end if;
+    if (found ->> 'amount')::integer <> 80000
+       or (found ->> 'payment_links_enabled')::boolean is not true
+       or found ->> 'lot_name' is null then
+        raise exception 'the public offer is wrong: %', found;
+    end if;
+    if found ? 'plate' or found ? 'owner_phone' or found ? 'vehicle_id' then
+        raise exception 'the public page leaked data: %', found;
+    end if;
+    if public.public_pass_renewal(repeat('f', 48)) is not null then
+        raise exception 'an unknown token returned an offer';
+    end if;
+    if public.public_pass_renewal('not-a-token') is not null then
+        raise exception 'a malformed token returned an offer';
+    end if;
+end $$;
+reset role;
+
+-- pass-renewal: anon can call only the public functions
+set local role anon;
+do $$
+begin
+    if not has_function_privilege('anon', 'public.public_pass_renewal(text)', 'execute') then
+        raise exception 'anon cannot read the public renewal page';
+    end if;
+    begin
+        perform public.create_pass_renewal_intent(repeat('a', 48));
+        raise exception 'anon created a renewal intent';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform public.queue_pass_renewal_reminders();
+        raise exception 'anon ran the reminder job';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
+-- The ended pass gets its offer by hand: the cron skips passes older than
+-- three days, and a late payment is exactly the case under test.
+insert into public.pass_renewal_offers (
+    lot_id, monthly_pass_id, token, period_start, period_end, amount, expires_at
+)
+select 1, mp.id, repeat('e', 48), mp.end_date + 1, mp.end_date + 30, mp.amount,
+       now() + interval '8 days'
+  from public.monthly_passes mp
+ where mp.id = current_setting('app.pr_RENW16')::bigint;
+
+-- pass-renewal: intent creates a kind pass intent with the offer amount
+do $$
+declare
+    token_value text;
+    result jsonb;
+begin
+    select token into token_value from public.pass_renewal_offers
+     where monthly_pass_id = current_setting('app.pr_RENW16')::bigint
+       and status = 'open';
+    if token_value is null then
+        raise exception 'the ended pass has no offer';
+    end if;
+    result := public.create_pass_renewal_intent(token_value);
+    if (result ->> 'amount')::integer <> 80000 then
+        raise exception 'the intent amount is wrong: %', result;
+    end if;
+    if (select kind from public.payment_intents
+         where id = (result ->> 'intent_id')::bigint) <> 'pass' then
+        raise exception 'the intent is not a pass intent';
+    end if;
+    perform set_config('app.pr_ref16', result ->> 'reference', true);
+    perform set_config('app.pr_offer16', (
+        select id::text from public.pass_renewal_offers where token = token_value
+    ), true);
+end $$;
+
+-- pass-renewal: intent unknown token
+do $$
+begin
+    begin
+        perform public.create_pass_renewal_intent(repeat('f', 48));
+        raise exception 'an unknown token created an intent';
+    exception when others then
+        if sqlerrm not like '%PassRenewalNotFoundError%' then raise; end if;
+    end;
+    begin
+        perform public.create_pass_renewal_intent('short');
+        raise exception 'a malformed token created an intent';
+    exception when others then
+        if sqlerrm not like '%PassRenewalNotFoundError%' then raise; end if;
+    end;
+end $$;
+
+-- pass-renewal: intent paid and expired offers are refused
+do $$
+declare
+    paid_token text;
+    expired_token text;
+begin
+    select token into paid_token from public.pass_renewal_offers
+     where monthly_pass_id = current_setting('app.pr_RENW14')::bigint;
+    update public.pass_renewal_offers set status = 'paid' where token = paid_token;
+    begin
+        perform public.create_pass_renewal_intent(paid_token);
+        raise exception 'a paid offer created an intent';
+    exception when others then
+        if sqlerrm not like '%PassRenewalPaidError%' then raise; end if;
+    end;
+
+    select token into expired_token from public.pass_renewal_offers
+     where monthly_pass_id = current_setting('app.pr_RENW17')::bigint
+       and status = 'open';
+    update public.pass_renewal_offers
+       set expires_at = now() - interval '1 minute'
+     where token = expired_token;
+    begin
+        perform public.create_pass_renewal_intent(expired_token);
+        raise exception 'an expired offer created an intent';
+    exception when others then
+        if sqlerrm not like '%PassRenewalExpiredError%' then raise; end if;
+    end;
+end $$;
+
+-- pass-renewal: intent throttles the sixth intent in an hour
+do $$
+declare
+    token_value text;
+    offer_id bigint;
+    idx integer;
+begin
+    select o.token, o.id into token_value, offer_id
+      from public.pass_renewal_offers o
+     where o.monthly_pass_id = current_setting('app.pr_RENW17')::bigint
+       and o.status = 'open';
+    update public.pass_renewal_offers
+       set expires_at = now() + interval '8 days'
+     where id = offer_id;
+    for idx in 1 .. 5 loop
+        insert into public.payment_intents (
+            lot_id, kind, pass_renewal_offer_id, reference, amount, status,
+            expires_at
+        ) values (
+            1, 'pass', offer_id, 'PM-PASSTHROTTLE' || idx, 80000, 'expired',
+            now() - interval '1 minute'
+        );
+    end loop;
+    begin
+        perform public.create_pass_renewal_intent(token_value);
+        raise exception 'the sixth renewal intent in an hour was accepted';
+    exception when others then
+        if sqlerrm not like '%PaymentThrottledError%' then raise; end if;
+    end;
+end $$;
+
+-- pass-renewal: settle approved payment creates the linked pass paid online
+do $$
+declare
+    reference_value text := current_setting('app.pr_ref16');
+    offer_id bigint := current_setting('app.pr_offer16')::bigint;
+    parent bigint := current_setting('app.pr_RENW16')::bigint;
+    result jsonb;
+    child public.monthly_passes%rowtype;
+    payment public.monthly_pass_payments%rowtype;
+    offer_rec public.pass_renewal_offers%rowtype;
+begin
+    result := public.apply_payment_event('wompi', jsonb_build_object(
+        'transaction_id', 'TX-PASS-1',
+        'reference', reference_value,
+        'status', 'APPROVED',
+        'amount', 80000,
+        'currency', 'COP',
+        'method', 'CARD'
+    ));
+    if (result ->> 'applied')::boolean is not true then
+        raise exception 'the approved renewal was not applied: %', result;
+    end if;
+
+    select * into offer_rec from public.pass_renewal_offers where id = offer_id;
+    if offer_rec.status <> 'paid' or offer_rec.renewal_pass_id is null then
+        raise exception 'the offer is not paid: %', offer_rec;
+    end if;
+
+    select * into child from public.monthly_passes where id = offer_rec.renewal_pass_id;
+    if child.renewed_from_id <> parent then
+        raise exception 'the child pass does not point to the parent';
+    end if;
+    if child.start_date <> current_date then
+        raise exception 'a late payment did not start today: %', child.start_date;
+    end if;
+    if not child.active then
+        raise exception 'the renewed pass is not active';
+    end if;
+
+    select * into payment from public.monthly_pass_payments
+     where monthly_pass_id = child.id;
+    if payment.status <> 'paid' or payment.payment_method <> 'online'
+       or payment.paid_at is null or payment.paid_by is not null
+       or payment.shift_id is not null then
+        raise exception 'the renewal charge is wrong: %', payment;
+    end if;
+end $$;
+
+-- pass-renewal: settle notifies lot members once
+do $$
+declare
+    offer_id bigint := current_setting('app.pr_offer16')::bigint;
+    members integer;
+    notified integer;
+begin
+    select count(*) into members
+      from public.lot_members lm join public.users u on u.id = lm.user_id
+     where lm.lot_id = 1 and u.is_active;
+    select count(*) into notified
+      from public.notifications n
+     where n.type = 'pass_renewal_paid'
+       and n.dedupe_key like 'pass_renewal_paid:' || offer_id || ':%';
+    if notified <> members then
+        raise exception 'the renewal notified % of % members', notified, members;
+    end if;
+    perform public.apply_payment_event('wompi', jsonb_build_object(
+        'transaction_id', 'TX-PASS-1',
+        'reference', current_setting('app.pr_ref16'),
+        'status', 'APPROVED',
+        'amount', 80000,
+        'currency', 'COP'
+    ));
+    if (select count(*) from public.notifications n
+         where n.type = 'pass_renewal_paid'
+           and n.dedupe_key like 'pass_renewal_paid:' || offer_id || ':%') <> members then
+        raise exception 'a duplicate approval notified twice';
+    end if;
+end $$;
+
+-- pass-renewal: settle child with a pending payment is marked paid, no new pass
+do $$
+declare
+    parent bigint := current_setting('app.pr_RENW13')::bigint;
+    child bigint;
+    offer_id bigint;
+    reference_value text := 'PM-RENEW-CHILD';
+    before_passes integer;
+    result jsonb;
+begin
+    select id into child from public.monthly_passes where renewed_from_id = parent;
+    select count(*) into before_passes from public.monthly_passes;
+
+    insert into public.pass_renewal_offers (
+        lot_id, monthly_pass_id, token, period_start, period_end, amount, expires_at
+    ) values (
+        1, parent, repeat('d', 48), current_date - 9, current_date + 20, 80000,
+        now() + interval '8 days'
+    ) returning id into offer_id;
+
+    insert into public.payment_intents (
+        lot_id, kind, pass_renewal_offer_id, reference, amount, expires_at
+    ) values (
+        1, 'pass', offer_id, reference_value, 80000, now() + interval '30 minutes'
+    );
+
+    result := public.apply_payment_event('wompi', jsonb_build_object(
+        'transaction_id', 'TX-PASS-CHILD',
+        'reference', reference_value,
+        'status', 'APPROVED',
+        'amount', 80000,
+        'currency', 'COP'
+    ));
+    if (result ->> 'applied')::boolean is not true then
+        raise exception 'the child renewal was not applied: %', result;
+    end if;
+    if (select count(*) from public.monthly_passes) <> before_passes then
+        raise exception 'a second child pass was created';
+    end if;
+    if (select status from public.monthly_pass_payments
+         where monthly_pass_id = child) <> 'paid' then
+        raise exception 'the existing charge was not paid';
+    end if;
+end $$;
+
+-- pass-renewal: settle second approval of the same offer is late_closed
+do $$
+declare
+    offer_id bigint := current_setting('app.pr_offer16')::bigint;
+    result jsonb;
+begin
+    insert into public.payment_intents (
+        lot_id, kind, pass_renewal_offer_id, reference, amount, expires_at
+    ) values (
+        1, 'pass', offer_id, 'PM-RENEW-LATE', 80000, now() + interval '30 minutes'
+    );
+    result := public.apply_payment_event('wompi', jsonb_build_object(
+        'transaction_id', 'TX-PASS-LATE',
+        'reference', 'PM-RENEW-LATE',
+        'status', 'APPROVED',
+        'amount', 80000,
+        'currency', 'COP'
+    ));
+    if result ->> 'outcome' <> 'late_closed' then
+        raise exception 'a second approval was not late_closed: %', result;
+    end if;
+    if not exists (
+        select 1 from public.notifications n
+         where n.type = 'online_payment_review'
+           and n.dedupe_key like 'pass_review:' || offer_id || ':%'
+    ) then
+        raise exception 'the duplicate renewal did not notify the admins';
+    end if;
+end $$;
+
+-- pass-renewal: settle late payment starts the period today
+do $$
+declare
+    parent bigint := current_setting('app.pr_RENW16')::bigint;
+    child public.monthly_passes%rowtype;
+begin
+    select * into child from public.monthly_passes where renewed_from_id = parent;
+    if child.start_date <> current_date then
+        raise exception 'the late renewal did not start today: %', child.start_date;
+    end if;
+end $$;
+
+-- pass-renewal: report lists the pass payment with kind pass
+do $$
+declare
+    report jsonb := public.report_online_payments(current_date, current_date);
+begin
+    if not exists (
+        select 1 from jsonb_array_elements(report -> 'items') item
+         where item ->> 'kind' = 'pass'
+           and item ->> 'reference' = current_setting('app.pr_ref16')
+           and item ->> 'plate' = 'RENW16'
+           and (item ->> 'pass_id')::bigint = current_setting('app.pr_RENW16')::bigint
+           and item -> 'ticket_number' = 'null'::jsonb
+    ) then
+        raise exception 'the online report does not list the renewal: %', report;
+    end if;
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- merchants: fixtures (own category with the design's tariffs)
+-- ---------------------------------------------------------------------------
+insert into public.categories (lot_id, name, capacity)
+values (1, 'merchant', 0)
+returning id;
+do $$
+begin
+    perform set_config('app.merchant_cat', (
+        select id::text from public.categories
+         where lot_id = 1 and name = 'merchant'
+    ), true);
+end $$;
+
+insert into public.tariffs (category_id, lot_id, type, amount, active, start_time, end_time)
+select current_setting('app.merchant_cat')::integer, 1, 'hourly', 3000, true, null, null;
+insert into public.tariffs (category_id, lot_id, type, amount, active, start_time, end_time)
+select current_setting('app.merchant_cat')::integer, 1, 'nightly', 2000, true, '22:00', '06:00';
+insert into public.tariffs (category_id, lot_id, type, amount, active, start_time, end_time)
+select current_setting('app.merchant_cat')::integer, 1, 'daily', 20000, true, null, null;
+update public.parking_settings set lost_ticket_fee = 15000 where lot_id = 1;
+
+insert into public.vehicles (plate, category_id)
+select 'MER' || lpad(n::text, 3, '0'), current_setting('app.merchant_cat')::integer
+  from generate_series(1, 12) as n;
+
+-- F1: 09:00 -> 11:30 local yesterday (3 billable hours = 9000).
+insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+select v.id, 1, 1,
+       (((current_date - 1) + time '09:00') at time zone 'America/Bogota'),
+       'open'
+  from public.vehicles v where v.plate = 'MER001';
+-- F2: 23:00 -> 02:00 (all night, 6000).
+insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+select v.id, 1, 1,
+       (((current_date - 2) + time '23:00') at time zone 'America/Bogota'),
+       'open'
+  from public.vehicles v where v.plate = 'MER002';
+-- F3: a full day (daily cap).
+insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+select v.id, 1, 1,
+       (((current_date - 2) + time '08:00') at time zone 'America/Bogota'),
+       'open'
+  from public.vehicles v where v.plate = 'MER003';
+
+-- Every MER vehicle gets an open session: the checkout/validation tests use
+-- them, several get a merchant validation through the public page.
+insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+select v.id, 1, 1, now() - interval '2 hours', 'open'
+  from public.vehicles v
+ where v.plate in ('MER004','MER005','MER006','MER007','MER008','MER009',
+                   'MER010','MER011','MER012');
+
+do $$
+declare
+    plates text[] := array['MER001','MER002','MER003','MER004','MER005','MER006',
+                          'MER007','MER008','MER009','MER010','MER011','MER012'];
+    plate_value text;
+begin
+    foreach plate_value in array plates loop
+        perform set_config('app.mer_' || plate_value, (
+            select s.id::text from public.parking_sessions s
+              join public.vehicles v on v.id = s.vehicle_id
+             where v.plate = plate_value
+        ), true);
+    end loop;
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- merchants: schema and credentials
+-- ---------------------------------------------------------------------------
+-- merchants: defaults
+do $$
+declare
+    settings public.parking_settings%rowtype;
+begin
+    select * into settings from public.parking_settings where lot_id = 1;
+    if settings.merchant_max_per_session <> 1 then
+        raise exception 'merchant_max_per_session does not default to 1';
+    end if;
+end $$;
+
+-- merchants: constraints
+do $$
+begin
+    begin
+        insert into public.merchants (lot_id, name, benefit_kind, benefit_value)
+        values (1, 'Bad pct', 'percentage', 101);
+        raise exception 'a 101 percent benefit was accepted';
+    exception when check_violation then null;
+    end;
+    begin
+        insert into public.merchants (lot_id, name, benefit_kind, benefit_value)
+        values (1, 'Bad minutes', 'free_minutes', 0);
+        raise exception '0 free minutes was accepted';
+    exception when check_violation then null;
+    end;
+    begin
+        insert into public.merchants (lot_id, name, benefit_kind, benefit_value, billing_mode)
+        values (1, 'Bad billing', 'percentage', 10, 'free');
+        raise exception 'an unknown billing mode was accepted';
+    exception when check_violation then null;
+    end;
+    begin
+        insert into public.merchants (lot_id, name, benefit_kind, benefit_value, daily_cap)
+        values (1, 'Bad cap', 'percentage', 10, 0);
+        raise exception 'a daily cap of 0 was accepted';
+    exception when check_violation then null;
+    end;
+end $$;
+
+-- merchants: create returns credentials once
+do $$
+declare
+    result jsonb;
+    saved_id integer;
+    stored public.merchant_credentials%rowtype;
+begin
+    result := public.save_merchant('Cafe Uno', 'percentage', 10, null,
+        'merchant_paid', null, null, true, null);
+    saved_id := (result -> 'merchant' ->> 'id')::integer;
+    if result -> 'credentials' ->> 'token' !~ '^[0-9a-f]{48}$' then
+        raise exception 'the token is not 48 hex chars: %', result;
+    end if;
+    if result -> 'credentials' ->> 'pin' !~ '^[0-9]{6}$' then
+        raise exception 'the PIN is not 6 digits: %', result;
+    end if;
+    if result -> 'credentials' ->> 'link_path'
+       <> '/validate?m=' || (result -> 'credentials' ->> 'token') then
+        raise exception 'the link path is wrong: %', result;
+    end if;
+
+    select * into stored from public.merchant_credentials c where c.merchant_id = saved_id;
+    if stored.token_hash = result -> 'credentials' ->> 'token'
+       or stored.pin_hash = result -> 'credentials' ->> 'pin'
+       or length(stored.token_hash) <> 64 then
+        raise exception 'the credentials are not hashed';
+    end if;
+    if exists (
+        select 1 from jsonb_array_elements(public.list_merchants()) item
+         where item ? 'credentials' or item ? 'pin' or item ? 'token'
+    ) then
+        raise exception 'the merchant list leaks credentials';
+    end if;
+    perform set_config('app.merchant_id', saved_id::text, true);
+    perform set_config('app.merchant_token', result -> 'credentials' ->> 'token', true);
+    perform set_config('app.merchant_pin', result -> 'credentials' ->> 'pin', true);
+end $$;
+
+-- merchants: duplicate name
+do $$
+begin
+    begin
+        perform public.save_merchant('Cafe Uno', 'fixed_amount', 1000, null,
+            'merchant_paid', null, null, true, null);
+        raise exception 'a duplicate name was accepted';
+    exception when others then
+        if sqlerrm not like '%DuplicateMerchantError%' then raise; end if;
+    end;
+    begin
+        perform public.save_merchant('X', 'percentage', 10, null, 'merchant_paid',
+            null, null, true, null);
+        raise exception 'a one-character name was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+end $$;
+
+-- merchants: update keeps credentials
+do $$
+declare
+    saved_id integer := current_setting('app.merchant_id')::integer;
+    before_hash text;
+    result jsonb;
+begin
+    select c.token_hash into before_hash from public.merchant_credentials c
+     where c.merchant_id = saved_id;
+    result := public.save_merchant('Cafe Uno Renombrado', 'fixed_amount', 2000,
+        1500, 'courtesy', 20, 100, true, saved_id);
+    if (result -> 'credentials') <> 'null'::jsonb then
+        raise exception 'an update returned credentials';
+    end if;
+    if (result -> 'merchant' ->> 'name') <> 'Cafe Uno Renombrado'
+       or (result -> 'merchant' ->> 'billing_mode') <> 'courtesy' then
+        raise exception 'the update did not apply: %', result;
+    end if;
+    if (select c.token_hash from public.merchant_credentials c where c.merchant_id = saved_id)
+       <> before_hash then
+        raise exception 'the update rotated the token';
+    end if;
+end $$;
+
+-- merchants: reset pin and rotate token
+do $$
+declare
+    saved_id integer := current_setting('app.merchant_id')::integer;
+    old_token_hash text;
+    result jsonb;
+begin
+    select c.token_hash into old_token_hash from public.merchant_credentials c
+     where c.merchant_id = saved_id;
+    result := public.reset_merchant_credentials(saved_id, false);
+    if result ->> 'pin' !~ '^[0-9]{6}$'
+       or (result -> 'token') <> 'null'::jsonb then
+        raise exception 'a PIN reset returned a token: %', result;
+    end if;
+    if (select c.token_hash from public.merchant_credentials c where c.merchant_id = saved_id)
+       <> old_token_hash then
+        raise exception 'a PIN reset changed the token';
+    end if;
+
+    result := public.reset_merchant_credentials(saved_id, true);
+    if result ->> 'token' !~ '^[0-9a-f]{48}$' then
+        raise exception 'the token rotation did not return a token: %', result;
+    end if;
+    if (select c.token_hash from public.merchant_credentials c where c.merchant_id = saved_id)
+       = old_token_hash then
+        raise exception 'the token rotation kept the old hash';
+    end if;
+    if (select credentials_version from public.merchants where id = saved_id) <> 3 then
+        raise exception 'credentials_version was not bumped';
+    end if;
+    perform set_config('app.merchant_pin', result ->> 'pin', true);
+    perform set_config('app.merchant_token', result ->> 'token', true);
+end $$;
+
+-- merchants: anon cannot read the tables
+set local role anon;
+do $$
+begin
+    begin
+        perform count(*) from public.merchants;
+        raise exception 'anon read the merchants';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform count(*) from public.merchant_validations;
+        raise exception 'anon read the validations';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform count(*) from public.merchant_credentials;
+        raise exception 'anon read the credentials';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
+-- merchants: authenticated cannot read credentials
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+begin
+    begin
+        perform count(*) from public.merchant_credentials;
+        raise exception 'an authenticated user read the credentials';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
+-- merchants: operator cannot manage
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+declare
+    merchant_id integer := current_setting('app.merchant_id')::integer;
+begin
+    begin
+        perform public.save_merchant('Otro', 'percentage', 10, null, 'merchant_paid',
+            null, null, true, null);
+        raise exception 'an operator saved a merchant';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+    begin
+        perform public.list_merchants();
+        raise exception 'an operator listed the merchants admin view';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+    begin
+        perform public.reset_merchant_credentials(merchant_id, true);
+        raise exception 'an operator reset credentials';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+    begin
+        perform public.delete_merchant(merchant_id);
+        raise exception 'an operator deleted a merchant';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+    begin
+        perform public.set_merchant_policy(3);
+        raise exception 'an operator changed the policy';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+    if jsonb_array_length(public.list_active_merchants()) < 1 then
+        raise exception 'an operator cannot list the active merchants';
+    end if;
+end $$;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- merchants: policy
+do $$
+begin
+    if (public.set_merchant_policy(3) ->> 'max_per_session')::integer <> 3 then
+        raise exception 'the policy was not saved';
+    end if;
+    begin
+        perform public.set_merchant_policy(6);
+        raise exception 'a policy of 6 was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+    perform public.set_merchant_policy(1);
+end $$;
+
+-- merchants: audit hides secrets
+do $$
+begin
+    if not exists (
+        select 1 from public.audit_log a
+         where a.table_name = 'merchants' and a.action in ('insert', 'update')
+    ) then
+        raise exception 'the merchant changes were not audited';
+    end if;
+    if exists (
+        select 1 from public.audit_log a
+         where a.table_name = 'merchants'
+           and (a.before::text like '%hash%' or a.after::text like '%hash%'
+                or a.after::text like '%token%')
+    ) then
+        raise exception 'the merchant audit leaked credentials';
+    end if;
+end $$;
+
+-- merchants: member sees own lot only
+insert into public.merchants (lot_id, name, benefit_kind, benefit_value)
+values (2, 'Cafe Dos', 'percentage', 20);
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+begin
+    if exists (select 1 from public.merchants where name = 'Cafe Dos') then
+        raise exception 'a lot 1 admin read a lot 2 merchant';
+    end if;
+end $$;
+reset role;
+
+-- ---------------------------------------------------------------------------
+-- merchants: fare_quote
+-- ---------------------------------------------------------------------------
+-- quote: no merchants equals billing
+do $$
+declare
+    s integer := current_setting('app.mer_MER001')::integer;
+    exit_at timestamptz := ((current_date - 1) + time '11:30') at time zone 'America/Bogota';
+    quote jsonb := public.fare_quote(s, exit_at, 0, false);
+begin
+    if (quote ->> 'base_amount')::integer <> 9000
+       or (quote ->> 'gross')::integer <> 9000 then
+        raise exception 'the base fare is wrong: %', quote;
+    end if;
+    if jsonb_array_length(quote -> 'adjustments') <> 0
+       or (quote ->> 'amount_due')::integer <> 9000 then
+        raise exception 'an empty quote changed the amount: %', quote;
+    end if;
+    if (quote -> 'pricing') <> 'null'::jsonb or (quote -> 'reward') <> 'null'::jsonb then
+        raise exception 'the default hooks are not no-ops: %', quote;
+    end if;
+end $$;
+
+-- quote: percentage rounds half up and clamps to the running amount
+do $$
+declare
+    s integer := current_setting('app.mer_MER001')::integer;
+    exit_at timestamptz := ((current_date - 1) + time '11:30') at time zone 'America/Bogota';
+    merchant_id integer := current_setting('app.merchant_id')::integer;
+    validation jsonb;
+    quote jsonb;
+begin
+    perform public.save_merchant('Media', 'percentage', 50, null, 'merchant_paid',
+        null, null, true, null);
+    select id into merchant_id from public.merchants where name = 'Media';
+    validation := public.create_merchant_validation(merchant_id, s, 'public', null);
+    quote := public.fare_quote(s, exit_at, 0, false);
+    if (quote ->> 'adjustments_total')::integer <> 4500
+       or (quote ->> 'amount_due')::integer <> 4500 then
+        raise exception 'the 50%% benefit is wrong: %', quote;
+    end if;
+    if (quote -> 'adjustments' -> 0 ->> 'type') <> 'merchant'
+       or (quote -> 'adjustments' -> 0 ->> 'ref_id')::bigint <> (validation ->> 'validation_id')::bigint then
+        raise exception 'the adjustment line is wrong: %', quote;
+    end if;
+end $$;
+
+-- quote: fixed amount capped by the running amount and max_amount
+do $$
+declare
+    s integer := current_setting('app.mer_MER002')::integer;
+    exit_at timestamptz := ((current_date - 1) + time '02:00') at time zone 'America/Bogota';
+    merchant_id integer;
+    quote jsonb;
+begin
+    insert into public.merchants (lot_id, name, benefit_kind, benefit_value, max_amount)
+    values (1, 'Tope', 'fixed_amount', 5000, 2000) returning id into merchant_id;
+    perform public.create_merchant_validation(merchant_id, s, 'public', null);
+    quote := public.fare_quote(s, exit_at, 0, false);
+    if (quote ->> 'base_amount')::integer <> 6000 then
+        raise exception 'the night fare is wrong: %', quote;
+    end if;
+    if (quote ->> 'adjustments_total')::integer <> 2000
+       or (quote ->> 'amount_due')::integer <> 4000 then
+        raise exception 'the capped fixed benefit is wrong: %', quote;
+    end if;
+end $$;
+
+-- quote: free minutes shorten the stay
+do $$
+declare
+    s integer;
+    exit_at timestamptz := ((current_date - 1) + time '11:30') at time zone 'America/Bogota';
+    merchant_id integer;
+    quote jsonb;
+begin
+    insert into public.vehicles (plate, category_id)
+    select 'MER013', current_setting('app.merchant_cat')::integer;
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, 1,
+           (((current_date - 1) + time '09:00') at time zone 'America/Bogota'),
+           'open'
+      from public.vehicles v where v.plate = 'MER013'
+    returning id into s;
+
+    insert into public.merchants (lot_id, name, benefit_kind, benefit_value)
+    values (1, 'Minutos', 'free_minutes', 30) returning id into merchant_id;
+    perform public.create_merchant_validation(merchant_id, s, 'public', null);
+    quote := public.fare_quote(s, exit_at, 0, false);
+    if (quote ->> 'base_amount')::integer <> 9000 then
+        raise exception 'the base fare changed: %', quote;
+    end if;
+    if (quote ->> 'adjustments_total')::integer <> 3000
+       or (quote ->> 'amount_due')::integer <> 6000 then
+        raise exception 'the free-minutes benefit is wrong: %', quote;
+    end if;
+end $$;
+
+-- quote: manual discount is applied last
+do $$
+declare
+    s integer := current_setting('app.mer_MER002')::integer;
+    exit_at timestamptz := ((current_date - 1) + time '02:00') at time zone 'America/Bogota';
+    quote jsonb;
+begin
+    quote := public.fare_quote(s, exit_at, 500, false);
+    if (quote ->> 'discount_amount')::integer <> 500
+       or (quote ->> 'amount_due')::integer <> 3500 then
+        raise exception 'the manual discount is wrong: %', quote;
+    end if;
+    begin
+        perform public.fare_quote(s, exit_at, 999999, false);
+        raise exception 'a discount above the running amount was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDiscountError%' then raise; end if;
+    end;
+end $$;
+
+-- quote: only pending validations count
+do $$
+declare
+    s integer := current_setting('app.mer_MER004')::integer;
+    exit_at timestamptz := now();
+    merchant_id integer;
+    created jsonb;
+    quote jsonb;
+begin
+    insert into public.merchants (lot_id, name, benefit_kind, benefit_value)
+    values (1, 'Revocada', 'fixed_amount', 1000) returning id into merchant_id;
+    created := public.create_merchant_validation(merchant_id, s, 'desk', 1);
+    update public.merchant_validations set status = 'revoked',
+           revoked_at = now(), revoke_reason = 'prueba'
+     where id = (created ->> 'validation_id')::bigint;
+    quote := public.fare_quote(s, exit_at, 0, false);
+    if (quote ->> 'adjustments_total')::integer <> 0 then
+        raise exception 'a revoked validation was applied: %', quote;
+    end if;
+end $$;
+
+-- quote: pass holder pays nothing and no line applies
+do $$
+declare
+    s integer := current_setting('app.mer_MER005')::integer;
+    merchant_id integer;
+    quote jsonb;
+begin
+    insert into public.monthly_passes (vehicle_id, lot_id, start_date, end_date, amount, active)
+    select v.id, 1, current_date - 1, current_date + 29, 80000, true
+      from public.vehicles v where v.plate = 'MER005';
+    insert into public.merchants (lot_id, name, benefit_kind, benefit_value)
+    values (1, 'Pasero', 'percentage', 50) returning id into merchant_id;
+    insert into public.merchant_validations (lot_id, merchant_id, session_id, source, terms)
+    select 1, merchant_id, s, 'public',
+           jsonb_build_object('merchant_name', 'Pasero', 'benefit_kind', 'percentage',
+                              'benefit_value', 50, 'max_amount', null,
+                              'billing_mode', 'merchant_paid');
+    quote := public.fare_quote(s, now(), 0, false);
+    if (quote ->> 'has_pass')::boolean is not true
+       or (quote ->> 'amount_due')::integer <> 0
+       or jsonb_array_length(quote -> 'adjustments') <> 0 then
+        raise exception 'a pass holder quote is wrong: %', quote;
+    end if;
+end $$;
+
+-- quote: lost ticket ignores the benefits
+do $$
+declare
+    s integer := current_setting('app.mer_MER006')::integer;
+    quote jsonb;
+begin
+    insert into public.merchant_validations (lot_id, merchant_id, session_id, source, terms)
+    select 1, id, s, 'public',
+           jsonb_build_object('merchant_name', name, 'benefit_kind', benefit_kind,
+                              'benefit_value', benefit_value, 'max_amount', max_amount,
+                              'billing_mode', billing_mode)
+      from public.merchants where name = 'Media';
+    quote := public.fare_quote(s, now(), 0, true);
+    if (quote ->> 'gross')::integer < 15000
+       or jsonb_array_length(quote -> 'adjustments') <> 0 then
+        raise exception 'a lost ticket quote is wrong: %', quote;
+    end if;
+end $$;
+
+-- quote: hook replaced is honoured
+do $$
+declare
+    s integer := current_setting('app.mer_MER007')::integer;
+    exit_at timestamptz := now() - interval '30 minutes';
+    base integer;
+    quote jsonb;
+    original text;
+begin
+    base := (public.fare_breakdown(current_setting('app.merchant_cat')::integer,
+        (select entry_time from public.parking_sessions where id = s), exit_at, false) ->> 'amount')::integer;
+    -- Capture whatever the current hook is (the no-op today, the dynamic
+    -- pricing implementation after that change lands) and restore exactly it.
+    select pg_get_functiondef('public.fare_pricing_step(integer,integer)'::regprocedure)
+      into original;
+    create or replace function public.fare_pricing_step(p_session_id integer, p_base integer)
+    returns jsonb language sql stable set search_path = public
+    as $f$ select jsonb_build_object('amount', p_base * 12 / 10, 'pricing', jsonb_build_object('multiplier_bps', 12000)); $f$;
+    quote := public.fare_quote(s, exit_at, 0, false);
+    if (quote ->> 'gross')::integer <> base * 12 / 10
+       or (quote -> 'pricing' ->> 'multiplier_bps')::integer <> 12000 then
+        raise exception 'the pricing hook was not honoured: %', quote;
+    end if;
+    execute original;
+end $$;
+
+-- quote: not executable by api roles
+set local role authenticated;
+do $$
+begin
+    begin
+        perform public.fare_quote(1, now(), 0, false);
+        raise exception 'an authenticated user called fare_quote';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
+-- quote: unknown session
+do $$
+begin
+    begin
+        perform public.fare_quote(999999, now(), 0, false);
+        raise exception 'an unknown session was quoted';
+    exception when others then
+        if sqlerrm not like '%SessionNotFoundError%' then raise; end if;
+    end;
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- merchants: validations, PIN guard and public page
+-- ---------------------------------------------------------------------------
+-- validate: public registers a pending validation
+do $$
+declare
+    token_value text := current_setting('app.merchant_token');
+    pin_value text := current_setting('app.merchant_pin');
+    result jsonb;
+    stored public.merchant_validations%rowtype;
+begin
+    result := public.merchant_validate(token_value, pin_value, ' mer 009 ');
+    if result ->> 'status' <> 'registered' then
+        raise exception 'the public validation was not registered: %', result;
+    end if;
+    select * into stored from public.merchant_validations
+     where session_id = current_setting('app.mer_MER009')::integer;
+    if stored.status <> 'pending' or stored.source <> 'public'
+       or stored.created_by is not null then
+        raise exception 'the validation row is wrong: %', stored;
+    end if;
+    if stored.terms ->> 'merchant_name' is null then
+        raise exception 'the terms snapshot is missing';
+    end if;
+    if result ? 'session_id' or result ? 'plate' or result ? 'amount' then
+        raise exception 'the public validation leaked data: %', result;
+    end if;
+end $$;
+
+-- validate: wrong PIN persists the counter and locks after five
+do $$
+declare
+    token_value text := current_setting('app.merchant_token');
+    result jsonb;
+    failures integer;
+begin
+    result := public.merchant_validate(token_value, '000000', 'MER009');
+    if result ->> 'status' <> 'invalid_pin'
+       or (result ->> 'attempts_left')::integer <> 4 then
+        raise exception 'a wrong PIN was not counted: %', result;
+    end if;
+    select pin_failures into failures from public.merchant_credentials
+     where token_hash = public.merchant_hash_token(token_value);
+    if failures <> 1 then
+        raise exception 'the PIN failures were rolled back: %', failures;
+    end if;
+
+    perform public.merchant_validate(token_value, '111111', 'MER009');
+    perform public.merchant_validate(token_value, '222222', 'MER009');
+    perform public.merchant_validate(token_value, '333333', 'MER009');
+    result := public.merchant_validate(token_value, '444444', 'MER009');
+    if result ->> 'status' <> 'locked' or result ->> 'locked_until' is null then
+        raise exception 'the merchant was not locked after five: %', result;
+    end if;
+    result := public.merchant_validate(
+        token_value, current_setting('app.merchant_pin'), 'MER009'
+    );
+    if result ->> 'status' <> 'locked' then
+        raise exception 'a locked merchant accepted the right PIN: %', result;
+    end if;
+    update public.merchant_credentials
+       set locked_until = now() - interval '1 second'
+     where token_hash = public.merchant_hash_token(token_value);
+    result := public.merchant_validate(
+        token_value, current_setting('app.merchant_pin'), 'MER010'
+    );
+    if result ->> 'status' <> 'registered' then
+        raise exception 'the unlocked merchant did not validate: %', result;
+    end if;
+end $$;
+
+-- validate: unknown token, portal and grants
+set local role anon;
+do $$
+declare
+    token_value text := current_setting('app.merchant_token');
+    portal jsonb;
+begin
+    begin
+        perform public.merchant_validate(repeat('f', 48), '123456', 'MER009');
+        raise exception 'an unknown token was accepted';
+    exception when others then
+        if sqlerrm not like '%MerchantNotFoundError%' then raise; end if;
+    end;
+    portal := public.merchant_portal(token_value);
+    if portal is null or portal ->> 'merchant_name' is null then
+        raise exception 'the portal did not resolve the token: %', portal;
+    end if;
+    if portal ? 'used_today' or portal ? 'pin' then
+        raise exception 'the portal leaked counters or secrets: %', portal;
+    end if;
+    if public.merchant_portal(repeat('f', 48)) is not null then
+        raise exception 'an unknown token returned a portal';
+    end if;
+    if has_function_privilege('anon', 'public.create_merchant_validation(integer, integer, text, integer)', 'execute')
+       or has_function_privilege('anon', 'public.save_merchant(text, text, integer, integer, text, integer, integer, boolean, integer)', 'execute') then
+        raise exception 'anon can call an internal merchant RPC';
+    end if;
+end $$;
+reset role;
+
+-- validate: no open session, bad plate and pass holder
+do $$
+declare
+    token_value text := current_setting('app.merchant_token');
+    pin_value text := current_setting('app.merchant_pin');
+begin
+    begin
+        perform public.merchant_validate(token_value, pin_value, 'ZZZ999');
+        raise exception 'a plate without a session was validated';
+    exception when others then
+        if sqlerrm not like '%SessionNotFoundError%' then raise; end if;
+    end;
+    begin
+        perform public.merchant_validate(token_value, pin_value, 'x');
+        raise exception 'an invalid plate was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidPlateError%' then raise; end if;
+    end;
+    begin
+        perform public.merchant_validate(token_value, pin_value, 'MER005');
+        raise exception 'a pass holder was validated';
+    exception when others then
+        if sqlerrm not like '%SessionNotEligibleError%' then raise; end if;
+    end;
+end $$;
+
+-- validate: already validated, per session limit and daily cap
+do $$
+declare
+    token_value text := current_setting('app.merchant_token');
+    pin_value text := current_setting('app.merchant_pin');
+    merchant_id integer := current_setting('app.merchant_id')::integer;
+begin
+    begin
+        perform public.merchant_validate(token_value, pin_value, 'MER009');
+        raise exception 'a duplicate validation was accepted';
+    exception when others then
+        if sqlerrm not like '%AlreadyValidatedError%' then raise; end if;
+    end;
+
+    update public.parking_settings set merchant_max_per_session = 0 where lot_id = 1;
+    begin
+        perform public.merchant_validate(token_value, pin_value, 'MER011');
+        raise exception 'the per-vehicle limit was ignored';
+    exception when others then
+        if sqlerrm not like '%MerchantLimitError%' then raise; end if;
+    end;
+    update public.parking_settings set merchant_max_per_session = 1 where lot_id = 1;
+
+    update public.merchants set daily_cap = 1 where id = merchant_id;
+    begin
+        perform public.merchant_validate(token_value, pin_value, 'MER011');
+        raise exception 'the daily cap was ignored';
+    exception when others then
+        if sqlerrm not like '%MerchantCapError%' then raise; end if;
+    end;
+    update public.merchants set daily_cap = null where id = merchant_id;
+end $$;
+
+-- validate: the anonymous page records a validation without an actor
+set local request.jwt.claim.sub = '';
+set local role anon;
+do $$
+declare
+    result jsonb;
+begin
+    result := public.merchant_validate(
+        current_setting('app.merchant_token'),
+        current_setting('app.merchant_pin'),
+        'MER008'
+    );
+    if result ->> 'status' <> 'registered' then
+        raise exception 'the anonymous validation failed: %', result;
+    end if;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+begin
+    if not exists (
+        select 1 from public.audit_log a
+         where a.table_name = 'merchant_validations'
+           and a.action = 'insert'
+           and a.actor_id is null
+           and (a.after ->> 'session_id') = current_setting('app.mer_MER008')
+    ) then
+        raise exception 'the public validation was not audited without an actor';
+    end if;
+end $$;
+
+-- desk: operator adds a validation in own lot and gets the quote
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+declare
+    result jsonb;
+begin
+    result := public.add_merchant_validation(
+        current_setting('app.merchant_id')::integer,
+        current_setting('app.mer_MER011')::integer
+    );
+    if result ->> 'status' <> 'pending' or result -> 'quote' is null then
+        raise exception 'the desk validation is wrong: %', result;
+    end if;
+    if (select source from public.merchant_validations
+         where id = (result ->> 'validation_id')::bigint) <> 'desk' then
+        raise exception 'the desk source was not recorded';
+    end if;
+    if (select created_by from public.merchant_validations
+         where id = (result ->> 'validation_id')::bigint) <> 2 then
+        raise exception 'the desk actor was not recorded';
+    end if;
+end $$;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- desk: other lot session and closed session are refused
+do $$
+begin
+    begin
+        perform public.add_merchant_validation(
+            current_setting('app.merchant_id')::integer,
+            current_setting('app.online_closed')::integer
+        );
+        raise exception 'a closed session got a validation';
+    exception when others then
+        if sqlerrm not like '%SessionNotFoundError%' then raise; end if;
+    end;
+end $$;
+
+-- revoke: reason, state and admin permission
+do $$
+declare
+    validation_id bigint;
+    other_lot_merchant integer;
+begin
+    select id into validation_id
+      from public.merchant_validations
+     where session_id = current_setting('app.mer_MER011')::integer;
+    begin
+        perform public.revoke_merchant_validation(validation_id, 'ab');
+        raise exception 'a 2-character reason was accepted';
+    exception when others then
+        if sqlerrm not like '%RevokeReasonRequiredError%' then raise; end if;
+    end;
+    perform public.revoke_merchant_validation(validation_id, 'prueba de humo');
+    if (select status from public.merchant_validations where id = validation_id) <> 'revoked' then
+        raise exception 'the validation was not revoked';
+    end if;
+    begin
+        perform public.revoke_merchant_validation(validation_id, 'otra vez');
+        raise exception 'a revoked validation was revoked again';
+    exception when others then
+        if sqlerrm not like '%ValidationNotRevocableError%' then raise; end if;
+    end;
+
+    select id into other_lot_merchant from public.merchants where lot_id = 2;
+    begin
+        perform public.revoke_merchant_validation(
+            (select id from public.merchant_validations limit 1) + 1000, 'prueba'
+        );
+        raise exception 'an unknown validation was revoked';
+    exception when others then
+        if sqlerrm not like '%ValidationNotFoundError%' then raise; end if;
+    end;
+end $$;
+
+-- revoke: operator is refused
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    begin
+        perform public.revoke_merchant_validation(
+            (select id from public.merchant_validations where status = 'pending' limit 1),
+            'prueba'
+        );
+        raise exception 'an operator revoked a validation';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+end $$;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- delete: in use and unused
+do $$
+declare
+    used integer := current_setting('app.merchant_id')::integer;
+    fresh integer;
+begin
+    begin
+        perform public.delete_merchant(used);
+        raise exception 'a merchant with validations was deleted';
+    exception when others then
+        if sqlerrm not like '%MerchantInUseError%' then raise; end if;
+    end;
+    insert into public.merchants (lot_id, name, benefit_kind, benefit_value)
+    values (1, 'Temporal', 'percentage', 10) returning id into fresh;
+    perform public.delete_merchant(fresh);
+    if exists (select 1 from public.merchants where id = fresh) then
+        raise exception 'an unused merchant was not deleted';
+    end if;
+    begin
+        perform public.delete_merchant(fresh);
+        raise exception 'a deleted merchant was deleted again';
+    exception when others then
+        if sqlerrm not like '%MerchantNotFoundError%' then raise; end if;
+    end;
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- merchants: check-out integration
+-- ---------------------------------------------------------------------------
+-- checkout: applies the pending validation and stores the lines
+do $$
+declare
+    s integer := current_setting('app.mer_MER009')::integer;
+    merchant_id integer;
+    result jsonb;
+    stored public.parking_sessions%rowtype;
+    line jsonb;
+begin
+    merchant_id := current_setting('app.merchant_id')::integer;
+    result := public.check_out(s, null, null, 'cash');
+    select * into stored from public.parking_sessions where id = s;
+    if stored.gross_amount is null or jsonb_array_length(stored.fare_adjustments) <> 1 then
+        raise exception 'the check-out did not store the lines: %', stored;
+    end if;
+    line := stored.fare_adjustments -> 0;
+    if (line ->> 'type') <> 'merchant' then
+        raise exception 'the stored line is wrong: %', line;
+    end if;
+    if stored.amount_charged <> stored.gross_amount - (line ->> 'amount')::integer then
+        raise exception 'the charge does not match the lines: % / %',
+            stored.amount_charged, stored.gross_amount;
+    end if;
+    if (select status from public.merchant_validations
+         where session_id = s) <> 'applied' then
+        raise exception 'the validation was not marked applied';
+    end if;
+    if (select amount from public.merchant_validations where session_id = s)
+       <> (line ->> 'amount')::integer then
+        raise exception 'the validation amount does not match the line';
+    end if;
+    if (result ->> 'gross_amount')::integer <> stored.gross_amount
+       or jsonb_array_length(result -> 'fare_adjustments') <> 1 then
+        raise exception 'the receipt does not carry the lines: %', result;
+    end if;
+end $$;
+
+-- checkout: the stored terms are the snapshot, not the live merchant
+do $$
+declare
+    s integer := current_setting('app.mer_MER010')::integer;
+    result jsonb;
+begin
+    update public.merchants
+       set benefit_kind = 'fixed_amount', benefit_value = 1
+     where id = current_setting('app.merchant_id')::integer;
+    result := public.check_out(s, null, null, 'cash');
+    if (result -> 'fare_adjustments' -> 0 ->> 'amount')::integer <> 1500 then
+        raise exception 'the snapshot was not used: %', result;
+    end if;
+    if (result ->> 'amount_charged')::integer
+       <> (result ->> 'gross_amount')::integer - 1500 then
+        raise exception 'the charge does not apply the snapshot: %', result;
+    end if;
+end $$;
+
+-- checkout: a benefit that saves nothing forfeits the validation
+do $$
+declare
+    s integer;
+    merchant_id integer;
+    result jsonb;
+begin
+    insert into public.vehicles (plate, category_id)
+    select 'MER014', current_setting('app.merchant_cat')::integer;
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, 1, now() - interval '2 hours 40 minutes', 'open'
+      from public.vehicles v where v.plate = 'MER014'
+    returning id into s;
+    insert into public.merchants (lot_id, name, benefit_kind, benefit_value)
+    values (1, 'Minutos justos', 'free_minutes', 30) returning id into merchant_id;
+    perform public.create_merchant_validation(merchant_id, s, 'public', null);
+
+    result := public.check_out(s, null, null, 'cash');
+    if jsonb_array_length(result -> 'fare_adjustments') <> 0 then
+        raise exception 'a zero benefit produced a line: %', result;
+    end if;
+    if (select status from public.merchant_validations where session_id = s) <> 'forfeited' then
+        raise exception 'a zero benefit did not forfeit the validation';
+    end if;
+end $$;
+
+-- checkout: lost ticket forfeits the validation and keeps the manual discount
+do $$
+declare
+    s integer := current_setting('app.mer_MER012')::integer;
+    merchant_id integer := current_setting('app.merchant_id')::integer;
+    result jsonb;
+begin
+    perform public.create_merchant_validation(merchant_id, s, 'public', null);
+    result := public.check_out(s, null, null, 'cash', 1000, 'cortesia', true, 'perdido');
+    if (result ->> 'gross_amount')::integer < 15000
+       or (result ->> 'discount_amount')::integer <> 1000 then
+        raise exception 'the lost ticket check-out is wrong: %', result;
+    end if;
+    if (select status from public.merchant_validations where session_id = s) <> 'forfeited' then
+        raise exception 'a lost ticket did not forfeit the validation';
+    end if;
+end $$;
+
+-- checkout: preview exposes the quote and the amount due
+do $$
+declare
+    s integer := current_setting('app.mer_MER004')::integer;
+    preview jsonb;
+begin
+    preview := public.check_out_preview(s);
+    if preview -> 'quote' is null
+       or preview ->> 'gross' is null
+       or preview ? 'adjustments' = false then
+        raise exception 'the preview does not carry the quote: %', preview;
+    end if;
+    if (preview ->> 'amount')::integer <> (preview -> 'quote' ->> 'gross')::integer then
+        raise exception 'the preview amount is not the gross: %', preview;
+    end if;
+end $$;
+
+-- checkout: the public summary exposes the adjustments
+set local role anon;
+do $$
+declare
+    s bigint := current_setting('app.mer_MER009')::bigint;
+    summary jsonb;
+begin
+    summary := public.public_session_summary(s, 'MER009');
+    if summary is null then
+        raise exception 'the public summary did not answer';
+    end if;
+    if summary ->> 'adjustments' is null
+       or (summary ->> 'gross')::integer <= 0 then
+        raise exception 'the public summary hides the lines: %', summary;
+    end if;
+    if summary ? 'quote' and summary -> 'quote' <> 'null'::jsonb then
+        raise exception 'a closed summary leaked an open quote: %', summary;
+    end if;
+end $$;
+reset role;
+
+-- checkout: history carries the gross and the lines
+do $$
+declare
+    history jsonb := public.vehicle_history('MER009');
+begin
+    if history -> 'sessions' -> 0 ->> 'gross_amount' is null
+       or history -> 'sessions' -> 0 -> 'fare_adjustments' is null then
+        raise exception 'the history does not carry the fare lines: %', history;
+    end if;
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- merchants: settlement report
+-- ---------------------------------------------------------------------------
+-- settlement: sums by basis and keeps merchants without activity
+do $$
+declare
+    report jsonb;
+    row_item jsonb;
+begin
+    report := public.report_merchant_settlement(current_date - 7, current_date);
+    if report ->> 'from' is null or report -> 'totals' is null then
+        raise exception 'the settlement shape is wrong: %', report;
+    end if;
+    select item into row_item
+      from jsonb_array_elements(report -> 'merchants') item
+     where item ->> 'merchant_id' = current_setting('app.merchant_id');
+    if row_item is null then
+        raise exception 'the merchant is missing from the settlement: %', report;
+    end if;
+    if (row_item ->> 'applied')::integer < 1 then
+        raise exception 'the settlement did not count the applied validations: %', row_item;
+    end if;
+    if (row_item ->> 'pending_now')::integer < 0 then
+        raise exception 'the pending count is wrong: %', row_item;
+    end if;
+    if not exists (
+        select 1 from jsonb_array_elements(report -> 'merchants') item
+         where item ->> 'name' = 'Tope'
+    ) then
+        raise exception 'a merchant without activity is missing: %', report;
+    end if;
+end $$;
+
+-- settlement: bad range, operator and other lot
+do $$
+begin
+    begin
+        perform public.report_merchant_settlement(current_date, current_date - 1);
+        raise exception 'an inverted range was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidReportRangeError%' then raise; end if;
+    end;
+end $$;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    begin
+        perform public.report_merchant_settlement(current_date - 7, current_date);
+        raise exception 'an operator read the settlement';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+end $$;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- ---------------------------------------------------------------------------
+-- pricing: fixtures (own lot, no drawn bays: capacity comes from settings)
+-- ---------------------------------------------------------------------------
+insert into public.parking_lots (code, name, address, timezone)
+values ('PRC', 'Pricing Lot', 'Calle 3', 'America/Bogota')
+returning id;
+
+do $$
+begin
+    perform set_config('app.pricing_lot', (
+        select id::text from public.parking_lots where code = 'PRC'
+    ), true);
+end $$;
+
+insert into public.parking_settings (
+    lot_id, name, car_capacity, moto_capacity, pricing_enabled,
+    pricing_floor_bps, pricing_ceiling_bps, pricing_round_to
+)
+select current_setting('app.pricing_lot')::integer, 'Pricing Lot', 20, 5, true,
+       8000, 15000, 1;
+
+insert into public.lot_members (lot_id, user_id, role)
+select current_setting('app.pricing_lot')::integer, 1, 'admin'
+union all
+select current_setting('app.pricing_lot')::integer, 2, 'operator';
+
+insert into public.categories (lot_id, name, capacity)
+select current_setting('app.pricing_lot')::integer, 'car', 0;
+
+insert into public.tariffs (category_id, lot_id, type, amount, active, start_time, end_time)
+select c.id, current_setting('app.pricing_lot')::integer, 'hourly', 3000, true, null, null
+  from public.categories c where c.lot_id = current_setting('app.pricing_lot')::integer;
+insert into public.tariffs (category_id, lot_id, type, amount, active, start_time, end_time)
+select c.id, current_setting('app.pricing_lot')::integer, 'nightly', 2000, true, '22:00', '06:00'
+  from public.categories c where c.lot_id = current_setting('app.pricing_lot')::integer;
+insert into public.tariffs (category_id, lot_id, type, amount, active, start_time, end_time)
+select c.id, current_setting('app.pricing_lot')::integer, 'daily', 20000, true, null, null
+  from public.categories c where c.lot_id = current_setting('app.pricing_lot')::integer;
+
+insert into public.vehicles (plate, category_id)
+select 'PRI' || lpad(n::text, 2, '0'),
+       (select id from public.categories where lot_id = current_setting('app.pricing_lot')::integer)
+  from generate_series(1, 24) as n;
+
+do $$
+declare
+    lot integer := current_setting('app.pricing_lot')::integer;
+    category integer := (select id from public.categories where lot_id = lot);
+begin
+    perform set_config('app.pricing_cat', category::text, true);
+end $$;
+
+do $$
+begin
+    perform set_config('request.headers',
+        jsonb_build_object('x-lot-id', current_setting('app.pricing_lot'))::text, true);
+end $$;
+
+-- pricing: schema defaults
+do $$
+declare
+    settings public.parking_settings%rowtype;
+begin
+    select * into settings from public.parking_settings where lot_id = 1;
+    if settings.pricing_enabled is not false
+       or settings.pricing_floor_bps <> 10000
+       or settings.pricing_ceiling_bps <> 15000
+       or settings.pricing_round_to <> 1 then
+        raise exception 'the pricing settings defaults are wrong';
+    end if;
+    begin
+        update public.parking_settings set pricing_floor_bps = 11000 where lot_id = 1;
+        raise exception 'a floor above 100 %% was accepted';
+    exception when check_violation then null;
+    end;
+    begin
+        update public.parking_settings set pricing_ceiling_bps = 9000 where lot_id = 1;
+        raise exception 'a ceiling below 100 %% was accepted';
+    exception when check_violation then null;
+    end;
+    begin
+        update public.parking_settings set pricing_round_to = 0 where lot_id = 1;
+        raise exception 'a rounding step of 0 was accepted';
+    exception when check_violation then null;
+    end;
+end $$;
+
+-- pricing: rule constraints
+do $$
+declare
+    lot integer := current_setting('app.pricing_lot')::integer;
+begin
+    begin
+        insert into public.pricing_rules (lot_id, name, multiplier_bps)
+        values (lot, 'Sin efecto', 10000);
+        raise exception 'a rule without effect was accepted';
+    exception when check_violation then null;
+    end;
+    begin
+        insert into public.pricing_rules (lot_id, name, min_occupancy_pct, max_occupancy_pct, multiplier_bps)
+        values (lot, 'Banda inversa', 90, 80, 12000);
+        raise exception 'an inverted band was accepted';
+    exception when check_violation then null;
+    end;
+    begin
+        insert into public.pricing_rules (lot_id, name, from_time, multiplier_bps)
+        values (lot, 'Ventana a medias', time '10:00', 12000);
+        raise exception 'a window with one time was accepted';
+    exception when check_violation then null;
+    end;
+    begin
+        insert into public.pricing_rules (lot_id, name, from_time, to_time, multiplier_bps)
+        values (lot, 'Ventana igual', time '10:00', time '10:00', 12000);
+        raise exception 'an equal window was accepted';
+    exception when check_violation then null;
+    end;
+    begin
+        insert into public.pricing_rules (lot_id, name, group_name, multiplier_bps)
+        values (lot, 'Grupo bus', 'bus', 12000);
+        raise exception 'an unknown group was accepted';
+    exception when check_violation then null;
+    end;
+end $$;
+
+-- pricing: anon cannot select the rules
+set local role anon;
+do $$
+begin
+    begin
+        perform count(*) from public.pricing_rules;
+        raise exception 'anon read the pricing rules';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
+-- pricing: operator sees no rules
+insert into public.pricing_rules (
+    lot_id, name, active, priority, group_name, min_occupancy_pct,
+    max_occupancy_pct, multiplier_bps
+)
+select current_setting('app.pricing_lot')::integer, 'Alta ocupacion', true, 500,
+       'car', 80, 100, 12000;
+
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    if (select count(*) from public.pricing_rules) <> 0 then
+        raise exception 'an operator read the pricing rules';
+    end if;
+end $$;
+reset role;
+
+-- ---------------------------------------------------------------------------
+-- pricing: pure functions
+-- ---------------------------------------------------------------------------
+-- pricing: apply multiplier
+do $$
+declare
+    lock jsonb := jsonb_build_object(
+        'v', 1, 'rule_id', 1, 'rule_name', 'R', 'kind', 'multiplier',
+        'multiplier_bps', 12000, 'surcharge_amount', 0,
+        'floor_bps', 10000, 'ceiling_bps', 15000, 'round_to', 1,
+        'occupancy_pct', 85, 'locked_at', now(), 'source', 'checkin');
+begin
+    if public.pricing_apply(lock, 9000) <> 10800 then
+        raise exception 'the multiplier was not applied: %', public.pricing_apply(lock, 9000);
+    end if;
+    if public.pricing_apply(lock, 6000) <> 7200 then
+        raise exception 'the multiplier on 6000 is wrong';
+    end if;
+    if (public.pricing_apply_detail(lock, 9000) ->> 'clamped') is not null then
+        raise exception 'an unclamped result was reported as clamped';
+    end if;
+end $$;
+
+-- pricing: apply floor ceiling
+do $$
+declare
+    ceiling_lock jsonb := jsonb_build_object(
+        'multiplier_bps', 20000, 'surcharge_amount', 0,
+        'floor_bps', 10000, 'ceiling_bps', 15000, 'round_to', 1);
+    floor_lock jsonb := jsonb_build_object(
+        'multiplier_bps', 9000, 'surcharge_amount', 0,
+        'floor_bps', 9500, 'ceiling_bps', 15000, 'round_to', 1);
+    detail jsonb;
+begin
+    detail := public.pricing_apply_detail(ceiling_lock, 9000);
+    if (detail ->> 'amount')::integer <> 13500 or detail ->> 'clamped' <> 'ceiling' then
+        raise exception 'the ceiling clamp is wrong: %', detail;
+    end if;
+    detail := public.pricing_apply_detail(floor_lock, 6000);
+    if (detail ->> 'amount')::integer <> 5700 or detail ->> 'clamped' <> 'floor' then
+        raise exception 'the floor clamp is wrong: %', detail;
+    end if;
+end $$;
+
+-- pricing: apply rounding and surcharge
+do $$
+declare
+    surcharge_lock jsonb := jsonb_build_object(
+        'multiplier_bps', 10000, 'surcharge_amount', 2000,
+        'floor_bps', 10000, 'ceiling_bps', 15000, 'round_to', 1);
+    rounded_lock jsonb := jsonb_build_object(
+        'multiplier_bps', 12000, 'surcharge_amount', 0,
+        'floor_bps', 10000, 'ceiling_bps', 15000, 'round_to', 500);
+begin
+    if public.pricing_apply(surcharge_lock, 9000) <> 11000 then
+        raise exception 'the surcharge was not applied';
+    end if;
+    if public.pricing_apply(rounded_lock, 3000) <> 3500 then
+        raise exception 'the rounding step is wrong: %', public.pricing_apply(rounded_lock, 3000);
+    end if;
+end $$;
+
+-- pricing: apply identity
+do $$
+begin
+    if public.pricing_apply(null, 9000) <> 9000 then
+        raise exception 'a null lock changed the amount';
+    end if;
+    if public.pricing_apply(jsonb_build_object('multiplier_bps', 12000), 0) <> 0 then
+        raise exception 'a zero base was priced';
+    end if;
+end $$;
+
+-- pricing: rule matches
+do $$
+declare
+    rule public.pricing_rules%rowtype;
+    band public.pricing_rules%rowtype;
+    window_rule public.pricing_rules%rowtype;
+    overnight public.pricing_rules%rowtype;
+    saturday public.pricing_rules%rowtype;
+begin
+    select * into band from public.pricing_rules
+     where lot_id = current_setting('app.pricing_lot')::integer and name = 'Alta ocupacion';
+    if not public.pricing_rule_matches(band, 'car', timestamp '2026-11-12 12:00', 85) then
+        raise exception 'the occupancy band did not match at 85';
+    end if;
+    if public.pricing_rule_matches(band, 'car', timestamp '2026-11-12 12:00', 50) then
+        raise exception 'the occupancy band matched at 50';
+    end if;
+    if public.pricing_rule_matches(band, 'car', timestamp '2026-11-12 12:00', null) then
+        raise exception 'the occupancy band matched an unknown occupancy';
+    end if;
+    if public.pricing_rule_matches(band, 'moto', timestamp '2026-11-12 12:00', 85) then
+        raise exception 'the car rule matched the moto group';
+    end if;
+
+    rule := band;
+    rule.group_name := null;
+    rule.min_occupancy_pct := null;
+    rule.max_occupancy_pct := null;
+    rule.priority := 1;
+    rule.from_time := time '17:00';
+    rule.to_time := time '20:00';
+    window_rule := rule;
+    if not public.pricing_rule_matches(window_rule, 'car', timestamp '2026-11-12 17:00', null) then
+        raise exception 'the window did not match at its start';
+    end if;
+    if public.pricing_rule_matches(window_rule, 'car', timestamp '2026-11-12 20:00', null) then
+        raise exception 'the window matched at its end';
+    end if;
+
+    overnight := window_rule;
+    overnight.from_time := time '22:00';
+    overnight.to_time := time '06:00';
+    if not public.pricing_rule_matches(overnight, 'car', timestamp '2026-11-12 01:00', null) then
+        raise exception 'the overnight window did not match after midnight';
+    end if;
+    if public.pricing_rule_matches(overnight, 'car', timestamp '2026-11-12 06:00', null) then
+        raise exception 'the overnight window matched at its end';
+    end if;
+
+    saturday := window_rule;
+    saturday.from_time := null;
+    saturday.to_time := null;
+    saturday.weekdays := 32;  -- Saturday
+    if not public.pricing_rule_matches(saturday, 'car', timestamp '2026-11-14 12:00', null) then
+        raise exception 'the Saturday rule did not match a Saturday';
+    end if;
+    if public.pricing_rule_matches(saturday, 'car', timestamp '2026-11-12 12:00', null) then
+        raise exception 'the Saturday rule matched a Thursday';
+    end if;
+end $$;
+
+-- pricing: group occupancy
+do $$
+declare
+    lot integer := current_setting('app.pricing_lot')::integer;
+begin
+    delete from public.parking_sessions where lot_id = lot;
+    delete from public.category_reservations where lot_id = lot;
+
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '1 hour', 'open'
+      from public.vehicles v
+     where v.category_id = current_setting('app.pricing_cat')::integer
+     order by v.plate
+     limit 15;
+    insert into public.category_reservations (
+        lot_id, category_id, plate, reserved_until, status, source,
+        reserved_from, customer_name, customer_phone
+    )
+    select lot, current_setting('app.pricing_cat')::integer,
+           'RSV' || n, now() + interval '1 hour', 'active', 'app',
+           now(), 'Cliente', '3001112233'
+      from generate_series(1, 2) as n;
+
+    if public.pricing_group_capacity(lot, 'car') <> 20 then
+        raise exception 'the group capacity is not 20: %', public.pricing_group_capacity(lot, 'car');
+    end if;
+    if public.pricing_group_occupancy(lot, 'car') <> 85 then
+        raise exception 'the occupancy is not 85: %', public.pricing_group_occupancy(lot, 'car');
+    end if;
+    if public.pricing_group_occupancy(lot, 'heavy') is not null then
+        raise exception 'heavy occupancy should be unknown';
+    end if;
+end $$;
+
+-- pricing: lock at insert
+do $$
+declare
+    lot integer := current_setting('app.pricing_lot')::integer;
+    category integer := current_setting('app.pricing_cat')::integer;
+    session public.parking_sessions%rowtype;
+begin
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now(), 'open'
+      from public.vehicles v
+     where v.category_id = category and v.plate = 'PRI18'
+    returning * into session;
+
+    if session.pricing_lock is null then
+        raise exception 'the entry was not priced';
+    end if;
+    if session.pricing_lock ->> 'rule_name' <> 'Alta ocupacion'
+       or (session.pricing_lock ->> 'multiplier_bps')::integer <> 12000
+       or (session.pricing_lock ->> 'occupancy_pct')::integer <> 85
+       or session.pricing_lock ->> 'source' <> 'checkin' then
+        raise exception 'the lock is wrong: %', session.pricing_lock;
+    end if;
+    perform set_config('app.pricing_session', session.id::text, true);
+    perform set_config('app.pricing_locked', session.pricing_lock::text, true);
+
+    if public.pricing_session_lock(session.id) is null
+       or (public.pricing_session_lock(session.id) ->> 'hourly_locked')::integer <> 3600 then
+        raise exception 'the session lock read is wrong: %',
+            public.pricing_session_lock(session.id);
+    end if;
+end $$;
+
+-- pricing: lock immutable
+do $$
+begin
+    begin
+        update public.parking_sessions
+           set pricing_lock = jsonb_build_object('v', 1)
+         where id = current_setting('app.pricing_session')::integer;
+        raise exception 'the lock was overwritten';
+    exception when others then
+        if sqlerrm not like '%PricingLockImmutableError%' then raise; end if;
+    end;
+end $$;
+
+-- pricing: disabled lot no lock
+do $$
+declare
+    lot integer := current_setting('app.pricing_lot')::integer;
+    session public.parking_sessions%rowtype;
+begin
+    update public.parking_settings set pricing_enabled = false where lot_id = lot;
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now(), 'open'
+      from public.vehicles v where v.plate = 'PRI19'
+    returning * into session;
+    if session.pricing_lock is not null then
+        raise exception 'a disabled lot priced the entry';
+    end if;
+    delete from public.parking_sessions where id = session.id;
+    update public.parking_settings set pricing_enabled = true where lot_id = lot;
+end $$;
+
+-- pricing: offline replay drops a surcharge and keeps a discount
+do $$
+declare
+    lot integer := current_setting('app.pricing_lot')::integer;
+    category integer := current_setting('app.pricing_cat')::integer;
+    saturday timestamp := date_trunc('week', (current_date - 7)::timestamp) + interval '5 days 10 hours';
+    night timestamp := date_trunc('week', (current_date - 7)::timestamp) + interval '2 days 23 hours';
+    session public.parking_sessions%rowtype;
+begin
+    delete from public.parking_sessions where lot_id = lot;
+    delete from public.category_reservations where lot_id = lot;
+
+    insert into public.pricing_rules (
+        lot_id, name, weekdays, surcharge_amount, multiplier_bps, priority
+    ) values (lot, 'Evento sabado', 32, 2000, 10000, 600);
+
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, saturday at time zone 'America/Bogota', 'open'
+      from public.vehicles v where v.plate = 'PRI20'
+    returning * into session;
+    if session.pricing_lock is not null then
+        raise exception 'an offline surcharge was kept: %', session.pricing_lock;
+    end if;
+    delete from public.parking_sessions where id = session.id;
+
+    insert into public.pricing_rules (
+        lot_id, name, from_time, to_time, multiplier_bps, priority
+    ) values (lot, 'Noche valle', time '22:00', time '06:00', 9000, 400);
+
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, night at time zone 'America/Bogota', 'open'
+      from public.vehicles v where v.plate = 'PRI21'
+    returning * into session;
+    if session.pricing_lock is null
+       or session.pricing_lock ->> 'source' <> 'offline'
+       or (session.pricing_lock ->> 'multiplier_bps')::integer <> 9000 then
+        raise exception 'an offline discount was not kept: %', session.pricing_lock;
+    end if;
+
+    update public.pricing_rules set active = false
+     where lot_id = lot and name in ('Noche valle', 'Evento sabado');
+end $$;
+
+-- pricing: reservation promise keeps the cheaper price
+do $$
+declare
+    lot integer := current_setting('app.pricing_lot')::integer;
+    category integer := current_setting('app.pricing_cat')::integer;
+    session public.parking_sessions%rowtype;
+begin
+    delete from public.parking_sessions where lot_id = lot;
+    delete from public.category_reservations where lot_id = lot;
+
+    -- 12 of 20 = 60 %: no rule matches, the hold stores the identity lock.
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '1 hour', 'open'
+      from public.vehicles v where v.category_id = category
+     order by v.plate limit 12;
+    insert into public.category_reservations (
+        lot_id, category_id, plate, reserved_from, reserved_until, status,
+        source, customer_name, customer_phone
+    ) values (
+        lot, category, 'PRI22', now() - interval '1 hour', now() + interval '1 hour',
+        'active', 'public', 'Cliente', '3001112233'
+    );
+    if (select pricing_lock ->> 'rule_name' from public.category_reservations
+         where plate = 'PRI22') <> '' then
+        raise exception 'the hold did not store the identity lock';
+    end if;
+
+    -- 17 of 20 = 85 %: R1 matches now, but the hold promised the usual price.
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '1 hour', 'open'
+      from public.vehicles v where v.category_id = category
+     order by v.plate offset 12 limit 5;
+    update public.category_reservations set status = 'used' where plate = 'PRI22';
+
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now(), 'open'
+      from public.vehicles v where v.plate = 'PRI22'
+    returning * into session;
+    if session.pricing_lock is not null then
+        raise exception 'the hold promise was broken: %', session.pricing_lock;
+    end if;
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- pricing: RPCs
+-- ---------------------------------------------------------------------------
+-- pricing: settings admin only and validation
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    begin
+        perform public.get_pricing_settings();
+        raise exception 'an operator read the pricing settings';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- pricing: settings validation and audit
+do $$
+begin
+    begin
+        perform public.set_pricing_settings(null, 500, null, null);
+        raise exception 'an invalid floor was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidPricingSettingsError%' then raise; end if;
+    end;
+    if (public.set_pricing_settings(null, 8500, null, null) ->> 'floor_bps')::integer <> 8500 then
+        raise exception 'the floor was not saved';
+    end if;
+    if not exists (
+        select 1 from public.audit_log a
+         where a.table_name = 'parking_settings' and a.action = 'update'
+           and a.lot_id = current_setting('app.pricing_lot')::integer
+    ) then
+        raise exception 'the settings change was not audited';
+    end if;
+end $$;
+
+-- pricing: save rule, duplicate and audit
+do $$
+declare
+    result jsonb;
+begin
+    result := public.save_pricing_rule(
+        'Regla prueba', 10, 'car', 50, 90, 127, time '10:00', time '12:00',
+        11000, 0, true, null
+    );
+    if (result ->> 'id') is null or result ->> 'from_time' <> '10:00' then
+        raise exception 'the saved rule shape is wrong: %', result;
+    end if;
+    begin
+        perform public.save_pricing_rule(
+            'Regla prueba', 10, 'car', 50, 90, null, null, null, 11000, 0, true, null
+        );
+        raise exception 'a duplicate rule name was accepted';
+    exception when others then
+        if sqlerrm not like '%DuplicatePricingRuleError%' then raise; end if;
+    end;
+    begin
+        perform public.save_pricing_rule(
+            'Mala', 10, 'car', 50, 40, null, null, null, 11000, 0, true, null
+        );
+        raise exception 'an inverted band was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidPricingRuleError%' then raise; end if;
+    end;
+    if not exists (
+        select 1 from public.audit_log a
+         where a.table_name = 'pricing_rules' and a.action = 'insert'
+    ) then
+        raise exception 'the rule was not audited';
+    end if;
+end $$;
+
+-- pricing: rule of another lot is refused
+set local request.headers = '{"x-lot-id":"1"}';
+do $$
+begin
+    begin
+        perform public.save_pricing_rule(
+            'Ajena', 10, 'car', null, null, null, null, null, 12000, 0, true,
+            (select id from public.pricing_rules limit 1)
+        );
+        raise exception 'a rule of another lot was edited';
+    exception when others then
+        if sqlerrm not like '%PricingRuleNotFoundError%' then raise; end if;
+    end;
+end $$;
+do $$
+begin
+    perform set_config('request.headers',
+        jsonb_build_object('x-lot-id', current_setting('app.pricing_lot'))::text, true);
+end $$;
+
+-- pricing: quote, session lock and availability keys
+do $$
+declare
+    lot integer := current_setting('app.pricing_lot')::integer;
+    category integer := current_setting('app.pricing_cat')::integer;
+    quote jsonb;
+begin
+    -- 17 open = 85 %: R1 matches now.
+    delete from public.category_reservations where lot_id = lot;
+    delete from public.parking_sessions where lot_id = lot;
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '1 hour', 'open'
+      from public.vehicles v where v.category_id = category
+     order by v.plate limit 17;
+    quote := public.pricing_quote(category);
+    if (quote ->> 'enabled')::boolean is not true
+       or quote ->> 'tier' <> 'higher'
+       or (quote ->> 'hourly_base')::integer <> 3000
+       or (quote ->> 'hourly_current')::integer <> 3600
+       or (quote ->> 'occupancy_pct')::integer <> 85
+       or quote -> 'rule' ->> 'name' <> 'Alta ocupacion' then
+        raise exception 'the quote is wrong: %', quote;
+    end if;
+
+    begin
+        perform public.pricing_quote(
+            (select id from public.categories where lot_id = 1 limit 1)
+        );
+        raise exception 'a foreign category was quoted';
+    exception when others then
+        if sqlerrm not like '%CategoryNotFoundError%' then raise; end if;
+    end;
+
+end $$;
+
+set local role anon;
+do $$
+declare
+    lot integer := current_setting('app.pricing_lot')::integer;
+    payload jsonb := public.public_availability(lot);
+    category jsonb;
+begin
+    category := payload -> 'categories' -> 0;
+    if (payload -> 'pricing' ->> 'enabled')::boolean is not true then
+        raise exception 'the public payload hides the switch';
+    end if;
+    if (category ->> 'current_hourly_amount')::integer < 3000 then
+        raise exception 'the current price is missing: %', category;
+    end if;
+    if category ->> 'price_tier' not in ('base', 'higher', 'lower') then
+        raise exception 'the tier is invalid: %', category;
+    end if;
+    if (category ->> 'hourly_amount')::integer <> 3000 then
+        raise exception 'the base tariff key changed';
+    end if;
+end $$;
+reset role;
+
+-- pricing: simulate and impact
+do $$
+declare
+    simulation jsonb;
+    impact jsonb;
+    before_sessions integer;
+begin
+    select count(*) into before_sessions from public.parking_sessions;
+    simulation := public.pricing_simulate(30, null);
+    if simulation ->> 'days' <> '30' or simulation -> 'by_rule' is null then
+        raise exception 'the simulation shape is wrong: %', simulation;
+    end if;
+    if (simulation ->> 'sessions_considered')::integer <> 0 then
+        raise exception 'closed sessions were expected to be skipped: %', simulation;
+    end if;
+
+    simulation := public.pricing_simulate(30, jsonb_build_array(jsonb_build_object(
+        'name', 'Candidata', 'priority', 10, 'group', 'car',
+        'min_occupancy', 0, 'max_occupancy', 100,
+        'weekdays', null, 'from_time', null, 'to_time', null,
+        'multiplier_bps', 12000, 'surcharge_amount', 0
+    )));
+    if simulation ->> 'days' <> '30' then
+        raise exception 'the candidate simulation failed';
+    end if;
+    if (select count(*) from public.parking_sessions) <> before_sessions then
+        raise exception 'the simulation wrote sessions';
+    end if;
+    begin
+        perform public.pricing_simulate(0, null);
+        raise exception 'a zero-day simulation was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidReportRangeError%' then raise; end if;
+    end;
+
+    impact := public.report_pricing_impact(current_date, current_date);
+    if impact -> 'by_rule' is null then
+        raise exception 'the impact report shape is wrong: %', impact;
+    end if;
+end $$;
+
+-- pricing: simulate is admin only
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    begin
+        perform public.pricing_simulate(30, null);
+        raise exception 'an operator ran the simulation';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+end $$;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- pricing: canonical stack through fare_quote (pricing + merchant + discount)
+do $$
+declare
+    lot integer := current_setting('app.pricing_lot')::integer;
+    category integer := current_setting('app.pricing_cat')::integer;
+    session public.parking_sessions%rowtype;
+    entry_at timestamptz := ((current_date - 1) + time '09:00') at time zone 'America/Bogota';
+    exit_at timestamptz := ((current_date - 1) + time '11:30') at time zone 'America/Bogota';
+    merchant_id integer;
+    quote jsonb;
+begin
+    delete from public.parking_sessions where lot_id = lot;
+    delete from public.category_reservations where lot_id = lot;
+
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '1 hour', 'open'
+      from public.vehicles v where v.category_id = category
+     order by v.plate limit 17;
+
+    -- A past entry is an offline replay (surcharges are dropped), so the
+    -- canonical lock is written explicitly here; the trigger is exercised in
+    -- the `lock at insert` and `check_out` blocks.
+    insert into public.parking_sessions (
+        vehicle_id, operator_id, lot_id, entry_time, status, pricing_lock
+    )
+    select v.id, 1, lot, entry_at, 'open', jsonb_build_object(
+        'v', 1,
+        'rule_id', (select id from public.pricing_rules
+                     where lot_id = lot and name = 'Alta ocupacion'),
+        'rule_name', 'Alta ocupacion',
+        'kind', 'multiplier',
+        'multiplier_bps', 12000,
+        'surcharge_amount', 0,
+        'floor_bps', 8500,
+        'ceiling_bps', 15000,
+        'round_to', 1,
+        'occupancy_pct', 85,
+        'locked_at', now(),
+        'source', 'checkin'
+    )
+      from public.vehicles v where v.plate = 'PRI23'
+    returning * into session;
+    if session.pricing_lock is null or session.pricing_lock ->> 'rule_name' <> 'Alta ocupacion' then
+        raise exception 'the canonical session was not locked: %', session.pricing_lock;
+    end if;
+    perform set_config('app.pricing_canonical', session.id::text, true);
+
+    merchant_id := (public.save_merchant(
+        'Convenio canonico', 'percentage', 50, null, 'merchant_paid',
+        null, null, true, null
+    ) -> 'merchant' ->> 'id')::integer;
+    perform public.create_merchant_validation(merchant_id, session.id, 'public', null);
+
+    quote := public.fare_quote(session.id, exit_at, 400, false);
+    if (quote ->> 'base_amount')::integer <> 9000 then
+        raise exception 'the canonical base is wrong: %', quote;
+    end if;
+    if (quote ->> 'gross')::integer <> 10800 then
+        raise exception 'the canonical gross is wrong: %', quote;
+    end if;
+    if (quote -> 'adjustments' -> 0 ->> 'amount')::integer <> 5400 then
+        raise exception 'the merchant line is wrong: %', quote;
+    end if;
+    if (quote ->> 'discount_amount')::integer <> 400
+       or (quote ->> 'amount_due')::integer <> 5000 then
+        raise exception 'the canonical due is wrong: %', quote;
+    end if;
+    if (quote -> 'pricing' ->> 'delta')::integer <> 1800 then
+        raise exception 'the pricing delta is wrong: %', quote;
+    end if;
+end $$;
+
+-- pricing: midnight wrap and daily cap
+do $$
+declare
+    lot integer := current_setting('app.pricing_lot')::integer;
+    category integer := current_setting('app.pricing_cat')::integer;
+    session public.parking_sessions%rowtype;
+    quote jsonb;
+    entry_at timestamptz;
+begin
+    delete from public.parking_sessions where lot_id = lot;
+    delete from public.category_reservations where lot_id = lot;
+    update public.pricing_rules set active = true
+     where lot_id = lot and name in ('Noche valle');
+
+    entry_at := ((current_date - 2) + time '23:00') at time zone 'America/Bogota';
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, entry_at, 'open'
+      from public.vehicles v where v.plate = 'PRI24'
+    returning * into session;
+    if session.pricing_lock is null
+       or (session.pricing_lock ->> 'multiplier_bps')::integer <> 9000 then
+        raise exception 'the night rule was not locked: %', session.pricing_lock;
+    end if;
+
+    quote := public.fare_quote(
+        session.id,
+        ((current_date - 1) + time '02:00') at time zone 'America/Bogota',
+        0, false
+    );
+    if (quote ->> 'base_amount')::integer <> 6000
+       or (quote ->> 'gross')::integer <> 5400 then
+        raise exception 'the midnight wrap is wrong: %', quote;
+    end if;
+
+    -- Daily cap then multiplier: a 24 h stay caps at 20000 and scales.
+    update public.pricing_rules set active = true
+     where lot_id = lot and name = 'Alta ocupacion';
+end $$;
+
+-- pricing: check_out applies the stored lock with the merchant line
+do $$
+declare
+    lot integer := current_setting('app.pricing_lot')::integer;
+    category integer := current_setting('app.pricing_cat')::integer;
+    session public.parking_sessions%rowtype;
+    result jsonb;
+begin
+    delete from public.parking_sessions where lot_id = lot;
+    delete from public.category_reservations where lot_id = lot;
+    update public.pricing_rules set active = true
+     where lot_id = lot and name = 'Alta ocupacion';
+
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '1 hour', 'open'
+      from public.vehicles v where v.category_id = category
+     order by v.plate limit 17;
+    -- An entry within the last 5 minutes is online: the surcharge applies.
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '4 minutes', 'open'
+      from public.vehicles v where v.plate = 'PRI23'
+    returning * into session;
+
+    perform public.create_merchant_validation(
+        (select id from public.merchants where name = 'Convenio canonico'),
+        session.id, 'public', null
+    );
+    result := public.check_out(session.id, null, null, 'cash', 400, 'cortesia');
+    if (result ->> 'gross_amount')::integer <> 3600 then
+        raise exception 'the check-out gross is wrong: %', result;
+    end if;
+    if (result -> 'fare_adjustments' -> 0 ->> 'amount')::integer <> 1800 then
+        raise exception 'the check-out merchant line is wrong: %', result;
+    end if;
+    if (result ->> 'amount_charged')::integer <> 1400
+       or (result ->> 'discount_amount')::integer <> 400 then
+        raise exception 'the check-out charge is wrong: %', result;
+    end if;
+
+    if public.report_pricing_impact(current_date, current_date) ->> 'locked_sessions' is null then
+        raise exception 'the impact report did not answer';
+    end if;
+end $$;
+
+
+-- ---------------------------------------------------------------------------
+-- loyalty: schema defaults
+-- ---------------------------------------------------------------------------
+do $$
+declare
+    settings public.parking_settings%rowtype;
+begin
+    select * into settings from public.parking_settings where lot_id = 1;
+    if settings.loyalty_enabled is not false
+       or settings.loyalty_visits_required <> 5
+       or settings.loyalty_reward_kind <> 'free_stay'
+       or settings.loyalty_reward_max_amount is not null
+       or settings.loyalty_reward_fixed_amount <> 0
+       or settings.loyalty_min_amount <> 0
+       or settings.loyalty_min_minutes <> 0
+       or settings.loyalty_redeem_mode <> 'auto'
+       or settings.loyalty_stack_with_merchant is not true
+       or settings.loyalty_reward_valid_days <> 90 then
+        raise exception 'the loyalty defaults are wrong';
+    end if;
+    begin
+        update public.parking_settings set loyalty_visits_required = 1 where lot_id = 1;
+        raise exception 'a single-visit program was accepted';
+    exception when check_violation then null;
+    end;
+    begin
+        update public.parking_settings set loyalty_reward_kind = 'bogus' where lot_id = 1;
+        raise exception 'an unknown reward kind was accepted';
+    exception when check_violation then null;
+    end;
+    begin
+        update public.parking_settings set loyalty_reward_kind = 'fixed_amount'
+         where lot_id = 1;
+        raise exception 'a fixed reward worth zero was accepted';
+    exception when check_violation then null;
+    end;
+    begin
+        update public.parking_settings set loyalty_reward_valid_days = 3 where lot_id = 1;
+        raise exception 'a three-day validity was accepted';
+    exception when check_violation then null;
+    end;
+end $$;
+
+-- loyalty: fixtures
+insert into public.parking_lots (code, name, address, timezone)
+values ('LYL', 'Loyalty Lot', 'Calle 4', 'America/Bogota');
+
+do $$
+begin
+    perform set_config('app.loyalty_lot', (
+        select id::text from public.parking_lots where code = 'LYL'
+    ), true);
+end $$;
+
+insert into public.parking_settings (
+    lot_id, name, address, car_capacity, moto_capacity
+)
+select current_setting('app.loyalty_lot')::integer, 'Loyalty Lot', 'Calle 4', 20, 5;
+
+insert into public.lot_members (lot_id, user_id, role)
+select current_setting('app.loyalty_lot')::integer, 1, 'admin'
+union all
+select current_setting('app.loyalty_lot')::integer, 2, 'operator';
+
+insert into public.categories (lot_id, name, capacity)
+select current_setting('app.loyalty_lot')::integer, 'car', 0;
+
+insert into public.tariffs (category_id, lot_id, type, amount, active, start_time, end_time)
+select c.id, current_setting('app.loyalty_lot')::integer, 'hourly', 3000, true, null, null
+  from public.categories c where c.lot_id = current_setting('app.loyalty_lot')::integer;
+insert into public.tariffs (category_id, lot_id, type, amount, active, start_time, end_time)
+select c.id, current_setting('app.loyalty_lot')::integer, 'nightly', 2000, true, '22:00', '06:00'
+  from public.categories c where c.lot_id = current_setting('app.loyalty_lot')::integer;
+insert into public.tariffs (category_id, lot_id, type, amount, active, start_time, end_time)
+select c.id, current_setting('app.loyalty_lot')::integer, 'daily', 20000, true, null, null
+  from public.categories c where c.lot_id = current_setting('app.loyalty_lot')::integer;
+
+insert into public.vehicles (plate, category_id)
+select 'LYL' || lpad(n::text, 2, '0'),
+       (select id from public.categories
+         where lot_id = current_setting('app.loyalty_lot')::integer)
+  from generate_series(1, 14) as n;
+
+update public.parking_settings
+   set loyalty_enabled = true,
+       loyalty_visits_required = 5,
+       loyalty_reward_kind = 'free_stay',
+       loyalty_reward_max_amount = null,
+       loyalty_reward_fixed_amount = 0,
+       loyalty_min_amount = 3000,
+       loyalty_min_minutes = 30,
+       loyalty_redeem_mode = 'auto',
+       loyalty_stack_with_merchant = true,
+       loyalty_reward_valid_days = 90
+ where lot_id = current_setting('app.loyalty_lot')::integer;
+
+do $$
+begin
+    perform set_config('request.headers',
+        jsonb_build_object('x-lot-id', current_setting('app.loyalty_lot'))::text, true);
+end $$;
+
+-- loyalty: anon cannot select tables
+set local role anon;
+do $$
+begin
+    begin
+        perform 1 from public.loyalty_accounts limit 1;
+        raise exception 'anon read the loyalty accounts';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform 1 from public.loyalty_rewards limit 1;
+        raise exception 'anon read the loyalty rewards';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform 1 from public.loyalty_visits limit 1;
+        raise exception 'anon read the loyalty visits';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform 1 from public.loyalty_adjustments limit 1;
+        raise exception 'anon read the loyalty adjustments';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
+-- loyalty: rls enabled
+do $$
+declare
+    missing text;
+begin
+    select string_agg(c.relname, ', ') into missing
+      from pg_class c
+      join pg_namespace n on n.oid = c.relnamespace
+     where n.nspname = 'public'
+       and c.relname in ('loyalty_accounts', 'loyalty_rewards',
+                         'loyalty_visits', 'loyalty_adjustments')
+       and not c.relrowsecurity;
+    if missing is not null then
+        raise exception 'RLS is off on %', missing;
+    end if;
+    if (select count(*) from pg_class c
+          join pg_namespace n on n.oid = c.relnamespace
+         where n.nspname = 'public'
+           and c.relname in ('loyalty_accounts', 'loyalty_rewards',
+                             'loyalty_visits', 'loyalty_adjustments')) <> 4 then
+        raise exception 'a loyalty table is missing';
+    end if;
+end $$;
+
+-- loyalty: unique account and visit
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+begin
+    insert into public.loyalty_accounts (lot_id, plate) values (lot, 'UNIQ1');
+    begin
+        insert into public.loyalty_accounts (lot_id, plate) values (lot, 'UNIQ1');
+        raise exception 'a duplicate account was accepted';
+    exception when unique_violation then null;
+    end;
+
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '1 hour', 'open'
+      from public.vehicles v where v.plate = 'LYL14'
+    returning id into session_row;
+    insert into public.loyalty_visits (
+        lot_id, plate, session_id, business_day, status
+    ) values (lot, 'LYL14', session_row, current_date, 'counted');
+    begin
+        insert into public.loyalty_visits (
+            lot_id, plate, session_id, business_day, status
+        ) values (lot, 'LYL14', session_row, current_date, 'counted');
+        raise exception 'a duplicate visit for one session was accepted';
+    exception when unique_violation then null;
+    end;
+end $$;
+
+-- loyalty: reward redeemed check
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+begin
+    begin
+        insert into public.loyalty_rewards (
+            lot_id, plate, status, kind, visits_required, expires_at
+        ) values (lot, 'UNIQ1', 'redeemed', 'free_stay', 5, now() + interval '10 days');
+        raise exception 'a redeemed reward without a session was accepted';
+    exception when check_violation then null;
+    end;
+end $$;
+
+-- loyalty: operator sees no rows
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+    reward_id bigint;
+begin
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '1 hour', 'open'
+      from public.vehicles v where v.plate = 'LYL13'
+    returning id into session_row;
+    insert into public.loyalty_visits (
+        lot_id, plate, session_id, business_day, status
+    ) values (lot, 'LYL13', session_row, current_date, 'counted');
+    insert into public.loyalty_rewards (
+        lot_id, plate, kind, visits_required, expires_at
+    ) values (lot, 'LYL13', 'free_stay', 5, now() + interval '10 days')
+    returning id into reward_id;
+end $$;
+
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    if (select count(*) from public.loyalty_visits) <> 0 then
+        raise exception 'an operator read the loyalty visits';
+    end if;
+    if (select count(*) from public.loyalty_accounts) <> 0 then
+        raise exception 'an operator read the loyalty accounts';
+    end if;
+end $$;
+reset role;
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+begin
+    if (select count(*) from public.loyalty_visits) < 1 then
+        raise exception 'the lot admin could not read the visits';
+    end if;
+end $$;
+do $$
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+end $$;
+do $$
+begin
+    if (select count(*) from public.loyalty_visits) <> 0 then
+        raise exception 'the admin of lot 1 read another lot visits';
+    end if;
+end $$;
+reset role;
+do $$
+begin
+    perform set_config('request.headers',
+        jsonb_build_object('x-lot-id', current_setting('app.loyalty_lot'))::text, true);
+end $$;
+
+-- loyalty: success visit counts
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+    account public.loyalty_accounts%rowtype;
+    visit public.loyalty_visits%rowtype;
+begin
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '2 hours', 'open'
+      from public.vehicles v where v.plate = 'LYL01'
+    returning id into session_row;
+    update public.parking_sessions
+       set status = 'closed', exit_time = now(), amount_charged = 9000,
+           payment_method = 'cash', gross_amount = 9000, fare_adjustments = '[]'::jsonb
+     where id = session_row;
+
+    select * into account from public.loyalty_accounts a
+     where a.lot_id = lot and a.plate = 'LYL01';
+    select * into visit from public.loyalty_visits v where v.session_id = session_row;
+    if not found or account.progress <> 1 then
+        raise exception 'the first visit did not count: %', account.progress;
+    end if;
+    if visit.status <> 'counted' or visit.progress_before <> 0
+       or visit.amount <> 9000 then
+        raise exception 'the counted visit shape is wrong';
+    end if;
+end $$;
+
+
+-- loyalty: success reward at fifth visit
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    day_offset integer;
+    exit_at timestamptz;
+    session_row integer;
+    account public.loyalty_accounts%rowtype;
+    reward public.loyalty_rewards%rowtype;
+    fifth_session integer;
+begin
+    for day_offset in 1..4 loop
+        exit_at := ((current_date - day_offset) + time '12:00') at time zone 'America/Bogota';
+        insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+        select v.id, 1, lot, exit_at - interval '2 hours', 'open'
+          from public.vehicles v where v.plate = 'LYL01'
+        returning id into session_row;
+        update public.parking_sessions
+           set status = 'closed', exit_time = exit_at, amount_charged = 9000,
+               payment_method = 'cash', gross_amount = 9000, fare_adjustments = '[]'::jsonb
+         where id = session_row;
+        if day_offset = 4 then
+            fifth_session := session_row;
+        end if;
+    end loop;
+
+    select * into account from public.loyalty_accounts a
+     where a.lot_id = lot and a.plate = 'LYL01';
+    if account.progress <> 0 or account.earned_total <> 1 then
+        raise exception 'the fifth visit did not reset the progress: % / %',
+            account.progress, account.earned_total;
+    end if;
+
+    select * into reward from public.loyalty_rewards r
+     where r.lot_id = lot and r.plate = 'LYL01' and r.status = 'available';
+    if not found then
+        raise exception 'the fifth visit did not earn a reward';
+    end if;
+    if reward.kind <> 'free_stay' or reward.visits_required <> 5
+       or reward.max_amount is not null or reward.fixed_amount <> 0
+       or reward.earned_session_id <> fifth_session then
+        raise exception 'the reward snapshot is wrong: %', to_jsonb(reward);
+    end if;
+    if reward.expires_at < now() + interval '89 days'
+       or reward.expires_at > now() + interval '91 days' then
+        raise exception 'the reward expiry is wrong: %', reward.expires_at;
+    end if;
+    if (select earned_reward_id from public.loyalty_visits where session_id = fifth_session)
+       is distinct from reward.id then
+        raise exception 'the earning visit does not point at the reward';
+    end if;
+    perform set_config('app.loy_reward', reward.id::text, true);
+    perform set_config('app.loy_fifth', fifth_session::text, true);
+end $$;
+
+-- loyalty: same day skipped
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+    visit public.loyalty_visits%rowtype;
+begin
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '4 hours', 'open'
+      from public.vehicles v where v.plate = 'LYL02'
+    returning id into session_row;
+    update public.parking_sessions
+       set status = 'closed', exit_time = now() - interval '2 hours',
+           amount_charged = 9000, payment_method = 'cash'
+     where id = session_row;
+
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '1 hour', 'open'
+      from public.vehicles v where v.plate = 'LYL02'
+    returning id into session_row;
+    update public.parking_sessions
+       set status = 'closed', exit_time = now(), amount_charged = 9000,
+           payment_method = 'cash'
+     where id = session_row;
+
+    select * into visit from public.loyalty_visits v where v.session_id = session_row;
+    if visit.status <> 'skipped' or visit.skip_reason <> 'same_day' then
+        raise exception 'the second visit of the day was not skipped: %',
+            to_jsonb(visit);
+    end if;
+    if (select progress from public.loyalty_accounts
+         where lot_id = lot and plate = 'LYL02') <> 1 then
+        raise exception 'the skipped visit changed the progress';
+    end if;
+end $$;
+
+-- loyalty: below minutes and below amount
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+    short_exit timestamptz := ((current_date - 3) + time '10:00') at time zone 'America/Bogota';
+begin
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, short_exit - interval '10 minutes', 'open'
+      from public.vehicles v where v.plate = 'LYL03'
+    returning id into session_row;
+    update public.parking_sessions
+       set status = 'closed', exit_time = short_exit, amount_charged = 9000,
+           payment_method = 'cash'
+     where id = session_row;
+    if (select skip_reason from public.loyalty_visits where session_id = session_row)
+       <> 'below_minutes' then
+        raise exception 'a 10 minute visit was not skipped as too short';
+    end if;
+
+    short_exit := ((current_date - 2) + time '10:00') at time zone 'America/Bogota';
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, short_exit - interval '2 hours', 'open'
+      from public.vehicles v where v.plate = 'LYL03'
+    returning id into session_row;
+    update public.parking_sessions
+       set status = 'closed', exit_time = short_exit, amount_charged = 1000,
+           payment_method = 'cash'
+     where id = session_row;
+    if (select skip_reason from public.loyalty_visits where session_id = session_row)
+       <> 'below_amount' then
+        raise exception 'a 1000 visit was not skipped as below the minimum';
+    end if;
+end $$;
+
+-- loyalty: zero charge never counts
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+begin
+    update public.parking_settings set loyalty_min_amount = 0 where lot_id = lot;
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '2 hours', 'open'
+      from public.vehicles v where v.plate = 'LYL04'
+    returning id into session_row;
+    update public.parking_sessions
+       set status = 'closed', exit_time = now(), amount_charged = 0,
+           payment_method = 'cash'
+     where id = session_row;
+    if (select skip_reason from public.loyalty_visits where session_id = session_row)
+       <> 'below_amount' then
+        raise exception 'a zero charge counted as a visit';
+    end if;
+    update public.parking_settings set loyalty_min_amount = 3000 where lot_id = lot;
+end $$;
+
+-- loyalty: pass lost exempt skipped
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+    expected text;
+    method text;
+    lost boolean;
+    n integer;
+begin
+    for n in 1..3 loop
+        expected := case n when 1 then 'pass' when 2 then 'lost_ticket' else 'exempt' end;
+        method := case n when 1 then 'monthly_pass' when 3 then 'exempt' else 'cash' end;
+        lost := n = 2;
+        insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+        select v.id, 1, lot, now() - interval '3 hours', 'open'
+          from public.vehicles v where v.plate = 'LYL05'
+        returning id into session_row;
+        update public.parking_sessions
+           set status = 'closed', exit_time = now() - make_interval(mins => (4 - n) * 10),
+               amount_charged = 9000, payment_method = method, lost_ticket = lost
+         where id = session_row;
+        if (select skip_reason from public.loyalty_visits where session_id = session_row)
+           <> expected then
+            raise exception 'visit % was not skipped as %: %', n, expected,
+                (select skip_reason from public.loyalty_visits where session_id = session_row);
+        end if;
+    end loop;
+    if (select progress from public.loyalty_accounts
+         where lot_id = lot and plate = 'LYL05') <> 0 then
+        raise exception 'a skipped visit changed the progress';
+    end if;
+end $$;
+
+-- loyalty: business day lot timezone
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    exit_at timestamptz;
+    session_row integer;
+begin
+    exit_at := ((current_date - 2) + time '23:30') at time zone 'America/Bogota';
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, exit_at - interval '2 hours', 'open'
+      from public.vehicles v where v.plate = 'LYL06'
+    returning id into session_row;
+    update public.parking_sessions
+       set status = 'closed', exit_time = exit_at, amount_charged = 9000,
+           payment_method = 'cash'
+     where id = session_row;
+
+    exit_at := ((current_date - 1) + time '00:10') at time zone 'America/Bogota';
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, exit_at - interval '2 hours', 'open'
+      from public.vehicles v where v.plate = 'LYL06'
+    returning id into session_row;
+    update public.parking_sessions
+       set status = 'closed', exit_time = exit_at, amount_charged = 9000,
+           payment_method = 'cash'
+     where id = session_row;
+
+    if (select count(*) from public.loyalty_visits v
+         where v.lot_id = lot and v.plate = 'LYL06' and v.status = 'counted') <> 2 then
+        raise exception 'the business day did not follow the lot timezone';
+    end if;
+    if (select progress from public.loyalty_accounts
+         where lot_id = lot and plate = 'LYL06') <> 2 then
+        raise exception 'the two local days did not both count';
+    end if;
+end $$;
+
+-- loyalty: lot isolation
+insert into public.parking_lots (code, name, address, timezone)
+values ('LY2', 'Loyalty Lot 2', 'Calle 5', 'America/Bogota');
+do $$
+begin
+    perform set_config('app.loyalty_lot2', (
+        select id::text from public.parking_lots where code = 'LY2'
+    ), true);
+end $$;
+insert into public.parking_settings (lot_id, name, address, car_capacity, moto_capacity)
+select current_setting('app.loyalty_lot2')::integer, 'Loyalty Lot 2', 'Calle 5', 5, 0;
+insert into public.lot_members (lot_id, user_id, role)
+select current_setting('app.loyalty_lot2')::integer, 1, 'admin';
+update public.parking_settings
+   set loyalty_enabled = true, loyalty_min_amount = 3000, loyalty_min_minutes = 30
+ where lot_id = current_setting('app.loyalty_lot2')::integer;
+
+do $$
+declare
+    lot1 integer := current_setting('app.loyalty_lot')::integer;
+    lot2 integer := current_setting('app.loyalty_lot2')::integer;
+    session_row integer;
+begin
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot2, now() - interval '2 hours', 'open'
+      from public.vehicles v where v.plate = 'LYL01'
+    returning id into session_row;
+    update public.parking_sessions
+       set status = 'closed', exit_time = now(), amount_charged = 9000,
+           payment_method = 'cash'
+     where id = session_row;
+
+    if (select progress from public.loyalty_accounts a
+         where a.lot_id = lot2 and a.plate = 'LYL01') <> 1 then
+        raise exception 'lot 2 did not create its own account';
+    end if;
+    if (select progress from public.loyalty_accounts a
+         where a.lot_id = lot1 and a.plate = 'LYL01') <> 0 then
+        raise exception 'lot 2 progress leaked into lot 1';
+    end if;
+end $$;
+
+-- loyalty: disabled writes nothing
+do $$
+declare
+    lot2 integer := current_setting('app.loyalty_lot2')::integer;
+    before_visits integer;
+    before_progress integer;
+    session_row integer;
+begin
+    select count(*) into before_visits from public.loyalty_visits where lot_id = lot2;
+    select progress into before_progress from public.loyalty_accounts
+     where lot_id = lot2 and plate = 'LYL01';
+    update public.parking_settings set loyalty_enabled = false where lot_id = lot2;
+
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot2, now() - interval '2 hours', 'open'
+      from public.vehicles v where v.plate = 'LYL02'
+    returning id into session_row;
+    update public.parking_sessions
+       set status = 'closed', exit_time = now(), amount_charged = 9000,
+           payment_method = 'cash'
+     where id = session_row;
+
+    if (select count(*) from public.loyalty_visits where lot_id = lot2) <> before_visits then
+        raise exception 'a disabled lot wrote a visit';
+    end if;
+    if (select progress from public.loyalty_accounts
+         where lot_id = lot2 and plate = 'LYL01') <> before_progress then
+        raise exception 'a disabled lot changed the progress';
+    end if;
+end $$;
+
+-- loyalty: settings change keeps snapshot
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    reward public.loyalty_rewards%rowtype;
+begin
+    update public.parking_settings
+       set loyalty_reward_kind = 'fixed_amount',
+           loyalty_reward_fixed_amount = 5000
+     where lot_id = lot;
+    select * into reward from public.loyalty_rewards r
+     where r.id = current_setting('app.loy_reward')::bigint;
+    if reward.kind <> 'free_stay' or reward.fixed_amount <> 0 then
+        raise exception 'the earned reward was rewritten by the settings: %',
+            to_jsonb(reward);
+    end if;
+    update public.parking_settings
+       set loyalty_reward_kind = 'free_stay',
+           loyalty_reward_fixed_amount = 0
+     where lot_id = lot;
+end $$;
+
+-- loyalty: trigger never blocks check_out
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+begin
+    alter table public.loyalty_visits
+        add constraint tmp_loyalty_fail check (false) not valid;
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '2 hours', 'open'
+      from public.vehicles v where v.plate = 'LYL07'
+    returning id into session_row;
+    update public.parking_sessions
+       set status = 'closed', exit_time = now(), amount_charged = 9000,
+           payment_method = 'cash'
+     where id = session_row;
+    if (select status from public.parking_sessions where id = session_row) <> 'closed' then
+        raise exception 'a loyalty failure blocked the check-out';
+    end if;
+    alter table public.loyalty_visits drop constraint tmp_loyalty_fail;
+end $$;
+
+-- loyalty: concurrent plate lock key
+do $$
+begin
+    if not exists (
+        select 1 from pg_proc p
+         where p.proname = 'loyalty_on_session_closed'
+           and p.prosrc like '%pg_advisory_xact_lock(hashtext(''loyalty:''%'
+    ) then
+        raise exception 'the trigger lost its per-plate advisory lock';
+    end if;
+end $$;
+
+
+-- loyalty: extra fixtures for the hook
+insert into public.vehicles (plate, category_id)
+select 'LYL' || n,
+       (select id from public.categories
+         where lot_id = current_setting('app.loyalty_lot')::integer)
+  from unnest(array['15','16','17','18','19','20','21','22']) as n;
+
+-- loyalty: hook off returns no-op
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+    quote jsonb;
+    base integer;
+begin
+    update public.parking_settings set loyalty_enabled = false where lot_id = lot;
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '2 hours', 'open'
+      from public.vehicles v where v.plate = 'LYL15'
+    returning id into session_row;
+    quote := public.fare_quote(session_row, now(), 0, false);
+    base := (quote ->> 'base_amount')::integer;
+    if (quote -> 'reward') is not null and (quote -> 'reward') <> 'null'::jsonb then
+        raise exception 'a disabled program returned a reward';
+    end if;
+    if (quote ->> 'gross')::integer <> base
+       or (quote ->> 'amount_due')::integer <> base then
+        raise exception 'a disabled program changed the fare';
+    end if;
+    delete from public.parking_sessions where id = session_row;
+    update public.parking_settings set loyalty_enabled = true where lot_id = lot;
+end $$;
+
+-- loyalty: free stay no cap midnight
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+    quote jsonb;
+begin
+    insert into public.loyalty_rewards (lot_id, plate, kind, visits_required, expires_at)
+    values (lot, 'LYL15', 'free_stay', 5, now() + interval '30 days');
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot,
+           ((current_date - 1) + time '23:00') at time zone 'America/Bogota', 'open'
+      from public.vehicles v where v.plate = 'LYL15'
+    returning id into session_row;
+    quote := public.fare_quote(
+        session_row,
+        (current_date + time '02:00') at time zone 'America/Bogota',
+        0, false
+    );
+    if (quote ->> 'base_amount')::integer <> 6000
+       or (quote ->> 'gross')::integer <> 6000 then
+        raise exception 'the midnight base is wrong: %', quote;
+    end if;
+    if (quote -> 'adjustments' -> 0 ->> 'type') <> 'reward'
+       or (quote -> 'adjustments' -> 0 ->> 'amount')::integer <> 6000
+       or (quote ->> 'amount_due')::integer <> 0 then
+        raise exception 'the free stay was not applied: %', quote;
+    end if;
+    if (quote -> 'reward' ->> 'applied')::boolean is not true then
+        raise exception 'the reward info does not report the application';
+    end if;
+    delete from public.parking_sessions where id = session_row;
+end $$;
+
+-- loyalty: fixed on capped day
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+    quote jsonb;
+begin
+    insert into public.loyalty_rewards (
+        lot_id, plate, kind, fixed_amount, visits_required, expires_at
+    ) values (lot, 'LYL16', 'fixed_amount', 5000, 5, now() + interval '30 days');
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot,
+           ((current_date - 1) + time '08:00') at time zone 'America/Bogota', 'open'
+      from public.vehicles v where v.plate = 'LYL16'
+    returning id into session_row;
+    quote := public.fare_quote(
+        session_row,
+        (current_date - 1 + time '18:00') at time zone 'America/Bogota',
+        0, false
+    );
+    if (quote ->> 'base_amount')::integer <> 20000
+       or (quote ->> 'amount_due')::integer <> 15000
+       or (quote -> 'adjustments' -> 0 ->> 'amount')::integer <> 5000 then
+        raise exception 'the fixed reward on the daily cap is wrong: %', quote;
+    end if;
+    delete from public.parking_sessions where id = session_row;
+end $$;
+
+-- loyalty: free stay cap
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+    quote jsonb;
+begin
+    insert into public.loyalty_rewards (
+        lot_id, plate, kind, max_amount, visits_required, expires_at
+    ) values (lot, 'LYL17', 'free_stay', 8000, 5, now() + interval '30 days');
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot,
+           ((current_date - 1) + time '20:00') at time zone 'America/Bogota', 'open'
+      from public.vehicles v where v.plate = 'LYL17'
+    returning id into session_row;
+    quote := public.fare_quote(
+        session_row,
+        (current_date - 1 + time '23:30') at time zone 'America/Bogota',
+        0, false
+    );
+    if (quote ->> 'base_amount')::integer <> 10000
+       or (quote ->> 'amount_due')::integer <> 2000
+       or (quote -> 'adjustments' -> 0 ->> 'amount')::integer <> 8000 then
+        raise exception 'the free stay cap is wrong: %', quote;
+    end if;
+    delete from public.parking_sessions where id = session_row;
+end $$;
+
+-- loyalty: lost ticket no reward
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+    quote jsonb;
+begin
+    insert into public.loyalty_rewards (lot_id, plate, kind, visits_required, expires_at)
+    values (lot, 'LYL18', 'free_stay', 5, now() + interval '30 days');
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot,
+           ((current_date - 1) + time '09:00') at time zone 'America/Bogota', 'open'
+      from public.vehicles v where v.plate = 'LYL18'
+    returning id into session_row;
+    quote := public.fare_quote(
+        session_row,
+        (current_date - 1 + time '11:00') at time zone 'America/Bogota',
+        0, true
+    );
+    if (quote ->> 'gross')::integer <> public.lost_ticket_amount(
+           session_row,
+           (current_date - 1 + time '11:00') at time zone 'America/Bogota')
+       or (quote ->> 'amount_due')::integer <> (quote ->> 'gross')::integer
+       or jsonb_array_length(quote -> 'adjustments') <> 0 then
+        raise exception 'a lost ticket received a reward: %', quote;
+    end if;
+    if (select status from public.loyalty_rewards
+         where lot_id = lot and plate = 'LYL18') <> 'available' then
+        raise exception 'the lost ticket consumed the reward';
+    end if;
+    delete from public.parking_sessions where id = session_row;
+end $$;
+
+-- loyalty: pass no reward
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+    quote jsonb;
+begin
+    insert into public.monthly_passes (vehicle_id, lot_id, start_date, end_date, amount)
+    select v.id, lot, current_date - 1, current_date + 30, 150000
+      from public.vehicles v where v.plate = 'LYL18';
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot,
+           ((current_date - 1) + time '09:00') at time zone 'America/Bogota', 'open'
+      from public.vehicles v where v.plate = 'LYL18'
+    returning id into session_row;
+    quote := public.fare_quote(
+        session_row,
+        (current_date - 1 + time '11:00') at time zone 'America/Bogota',
+        0, false
+    );
+    if (quote ->> 'gross')::integer <> 0
+       or (quote ->> 'amount_due')::integer <> 0
+       or jsonb_array_length(quote -> 'adjustments') <> 0 then
+        raise exception 'a pass holder received a reward: %', quote;
+    end if;
+    delete from public.parking_sessions where id = session_row;
+end $$;
+
+-- loyalty: stack canonical with pricing
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+    quote jsonb;
+    merchant_id integer;
+begin
+    insert into public.loyalty_rewards (
+        lot_id, plate, kind, fixed_amount, visits_required, expires_at
+    ) values (lot, 'LYL19', 'fixed_amount', 2000, 5, now() + interval '30 days');
+    insert into public.parking_sessions (
+        vehicle_id, operator_id, lot_id, entry_time, status, pricing_lock
+    )
+    select v.id, 1, lot,
+           ((current_date - 1) + time '09:00') at time zone 'America/Bogota', 'open',
+           jsonb_build_object(
+               'v', 1, 'rule_id', null, 'rule_name', 'Alta ocupacion',
+               'kind', 'multiplier', 'multiplier_bps', 12000,
+               'surcharge_amount', 0, 'floor_bps', 10000, 'ceiling_bps', 15000,
+               'round_to', 1, 'occupancy_pct', 85, 'locked_at', now(),
+               'source', 'checkin'
+           )
+      from public.vehicles v where v.plate = 'LYL19'
+    returning id into session_row;
+
+    merchant_id := (public.save_merchant(
+        'Convenio fidelidad', 'percentage', 50, null, 'merchant_paid',
+        null, null, true, null
+    ) -> 'merchant' ->> 'id')::integer;
+    perform public.create_merchant_validation(merchant_id, session_row, 'public', null);
+
+    quote := public.fare_quote(
+        session_row,
+        (current_date - 1 + time '11:30') at time zone 'America/Bogota',
+        400, false
+    );
+    if (quote ->> 'base_amount')::integer <> 9000
+       or (quote ->> 'gross')::integer <> 10800 then
+        raise exception 'the canonical stack base is wrong: %', quote;
+    end if;
+    if (quote -> 'adjustments' -> 0 ->> 'amount')::integer <> 5400
+       or (quote -> 'adjustments' -> 1 ->> 'type') <> 'reward'
+       or (quote -> 'adjustments' -> 1 ->> 'amount')::integer <> 2000 then
+        raise exception 'the canonical stack lines are wrong: %', quote;
+    end if;
+    if (quote ->> 'amount_due')::integer <> 3000 then
+        raise exception 'the canonical stack due is wrong: %', quote;
+    end if;
+    perform set_config('app.loy_stack_session', session_row::text, true);
+end $$;
+
+-- loyalty: not stacked with merchant when off
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer := current_setting('app.loy_stack_session')::integer;
+    quote jsonb;
+begin
+    update public.parking_settings set loyalty_stack_with_merchant = false
+     where lot_id = lot;
+    quote := public.fare_quote(
+        session_row,
+        (current_date - 1 + time '11:30') at time zone 'America/Bogota',
+        400, false
+    );
+    if (quote ->> 'amount_due')::integer <> 5000
+       or (quote -> 'reward' ->> 'reason') <> 'merchant'
+       or (quote -> 'reward' ->> 'applied')::boolean is not false then
+        raise exception 'the merchant stack switch is wrong: %', quote;
+    end if;
+    if (select status from public.loyalty_rewards
+         where lot_id = lot and plate = 'LYL19') <> 'available' then
+        raise exception 'a skipped reward was consumed';
+    end if;
+    update public.parking_settings set loyalty_stack_with_merchant = true
+     where lot_id = lot;
+end $$;
+
+-- loyalty: floor zero skipped
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+    quote jsonb;
+    merchant_id integer;
+begin
+    insert into public.loyalty_rewards (
+        lot_id, plate, kind, fixed_amount, visits_required, expires_at
+    ) values (lot, 'LYL20', 'fixed_amount', 2000, 5, now() + interval '30 days');
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot,
+           ((current_date - 1) + time '10:00') at time zone 'America/Bogota', 'open'
+      from public.vehicles v where v.plate = 'LYL20'
+    returning id into session_row;
+    merchant_id := (public.save_merchant(
+        'Convenio cero', 'fixed_amount', 5000, null, 'merchant_paid',
+        null, null, true, null
+    ) -> 'merchant' ->> 'id')::integer;
+    perform public.create_merchant_validation(merchant_id, session_row, 'public', null);
+
+    quote := public.fare_quote(
+        session_row,
+        (current_date - 1 + time '11:00') at time zone 'America/Bogota',
+        0, false
+    );
+    if (quote ->> 'base_amount')::integer <> 3000
+       or (quote ->> 'amount_due')::integer <> 0 then
+        raise exception 'the zero floor is wrong: %', quote;
+    end if;
+    if (quote -> 'reward' ->> 'reason') <> 'zero'
+       or (quote -> 'reward' ->> 'applied')::boolean is not false then
+        raise exception 'the reward was not skipped at the floor: %', quote;
+    end if;
+    delete from public.parking_sessions where id = session_row;
+end $$;
+
+-- loyalty: online paid cap
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+    quote jsonb;
+begin
+    insert into public.loyalty_rewards (
+        lot_id, plate, kind, fixed_amount, visits_required, expires_at
+    ) values (lot, 'LYL21', 'fixed_amount', 2000, 5, now() + interval '30 days');
+    -- Fixed daytime window on a past date: `now() - 3 hours` would cross the
+    -- night-rate boundary depending on the wall clock and change the fare.
+    insert into public.parking_sessions (
+        vehicle_id, operator_id, lot_id, entry_time, status, online_paid_amount
+    )
+    select v.id, 1, lot,
+           ((current_date - 1) + time '09:00') at time zone 'America/Bogota',
+           'open', 9000
+      from public.vehicles v where v.plate = 'LYL21'
+    returning id into session_row;
+    quote := public.fare_quote(
+        session_row,
+        (current_date - 1 + time '11:30') at time zone 'America/Bogota',
+        0, false
+    );
+    if (quote -> 'reward' ->> 'reason') <> 'zero'
+       or (quote ->> 'amount_due')::integer <> 9000 then
+        raise exception 'a fully paid online session got a reward: %', quote;
+    end if;
+
+    update public.parking_sessions set online_paid_amount = 6000 where id = session_row;
+    quote := public.fare_quote(
+        session_row,
+        (current_date - 1 + time '11:30') at time zone 'America/Bogota',
+        0, false
+    );
+    if (quote ->> 'amount_due')::integer <> 7000
+       or (quote -> 'adjustments' -> 0 ->> 'amount')::integer <> 2000 then
+        raise exception 'the partial online cap is wrong: %', quote;
+    end if;
+    delete from public.parking_sessions where id = session_row;
+end $$;
+
+-- loyalty: oldest reward first
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    older bigint;
+    session_row integer;
+    quote jsonb;
+begin
+    insert into public.loyalty_rewards (
+        lot_id, plate, kind, visits_required, expires_at, created_at
+    ) values (lot, 'LYL22', 'free_stay', 5, now() + interval '30 days',
+              now() - interval '2 days')
+    returning id into older;
+    insert into public.loyalty_rewards (
+        lot_id, plate, kind, visits_required, expires_at, created_at
+    ) values (lot, 'LYL22', 'free_stay', 5, now() + interval '30 days',
+              now() - interval '1 day');
+
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '2 hours', 'open'
+      from public.vehicles v where v.plate = 'LYL22'
+    returning id into session_row;
+    quote := public.fare_quote(session_row, now(), 0, false);
+    if (quote -> 'adjustments' -> 0 ->> 'ref_id')::bigint <> older then
+        raise exception 'the newest reward was consumed first: %', quote;
+    end if;
+    if jsonb_array_length(quote -> 'adjustments') <> 1 then
+        raise exception 'two rewards were applied to one session: %', quote;
+    end if;
+    delete from public.parking_sessions where id = session_row;
+end $$;
+
+-- loyalty: expired reward not applied
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+    quote jsonb;
+begin
+    insert into public.loyalty_rewards (
+        lot_id, plate, kind, visits_required, expires_at
+    ) values (lot, 'LYL15', 'free_stay', 5, now() - interval '1 day');
+    delete from public.loyalty_rewards
+     where lot_id = lot and plate = 'LYL15' and expires_at > now();
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '2 hours', 'open'
+      from public.vehicles v where v.plate = 'LYL15'
+    returning id into session_row;
+    quote := public.fare_quote(session_row, now(), 0, false);
+    if (quote -> 'reward' ->> 'available')::boolean is not false
+       or jsonb_array_length(quote -> 'adjustments') <> 0 then
+        raise exception 'an expired reward was applied: %', quote;
+    end if;
+    delete from public.parking_sessions where id = session_row;
+end $$;
+
+-- loyalty: preview has no side effect
+do $$
+declare
+    session_row integer := current_setting('app.loy_stack_session')::integer;
+    before_rewards integer;
+    before_visits integer;
+begin
+    select count(*) into before_rewards from public.loyalty_rewards;
+    select count(*) into before_visits from public.loyalty_visits;
+    perform public.check_out_preview(session_row);
+    perform public.check_out_preview(session_row);
+    if (select count(*) from public.loyalty_rewards) <> before_rewards
+       or (select count(*) from public.loyalty_visits) <> before_visits then
+        raise exception 'the preview wrote loyalty rows';
+    end if;
+end $$;
+
+-- loyalty: redeem marks reward and skips visit
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+    reward_id bigint;
+    result jsonb;
+    visit public.loyalty_visits%rowtype;
+begin
+    insert into public.loyalty_rewards (
+        lot_id, plate, kind, visits_required, expires_at
+    ) values (lot, 'LYL15', 'free_stay', 5, now() + interval '30 days')
+    returning id into reward_id;
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '2 hours', 'open'
+      from public.vehicles v where v.plate = 'LYL15'
+    returning id into session_row;
+
+    result := public.check_out(session_row);
+    if (result ->> 'amount_charged')::integer <> 0 then
+        raise exception 'the free stay was not free: %', result;
+    end if;
+    if (select status from public.loyalty_rewards where id = reward_id) <> 'redeemed' then
+        raise exception 'the reward was not marked as redeemed';
+    end if;
+    if (select redeemed_amount from public.loyalty_rewards where id = reward_id) <> 6000 then
+        raise exception 'the redeemed amount is wrong';
+    end if;
+    select * into visit from public.loyalty_visits v where v.session_id = session_row;
+    if visit.status <> 'skipped' or visit.skip_reason <> 'reward_redeemed' then
+        raise exception 'the redeeming visit was not skipped: %', to_jsonb(visit);
+    end if;
+    if (select redeemed_total from public.loyalty_accounts
+         where lot_id = lot and plate = 'LYL15') <> 1 then
+        raise exception 'redeemed_total was not raised';
+    end if;
+    perform set_config('app.loy_redeem_session', session_row::text, true);
+    perform set_config('app.loy_redeem_reward', reward_id::text, true);
+end $$;
+
+-- loyalty: operator mode waits for choice
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+    quote jsonb;
+begin
+    update public.parking_settings set loyalty_redeem_mode = 'operator' where lot_id = lot;
+    delete from public.loyalty_rewards where lot_id = lot and plate = 'LYL16';
+    insert into public.loyalty_rewards (
+        lot_id, plate, kind, fixed_amount, visits_required, expires_at
+    ) values (lot, 'LYL16', 'fixed_amount', 2000, 5, now() + interval '30 days');
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '2 hours', 'open'
+      from public.vehicles v where v.plate = 'LYL16'
+    returning id into session_row;
+
+    quote := public.fare_quote(session_row, now(), 0, false);
+    if (quote -> 'reward' ->> 'reason') <> 'operator_choice_pending'
+       or jsonb_array_length(quote -> 'adjustments') <> 0 then
+        raise exception 'the operator mode applied a reward early: %', quote;
+    end if;
+
+    if (public.choose_loyalty_redemption(session_row, 'redeem') ->> 'choice')
+       is distinct from 'redeem' then
+        raise exception 'the redemption choice was not stored';
+    end if;
+    quote := public.fare_quote(session_row, now(), 0, false);
+    if (quote ->> 'amount_due')::integer <> 4000
+       or (quote -> 'reward' ->> 'applied')::boolean is not true then
+        raise exception 'the operator choice did not apply the reward: %', quote;
+    end if;
+    update public.parking_settings set loyalty_redeem_mode = 'auto' where lot_id = lot;
+end $$;
+
+-- loyalty: choice skip in auto
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+    quote jsonb;
+    result jsonb;
+begin
+    delete from public.loyalty_rewards where lot_id = lot and plate = 'LYL17';
+    insert into public.loyalty_rewards (
+        lot_id, plate, kind, fixed_amount, visits_required, expires_at
+    ) values (lot, 'LYL17', 'fixed_amount', 2000, 5, now() + interval '30 days');
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '2 hours', 'open'
+      from public.vehicles v where v.plate = 'LYL17'
+    returning id into session_row;
+
+    perform public.choose_loyalty_redemption(session_row, 'skip');
+    quote := public.fare_quote(session_row, now(), 0, false);
+    if (quote -> 'reward' ->> 'reason') <> 'skipped'
+       or jsonb_array_length(quote -> 'adjustments') <> 0 then
+        raise exception 'the automatic mode ignored the skip: %', quote;
+    end if;
+    result := public.check_out(session_row);
+    if (result ->> 'amount_charged')::integer <> 6000 then
+        raise exception 'the skipped reward was applied anyway: %', result;
+    end if;
+    if (select status from public.loyalty_visits where session_id = session_row) <> 'counted' then
+        raise exception 'a skipped reward still counted the visit as redeeming';
+    end if;
+end $$;
+
+-- loyalty: choose redeem without reward
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+begin
+    delete from public.loyalty_rewards where lot_id = lot and plate = 'LYL18';
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '2 hours', 'open'
+      from public.vehicles v where v.plate = 'LYL18'
+    returning id into session_row;
+    begin
+        perform public.choose_loyalty_redemption(session_row, 'redeem');
+        raise exception 'a redemption without a reward was accepted';
+    exception when others then
+        if sqlerrm not like '%NoRewardAvailableError%' then raise; end if;
+    end;
+end $$;
+
+-- loyalty: choose invalid
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+begin
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '2 hours', 'open'
+      from public.vehicles v where v.plate = 'LYL20'
+    returning id into session_row;
+    begin
+        perform public.choose_loyalty_redemption(session_row, 'later');
+        raise exception 'an invalid redemption choice was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidLoyaltyChoiceError%' then raise; end if;
+    end;
+end $$;
+
+-- loyalty: choose closed session
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+begin
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '2 hours', 'open'
+      from public.vehicles v where v.plate = 'LYL21'
+    returning id into session_row;
+    update public.parking_sessions set status = 'closed', exit_time = now()
+     where id = session_row;
+    begin
+        perform public.choose_loyalty_redemption(session_row, 'skip');
+        raise exception 'a closed session accepted a choice';
+    exception when others then
+        if sqlerrm not like '%SessionAlreadyClosedError%' then raise; end if;
+    end;
+end $$;
+
+
+-- loyalty: status counts
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    payload jsonb;
+begin
+    insert into public.loyalty_accounts (lot_id, plate, progress, earned_total)
+    values (lot, 'ST001', 3, 1);
+    payload := public.loyalty_plate_status('st 001');
+    if (payload ->> 'enabled')::boolean is not true
+       or (payload ->> 'visits')::integer <> 3
+       or (payload ->> 'next_visit')::integer <> 4
+       or (payload ->> 'required')::integer <> 5
+       or (payload ->> 'reward_count')::integer <> 0
+       or (payload ->> 'counted_today')::boolean is not false then
+        raise exception 'the plate status counts are wrong: %', payload;
+    end if;
+end $$;
+
+-- loyalty: status reward and expiry
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    payload jsonb;
+    soonest timestamptz;
+begin
+    insert into public.loyalty_rewards (
+        lot_id, plate, kind, visits_required, expires_at
+    ) values (lot, 'ST001', 'free_stay', 5, now() + interval '10 days'),
+             (lot, 'ST001', 'fixed_amount', 5, now() + interval '5 days');
+    select min(expires_at) into soonest from public.loyalty_rewards
+     where lot_id = lot and plate = 'ST001' and status = 'available';
+    payload := public.loyalty_plate_status('ST001');
+    if (payload ->> 'reward_count')::integer <> 2 then
+        raise exception 'the plate status reward count is wrong: %', payload;
+    end if;
+    if (payload ->> 'reward_expires_at')::timestamptz <> soonest then
+        raise exception 'the plate status expiry is not the soonest: %', payload;
+    end if;
+end $$;
+
+-- loyalty: status disabled
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+begin
+    update public.parking_settings set loyalty_enabled = false where lot_id = lot;
+    if public.loyalty_plate_status('ST001') <> '{"enabled": false}'::jsonb then
+        raise exception 'the disabled status is not a single key';
+    end if;
+    update public.parking_settings set loyalty_enabled = true where lot_id = lot;
+end $$;
+
+-- loyalty: status creates no account
+do $$
+begin
+    perform public.loyalty_plate_status('ZZZ99');
+    if exists (select 1 from public.loyalty_accounts where plate = 'ZZZ99') then
+        raise exception 'the status created an account';
+    end if;
+end $$;
+
+-- loyalty: status invalid plate
+do $$
+begin
+    begin
+        perform public.loyalty_plate_status('X');
+        raise exception 'a one-character plate was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidPlateError%' then raise; end if;
+    end;
+end $$;
+
+-- loyalty: status anon denied
+set local role anon;
+do $$
+begin
+    begin
+        perform public.loyalty_plate_status('ST001');
+        raise exception 'anon read the loyalty status';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
+-- loyalty: settings get and set
+do $$
+declare
+    settings jsonb;
+begin
+    settings := public.get_loyalty_settings();
+    if (settings ->> 'visits_required')::integer <> 5
+       or (settings ->> 'reward_kind') <> 'free_stay'
+       or (settings ->> 'redeem_mode') <> 'auto' then
+        raise exception 'the settings shape is wrong: %', settings;
+    end if;
+
+    settings := public.set_loyalty_settings(
+        jsonb_build_object('visits_required', 6, 'reward_max_amount', 5000)
+    );
+    if (settings ->> 'visits_required')::integer <> 6
+       or (settings ->> 'reward_max_amount')::integer <> 5000 then
+        raise exception 'the settings were not saved: %', settings;
+    end if;
+    if not exists (
+        select 1 from public.audit_log a
+         where a.table_name = 'parking_settings' and a.action = 'update'
+           and a.lot_id = current_setting('app.loyalty_lot')::integer
+    ) then
+        raise exception 'the settings change was not audited';
+    end if;
+
+    settings := public.set_loyalty_settings(
+        jsonb_build_object('reward_max_amount', null)
+    );
+    if settings -> 'reward_max_amount' <> 'null'::jsonb then
+        raise exception 'a null cap did not clear the maximum: %', settings;
+    end if;
+
+    settings := public.set_loyalty_settings(
+        jsonb_build_object('visits_required', 5, 'reward_kind', 'free_stay',
+                           'reward_fixed_amount', 0)
+    );
+    if (settings ->> 'visits_required')::integer <> 5 then
+        raise exception 'the visits required were not restored';
+    end if;
+end $$;
+
+-- loyalty: settings invalid
+do $$
+begin
+    begin
+        perform public.set_loyalty_settings(jsonb_build_object('visits_required', 1));
+        raise exception 'an invalid program was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidLoyaltySettingsError%' then raise; end if;
+    end;
+    begin
+        perform public.set_loyalty_settings(jsonb_build_object(
+            'reward_kind', 'fixed_amount', 'reward_fixed_amount', 0));
+        raise exception 'a fixed reward worth zero was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidLoyaltySettingsError%' then raise; end if;
+    end;
+end $$;
+
+-- loyalty: settings admin only
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    begin
+        perform public.get_loyalty_settings();
+        raise exception 'an operator read the loyalty settings';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+    begin
+        perform public.set_loyalty_settings(jsonb_build_object('enabled', true));
+        raise exception 'an operator wrote the loyalty settings';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- loyalty: adjust ok
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    result jsonb;
+begin
+    result := public.adjust_loyalty_progress('ST001', 1, 'Ajuste manual');
+    if (result ->> 'progress')::integer <> 4
+       or (result ->> 'required')::integer <> 5 then
+        raise exception 'the adjustment shape is wrong: %', result;
+    end if;
+    if not exists (
+        select 1 from public.loyalty_adjustments a
+         where a.lot_id = lot and a.plate = 'ST001'
+           and a.delta = 1 and a.actor_id = (
+               select id from public.users
+                where auth_user_id = '00000000-0000-0000-0000-000000000001')
+    ) then
+        raise exception 'the adjustment was not recorded with its actor';
+    end if;
+end $$;
+
+-- loyalty: adjust range
+do $$
+begin
+    begin
+        perform public.adjust_loyalty_progress('ST001', 1, 'Fuera de rango');
+        raise exception 'an adjustment to N was accepted';
+    exception when others then
+        if sqlerrm not like '%LoyaltyAdjustRangeError%' then raise; end if;
+    end;
+    begin
+        perform public.adjust_loyalty_progress('ST001', -10, 'Bajo cero');
+        raise exception 'an adjustment below zero was accepted';
+    exception when others then
+        if sqlerrm not like '%LoyaltyAdjustRangeError%' then raise; end if;
+    end;
+end $$;
+
+-- loyalty: adjust reason
+do $$
+begin
+    begin
+        perform public.adjust_loyalty_progress('ST001', -1, 'ab');
+        raise exception 'a two-character reason was accepted';
+    exception when others then
+        if sqlerrm not like '%LoyaltyReasonRequiredError%' then raise; end if;
+    end;
+end $$;
+
+-- loyalty: adjust no account
+do $$
+begin
+    begin
+        perform public.adjust_loyalty_progress('NOACC1', 1, 'Sin cuenta');
+        raise exception 'an adjustment without an account was accepted';
+    exception when others then
+        if sqlerrm not like '%LoyaltyAccountNotFoundError%' then raise; end if;
+    end;
+end $$;
+
+-- loyalty: adjust disabled
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+begin
+    update public.parking_settings set loyalty_enabled = false where lot_id = lot;
+    begin
+        perform public.adjust_loyalty_progress('ST001', 1, 'Programa apagado');
+        raise exception 'a disabled program accepted an adjustment';
+    exception when others then
+        if sqlerrm not like '%LoyaltyDisabledError%' then raise; end if;
+    end;
+    update public.parking_settings set loyalty_enabled = true where lot_id = lot;
+end $$;
+
+-- loyalty: adjust operator denied
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    begin
+        perform public.adjust_loyalty_progress('ST001', -1, 'Operador');
+        raise exception 'an operator adjusted the progress';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- loyalty: reverse earning visit
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    fifth integer := current_setting('app.loy_fifth')::integer;
+    reward_id bigint := current_setting('app.loy_reward')::bigint;
+    result jsonb;
+begin
+    result := public.loyalty_reverse_visit(fifth);
+    if (result ->> 'reversed')::boolean is not true
+       or (result ->> 'reward_reversed')::boolean is not true
+       or (result ->> 'progress')::integer <> 4 then
+        raise exception 'the earning visit reversal is wrong: %', result;
+    end if;
+    if (select status from public.loyalty_rewards where id = reward_id) <> 'reversed' then
+        raise exception 'the earned reward was not reversed';
+    end if;
+    if (select earned_total from public.loyalty_accounts
+         where lot_id = lot and plate = 'LYL01') <> 0 then
+        raise exception 'the earned total did not drop';
+    end if;
+end $$;
+
+-- loyalty: reverse restores redeemed reward
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer := current_setting('app.loy_redeem_session')::integer;
+    reward_id bigint := current_setting('app.loy_redeem_reward')::bigint;
+    result jsonb;
+begin
+    result := public.loyalty_reverse_visit(session_row);
+    if (result ->> 'reversed')::boolean is not true
+       or (result ->> 'reward_restored')::boolean is not true then
+        raise exception 'the redeeming visit reversal is wrong: %', result;
+    end if;
+    if (select status from public.loyalty_rewards where id = reward_id) <> 'available' then
+        raise exception 'the redeemed reward was not restored';
+    end if;
+    if (select redeemed_total from public.loyalty_accounts
+         where lot_id = lot and plate = 'LYL15') <> 0 then
+        raise exception 'the redeemed total did not drop';
+    end if;
+end $$;
+
+-- loyalty: reverse plain visit
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+    result jsonb;
+begin
+    select session_id into session_row
+      from public.loyalty_visits v
+     where v.lot_id = lot and v.plate = 'LYL02' and v.status = 'counted'
+     order by v.id limit 1;
+    result := public.loyalty_reverse_visit(session_row);
+    if (result ->> 'progress')::integer <> 0 then
+        raise exception 'a plain visit did not decrement the progress: %', result;
+    end if;
+end $$;
+
+-- loyalty: reverse skipped visit
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+    result jsonb;
+begin
+    select session_id into session_row
+      from public.loyalty_visits v
+     where v.lot_id = lot and v.plate = 'LYL03' and v.status = 'skipped'
+     order by v.id limit 1;
+    result := public.loyalty_reverse_visit(session_row);
+    if (result ->> 'reversed')::boolean is not true
+       or (result ->> 'progress')::integer <> 0 then
+        raise exception 'the skipped visit reversal is wrong: %', result;
+    end if;
+end $$;
+
+-- loyalty: reverse idempotent
+do $$
+declare
+    session_row integer := current_setting('app.loy_redeem_session')::integer;
+    result jsonb;
+begin
+    result := public.loyalty_reverse_visit(session_row);
+    if (result ->> 'reversed')::boolean is not false then
+        raise exception 'a second reversal was accepted: %', result;
+    end if;
+end $$;
+
+-- loyalty: reverse never mints
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    before_rewards integer;
+    session_row integer;
+begin
+    select count(*) into before_rewards from public.loyalty_rewards where lot_id = lot;
+    select v.session_id into session_row
+      from public.loyalty_visits v
+     where v.lot_id = lot and v.plate = 'LYL06' and v.status = 'counted'
+     order by v.id limit 1;
+    perform public.loyalty_reverse_visit(session_row);
+    if (select count(*) from public.loyalty_rewards where lot_id = lot) <> before_rewards then
+        raise exception 'a reversal created a reward';
+    end if;
+end $$;
+
+-- loyalty: reverse denied to api roles
+set local role authenticated;
+do $$
+begin
+    begin
+        perform public.loyalty_reverse_visit(
+            current_setting('app.loy_redeem_session')::integer);
+        raise exception 'an api role reversed a visit';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
+-- loyalty: expire job
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    reward_id bigint;
+    expired integer;
+begin
+    insert into public.loyalty_rewards (
+        lot_id, plate, kind, visits_required, expires_at
+    ) values (lot, 'ST001', 'free_stay', 5, now() - interval '1 day')
+    returning id into reward_id;
+    expired := public.loyalty_expire_rewards();
+    if expired < 1 then
+        raise exception 'the expiry job expired nothing';
+    end if;
+    if (select status from public.loyalty_rewards where id = reward_id) <> 'expired' then
+        raise exception 'the past reward was not expired';
+    end if;
+end $$;
+
+-- loyalty: expire job service role only
+set local role authenticated;
+do $$
+begin
+    begin
+        perform public.loyalty_expire_rewards();
+        raise exception 'an api role ran the expiry job';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
+-- loyalty: report counts
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    tz text;
+    window_start timestamptz;
+    window_end timestamptz;
+    report jsonb;
+    expected integer;
+begin
+    select coalesce(business_timezone, 'America/Bogota') into tz
+      from public.parking_settings where lot_id = lot;
+    window_start := current_date::timestamp at time zone tz;
+    window_end := (current_date + 1)::timestamp at time zone tz;
+
+    report := public.report_loyalty(current_date, current_date);
+
+    select count(*) into expected from public.loyalty_visits v
+     where v.lot_id = lot and v.status = 'counted'
+       and v.created_at >= window_start and v.created_at < window_end;
+    if (report -> 'visits' ->> 'counted')::integer <> expected then
+        raise exception 'the counted visits are wrong: % <> %',
+            report -> 'visits' ->> 'counted', expected;
+    end if;
+
+    select count(*) into expected from public.loyalty_visits v
+     where v.lot_id = lot and v.status = 'skipped'
+       and v.created_at >= window_start and v.created_at < window_end;
+    if (report -> 'visits' ->> 'skipped')::integer <> expected then
+        raise exception 'the skipped visits are wrong';
+    end if;
+
+    select count(*) into expected from public.loyalty_visits v
+     where v.lot_id = lot and v.status = 'reversed'
+       and v.created_at >= window_start and v.created_at < window_end;
+    if (report -> 'visits' ->> 'reversed')::integer <> expected then
+        raise exception 'the reversed visits are wrong';
+    end if;
+
+    select count(*) into expected from public.loyalty_rewards r
+     where r.lot_id = lot and r.created_at >= window_start and r.created_at < window_end;
+    if (report -> 'rewards' ->> 'earned')::integer <> expected then
+        raise exception 'the earned rewards are wrong';
+    end if;
+
+    select count(*) into expected from public.loyalty_rewards r
+     where r.lot_id = lot and r.redeemed_at >= window_start and r.redeemed_at < window_end;
+    if (report -> 'rewards' ->> 'redeemed')::integer <> expected then
+        raise exception 'the redeemed rewards are wrong';
+    end if;
+
+    select coalesce(sum(r.redeemed_amount), 0) into expected
+      from public.loyalty_rewards r
+     where r.lot_id = lot and r.redeemed_at >= window_start and r.redeemed_at < window_end;
+    if (report ->> 'discount_given')::integer <> expected then
+        raise exception 'the discount given is wrong: % <> %',
+            report ->> 'discount_given', expected;
+    end if;
+
+    select count(distinct v.plate) into expected from public.loyalty_visits v
+     where v.lot_id = lot and v.status = 'counted'
+       and v.created_at >= window_start and v.created_at < window_end;
+    if (report ->> 'active_members')::integer <> expected then
+        raise exception 'the active members are wrong';
+    end if;
+
+    if jsonb_array_length(report -> 'top_plates') > 10 then
+        raise exception 'more than ten plates were reported';
+    end if;
+    if jsonb_array_length(report -> 'top_plates') > 0 then
+        if (report -> 'top_plates' -> 0 ->> 'plate') <> (
+            select v.plate from public.loyalty_visits v
+             where v.lot_id = lot and v.status = 'counted'
+               and v.created_at >= window_start and v.created_at < window_end
+             group by v.plate
+             order by count(*) desc, v.plate
+             limit 1
+        ) then
+            raise exception 'the top plates are not ordered';
+        end if;
+    end if;
+end $$;
+
+-- loyalty: report range boundaries
+do $$
+declare
+    report jsonb;
+begin
+    report := public.report_loyalty(current_date - 1, current_date - 1);
+    if (report -> 'visits' ->> 'counted')::integer <> 0 then
+        raise exception 'yesterday reported today visits: %', report;
+    end if;
+end $$;
+
+-- loyalty: report invalid range
+do $$
+begin
+    begin
+        perform public.report_loyalty(current_date, current_date - 1);
+        raise exception 'an inverted range was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidReportRangeError%' then raise; end if;
+    end;
+    begin
+        perform public.report_loyalty(current_date - 400, current_date);
+        raise exception 'a 400 day range was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidReportRangeError%' then raise; end if;
+    end;
+end $$;
+
+-- loyalty: report admin only
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    begin
+        perform public.report_loyalty(current_date, current_date);
+        raise exception 'an operator ran the loyalty report';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- loyalty: report lot isolation
+do $$
+declare
+    report jsonb;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    report := public.report_loyalty(current_date, current_date);
+    if (report -> 'visits' ->> 'counted')::integer <> 0
+       or (report -> 'rewards' ->> 'earned')::integer <> 0 then
+        raise exception 'the report leaked another lot: %', report;
+    end if;
+    perform set_config('request.headers',
+        jsonb_build_object('x-lot-id', current_setting('app.loyalty_lot'))::text, true);
+end $$;
+
+-- loyalty: members list search
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    accounts jsonb;
+    expected text;
+begin
+    accounts := public.list_loyalty_accounts('lyl0', 50);
+    if jsonb_array_length(accounts) < 1 then
+        raise exception 'the prefix search found nothing: %', accounts;
+    end if;
+    if (accounts -> 0 ->> 'plate') not like 'LYL0%' then
+        raise exception 'the prefix search returned another plate: %', accounts;
+    end if;
+    if accounts -> 0 -> 'reward_count' is null then
+        raise exception 'the account shape is missing the reward count';
+    end if;
+
+    accounts := public.list_loyalty_accounts(null, 0);
+    if jsonb_array_length(accounts) <> 1 then
+        raise exception 'the limit was not clamped to one: %', jsonb_array_length(accounts);
+    end if;
+
+    accounts := public.list_loyalty_accounts(null, 500);
+    if jsonb_array_length(accounts) > 200 then
+        raise exception 'the limit was not clamped to 200';
+    end if;
+
+    select a.plate into expected from public.loyalty_accounts a
+     where a.lot_id = lot
+     order by a.updated_at desc, a.id desc
+     limit 1;
+    accounts := public.list_loyalty_accounts(null, 200);
+    if (accounts -> 0 ->> 'plate') <> expected then
+        raise exception 'the members list is not newest first: %', accounts -> 0;
+    end if;
+end $$;
+
+-- loyalty: members admin only
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    begin
+        perform public.list_loyalty_accounts(null, 10);
+        raise exception 'an operator listed the loyalty accounts';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+
+-- loyalty: choose other lot
+do $$
+declare
+    lot2 integer := current_setting('app.loyalty_lot2')::integer;
+    session_row integer;
+begin
+    update public.parking_settings set loyalty_enabled = true where lot_id = lot2;
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot2, now() - interval '1 hour', 'open'
+      from public.vehicles v where v.plate = 'LYL02'
+    returning id into session_row;
+    begin
+        perform public.choose_loyalty_redemption(session_row, 'skip');
+        raise exception 'a session of another lot accepted a choice';
+    exception when others then
+        if sqlerrm not like '%LotRequiredError%' then raise; end if;
+    end;
+    delete from public.parking_sessions where id = session_row;
+end $$;
+
+-- loyalty: choose disabled
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    session_row integer;
+begin
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '1 hour', 'open'
+      from public.vehicles v where v.plate = 'LYL03'
+    returning id into session_row;
+    update public.parking_settings set loyalty_enabled = false where lot_id = lot;
+    begin
+        perform public.choose_loyalty_redemption(session_row, 'skip');
+        raise exception 'a disabled program accepted a choice';
+    exception when others then
+        if sqlerrm not like '%LoyaltyDisabledError%' then raise; end if;
+    end;
+    update public.parking_settings set loyalty_enabled = true where lot_id = lot;
+    delete from public.parking_sessions where id = session_row;
+end $$;
+
+-- loyalty: choose anon denied
+set local role anon;
+do $$
+begin
+    begin
+        perform public.choose_loyalty_redemption(1, 'skip');
+        raise exception 'anon chose a redemption';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
+-- loyalty: hook not callable by api roles
+set local role authenticated;
+do $$
+begin
+    begin
+        perform public.fare_reward_step(1, 1000, 0);
+        raise exception 'an api role called the reward hook';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
+-- loyalty: reverse after redeemed keeps the reward
+do $$
+declare
+    lot integer := current_setting('app.loyalty_lot')::integer;
+    day_offset integer;
+    exit_at timestamptz;
+    session_row integer;
+    fifth_session integer;
+    reward_id bigint;
+    redeem_session integer;
+    result jsonb;
+begin
+    insert into public.vehicles (plate, category_id)
+    select 'REV02', c.id from public.categories c where c.lot_id = lot;
+
+    for day_offset in 1..5 loop
+        exit_at := ((current_date - day_offset) + time '12:00') at time zone 'America/Bogota';
+        insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+        select v.id, 1, lot, exit_at - interval '2 hours', 'open'
+          from public.vehicles v where v.plate = 'REV02'
+        returning id into session_row;
+        update public.parking_sessions
+           set status = 'closed', exit_time = exit_at, amount_charged = 9000,
+               payment_method = 'cash'
+         where id = session_row;
+        if day_offset = 5 then
+            fifth_session := session_row;
+        end if;
+    end loop;
+
+    select id into reward_id from public.loyalty_rewards r
+     where r.lot_id = lot and r.plate = 'REV02' and r.status = 'available'
+     order by r.id limit 1;
+    if reward_id is null then
+        raise exception 'the fifth visit did not earn a reward for REV02';
+    end if;
+
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '2 hours', 'open'
+      from public.vehicles v where v.plate = 'REV02'
+    returning id into redeem_session;
+    perform public.check_out(redeem_session);
+
+    if (select status from public.loyalty_rewards where id = reward_id) <> 'redeemed' then
+        raise exception 'the reward was not redeemed by REV02';
+    end if;
+
+    result := public.loyalty_reverse_visit(fifth_session);
+    if (result ->> 'reversed')::boolean is not true
+       or (result ->> 'reward_reversed')::boolean is not false then
+        raise exception 'reversing an earning visit touched a redeemed reward: %', result;
+    end if;
+    if (select status from public.loyalty_rewards where id = reward_id) <> 'redeemed' then
+        raise exception 'a redeemed reward was clawed back';
+    end if;
+    if (select progress from public.loyalty_accounts
+         where lot_id = lot and plate = 'REV02') <> 0 then
+        raise exception 'reversing after redemption changed the progress';
+    end if;
+end $$;
+
+
+-- ---------------------------------------------------------------------------
+-- invoicing: amounts
+-- ---------------------------------------------------------------------------
+do $$
+declare
+    result jsonb;
+begin
+    result := public.fiscal_amounts(11900, 0, 1900);
+    if (result ->> 'gross')::integer <> 11900
+       or (result ->> 'tax_base')::integer <> 10000
+       or (result ->> 'tax_amount')::integer <> 1900 then
+        raise exception 'the tax extraction at 19 %% is wrong: %', result;
+    end if;
+    result := public.fiscal_amounts(5000, 0, 1900);
+    if (result ->> 'tax_base')::integer <> 4202
+       or (result ->> 'tax_amount')::integer <> 798 then
+        raise exception 'the tax extraction of 5000 is wrong: %', result;
+    end if;
+    result := public.fiscal_amounts(5000, 0, 0);
+    if (result ->> 'tax_base')::integer <> 5000
+       or (result ->> 'tax_amount')::integer <> 0 then
+        raise exception 'a zero rate produced tax: %', result;
+    end if;
+    result := public.fiscal_amounts(9000, 400, 1900);
+    if (result ->> 'gross')::integer <> 9400
+       or (result ->> 'total')::integer <> 9000
+       or (result ->> 'discount')::integer <> 400 then
+        raise exception 'the gross/total relation is wrong: %', result;
+    end if;
+end $$;
+
+-- invoicing: schema defaults mode off
+do $$
+declare
+    settings public.fiscal_settings%rowtype;
+begin
+    insert into public.parking_lots (code, name, address, timezone)
+    values ('FIS', 'Fiscal Lot', 'Calle 6', 'America/Bogota');
+    do $inner$
+    begin
+        perform set_config('app.fiscal_lot', (
+            select id::text from public.parking_lots where code = 'FIS'
+        ), true);
+    end $inner$;
+    insert into public.parking_settings (lot_id, name, address, car_capacity, business_timezone)
+    select current_setting('app.fiscal_lot')::integer, 'Fiscal Lot', 'Calle 6',
+           10, 'America/Bogota';
+    insert into public.lot_members (lot_id, user_id, role)
+    select current_setting('app.fiscal_lot')::integer, 1, 'admin'
+    union all
+    select current_setting('app.fiscal_lot')::integer, 2, 'operator';
+
+    update public.fiscal_settings
+       set mode = 'off', updated_at = now()
+     where lot_id = current_setting('app.fiscal_lot')::integer;
+end $$;
+
+-- invoicing: settings default
+do $$
+declare
+    lot integer := current_setting('app.fiscal_lot')::integer;
+    settings public.fiscal_settings%rowtype;
+begin
+    select * into settings from public.fiscal_settings fs where fs.lot_id = lot;
+    if found then
+        raise exception 'the fiscal settings started on';
+    end if;
+    if (public.fiscal_settings_json(lot) ->> 'mode') <> 'off' then
+        raise exception 'the fiscal mode does not default to off';
+    end if;
+    begin
+        insert into public.fiscal_settings (lot_id, mode, tax_rate_bps)
+        values (lot, 'on_request', 1900);
+        raise exception 'a mode without issuer data was accepted';
+    exception when check_violation then null;
+    end;
+    begin
+        insert into public.fiscal_settings (lot_id, mode, tax_rate_bps)
+        values (lot, 'off', 10001);
+        raise exception 'a tax rate above 100 %% was accepted';
+    exception when check_violation then null;
+    end;
+end $$;
+
+-- invoicing: schema constraints
+do $$
+declare
+    lot integer := current_setting('app.fiscal_lot')::integer;
+    resolution_id bigint;
+begin
+    insert into public.fiscal_resolutions (
+        lot_id, doc_type, resolution_number, prefix, range_from, range_to,
+        next_number, valid_from, valid_to, active
+    ) values (
+        lot, 'pos', 'RES-1', 'SETP', 1, 100, 1, current_date - 1, current_date + 300, true
+    ) returning id into resolution_id;
+    begin
+        insert into public.fiscal_resolutions (
+            lot_id, doc_type, resolution_number, prefix, range_from, range_to,
+            next_number, valid_from, valid_to, active
+        ) values (
+            lot, 'pos', 'RES-2', 'SETQ', 1, 100, 1, current_date - 1, current_date + 300, true
+        );
+        raise exception 'a second active resolution was accepted';
+    exception when unique_violation then null;
+    end;
+    update public.fiscal_resolutions set active = false where id = resolution_id;
+
+    begin
+        insert into public.fiscal_documents (
+            lot_id, doc_type, resolution_id, prefix, number, full_number,
+            source_kind, source_id, gross_amount, tax_rate_bps, tax_base,
+            tax_amount, total
+        ) values (
+            lot, 'credit_note', resolution_id, 'SETP', 99, 'SETP99',
+            'session', 1, 100, 1900, 84, 16, 100
+        );
+        raise exception 'a credit note without a related document was accepted';
+    exception when check_violation then null;
+    end;
+    begin
+        insert into public.fiscal_documents (
+            lot_id, doc_type, resolution_id, prefix, number, full_number,
+            source_kind, source_id, gross_amount, tax_rate_bps, tax_base,
+            tax_amount, total, customer_doc_type
+        ) values (
+            lot, 'pos', resolution_id, 'SETP', 98, 'SETP98',
+            'session', 1, 100, 1900, 84, 16, 100, 'CC'
+        );
+        raise exception 'a customer type without a number was accepted';
+    exception when check_violation then null;
+    end;
+end $$;
+
+-- invoicing: rls enabled
+do $$
+declare
+    missing text;
+begin
+    select string_agg(c.relname, ', ') into missing
+      from pg_class c
+      join pg_namespace n on n.oid = c.relnamespace
+     where n.nspname = 'public'
+       and c.relname in ('fiscal_settings', 'fiscal_resolutions', 'fiscal_documents')
+       and not c.relrowsecurity;
+    if missing is not null then
+        raise exception 'RLS is off on %', missing;
+    end if;
+end $$;
+
+-- invoicing: fixtures
+insert into public.categories (lot_id, name, capacity)
+select current_setting('app.fiscal_lot')::integer, 'car', 0;
+insert into public.tariffs (category_id, lot_id, type, amount, active, start_time, end_time)
+select c.id, current_setting('app.fiscal_lot')::integer, 'hourly', 3000, true, null, null
+  from public.categories c where c.lot_id = current_setting('app.fiscal_lot')::integer;
+insert into public.tariffs (category_id, lot_id, type, amount, active, start_time, end_time)
+select c.id, current_setting('app.fiscal_lot')::integer, 'daily', 20000, true, null, null
+  from public.categories c where c.lot_id = current_setting('app.fiscal_lot')::integer;
+insert into public.vehicles (plate, category_id)
+select 'FIS' || lpad(n::text, 2, '0'),
+       (select id from public.categories
+         where lot_id = current_setting('app.fiscal_lot')::integer)
+  from generate_series(1, 12) as n;
+
+do $$
+begin
+    perform set_config('request.headers',
+        jsonb_build_object('x-lot-id', current_setting('app.fiscal_lot'))::text, true);
+    perform set_config('request.jwt.claim.sub',
+        '00000000-0000-0000-0000-000000000001', true);
+end $$;
+
+create or replace function public.fiscal_test_session(p_plate text, p_amount integer, p_online integer default 0)
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+    lot integer := current_setting('app.fiscal_lot')::integer;
+    session_id integer;
+begin
+    insert into public.parking_sessions (
+        vehicle_id, operator_id, lot_id, entry_time, status, online_paid_amount
+    )
+    select v.id, 1, lot, now() - interval '2 hours', 'open', p_online
+      from public.vehicles v where v.plate = p_plate
+    returning id into session_id;
+    update public.parking_sessions
+       set status = 'closed', exit_time = now(), amount_charged = p_amount,
+           payment_method = case when p_online > 0 then 'cash' else 'cash' end,
+           discount_amount = 0, closed_recorded_at = now()
+     where id = session_id;
+    return session_id;
+end;
+$$;
+
+-- invoicing: issue mode off
+do $$
+declare
+    session_row integer := public.fiscal_test_session('FIS01', 11900);
+begin
+    begin
+        perform public.issue_fiscal_document('session', session_row, null);
+        raise exception 'a mode-off lot issued a document';
+    exception when others then
+        if sqlerrm not like '%FiscalNotEnabledError%' then raise; end if;
+    end;
+end $$;
+
+-- invoicing: settings save and started_at
+do $$
+declare
+    lot integer := current_setting('app.fiscal_lot')::integer;
+    saved jsonb;
+    started timestamptz;
+begin
+    saved := public.save_fiscal_settings(jsonb_build_object(
+        'mode', 'on_request',
+        'issuer_nit', '900123456',
+        'issuer_legal_name', 'Parqueadero Fiscal SAS',
+        'municipality_code', '11001',
+        'tax_rate_bps', 1900
+    ));
+    if saved ->> 'mode' <> 'on_request' or saved ->> 'issuer_nit' <> '900123456' then
+        raise exception 'the fiscal settings were not saved: %', saved;
+    end if;
+    started := (saved ->> 'started_at')::timestamptz;
+    if started is null then
+        raise exception 'started_at was not stamped';
+    end if;
+
+    saved := public.save_fiscal_settings(jsonb_build_object('tax_rate_bps', 1600));
+    if (saved ->> 'tax_rate_bps')::integer <> 1600
+       or (saved ->> 'started_at')::timestamptz <> started then
+        raise exception 'a partial save moved started_at or lost values: %', saved;
+    end if;
+    perform public.save_fiscal_settings(jsonb_build_object('tax_rate_bps', 1900));
+end $$;
+
+-- invoicing: settings incomplete
+do $$
+begin
+    begin
+        perform public.save_fiscal_settings(jsonb_build_object(
+            'mode', 'always', 'issuer_nit', null));
+        raise exception 'a mode without issuer data was accepted';
+    exception when others then
+        if sqlerrm not like '%FiscalSettingsIncompleteError%'
+           and sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+end $$;
+
+-- invoicing: resolutions
+do $$
+declare
+    lot integer := current_setting('app.fiscal_lot')::integer;
+    saved jsonb;
+    rows jsonb;
+begin
+    saved := public.save_fiscal_resolution(jsonb_build_object(
+        'doc_type', 'pos', 'resolution_number', '18760000001', 'prefix', 'SETP',
+        'range_from', 1, 'range_to', 5000,
+        'valid_from', current_date - 1, 'valid_to', current_date + 365
+    ));
+    if (saved ->> 'remaining')::bigint <> 5000 or saved ->> 'active' <> 'true' then
+        raise exception 'the saved resolution shape is wrong: %', saved;
+    end if;
+
+    saved := public.save_fiscal_resolution(jsonb_build_object(
+        'doc_type', 'pos', 'resolution_number', '18760000002', 'prefix', 'SETQ',
+        'range_from', 10, 'range_to', 20,
+        'valid_from', current_date - 1, 'valid_to', current_date + 365
+    ));
+    rows := public.list_fiscal_resolutions();
+    if jsonb_array_length(rows) < 2 then
+        raise exception 'the resolutions were not listed';
+    end if;
+    if (select count(*) from public.fiscal_resolutions r
+         where r.lot_id = lot and r.doc_type = 'pos' and r.active) <> 1 then
+        raise exception 'the previous resolution was not deactivated';
+    end if;
+
+    perform public.save_fiscal_resolution(jsonb_build_object(
+        'doc_type', 'pos', 'resolution_number', '18760000003', 'prefix', 'SETP',
+        'range_from', 1, 'range_to', 5000,
+        'valid_from', current_date - 1, 'valid_to', current_date + 365
+    ));
+    perform public.save_fiscal_resolution(jsonb_build_object(
+        'doc_type', 'invoice', 'resolution_number', '18760000004', 'prefix', 'FE',
+        'range_from', 1, 'range_to', 5000,
+        'valid_from', current_date - 1, 'valid_to', current_date + 365
+    ));
+    perform public.save_fiscal_resolution(jsonb_build_object(
+        'doc_type', 'credit_note', 'resolution_number', '18760000005', 'prefix', 'NC',
+        'range_from', 1, 'range_to', 5000,
+        'valid_from', current_date - 1, 'valid_to', current_date + 365
+    ));
+
+    if public.fiscal_config() ->> 'has_pos_resolution' <> 'true'
+       or public.fiscal_config() ->> 'has_invoice_resolution' <> 'true' then
+        raise exception 'the config does not see the resolutions';
+    end if;
+end $$;
+
+-- invoicing: issue session pos
+do $$
+declare
+    lot integer := current_setting('app.fiscal_lot')::integer;
+    session_row integer := public.fiscal_test_session('FIS02', 11900);
+    summary jsonb;
+begin
+    summary := public.issue_fiscal_document('session', session_row, null);
+    if (summary ->> 'created')::boolean is not true then
+        raise exception 'the first issuance reported created=false: %', summary;
+    end if;
+    if summary ->> 'doc_type' <> 'pos'
+       or summary ->> 'full_number' <> 'SETP1'
+       or (summary ->> 'total')::integer <> 11900
+       or (summary ->> 'tax_amount')::integer <> 1900 then
+        raise exception 'the pos document is wrong: %', summary;
+    end if;
+    perform set_config('app.fiscal_pos', (summary ->> 'document_id'), true);
+end $$;
+
+-- invoicing: issue idempotent
+do $$
+declare
+    session_row integer := public.fiscal_test_session('FIS02', 11900);
+    summary jsonb;
+begin
+    -- The same source cannot be issued twice; the existing document is returned.
+    begin
+        summary := public.issue_fiscal_document('session', session_row, null);
+    exception when others then
+        raise exception 'the idempotent call failed: %', sqlerrm;
+    end;
+end $$;
+
+do $$
+declare
+    session_row integer;
+    summary jsonb;
+begin
+    select s.id into session_row
+      from public.parking_sessions s
+      join public.vehicles v on v.id = s.vehicle_id
+     where v.plate = 'FIS02' and s.status = 'closed'
+     order by s.id limit 1;
+    summary := public.issue_fiscal_document('session', session_row, null);
+    if (summary ->> 'created')::boolean is not false then
+        raise exception 'a second call created a document: %', summary;
+    end if;
+end $$;
+
+-- invoicing: issue with customer creates an invoice
+do $$
+declare
+    session_row integer := public.fiscal_test_session('FIS03', 5000);
+    summary jsonb;
+begin
+    summary := public.issue_fiscal_document('session', session_row, jsonb_build_object(
+        'document_type', 'NIT',
+        'document_number', '900123456',
+        'name', 'Cliente Empresa SAS',
+        'email', 'facturas@empresa.test'
+    ));
+    if summary ->> 'doc_type' <> 'invoice'
+       or summary ->> 'full_number' <> 'FE1'
+       or (summary ->> 'tax_amount')::integer <> 798 then
+        raise exception 'the invoice is wrong: %', summary;
+    end if;
+end $$;
+
+-- invoicing: invalid customer
+do $$
+declare
+    session_row integer := public.fiscal_test_session('FIS04', 5000);
+begin
+    begin
+        perform public.issue_fiscal_document('session', session_row, jsonb_build_object(
+            'document_type', 'XX', 'document_number', '1', 'name', 'A'));
+        raise exception 'an invalid customer was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidFiscalCustomerError%' then raise; end if;
+    end;
+    begin
+        perform public.issue_fiscal_document('session', session_row, jsonb_build_object(
+            'document_type', 'CC', 'document_number', '123', 'name', 'A',
+            'email', 'not-an-email'));
+        raise exception 'an invalid email was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidFiscalCustomerError%' then raise; end if;
+    end;
+end $$;
+
+-- invoicing: issue rejects non billable sources
+do $$
+declare
+    lot integer := current_setting('app.fiscal_lot')::integer;
+    session_row integer;
+begin
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    select v.id, 1, lot, now() - interval '1 hour', 'open'
+      from public.vehicles v where v.plate = 'FIS05'
+    returning id into session_row;
+    begin
+        perform public.issue_fiscal_document('session', session_row, null);
+        raise exception 'an open session was invoiced';
+    exception when others then
+        if sqlerrm not like '%FiscalSourceNotBillableError%' then raise; end if;
+    end;
+    delete from public.parking_sessions where id = session_row;
+
+    insert into public.parking_sessions (
+        vehicle_id, operator_id, lot_id, entry_time, status, exit_time,
+        amount_charged, payment_method, closed_recorded_at
+    )
+    select v.id, 1, lot, now() - interval '2 hours', 'closed', now(),
+           0, 'cash', now()
+      from public.vehicles v where v.plate = 'FIS05'
+    returning id into session_row;
+    begin
+        perform public.issue_fiscal_document('session', session_row, null);
+        raise exception 'a zero charge was invoiced';
+    exception when others then
+        if sqlerrm not like '%FiscalSourceNotBillableError%' then raise; end if;
+    end;
+
+    update public.parking_sessions
+       set amount_charged = 5000, payment_method = 'exempt'
+     where id = session_row;
+    begin
+        perform public.issue_fiscal_document('session', session_row, null);
+        raise exception 'an exempt session was invoiced';
+    exception when others then
+        if sqlerrm not like '%FiscalSourceNotBillableError%' then raise; end if;
+    end;
+
+    update public.parking_sessions
+       set payment_method = 'cash', closed_recorded_at = now() - interval '1 day'
+     where id = session_row;
+    begin
+        perform public.issue_fiscal_document('session', session_row, null);
+        raise exception 'a session closed before started_at was invoiced';
+    exception when others then
+        if sqlerrm not like '%FiscalSourceNotBillableError%' then raise; end if;
+    end;
+end $$;
+
+-- invoicing: issue source not found
+do $$
+begin
+    begin
+        perform public.issue_fiscal_document('session', 999999, null);
+        raise exception 'a missing source was invoiced';
+    exception when others then
+        if sqlerrm not like '%FiscalSourceNotFoundError%' then raise; end if;
+    end;
+end $$;
+
+
+-- invoicing: test helpers
+create or replace function public.fiscal_test_issue(
+    p_plate text,
+    p_amount integer,
+    p_online integer default 0,
+    p_customer jsonb default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+    session_row integer := public.fiscal_test_session(p_plate, p_amount, p_online);
+begin
+    return public.issue_fiscal_document('session', session_row, p_customer);
+end;
+$$;
+
+create or replace function public.fiscal_test_accept(p_document_id bigint)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+    perform public.claim_fiscal_documents(100);
+    perform public.record_fiscal_result(p_document_id, jsonb_build_object(
+        'outcome', 'accepted',
+        'cufe', 'CUFE-' || p_document_id,
+        'qr_data', 'https://qr.test/' || p_document_id
+    ));
+end;
+$$;
+
+-- invoicing: payments split online and cash
+do $$
+declare
+    summary jsonb;
+    payload jsonb;
+begin
+    summary := public.fiscal_test_issue('FIS06', 11900, 6000);
+    payload := public.fiscal_document_payload((summary ->> 'document_id')::bigint);
+    if jsonb_array_length(payload -> 'payments') <> 2 then
+        raise exception 'the split payment was not listed: %', payload -> 'payments';
+    end if;
+    if (payload -> 'payments' -> 0 ->> 'method') <> 'online'
+       or (payload -> 'payments' -> 0 ->> 'amount')::integer <> 6000 then
+        raise exception 'the online part is wrong: %', payload -> 'payments';
+    end if;
+    if (payload -> 'payments' -> 1 ->> 'amount')::integer <> 5900 then
+        raise exception 'the desk part is wrong: %', payload -> 'payments';
+    end if;
+    if (payload -> 'issuer' ->> 'nit') <> '900123456'
+       or (payload -> 'document' ->> 'type') <> 'pos'
+       or (payload -> 'totals' ->> 'tax_amount')::integer <> 1900 then
+        raise exception 'the payload header is wrong: %', payload;
+    end if;
+end $$;
+
+-- invoicing: pass payment creates a document
+do $$
+declare
+    lot integer := current_setting('app.fiscal_lot')::integer;
+    pass_id integer;
+    payment_id bigint;
+    summary jsonb;
+begin
+    insert into public.monthly_passes (vehicle_id, lot_id, start_date, end_date, amount)
+    select v.id, lot, current_date, current_date + 30, 50000
+      from public.vehicles v where v.plate = 'FIS07'
+    returning id into pass_id;
+    select id into payment_id
+      from public.monthly_pass_payments p
+     where p.monthly_pass_id = pass_id;
+    update public.monthly_pass_payments
+       set amount = 50000, payment_method = 'cash', status = 'paid',
+           paid_at = now(), paid_by = 1
+     where id = payment_id;
+
+    summary := public.issue_fiscal_document('pass_payment', payment_id, null);
+    if summary ->> 'doc_type' <> 'pos'
+       or (summary ->> 'total')::integer <> 50000 then
+        raise exception 'the pass payment document is wrong: %', summary;
+    end if;
+    perform set_config('app.fiscal_pass_doc', summary ->> 'document_id', true);
+end $$;
+
+-- invoicing: for_session summary without customer data
+do $$
+declare
+    session_row integer;
+    summary jsonb;
+begin
+    select s.id into session_row
+      from public.parking_sessions s
+      join public.vehicles v on v.id = s.vehicle_id
+     where v.plate = 'FIS02' and s.status = 'closed'
+     order by s.id limit 1;
+    summary := public.fiscal_document_for_session(session_row);
+    if summary is null or summary ->> 'full_number' <> 'SETP1' then
+        raise exception 'the session document was not found: %', summary;
+    end if;
+    if summary ? 'customer_name' or summary ? 'customer_doc_number' then
+        raise exception 'the operator read exposes customer PII: %', summary;
+    end if;
+end $$;
+
+-- invoicing: claim and accepted stores cufe and qr
+do $$
+declare
+    document_id bigint := current_setting('app.fiscal_pos')::bigint;
+    claimed jsonb;
+    result jsonb;
+    session_row integer;
+begin
+    claimed := public.claim_fiscal_documents(100);
+    if not exists (
+        select 1 from jsonb_array_elements(claimed) item
+         where (item ->> 'id')::bigint = document_id
+    ) then
+        raise exception 'the pending document was not claimed';
+    end if;
+    if exists (
+        select 1 from public.fiscal_documents d
+         where d.id = document_id and d.locked_until is null
+    ) then
+        raise exception 'the claimed document was not locked';
+    end if;
+
+    result := public.record_fiscal_result(document_id, jsonb_build_object(
+        'outcome', 'accepted', 'cufe', 'CUFE-1', 'qr_data', 'https://qr.test/1'));
+    if result ->> 'status' <> 'accepted' then
+        raise exception 'the accepted result did not stick: %', result;
+    end if;
+    if (select cufe from public.fiscal_documents where id = document_id) <> 'CUFE-1'
+       or (select accepted_at from public.fiscal_documents where id = document_id) is null
+       or (select locked_until from public.fiscal_documents where id = document_id) is not null then
+        raise exception 'the accepted document fields are wrong';
+    end if;
+
+    select s.id into session_row
+      from public.parking_sessions s
+      join public.vehicles v on v.id = s.vehicle_id
+     where v.plate = 'FIS02' and s.status = 'closed'
+     order by s.id limit 1;
+    if (public.fiscal_document_for_session(session_row) ->> 'cufe') <> 'CUFE-1' then
+        raise exception 'the session read does not show the CUFE';
+    end if;
+end $$;
+
+-- invoicing: pending then sent
+do $$
+declare
+    summary jsonb;
+    document_id bigint;
+    result jsonb;
+begin
+    summary := public.fiscal_test_issue('FIS08', 7000);
+    document_id := (summary ->> 'document_id')::bigint;
+    perform public.claim_fiscal_documents(100);
+    result := public.record_fiscal_result(document_id, jsonb_build_object(
+        'outcome', 'pending', 'provider_document_id', 'PROV-8'));
+    if result ->> 'status' <> 'sent' then
+        raise exception 'a processing answer did not move to sent: %', result;
+    end if;
+    if (select provider_document_id from public.fiscal_documents where id = document_id)
+       <> 'PROV-8' then
+        raise exception 'the provider id was not stored';
+    end if;
+    perform set_config('app.fiscal_sent', document_id::text, true);
+end $$;
+
+-- invoicing: transient error schedules backoff
+do $$
+declare
+    document_id bigint := current_setting('app.fiscal_sent')::bigint;
+    before_attempt timestamptz;
+    result jsonb;
+begin
+    update public.fiscal_documents
+       set next_attempt_at = now(), locked_until = null
+     where id = document_id;
+    perform public.claim_fiscal_documents(100);
+    before_attempt := now();
+    result := public.record_fiscal_result(document_id, jsonb_build_object(
+        'outcome', 'transient_error', 'error', 'timeout'));
+    if result ->> 'status' <> 'pending' then
+        raise exception 'a transient error did not stay pending: %', result;
+    end if;
+    if (select next_attempt_at from public.fiscal_documents where id = document_id)
+       < before_attempt + interval '30 seconds' then
+        raise exception 'the backoff was not scheduled';
+    end if;
+    if (select last_error from public.fiscal_documents where id = document_id) <> 'timeout' then
+        raise exception 'the last error was not stored';
+    end if;
+end $$;
+
+-- invoicing: eighth transient error fails and notifies admins
+do $$
+declare
+    document_id bigint := current_setting('app.fiscal_sent')::bigint;
+    result jsonb;
+begin
+    update public.fiscal_documents
+       set attempts = 7, next_attempt_at = now(), locked_until = null
+     where id = document_id;
+    perform public.claim_fiscal_documents(100);
+    result := public.record_fiscal_result(document_id, jsonb_build_object(
+        'outcome', 'transient_error', 'error', 'still down'));
+    if result ->> 'status' <> 'failed' then
+        raise exception 'the eighth attempt did not fail: %', result;
+    end if;
+    if not exists (
+        select 1 from public.notifications n
+         where n.type = 'fiscal_document_failed'
+           and n.data ->> 'document_id' = document_id::text
+    ) then
+        raise exception 'the failed document did not notify the admins';
+    end if;
+end $$;
+
+-- invoicing: rejected notifies admins once
+do $$
+declare
+    summary jsonb;
+    document_id bigint;
+    before_count integer;
+    after_count integer;
+begin
+    summary := public.fiscal_test_issue('FIS09', 8000);
+    document_id := (summary ->> 'document_id')::bigint;
+    perform public.claim_fiscal_documents(100);
+    select count(*) into before_count from public.notifications
+     where type = 'fiscal_document_failed';
+    perform public.record_fiscal_result(document_id, jsonb_build_object(
+        'outcome', 'rejected', 'rejection_reason', 'NIT inválido'));
+    select count(*) into after_count from public.notifications
+     where type = 'fiscal_document_failed';
+    if after_count <> before_count + 1 then
+        raise exception 'the rejection did not notify exactly once: % <> %',
+            after_count, before_count;
+    end if;
+    if (select rejection_reason from public.fiscal_documents where id = document_id)
+       <> 'NIT inválido' then
+        raise exception 'the rejection reason was not stored';
+    end if;
+    perform set_config('app.fiscal_rejected', document_id::text, true);
+end $$;
+
+-- invoicing: retry rejected with new customer data
+do $$
+declare
+    document_id bigint := current_setting('app.fiscal_rejected')::bigint;
+    summary jsonb;
+begin
+    summary := public.retry_fiscal_document(document_id, jsonb_build_object(
+        'document_type', 'NIT',
+        'document_number', '900555111',
+        'name', 'Cliente Corregido SAS'
+    ));
+    if summary ->> 'status' <> 'pending'
+       or (summary ->> 'full_number') is null then
+        raise exception 'the retry did not reset the document: %', summary;
+    end if;
+    if (select customer_doc_number from public.fiscal_documents where id = document_id)
+       <> '900555111'
+       or (select attempts from public.fiscal_documents where id = document_id) <> 0 then
+        raise exception 'the retried customer was not stored';
+    end if;
+end $$;
+
+-- invoicing: retry accepted is refused
+do $$
+begin
+    begin
+        perform public.retry_fiscal_document(
+            current_setting('app.fiscal_pos')::bigint, null);
+        raise exception 'an accepted document was retried';
+    exception when others then
+        if sqlerrm not like '%InvalidFiscalStatusError%' then raise; end if;
+    end;
+end $$;
+
+-- invoicing: credit note requires an accepted document
+do $$
+declare
+    pending_doc bigint := current_setting('app.fiscal_rejected')::bigint;
+begin
+    update public.fiscal_documents set status = 'pending' where id = pending_doc;
+    begin
+        perform public.request_credit_note(pending_doc, 'Motivo válido');
+        raise exception 'a pending document was credited';
+    exception when others then
+        if sqlerrm not like '%FiscalDocumentNotAcceptedError%' then raise; end if;
+    end;
+end $$;
+
+-- invoicing: credit note accepted voids the original and frees the source
+do $$
+declare
+    original bigint := current_setting('app.fiscal_pos')::bigint;
+    summary jsonb;
+    credit_id bigint;
+    session_row integer;
+    reissued jsonb;
+begin
+    summary := public.request_credit_note(original, 'Cliente equivocado');
+    credit_id := (summary ->> 'document_id')::bigint;
+    if summary ->> 'doc_type' <> 'credit_note'
+       or summary ->> 'full_number' <> 'NC1' then
+        raise exception 'the credit note is wrong: %', summary;
+    end if;
+    begin
+        perform public.request_credit_note(original, 'Otra vez');
+        raise exception 'a second credit note was accepted';
+    exception when others then
+        if sqlerrm not like '%FiscalDocumentAlreadyCreditedError%' then raise; end if;
+    end;
+
+    perform public.fiscal_test_accept(credit_id);
+    if (select voided_at from public.fiscal_documents where id = original) is null then
+        raise exception 'the accepted credit note did not void the original';
+    end if;
+
+    select s.id into session_row
+      from public.parking_sessions s
+      join public.vehicles v on v.id = s.vehicle_id
+     where v.plate = 'FIS02' and s.status = 'closed'
+     order by s.id limit 1;
+    reissued := public.issue_fiscal_document('session', session_row, jsonb_build_object(
+        'document_type', 'CC', 'document_number', '123456', 'name', 'Cliente Nuevo'));
+    if reissued ->> 'doc_type' <> 'invoice'
+       or (reissued ->> 'created')::boolean is not true then
+        raise exception 'the source was not freed for a new invoice: %', reissued;
+    end if;
+end $$;
+
+-- invoicing: resolution errors
+do $$
+declare
+    lot integer := current_setting('app.fiscal_lot')::integer;
+    resolution public.fiscal_resolutions%rowtype;
+    summary jsonb;
+begin
+    select * into resolution from public.fiscal_resolutions r
+     where r.lot_id = lot and r.doc_type = 'invoice' and r.active;
+    update public.fiscal_resolutions set active = false where id = resolution.id;
+    begin
+        perform public.fiscal_test_issue('FIS10', 5000, 0, jsonb_build_object(
+            'document_type', 'CC', 'document_number', '777888', 'name', 'Cliente'));
+        raise exception 'an invoice without resolution was issued';
+    exception when others then
+        if sqlerrm not like '%FiscalResolutionMissingError%' then raise; end if;
+    end;
+    update public.fiscal_resolutions set active = true where id = resolution.id;
+
+    update public.fiscal_resolutions set valid_to = current_date - 1 where id = resolution.id;
+    begin
+        perform public.fiscal_test_issue('FIS10', 5000, 0, jsonb_build_object(
+            'document_type', 'CC', 'document_number', '777888', 'name', 'Cliente'));
+        raise exception 'an expired resolution was used';
+    exception when others then
+        if sqlerrm not like '%FiscalResolutionExpiredError%' then raise; end if;
+    end;
+    update public.fiscal_resolutions
+       set valid_to = current_date + 365,
+           next_number = range_to + 1
+     where id = resolution.id;
+    begin
+        perform public.fiscal_test_issue('FIS10', 5000, 0, jsonb_build_object(
+            'document_type', 'CC', 'document_number', '777888', 'name', 'Cliente'));
+        raise exception 'an exhausted resolution was used';
+    exception when others then
+        if sqlerrm not like '%FiscalResolutionExhaustedError%' then raise; end if;
+    end;
+    if (select next_number from public.fiscal_resolutions where id = resolution.id)
+       <> resolution.range_to + 1 then
+        raise exception 'the exhausted sequence moved';
+    end if;
+    update public.fiscal_resolutions
+       set next_number = resolution.next_number where id = resolution.id;
+
+    -- A rollback releases the number (gap-free).
+    summary := null;
+    begin
+        summary := public.fiscal_test_issue('FIS11', 5000, 0, jsonb_build_object(
+            'document_type', 'CC', 'document_number', '777888', 'name', 'Cliente'));
+        raise exception 'force rollback';
+    exception when others then
+        if sqlerrm <> 'force rollback' then raise; end if;
+    end;
+    if (select next_number from public.fiscal_resolutions where id = resolution.id)
+       <> resolution.next_number then
+        raise exception 'the failed issuance consumed a number';
+    end if;
+    summary := public.fiscal_test_issue('FIS11', 5000, 0, jsonb_build_object(
+        'document_type', 'CC', 'document_number', '777888', 'name', 'Cliente'));
+    if (select number from public.fiscal_documents
+         where id = (summary ->> 'document_id')::bigint) <> resolution.next_number then
+        raise exception 'the released number was not reused';
+    end if;
+end $$;
+
+-- invoicing: immutable numbered document
+do $$
+declare
+    document_id bigint := current_setting('app.fiscal_pass_doc')::bigint;
+begin
+    begin
+        update public.fiscal_documents set total = total + 1 where id = document_id;
+        raise exception 'the total of a numbered document was changed';
+    exception when others then
+        if sqlerrm not like '%FiscalDocumentImmutableError%' then raise; end if;
+    end;
+    begin
+        update public.fiscal_documents set number = number + 1 where id = document_id;
+        raise exception 'the number of a numbered document was changed';
+    exception when others then
+        if sqlerrm not like '%FiscalDocumentImmutableError%' then raise; end if;
+    end;
+    begin
+        update public.fiscal_documents set customer_name = 'Otro' where id = document_id;
+        raise exception 'the customer changed outside rejected/failed';
+    exception when others then
+        if sqlerrm not like '%FiscalDocumentImmutableError%' then raise; end if;
+    end;
+    update public.fiscal_documents set status = 'rejected' where id = document_id;
+    update public.fiscal_documents set customer_name = 'Permitido'
+     where id = document_id;
+    if (select customer_name from public.fiscal_documents where id = document_id)
+       <> 'Permitido' then
+        raise exception 'a rejected document could not be corrected';
+    end if;
+end $$;
+
+-- invoicing: sweeper always issues pos after ten minutes
+do $$
+declare
+    lot integer := current_setting('app.fiscal_lot')::integer;
+    session_row integer;
+    created integer;
+    again integer;
+    started_before timestamptz;
+begin
+    update public.fiscal_settings
+       set mode = 'always', started_at = now() - interval '2 days'
+     where lot_id = lot;
+    started_before := now() - interval '2 days';
+    insert into public.parking_sessions (
+        vehicle_id, operator_id, lot_id, entry_time, status
+    )
+    select v.id, 1, lot, now() - interval '3 hours', 'open'
+      from public.vehicles v where v.plate = 'FIS12'
+    returning id into session_row;
+    update public.parking_sessions
+       set status = 'closed', exit_time = now() - interval '15 minutes',
+           amount_charged = 9000, payment_method = 'cash',
+           closed_recorded_at = now() - interval '15 minutes'
+     where id = session_row;
+
+    created := public.enqueue_pending_fiscal_documents();
+    if created < 1 then
+        raise exception 'the sweeper created nothing';
+    end if;
+    if not exists (
+        select 1 from public.fiscal_documents d
+         where d.source_kind = 'session' and d.source_id = session_row
+           and d.doc_type = 'pos' and d.voided_at is null
+    ) then
+        raise exception 'the sweeper did not issue the pos';
+    end if;
+    again := public.enqueue_pending_fiscal_documents();
+    if again <> 0 then
+        raise exception 'the sweeper issued a duplicate: %', again;
+    end if;
+    update public.fiscal_settings set mode = 'on_request' where lot_id = lot;
+end $$;
+
+-- invoicing: low resolution notifies once per day
+do $$
+declare
+    lot integer := current_setting('app.fiscal_lot')::integer;
+    saved jsonb;
+    before_count integer;
+    after_count integer;
+begin
+    saved := public.save_fiscal_resolution(jsonb_build_object(
+        'doc_type', 'invoice', 'resolution_number', 'LOW-1', 'prefix', 'FEL',
+        'range_from', 100, 'range_to', 110,
+        'valid_from', current_date - 1, 'valid_to', current_date + 365
+    ));
+    select count(*) into before_count from public.notifications
+     where type = 'fiscal_resolution_low';
+    perform public.enqueue_pending_fiscal_documents();
+    select count(*) into after_count from public.notifications
+     where type = 'fiscal_resolution_low';
+    if after_count <= before_count then
+        raise exception 'the low resolution did not notify';
+    end if;
+    perform public.enqueue_pending_fiscal_documents();
+    if (select count(*) from public.notifications where type = 'fiscal_resolution_low')
+       <> after_count then
+        raise exception 'the low resolution notified twice in one day';
+    end if;
+end $$;
+
+-- invoicing: list documents
+do $$
+declare
+    listed jsonb;
+begin
+    listed := public.list_fiscal_documents(null, 5, 0);
+    if (listed ->> 'total')::integer < 1
+       or jsonb_array_length(listed -> 'items') <> 5 then
+        raise exception 'the document list shape is wrong: %', listed;
+    end if;
+    listed := public.list_fiscal_documents('accepted', 50, 0);
+    if exists (
+        select 1 from jsonb_array_elements(listed -> 'items') item
+         where item ->> 'status' <> 'accepted'
+    ) then
+        raise exception 'the status filter leaked other rows';
+    end if;
+    if (listed ->> 'items') is null then
+        raise exception 'the document list items are null';
+    end if;
+end $$;
+
+-- invoicing: operators cannot read the fiscal tables
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    if (select count(*) from public.fiscal_documents) <> 0 then
+        raise exception 'an operator read the fiscal documents';
+    end if;
+    if public.issue_fiscal_document('session', 1, null) is not null then
+        raise exception 'the operator issuance fixture is odd';
+    end if;
+exception when others then
+    if sqlerrm not like '%FiscalSourceNotBillableError%'
+       and sqlerrm not like '%FiscalSourceNotFoundError%'
+       and sqlerrm not like '%FiscalNotEnabledError%' then raise; end if;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- invoicing: admin functions refuse operators
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    begin
+        perform public.list_fiscal_documents(null, 5, 0);
+        raise exception 'an operator listed the fiscal documents';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+    begin
+        perform public.save_fiscal_settings(jsonb_build_object('mode', 'off'));
+        raise exception 'an operator saved the fiscal settings';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+    begin
+        perform public.list_fiscal_resolutions();
+        raise exception 'an operator listed the resolutions';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+    begin
+        perform public.request_credit_note(
+            current_setting('app.fiscal_pos')::bigint, 'Motivo');
+        raise exception 'an operator issued a credit note';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- invoicing: service functions denied to api roles
+set local role authenticated;
+do $$
+begin
+    begin
+        perform public.claim_fiscal_documents(10);
+        raise exception 'an api role claimed documents';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform public.record_fiscal_result(
+            1, jsonb_build_object('outcome', 'accepted'));
+        raise exception 'an api role recorded a result';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
+-- invoicing: anon denied
+set local role anon;
+do $$
+begin
+    begin
+        perform public.fiscal_config();
+        raise exception 'anon read the fiscal config';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform public.issue_fiscal_document('session', 1, null);
+        raise exception 'anon issued a document';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
+-- invoicing: lot isolation
+set local role authenticated;
+do $$
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    if (select count(*) from public.fiscal_documents) <> 0 then
+        raise exception 'the fiscal documents leaked to another lot';
+    end if;
+    perform set_config('request.headers',
+        jsonb_build_object('x-lot-id', current_setting('app.fiscal_lot'))::text, true);
+end $$;
+reset role;
+
+
+-- ---------------------------------------------------------------------------
+-- ai: fixtures
+-- ---------------------------------------------------------------------------
+do $$
+declare
+    lot2 integer;
+begin
+    delete from public.ai_requests where lot_id = 1;
+    delete from public.ai_limits where lot_id = 1;
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    perform set_config('request.jwt.claim.sub',
+        '00000000-0000-0000-0000-000000000001', true);
+    select id into lot2 from public.parking_lots where code = 'LY2';
+    if lot2 is null then
+        raise exception 'the second AI fixture lot is missing';
+    end if;
+    perform set_config('app.ai_lot2', lot2::text, true);
+end $$;
+
+-- ai: reserve returns request and remaining
+do $$
+declare
+    result jsonb;
+begin
+    result := public.ai_budget_reserve('report_assistant', 1000);
+    if (result ->> 'request_id') is null
+       or (result ->> 'remaining_requests')::integer <> 99 then
+        raise exception 'the first reservation is wrong: %', result;
+    end if;
+    perform set_config('app.ai_request', result ->> 'request_id', true);
+end $$;
+
+-- ai: record closes reservation
+do $$
+declare
+    request_id bigint := current_setting('app.ai_request')::bigint;
+    row public.ai_requests%rowtype;
+begin
+    perform public.ai_usage_record(request_id, jsonb_build_object(
+        'status', 'ok', 'model', 'deepseek-chat',
+        'input_tokens', 120, 'output_tokens', 40,
+        'cache_read_tokens', 10, 'cache_write_tokens', 5,
+        'tool_calls', 2, 'duration_ms', 900
+    ));
+    select * into row from public.ai_requests r where r.id = request_id;
+    if row.status <> 'ok' or row.input_tokens <> 120
+       or row.output_tokens <> 40 or row.tool_calls <> 2
+       or row.finished_at is null then
+        raise exception 'the usage row is wrong: %', to_jsonb(row);
+    end if;
+    begin
+        perform public.ai_usage_record(request_id, jsonb_build_object('status', 'ok'));
+        raise exception 'a closed reservation was recorded twice';
+    exception when others then
+        if sqlerrm not like '%AiRequestNotFoundError%' then raise; end if;
+    end;
+end $$;
+
+-- ai: status counts today
+do $$
+declare
+    result jsonb;
+begin
+    result := public.ai_budget_status('report_assistant');
+    if (result ->> 'used_requests')::integer <> 1
+       or (result ->> 'used_tokens')::integer <> 175
+       or (result ->> 'remaining_requests')::integer <> 99 then
+        raise exception 'the budget status is wrong: %', result;
+    end if;
+end $$;
+
+-- ai: set limit changes budget
+do $$
+declare
+    result jsonb;
+begin
+    result := public.set_ai_limit('report_assistant', 2, 5000);
+    if (result ->> 'daily_requests')::integer <> 2 then
+        raise exception 'the limit was not saved: %', result;
+    end if;
+    perform public.ai_budget_reserve('report_assistant', 100);
+    begin
+        perform public.ai_budget_reserve('report_assistant', 100);
+        raise exception 'the request limit was not enforced';
+    exception when others then
+        if sqlerrm not like '%AiBudgetExceededError%' then raise; end if;
+    end;
+    perform public.set_ai_limit('report_assistant', 100, 1000000);
+end $$;
+
+-- ai: token limit
+do $$
+begin
+    perform public.set_ai_limit('report_assistant', 100, 200);
+    begin
+        perform public.ai_budget_reserve('report_assistant', 100);
+        raise exception 'the token limit was not enforced';
+    exception when others then
+        if sqlerrm not like '%AiBudgetExceededError%' then raise; end if;
+    end;
+    perform public.set_ai_limit('report_assistant', 100, 1000000);
+end $$;
+
+-- ai: invalid reservations and limits
+do $$
+begin
+    begin
+        perform public.ai_budget_reserve('bogus_feature', 100);
+        raise exception 'an unknown feature reserved budget';
+    exception when others then
+        if sqlerrm not like '%AiFeatureUnknownError%' then raise; end if;
+    end;
+    begin
+        perform public.ai_budget_reserve('report_assistant', 0);
+        raise exception 'a zero estimate was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+    begin
+        perform public.set_ai_limit('report_assistant', -1, 100);
+        raise exception 'a negative limit was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+end $$;
+
+-- ai: set limit audited
+do $$
+begin
+    if not exists (
+        select 1 from public.audit_log a
+         where a.table_name = 'ai_limits' and a.lot_id = 1
+    ) then
+        raise exception 'the AI limit change was not audited';
+    end if;
+end $$;
+
+-- ai: foreign lot refused
+do $$
+begin
+    perform set_config('request.headers', '{"x-lot-id":"999999"}', true);
+    begin
+        perform public.ai_budget_reserve('report_assistant', 100);
+        raise exception 'a foreign lot reserved budget';
+    exception when others then
+        if sqlerrm not like '%LotRequiredError%' then raise; end if;
+    end;
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+end $$;
+
+-- ai: isolated per lot
+do $$
+declare
+    lot1_used integer;
+    lot2_used integer;
+    result jsonb;
+begin
+    select (public.ai_budget_status('report_assistant') ->> 'used_requests')::integer
+      into lot1_used;
+    perform set_config('request.headers',
+        jsonb_build_object('x-lot-id', current_setting('app.ai_lot2'))::text, true);
+    result := public.ai_budget_reserve('report_assistant', 100);
+    if (result ->> 'lot_id')::integer <> current_setting('app.ai_lot2')::integer then
+        raise exception 'the reservation went to another lot: %', result;
+    end if;
+    perform public.ai_usage_record((result ->> 'request_id')::bigint,
+        jsonb_build_object('status', 'ok', 'input_tokens', 10));
+    select (public.ai_budget_status('report_assistant') ->> 'used_requests')::integer
+      into lot2_used;
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    if lot2_used < 1
+       or (public.ai_budget_status('report_assistant') ->> 'used_requests')::integer
+          <> lot1_used then
+        raise exception 'the AI budgets are not isolated per lot';
+    end if;
+end $$;
+
+-- ai: operator denied and table isolation
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    begin
+        perform public.ai_budget_reserve('report_assistant', 100);
+        raise exception 'an operator reserved AI budget';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+    begin
+        perform public.ai_budget_status('report_assistant');
+        raise exception 'an operator read the AI budget';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+    if (select count(*) from public.ai_requests) <> 0
+       or (select count(*) from public.ai_limits) <> 0 then
+        raise exception 'an operator read the AI tables';
+    end if;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- ai: record of another actor denied
+do $$
+declare
+    request_id bigint;
+begin
+    request_id := (public.ai_budget_reserve('report_assistant', 100) ->> 'request_id')::bigint;
+    perform set_config('app.ai_actor_request', request_id::text, true);
+end $$;
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    begin
+        perform public.ai_usage_record(
+            current_setting('app.ai_actor_request')::bigint,
+            jsonb_build_object('status', 'ok'));
+        raise exception 'another actor closed the reservation';
+    exception when others then
+        if sqlerrm not like '%AiRequestNotFoundError%' then raise; end if;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+-- ai: missing token denied
+do $$
+begin
+    perform set_config('request.jwt.claim.sub', '', true);
+    begin
+        perform public.ai_budget_reserve('report_assistant', 100);
+        raise exception 'a request without a user reserved budget';
+    exception when others then
+        if sqlerrm not like '%InvalidTokenError%' then raise; end if;
+    end;
+    perform set_config('request.jwt.claim.sub',
+        '00000000-0000-0000-0000-000000000001', true);
+end $$;
+
+-- ai: anon denied
+set local role anon;
+do $$
+begin
+    begin
+        perform 1 from public.ai_requests limit 1;
+        raise exception 'anon read the AI requests';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform public.ai_budget_reserve('report_assistant', 100);
+        raise exception 'anon reserved AI budget';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
+-- ai: purge is internal and has a 30 day floor
+set local role authenticated;
+do $$
+begin
+    begin
+        perform public.purge_ai_requests(90);
+        raise exception 'an api role purged the AI log';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+do $$
+declare
+    old_row bigint;
+    recent_row bigint;
+    removed integer;
+begin
+    insert into public.ai_requests (
+        lot_id, feature, actor_id, status, reserved_tokens, business_day, created_at
+    ) values (1, 'report_assistant', 1, 'ok', 10, current_date, now() - interval '40 days')
+    returning id into old_row;
+    insert into public.ai_requests (
+        lot_id, feature, actor_id, status, reserved_tokens, business_day, created_at
+    ) values (1, 'report_assistant', 1, 'ok', 10, current_date, now() - interval '10 days')
+    returning id into recent_row;
+    removed := public.purge_ai_requests(1);
+    if removed < 1 then
+        raise exception 'the purge removed nothing';
+    end if;
+    if exists (select 1 from public.ai_requests where id = old_row) then
+        raise exception 'the 40 day row survived the purge';
+    end if;
+    if not exists (select 1 from public.ai_requests where id = recent_row) then
+        raise exception 'the 30 day floor was not respected';
+    end if;
+end $$;
+
+-- ai: the nine report RPCs are stable (GET-read-only guarantee)
+do $$
+declare
+    missing text;
+begin
+    select string_agg(name, ', ') into missing
+      from unnest(array[
+          'report_revenue', 'report_hourly_traffic', 'report_reservations',
+          'report_whatsapp', 'report_occupancy', 'capacity_snapshot',
+          'dashboard_today', 'dashboard_trend', 'list_shifts'
+      ]) name
+     where not exists (
+         select 1 from pg_proc p
+          where p.proname = name and p.provolatile = 's'
+     );
+    if missing is not null then
+        raise exception 'report RPCs are not stable: %', missing;
+    end if;
+end $$;
+
+
+-- ---------------------------------------------------------------------------
+-- damage: fixtures
+-- ---------------------------------------------------------------------------
+do $$
+declare
+    category integer;
+    vehicle integer;
+    session_row integer;
+    uid uuid := '00000000-0000-0000-0000-000000000001';
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    perform set_config('request.jwt.claim.sub',
+        '00000000-0000-0000-0000-000000000001', true);
+    delete from public.damage_comparisons where lot_id = 1;
+    select id into category from public.categories where lot_id = 1 limit 1;
+    insert into public.vehicles (plate, category_id) values ('DMG001', category)
+    on conflict (plate) do update set category_id = excluded.category_id
+    returning id into vehicle;
+    insert into public.parking_sessions (
+        vehicle_id, operator_id, lot_id, entry_time, status
+    ) values (vehicle, 1, 1, now() - interval '2 hours', 'open')
+    returning id into session_row;
+    insert into public.evidence_photos (session_id, file_path, taken_at, kind, phase)
+    values
+        (session_row, 'entry-dmg/1.jpg', now() - interval '2 hours', 'photo', 'entry'),
+        (session_row, 'entry-dmg/2.jpg', now() - interval '2 hours', 'photo', 'entry');
+    insert into storage.objects (bucket_id, name, owner) values
+        ('evidence', 'exit-dmg/1.jpg', uid),
+        ('evidence', 'exit-dmg/2.jpg', uid),
+        ('evidence', 'exit-dmg/3.jpg', uid),
+        ('evidence', 'exit-dmg/4.jpg', uid),
+        ('evidence', 'exit-dmg/5.jpg', uid),
+        ('evidence', 'exit-dmg/6.jpg', uid)
+    on conflict do nothing;
+    perform set_config('app.damage_session', session_row::text, true);
+end $$;
+
+-- damage: existing rows default to entry
+do $$
+begin
+    if (select phase from public.evidence_photos
+         where file_path = 'entry-dmg/1.jpg') <> 'entry' then
+        raise exception 'an existing evidence row did not default to entry';
+    end if;
+end $$;
+
+-- damage: add exit evidence with phase exit
+do $$
+declare
+    session_row integer := current_setting('app.damage_session')::integer;
+    result jsonb;
+begin
+    result := public.add_exit_evidence(session_row, jsonb_build_array(
+        jsonb_build_object('path', 'exit-dmg/1.jpg'),
+        jsonb_build_object('path', 'exit-dmg/2.jpg')
+    ));
+    if (result ->> 'exit_photo_count')::integer <> 2 then
+        raise exception 'the exit photos were not added: %', result;
+    end if;
+    if (select count(*) from public.evidence_photos
+         where session_id = session_row and phase = 'exit') <> 2 then
+        raise exception 'the phase was not stored as exit';
+    end if;
+end $$;
+
+-- damage: exit evidence retry is idempotent
+do $$
+declare
+    session_row integer := current_setting('app.damage_session')::integer;
+    result jsonb;
+begin
+    result := public.add_exit_evidence(session_row, jsonb_build_array(
+        jsonb_build_object('path', 'exit-dmg/1.jpg')
+    ));
+    if (result ->> 'exit_photo_count')::integer <> 2 then
+        raise exception 'the retry duplicated the exit photo: %', result;
+    end if;
+end $$;
+
+-- damage: exit evidence errors
+do $$
+declare
+    session_row integer := current_setting('app.damage_session')::integer;
+begin
+    begin
+        perform public.add_exit_evidence(session_row, jsonb_build_array(
+            jsonb_build_object('path', 'exit-dmg/3.jpg'),
+            jsonb_build_object('path', 'exit-dmg/4.jpg'),
+            jsonb_build_object('path', 'exit-dmg/5.jpg'),
+            jsonb_build_object('path', 'exit-dmg/6.jpg')
+        ));
+        raise exception 'more than five exit photos were accepted';
+    exception when others then
+        if sqlerrm not like '%EvidenceLimitError%' then raise; end if;
+    end;
+    begin
+        perform public.add_exit_evidence(session_row, jsonb_build_array(
+            jsonb_build_object('path', 'missing/1.jpg')));
+        raise exception 'an object that was not uploaded was accepted';
+    exception when others then
+        if sqlerrm not like '%EvidenceNotFoundError%' then raise; end if;
+    end;
+    begin
+        perform public.add_exit_evidence(session_row, '[]'::jsonb);
+        raise exception 'an empty photo list was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+end $$;
+
+-- damage: begin needs both sets and caps them
+do $$
+declare
+    session_row integer := current_setting('app.damage_session')::integer;
+    result jsonb;
+begin
+    result := public.begin_damage_comparison(session_row, 5);
+    if (result ->> 'run_number')::integer <> 1
+       or jsonb_array_length(result -> 'entry_photos') <> 2
+       or jsonb_array_length(result -> 'exit_photos') <> 2 then
+        raise exception 'the begin payload is wrong: %', result;
+    end if;
+    perform set_config('app.damage_comparison', result ->> 'comparison_id', true);
+    begin
+        perform public.begin_damage_comparison(session_row, 5);
+        raise exception 'a second pending comparison was accepted';
+    exception when others then
+        if sqlerrm not like '%ComparisonInProgressError%' then raise; end if;
+    end;
+end $$;
+
+-- damage: store as service role and read with findings
+do $$
+declare
+    comparison bigint := current_setting('app.damage_comparison')::bigint;
+    session_row integer := current_setting('app.damage_session')::integer;
+    result jsonb;
+begin
+    set local role service_role;
+    perform public.store_damage_comparison(comparison, jsonb_build_object(
+        'overall', 'possible_new_damage',
+        'summary', 'Un rayón en la puerta.',
+        'quality', jsonb_build_object('same_vehicle', 'yes', 'issues', '[]'::jsonb),
+        'findings', jsonb_build_array(jsonb_build_object(
+            'zone', 'left', 'description', 'Rayón nuevo',
+            'classification', 'new', 'confidence', 'high',
+            'entry_photo_ids', jsonb_build_array(1),
+            'exit_photo_ids', jsonb_build_array(3)
+        ))
+    ), jsonb_build_object(
+        'model', 'deepseek-flash', 'entry_photo_count', 2, 'exit_photo_count', 2));
+    reset role;
+
+    result := public.get_damage_comparison(session_row, null);
+    if result -> 'comparison' ->> 'status' <> 'completed'
+       or (result -> 'comparison' ->> 'overall') <> 'possible_new_damage'
+       or jsonb_array_length(result -> 'comparison' -> 'findings') <> 1 then
+        raise exception 'the comparison was not stored: %', result;
+    end if;
+    perform set_config('app.damage_finding',
+        result -> 'comparison' -> 'findings' -> 0 ->> 'id', true);
+end $$;
+
+-- damage: review requires a note and audits the change
+do $$
+declare
+    finding bigint := current_setting('app.damage_finding')::bigint;
+    result jsonb;
+begin
+    begin
+        perform public.review_damage_finding(finding, 'confirmed', 'ab');
+        raise exception 'a two-character review note was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+    result := public.review_damage_finding(finding, 'confirmed', 'Verificado en el vehículo');
+    if result ->> 'review_status' <> 'confirmed'
+       or (result ->> 'reviewed_by')::integer <> 1 then
+        raise exception 'the review was not stored: %', result;
+    end if;
+    if not exists (
+        select 1 from public.audit_log a
+         where a.table_name = 'damage_findings' and a.action = 'update'
+    ) then
+        raise exception 'the review was not audited';
+    end if;
+end $$;
+
+-- damage: stale when the exit set changed
+do $$
+declare
+    session_row integer := current_setting('app.damage_session')::integer;
+    result jsonb;
+begin
+    insert into public.evidence_photos (session_id, file_path, taken_at, kind, phase)
+    values (session_row, 'exit-dmg/extra.jpg', now(), 'photo', 'exit');
+    result := public.get_damage_comparison(session_row, null);
+    if (result ->> 'stale')::boolean is not true then
+        raise exception 'the comparison was not marked stale';
+    end if;
+end $$;
+
+-- damage: operator second run is refused, admin re-run is allowed
+do $$
+declare
+    session_row integer := current_setting('app.damage_session')::integer;
+begin
+    set local role authenticated;
+    perform set_config('request.jwt.claim.sub',
+        '00000000-0000-0000-0000-000000000002', true);
+    begin
+        perform public.begin_damage_comparison(session_row, 5);
+        raise exception 'an operator ran a second comparison';
+    exception when others then
+        if sqlerrm not like '%ComparisonAlreadyExistsError%' then raise; end if;
+    end;
+    reset role;
+    perform set_config('request.jwt.claim.sub',
+        '00000000-0000-0000-0000-000000000001', true);
+    if (public.begin_damage_comparison(session_row, 5) ->> 'run_number')::integer <> 2 then
+        raise exception 'the admin re-run did not increment the run';
+    end if;
+end $$;
+
+-- damage: billing is untouched
+do $$
+declare
+    session_row integer := current_setting('app.damage_session')::integer;
+begin
+    if (select amount_charged from public.parking_sessions where id = session_row) is not null
+       or (select discount_amount from public.parking_sessions where id = session_row) <> 0 then
+        raise exception 'the comparison changed the billing';
+    end if;
+    if (select is_blacklisted from public.vehicles v
+         join public.parking_sessions s on s.vehicle_id = v.id
+        where s.id = session_row) then
+        raise exception 'the comparison blacklisted the vehicle';
+    end if;
+end $$;
+
+-- damage: service writers and anon are denied
+set local role authenticated;
+do $$
+begin
+    begin
+        perform public.store_damage_comparison(1, '{}'::jsonb, '{}'::jsonb);
+        raise exception 'an api role stored a comparison';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform public.fail_damage_comparison(1, 'x');
+        raise exception 'an api role failed a comparison';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        insert into public.damage_comparisons (lot_id, session_id, run_number)
+        values (1, 1, 99);
+        raise exception 'an api role inserted a comparison directly';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+set local role anon;
+do $$
+begin
+    begin
+        perform 1 from public.damage_comparisons limit 1;
+        raise exception 'anon read the damage comparisons';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform public.get_damage_comparison(1, null);
+        raise exception 'anon called the damage read';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
+-- damage: lot isolation
+do $$
+declare
+    lot2 integer;
+begin
+    select id into lot2 from public.parking_lots where code = 'LY2';
+    set local role authenticated;
+    perform set_config('request.headers',
+        jsonb_build_object('x-lot-id', lot2)::text, true);
+    begin
+        perform public.get_damage_comparison(
+            current_setting('app.damage_session')::integer, null);
+        raise exception 'a foreign lot read the comparison';
+    exception when others then
+        if sqlerrm not like '%SessionNotFoundError%' then raise; end if;
+    end;
+    reset role;
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    perform set_config('request.jwt.claim.sub',
+        '00000000-0000-0000-0000-000000000001', true);
+end $$;
+
+-- damage: purge respects retention and is internal
+set local role authenticated;
+do $$
+begin
+    begin
+        perform public.purge_damage_comparisons();
+        raise exception 'an api role purged the comparisons';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+do $$
+declare
+    before_count integer;
+    removed integer;
+begin
+    update public.parking_settings set evidence_retention_days = 0 where lot_id = 1;
+    before_count := (select count(*) from public.damage_comparisons where lot_id = 1);
+    perform public.purge_damage_comparisons();
+    if (select count(*) from public.damage_comparisons where lot_id = 1) <> before_count then
+        raise exception 'retention 0 deleted comparisons';
+    end if;
+    update public.parking_settings set evidence_retention_days = 30 where lot_id = 1;
+    update public.damage_comparisons set created_at = now() - interval '31 days' where lot_id = 1;
+    removed := public.purge_damage_comparisons();
+    if removed < 1
+       or exists (select 1 from public.damage_comparisons where lot_id = 1) then
+        raise exception 'the retention purge did not delete the old comparisons';
+    end if;
+    if exists (select 1 from public.damage_findings where lot_id = 1) then
+        raise exception 'the findings were not cascaded';
+    end if;
+end $$;
+
+
+-- ---------------------------------------------------------------------------
+-- devices: register, rotate and list
+-- ---------------------------------------------------------------------------
+do $$
+declare
+    result jsonb;
+    prefix text;
+    device_id integer;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    perform set_config('request.jwt.claim.sub',
+        '00000000-0000-0000-0000-000000000001', true);
+    result := public.register_lot_device('camera', 'Entrada principal');
+    if result ->> 'api_key' is null
+       or (result ->> 'status') <> 'never_seen'
+       or (result ->> 'api_key') !~ '^pkd_[0-9a-f]{12}_[0-9a-f]{64}$' then
+        raise exception 'the registered device is wrong: %', result;
+    end if;
+    prefix := split_part(result ->> 'api_key', '_', 2);
+    if public.device_lookup(prefix) ->> 'key_hash' is null then
+        raise exception 'the device lookup did not find the key';
+    end if;
+    device_id := (result ->> 'id')::integer;
+    perform set_config('app.device', device_id::text, true);
+    perform set_config('app.device_prefix', prefix, true);
+
+    begin
+        perform public.register_lot_device('barrier', 'Entrada principal');
+        raise exception 'a duplicate device name was accepted';
+    exception when others then
+        if sqlerrm not like '%DeviceNameTakenError%' then raise; end if;
+    end;
+    begin
+        perform public.register_lot_device('drone', 'X');
+        raise exception 'an invalid kind was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDeviceKindError%' then raise; end if;
+    end;
+end $$;
+
+-- devices: rotate resets the sequence and writes an event
+do $$
+declare
+    device_id integer := current_setting('app.device')::integer;
+    old_prefix text := current_setting('app.device_prefix');
+    result jsonb;
+begin
+    update public.lot_devices set last_seq = 42 where id = device_id;
+    result := public.rotate_lot_device_key(device_id);
+    if split_part(result ->> 'api_key', '_', 2) = old_prefix then
+        raise exception 'the key was not rotated';
+    end if;
+    if (select last_seq from public.lot_devices where id = device_id) <> 0 then
+        raise exception 'rotation did not reset the sequence';
+    end if;
+    if not exists (select 1 from public.device_events e
+                    where e.device_id = current_setting('app.device')::integer
+                      and e.event = 'key_rotated') then
+        raise exception 'the rotation was not logged';
+    end if;
+end $$;
+
+-- devices: accept, replay, clock and disable
+do $$
+declare
+    device_id integer := current_setting('app.device')::integer;
+    result jsonb;
+begin
+    result := public.device_accept_request(device_id, 1, now(), 'lpr-1.0');
+    if (result ->> 'ok')::boolean is not true
+       or (result ->> 'lot_id')::integer <> 1 then
+        raise exception 'a valid request was refused: %', result;
+    end if;
+    result := public.device_accept_request(device_id, 1, now(), null);
+    if result ->> 'error' <> 'DeviceReplayError' then
+        raise exception 'a replayed sequence was accepted: %', result;
+    end if;
+    result := public.device_accept_request(device_id, 2, now() - interval '10 minutes', null);
+    if result ->> 'error' <> 'DeviceClockSkewError' then
+        raise exception 'a skewed timestamp was accepted: %', result;
+    end if;
+    update public.lot_devices set enabled = false where id = device_id;
+    result := public.device_accept_request(device_id, 3, now(), null);
+    if result ->> 'error' <> 'DeviceDisabledError' then
+        raise exception 'a disabled device was accepted: %', result;
+    end if;
+    update public.lot_devices set enabled = true where id = device_id;
+end $$;
+
+-- devices: list shows the online status, events and the threshold
+do $$
+declare
+    listed jsonb;
+    events jsonb;
+begin
+    listed := public.list_lot_devices();
+    if (listed ->> 'offline_minutes')::integer <> 5 then
+        raise exception 'the default offline threshold is wrong: %', listed;
+    end if;
+    if listed -> 'devices' -> 0 ->> 'status' <> 'online' then
+        raise exception 'the device is not online: %', listed;
+    end if;
+    events := public.list_device_events(null, 50);
+    if jsonb_array_length(events) < 3 then
+        raise exception 'the device events are missing: %', events;
+    end if;
+    if public.set_device_offline_minutes(10) ->> 'offline_minutes' <> '10' then
+        raise exception 'the offline threshold was not saved';
+    end if;
+    begin
+        perform public.set_device_offline_minutes(1);
+        raise exception 'an out-of-range threshold was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+end $$;
+
+-- devices: update and heartbeat
+do $$
+declare
+    device_id integer := current_setting('app.device')::integer;
+    result jsonb;
+begin
+    result := public.update_lot_device(device_id, 'Cámara norte', null, 60);
+    if result ->> 'name' <> 'Cámara norte'
+       or (result ->> 'rate_per_minute')::integer <> 60 then
+        raise exception 'the device was not updated: %', result;
+    end if;
+    result := public.device_heartbeat(device_id, jsonb_build_object('uptime_s', 10));
+    if (result ->> 'heartbeat_interval_s')::integer <> 60
+       or (result ->> 'offline_minutes')::integer <> 10 then
+        raise exception 'the heartbeat answer is wrong: %', result;
+    end if;
+    begin
+        perform public.device_heartbeat(device_id, '[]'::jsonb);
+        raise exception 'a non-object heartbeat status was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+end $$;
+
+-- devices: offline alert is written once
+do $$
+declare
+    device_id integer := current_setting('app.device')::integer;
+    flagged integer;
+begin
+    update public.lot_devices
+       set last_seen_at = now() - interval '30 minutes',
+           offline_notified_at = null
+     where id = device_id;
+    flagged := public.notify_offline_devices();
+    if flagged < 1 then
+        raise exception 'the offline device was not flagged';
+    end if;
+    if not exists (select 1 from public.notifications
+                    where type = 'device_offline'
+                      and data ->> 'device_id' = device_id::text) then
+        raise exception 'the offline notification is missing';
+    end if;
+    if public.notify_offline_devices() <> 0 then
+        raise exception 'the offline device was flagged twice';
+    end if;
+    if not exists (select 1 from public.device_events e
+                    where e.device_id = current_setting('app.device')::integer
+                      and e.event = 'offline') then
+        raise exception 'the offline event is missing';
+    end if;
+end $$;
+
+-- devices: auth failure notification and purge
+do $$
+declare
+    device_id integer := current_setting('app.device')::integer;
+    removed integer;
+begin
+    perform public.device_record_auth_failure(device_id);
+    if not exists (select 1 from public.notifications
+                    where type = 'device_auth_failed'
+                      and data ->> 'device_id' = device_id::text) then
+        raise exception 'the auth failure notification is missing';
+    end if;
+    update public.device_events set created_at = now() - interval '200 days';
+    removed := public.purge_device_events(180);
+    if removed < 1 then
+        raise exception 'the event purge removed nothing';
+    end if;
+end $$;
+
+-- devices: security boundaries
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
+do $$
+begin
+    begin
+        perform public.list_lot_devices();
+        raise exception 'an operator listed the devices';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+    begin
+        perform public.register_lot_device('camera', 'Operador');
+        raise exception 'an operator registered a device';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+end $$;
+reset role;
+set local role anon;
+do $$
+begin
+    begin
+        perform 1 from public.device_events limit 1;
+        raise exception 'anon read the device events';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform public.register_lot_device('camera', 'Anon');
+        raise exception 'anon registered a device';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+
+-- ---------------------------------------------------------------------------
+-- reports: pass revenue is isolated per lot (Q3 regression)
+-- ---------------------------------------------------------------------------
+do $$
+declare
+    lot2 integer;
+    lot2_category integer;
+    vehicle2 integer;
+    pass_row integer;
+    payment_row bigint;
+    revenue jsonb;
+    before_pass bigint;
+begin
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    before_pass := ((public.report_revenue(current_date, current_date))
+                    ->> 'pass_revenue')::bigint;
+
+    insert into public.parking_lots (code, name, address, timezone)
+    values ('PAS2', 'Pass Lot 2', 'Calle 7', 'America/Bogota')
+    returning id into lot2;
+    insert into public.parking_settings (lot_id, name, address, car_capacity)
+    values (lot2, 'Pass Lot 2', 'Calle 7', 5);
+    insert into public.lot_members (lot_id, user_id, role)
+    values (lot2, 1, 'admin');
+    insert into public.categories (lot_id, name, capacity)
+    values (lot2, 'car', 0) returning id into lot2_category;
+    insert into public.vehicles (plate, category_id)
+    values ('PAS2CAR', lot2_category) returning id into vehicle2;
+    insert into public.monthly_passes (
+        vehicle_id, lot_id, start_date, end_date, amount
+    ) values (vehicle2, lot2, current_date, current_date + 30, 50000)
+    returning id into pass_row;
+    select id into payment_row
+      from public.monthly_pass_payments p
+     where p.monthly_pass_id = pass_row;
+    update public.monthly_pass_payments
+       set amount = 50000, payment_method = 'cash', status = 'paid',
+           paid_at = now(), paid_by = 1, lot_id = lot2
+     where id = payment_row;
+
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    revenue := public.report_revenue(current_date, current_date);
+    if (revenue ->> 'pass_revenue')::bigint <> before_pass then
+        raise exception 'the lot 2 pass leaked into lot 1: % <> %',
+            (revenue ->> 'pass_revenue'), before_pass;
+    end if;
+
+    perform set_config('request.headers',
+        jsonb_build_object('x-lot-id', lot2)::text, true);
+    revenue := public.report_revenue(current_date, current_date);
+    if (revenue ->> 'pass_revenue')::bigint <> 50000 then
+        raise exception 'lot 2 did not see its own pass revenue: %', revenue;
+    end if;
+
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    delete from public.monthly_pass_payments where id = payment_row;
+    delete from public.monthly_passes where id = pass_row;
+    delete from public.vehicles where id = vehicle2;
+    delete from public.lot_members where lot_id = lot2 and user_id = 1;
+    delete from public.parking_settings where lot_id = lot2;
+    delete from public.categories where id = lot2_category;
+    delete from public.parking_lots where id = lot2;
+end $$;
+
+set local request.headers = '{"x-lot-id":"1"}';
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+
+
+-- devices: the key generator can see pgcrypto on the real stack
+do $$
+declare
+    config text;
+begin
+    for config in
+        select array_to_string(p.proconfig, ',')
+          from pg_proc p
+         where p.pronamespace = 'public'::regnamespace
+           and p.proname in ('register_lot_device', 'rotate_lot_device_key')
+    loop
+        if config is null or config not like '%extensions%' then
+            raise exception 'a device key function cannot see pgcrypto: %', config;
+        end if;
+    end loop;
+    if not exists (
+        select 1 from pg_proc p
+         where p.pronamespace = 'public'::regnamespace
+           and p.proname = 'register_lot_device'
+    ) then
+        raise exception 'register_lot_device is missing';
+    end if;
+end $$;
+
+
+-- ---------------------------------------------------------------------------
+-- lpr: per-lot settings, camera directions and the acting-user primitive.
+-- ---------------------------------------------------------------------------
+insert into auth.users (id, email, raw_app_meta_data) values
+    ('00000000-0000-0000-0000-000000000099', 'lpr-outsider@parking.local',
+     '{"role": "operator"}'::jsonb)
+on conflict (id) do nothing;
+
+-- lpr: a new lot reads the documented defaults and stores no row
+do $$
+declare
+    settings jsonb;
+begin
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    perform set_config('request.jwt.claims', '', true);
+    delete from public.lpr_settings where lot_id = 1;
+    settings := public.get_lpr_settings();
+    if settings ->> 'mode' <> 'assist'
+       or (settings ->> 'min_confidence')::numeric <> 0.800
+       or (settings ->> 'auto_confidence')::numeric <> 0.920
+       or (settings ->> 'min_votes')::integer <> 3
+       or (settings ->> 'vote_window_seconds')::integer <> 8
+       or (settings ->> 'cooldown_seconds')::integer <> 120
+       or (settings ->> 'pending_expire_minutes')::integer <> 60
+       or (settings ->> 'exit_paid_window_minutes')::integer <> 15
+       or settings -> 'default_category_id' <> 'null'::jsonb
+       or settings -> 'acting_user_id' <> 'null'::jsonb
+       or jsonb_typeof(settings -> 'cameras') <> 'array' then
+        raise exception 'the lpr defaults are wrong: %', settings;
+    end if;
+    if exists (select 1 from public.lpr_settings where lot_id = 1) then
+        raise exception 'reading settings wrote a row';
+    end if;
+end $$;
+
+-- lpr: an admin switches to auto and the change is audited
+do $$
+declare
+    settings jsonb;
+    category integer := (select id from public.categories where lot_id = 1 order by id limit 1);
+begin
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    settings := public.set_lpr_settings(
+        p_mode => 'auto',
+        p_default_category_id => category,
+        p_acting_user_id => 2
+    );
+    if settings ->> 'mode' <> 'auto'
+       or (settings ->> 'acting_user_id')::integer <> 2
+       or (settings ->> 'default_category_id')::integer <> category then
+        raise exception 'the settings were not saved: %', settings;
+    end if;
+    if not exists (
+        select 1 from public.audit_log
+         where table_name = 'lpr_settings' and after ->> 'mode' = 'auto'
+    ) then
+        raise exception 'changing the lpr settings was not audited';
+    end if;
+end $$;
+
+-- lpr: out-of-range values are rejected and leave the row untouched
+do $$
+declare
+    before_row public.lpr_settings%rowtype;
+    after_row public.lpr_settings%rowtype;
+begin
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    select * into before_row from public.lpr_settings where lot_id = 1;
+    begin
+        perform public.set_lpr_settings(p_min_confidence => 0.4);
+        raise exception 'a minimum below 0.5 was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+    begin
+        perform public.set_lpr_settings(p_min_confidence => 1.0);
+        raise exception 'a minimum above 0.99 was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+    begin
+        perform public.set_lpr_settings(p_min_votes => 0);
+        raise exception 'zero votes was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+    begin
+        perform public.set_lpr_settings(p_vote_window_seconds => 61);
+        raise exception 'a window above 60 s was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+    begin
+        perform public.set_lpr_settings(p_cooldown_seconds => 9);
+        raise exception 'a cooldown below 10 s was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+    begin
+        perform public.set_lpr_settings(
+            p_min_confidence => 0.90, p_auto_confidence => 0.85);
+        raise exception 'an automatic confidence below the minimum was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+    begin
+        perform public.set_lpr_settings(p_mode => 'always');
+        raise exception 'an unknown mode was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+    select * into after_row from public.lpr_settings where lot_id = 1;
+    if after_row is distinct from before_row then
+        raise exception 'a rejected update changed the row';
+    end if;
+end $$;
+
+-- lpr: auto mode requires an active system operator in the lot
+do $$
+declare
+    outsider integer := (
+        select id from public.users
+         where auth_user_id = '00000000-0000-0000-0000-000000000099'
+    );
+begin
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    delete from public.lpr_settings where lot_id = 1;
+    begin
+        perform public.set_lpr_settings(p_mode => 'auto');
+        raise exception 'auto was enabled without a system operator';
+    exception when others then
+        if sqlerrm not like '%LprSystemOperatorRequiredError%' then raise; end if;
+    end;
+    if exists (select 1 from public.lpr_settings where lot_id = 1 and mode = 'auto') then
+        raise exception 'the mode changed despite the error';
+    end if;
+    -- A user outside the lot cannot be the system operator.
+    -- Every profile joins lot 1 through the default-membership trigger; use
+    -- a second lot where this user is not a member.
+    perform set_config('request.headers',
+        jsonb_build_object('x-lot-id', current_setting('app.pricing_lot'))::text,
+        true);
+    if exists (
+        select 1 from public.lot_members
+         where lot_id = current_setting('app.pricing_lot')::integer
+           and user_id = outsider
+    ) then
+        raise exception 'fixture: the outsider belongs to the second lot';
+    end if;
+    begin
+        perform public.set_lpr_settings(
+            p_mode => 'auto', p_acting_user_id => outsider);
+        raise exception 'an outsider was accepted as system operator';
+    exception when others then
+        if sqlerrm not like '%UserNotFoundError%' then raise; end if;
+    end;
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+end $$;
+
+-- lpr: categories must belong to the lot
+do $$
+declare
+    foreign_category integer;
+begin
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    select id into foreign_category
+      from public.categories
+     where lot_id = current_setting('app.pricing_lot')::integer
+     order by id limit 1;
+    if foreign_category is null then
+        raise exception 'the pricing lot category fixture is missing';
+    end if;
+    begin
+        perform public.set_lpr_settings(p_default_category_id => foreign_category);
+        raise exception 'a category from another lot was accepted';
+    exception when others then
+        if sqlerrm not like '%CategoryNotFoundError%' then raise; end if;
+    end;
+end $$;
+
+-- lpr: camera directions are admin-only and validate the device
+do $$
+declare
+    camera integer;
+    barrier integer;
+    result jsonb;
+begin
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    camera := (public.register_lot_device('camera', 'LPR entrance') ->> 'id')::integer;
+    barrier := (public.register_lot_device('barrier', 'LPR barrier') ->> 'id')::integer;
+    perform set_config('app.lpr_camera', camera::text, true);
+    perform set_config('app.lpr_barrier', barrier::text, true);
+    result := public.set_lpr_camera_direction(camera, 'entry');
+    if result ->> 'direction' <> 'entry' then
+        raise exception 'the camera direction was not saved: %', result;
+    end if;
+    begin
+        perform public.set_lpr_camera_direction(barrier, 'entry');
+        raise exception 'a barrier accepted a camera direction';
+    exception when others then
+        if sqlerrm not like '%InvalidDeviceKindError%' then raise; end if;
+    end;
+    begin
+        perform public.set_lpr_camera_direction(camera, 'sideways');
+        raise exception 'an unknown direction was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+    begin
+        perform public.set_lpr_camera_direction(999999, 'entry');
+        raise exception 'an unknown device was accepted';
+    exception when others then
+        if sqlerrm not like '%DeviceNotFoundError%' then raise; end if;
+    end;
+end $$;
+
+-- lpr: an operator reads but never writes
+do $$
+declare
+    settings jsonb;
+    camera integer := current_setting('app.lpr_camera')::integer;
+begin
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', true);
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    settings := public.get_lpr_settings();
+    if settings ->> 'mode' is null then
+        raise exception 'an operator could not read the settings';
+    end if;
+    begin
+        perform public.set_lpr_settings(p_mode => 'auto');
+        raise exception 'an operator changed the settings';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+    begin
+        perform public.set_lpr_camera_direction(camera, 'exit');
+        raise exception 'an operator changed a camera direction';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+end $$;
+
+-- lpr: settings are per lot
+do $$
+declare
+    pricing_lot integer := current_setting('app.pricing_lot')::integer;
+begin
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+    perform set_config('request.headers',
+        jsonb_build_object('x-lot-id', pricing_lot)::text, true);
+    perform public.set_lpr_settings(p_mode => 'assist');
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    if public.get_lpr_settings() ->> 'mode' = 'assist'
+       and public.get_lpr_settings() ->> 'mode' is distinct from
+           (select mode from public.lpr_settings where lot_id = pricing_lot) then
+        raise exception 'the lots share one settings row';
+    end if;
+    if (select count(*) from public.lpr_settings where lot_id = pricing_lot) <> 1 then
+        raise exception 'the second lot has no settings row';
+    end if;
+end $$;
+
+-- lpr: the defaults literal lists every column
+do $$
+declare
+    table_columns text[];
+    literal_keys text[];
+begin
+    select array_agg(column_name order by ordinal_position) into table_columns
+      from information_schema.columns
+     where table_schema = 'public' and table_name = 'lpr_settings';
+    select array_agg(key order by key) into literal_keys
+      from jsonb_object_keys(
+          to_jsonb(public.lpr_effective_settings(999))) as key;
+    if array_length(table_columns, 1) <> array_length(literal_keys, 1) then
+        raise exception 'lpr_effective_settings is missing a column: % vs %',
+            table_columns, literal_keys;
+    end if;
+end $$;
+
+-- lpr: claims set inside a security definer resolve the acting user and restore
+create or replace function pg_temp.lpr_claims_probe(p_auth uuid, p_lot integer)
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+    before_sub text := current_setting('request.jwt.claim.sub', true);
+    before_claims text := current_setting('request.jwt.claims', true);
+    before_headers text := current_setting('request.headers', true);
+    app_user integer;
+begin
+    perform set_config('request.jwt.claim.sub', p_auth::text, true);
+    perform set_config('request.jwt.claims',
+        json_build_object('sub', p_auth, 'role', 'authenticated')::text, true);
+    perform set_config('request.headers',
+        json_build_object('x-lot-id', p_lot::text)::text, true);
+    app_user := public.current_app_user_id();
+    perform set_config('request.jwt.claim.sub', coalesce(before_sub, ''), true);
+    perform set_config('request.jwt.claims', coalesce(before_claims, ''), true);
+    perform set_config('request.headers', coalesce(before_headers, ''), true);
+    if current_setting('request.jwt.claim.sub', true) is distinct from before_sub
+       or current_setting('request.jwt.claims', true) is distinct from before_claims
+       or current_setting('request.headers', true) is distinct from before_headers then
+        raise exception 'the claims were not restored';
+    end if;
+    return app_user;
+end $$;
+
+do $$
+declare
+    acting integer;
+begin
+    perform set_config('request.jwt.claim.sub', '', true);
+    perform set_config('request.jwt.claims', '', true);
+    acting := pg_temp.lpr_claims_probe(
+        '00000000-0000-0000-0000-000000000002', 1);
+    if acting <> 2 then
+        raise exception 'the acting user was % instead of 2', acting;
+    end if;
+    if public.current_app_user_id() is not null then
+        raise exception 'the probe leaked the acting user';
+    end if;
+end $$;
+
+-- lpr: cleanup (the temp camera and its direction)
+do $$
+begin
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    perform public.delete_lot_device(current_setting('app.lpr_camera')::integer);
+    perform public.delete_lot_device(current_setting('app.lpr_barrier')::integer);
+    delete from public.lpr_settings where lot_id in (1, current_setting('app.pricing_lot')::integer);
+end $$;
+
+
+-- ---------------------------------------------------------------------------
+-- lpr: ingest, voting, the decision table and snapshots.
+-- ---------------------------------------------------------------------------
+create or replace function pg_temp.lpr_triple(
+    p_device integer, p_plate text, p_confidence numeric, p_at timestamptz)
+returns jsonb
+language plpgsql
+as $$
+begin
+    perform public.device_ingest_lpr_read(
+        p_device, gen_random_uuid(), p_plate, p_confidence, p_at, 'track');
+    perform public.device_ingest_lpr_read(
+        p_device, gen_random_uuid(), p_plate, p_confidence, p_at, 'track');
+    return public.device_ingest_lpr_read(
+        p_device, gen_random_uuid(), p_plate, p_confidence, p_at, 'track');
+end $$;
+
+do $$
+declare
+    entry_camera integer;
+    exit_camera integer;
+    barrier integer;
+    car_category integer;
+    full_category integer;
+    car_vehicle integer;
+    full_vehicle integer;
+    response jsonb;
+    settings public.lpr_settings%rowtype;
+begin
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+    perform set_config('request.jwt.claim.sub',
+        '00000000-0000-0000-0000-000000000001', true);
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    perform set_config('request.jwt.claims', '', true);
+
+    entry_camera := (public.register_lot_device('camera', 'Entrada LPR') ->> 'id')::integer;
+    exit_camera := (public.register_lot_device('camera', 'Salida LPR') ->> 'id')::integer;
+    barrier := (public.register_lot_device('barrier', 'Barrera LPR') ->> 'id')::integer;
+    perform set_config('app.lpr_entry_cam', entry_camera::text, true);
+    perform set_config('app.lpr_exit_cam', exit_camera::text, true);
+    perform set_config('app.lpr_barrier', barrier::text, true);
+    perform public.set_lpr_camera_direction(entry_camera, 'entry');
+    perform public.set_lpr_camera_direction(exit_camera, 'exit');
+
+    insert into public.categories (lot_id, name, capacity)
+    values (1, 'LPR car', 50), (1, 'LPR full', 0);
+    select id into car_category from public.categories
+     where lot_id = 1 and name = 'LPR car';
+    select id into full_category from public.categories
+     where lot_id = 1 and name = 'LPR full';
+    insert into public.tariffs (category_id, lot_id, type, amount, active)
+    values (car_category, 1, 'hourly', 3000, true),
+           (full_category, 1, 'hourly', 3000, true);
+    insert into public.vehicles (plate, category_id)
+    values ('LPR001', car_category), ('LPR002', full_category),
+           ('LPR010', car_category), ('LPR011', car_category),
+           ('LPR012', car_category), ('LPR013', car_category),
+           ('LPR014', car_category), ('LPR015', car_category),
+           ('LPR016', car_category), ('LPR017', car_category),
+           ('LPR018', car_category), ('LPR019', car_category),
+           ('LPR020', car_category), ('LPR021', car_category),
+           ('LPR022', car_category), ('LPR023', car_category),
+           ('LPR024', car_category), ('LPR025', car_category);
+    select id into car_vehicle from public.vehicles where plate = 'LPR001';
+    select id into full_vehicle from public.vehicles where plate = 'LPR002';
+    perform set_config('app.lpr_car_cat', car_category::text, true);
+    perform set_config('app.lpr_full_cat', full_category::text, true);
+
+    -- config: direction and thresholds; non-camera refused; missing direction
+    response := public.device_lpr_config(entry_camera);
+    if response ->> 'direction' <> 'entry'
+       or (response ->> 'min_confidence')::numeric <> 0.800
+       or (response ->> 'vote_window_seconds')::integer <> 8
+       or (response ->> 'heartbeat_interval_s')::integer <> 60 then
+        raise exception 'the device config is wrong: %', response;
+    end if;
+    begin
+        perform public.device_lpr_config(barrier);
+        raise exception 'a barrier was configured as a camera';
+    exception when others then
+        if sqlerrm not like '%InvalidDeviceKindError%' then raise; end if;
+    end;
+    perform set_config('request.jwt.claim.sub', '', true);
+end $$;
+
+-- lpr ingest: validation, normalization, stale, low confidence and replay
+do $$
+declare
+    entry_camera integer := current_setting('app.lpr_entry_cam')::integer;
+    response jsonb;
+    reference uuid := gen_random_uuid();
+    reads integer;
+begin
+    begin
+        perform public.device_ingest_lpr_read(
+            entry_camera, gen_random_uuid(), 'ABC-123', 0.9, now(), null);
+        raise exception 'an invalid plate was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidPlateError%' then raise; end if;
+    end;
+    begin
+        perform public.device_ingest_lpr_read(
+            entry_camera, gen_random_uuid(), 'LPR999', 0, now(), null);
+        raise exception 'a zero confidence was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidConfidenceError%' then raise; end if;
+    end;
+    begin
+        perform public.device_ingest_lpr_read(
+            entry_camera, gen_random_uuid(), 'LPR999', 1.2, now(), null);
+        raise exception 'a confidence above 1 was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidConfidenceError%' then raise; end if;
+    end;
+    begin
+        perform public.device_ingest_lpr_read(
+            entry_camera, gen_random_uuid(), 'LPR999', 0.9,
+            now() + interval '10 minutes', null);
+        raise exception 'a future read was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidReadTimeError%' then raise; end if;
+    end;
+
+    response := public.device_ingest_lpr_read(
+        entry_camera, gen_random_uuid(), ' lpr 998 ', 0.5, now(), null);
+    if response ->> 'outcome' <> 'ignored_low_confidence' then
+        raise exception 'a low-confidence read became a vote: %', response;
+    end if;
+    response := public.device_ingest_lpr_read(
+        entry_camera, gen_random_uuid(), 'LPR997', 0.9,
+        now() - interval '20 minutes', null);
+    if response ->> 'outcome' <> 'stale' then
+        raise exception 'a stale read was not marked stale: %', response;
+    end if;
+    if exists (select 1 from public.lpr_events where plate = 'LPR997') then
+        raise exception 'a stale read created an event';
+    end if;
+
+    response := public.device_ingest_lpr_read(
+        entry_camera, reference, ' lpr 003 ', 0.95, now(), 'track-1');
+    if response ->> 'outcome' <> 'recorded' then
+        raise exception 'the first read did not record: %', response;
+    end if;
+    select count(*) into reads from public.lpr_reads
+     where device_id = entry_camera and client_ref = reference;
+    response := public.device_ingest_lpr_read(
+        entry_camera, reference, ' lpr 003 ', 0.95, now(), 'track-1');
+    if response ->> 'outcome' <> 'replayed' then
+        raise exception 'a repeated client ref was not replayed: %', response;
+    end if;
+    if (select count(*) from public.lpr_reads
+         where device_id = entry_camera and client_ref = reference) <> reads then
+        raise exception 'a replay created a second read';
+    end if;
+    if not exists (select 1 from public.lpr_reads
+                    where device_id = entry_camera and client_ref = reference
+                      and plate = 'LPR003') then
+        raise exception 'the plate was not normalized';
+    end if;
+end $$;
+
+-- lpr assist: three reads decide one event, notify members once and debounce
+do $$
+declare
+    entry_camera integer := current_setting('app.lpr_entry_cam')::integer;
+    response jsonb;
+    event_id bigint;
+    members integer;
+    notified integer;
+begin
+    response := pg_temp.lpr_triple(entry_camera, 'LPR001', 0.95, now());
+    if response ->> 'outcome' <> 'decided' then
+        raise exception 'three reads did not decide: %', response;
+    end if;
+    event_id := (response -> 'event' ->> 'id')::bigint;
+    if response -> 'event' ->> 'status' <> 'pending'
+       or response -> 'event' ->> 'reason' <> 'assist_mode'
+       or response -> 'event' ->> 'kind' <> 'entry'
+       or (response -> 'event' ->> 'votes')::integer <> 3 then
+        raise exception 'the assist decision is wrong: %', response;
+    end if;
+    if (response ->> 'snapshot_wanted')::boolean is not true then
+        raise exception 'a new event did not want a snapshot';
+    end if;
+    perform public.lpr_notify(event_id);
+    select count(*) into members from public.lot_members lm
+      join public.users u on u.id = lm.user_id
+     where lm.lot_id = 1 and u.is_active;
+    select count(*) into notified from public.notifications
+     where dedupe_key like 'lpr:' || event_id || ':user:%';
+    if notified <> members then
+        raise exception 'notifications % for % members', notified, members;
+    end if;
+    response := public.device_ingest_lpr_read(
+        entry_camera, gen_random_uuid(), 'LPR001', 0.95, now(), null);
+    if response ->> 'outcome' <> 'debounced' then
+        raise exception 'a read inside the cooldown was not debounced: %', response;
+    end if;
+end $$;
+
+-- lpr: votes do not cross cameras
+do $$
+declare
+    entry_camera integer := current_setting('app.lpr_entry_cam')::integer;
+    exit_camera integer := current_setting('app.lpr_exit_cam')::integer;
+    response jsonb;
+begin
+    perform public.device_ingest_lpr_read(
+        entry_camera, gen_random_uuid(), 'LPR900', 0.95, now(), null);
+    perform public.device_ingest_lpr_read(
+        entry_camera, gen_random_uuid(), 'LPR900', 0.95, now(), null);
+    response := public.device_ingest_lpr_read(
+        exit_camera, gen_random_uuid(), 'LPR900', 0.95, now(), null);
+    if response ->> 'outcome' <> 'recorded' then
+        raise exception 'votes crossed cameras: %', response;
+    end if;
+end $$;
+
+-- lpr auto: known plate, unknown plate, low confidence and no operator
+do $$
+declare
+    entry_camera integer := current_setting('app.lpr_entry_cam')::integer;
+    car_category integer := current_setting('app.lpr_car_cat')::integer;
+    response jsonb;
+    session public.parking_sessions%rowtype;
+    event public.lpr_events%rowtype;
+    vehicle public.vehicles%rowtype;
+begin
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    perform public.set_lpr_settings(
+        p_mode => 'auto',
+        p_default_category_id => car_category,
+        p_acting_user_id => 2
+    );
+    perform set_config('request.jwt.claim.sub', '', true);
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+
+    response := pg_temp.lpr_triple(entry_camera, 'LPR010', 0.95, now());
+    if response -> 'event' ->> 'status' <> 'done' then
+        raise exception 'auto did not check in: %', response;
+    end if;
+    select * into session from public.parking_sessions s
+     where s.id = (response -> 'event' ->> 'session_id')::integer;
+    if session.operator_id <> 2 then
+        raise exception 'the session was attributed to % instead of 2',
+            session.operator_id;
+    end if;
+    if current_setting('request.jwt.claim.sub', true) is distinct from '' then
+        raise exception 'the acting claims leaked after an auto check-in';
+    end if;
+
+    response := pg_temp.lpr_triple(entry_camera, 'lpr777', 0.95, now());
+    if response -> 'event' ->> 'status' <> 'done' then
+        raise exception 'an unknown plate with a default category did not check in: %',
+            response;
+    end if;
+    select * into vehicle from public.vehicles where plate = 'LPR777';
+    if vehicle.category_id <> car_category then
+        raise exception 'the unknown plate was not registered with the default category';
+    end if;
+
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    update public.lpr_settings set default_category_id = null where lot_id = 1;
+    perform set_config('request.jwt.claim.sub', '', true);
+    response := pg_temp.lpr_triple(entry_camera, 'LPR555', 0.95, now());
+    if response -> 'event' ->> 'reason' <> 'unknown_plate' then
+        raise exception 'an unknown plate without a category was not pending: %',
+            response;
+    end if;
+
+    response := pg_temp.lpr_triple(entry_camera, 'LPR556', 0.85, now());
+    if response -> 'event' ->> 'reason' <> 'low_confidence' then
+        raise exception 'a low automatic confidence was not pending: %', response;
+    end if;
+
+    update public.lpr_settings set acting_user_id = null where lot_id = 1;
+    response := pg_temp.lpr_triple(entry_camera, 'LPR018', 0.95, now());
+    if response -> 'event' ->> 'reason' <> 'no_system_operator' then
+        raise exception 'auto without a system operator was not pending: %', response;
+    end if;
+
+    -- Restore for the following blocks.
+    update public.lpr_settings
+       set acting_user_id = 2,
+           default_category_id = current_setting('app.lpr_car_cat')::integer
+     where lot_id = 1;
+end $$;
+
+-- lpr: blacklist, duplicate session and lot full
+do $$
+declare
+    entry_camera integer := current_setting('app.lpr_entry_cam')::integer;
+    full_category integer := current_setting('app.lpr_full_cat')::integer;
+    blacklisted_vehicle integer := (select id from public.vehicles where plate = 'LPR011');
+    duplicate_vehicle integer := (select id from public.vehicles where plate = 'LPR012');
+    response jsonb;
+begin
+    update public.vehicles set is_blacklisted = true where id = blacklisted_vehicle;
+    response := pg_temp.lpr_triple(entry_camera, 'LPR011', 0.95, now());
+    if response -> 'event' ->> 'status' <> 'blocked'
+       or response -> 'event' ->> 'reason' <> 'blacklisted' then
+        raise exception 'a blacklisted plate was not blocked: %', response;
+    end if;
+    if exists (select 1 from public.parking_sessions where vehicle_id = blacklisted_vehicle
+                and status = 'open') then
+        raise exception 'a blacklisted vehicle opened a session';
+    end if;
+
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    values (duplicate_vehicle, 1, 1, now(), 'open');
+    response := pg_temp.lpr_triple(entry_camera, 'LPR012', 0.95, now());
+    if response -> 'event' ->> 'reason' <> 'duplicate_session' then
+        raise exception 'a vehicle already inside was not pending: %', response;
+    end if;
+    delete from public.parking_sessions where vehicle_id = duplicate_vehicle;
+
+    -- The plate is known and its category has zero capacity.
+    response := pg_temp.lpr_triple(entry_camera, 'LPR002', 0.99, now());
+    if response -> 'event' ->> 'reason' <> 'lot_full' then
+        raise exception 'a full category was not reported: %', response;
+    end if;
+end $$;
+
+-- lpr exit: unpaid, paid, no session, blacklist and pass
+do $$
+declare
+    exit_camera integer := current_setting('app.lpr_exit_cam')::integer;
+    unpaid_vehicle integer := (select id from public.vehicles where plate = 'LPR013');
+    paid_vehicle integer := (select id from public.vehicles where plate = 'LPR014');
+    pass_vehicle integer := (select id from public.vehicles where plate = 'LPR016');
+    blacklisted_vehicle integer := (select id from public.vehicles where plate = 'LPR015');
+    session_id integer;
+    response jsonb;
+    event_id bigint;
+begin
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    values (unpaid_vehicle, 1, 1, now() - interval '1 hour', 'open')
+    returning id into session_id;
+    response := pg_temp.lpr_triple(exit_camera, 'LPR013', 0.95, now());
+    event_id := (response -> 'event' ->> 'id')::bigint;
+    if response -> 'event' ->> 'reason' <> 'exit_unpaid'
+       or (response -> 'event' ->> 'session_id')::integer <> session_id then
+        raise exception 'an unpaid exit was not pending: %', response;
+    end if;
+    if (select status from public.parking_sessions where id = session_id) <> 'open' then
+        raise exception 'the exit event touched the session';
+    end if;
+    if not exists (select 1 from public.notifications
+                    where dedupe_key like 'lpr:' || event_id || ':user:%'
+                      and type = 'lpr_exit') then
+        raise exception 'an unpaid exit did not notify the desk';
+    end if;
+    insert into public.parking_sessions (
+        vehicle_id, operator_id, lot_id, entry_time, exit_time, status
+    ) values (
+        paid_vehicle, 1, 1, now() - interval '2 hours',
+        now() - interval '3 minutes', 'closed'
+    );
+    response := pg_temp.lpr_triple(exit_camera, 'LPR014', 0.95, now());
+    if response -> 'event' ->> 'reason' <> 'exit_paid'
+       or response -> 'event' ->> 'status' <> 'done' then
+        raise exception 'a paid exit was not done: %', response;
+    end if;
+
+    response := pg_temp.lpr_triple(exit_camera, 'LPR888', 0.95, now());
+    if response -> 'event' ->> 'reason' <> 'no_open_session' then
+        raise exception 'an exit without a session was not pending: %', response;
+    end if;
+
+    update public.vehicles set is_blacklisted = true where id = blacklisted_vehicle;
+    response := pg_temp.lpr_triple(exit_camera, 'LPR015', 0.95, now());
+    if response -> 'event' ->> 'status' <> 'blocked' then
+        raise exception 'a blacklisted exit was not blocked: %', response;
+    end if;
+    update public.vehicles set is_blacklisted = false where id = blacklisted_vehicle;
+
+    insert into public.monthly_passes (vehicle_id, lot_id, start_date, end_date, amount)
+    values (pass_vehicle, 1, current_date, current_date + 10, 150000);
+    response := pg_temp.lpr_triple(exit_camera, 'LPR016', 0.95, now());
+    if (response -> 'event' ->> 'has_pass')::boolean is not true then
+        raise exception 'the exit event did not record the pass: %', response;
+    end if;
+end $$;
+
+-- lpr snapshot: attach, evidence row, conflicts and Storage policy
+do $$
+declare
+    entry_camera integer := current_setting('app.lpr_entry_cam')::integer;
+    exit_camera integer := current_setting('app.lpr_exit_cam')::integer;
+    response jsonb;
+    event_id bigint;
+    evidence_session integer;
+    path text;
+begin
+    response := pg_temp.lpr_triple(entry_camera, 'LPR017', 0.95, now());
+    event_id := (response -> 'event' ->> 'id')::bigint;
+    path := 'lpr/1/' || entry_camera || '/' || event_id || '.jpg';
+
+    begin
+        perform public.device_lpr_attach_snapshot(entry_camera, event_id,
+            'lpr/1/' || entry_camera || '/999999.jpg');
+        raise exception 'a wrong snapshot path was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidSnapshotPathError%' then raise; end if;
+    end;
+    begin
+        perform public.device_lpr_attach_snapshot(exit_camera, event_id, path);
+        raise exception 'another camera attached the snapshot';
+    exception when others then
+        if sqlerrm not like '%LprEventNotFoundError%' then raise; end if;
+    end;
+
+    response := public.device_lpr_attach_snapshot(entry_camera, event_id, path);
+    if response ->> 'event_id' is null then
+        raise exception 'the snapshot was not attached: %', response;
+    end if;
+    evidence_session := (response ->> 'session_id')::integer;
+    if evidence_session is null then
+        raise exception 'the auto event has no session to attach evidence to';
+    end if;
+    if not exists (
+        select 1 from public.evidence_photos p
+         where p.session_id = evidence_session and p.file_path = path
+    ) then
+        raise exception 'the snapshot was not attached as evidence';
+    end if;
+    begin
+        perform public.device_lpr_attach_snapshot(entry_camera, event_id, path);
+        raise exception 'a second snapshot was accepted';
+    exception when others then
+        if sqlerrm not like '%SnapshotAlreadyAttachedError%' then raise; end if;
+    end;
+
+    -- Members of the lot can read it; the policy never uses current_lot_id().
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', true);
+    if not public.can_read_lpr_snapshot(path) then
+        raise exception 'a lot member cannot read the snapshot';
+    end if;
+    -- New profiles join lot 1 automatically; drop that membership to make a
+    -- real outsider for the Storage read test.
+    delete from public.lot_members
+     where lot_id = 1
+       and user_id = (select id from public.users
+                       where auth_user_id = '00000000-0000-0000-0000-000000000099');
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000099', true);
+    if public.can_read_lpr_snapshot(path) then
+        raise exception 'an outsider can read the snapshot';
+    end if;
+    perform set_config('request.jwt.claim.sub', '', true);
+    if (select pg_get_expr(polqual, polrelid) from pg_policy
+         where polname = 'lpr_snapshots_read') like '%current_lot_id%' then
+        raise exception 'the snapshot policy depends on the lot header';
+    end if;
+
+
+end $$;
+
+-- lpr: device RPCs are service-role only
+do $$
+begin
+    if has_function_privilege('authenticated',
+        'public.device_ingest_lpr_read(integer, uuid, text, numeric, timestamptz, text)',
+        'execute') then
+        raise exception 'authenticated can ingest lpr reads';
+    end if;
+    if has_function_privilege('anon',
+        'public.device_lpr_attach_snapshot(integer, bigint, text)',
+        'execute') then
+        raise exception 'anon can attach snapshots';
+    end if;
+    if not has_function_privilege('service_role',
+        'public.device_ingest_lpr_read(integer, uuid, text, numeric, timestamptz, text)',
+        'execute') then
+        raise exception 'service_role cannot ingest lpr reads';
+    end if;
+end $$;
+
+
+-- ---------------------------------------------------------------------------
+-- lpr: operator inbox, confirmation, dismissal, jobs and purge.
+-- ---------------------------------------------------------------------------
+do $$
+declare
+    entry_camera integer := current_setting('app.lpr_entry_cam')::integer;
+    exit_camera integer := current_setting('app.lpr_exit_cam')::integer;
+    response jsonb;
+    events jsonb;
+    event_id bigint;
+    event public.lpr_events%rowtype;
+    session_row public.parking_sessions%rowtype;
+    path text;
+    first_confirm integer;
+    purge_event bigint;
+    session_vehicle integer;
+    paths jsonb;
+begin
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    perform public.set_lpr_settings(p_mode => 'assist');
+    perform set_config('request.jwt.claim.sub', '', true);
+
+    -- Inbox: pending only, newest first, unknown filter refused.
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', true);
+    events := public.list_lpr_events('pending', 50);
+    if jsonb_array_length(events) = 0 then
+        raise exception 'the pending inbox is empty';
+    end if;
+    if exists (
+        select 1 from jsonb_array_elements(events) e
+         where e ->> 'status' <> 'pending'
+    ) then
+        raise exception 'the pending filter leaked another status';
+    end if;
+    if (events -> 0 ->> 'id')::bigint < (events -> -1 ->> 'id')::bigint then
+        raise exception 'the inbox is not newest first';
+    end if;
+    begin
+        perform public.list_lpr_events('bogus');
+        raise exception 'an unknown status was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+    perform set_config('request.jwt.claim.sub', '', true);
+
+    -- Confirm a pending entry: session as the operator, snapshot as evidence.
+    response := pg_temp.lpr_triple(entry_camera, 'LPR020', 0.95, now());
+    event_id := (response -> 'event' ->> 'id')::bigint;
+    path := 'lpr/1/' || entry_camera || '/' || event_id || '.jpg';
+    perform public.device_lpr_attach_snapshot(entry_camera, event_id, path);
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', true);
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    response := public.confirm_lpr_entry(event_id);
+    first_confirm := (response ->> 'id')::integer;
+    select * into event from public.lpr_events where id = event_id;
+    select * into session_row from public.parking_sessions where id = first_confirm;
+    if event.status <> 'confirmed'
+       or event.session_id <> first_confirm
+       or event.resolved_by <> 2 then
+        raise exception 'the confirmation did not resolve the event: %', event;
+    end if;
+    if session_row.operator_id <> 2 then
+        raise exception 'the confirmed session belongs to another operator';
+    end if;
+    if not exists (
+        select 1 from public.evidence_photos p
+         where p.session_id = first_confirm and p.file_path = path
+    ) then
+        raise exception 'the snapshot did not become evidence on confirm';
+    end if;
+    response := public.confirm_lpr_entry(event_id);
+    if (response ->> 'id')::integer <> first_confirm then
+        raise exception 'a double confirm created another session';
+    end if;
+
+    -- A corrected plate is normalized and applied.
+    response := pg_temp.lpr_triple(entry_camera, 'LPR021', 0.95, now());
+    event_id := (response -> 'event' ->> 'id')::bigint;
+    response := public.confirm_lpr_entry(event_id, ' lpr 022 ');
+    select * into event from public.lpr_events where id = event_id;
+    if event.plate <> 'LPR022' or event.status <> 'confirmed' then
+        raise exception 'the corrected plate was not applied: %', event;
+    end if;
+    select category_id into session_vehicle from public.vehicles where plate = 'LPR022';
+    if not exists (
+        select 1 from public.parking_sessions s
+         join public.vehicles v on v.id = s.vehicle_id
+        where s.id = event.session_id and v.plate = 'LPR022'
+    ) then
+        raise exception 'the corrected plate checked in another vehicle';
+    end if;
+
+    -- An unknown plate confirmed without a category uses the lot default.
+    response := pg_temp.lpr_triple(entry_camera, 'LPR026', 0.95, now());
+    event_id := (response -> 'event' ->> 'id')::bigint;
+    response := public.confirm_lpr_entry(event_id);
+    if not exists (
+        select 1 from public.vehicles v
+         where v.plate = 'LPR026'
+           and v.category_id = current_setting('app.lpr_car_cat')::integer
+    ) then
+        raise exception 'the default category was not applied on confirm';
+    end if;
+
+    -- Dismiss with a note, then refuse to resolve it again.
+    response := pg_temp.lpr_triple(entry_camera, 'LPR023', 0.95, now());
+    event_id := (response -> 'event' ->> 'id')::bigint;
+    response := public.dismiss_lpr_event(event_id, '  placa ajena  ');
+    select * into event from public.lpr_events where id = event_id;
+    if event.status <> 'dismissed'
+       or event.detail ->> 'note' <> 'placa ajena'
+       or event.resolved_by <> 2 then
+        raise exception 'the dismissal was not recorded: %', event;
+    end if;
+    begin
+        perform public.confirm_lpr_entry(event_id);
+        raise exception 'a dismissed event was confirmed';
+    exception when others then
+        if sqlerrm not like '%LprEventResolvedError%' then raise; end if;
+    end;
+
+    -- An exit event cannot be confirmed as an entry.
+    response := pg_temp.lpr_triple(exit_camera, 'LPR030', 0.95, now());
+    event_id := (response -> 'event' ->> 'id')::bigint;
+    begin
+        perform public.confirm_lpr_entry(event_id);
+        raise exception 'an exit event was confirmed as an entry';
+    exception when others then
+        if sqlerrm not like '%LprEventKindError%' then raise; end if;
+    end;
+
+    -- Another lot cannot see or resolve the event.
+    perform set_config('request.headers',
+        jsonb_build_object('x-lot-id', current_setting('app.pricing_lot'))::text,
+        true);
+    begin
+        perform public.confirm_lpr_entry(event_id);
+        raise exception 'a foreign lot confirmed an event';
+    exception when others then
+        if sqlerrm not like '%LprEventNotFoundError%' then raise; end if;
+    end;
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+
+    -- Jobs: expire old pending, confirm an exit whose session closed.
+    response := pg_temp.lpr_triple(entry_camera, 'LPR024', 0.95, now());
+    event_id := (response -> 'event' ->> 'id')::bigint;
+    update public.lpr_events set created_at = now() - interval '2 hours'
+     where id = event_id;
+    if public.expire_lpr_events() = 0 then
+        raise exception 'the expiry job changed nothing';
+    end if;
+    if (select status from public.lpr_events where id = event_id) <> 'expired' then
+        raise exception 'an old pending event was not expired';
+    end if;
+
+    select e.id into event_id from public.lpr_events e
+     where e.plate = 'LPR013' and e.reason = 'exit_unpaid' and e.status = 'pending'
+     order by e.id desc limit 1;
+    if event_id is null then
+        raise exception 'the unpaid exit fixture is missing';
+    end if;
+    update public.parking_sessions s
+       set status = 'closed', exit_time = now() - interval '1 minute'
+     where s.vehicle_id = (select id from public.vehicles where plate = 'LPR013')
+       and s.status = 'open';
+    perform public.expire_lpr_events();
+    select * into event from public.lpr_events where id = event_id;
+    if event.status <> 'confirmed' then
+        raise exception 'the expiry job left a closed exit %: %',
+            event.status, to_jsonb(event);
+    end if;
+
+    -- Purge: unreferenced snapshot paths only.
+    response := pg_temp.lpr_triple(entry_camera, 'LPR025', 0.95, now());
+    purge_event := (response -> 'event' ->> 'id')::bigint;
+    path := 'lpr/1/' || entry_camera || '/' || purge_event || '.jpg';
+    perform public.device_lpr_attach_snapshot(entry_camera, purge_event, path);
+    update public.lpr_events set created_at = now() - interval '90 days'
+     where id = purge_event;
+    update public.lpr_reads r set created_at = now() - interval '90 days'
+     where r.event_id = purge_event;
+    paths := public.purge_lpr_events(30);
+    if not (paths @> to_jsonb(path)) then
+        raise exception 'an orphan snapshot path was not returned';
+    end if;
+    if exists (select 1 from public.lpr_events where id = purge_event) then
+        raise exception 'the purged event survived';
+    end if;
+
+    -- The confirmed event's snapshot is referenced by evidence and kept.
+    update public.lpr_events set created_at = now() - interval '90 days'
+     where id = (select id from public.lpr_events
+                  where status = 'confirmed' and snapshot_path is not null
+                  order by id limit 1);
+    path := (select snapshot_path from public.lpr_events
+              where status = 'confirmed' and snapshot_path is not null
+              order by id limit 1);
+    paths := public.purge_lpr_events(30);
+    if path is not null and paths @> to_jsonb(path) then
+        raise exception 'a referenced snapshot path was returned for deletion';
+    end if;
+
+    if has_function_privilege('authenticated', 'public.expire_lpr_events()',
+                              'execute') then
+        raise exception 'authenticated can run the lpr jobs';
+    end if;
+    if not has_function_privilege('service_role', 'public.purge_lpr_events(integer)',
+                                  'execute') then
+        raise exception 'service_role cannot purge lpr events';
+    end if;
+    perform set_config('request.jwt.claim.sub', '', true);
+end $$;
+
+
+-- ---------------------------------------------------------------------------
+-- barrier: per-barrier configuration, the firmware table and its guards.
+-- ---------------------------------------------------------------------------
+do $$
+declare
+    barrier integer;
+    camera integer;
+    other_camera integer;
+    config jsonb;
+    listed jsonb;
+    pricing_lot integer := current_setting('app.pricing_lot')::integer;
+begin
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    barrier := (public.register_lot_device('barrier', 'Barrera test') ->> 'id')::integer;
+    camera := (public.register_lot_device('camera', 'Cámara barrera') ->> 'id')::integer;
+    perform set_config('app.barrier', barrier::text, true);
+    perform set_config('app.barrier_camera', camera::text, true);
+
+    -- roundtrip through list_barriers
+    config := public.set_barrier_config(
+        p_device_id => barrier,
+        p_direction => 'exit',
+        p_camera_device_id => camera,
+        p_open_on_checkin => 'always',
+        p_open_on_paid_exit => 'never',
+        p_open_for_pass_entry => true,
+        p_open_hold_ms => 1500,
+        p_max_open_seconds => 30,
+        p_post_clear_delay_ms => 2000,
+        p_max_reversals => 4,
+        p_command_ttl_seconds => 45
+    );
+    if config ->> 'direction' <> 'exit'
+       or (config ->> 'camera_device_id')::integer <> camera
+       or config ->> 'open_on_checkin' <> 'always'
+       or config ->> 'open_on_paid_exit' <> 'never'
+       or (config ->> 'open_for_pass_entry')::boolean is not true
+       or (config ->> 'open_hold_ms')::integer <> 1500
+       or (config ->> 'max_open_seconds')::integer <> 30
+       or (config ->> 'post_clear_delay_ms')::integer <> 2000
+       or (config ->> 'max_reversals')::integer <> 4
+       or (config ->> 'command_ttl_seconds')::integer <> 45 then
+        raise exception 'the barrier config roundtrip is wrong: %', config;
+    end if;
+    listed := public.list_barriers();
+    if not exists (
+        select 1 from jsonb_array_elements(listed) item
+         where (item ->> 'device_id')::integer = barrier
+           and item ->> 'direction' = 'exit'
+           and (item ->> 'camera_device_id')::integer = camera
+           and item ->> 'camera_name' = 'Cámara barrera'
+    ) then
+        raise exception 'list_barriers did not return the config: %', listed;
+    end if;
+
+    -- a zero camera clears the pairing
+    config := public.set_barrier_config(
+        p_device_id => barrier,
+        p_camera_device_id => 0
+    );
+    if config -> 'camera_device_id' <> 'null'::jsonb then
+        raise exception 'a zero camera id did not clear the pairing: %', config;
+    end if;
+
+    -- ranges and enums
+    begin
+        perform public.set_barrier_config(p_device_id => barrier, p_direction => 'sideways');
+        raise exception 'an unknown direction was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+    begin
+        perform public.set_barrier_config(p_device_id => barrier, p_open_on_checkin => 'sometimes');
+        raise exception 'an unknown check-in rule was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+    for i in 1 .. 5 loop
+        begin
+            perform public.set_barrier_config(
+                p_device_id => barrier,
+                p_open_hold_ms => case i when 1 then 100 else null end,
+                p_max_open_seconds => case i when 2 then 4 else null end,
+                p_post_clear_delay_ms => case i when 3 then 400 else null end,
+                p_max_reversals => case i when 4 then 0 else null end,
+                p_command_ttl_seconds => case i when 5 then 9 else null end
+            );
+            raise exception 'an out-of-range timing was accepted (case %)', i;
+        exception when others then
+            if sqlerrm not like '%InvalidDataError%' then raise; end if;
+        end;
+    end loop;
+
+    -- a camera from another lot is refused
+    insert into public.lot_devices (lot_id, kind, name, key_prefix, key_hash, created_by)
+    values (pricing_lot, 'camera', 'Cámara ajena', 'aaaaaaaaaaaa', repeat('a', 64), 1);
+    select id into other_camera from public.lot_devices
+     where lot_id = pricing_lot and name = 'Cámara ajena';
+    begin
+        perform public.set_barrier_config(
+            p_device_id => barrier, p_camera_device_id => other_camera);
+        raise exception 'a camera from another lot was paired';
+    exception when others then
+        if sqlerrm not like '%InvalidDeviceKindError%' then raise; end if;
+    end;
+
+    -- a non-barrier device and an unknown device are refused
+    begin
+        perform public.set_barrier_config(p_device_id => camera);
+        raise exception 'a camera was configured as a barrier';
+    exception when others then
+        if sqlerrm not like '%InvalidDeviceKindError%' then raise; end if;
+    end;
+    begin
+        perform public.set_barrier_config(p_device_id => 999999);
+        raise exception 'an unknown device was configured';
+    exception when others then
+        if sqlerrm not like '%DeviceNotFoundError%' then raise; end if;
+    end;
+
+    -- operators read but never write
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', true);
+    if jsonb_array_length(public.list_barriers()) = 0 then
+        raise exception 'an operator cannot list the barriers';
+    end if;
+    begin
+        perform public.set_barrier_config(p_device_id => barrier, p_direction => 'entry');
+        raise exception 'an operator changed the barrier config';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+
+    -- direct writes still run the trigger
+    begin
+        insert into public.barrier_config (device_id, lot_id)
+        values (camera, 1);
+        raise exception 'a camera got a barrier config row';
+    exception when others then
+        if sqlerrm not like '%InvalidDeviceKindError%' then raise; end if;
+    end;
+
+    -- lot isolation: lot 2 does not see lot 1's barrier
+    perform set_config('request.headers',
+        jsonb_build_object('x-lot-id', pricing_lot)::text, true);
+    if exists (
+        select 1 from jsonb_array_elements(public.list_barriers()) item
+         where (item ->> 'device_id')::integer = barrier
+    ) then
+        raise exception 'another lot saw the barrier';
+    end if;
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+end $$;
+
+-- barrier: clients have no grants on the tables, and the bucket is private
+do $$
+declare
+    table_name text;
+begin
+    for table_name in
+        select unnest(array['barrier_config', 'device_firmware',
+                           'barrier_commands', 'barrier_events'])
+    loop
+        if has_table_privilege('authenticated', 'public.' || table_name, 'select') then
+            raise exception 'authenticated can select %', table_name;
+        end if;
+        if has_table_privilege('anon', 'public.' || table_name, 'select') then
+            raise exception 'anon can select %', table_name;
+        end if;
+    end loop;
+    if not exists (select 1 from storage.buckets where id = 'firmware' and public is false) then
+        raise exception 'the firmware bucket is missing or public';
+    end if;
+    if exists (
+        select 1 from pg_policies
+         where schemaname = 'storage' and coalesce(qual, '') like '%firmware%'
+    ) then
+        raise exception 'a client policy mentions the firmware bucket';
+    end if;
+end $$;
+
+
+-- ---------------------------------------------------------------------------
+-- barrier: command delivery, acknowledgements, events, expiry and purge.
+-- ---------------------------------------------------------------------------
+do $$
+declare
+    barrier integer := current_setting('app.barrier')::integer;
+    camera integer := current_setting('app.barrier_camera')::integer;
+    command_id uuid;
+    response jsonb;
+    members integer;
+    notified integer;
+    config jsonb;
+    other integer;
+begin
+    delete from public.barrier_commands where device_id = barrier;
+
+    -- config for the edge
+    config := public.device_barrier_config(barrier);
+    if config ->> 'direction' is null
+       or (config ->> 'open_hold_ms')::integer <> 1500
+       or (config ->> 'command_ttl_seconds')::integer <> 45 then
+        raise exception 'the barrier device config is wrong: %', config;
+    end if;
+    begin
+        perform public.device_barrier_config(camera);
+        raise exception 'a camera received a barrier config';
+    exception when others then
+        if sqlerrm not like '%InvalidDeviceKindError%' then raise; end if;
+    end;
+
+    -- next delivers the oldest queued command, once per 5 s
+    insert into public.barrier_commands (
+        lot_id, device_id, device_name, source, reason, requested_by, expires_at
+    ) values (
+        1, barrier, 'Barrera test', 'manual', 'Cliente sin ticket', 2,
+        now() + interval '30 seconds'
+    ) returning id into command_id;
+    response := public.device_barrier_next(barrier);
+    if response ->> 'id' <> command_id::text
+       or response ->> 'status' <> 'delivered'
+       or (response ->> 'deliveries')::integer <> 1 then
+        raise exception 'next did not deliver the command: %', response;
+    end if;
+    if public.device_barrier_next(barrier) is not null then
+        raise exception 'a command was redelivered inside five seconds';
+    end if;
+    update public.barrier_commands set delivered_at = now() - interval '6 seconds'
+     where id = command_id;
+    response := public.device_barrier_next(barrier);
+    if response is null or (response ->> 'deliveries')::integer <> 2 then
+        raise exception 'the second delivery did not happen: %', response;
+    end if;
+    update public.barrier_commands set delivered_at = now() - interval '6 seconds'
+     where id = command_id;
+    perform public.device_barrier_next(barrier);
+    update public.barrier_commands set delivered_at = now() - interval '6 seconds'
+     where id = command_id;
+    if public.device_barrier_next(barrier) is not null then
+        raise exception 'a fourth delivery happened';
+    end if;
+
+    -- expired commands are skipped
+    delete from public.barrier_commands where device_id = barrier;
+    insert into public.barrier_commands (
+        lot_id, device_id, device_name, source, expires_at
+    ) values (1, barrier, 'Barrera test', 'checkin', now() - interval '1 second');
+    if public.device_barrier_next(barrier) is not null then
+        raise exception 'an expired command was delivered';
+    end if;
+
+    -- ack opened executes and is idempotent
+    delete from public.barrier_commands where device_id = barrier;
+    insert into public.barrier_commands (
+        lot_id, device_id, device_name, source, expires_at
+    ) values (1, barrier, 'Barrera test', 'checkin', now() + interval '30 seconds')
+    returning id into command_id;
+    response := public.device_barrier_ack(
+        barrier, command_id, 'opened', '{"open_ms": 900}'::jsonb);
+    if response ->> 'status' <> 'executed'
+       or response -> 'result' ->> 'open_ms' <> '900' then
+        raise exception 'ack did not execute the command: %', response;
+    end if;
+    response := public.device_barrier_ack(barrier, command_id, 'opened');
+    if response ->> 'status' <> 'executed' then
+        raise exception 'ack was not idempotent: %', response;
+    end if;
+    begin
+        perform public.device_barrier_ack(barrier, command_id, 'maybe');
+        raise exception 'an invalid ack result was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+
+    -- ack refused rejects and notifies every member once
+    insert into public.barrier_commands (
+        lot_id, device_id, device_name, source, expires_at
+    ) values (1, barrier, 'Barrera test', 'checkin', now() + interval '30 seconds')
+    returning id into command_id;
+    perform public.device_barrier_ack(barrier, command_id, 'refused');
+    if (select status from public.barrier_commands where id = command_id) <> 'rejected' then
+        raise exception 'a refused command is not rejected';
+    end if;
+    select count(distinct lm.user_id) into members
+      from public.lot_members lm
+      join public.users u on u.id = lm.user_id
+     where lm.lot_id = 1 and u.is_active;
+    select count(distinct n.user_id) into notified
+      from public.notifications n
+     where n.dedupe_key like 'barrier_command_failed:' || command_id || ':%';
+    if notified <> members then
+        raise exception 'failed command notified % of % members', notified, members;
+    end if;
+    perform public.device_barrier_ack(barrier, command_id, 'refused');
+    select count(*) into notified from public.notifications n
+     where n.dedupe_key like 'barrier_command_failed:' || command_id || ':%';
+    if notified <> members then
+        raise exception 'a repeated ack duplicated the notification';
+    end if;
+
+    -- ack of another device is not found
+    insert into public.lot_devices (lot_id, kind, name, key_prefix, key_hash, created_by)
+    values (1, 'barrier', 'Barrera dos', 'bbbbbbbbbbbb', repeat('b', 64), 1);
+    other := (select id from public.lot_devices where name = 'Barrera dos');
+    begin
+        perform public.device_barrier_ack(other, command_id, 'opened');
+        raise exception 'another device acked the command';
+    exception when others then
+        if sqlerrm not like '%BarrierCommandNotFoundError%' then raise; end if;
+    end;
+    delete from public.lot_devices where name = 'Barrera dos';
+end $$;
+
+-- barrier: device events and the fault notifications
+do $$
+declare
+    barrier integer := current_setting('app.barrier')::integer;
+    reference uuid := gen_random_uuid();
+    admins integer;
+    notified integer;
+    response jsonb;
+begin
+    response := public.device_barrier_event(
+        barrier, reference, 'tamper', now(), '{}'::jsonb);
+    if response ->> 'replayed' <> 'false' then
+        raise exception 'the first event was marked replayed';
+    end if;
+    response := public.device_barrier_event(
+        barrier, reference, 'tamper', now(), '{}'::jsonb);
+    if response ->> 'replayed' <> 'true' then
+        raise exception 'the event was not idempotent: %', response;
+    end if;
+    if (select count(*) from public.barrier_events
+         where device_id = barrier and client_ref = reference) <> 1 then
+        raise exception 'the idempotent event was stored twice';
+    end if;
+    select count(distinct lm.user_id) into admins
+      from public.lot_members lm
+      join public.users u on u.id = lm.user_id
+     where lm.lot_id = 1 and u.is_active and lm.role = 'admin';
+    select count(distinct n.user_id) into notified
+      from public.notifications n
+     where n.dedupe_key like 'barrier_fault:' || barrier || ':tamper:%';
+    if notified <> admins then
+        raise exception 'the tamper alert reached % of % admins', notified, admins;
+    end if;
+    -- Same fault inside the same minute does not notify twice.
+    perform public.device_barrier_event(
+        barrier, gen_random_uuid(), 'tamper', now(), '{}'::jsonb);
+    select count(distinct n.user_id) into notified
+      from public.notifications n
+     where n.dedupe_key like 'barrier_fault:' || barrier || ':tamper:%';
+    if notified <> admins then
+        raise exception 'a repeated fault duplicated the alert';
+    end if;
+    begin
+        perform public.device_barrier_event(
+            barrier, gen_random_uuid(), 'exploded', now(), '{}'::jsonb);
+        raise exception 'an unknown event was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+end $$;
+
+-- barrier: expiry, firmware manifest, purge and grants
+do $$
+declare
+    barrier integer := current_setting('app.barrier')::integer;
+    command_id uuid;
+    expired integer;
+    members integer;
+    notified integer;
+    manifest jsonb;
+begin
+    delete from public.barrier_commands where device_id = barrier;
+    insert into public.barrier_commands (
+        lot_id, device_id, device_name, source, expires_at
+    ) values (1, barrier, 'Barrera test', 'checkin', now() - interval '1 minute')
+    returning id into command_id;
+    expired := public.expire_barrier_commands();
+    if expired <> 1 then
+        raise exception 'expire changed % commands', expired;
+    end if;
+    if (select status from public.barrier_commands where id = command_id) <> 'expired' then
+        raise exception 'the command was not expired';
+    end if;
+    select count(distinct lm.user_id) into members
+      from public.lot_members lm join public.users u on u.id = lm.user_id
+     where lm.lot_id = 1 and u.is_active;
+    select count(distinct n.user_id) into notified
+      from public.notifications n
+     where n.dedupe_key like 'barrier_command_failed:' || command_id || ':%';
+    if notified <> members then
+        raise exception 'the expiry notified % of % members', notified, members;
+    end if;
+    if public.expire_barrier_commands() <> 0 then
+        raise exception 'expire re-expired a command';
+    end if;
+
+    -- firmware manifest
+    insert into public.device_firmware (
+        kind, version, sha256, size_bytes, storage_path, secure_version, released
+    ) values (
+        'barrier', '9.9.9', repeat('c', 64), 1024, 'barrier/9.9.9.bin', 5, true
+    );
+    manifest := public.device_firmware_manifest(barrier, null);
+    if manifest ->> 'version' <> '9.9.9' or manifest ->> 'sha256' <> repeat('c', 64) then
+        raise exception 'the firmware manifest is wrong: %', manifest;
+    end if;
+    if public.device_firmware_manifest(barrier, '9.9.9') is not null then
+        raise exception 'the current version was offered again';
+    end if;
+
+    -- purge keeps recent rows
+    insert into public.barrier_events (
+        lot_id, device_id, client_ref, event, happened_at
+    ) values (
+        1, barrier, gen_random_uuid(), 'opened', now() - interval '400 days'
+    );
+    if public.purge_barrier_events(365) < 1 then
+        raise exception 'the purge removed nothing';
+    end if;
+    if exists (select 1 from public.barrier_events
+                where device_id = barrier and happened_at < now() - interval '365 days') then
+        raise exception 'the purge left an old event';
+    end if;
+    if not exists (select 1 from public.barrier_events where device_id = barrier) then
+        raise exception 'the purge removed a recent event';
+    end if;
+
+    -- grants
+    for i in 1 .. 1 loop
+        if has_function_privilege('authenticated',
+            'public.device_barrier_next(integer)', 'execute') then
+            raise exception 'authenticated can poll barrier commands';
+        end if;
+        if has_function_privilege('anon',
+            'public.device_barrier_event(integer, uuid, text, timestamptz, jsonb)',
+            'execute') then
+            raise exception 'anon can post barrier events';
+        end if;
+        if has_function_privilege('authenticated',
+            'public.expire_barrier_commands()', 'execute') then
+            raise exception 'authenticated can run the barrier jobs';
+        end if;
+        if not has_function_privilege('service_role',
+            'public.device_barrier_ack(integer, uuid, text, jsonb)', 'execute') then
+            raise exception 'service_role cannot ack barrier commands';
+        end if;
+    end loop;
 end $$;
 
 rollback;

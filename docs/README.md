@@ -13,6 +13,9 @@ Start here, then open the page you need.
 | [`architecture.md`](architecture.md) | How the system is put together: components, Flutter layers, and the flows for check-in, billing, shifts, notifications and multi-site. |
 | [`infrastructure.md`](infrastructure.md) | Services, ports, volumes, environment variables, operations (logs, health, backup/restore, cron, scaling). |
 | [`database.md`](database.md) | Tables, relationships (ER diagram), RPC catalog, RLS model and migration rules. |
+| [`lpr-gate.md`](lpr-gate.md) | **Plate camera**: decision table, operator inbox, settings, device protocol, retention and rollback. |
+| [`device-gateway.md`](device-gateway.md) | **Device protocol**: headers, endpoints, error table, retry/sequence rules, key rotation and the automated smoke. |
+| [`slot-board.md`](slot-board.md) | **Slot board**: the live bay grid, its states and the operator actions. |
 | [`ui-kit.md`](ui-kit.md) | **Design system**: four screen states, shared widgets, tokens, accessibility and per-module conventions. |
 | [`production-readiness.md`](production-readiness.md) | **Go-live checklist**: SLOs, infrastructure, data/schema guards, security, resilience, observability and the release checklist. |
 | [`operations-systemd.md`](operations-systemd.md) | Host timers for the healthcheck, notifications cron and nightly backups (retention/offsite). |

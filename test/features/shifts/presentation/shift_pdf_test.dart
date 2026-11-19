@@ -15,4 +15,15 @@ void main() {
     expect(bytes, isNotEmpty);
     expect(String.fromCharCodes(bytes.take(4)), '%PDF');
   });
+
+  test('Success: the PDF includes an online sales row without failing', () async {
+    final bytes = await buildShiftPdf(
+      l10n: await AppLocalizations.delegate.load(defaultLocale),
+      shift: sampleShift(closed: true, countedCash: 14000, onlineSales: 12000),
+      lotName: 'Central',
+    );
+
+    expect(bytes, isNotEmpty);
+    expect(String.fromCharCodes(bytes.take(4)), '%PDF');
+  });
 }

@@ -24,9 +24,7 @@ class HiveVehicleHistoryLocalDataSource
     if (raw == null || raw.isEmpty) {
       return null;
     }
-    return VehicleHistory.fromJson(
-      jsonDecode(raw) as Map<String, dynamic>,
-    );
+    return VehicleHistory.fromJson(jsonDecode(raw) as Map<String, dynamic>);
   }
 
   @override

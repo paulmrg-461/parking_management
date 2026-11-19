@@ -23,6 +23,11 @@ class _FakeRemote implements VehicleRemoteDataSource {
   final bool failWithNetwork;
   final List<Vehicle> vehicles;
 
+  /// The base version the last update/delete sent, and an optional conflict
+  /// to throw instead of writing.
+  int? sentBaseVersion;
+  VersionConflictFailure? conflict;
+
   @override
   Future<List<Vehicle>> list({String? plate}) async {
     if (failWithNetwork) {
@@ -35,7 +40,7 @@ class _FakeRemote implements VehicleRemoteDataSource {
   Future<PagedResult<Vehicle>> listPage({
     required int limit,
     required int offset,
-    String? plate,
+    String? query,
   }) async {
     if (failWithNetwork) {
       throw const NetworkFailure('offline');
@@ -52,7 +57,16 @@ class _FakeRemote implements VehicleRemoteDataSource {
   }
 
   @override
-  Future<Vehicle> update(int id, Map<String, dynamic> payload) async {
+  Future<Vehicle> update(
+    int id,
+    Map<String, dynamic> payload, {
+    int? baseVersion,
+  }) async {
+    sentBaseVersion = baseVersion;
+    final error = conflict;
+    if (error != null) {
+      throw error;
+    }
     if (failWithNetwork) {
       throw const NetworkFailure('offline');
     }
@@ -68,7 +82,12 @@ class _FakeRemote implements VehicleRemoteDataSource {
   }
 
   @override
-  Future<void> delete(int id) async {
+  Future<void> delete(int id, {int? baseVersion}) async {
+    sentBaseVersion = baseVersion;
+    final error = conflict;
+    if (error != null) {
+      throw error;
+    }
     if (failWithNetwork) {
       throw const NetworkFailure('offline');
     }
@@ -333,4 +352,105 @@ void main() {
       },
     );
   });
+
+  test(
+    'Success: an online update sends the cached version as its base',
+    () async {
+      final local = HiveVehicleLocalDataSource();
+      final remote = _FakeRemote(
+        vehicles: const [
+          Vehicle(id: 1, plate: 'ABC123', categoryId: 1, version: 7),
+        ],
+      );
+      final repo = VehicleRepositoryImpl(remote, local, outbox);
+      await repo.list();
+
+      await repo.update(const UpdateVehicleCommand(id: 1, color: 'blue'));
+
+      expect(remote.sentBaseVersion, 7);
+    },
+  );
+
+  test('Failure: a conflict is parked and rethrown', () async {
+    final local = HiveVehicleLocalDataSource();
+    final remote =
+        _FakeRemote(
+            vehicles: const [
+              Vehicle(id: 1, plate: 'ABC123', categoryId: 1, version: 7),
+            ],
+          )
+          ..conflict = VersionConflictFailure({
+            'id': 1,
+            'plate': 'ABC123',
+            'category_id': 1,
+            'color': 'green',
+            'version': 9,
+          });
+    final repo = VehicleRepositoryImpl(remote, local, outbox);
+    await repo.list();
+
+    await expectLater(
+      repo.update(const UpdateVehicleCommand(id: 1, color: 'blue')),
+      throwsA(isA<VersionConflictFailure>()),
+    );
+    final conflict = (await outbox.listConflicts()).single.value;
+    expect(conflict.conflictKind, 'edited');
+    expect(conflict.baseVersion, 7);
+    expect(conflict.decodeServerRow()?['version'], 9);
+  });
+
+  test(
+    'Security: an edit is refused while its conflict is unresolved',
+    () async {
+      final local = HiveVehicleLocalDataSource();
+      final remote = _FakeRemote(
+        vehicles: const [
+          Vehicle(id: 1, plate: 'ABC123', categoryId: 1, version: 7),
+        ],
+      )..conflict = VersionConflictFailure({'id': 1, 'version': 9});
+      final repo = VehicleRepositoryImpl(remote, local, outbox);
+      await repo.list();
+      await expectLater(
+        repo.update(const UpdateVehicleCommand(id: 1, color: 'blue')),
+        throwsA(isA<VersionConflictFailure>()),
+      );
+
+      await expectLater(
+        repo.update(const UpdateVehicleCommand(id: 1, brand: 'Kia')),
+        throwsA(
+          isA<ValidationFailure>().having(
+            (failure) => failure.code,
+            'code',
+            ClientFailureCodes.conflictPending,
+          ),
+        ),
+      );
+    },
+  );
+
+  test(
+    'Success: an offline edit stores the base version and the snapshot',
+    () async {
+      final local = HiveVehicleLocalDataSource();
+      await VehicleRepositoryImpl(
+        _FakeRemote(
+          vehicles: const [
+            Vehicle(id: 1, plate: 'ABC123', categoryId: 1, version: 4),
+          ],
+        ),
+        local,
+        outbox,
+      ).list();
+
+      await VehicleRepositoryImpl(
+        _FakeRemote(failWithNetwork: true),
+        local,
+        outbox,
+      ).update(const UpdateVehicleCommand(id: 1, color: 'blue'));
+
+      final entry = outbox.enqueued.single;
+      expect(entry.baseVersion, 4);
+      expect(entry.decodeBaseSnapshot()?['plate'], 'ABC123');
+    },
+  );
 }

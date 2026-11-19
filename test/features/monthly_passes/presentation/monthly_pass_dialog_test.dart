@@ -43,41 +43,36 @@ void main() {
     expect(_amount(tester), '90000');
   });
 
-  testWidgets('Security: editing keeps the saved amount and can reuse the tariff', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      testApp(
-        Scaffold(
-          body: MonthlyPassDialog(
-            vehicles: _vehicles,
-            monthlyTariffs: const {1: 120000},
-            existing: MonthlyPass(
-              id: 1,
-              vehicleId: 1,
-              startDate: DateTime(2026, 1, 1),
-              endDate: DateTime(2026, 1, 31),
-              amount: 100000,
+  testWidgets(
+    'Security: editing keeps the saved amount and can reuse the tariff',
+    (tester) async {
+      await tester.pumpWidget(
+        testApp(
+          Scaffold(
+            body: MonthlyPassDialog(
+              vehicles: _vehicles,
+              monthlyTariffs: const {1: 120000},
+              existing: MonthlyPass(
+                id: 1,
+                vehicleId: 1,
+                startDate: DateTime(2026, 1, 1),
+                endDate: DateTime(2026, 1, 31),
+                amount: 100000,
+              ),
+              onSave: (_) {},
             ),
-            onSave: (_) {},
           ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    expect(_amount(tester), '100000');
-    expect(
-      find.byKey(const Key('monthly_pass_use_tariff')),
-      findsOneWidget,
-    );
+      expect(_amount(tester), '100000');
+      expect(find.byKey(const Key('monthly_pass_use_tariff')), findsOneWidget);
 
-    await tester.enterText(
-      find.byKey(const Key('monthly_pass_amount')),
-      '',
-    );
-    await tester.tap(find.byKey(const Key('monthly_pass_use_tariff')));
-    await tester.pumpAndSettle();
-    expect(_amount(tester), '120000');
-  });
+      await tester.enterText(find.byKey(const Key('monthly_pass_amount')), '');
+      await tester.tap(find.byKey(const Key('monthly_pass_use_tariff')));
+      await tester.pumpAndSettle();
+      expect(_amount(tester), '120000');
+    },
+  );
 }

@@ -22,6 +22,7 @@ void main() {
     ],
     Failure? listError,
     void Function(BuildContext context, String plate)? onCheckIn,
+    void Function(BuildContext context, String plate)? onHistory,
   }) async {
     vehicles = FakeVehicleRepository(initial)..listError = listError;
     await tester.pumpWidget(
@@ -30,7 +31,9 @@ void main() {
           vehicles,
           FakeCategoryRepository(const [Category(id: 1, name: 'carro')]),
         ),
-        child: testApp(VehiclesPage(onCheckIn: onCheckIn)),
+        child: testApp(
+          VehiclesPage(onCheckIn: onCheckIn, onHistory: onHistory),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -100,21 +103,26 @@ void main() {
     expect(find.text('ABC123'), findsOneWidget);
   });
 
-  testWidgets('Failure: load error offers retry; empty list shows empty state', (
-    tester,
-  ) async {
-    await pumpPage(tester, initial: const [], listError: const ServerFailure());
+  testWidgets(
+    'Failure: load error offers retry; empty list shows empty state',
+    (tester) async {
+      await pumpPage(
+        tester,
+        initial: const [],
+        listError: const ServerFailure(),
+      );
 
-    expect(find.text('Reintentar'), findsOneWidget);
-    vehicles.listError = null;
-    await tester.tap(find.text('Reintentar'));
-    await tester.pumpAndSettle();
-    expect(find.text('Aún no hay vehículos registrados'), findsOneWidget);
+      expect(find.text('Reintentar'), findsOneWidget);
+      vehicles.listError = null;
+      await tester.tap(find.text('Reintentar'));
+      await tester.pumpAndSettle();
+      expect(find.text('Aún no hay vehículos registrados'), findsOneWidget);
 
-    await tester.tap(find.text('Agregar vehículo'));
-    await tester.pumpAndSettle();
-    expect(find.byType(AlertDialog), findsOneWidget);
-  });
+      await tester.tap(find.text('Agregar vehículo'));
+      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsOneWidget);
+    },
+  );
 
   testWidgets('Failure: create requires plate and normalizes it', (
     tester,
@@ -128,10 +136,12 @@ void main() {
     expect(find.text('Ingresa la placa'), findsOneWidget);
 
     await tester.enterText(
-      find.descendant(
-        of: find.byType(AlertDialog),
-        matching: find.byType(TextField),
-      ).first,
+      find
+          .descendant(
+            of: find.byType(AlertDialog),
+            matching: find.byType(TextField),
+          )
+          .first,
       'xyz 999',
     );
     await tester.tap(find.text('Crear'));
@@ -148,10 +158,12 @@ void main() {
     await tester.tap(find.byTooltip('Agregar vehículo'));
     await tester.pumpAndSettle();
     await tester.enterText(
-      find.descendant(
-        of: find.byType(AlertDialog),
-        matching: find.byType(TextField),
-      ).first,
+      find
+          .descendant(
+            of: find.byType(AlertDialog),
+            matching: find.byType(TextField),
+          )
+          .first,
       'xyz 999',
     );
     await tester.enterText(
@@ -196,10 +208,13 @@ void main() {
   });
 
   testWidgets('Success: typing a plate searches the list', (tester) async {
-    await pumpPage(tester, initial: const [
-      Vehicle(id: 1, plate: 'ABC123', categoryId: 1),
-      Vehicle(id: 2, plate: 'XYZ999', categoryId: 1),
-    ]);
+    await pumpPage(
+      tester,
+      initial: const [
+        Vehicle(id: 1, plate: 'ABC123', categoryId: 1),
+        Vehicle(id: 2, plate: 'XYZ999', categoryId: 1),
+      ],
+    );
 
     await tester.enterText(find.byKey(const Key('vehicles_search')), 'xyz');
     await tester.pump(const Duration(milliseconds: 400));
@@ -207,6 +222,27 @@ void main() {
 
     expect(find.text('ABC123'), findsNothing);
     expect(find.text('XYZ999'), findsOneWidget);
+  });
+
+  testWidgets('Success: a vehicle row opens its history', (tester) async {
+    String? opened;
+    await pumpPage(tester, onHistory: (_, plate) => opened = plate);
+
+    await tester.tap(find.byTooltip('Ver historial'));
+    await tester.pumpAndSettle();
+
+    expect(opened, 'ABC123');
+  });
+
+  testWidgets('A11y: the row actions fit a phone width', (tester) async {
+    tester.view.physicalSize = const Size(400, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await pumpPage(tester);
+
+    expect(tester.takeException(), isNull);
+    expect(find.byTooltip('Ver historial'), findsOneWidget);
   });
 
   testWidgets('Success: creating a vehicle offers to check it in', (
@@ -218,10 +254,12 @@ void main() {
     await tester.tap(find.byTooltip('Agregar vehículo'));
     await tester.pumpAndSettle();
     await tester.enterText(
-      find.descendant(
-        of: find.byType(AlertDialog),
-        matching: find.byType(TextField),
-      ).first,
+      find
+          .descendant(
+            of: find.byType(AlertDialog),
+            matching: find.byType(TextField),
+          )
+          .first,
       'xyz 999',
     );
     await tester.tap(find.text('Crear'));

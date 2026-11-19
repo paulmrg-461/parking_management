@@ -188,7 +188,12 @@ class _AppSidebarState extends State<AppSidebar> {
     }
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(Space.md, Space.md, Space.xs, Space.md),
+      padding: const EdgeInsets.fromLTRB(
+        Space.md,
+        Space.md,
+        Space.xs,
+        Space.md,
+      ),
       child: Row(
         children: [
           const _BrandMark(size: 40),
@@ -275,12 +280,7 @@ class _AppSidebarState extends State<AppSidebar> {
   }
 
   Widget _groupLabel(BuildContext context, String label) => Padding(
-    padding: const EdgeInsets.fromLTRB(
-      Space.sm,
-      Space.md,
-      Space.sm,
-      Space.sm,
-    ),
+    padding: const EdgeInsets.fromLTRB(Space.sm, Space.md, Space.sm, Space.sm),
     child: Text(
       label.toUpperCase(),
       style: Theme.of(context).textTheme.labelSmall?.copyWith(
@@ -362,8 +362,7 @@ class _AppSidebarState extends State<AppSidebar> {
               collapsed: _collapsed,
               name: lots.active!.name,
               tooltip: l10n.lotSwitchTooltip(lots.active!.name),
-              onTap: () =>
-                  showLotSwitcher(context, lots.lots, lots.active!),
+              onTap: () => showLotSwitcher(context, lots.lots, lots.active!),
             ),
           ],
           if (!_collapsed)
@@ -706,15 +705,16 @@ class _SidebarItem extends StatelessWidget {
                               label,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: (dense
-                                      ? theme.textTheme.bodyMedium
-                                      : theme.textTheme.labelLarge)
-                                  ?.copyWith(
-                                    color: foreground,
-                                    fontWeight: selected
-                                        ? FontWeight.w700
-                                        : FontWeight.w500,
-                                  ),
+                              style:
+                                  (dense
+                                          ? theme.textTheme.bodyMedium
+                                          : theme.textTheme.labelLarge)
+                                      ?.copyWith(
+                                        color: foreground,
+                                        fontWeight: selected
+                                            ? FontWeight.w700
+                                            : FontWeight.w500,
+                                      ),
                             ),
                           ),
                         ],
@@ -816,11 +816,7 @@ class _SiteCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Icon(
-                Icons.unfold_more,
-                size: 18,
-                color: scheme.onSurfaceVariant,
-              ),
+              Icon(Icons.unfold_more, size: 18, color: scheme.onSurfaceVariant),
             ],
           ),
         ),
@@ -903,7 +899,12 @@ class _UserCard extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(Space.sm, Space.sm, Space.xs, Space.sm),
+      padding: const EdgeInsets.fromLTRB(
+        Space.sm,
+        Space.sm,
+        Space.xs,
+        Space.sm,
+      ),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(Radii.md),

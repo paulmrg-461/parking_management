@@ -21,10 +21,8 @@ Future<Uint8List> buildRecordsPdf({
   final doc = pw.Document();
   final charged = records.fold<int>(0, (sum, item) => sum + item.amountCharged);
   final filters = [
-    if (plate != null && plate.trim().isNotEmpty)
-      '${l10n.plateLabel}: $plate',
-    if (from != null && to != null)
-      '${Formatters.date(from)} — ${Formatters.date(to)}',
+    if (plate != null && plate.trim().isNotEmpty) '${l10n.plateLabel}: $plate',
+    if (from != null && to != null) Formatters.pdfDateRange(from, to),
     if (from == null && to == null) l10n.recordsRangeAll,
   ].join(' · ');
   final builder = PdfDocumentBuilder(
@@ -77,9 +75,7 @@ Future<Uint8List> buildRecordsPdf({
             ),
             cellStyle: const pw.TextStyle(fontSize: 8),
             cellAlignment: pw.Alignment.centerLeft,
-            headerDecoration: const pw.BoxDecoration(
-              color: PdfColors.grey300,
-            ),
+            headerDecoration: const pw.BoxDecoration(color: PdfColors.grey300),
             columnWidths: {
               0: const pw.FlexColumnWidth(1.1),
               1: const pw.FlexColumnWidth(1.6),

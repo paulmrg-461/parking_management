@@ -1,0 +1,84 @@
+{
+  "case": "case_10.json",
+  "question": "How many web reservations ended in an entry in October?",
+  "locale": "en",
+  "today": "2026-11-10",
+  "timezone": "America/Bogota",
+  "currency": "COP",
+  "rpc_outputs": {
+    "report_reservations": {
+      "total": 64,
+      "public": 30,
+      "app": 34,
+      "used": 58,
+      "used_public": 21,
+      "cancelled": 4,
+      "expired": 2,
+      "active": 0
+    }
+  },
+  "model_script": [
+    {
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "r1",
+          "name": "get_reservations_report",
+          "input": {
+            "start_date": "2026-10-01",
+            "end_date": "2026-10-31"
+          }
+        }
+      ],
+      "stop_reason": "tool_use"
+    },
+    {
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "submit",
+          "name": "submit_answer",
+          "input": {
+            "status": "answered",
+            "headline": "{f1} web reservations ended in an entry.",
+            "explanation": "",
+            "period_start": "2026-10-01",
+            "period_end": "2026-10-31",
+            "figures": [
+              {
+                "id": "f1",
+                "label": "Web reservations used",
+                "unit": "count",
+                "op": "value",
+                "operands": [
+                  {
+                    "call_id": "r1",
+                    "path": "used_public"
+                  }
+                ]
+              }
+            ],
+            "caveats": []
+          }
+        }
+      ],
+      "stop_reason": "end_turn"
+    }
+  ],
+  "expected": {
+    "tools": [
+      {
+        "tool": "get_reservations_report"
+      }
+    ],
+    "answer": {
+      "status": "answered",
+      "figures": [
+        {
+          "id": "f1",
+          "value": 21
+        }
+      ]
+    }
+  }
+}

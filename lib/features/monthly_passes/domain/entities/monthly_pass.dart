@@ -36,22 +36,23 @@ class MonthlyPass extends Equatable {
     final current = now ?? DateTime.now();
     final today = DateTime(current.year, current.month, current.day);
     final end = DateTime(endDate.year, endDate.month, endDate.day);
-    final start = end.isBefore(today) ? today : end.add(const Duration(days: 1));
+    final start = end.isBefore(today)
+        ? today
+        : end.add(const Duration(days: 1));
     return (start: start, end: start.add(const Duration(days: 29)));
   }
 
   @override
-  List<Object?> get props =>
-      [
-        id,
-        vehicleId,
-        startDate,
-        endDate,
-        amount,
-        active,
-        autoRenew,
-        autoRenewPaymentMethod,
-      ];
+  List<Object?> get props => [
+    id,
+    vehicleId,
+    startDate,
+    endDate,
+    amount,
+    active,
+    autoRenew,
+    autoRenewPaymentMethod,
+  ];
 }
 
 enum MonthlyPassStatus { active, upcoming, expired }
@@ -76,10 +77,7 @@ MonthlyPassStatus monthlyPassStatus(MonthlyPass pass, DateTime now) {
 
 /// Active passes first (soonest expiry first), then upcoming (soonest start),
 /// then expired (most recent first). Stable for equal keys.
-List<MonthlyPass> sortMonthlyPasses(
-  List<MonthlyPass> passes, {
-  DateTime? now,
-}) {
+List<MonthlyPass> sortMonthlyPasses(List<MonthlyPass> passes, {DateTime? now}) {
   final today = now ?? DateTime.now();
   int priority(MonthlyPass pass) => switch (monthlyPassStatus(pass, today)) {
     MonthlyPassStatus.active => 0,
