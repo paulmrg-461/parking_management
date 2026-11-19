@@ -4,7 +4,7 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-11-18 (guidance batch).
+Last updated: 2026-11-18 (replay batch).
 
 ## Where we are
 
@@ -60,9 +60,18 @@ Last updated: 2026-11-18 (guidance batch).
   blocks capture or submission (the existing check-in/dialog suites stay
   green). `slotForIndex` clamps negatives to `frontLeft` and overflow to
   `detail`.
+- Replay harness shipped: `report-assistant/replay_test.ts` iterates
+  `fixtures/*.json` (question, recorded RPC output, recorded model script and
+  the expected figures) and runs the real agent loop with a scripted model and
+  a fake PostgREST — no network, so the CI `edge-functions` job runs it.
+  Four cases cover the design table: per-category revenue (F1), two payment
+  methods (F3), the out-of-scope plate question with redaction (F16) and a
+  hostile category name that must not change the figures (F18). The remaining
+  14 recorded cases and `eval:live` still need a manual live run with the
+  owner's key.
 - Still pending: rotate the exposed DeepSeek key (owner), the manual smokes
-  (payments/passes/damage/devices), the AI replay fixtures/eval and the three
-  hardware changes.
+  (payments/passes/damage/devices), the 14 remaining replay fixtures, the
+  `eval:live` tooling and the three hardware changes.
 
 ## Device gateway backend (2026-11-18, `0128`-`0129`)
 

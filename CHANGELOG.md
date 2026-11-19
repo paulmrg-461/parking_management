@@ -67,6 +67,13 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - Android release build: R8 keep rules for the optional ML Kit scripts.
 
 ### Added
+- **AI replay harness** (`report-assistant/replay_test.ts` + fixtures):
+  deterministic, network-free regression of the agent loop — recorded RPC
+  output and model scripts, expected figure values asserted — runnable in the
+  CI `edge-functions` job. Four design cases included (per-category revenue,
+  payment split, out-of-scope plate question with redaction, hostile
+  category-name injection).
+
 - **Guided photo capture** (`core/widgets/capture_guide.dart`): a next-angle
   banner and slot chips shown at check-in and in the exit-photo section, plus a
   simple illustration dialog, so the entry and exit sets cover the same four
