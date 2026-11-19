@@ -4,7 +4,7 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-11-18 (replay parity).
+Last updated: 2026-11-19 (device E2E).
 
 ## Where we are
 
@@ -117,6 +117,16 @@ Last updated: 2026-11-18 (replay parity).
   script.ts` (tested) does the swap without touching the rest of the fixture.
 - Deno tasks: `test`, `eval:live`, `eval:record`, `eval:damage`, all in
   `supabase/volumes/functions/deno.jsonc`.
+- Real bug found by the new device E2E: Supabase keeps pgcrypto in the
+  `extensions` schema, so the device key functions (`search_path = public`)
+  failed live with `gen_random_bytes does not exist`. `0130` sets both search
+  paths; the SQL suite only passed before because its database resolved
+  pgcrypto from `public`. Whenever a migration calls pgcrypto, use
+  `set search_path = public, extensions`.
+- `test/integration/device_gateway_test.dart` now automates the protocol
+  smoke (register, time, heartbeat, replay, skew, bad key, audit events); it
+  runs from `integration_test/app_flow_test.dart` and skips without env.
+  Only physical boot/network retries still need hardware.
 - SQL suite flakiness fixed in `rpc_test.sql`: two blocks were tied to the
   wall clock. The forecast median fixture now anchors on the most recent
   Wednesday strictly before today (the profile window is `today - 8 weeks ..

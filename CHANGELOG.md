@@ -10,6 +10,12 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 ## [Unreleased] — 2026-11 (app reliability and operator UX)
 
 ### Fixed
+- **Device registration failed on the real stack**: `register_lot_device` and
+  `rotate_lot_device_key` were created with `search_path = public`, but
+  Supabase installs pgcrypto in `extensions`, so the first call raised
+  `function gen_random_bytes(integer) does not exist` (the SQL suite only saw
+  a database where it resolved). `0130` widens both search paths and a
+  regression block asserts it.
 - **Settings** no longer shows a bare spinner while loading or a plain text
   with no way out when the load fails: it paints a skeleton and an
   `ErrorState` with **Reintentar**. The vehicle history lookup also paints a
@@ -67,6 +73,11 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - Android release build: R8 keep rules for the optional ML Kit scripts.
 
 ### Added
+- **Automated device-gateway E2E** (`test/integration/device_gateway_test.dart`,
+  wired into `integration_test/app_flow_test.dart`): registers a device as a
+  lot admin and speaks the firmware protocol against the live stack — `/v1/time`,
+  heartbeat, replay `409`, clock skew `400`, tampered key `401`, recovery `200`
+  and the audit events. No hardware needed; skips without the stack env.
 - **Damage comparison replay harness** (`damage-compare/replay_test.ts` +
   `fixtures/replay/*.json`): recorded model answers go through the real
   normaliser with no images and no network. Nine cases pin the verdict rules

@@ -16045,4 +16045,29 @@ set local request.headers = '{"x-lot-id":"1"}';
 
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
 
+
+-- devices: the key generator can see pgcrypto on the real stack
+do $$
+declare
+    config text;
+begin
+    for config in
+        select array_to_string(p.proconfig, ',')
+          from pg_proc p
+         where p.pronamespace = 'public'::regnamespace
+           and p.proname in ('register_lot_device', 'rotate_lot_device_key')
+    loop
+        if config is null or config not like '%extensions%' then
+            raise exception 'a device key function cannot see pgcrypto: %', config;
+        end if;
+    end loop;
+    if not exists (
+        select 1 from pg_proc p
+         where p.pronamespace = 'public'::regnamespace
+           and p.proname = 'register_lot_device'
+    ) then
+        raise exception 'register_lot_device is missing';
+    end if;
+end $$;
+
 rollback;

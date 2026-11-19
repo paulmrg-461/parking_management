@@ -27,3 +27,22 @@ sequence and timestamp and the same idempotency key on network errors, 429 or
 
 The API key is stored as a SHA-256 hash; rotate it from the admin screen if it
 leaks. The gateway derives the lot from the registry, never from a header.
+
+## Automated protocol smoke (no hardware)
+
+`test/integration/device_gateway_test.dart` exercises the real path against a
+running stack: it signs in as a lot admin, registers a `camera` device, calls
+`/v1/time`, sends a heartbeat, then asserts the branches that firmware relies on
+— replay (`409`), clock skew (`400`), a tampered key (`401`) and recovery with
+the right key (`200`) — and finally checks the audit events. The wrapper
+`integration_test/app_flow_test.dart` runs it next to the check-in flow:
+
+```bash
+SUPABASE_URL=http://localhost:8017 \
+SUPABASE_ANON_KEY=$(grep '^ANON_KEY=' .env | cut -d= -f2-) \
+flutter test -d linux integration_test/app_flow_test.dart
+```
+
+It skips when the environment is not configured. What still needs real
+hardware: boot behaviour, retry/backoff on a physical network and firmware
+updates.
