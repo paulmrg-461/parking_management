@@ -98,8 +98,9 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - **Damage verdicts are conservative by construction**: an all-clear now
   requires a confirmed same vehicle, at least three zones visible in both
   photo sets and no uncertain finding; otherwise the verdict is
-  `insufficient_evidence`. Three replay cases pin the rule (different
-  vehicle, two covered zones, the three-zone boundary).
+  `insufficient_evidence`. The zone floor is `AI_DAMAGE_MIN_COVERED_ZONES`
+  (default 3). Three replay cases and two handler tests pin the rule
+  (different vehicle, two covered zones, the three-zone boundary).
 
 - **Damage replay parity**: nine more normaliser cases — multi-photo
   pairing, foreign photo ids dropped and downgraded, missing exit photo,

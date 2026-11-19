@@ -1,7 +1,7 @@
 import { assertEquals } from 'jsr:@std/assert@^1'
 import { AiError } from '../_shared/ai/errors.ts'
 import { loadConfig } from '../_shared/ai/config.ts'
-import { createHandler, type DamageDeps } from './index.ts'
+import { createHandler, normalise, type DamageDeps } from './index.ts'
 
 function deps(options: {
   key?: string
@@ -134,4 +134,35 @@ Deno.test('damage downgrades a new finding without exit photos', async () => {
   )).json()
   assertEquals(body.findings[0].classification, 'uncertain')
   assertEquals(body.overall, 'insufficient_evidence')
+})
+
+Deno.test('damage coverage floor is configurable', () => {
+  const answer = {
+    quality: { same_vehicle: 'yes', covered_zones: ['front', 'rear'] },
+    findings: [],
+  }
+  assertEquals(normalise(answer, [1], [2], 2).overall, 'no_new_damage')
+  assertEquals(normalise(answer, [1], [2], 3).overall, 'insufficient_evidence')
+  // A zero falls back to one zone: the check is never disabled entirely.
+  assertEquals(normalise(answer, [1], [2], 0).overall, 'no_new_damage')
+})
+
+Deno.test('damage run honours the configured coverage floor', async () => {
+  const vision = () => Promise.resolve({
+    content: JSON.stringify({
+      summary: 'Sin cambios.',
+      quality: { same_vehicle: 'yes', covered_zones: ['front', 'rear'], issues: [] },
+      findings: [],
+    }),
+    model: 'm',
+    usage: {},
+  })
+  const twoZones = await (await createHandler({ ...deps({ vision }), minCoveredZones: 2 })(
+    post({ mode: 'run', session_id: 1, locale: 'es' }),
+  )).json()
+  assertEquals(twoZones.overall, 'no_new_damage')
+  const strict = await (await createHandler(deps({ vision }))(
+    post({ mode: 'run', session_id: 1, locale: 'es' }),
+  )).json()
+  assertEquals(strict.overall, 'insufficient_evidence')
 })
