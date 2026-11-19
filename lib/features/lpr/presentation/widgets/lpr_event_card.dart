@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 
 import '../../../../core/l10n/l10n.dart';
@@ -6,6 +8,7 @@ import '../../../../core/widgets/date_time_text.dart';
 import '../../../../core/widgets/plate_text.dart';
 import '../../../../core/widgets/status_chip.dart';
 import '../../domain/entities/lpr_event.dart';
+import 'lpr_snapshot_thumb.dart';
 
 /// One pending read. The plate is the headline; the reason chip explains why
 /// a person is needed. The actions available depend on the direction and the
@@ -17,12 +20,14 @@ class LprEventCard extends StatelessWidget {
     this.onConfirm,
     this.onDismiss,
     this.onCheckOut,
+    this.snapshotLoader,
   });
 
   final LprEvent event;
   final VoidCallback? onConfirm;
   final VoidCallback? onDismiss;
   final VoidCallback? onCheckOut;
+  final Future<Uint8List> Function(String path)? snapshotLoader;
 
   @override
   Widget build(BuildContext context) {
@@ -49,6 +54,12 @@ class LprEventCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: Space.xs),
+            if (event.snapshotPath case final path?)
+              if (snapshotLoader case final loader?)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: Space.sm),
+                  child: LprSnapshotThumb(path: path, loader: loader),
+                ),
             Text(
               l10n.gateConfidence(percent),
               style: theme.textTheme.bodySmall,

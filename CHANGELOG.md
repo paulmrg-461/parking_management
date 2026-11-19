@@ -77,6 +77,11 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - Android release build: R8 keep rules for the optional ML Kit scripts.
 
 ### Added
+- **Gate snapshot thumbnail**: a pending read with a snapshot shows the image
+  in its card (loaded through the repository, so the Storage membership policy
+  decides), with a "no image" placeholder when it is missing or denied. The
+  route passes the loader; tests cover the image, the placeholder and the
+  no-snapshot case.
 - **LPR edge service core** (`edge/lpr/`, `pytest`): strict configuration
   (unknown keys, HTTPS, `0600` secrets, engine hashes), plate post-processing
   with the positional confusable fold, the IoU tracker and read schedule, the

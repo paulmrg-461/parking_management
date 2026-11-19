@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -118,6 +120,58 @@ void main() {
     await tester.tap(find.byKey(const Key('lpr_checkout_2')));
     await tester.pumpAndSettle();
     expect(find.text('checkout ABC123'), findsOneWidget);
+  });
+
+  testWidgets('a read with a snapshot shows its thumbnail', (tester) async {
+    final png = base64Decode(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAE'
+      'hQGAhKmMIQAAAABJRU5ErkJggg==',
+    );
+    final repository = FakeLprRepository()
+      ..events = [fakeLprEvent(id: 3, snapshotPath: 'lpr/1/7/3.jpg')];
+    await tester.pumpWidget(
+      testApp(
+        BlocProvider(
+          create: (_) => LprInboxCubit(repository),
+          child: GatePage(
+            online: () async => true,
+            snapshotLoader: (path) async {
+              expect(path, 'lpr/1/7/3.jpg');
+              return png;
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('lpr_snapshot_image')), findsOneWidget);
+  });
+
+  testWidgets('a snapshot error shows the placeholder', (tester) async {
+    final repository = FakeLprRepository()
+      ..events = [fakeLprEvent(id: 3, snapshotPath: 'lpr/1/7/3.jpg')];
+    await tester.pumpWidget(
+      testApp(
+        BlocProvider(
+          create: (_) => LprInboxCubit(repository),
+          child: GatePage(
+            online: () async => true,
+            snapshotLoader: (path) async => throw Exception('denied'),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('lpr_snapshot_missing')), findsOneWidget);
+  });
+
+  testWidgets('no snapshot path renders no image', (tester) async {
+    await tester.pumpWidget(
+      gate(FakeLprRepository()..events = [fakeLprEvent(id: 3)]),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('lpr_snapshot_image')), findsNothing);
+    expect(find.byKey(const Key('lpr_snapshot_missing')), findsNothing);
   });
 
   testWidgets('an admin sees the settings action and it fires', (tester) async {

@@ -41,6 +41,7 @@ import '../../features/pass_renewal/application/pass_renewal_cubit.dart';
 import '../../features/pricing/application/price_quote_cubit.dart';
 import '../../features/loyalty/application/loyalty_status_cubit.dart';
 import '../../features/lpr/application/lpr_inbox_cubit.dart';
+import '../../features/lpr/domain/repositories/lpr_repository.dart';
 import '../../features/lpr/presentation/gate_page.dart';
 import '../../features/lpr/presentation/gate_settings_page.dart';
 import '../../features/damage_comparison/application/damage_comparison_cubit.dart';
@@ -355,6 +356,8 @@ GoRoute _homeRoute(AuthCubit auth) => GoRoute(
                 auth.session.user.role == UserRole.admin;
             return GatePage(
               onSettings: admin ? () => context.push('/gate-settings') : null,
+              snapshotLoader: (path) =>
+                  serviceLocator<LprRepository>().snapshot(path),
             );
           },
         ),

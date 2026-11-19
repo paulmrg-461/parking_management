@@ -285,6 +285,9 @@ until the edge service exists.
   pickers, per-camera direction, save). The page creates its three cubits so
   the router stays free of deferred-heavy imports; the route is admin-only
   and the drawer entry is "Cámara de placas".
+- The gate cards show the snapshot thumbnail (`LprSnapshotThumb`, loader
+  injected by the route from the repository) with the `Sin imagen`/`No image`
+  placeholder on error; three widget tests cover it.
 - Docs shipped: `docs/lpr-gate.md` (decision table, operator flow, settings,
   protocol, retention, rollback, limits) plus the database/architecture/
   infrastructure/project-overview/index updates. Mermaid: camera -> edge

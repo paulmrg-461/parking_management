@@ -36,6 +36,7 @@ LprEvent fakeLprEvent({
   LprEventReason? reason = LprEventReason.assistMode,
   String plate = 'ABC123',
   int? sessionId,
+  String? snapshotPath,
 }) {
   return LprEvent(
     id: id,
@@ -47,7 +48,7 @@ LprEvent fakeLprEvent({
     votes: 3,
     sessionId: sessionId,
     hasPass: false,
-    snapshotPath: null,
+    snapshotPath: snapshotPath,
     deviceName: 'Entrada',
     createdAt: DateTime(2026, 11, 19, 10),
   );

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -22,13 +24,21 @@ import 'widgets/lpr_event_card.dart';
 /// admins see it; confirming is a normal check-in performed by the signed-in
 /// operator.
 class GatePage extends StatefulWidget {
-  const GatePage({super.key, this.online, this.onSettings});
+  const GatePage({
+    super.key,
+    this.online,
+    this.onSettings,
+    this.snapshotLoader,
+  });
 
   /// Test seam for the connectivity check.
   final Future<bool> Function()? online;
 
   /// Opens `/gate-settings`; null hides the action (non-admins, tests).
   final VoidCallback? onSettings;
+
+  /// Test seam for the snapshot bytes; the route passes the repository call.
+  final Future<Uint8List> Function(String path)? snapshotLoader;
 
   @override
   State<GatePage> createState() => _GatePageState();
@@ -132,6 +142,7 @@ class _GatePageState extends State<GatePage> {
             onConfirm: _confirm,
             onDismiss: _dismiss,
             onCheckOut: _checkOut,
+            snapshotLoader: widget.snapshotLoader,
           ),
         },
       ),
@@ -174,6 +185,7 @@ class _GateList extends StatelessWidget {
     required this.onConfirm,
     required this.onDismiss,
     required this.onCheckOut,
+    this.snapshotLoader,
   });
 
   final List<LprEvent> events;
@@ -182,6 +194,7 @@ class _GateList extends StatelessWidget {
   final void Function(LprEvent) onConfirm;
   final void Function(LprEvent) onDismiss;
   final void Function(LprEvent) onCheckOut;
+  final Future<Uint8List> Function(String path)? snapshotLoader;
 
   @override
   Widget build(BuildContext context) {
@@ -200,6 +213,7 @@ class _GateList extends StatelessWidget {
             onConfirm: event.isEntry && !busy ? () => onConfirm(event) : null,
             onDismiss: busy ? null : () => onDismiss(event),
             onCheckOut: exitUnpaid && !busy ? () => onCheckOut(event) : null,
+            snapshotLoader: snapshotLoader,
           );
         },
       ),
