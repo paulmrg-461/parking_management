@@ -13,7 +13,7 @@
 // Never wired into CI.
 
 import { loadConfig } from '../_shared/ai/config.ts'
-import { evalRefusal } from './eval_guard.ts'
+import { evalRefusal } from '../_shared/ai/eval_guard.ts'
 import { createModelClient } from '../_shared/ai/deepseek.ts'
 import { run, type AgentDeps } from './agent.ts'
 import { join } from 'jsr:@std/path@^1'
@@ -35,7 +35,7 @@ type Fixture = {
 }
 
 const env = Deno.env.toObject()
-const refusal = evalRefusal(env)
+const refusal = evalRefusal(env, 'eval:live')
 if (refusal !== null) {
   console.error(refusal)
   Deno.exit(1)

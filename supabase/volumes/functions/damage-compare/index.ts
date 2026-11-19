@@ -276,6 +276,57 @@ export function createHandler(deps: DamageDeps) {
 }
 
 // ---------------------------------------------------------------------------
+// Vision call (shared with the manual live eval so both use one code path).
+// ---------------------------------------------------------------------------
+export function createVision(
+  env: Record<string, string | undefined>,
+): DamageDeps['vision'] {
+  const baseUrl = env.DEEPSEEK_BASE_URL ?? 'https://api.deepseek.com'
+  const model = env.DEEPSEEK_MODEL_DAMAGE_COMPARE ?? 'deepseek-flash'
+  return async (prompt, images, cfg) => {
+    const content = [
+      { type: 'text', text: prompt },
+      ...images.map((image) => ({
+        type: 'image_url',
+        image_url: { url: image.dataUrl, detail: 'high' },
+      })),
+    ]
+    const response = await fetch(`${baseUrl.replace(/\/$/, '')}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${cfg.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 2000,
+        response_format: { type: 'json_object' },
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content },
+        ],
+      }),
+    })
+    if (!response.ok) {
+      throw new AiError('AiUpstreamError', 502)
+    }
+    const data = await response.json() as {
+      model?: string
+      choices?: Array<{ message?: { content?: string } }>
+      usage?: { prompt_tokens?: number; completion_tokens?: number }
+    }
+    return {
+      content: data.choices?.[0]?.message?.content ?? '',
+      model: data.model ?? model,
+      usage: {
+        input: data.usage?.prompt_tokens ?? 0,
+        output: data.usage?.completion_tokens ?? 0,
+      },
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Real dependencies.
 // ---------------------------------------------------------------------------
 function realDeps(): DamageDeps {
@@ -331,49 +382,7 @@ function realDeps(): DamageDeps {
       }
       return loaded
     },
-    vision: async (prompt, images, cfg) => {
-      const baseUrl = env.DEEPSEEK_BASE_URL ?? 'https://api.deepseek.com'
-      const model = env.DEEPSEEK_MODEL_DAMAGE_COMPARE ?? 'deepseek-flash'
-      const content = [
-        { type: 'text', text: prompt },
-        ...images.map((image) => ({
-          type: 'image_url',
-          image_url: { url: image.dataUrl, detail: 'high' },
-        })),
-      ]
-      const response = await fetch(`${baseUrl.replace(/\/$/, '')}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${cfg.apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model,
-          max_tokens: 2000,
-          response_format: { type: 'json_object' },
-          messages: [
-            { role: 'system', content: SYSTEM_PROMPT },
-            { role: 'user', content },
-          ],
-        }),
-      })
-      if (!response.ok) {
-        throw new AiError('AiUpstreamError', 502)
-      }
-      const data = await response.json() as {
-        model?: string
-        choices?: Array<{ message?: { content?: string } }>
-        usage?: { prompt_tokens?: number; completion_tokens?: number }
-      }
-      return {
-        content: data.choices?.[0]?.message?.content ?? '',
-        model: data.model ?? model,
-        usage: {
-          input: data.usage?.prompt_tokens ?? 0,
-          output: data.usage?.completion_tokens ?? 0,
-        },
-      }
-    },
+    vision: createVision(env),
     store: storeResult,
     fail: failComparison,
     reserve: async (caller) => {

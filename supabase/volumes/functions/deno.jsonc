@@ -1,7 +1,8 @@
 {
   "tasks": {
     "test": "deno test --allow-env --allow-read",
-    "eval:live": "deno run --allow-env --allow-read report-assistant/eval_live.ts"
+    "eval:live": "deno run --allow-env --allow-read report-assistant/eval_live.ts",
+    "eval:damage": "deno run --allow-env --allow-read damage-compare/eval/live.ts"
   },
   "imports": {
     "@supabase/functions-js": "jsr:@supabase/functions-js@^2",

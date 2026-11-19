@@ -95,6 +95,18 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   relative to the run date) and the loyalty online-cap fixture uses a fixed
   past daytime window instead of `now() - 3 hours`, which crossed the night
   rate boundary and changed the fare depending on the hour of the run.
+- **Damage live eval** (`deno task eval:damage`): reads labelled photo
+  pairs from `DAMAGE_FIXTURES_DIR` (default `fixtures/pairs/`, no images
+  committed), runs the production prompt/vision call/normaliser and scores
+  the verdicts with the design's rules — zero tolerance for an all-clear on
+  the angle/blur/vehicle-swap categories, at most one false positive across
+  A+D and the right zone on at least 80% of the new-damage pairs. The
+  scoring is pure and tested; the task refuses to run in CI or without a
+  key, and `fixtures/pairs/README.md` documents the 24-pair plan, the
+  capture protocol and the consent/blur requirement. The vision call is now
+  one exported factory (`createVision`) shared by the function and the
+  eval.
+
 - **Damage verdicts are conservative by construction**: an all-clear now
   requires a confirmed same vehicle, at least three zones visible in both
   photo sets and no uncertain finding; otherwise the verdict is

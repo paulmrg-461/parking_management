@@ -96,15 +96,22 @@ Last updated: 2026-11-18 (replay parity).
   The overall verdict now follows the design's safety rule: any `new` finding
   wins; otherwise an all-clear needs `same_vehicle = yes`, at least three
   covered zones (`AI_DAMAGE_MIN_COVERED_ZONES`, default 3) and no uncertain
-  finding. Deno suite is 128 tests.
+  finding. Deno suite is 133 tests.
 - `report-assistant/eval_live.ts` + `deno task eval:live` (manual, needs
   `DEEPSEEK_API_KEY`, never in CI): runs the same 18 fixtures against the
   real model, scores tool selection (expected subset of called, with
   `get_capacity_now` noise allowed), the date arguments and every figure
   value, and fails under 17/18. `eval_guard.ts` refuses without a key and
   inside CI; three tests pin the refusals.
-- The damage live eval still needs real photo pairs; there is no image
-  fixture set yet.
+- Damage live eval shipped: `deno task eval:damage` (manual, guarded like
+  `eval:live`) reads labelled pairs from `DAMAGE_FIXTURES_DIR` (default
+  `damage-compare/fixtures/pairs`, README only in the repo), runs the same
+  prompt/vision/normaliser and scores with `damage-compare/eval/scoring.ts`
+  (A+D false-positive budget 1, B zone hit >= 80%, zero tolerance for an
+  all-clear on E/G/H). What is still missing is the owner's consented,
+  plate-blurred photo pairs; the tooling is ready for them.
+- The vision call was extracted to `createVision(env)` in `index.ts` so the
+  function and the eval share one code path.
 - SQL suite flakiness fixed in `rpc_test.sql`: two blocks were tied to the
   wall clock. The forecast median fixture now anchors on the most recent
   Wednesday strictly before today (the profile window is `today - 8 weeks ..

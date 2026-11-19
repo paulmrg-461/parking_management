@@ -67,6 +67,7 @@ volumes/functions/damage-compare/**
 !volumes/functions/damage-compare/**/
 !volumes/functions/damage-compare/**/*.ts
 !volumes/functions/damage-compare/**/*.json
+!volumes/functions/damage-compare/fixtures/pairs/README.md
 !volumes/functions/device-gateway/
 volumes/functions/device-gateway/**
 !volumes/functions/device-gateway/index.ts
