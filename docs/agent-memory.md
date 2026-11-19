@@ -346,10 +346,31 @@ barrier are untouched.
   redelivery rules, expired skip, ack opened/refused/idempotent, foreign
   device, event idempotency, fault audience and dedupe, expiry notifications,
   firmware manifest, purge and the grants.
-- Next: the Ed25519 signing module, `barrier_issue_command` + the triggers,
-  the gateway routes, the operator RPCs (manual open, config/list, command
-  history), the Flutter `/barrier` page and the ESP32 firmware. Tasks 1.1-1.3
-  and 2.2 are checked.
+- Signing: `device-gateway/signing.ts` (base64 PKCS#8 Ed25519, canonical
+  `parking-barrier-v1|id|device|open|issued|expires|nonce|hold_ms|max_open_s`,
+  64-byte base64 signature, missing/malformed key → `SigningUnavailableError`
+  → 503). Tests cover the exact message, verification with the committed
+  public key, timing changes, malformed commands and that the key is never
+  logged. `edge/barrier/test/vectors/command_v1.json` is the TS↔C++ vector
+  (regenerate with `UPDATE_VECTORS=1`).
+- Gateway routes (in `index.ts`, matcher in `routing.ts`): `/v1/barrier/
+  config`, `/commands/next` (long poll, wait clamped 0..20, 500 ms attempts,
+  one poll per device, 204 when empty, signed command with the config
+  timings, 503 without the key), `/commands/:id/ack` (Idempotency-Key must
+  equal the id, `opened`/`refused`, 404 for a foreign command),
+  `/events` (≤ 2 KiB, idempotent in SQL) and `/firmware[/:version/image]`.
+  Barrier routes are barrier-only, LPR routes camera-only.
+- `BARRIER_COMMAND_SIGNING_KEY` is in the compose env, `.env.example`, both
+  `supabase/.env.example` and the local `.env`; generate with
+  `edge/barrier/tools/gen_command_key.sh` (prints the env line and the
+  firmware public key). `docker compose restart` does NOT reload env: use
+  `up -d functions` after changing the key.
+- The live device E2E now registers a barrier, sets its config, reads
+  `/v1/barrier/config` and polls `commands/next` (204) — proving the key is
+  loaded. Deno suite 179 tests.
+- Next: `barrier_issue_command` + the triggers, the operator RPCs (manual
+  open, list/history), the Flutter `/barrier` page and the ESP32 firmware.
+  Tasks 1.1-1.3, 2.2 and 4.1-4.4 are checked.
 
 ## Damage comparison backend (2026-11-18, `0127`)
 

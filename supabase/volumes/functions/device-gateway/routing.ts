@@ -8,6 +8,12 @@ export type RouteName =
   | 'lpr_config'
   | 'lpr_reads'
   | 'lpr_snapshot'
+  | 'barrier_config'
+  | 'barrier_next'
+  | 'barrier_ack'
+  | 'barrier_event'
+  | 'barrier_firmware'
+  | 'barrier_image'
 
 type Route = {
   method: string
@@ -29,6 +35,36 @@ const ROUTES: Route[] = [
     method: 'PUT',
     name: 'lpr_snapshot',
     segments: ['v1', 'lpr', 'events', ':id', 'snapshot'],
+  },
+  {
+    method: 'GET',
+    name: 'barrier_config',
+    segments: ['v1', 'barrier', 'config'],
+  },
+  {
+    method: 'GET',
+    name: 'barrier_next',
+    segments: ['v1', 'barrier', 'commands', 'next'],
+  },
+  {
+    method: 'POST',
+    name: 'barrier_ack',
+    segments: ['v1', 'barrier', 'commands', ':id', 'ack'],
+  },
+  {
+    method: 'POST',
+    name: 'barrier_event',
+    segments: ['v1', 'barrier', 'events'],
+  },
+  {
+    method: 'GET',
+    name: 'barrier_firmware',
+    segments: ['v1', 'barrier', 'firmware'],
+  },
+  {
+    method: 'GET',
+    name: 'barrier_image',
+    segments: ['v1', 'barrier', 'firmware', ':version', 'image'],
   },
 ]
 

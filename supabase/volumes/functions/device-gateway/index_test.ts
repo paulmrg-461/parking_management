@@ -48,6 +48,24 @@ function deps(options: {
       upload: () => Promise.resolve({ status: 200 }),
       remove: () => Promise.resolve(),
     },
+    barrier: {
+      config: () => Promise.resolve({
+        direction: 'entry',
+        open_hold_ms: 1000,
+        max_open_seconds: 20,
+        post_clear_delay_ms: 1500,
+        max_reversals: 3,
+        command_ttl_seconds: 30,
+      }),
+      next: () => Promise.resolve(null),
+      ack: () => Promise.resolve({ status: 'executed' }),
+      event: () => Promise.resolve({ ok: true }),
+      firmware: () => Promise.resolve(null),
+      image: () => Promise.resolve(null),
+      signer: () =>
+        Promise.resolve({ publicKey: '', sign: () => Promise.resolve('sig') }),
+      sleep: () => Promise.resolve(),
+    },
   }
 }
 

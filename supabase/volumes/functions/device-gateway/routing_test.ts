@@ -21,6 +21,29 @@ Deno.test('matches named segments and rejects extra segments', () => {
   assertEquals(matchRoute('PUT', fn('/v1/lpr/events/snapshot')), null)
 })
 
+Deno.test('matches the barrier routes', () => {
+  assertEquals(matchRoute('GET', fn('/v1/barrier/config'))?.name, 'barrier_config')
+  assertEquals(
+    matchRoute('GET', fn('/v1/barrier/commands/next'))?.name,
+    'barrier_next',
+  )
+  const ack = matchRoute('POST', fn('/v1/barrier/commands/6f1c/ack'))
+  assertEquals(ack?.name, 'barrier_ack')
+  assertEquals(ack?.params['id'], '6f1c')
+  assertEquals(matchRoute('POST', fn('/v1/barrier/events'))?.name, 'barrier_event')
+  assertEquals(
+    matchRoute('GET', fn('/v1/barrier/firmware'))?.name,
+    'barrier_firmware',
+  )
+  const image = matchRoute('GET', fn('/v1/barrier/firmware/1.2.3/image'))
+  assertEquals(image?.name, 'barrier_image')
+  assertEquals(image?.params['version'], '1.2.3')
+  assertEquals(
+    matchRoute('GET', fn('/v1/barrier/firmware/1.2.3/image/extra')),
+    null,
+  )
+})
+
 Deno.test('a route only matches its method', () => {
   assertEquals(matchRoute('GET', fn('/v1/heartbeat')), null)
   assertEquals(matchRoute('POST', fn('/v1/time')), null)

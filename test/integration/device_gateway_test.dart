@@ -214,6 +214,54 @@ void main() {
       expect(attached['event_id'], event['id']);
       expect(attached['session_id'], isNull);
 
+      // Barrier routes: configured timings and a signed-command poll.
+      final barrierName = 'e2e-barrier-${DateTime.now().millisecondsSinceEpoch}';
+      final barrier = Map<String, dynamic>.from(
+        await client.rpc('register_lot_device', params: {
+          'p_kind': 'barrier',
+          'p_name': barrierName,
+        }) as Map,
+      );
+      final barrierKey = barrier['api_key'] as String;
+      final barrierId = barrier['id'] as int;
+      addTearDown(() async {
+        try {
+          await client.rpc('delete_lot_device', params: {'p_id': barrierId});
+        } catch (_) {}
+      });
+      await client.rpc('set_barrier_config', params: {
+        'p_device_id': barrierId,
+        'p_direction': 'entry',
+        'p_open_hold_ms': 1000,
+      });
+      final barrierConfig = await http
+          .get(
+            Uri.parse('$gateway/v1/barrier/config'),
+            headers: {
+              'X-Device-Key': barrierKey,
+              'X-Device-Timestamp': '$now',
+              'X-Device-Seq': '1',
+            },
+          )
+          .timeout(const Duration(seconds: 15));
+      expect(barrierConfig.statusCode, 200);
+      final configBody = jsonDecode(barrierConfig.body) as Map<String, dynamic>;
+      expect(configBody['direction'], 'entry');
+      expect(configBody['open_hold_ms'], 1000);
+      expect(configBody['command_ttl_s'], 30);
+
+      final poll = await http
+          .get(
+            Uri.parse('$gateway/v1/barrier/commands/next?wait=0'),
+            headers: {
+              'X-Device-Key': barrierKey,
+              'X-Device-Timestamp': '$now',
+              'X-Device-Seq': '2',
+            },
+          )
+          .timeout(const Duration(seconds: 15));
+      expect(poll.statusCode, 204);
+
       final events = await client.rpc('list_device_events', params: {
         'p_device_id': deviceId,
         'p_limit': 20,

@@ -77,6 +77,14 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - Android release build: R8 keep rules for the optional ML Kit scripts.
 
 ### Added
+- **Signed barrier commands**: Ed25519 signing in the gateway (`signing.ts`)
+  over the versioned canonical message (including `hold_ms` and
+  `max_open_s`), with the key only in the functions environment and a
+  fail-closed 503 when it is missing. The gateway gained the barrier routes
+  (config, long-poll next, ack, events, firmware manifest and image), the
+  shared TS/C++ test vector and the generation script; the live E2E now
+  registers a barrier, configures it and polls a signed-command endpoint.
+  `BARRIER_COMMAND_SIGNING_KEY` is wired into compose and the env examples.
 - **Barrier commands and device RPCs (`0136`)**: the command queue (nonce,
   short TTL, delivery counter) and device events, with service-role delivery
   (oldest first, at most three deliveries five seconds apart, expired ones

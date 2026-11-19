@@ -502,6 +502,9 @@ services:
       FISCAL_PROVIDER_TOKEN: ${FISCAL_PROVIDER_TOKEN:-}
       FISCAL_PROVIDER_ENV: ${FISCAL_PROVIDER_ENV:-habilitacion}
       FISCAL_PROVIDER_TIMEOUT_MS: ${FISCAL_PROVIDER_TIMEOUT_MS:-15000}
+      # Barrier command signing (Ed25519, base64 PKCS#8). Empty makes
+      # /v1/barrier/commands/next answer 503 (fail closed); see the runbook.
+      BARRIER_COMMAND_SIGNING_KEY: ${BARRIER_COMMAND_SIGNING_KEY:-}
       # Optional: DeepSeek (OpenAI-compatible) for report-assistant. Empty
       # keeps the assistant inert ({configured:false}); see the secrets runbook.
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}

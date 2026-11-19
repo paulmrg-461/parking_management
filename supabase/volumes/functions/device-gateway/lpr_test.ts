@@ -38,6 +38,17 @@ function deps(options: {
         return Promise.resolve()
       },
     },
+    barrier: {
+      config: () => Promise.resolve({}),
+      next: () => Promise.resolve(null),
+      ack: () => Promise.resolve({ status: 'executed' }),
+      event: () => Promise.resolve({ ok: true }),
+      firmware: () => Promise.resolve(null),
+      image: () => Promise.resolve(null),
+      signer: () =>
+        Promise.resolve({ publicKey: '', sign: () => Promise.resolve('sig') }),
+      sleep: () => Promise.resolve(),
+    },
   }
 }
 

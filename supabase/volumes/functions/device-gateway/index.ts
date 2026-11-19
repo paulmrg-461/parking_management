@@ -8,6 +8,11 @@
 
 import { json } from '../_shared/ai/sse.ts'
 import { matchRoute } from './routing.ts'
+import {
+  createSigner,
+  SigningUnavailableError,
+  type BarrierSigner,
+} from './signing.ts'
 
 export type LprReadBody = {
   client_ref: string
@@ -32,6 +37,31 @@ export type LprDeps = {
   remove: (path: string) => Promise<void>
 }
 
+export type BarrierDeps = {
+  config: (deviceId: number) => Promise<Record<string, unknown>>
+  next: (deviceId: number) => Promise<Record<string, unknown> | null>
+  ack: (
+    deviceId: number,
+    commandId: string,
+    result: string,
+    detail: Record<string, unknown>,
+  ) => Promise<Record<string, unknown>>
+  event: (
+    deviceId: number,
+    clientRef: string,
+    event: string,
+    at: string,
+    detail: Record<string, unknown>,
+  ) => Promise<Record<string, unknown>>
+  firmware: (
+    deviceId: number,
+    current: string | null,
+  ) => Promise<Record<string, unknown> | null>
+  image: (version: string) => Promise<Uint8Array | null>
+  signer: () => Promise<BarrierSigner>
+  sleep: (ms: number) => Promise<void>
+}
+
 export type GatewayDeps = {
   serviceKey: () => string
   lookup: (prefix: string) => Promise<{ id: number; key_hash: string } | null>
@@ -48,6 +78,7 @@ export type GatewayDeps = {
   authFailure: (deviceId: number) => Promise<void>
   now: () => Date
   lpr: LprDeps
+  barrier: BarrierDeps
 }
 
 const KEY = /^pkd_([0-9a-f]{12})_([0-9a-f]{64})$/
@@ -84,10 +115,14 @@ export function createHandler(deps: GatewayDeps) {
     const code = error instanceof Error ? error.message : 'ServiceError'
     const status = code === 'InvalidDeviceKindError'
       ? 403
-      : code === 'LprEventNotFoundError'
+      : code === 'LprEventNotFoundError' ||
+          code === 'BarrierCommandNotFoundError' ||
+          code === 'NotFoundError'
       ? 404
       : code === 'SnapshotAlreadyAttachedError'
       ? 409
+      : code === 'GatewayUnavailableError'
+      ? 503
       : code === 'InvalidPlateError' || code === 'InvalidConfidenceError' ||
           code === 'InvalidReadTimeError' ||
           code === 'LprDirectionNotSetError' ||
@@ -185,6 +220,211 @@ export function createHandler(deps: GatewayDeps) {
     }
   }
 
+
+  const BARRIER_VERSION = /^\d+\.\d+\.\d+$/
+  const polling = new Set<number>()
+  const sleep = (ms: number) => deps.barrier.sleep(ms)
+
+  function unixSeconds(value: unknown): number {
+    if (typeof value === 'number') return Math.trunc(value)
+    const parsed = Date.parse(String(value))
+    return Number.isFinite(parsed) ? Math.floor(parsed / 1000) : NaN
+  }
+
+  async function readJson(
+    req: Request,
+    limit: number,
+  ): Promise<Record<string, unknown> | Response> {
+    const text = await req.text()
+    if (encoder.encode(text).length > limit) {
+      return refuse('PayloadTooLargeError', 413)
+    }
+    try {
+      const body = JSON.parse(text)
+      if (body === null || typeof body !== 'object' || Array.isArray(body)) {
+        return refuse('InvalidDataError', 400)
+      }
+      return body as Record<string, unknown>
+    } catch (_) {
+      return refuse('InvalidDataError', 400)
+    }
+  }
+
+  async function barrierConfig(deviceId: number): Promise<Response> {
+    try {
+      const raw = await deps.barrier.config(deviceId)
+      return json({
+        direction: raw.direction,
+        open_hold_ms: Number(raw.open_hold_ms),
+        max_open_s: Number(raw.max_open_seconds),
+        post_clear_delay_ms: Number(raw.post_clear_delay_ms),
+        max_reversals: Number(raw.max_reversals),
+        command_ttl_s: Number(raw.command_ttl_seconds),
+        poll_wait_s: 20,
+        heartbeat_interval_s: 60,
+      })
+    } catch (error) {
+      return failure(error)
+    }
+  }
+
+  async function barrierNext(
+    url: URL,
+    deviceId: number,
+  ): Promise<Response> {
+    let signer: BarrierSigner
+    try {
+      signer = await deps.barrier.signer()
+    } catch (error) {
+      if (error instanceof SigningUnavailableError) {
+        return refuse('GatewayUnavailableError', 503)
+      }
+      return failure(error)
+    }
+    const raw = Number(url.searchParams.get('wait') ?? '20')
+    const wait = Math.min(Math.max(Number.isFinite(raw) ? raw : 20, 0), 20)
+    if (polling.has(deviceId)) {
+      return refuse('BarrierPollInProgressError', 409)
+    }
+    polling.add(deviceId)
+    try {
+      const attempts = Math.max(1, Math.ceil((wait * 1000) / 500))
+      for (let attempt = 0; attempt < attempts; attempt++) {
+        const command = await deps.barrier.next(deviceId)
+        if (command !== null) {
+          const config = await deps.barrier.config(deviceId)
+          const issuedAt = unixSeconds(command.issued_at)
+          const expiresAt = unixSeconds(command.expires_at)
+          const holdMs = Number(config.open_hold_ms)
+          const maxOpenS = Number(config.max_open_seconds)
+          const signature = await signer.sign({
+            id: String(command.id),
+            device_id: Number(command.device_id),
+            issued_at: issuedAt,
+            expires_at: expiresAt,
+            nonce: String(command.nonce),
+            hold_ms: holdMs,
+            max_open_s: maxOpenS,
+          })
+          return json({
+            command: {
+              id: command.id,
+              device_id: Number(command.device_id),
+              action: 'open',
+              issued_at: issuedAt,
+              expires_at: expiresAt,
+              nonce: command.nonce,
+              hold_ms: holdMs,
+              max_open_s: maxOpenS,
+              signature,
+            },
+            server_time: deps.now().toISOString(),
+          })
+        }
+        if (attempt < attempts - 1) await sleep(500)
+      }
+      return new Response(null, { status: 204 })
+    } catch (error) {
+      return failure(error)
+    } finally {
+      polling.delete(deviceId)
+    }
+  }
+
+  async function barrierAck(
+    req: Request,
+    deviceId: number,
+    commandId: string,
+  ): Promise<Response> {
+    if (!UUID.test(commandId)) {
+      return refuse('BarrierCommandNotFoundError', 404)
+    }
+    if ((req.headers.get('Idempotency-Key') ?? '') !== commandId) {
+      return refuse('InvalidDataError', 400)
+    }
+    const parsed = await readJson(req, 2048)
+    if (parsed instanceof Response) return parsed
+    const result = String(parsed.result ?? '')
+    if (result !== 'opened' && result !== 'refused') {
+      return refuse('InvalidDataError', 400)
+    }
+    const detail = { ...parsed }
+    delete detail.result
+    try {
+      const ack = await deps.barrier.ack(deviceId, commandId, result, detail)
+      return json({ status: ack.status })
+    } catch (error) {
+      return failure(error)
+    }
+  }
+
+  async function barrierEvent(
+    req: Request,
+    deviceId: number,
+  ): Promise<Response> {
+    const parsed = await readJson(req, 2048)
+    if (parsed instanceof Response) return parsed
+    const clientRef = String(parsed.client_ref ?? '')
+    const event = String(parsed.event ?? '')
+    const at = String(parsed.at ?? '')
+    if (!UUID.test(clientRef) || event === '' || at === '') {
+      return refuse('InvalidDataError', 400)
+    }
+    const detail = typeof parsed.detail === 'object' && parsed.detail !== null
+      ? parsed.detail as Record<string, unknown>
+      : {}
+    try {
+      await deps.barrier.event(deviceId, clientRef, event, at, detail)
+      return json({ ok: true })
+    } catch (error) {
+      return failure(error)
+    }
+  }
+
+  async function barrierFirmware(
+    url: URL,
+    deviceId: number,
+  ): Promise<Response> {
+    try {
+      const manifest = await deps.barrier.firmware(
+        deviceId,
+        url.searchParams.get('current'),
+      )
+      if (manifest === null) {
+        return new Response(null, { status: 204 })
+      }
+      return json({
+        version: manifest.version,
+        sha256: manifest.sha256,
+        size: Number(manifest.size_bytes),
+        secure_version: Number(manifest.secure_version),
+        image_path: `/v1/barrier/firmware/${manifest.version}/image`,
+      })
+    } catch (error) {
+      return failure(error)
+    }
+  }
+
+  async function barrierImage(version: string): Promise<Response> {
+    if (!BARRIER_VERSION.test(version)) {
+      return refuse('NotFoundError', 404)
+    }
+    try {
+      const bytes = await deps.barrier.image(version)
+      if (bytes === null) {
+        return refuse('NotFoundError', 404)
+      }
+      const copy = new Uint8Array(new ArrayBuffer(bytes.length))
+      copy.set(bytes)
+      return new Response(copy.buffer, {
+        status: 200,
+        headers: { 'Content-Type': 'application/octet-stream' },
+      })
+    } catch (error) {
+      return failure(error)
+    }
+  }
+
   return async (req: Request): Promise<Response> => {
     const url = new URL(req.url)
     const route = matchRoute(req.method, url.pathname)
@@ -259,9 +499,28 @@ export function createHandler(deps: GatewayDeps) {
       })
     }
 
-    // LPR routes are camera-only.
-    if (accepted.kind !== 'camera') {
+    // LPR routes are camera-only, barrier routes barrier-only.
+    const requiredKind = route.name.startsWith('lpr_') ? 'camera' : 'barrier'
+    if (accepted.kind !== requiredKind) {
       return refuse('InvalidDeviceKindError', 403)
+    }
+    if (route.name === 'barrier_config') {
+      return barrierConfig(deviceId)
+    }
+    if (route.name === 'barrier_next') {
+      return barrierNext(url, deviceId)
+    }
+    if (route.name === 'barrier_ack') {
+      return barrierAck(req, deviceId, route.params['id'] ?? '')
+    }
+    if (route.name === 'barrier_event') {
+      return barrierEvent(req, deviceId)
+    }
+    if (route.name === 'barrier_firmware') {
+      return barrierFirmware(url, deviceId)
+    }
+    if (route.name === 'barrier_image') {
+      return barrierImage(route.params['version'] ?? '')
     }
     if (route.name === 'lpr_config') {
       try {
@@ -281,6 +540,7 @@ export function createHandler(deps: GatewayDeps) {
 function realDeps(): GatewayDeps {
   const url = Deno.env.get('SUPABASE_URL') ?? ''
   const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  let signerPromise: Promise<BarrierSigner> | null = null
   const rpc = async (name: string, body: Record<string, unknown>) => {
     const response = await fetch(`${url}/rest/v1/rpc/${name}`, {
       method: 'POST',
@@ -361,6 +621,55 @@ function realDeps(): GatewayDeps {
           },
         })
       },
+    },
+    barrier: {
+      config: (deviceId) => rpc('device_barrier_config', {
+        p_device_id: deviceId,
+      }),
+      next: (deviceId) => rpc('device_barrier_next', { p_device_id: deviceId }),
+      ack: (deviceId, commandId, result, detail) =>
+        rpc('device_barrier_ack', {
+          p_device_id: deviceId,
+          p_command_id: commandId,
+          p_result: result,
+          p_detail: detail,
+        }),
+      event: (deviceId, clientRef, event, at, detail) =>
+        rpc('device_barrier_event', {
+          p_device_id: deviceId,
+          p_client_ref: clientRef,
+          p_event: event,
+          p_at: at,
+          p_detail: detail,
+        }),
+      firmware: (deviceId, current) =>
+        rpc('device_firmware_manifest', {
+          p_device_id: deviceId,
+          p_current: current,
+        }),
+      image: async (version) => {
+        const query = 'device_firmware?kind=eq.barrier' +
+          `&version=eq.${encodeURIComponent(version)}` +
+          '&released=eq.true&select=storage_path&limit=1'
+        const response = await fetch(`${url}/rest/v1/${query}`, {
+          headers: { apikey: key, Authorization: `Bearer ${key}` },
+        })
+        if (!response.ok) return null
+        const rows = await response.json() as Array<{ storage_path?: string }>
+        const path = rows[0]?.storage_path
+        if (!path) return null
+        const object = await fetch(
+          `${url}/storage/v1/object/firmware/${path}`,
+          { headers: { apikey: key, Authorization: `Bearer ${key}` } },
+        )
+        if (!object.ok) return null
+        return new Uint8Array(await object.arrayBuffer())
+      },
+      signer: () => {
+        signerPromise ??= createSigner(Deno.env.toObject())
+        return signerPromise
+      },
+      sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
     },
   }
 }

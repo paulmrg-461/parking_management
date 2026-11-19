@@ -1,0 +1,15 @@
+{
+  "version": "parking-barrier-v1",
+  "public_key_spki_b64": "MCowBQYDK2VwAyEAbk49EEZ4exPyZAQ3uvD+S5CQWw52X9NbcTY+i6ZQWBs=",
+  "command": {
+    "id": "6f1c1d8e-0b34-4d44-8a3e-6f5c1c1d9a10",
+    "device_id": 7,
+    "issued_at": 1731247401,
+    "expires_at": 1731247431,
+    "nonce": "9f2c4a7e1b3d5f60718293a4b5c6d7e8",
+    "hold_ms": 1000,
+    "max_open_s": 20
+  },
+  "message": "parking-barrier-v1|6f1c1d8e-0b34-4d44-8a3e-6f5c1c1d9a10|7|open|1731247401|1731247431|9f2c4a7e1b3d5f60718293a4b5c6d7e8|1000|20",
+  "signature_b64": "03/gnE2N7FjrKVt4N4XSYYl2gzqqCzX1iVY231LZGmBSjDzO2l7YJ2UJ++pPUPmGttUQD8yKOcOVwJyIFrvPCg=="
+}
