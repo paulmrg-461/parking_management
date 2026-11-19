@@ -47,15 +47,17 @@ class _CreateUserDialogState extends State<CreateUserDialog> {
   @override
   void initState() {
     super.initState();
-    _lotId = widget.initialLotId ??
+    _lotId =
+        widget.initialLotId ??
         (widget.lots.isEmpty ? null : widget.lots.first.id);
   }
 
   String? _required(String? value) =>
       (value ?? '').trim().isEmpty ? context.l10n.fieldRequired : null;
 
-  String? _pin(String? value) =>
-      _pinPattern.hasMatch((value ?? '').trim()) ? null : context.l10n.pinInvalid;
+  String? _pin(String? value) => _pinPattern.hasMatch((value ?? '').trim())
+      ? null
+      : context.l10n.pinInvalid;
 
   void _submit() {
     if (!_formKey.currentState!.validate()) {
@@ -109,17 +111,22 @@ class _CreateUserDialogState extends State<CreateUserDialog> {
               ),
               const SizedBox(height: Space.md),
               DropdownButtonFormField<UserRole>(
+                isExpanded: true,
                 initialValue: _role,
                 decoration: InputDecoration(labelText: l10n.fieldRole),
                 items: [
                   for (final role in UserRole.values)
-                    DropdownMenuItem(value: role, child: Text(role.label(l10n))),
+                    DropdownMenuItem(
+                      value: role,
+                      child: Text(role.label(l10n)),
+                    ),
                 ],
                 onChanged: (value) => setState(() => _role = value ?? _role),
               ),
               if (widget.lots.length > 1) ...[
                 const SizedBox(height: Space.md),
                 DropdownButtonFormField<int>(
+                  isExpanded: true,
                   initialValue: _lotId,
                   decoration: InputDecoration(labelText: l10n.lotLabel),
                   items: [

@@ -25,7 +25,8 @@ final class SubmissionFailed extends Submission {
   const SubmissionFailed(this.message, {this.failure});
 
   /// Carries the [Failure] so presentation can localize it by `code`.
-  SubmissionFailed.of(Failure failure) : this(failure.message, failure: failure);
+  SubmissionFailed.of(Failure failure)
+    : this(failure.message, failure: failure);
 
   final String message;
   final Failure? failure;

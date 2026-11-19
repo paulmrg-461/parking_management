@@ -5,10 +5,7 @@ import '../../../core/network/supabase_error_mapper.dart';
 import '../domain/entities/public_evidence.dart';
 
 abstract class EvidenceRemoteDataSource {
-  Future<PublicEvidence> fetch({
-    required int sessionId,
-    required String plate,
-  });
+  Future<PublicEvidence> fetch({required int sessionId, required String plate});
 }
 
 class SupabaseEvidenceRemoteDataSource implements EvidenceRemoteDataSource {

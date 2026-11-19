@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/core/state/submission.dart';
 import 'package:parking_management/features/monthly_passes/application/monthly_passes_cubit.dart';
 import 'package:parking_management/features/monthly_passes/domain/commands/create_monthly_pass_command.dart';
 import 'package:parking_management/features/monthly_passes/domain/commands/update_monthly_pass_command.dart';
+import 'package:parking_management/features/monthly_passes/domain/entities/pass_renewal_offer_summary.dart';
 import 'package:parking_management/features/vehicles/domain/entities/vehicle.dart';
 
 import '../../../helpers/fake_monthly_pass_repository.dart';
@@ -166,5 +169,63 @@ void main() {
         expect(loaded().submission, isA<SubmissionFailed>());
       },
     );
+  });
+
+  test('Success: passes and pending payments load in parallel', () async {
+    final gate = Completer<void>();
+    repository.listGate = gate.future;
+
+    final pending = cubit.load();
+    await pumpEventQueue();
+
+    expect(repository.pendingCalls, 1);
+    gate.complete();
+    await pending;
+    expect(loaded().monthlyPasses, isNotEmpty);
+  });
+
+  test('Success: load includes the renewal offers', () async {
+    repository.offers = const [
+      PassRenewalOfferSummary(monthlyPassId: 1, status: 'open'),
+    ];
+    await cubit.load();
+
+    expect(loaded().offers[1]?.status, 'open');
+    expect(repository.offersCalls, greaterThanOrEqualTo(1));
+  });
+
+  test('Failure: a failed offers read never fails the page', () async {
+    repository.offersError = const NetworkFailure('offline');
+    await cubit.load();
+
+    expect(loaded().monthlyPasses, isNotEmpty);
+    expect(loaded().offers, isEmpty);
+  });
+
+  test('Success: sendRenewalLink reports it and refreshes the offers', () async {
+    await cubit.load();
+    repository.offers = const [
+      PassRenewalOfferSummary(monthlyPassId: 1, status: 'open'),
+    ];
+
+    await cubit.sendRenewalLink(_pass);
+
+    expect(repository.renewalLinks, [1]);
+    expect(loaded().lastAction, MonthlyPassAction.renewalLinkSent);
+    expect(loaded().offers[1]?.status, 'open');
+  });
+
+  test('Failure: a refused renewal link keeps the list', () async {
+    await cubit.load();
+    repository.linkError = const ValidationFailure(
+      'MissingOwnerPhoneError',
+      'MissingOwnerPhoneError',
+    );
+
+    await cubit.sendRenewalLink(_pass);
+
+    expect(loaded().submission, isA<SubmissionFailed>());
+    expect(loaded().monthlyPasses, isNotEmpty);
+    expect(loaded().lastAction, isNot(MonthlyPassAction.renewalLinkSent));
   });
 }

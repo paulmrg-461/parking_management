@@ -1,15 +1,46 @@
 {
   "@@locale": "es",
   "appTitle": "Parqueadero",
-  "@appTitle": {"description": "Application name shown in the task switcher and login."},
-
+  "@appTitle": {
+    "description": "Application name shown in the task switcher and login."
+  },
   "actionClose": "Cerrar",
   "activityCheckIn": "{actor} registró el ingreso de {plate}",
-  "@activityCheckIn": {"placeholders": {"actor": {"type": "String"}, "plate": {"type": "String"}}},
+  "@activityCheckIn": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      },
+      "plate": {
+        "type": "String"
+      }
+    }
+  },
   "activityCheckOut": "{actor} registró la salida de {plate} · Cobro: {amount}",
-  "@activityCheckOut": {"placeholders": {"actor": {"type": "String"}, "plate": {"type": "String"}, "amount": {"type": "String"}}},
+  "@activityCheckOut": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      },
+      "plate": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "activityCheckOutNoAmount": "{actor} registró la salida de {plate}",
-  "@activityCheckOutNoAmount": {"placeholders": {"actor": {"type": "String"}, "plate": {"type": "String"}}},
+  "@activityCheckOutNoAmount": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      },
+      "plate": {
+        "type": "String"
+      }
+    }
+  },
   "actionCancel": "Cancelar",
   "actionSave": "Guardar",
   "actionCreate": "Crear",
@@ -28,7 +59,6 @@
   "loading": "Cargando",
   "fieldRequired": "Campo obligatorio",
   "notAvailable": "—",
-
   "errorNetwork": "No hay conexión con el servidor",
   "errorServer": "El servidor no está disponible. Intenta de nuevo en un momento",
   "errorAuth": "Usuario o PIN incorrectos",
@@ -39,6 +69,116 @@
   "evidenceGateHint": "La placa impresa en el recibo es la clave de acceso.",
   "evidenceUnlock": "Ver evidencias",
   "policiesTitle": "Políticas y contrato",
+  "bookingTitle": "Reserva tu espacio",
+  "bookingSubtitle": "Elige el tipo de vehículo y asegura tu cupo en segundos.",
+  "bookingOnline": "Reserva en línea",
+  "bookingSectionAvailability": "Disponibilidad ahora",
+  "bookingSectionHint": "Datos en tiempo real del parqueadero",
+  "bookingRefresh": "Actualizar disponibilidad",
+  "bookingAvailable": "{count, plural, =1{1 disponible} other{{count} disponibles}}",
+  "@bookingAvailable": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "bookingFull": "Completo",
+  "bookingUnlimited": "Sin límite",
+  "bookingNoSpaceTitle": "No hay cupo en este momento",
+  "bookingNoSpaceHint": "Se acaba de llenar. Puedes llamar al parqueadero o volver a intentar en unos minutos.",
+  "bookingFromPrice": "Desde {price}/hora",
+  "@bookingFromPrice": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "bookingPriceUndefined": "Tarifa en recepción",
+  "bookingSelectCategory": "Elige un tipo de vehículo",
+  "bookingFormTitle": "Tus datos",
+  "bookingPhone": "Celular",
+  "bookingPhoneHint": "300 000 0000",
+  "bookingName": "Nombre",
+  "bookingDuration": "¿Cuánto tiempo necesitas?",
+  "bookingDurationHours": "{hours} h",
+  "@bookingDurationHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "bookingSubmit": "Reservar espacio",
+  "bookingSubmitting": "Reservando…",
+  "bookingLegal": "Al reservar aceptas las políticas y el contrato del parqueadero.",
+  "bookingPolicies": "Ver políticas",
+  "bookingSuccessTitle": "¡Reserva confirmada!",
+  "bookingSuccessHint": "Muestra este código al llegar al parqueadero.",
+  "bookingCode": "Código de reserva",
+  "bookingPlateDetail": "Placa",
+  "bookingCategoryDetail": "Tipo",
+  "bookingUntil": "Válida hasta",
+  "bookingAddress": "Dirección",
+  "bookingAnother": "Hacer otra reserva",
+  "bookingLookupTitle": "¿Ya reservaste?",
+  "bookingLookupHint": "Consulta o cancela con el código y el celular de tu reserva.",
+  "bookingLookupCode": "Código",
+  "bookingLookupPhone": "Celular",
+  "bookingLookupAction": "Consultar reserva",
+  "bookingLookupChecking": "Buscando…",
+  "bookingLookupInvalid": "Escribe el código y un celular válido.",
+  "bookingLookupNotFound": "No encontramos una reserva activa con esos datos. Revisa el código y el celular.",
+  "bookingLookupFound": "Reserva de {plate}",
+  "@bookingLookupFound": {
+    "placeholders": {
+      "plate": {
+        "type": "String"
+      }
+    }
+  },
+  "bookingCancel": "Cancelar reserva",
+  "bookingCancelTitle": "¿Cancelar tu reserva?",
+  "bookingCancelBody": "Se liberará el cupo de {plate}. Esta acción no se puede deshacer.",
+  "@bookingCancelBody": {
+    "placeholders": {
+      "plate": {
+        "type": "String"
+      }
+    }
+  },
+  "bookingCancelledTitle": "Reserva cancelada",
+  "bookingCancelledHint": "El cupo volvió a quedar disponible. Gracias por avisar.",
+  "bookingErrorNotFound": "No encontramos esa reserva. Revisa el código o llama al parqueadero.",
+  "bookingCall": "Llamar",
+  "bookingWhatsApp": "WhatsApp",
+  "bookingWhatsAppMessage": "Hola, tengo una reserva en {lot}.",
+  "@bookingWhatsAppMessage": {
+    "placeholders": {
+      "lot": {
+        "type": "String"
+      }
+    }
+  },
+  "bookingEmpty": "No hay tipos de vehículo configurados. Llama al parqueadero.",
+  "bookingFooter": "Reserva sujeta a disponibilidad. Si no puedes asistir, avísanos.",
+  "bookingErrorFull": "Ese tipo de vehículo ya no tiene espacio. Elige otro o intenta más tarde.",
+  "bookingErrorExists": "Ya tienes una reserva activa para esta placa.",
+  "bookingErrorLimit": "Alcanzaste el límite de reservas para este teléfono.",
+  "bookingErrorInside": "Este vehículo ya está dentro del parqueadero.",
+  "bookingErrorWindow": "La hora de la reserva no es válida.",
+  "bookingErrorPhone": "Ingresa un celular válido de 10 dígitos (empieza por 3).",
+  "bookingErrorName": "Ingresa tu nombre.",
+  "bookingErrorPlate": "Ingresa una placa válida.",
+  "bookingErrorLot": "No encontramos este parqueadero.",
+  "bookingCaptchaLabel": "Verificación de seguridad",
+  "bookingCaptchaPending": "Completa la verificación de seguridad para reservar.",
+  "bookingCaptchaExpired": "La verificación venció. Complétala de nuevo.",
+  "bookingCaptchaFailed": "No pudimos verificar que eres una persona. Inténtalo de nuevo.",
+  "bookingCaptchaUnavailable": "La verificación de seguridad no está disponible en este momento. Intenta en unos minutos o llama al parqueadero.",
+  "bookingCaptchaRequired": "Este parqueadero pide una verificación de seguridad para reservar en línea. Recarga la página o llama al parqueadero.",
+  "bookingErrorThrottled": "Hay muchas reservas en línea en este momento. Intenta en unos minutos o llama al parqueadero.",
   "policiesInvalid": "No pudimos cargar las políticas de este parqueadero.",
   "policiesEmpty": "Este parqueadero aún no publicó sus políticas.",
   "policiesHelp": "Al ingresar el vehículo aceptas estas políticas. Si tienes dudas, contacta al parqueadero.",
@@ -46,20 +186,50 @@
   "evidenceTitle": "Evidencias del vehículo",
   "evidenceInvalid": "Este enlace no es válido o la placa no coincide.",
   "evidenceKey": "Clave de acceso: {plate}",
-  "@evidenceKey": {"placeholders": {"plate": {"type": "String"}}},
+  "@evidenceKey": {
+    "placeholders": {
+      "plate": {
+        "type": "String"
+      }
+    }
+  },
   "evidenceEntry": "Ingreso: {when}",
-  "@evidenceEntry": {"placeholders": {"when": {"type": "String"}}},
+  "@evidenceEntry": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
   "evidenceEmpty": "Este ingreso no tiene fotos ni videos.",
   "evidenceNoPhotos": "Sin fotos.",
   "evidencePhotos": "Fotos ({count})",
-  "@evidencePhotos": {"placeholders": {"count": {"type": "int"}}},
+  "@evidencePhotos": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "evidenceVideos": "Videos ({count})",
-  "@evidenceVideos": {"placeholders": {"count": {"type": "int"}}},
+  "@evidenceVideos": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "evidencePlayVideo": "Ver video",
   "evidenceHelp": "Comparte este enlace solo con el propietario del vehículo. Las evidencias se eliminan según la retención del parqueadero.",
   "errorUnknown": "Ocurrió un error inesperado",
   "errorRateLimited": "Demasiados intentos. Intenta de nuevo en {minutes} min",
-  "@errorRateLimited": {"placeholders": {"minutes": {"type": "int"}}},
+  "@errorRateLimited": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
   "errorTooManyAttempts": "Demasiados intentos. Intenta más tarde",
   "errorNotFound": "No se encontró el registro",
   "errorConflict": "La operación entra en conflicto con los datos actuales",
@@ -81,6 +251,10 @@
   "errorEvidenceAlreadyUsed": "Estas fotos de evidencia ya se usaron en otra entrada; tómalas de nuevo",
   "errorSessionAlreadyClosed": "Esta salida ya fue registrada",
   "errorVehicleNotRegistered": "Vehículo nuevo: selecciona una categoría",
+  "errorInvalidPlate": "La placa no es válida",
+  "gateEventResolved": "Ese evento ya fue resuelto",
+  "gateEventKind": "Ese evento no es una entrada",
+  "gateNoSystemOperator": "Configura un operador del sistema en la cámara de placas",
   "errorInvalidPhoto": "Las fotos deben ser imágenes JPEG o PNG",
   "errorPhotoTooLarge": "Cada foto debe pesar 5 MB o menos",
   "errorTooManyPhotos": "Superaste el máximo de fotos por entrada",
@@ -91,18 +265,420 @@
   "errorScanUnavailable": "El escaneo de placas no está disponible aquí",
   "errorPendingSyncCheckOut": "Esta entrada aún no se ha sincronizado. Intenta cuando haya conexión",
   "errorMissingPendingPhoto": "Falta una foto de evidencia en cola",
-
   "deferredLoadError": "No se pudo cargar esta sección",
   "offlineBanner": "Sin conexión. Los cambios se guardan y se sincronizarán al reconectar",
-
   "syncPendingTooltip": "{count, plural, =1{1 cambio pendiente de sincronizar} other{{count} cambios pendientes de sincronizar}}",
-  "@syncPendingTooltip": {"placeholders": {"count": {"type": "int"}}},
+  "@syncPendingTooltip": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "syncPendingWithErrors": "{base} ({errors} con error)",
-  "@syncPendingWithErrors": {"placeholders": {"base": {"type": "String"}, "errors": {"type": "int"}}},
+  "@syncPendingWithErrors": {
+    "placeholders": {
+      "base": {
+        "type": "String"
+      },
+      "errors": {
+        "type": "int"
+      }
+    }
+  },
   "syncSheetTitle": "Cambios sin sincronizar",
   "syncNow": "Reintentar ahora",
+  "syncConflicts": "{count, plural, =1{1 conflicto por resolver} other{{count} conflictos por resolver}}",
+  "@syncConflicts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncConflictTitle": "Cambio en conflicto",
+  "syncConflictHint": "Otra persona cambió este registro mientras lo editabas.",
+  "syncKeepMine": "Quedarme con lo mío",
+  "syncKeepTheirs": "Quedarme con lo del servidor",
+  "conflictTitle": "Resolver conflicto",
+  "syncConflictSection": "Requieren tu decisión",
+  "syncConflictTileSubtitle": "Otra persona cambió este registro.",
+  "conflictIntro": "Tus cambios sin conexión chocan con cambios de otra persona.",
+  "conflictColumnBase": "Antes",
+  "conflictColumnMine": "Mío",
+  "conflictColumnTheirs": "Del servidor",
+  "conflictAutoMerged": "{count, plural, =0{} =1{1 cambio sin choque se aplicará solo.} other{{count} cambios sin choque se aplicarán solos.}}",
+  "@conflictAutoMerged": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "conflictPickEach": "Elige un valor para cada campo.",
+  "conflictApply": "Aplicar selección",
+  "conflictDeletedTitle": "Otra persona eliminó este registro.",
+  "conflictDeletedBody": "Tus cambios no se pueden aplicar. Puedes aceptar la eliminación y volver a ingresarlos si hace falta.",
+  "conflictAcceptDeletion": "Aceptar la eliminación",
+  "conflictEditedTitle": "Otra persona editó este registro mientras lo eliminabas.",
+  "conflictKeepDelete": "Eliminar de todos modos",
+  "conflictKeepRecord": "Conservar el registro",
+  "conflictAgain": "El registro cambió de nuevo. Revisa los valores actuales.",
+  "conflictEmpty": "No hay conflictos pendientes.",
+  "conflictNone": "Sin valor",
+  "cfYes": "Sí",
+  "cfNo": "No",
+  "waitlistJoinTitle": "Lista de espera",
+  "waitlistJoinHint": "Estamos llenos. Déjanos tus datos y te avisamos cuando se libere un cupo.",
+  "waitlistJoinAction": "Unirme a la lista de espera",
+  "waitlistWaitFor": "Puedo esperar hasta:",
+  "waitlistHoldFor": "Reservar el cupo por:",
+  "waitlistHoldHours": "{hours, plural, =1{1 hora} other{{hours} horas}}",
+  "@waitlistHoldHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "waitlistJoined": "Estás en la lista de espera",
+  "waitlistPosition": "Tu turno: {position}",
+  "@waitlistPosition": {
+    "placeholders": {
+      "position": {
+        "type": "int"
+      }
+    }
+  },
+  "waitlistCode": "Código {code}",
+  "@waitlistCode": {
+    "placeholders": {
+      "code": {
+        "type": "int"
+      }
+    }
+  },
+  "waitlistKeepCode": "Guarda este código: lo necesitas para reclamar o salir de la lista.",
+  "waitlistNotifyWhatsapp": "Te avisaremos por WhatsApp.",
+  "waitlistNotifyScreen": "Mantén esta página abierta o llámanos: te avisaremos aquí.",
+  "waitlistOfferTitle": "¡Se liberó un cupo!",
+  "waitlistOfferBody": "Resérvalo antes de las {time}.",
+  "@waitlistOfferBody": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "waitlistClaim": "Reclamar mi cupo",
+  "waitlistLeave": "Salir de la lista",
+  "waitlistLeft": "Saliste de la lista de espera",
+  "waitlistExpiredTitle": "Tu oferta venció",
+  "waitlistExpiredHint": "Puedes volver a unirte a la lista.",
+  "waitlistWaitingCount": "{count, plural, =1{1 persona esperando} other{{count} personas esperando}}",
+  "@waitlistWaitingCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "waitlistLookupLabel": "Código de lista de espera",
+  "waitlistDeskTitle": "Lista de espera",
+  "waitlistDeskEmptyTitle": "Nadie en lista de espera",
+  "waitlistDeskEmptyHint": "Cuando el parqueadero se llene, los clientes web podrán anotarse aquí.",
+  "waitlistDeskOffered": "Oferta hasta {time}",
+  "@waitlistDeskOffered": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "waitlistDeskCallCustomer": "Llamar: el cliente no tiene WhatsApp automático",
+  "waitlistDeskClaim": "Dar el cupo",
+  "waitlistDeskRemove": "Quitar de la lista",
+  "waitlistDeskRemoveBody": "Se quitará a {plate} de la lista y se liberará su oferta.",
+  "@waitlistDeskRemoveBody": {
+    "placeholders": {
+      "plate": {
+        "type": "String"
+      }
+    }
+  },
+  "waitlistSettingsTitle": "Lista de espera",
+  "waitlistSettingsEnabled": "Activar lista de espera pública",
+  "waitlistSettingsClaimMinutes": "Minutos para reclamar una oferta",
+  "waitlistSettingsMaxEntries": "Máximo de personas en lista",
+  "waitlistOfferChip": "Oferta",
+  "notifTypeWaitlist": "Lista de espera",
+  "errorWaitlistDisabled": "La lista de espera no está disponible.",
+  "errorWaitlistNotNeeded": "Hay cupo disponible: puedes reservar ahora.",
+  "errorWaitlistExists": "Esa placa ya está en la lista de espera.",
+  "errorWaitlistLimit": "Este celular ya tiene dos turnos en la lista.",
+  "errorWaitlistFull": "La lista de espera está llena.",
+  "errorWaitlistWindow": "Elige un tiempo de espera válido.",
+  "errorWaitlistNotFound": "No encontramos ese turno.",
+  "errorWaitlistNotOffered": "Aún no hay un cupo para ti.",
+  "errorOfferGone": "La oferta ya no está disponible.",
+  "reportWaitlistTitle": "Lista de espera",
+  "reportWaitlistJoined": "Anotados",
+  "reportWaitlistOffered": "Ofertas",
+  "reportWaitlistClaimed": "Reclamadas",
+  "homeForecastTitle": "Pronóstico de ocupación",
+  "homeForecastHint": "Próximas 12 horas según el historial",
+  "homeForecastFullAt": "{group}: se llenaría cerca de las {time}",
+  "@homeForecastFullAt": {
+    "placeholders": {
+      "group": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "homeForecastFullNow": "{group}: ya está lleno",
+  "@homeForecastFullNow": {
+    "placeholders": {
+      "group": {
+        "type": "String"
+      }
+    }
+  },
+  "homeForecastNotFull": "No se prevé que se llene en las próximas 12 horas",
+  "homeForecastGroupCar": "Autos",
+  "homeForecastGroupMoto": "Motos",
+  "homeForecastConfidenceHigh": "Confianza alta",
+  "homeForecastConfidenceMedium": "Confianza media",
+  "homeForecastConfidenceLow": "Confianza baja",
+  "homeForecastBarSemantics": "{hour}:00, se esperan {expected} de {capacity}",
+  "@homeForecastBarSemantics": {
+    "placeholders": {
+      "hour": {
+        "type": "int"
+      },
+      "expected": {
+        "type": "int"
+      },
+      "capacity": {
+        "type": "int"
+      }
+    }
+  },
+  "homeForecastInsufficient": "Aún reunimos historial para pronosticar",
+  "homeForecastNoCapacity": "Configura la capacidad para ver el pronóstico",
+  "homeForecastDisabled": "El pronóstico está desactivado",
+  "homeForecastUnavailable": "Pronóstico no disponible",
+  "reportsForecastTitle": "Precisión del pronóstico",
+  "reportsForecastSubtitle": "Error medio al repetir el pronóstico sobre las últimas semanas",
+  "reportsForecastRun": "Calcular precisión",
+  "reportsForecastMae": "Error medio: {value} vehículos",
+  "@reportsForecastMae": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "reportsForecastPriorOnly": "Solo con el historial: {value}",
+  "@reportsForecastPriorOnly": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "reportsForecastBetter": "{percent} % mejor con datos en vivo",
+  "@reportsForecastBetter": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "reportsForecastLead": "A {hours} h: {value}",
+  "@reportsForecastLead": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      },
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "reportsForecastEmpty": "Aún no hay historial suficiente",
+  "reportsForecastUnavailable": "No se pudo calcular la precisión",
+  "publicForecastTitle": "¿Cuándo se llena?",
+  "publicForecastFullAt": "Suele llenarse cerca de las {time}",
+  "@publicForecastFullAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "publicForecastFullNow": "Ahora está lleno",
+  "publicForecastNotFull": "No suele llenarse en las próximas horas",
+  "publicForecastGroupCar": "Autos",
+  "publicForecastGroupMoto": "Motos",
+  "publicForecastLevelFree": "Con espacio",
+  "publicForecastLevelBusy": "Concurrido",
+  "publicForecastLevelFull": "Lleno",
+  "publicForecastDisclaimer": "Estimación según días anteriores; puede variar.",
+  "navAnomalies": "Anomalías",
+  "anomaliesTitle": "Anomalías de caja",
+  "anomaliesSettings": "Umbrales",
+  "anomaliesOpenCount": "{count, plural, =1{1 abierta} other{{count} abiertas}}",
+  "@anomaliesOpenCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "anomaliesStatusOpen": "Abiertas",
+  "anomaliesStatusAcknowledged": "Reconocidas",
+  "anomaliesStatusDismissed": "Descartadas",
+  "anomaliesStatusAll": "Todas",
+  "anomaliesClearFilters": "Limpiar filtros",
+  "anomaliesRuleLabel": "Regla",
+  "anomaliesSeverityLabel": "Severidad",
+  "anomaliesSeverityLow": "Baja",
+  "anomaliesSeverityMedium": "Media",
+  "anomaliesSeverityHigh": "Alta",
+  "anomalyRuleShiftShortage": "Faltantes repetidos",
+  "anomalyRuleLostTicketRate": "Tasa alta de ticket perdido",
+  "anomalyRulePostCloseAdjustment": "Ajuste después del cierre",
+  "anomalyRuleZeroCharge": "Salida sin cobro",
+  "anomalyRuleShortLostTicket": "Ticket perdido con estadía corta",
+  "anomalyRuleDiscountRate": "Descuentos frecuentes",
+  "anomalyRuleShiftOpenLong": "Turno abierto demasiado tiempo",
+  "anomalyRuleSessionOpenLong": "Vehículo dentro por muchos días",
+  "anomalyDescShiftShortage": "{count} turnos con faltante, total {amount}",
+  "@anomalyDescShiftShortage": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "anomalyDescLostTicketRate": "{rate} % de tickets perdidos frente a {baseline} % de la sede",
+  "@anomalyDescLostTicketRate": {
+    "placeholders": {
+      "rate": {
+        "type": "String"
+      },
+      "baseline": {
+        "type": "String"
+      }
+    }
+  },
+  "anomalyDescPostCloseAdjustment": "Diferencia {from} → {to} ajustada por {admin}",
+  "@anomalyDescPostCloseAdjustment": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      },
+      "admin": {
+        "type": "String"
+      }
+    }
+  },
+  "anomalyDescZeroCharge": "{plate} salió sin cobro ({method})",
+  "@anomalyDescZeroCharge": {
+    "placeholders": {
+      "plate": {
+        "type": "String"
+      },
+      "method": {
+        "type": "String"
+      }
+    }
+  },
+  "anomalyDescShortLostTicket": "{plate}: ticket perdido tras {minutes} min",
+  "@anomalyDescShortLostTicket": {
+    "placeholders": {
+      "plate": {
+        "type": "String"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "anomalyDescDiscountRate": "{count} descuentos ({share} % de las salidas)",
+  "@anomalyDescDiscountRate": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "share": {
+        "type": "String"
+      }
+    }
+  },
+  "anomalyDescShiftOpenLong": "Abierto desde hace {hours} h",
+  "@anomalyDescShiftOpenLong": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "anomalyDescSessionOpenLong": "{plate} lleva {days} días dentro",
+  "@anomalyDescSessionOpenLong": {
+    "placeholders": {
+      "plate": {
+        "type": "String"
+      },
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "anomalyAcknowledge": "Reconocer",
+  "anomalyDismiss": "Descartar",
+  "anomalyNoteLabel": "Nota",
+  "anomalyNoteRequired": "Escribe una nota de al menos 3 caracteres",
+  "anomalyViewAudit": "Ver auditoría",
+  "anomalyViewContext": "Ver detalle",
+  "anomaliesEmptyTitle": "Todo en orden",
+  "anomaliesEmpty": "No hay anomalías con estos filtros.",
+  "anomaliesSettingsEnabled": "Detección activa",
+  "anomaliesSettingsSaved": "Umbrales guardados",
+  "anomaliesSettingsWindowDays": "Ventana (días)",
+  "anomaliesSettingsShortageMinAmount": "Faltante mínimo por turno",
+  "anomaliesSettingsShortageMinShifts": "Turnos con faltante para alertar",
+  "anomaliesSettingsLostTicketMinClosed": "Salidas mínimas por operador",
+  "anomaliesSettingsLostTicketMinRatePct": "Tasa mínima de ticket perdido (%)",
+  "anomaliesSettingsLostTicketFactorPct": "Veces la tasa de la sede (%)",
+  "anomaliesSettingsAdjustmentMinAmount": "Ajuste mínimo tras el cierre",
+  "anomaliesSettingsShortStayMinutes": "Estadía corta (minutos)",
+  "anomaliesSettingsDiscountMinCount": "Descuentos mínimos por admin",
+  "anomaliesSettingsDiscountSharePct": "Cuota de descuentos (%)",
+  "anomaliesSettingsShiftOpenHours": "Horas para turno abierto",
+  "anomaliesSettingsSessionOpenDays": "Días para vehículo dentro",
+  "notifTypeCashAnomaly": "Anomalía de caja",
+  "errorAnomalyNotFound": "No encontramos esa anomalía",
+  "errorAnomalyAlreadyResolved": "Esa anomalía ya fue revisada",
+  "errorAnomalyNoteRequired": "Escribe una nota de al menos 3 caracteres",
+  "errorInvalidAnomalySetting": "Revisa los valores de los umbrales",
   "syncQueued": "{count} en cola, se reintentarán solos.",
-  "@syncQueued": {"placeholders": {"count": {"type": "int"}}},
+  "@syncQueued": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "syncDiscard": "Descartar cambio",
   "syncUnknownError": "Error desconocido",
   "entityVehicle": "Vehículo",
@@ -111,11 +687,16 @@
   "entityCheckIn": "Entrada",
   "entityCheckOut": "Salida",
   "entitySettings": "Configuración",
-
   "categoryFullHint": "Las categorías llenas aparecen deshabilitadas.",
   "navLots": "Sedes",
   "lotMembersTitle": "Miembros de {name}",
-  "@lotMembersTitle": {"placeholders": {"name": {"type": "String"}}},
+  "@lotMembersTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "lotMembersEmpty": "Esta sede no tiene usuarios",
   "userInactive": "inactivo",
   "lotsTitle": "Sedes del parqueadero",
@@ -128,11 +709,32 @@
   "diagnosticsWhatsappSent": "Enviados (24 h)",
   "diagnosticsWhatsappEmpty": "Sin mensajes de WhatsApp en el periodo",
   "diagnosticsWhatsappAttempts": "{count} intentos",
-  "@diagnosticsWhatsappAttempts": {"placeholders": {"count": {"type": "int"}}},
+  "@diagnosticsWhatsappAttempts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "diagnosticsSystem": "Sistema",
   "diagnosticsMigrations": "Migraciones aplicadas ({count})",
-  "@diagnosticsMigrations": {"placeholders": {"count": {"type": "int"}}},
-  "@diagnosticsLots": {"placeholders": {"active": {"type": "int"}, "total": {"type": "int"}}},
+  "@diagnosticsMigrations": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@diagnosticsLots": {
+    "placeholders": {
+      "active": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "diagnosticsLots": "Sedes activas: {active} de {total}",
   "diagnosticsOpenSessions": "Sesiones abiertas",
   "diagnosticsStaleSessions": "Sesiones abiertas +24 h",
@@ -146,7 +748,13 @@
   "diagnosticsUnread": "Sin leer / total",
   "diagnosticsStorage": "Almacenamiento",
   "diagnosticsErrors": "Errores de la app ({count})",
-  "@diagnosticsErrors": {"placeholders": {"count": {"type": "int"}}},
+  "@diagnosticsErrors": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "diagnosticsErrorsEmpty": "Sin errores reportados en los últimos 7 días",
   "diagnosticsErrorDetail": "Detalle del error",
   "auditExport": "Exportar",
@@ -155,6 +763,8 @@
   "auditCopied": "CSV copiado al portapapeles",
   "auditActor": "Actor",
   "auditAllActors": "Todos",
+  "auditSearch": "Buscar",
+  "auditSearchHint": "Placa, usuario, tabla o valor",
   "auditTitle": "Auditoría",
   "auditTable": "Tabla",
   "auditAllTables": "Todas",
@@ -168,7 +778,13 @@
   "lotAddress": "Dirección (opcional)",
   "lotsEmpty": "Aún no hay sedes",
   "lotMembers": "{count} usuarios",
-  "@lotMembers": {"placeholders": {"count": {"type": "int"}}},
+  "@lotMembers": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "navReservations": "Reservas",
   "reservationsTitle": "Reservas de cupo",
   "reservationAdd": "Nueva reserva",
@@ -176,21 +792,46 @@
   "reservationCancelled": "Reserva cancelada",
   "reservationsEmpty": "No hay reservas activas",
   "reservationExpiresIn": "Vence en {duration}",
-  "@reservationExpiresIn": {"placeholders": {"duration": {"type": "String"}}},
+  "reservationInGrace": "En tolerancia",
+  "@reservationExpiresIn": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
   "reservationQuick2h": "+2 h",
   "reservationQuick4h": "+4 h",
   "reservationEndOfDay": "Fin del día",
   "reservationUntil": "Hasta {when}",
-  "@reservationUntil": {"placeholders": {"when": {"type": "String"}}},
+  "@reservationUntil": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
   "reservationUntilLabel": "Reservar hasta {when}",
-  "@reservationUntilLabel": {"placeholders": {"when": {"type": "String"}}},
+  "@reservationUntilLabel": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
   "reservationNotes": "Notas (opcional)",
   "reservationCheckIn": "Registrar entrada",
   "checkInHoldTitle": "Reserva activa",
   "reservationCancel": "Cancelar reserva",
   "reservationCancelTitle": "¿Cancelar la reserva?",
   "reservationCancelBody": "Se liberará el cupo reservado para {plate}.",
-  "@reservationCancelBody": {"placeholders": {"plate": {"type": "String"}}},
+  "@reservationCancelBody": {
+    "placeholders": {
+      "plate": {
+        "type": "String"
+      }
+    }
+  },
   "sidebarCollapse": "Contraer menú",
   "sidebarExpand": "Expandir menú",
   "navGroupOperation": "Operación",
@@ -216,15 +857,48 @@
   "navRecords": "Registros",
   "recordsTitle": "Registros de vehículos",
   "recordsCount": "{count} registros",
-  "@recordsCount": {"placeholders": {"count": {"type": "int"}}},
+  "@recordsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "recordsEmpty": "Sin registros para «{plate}»",
-  "@recordsEmpty": {"placeholders": {"plate": {"type": "String"}}},
+  "@recordsEmpty": {
+    "placeholders": {
+      "plate": {
+        "type": "String"
+      }
+    }
+  },
   "recordsEmptyAll": "Aún no hay registros en esta sede",
   "recordsClearFilter": "Ver todos",
   "recordsOpenSince": "Dentro desde {since} · {duration}",
-  "@recordsOpenSince": {"placeholders": {"since": {"type": "String"}, "duration": {"type": "String"}}},
+  "@recordsOpenSince": {
+    "placeholders": {
+      "since": {
+        "type": "String"
+      },
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
   "recordsWindow": "{entry} → {exit} · {duration}",
-  "@recordsWindow": {"placeholders": {"duration": {"type": "String"}, "entry": {"type": "String"}, "exit": {"type": "String"}}},
+  "@recordsWindow": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      },
+      "entry": {
+        "type": "String"
+      },
+      "exit": {
+        "type": "String"
+      }
+    }
+  },
   "recordsRangeAll": "Todo",
   "recordsRangeToday": "Hoy",
   "recordsRangeWeek": "7 días",
@@ -266,7 +940,13 @@
   "shiftMovementDone": "Movimiento de caja registrado",
   "shiftAdjustedDone": "Cierre del turno corregido",
   "shiftOpenedAt": "Abierto: {time}",
-  "@shiftOpenedAt": {"placeholders": {"time": {"type": "String"}}},
+  "@shiftOpenedAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "shiftSales": "Ventas",
   "shiftCashSales": "Ventas en efectivo",
   "shiftWithdrawals": "Retiros",
@@ -281,11 +961,23 @@
   "shiftClose": "Cerrar turno",
   "shiftDifferenceConfirmTitle": "El arqueo no cuadra",
   "shiftDifferenceConfirmBody": "Diferencia de {amount} frente al efectivo esperado. ¿Cerrar el turno igualmente?",
-  "@shiftDifferenceConfirmBody": {"placeholders": {"amount": {"type": "String"}}},
+  "@shiftDifferenceConfirmBody": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "shiftClosedTitle": "Turno cerrado",
   "cashCountTitle": "Contar efectivo",
   "cashCountUse": "Usar {amount}",
-  "@cashCountUse": {"placeholders": {"amount": {"type": "String"}}},
+  "@cashCountUse": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "shiftAdjust": "Corregir cierre de turno",
   "shiftCountedCash": "Efectivo contado",
   "shiftDifference": "Diferencia",
@@ -307,7 +999,6 @@
   "errorCashMovementReason": "Indica el motivo del movimiento",
   "errorInvalidDiscount": "El descuento no es válido",
   "errorDiscountReason": "Indica el motivo del descuento",
-
   "errorVehicleBlacklisted": "Este vehículo está bloqueado; un administrador debe desbloquearlo",
   "vehiclePhone": "Teléfono del cliente",
   "vehiclePhoneHint": "+57 300 111 2233",
@@ -324,16 +1015,90 @@
   "errorInvalidOwnerName": "Escribe el nombre completo (2 a 120 caracteres)",
   "vehicleSendWhatsapp": "Enviar recibo por WhatsApp",
   "vehicleWhatsappReady": "Hola, tu vehículo {plate} está listo para retirar.",
-  "@vehicleWhatsappReady": {"placeholders": {"plate": {"type": "String"}}},
+  "@vehicleWhatsappReady": {
+    "placeholders": {
+      "plate": {
+        "type": "String"
+      }
+    }
+  },
   "vehicleChargeAction": "Cobrar en caja",
+  "vehicleEvidenceAction": "Ver evidencias ({count})",
+  "@vehicleEvidenceAction": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sessionEvidenceTitle": "Evidencias de {plate}",
+  "@sessionEvidenceTitle": {
+    "placeholders": {
+      "plate": {
+        "type": "String"
+      }
+    }
+  },
+  "sessionEvidenceEmpty": "Sin fotos ni videos para esta sesión",
+  "sessionEvidencePhotoLabel": "Foto {index}",
+  "@sessionEvidencePhotoLabel": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      }
+    }
+  },
+  "sessionEvidenceVideoLabel": "Video de {seconds} s",
+  "@sessionEvidenceVideoLabel": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "sessionEvidenceDurationShort": "{seconds} s",
+  "@sessionEvidenceDurationShort": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "sessionEvidenceOpenFailed": "No se pudo abrir la evidencia",
+  "sessionEvidenceShort": "Evidencias ({count})",
+  "@sessionEvidenceShort": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "vehicleWhatsappReadyAction": "Avisar que está listo",
   "vehicleWhatsappReceipt": "Hola, te compartimos el recibo del vehículo {plate}:",
-  "@vehicleWhatsappReceipt": {"placeholders": {"plate": {"type": "String"}}},
+  "@vehicleWhatsappReceipt": {
+    "placeholders": {
+      "plate": {
+        "type": "String"
+      }
+    }
+  },
   "vehicleWhatsappHello": "Hola, te escribimos del parqueadero por el vehículo {plate}.",
-  "@vehicleWhatsappHello": {"placeholders": {"plate": {"type": "String"}}},
+  "@vehicleWhatsappHello": {
+    "placeholders": {
+      "plate": {
+        "type": "String"
+      }
+    }
+  },
   "vehicleWhatsappThanks": "¡Gracias por tu visita!",
   "errorInvalidPhone": "Escribe un teléfono válido (7 a 15 dígitos)",
   "errorWhatsappUnavailable": "No se pudo abrir WhatsApp en este dispositivo",
+  "errorVersionConflict": "Otra persona cambió este registro. Revisa el conflicto desde el ícono de sincronización.",
+  "errorConflictPending": "Resuelve primero el conflicto pendiente de este registro.",
+  "errorVersionRequired": "Actualiza la aplicación para editar este registro.",
+  "errorMinVersionRequired": "Define primero la versión mínima de la app.",
+  "errorMapsUnavailable": "No se pudo abrir el mapa en este dispositivo",
+  "bookingDirections": "Cómo llegar",
   "vehicleNotes": "Notas del vehículo",
   "vehicleNotesHint": "Rayones, incidentes, acuerdos…",
   "vehicleAddNotes": "Agregar nota",
@@ -343,38 +1108,103 @@
   "vehicleBlacklisted": "Bloqueado",
   "vehicleBlacklistTitle": "¿Bloquear vehículo?",
   "vehicleBlacklistBody": "{plate} no podrá ingresar hasta que un administrador lo desbloquee.",
-  "@vehicleBlacklistBody": {"placeholders": {"plate": {"type": "String"}}},
+  "@vehicleBlacklistBody": {
+    "placeholders": {
+      "plate": {
+        "type": "String"
+      }
+    }
+  },
   "vehicleUnblockTitle": "¿Desbloquear vehículo?",
   "vehicleUnblockBody": "{plate} podrá volver a ingresar al parqueadero.",
-  "@vehicleUnblockBody": {"placeholders": {"plate": {"type": "String"}}},
+  "@vehicleUnblockBody": {
+    "placeholders": {
+      "plate": {
+        "type": "String"
+      }
+    }
+  },
   "vehicleHistoryTitle": "Historial de vehículo",
+  "vehicleHistoryAction": "Ver historial",
+  "setupTitle": "Primeros pasos",
+  "setupProgress": "{done} de {total} listos",
+  "@setupProgress": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "setupCategories": "Categorías de vehículos",
+  "setupCategoriesHint": "Carros, motos y otros tipos",
+  "setupTariffs": "Tarifas",
+  "setupTariffsHint": "Precios por hora, día y noche",
+  "setupCapacity": "Espacios y capacidad",
+  "setupCapacityHint": "Capacidad en Ajustes o mapa físico",
+  "setupIdentity": "Datos del parqueadero",
+  "setupIdentityHint": "Dirección y teléfono para recibos y QR",
   "vehicleHistoryPrompt": "Busca una placa para ver sus entradas y salidas",
   "vehicleHistoryVisits": "Visitas",
   "vehicleHistoryTotalSpent": "Total pagado",
   "vehicleHistoryAllLots": "Todas las sedes",
-  "@vehicleHistoryCurrentLotVisits": {"placeholders": {"count": {"type": "int"}}},
+  "@vehicleHistoryCurrentLotVisits": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "vehicleHistoryCurrentLotVisits": "En esta sede: {count}",
   "actionReprintTicket": "Reimprimir ticket",
   "vehicleHistorySessions": "Movimientos",
   "vehicleHistoryNoSessions": "Sin movimientos registrados",
   "vehicleHistoryDuration": "Duración: {duration}",
-  "@vehicleHistoryDuration": {"placeholders": {"duration": {"type": "String"}}},
+  "@vehicleHistoryDuration": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
   "vehicleHistoryOpen": "En curso",
   "navMenu": "Menú",
   "navMenuTooltip": "Abrir el menú",
   "navMore": "Más",
   "navMoreTooltip": "Más secciones de gestión",
-
   "settingsDiscardTitle": "¿Descartar cambios?",
   "settingsDiscardBody": "Hay cambios sin guardar en la configuración.",
   "settingsDiscard": "Descartar",
   "spotsCapacityHint": "El mapa debe tener exactamente los espacios configurados en Ajustes.",
   "spotsGroupCount": "{drawn} de {target}",
-  "@spotsGroupCount": {"placeholders": {"drawn": {"type": "int"}, "target": {"type": "int"}}},
+  "@spotsGroupCount": {
+    "placeholders": {
+      "drawn": {
+        "type": "int"
+      },
+      "target": {
+        "type": "int"
+      }
+    }
+  },
   "spotsRemaining": "Faltan {count}",
-  "@spotsRemaining": {"placeholders": {"count": {"type": "int"}}},
+  "@spotsRemaining": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "spotsExcess": "Sobran {count}",
-  "@spotsExcess": {"placeholders": {"count": {"type": "int"}}},
+  "@spotsExcess": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "errorSpotCapacityReached": "Ya dibujaste todos los espacios configurados",
   "errorSpotCapacityRequired": "No puedes dejar menos espacios que los configurados; ajusta la capacidad en Ajustes",
   "spotsTitle": "Mapa del parqueadero",
@@ -387,10 +1217,30 @@
   "spotsGroup": "Grupo",
   "spotsActive": "Disponible",
   "spotsActiveHint": "Desactívalo para mantenimiento",
+  "spotsReason": "Motivo del mantenimiento (opcional)",
+  "spotsReasonHint": "Ej. fuga de aceite, pintura, vidrio roto",
+  "spotsReasonInvalid": "Escribe al menos 3 caracteres o déjalo vacío",
+  "spotsHistory": "Ver historial",
+  "spotsHistoryTitle": "Historial de {code}",
+  "@spotsHistoryTitle": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "spotsHistoryEmpty": "Sin cambios de estado",
+  "spotsHistorySystem": "Sistema",
   "spotsDelete": "Eliminar espacio",
   "spotsDeleteTitle": "¿Eliminar el espacio?",
   "spotsDeleteBody": "El espacio {code} saldrá del mapa. El historial se conserva.",
-  "@spotsDeleteBody": {"placeholders": {"code": {"type": "String"}}},
+  "@spotsDeleteBody": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
   "spotsDragHere": "Suelta aquí",
   "errorSpotCodeTaken": "Ya existe un espacio con ese código",
   "errorSpotCellTaken": "Esa celda ya está ocupada",
@@ -426,20 +1276,33 @@
   "settingsLegalEmpty": "Sin texto. Usa la plantilla o escribe tus políticas.",
   "settingsSectionMessaging": "Mensajería",
   "settingsOutOfServiceMapHint": "{count} bahía(s) en mantenimiento · se controla en el mapa",
-  "@settingsOutOfServiceMapHint": {"placeholders": {"count": {"type": "int"}}},
-  "settingsOutOfServiceHint": "Sin mapa se descuenta del cupo; con mapa, marca cada bahía en mantenimiento.",
+  "@settingsOutOfServiceMapHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsOutOfServiceHint": "Se descuentan de los espacios disponibles",
   "settingsTitle": "Configuración del parqueadero",
   "settingsCarCapacity": "Espacios para carros y camionetas",
   "settingsMotoCapacity": "Espacios para motos",
   "settingsCarOutOfService": "Carros fuera de servicio",
   "settingsMotoOutOfService": "Motos fuera de servicio",
-  "settingsOutOfServiceHint": "Se descuentan de los espacios disponibles",
   "settingsOutOfServiceTooMany": "No puede superar la capacidad configurada",
   "capacityOutOfService": "{count} fuera de servicio",
-  "@capacityOutOfService": {"placeholders": {"count": {"type": "int"}}},
+  "@capacityOutOfService": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "slotMaintenance": "Mantenimiento",
   "slotMaintenanceShort": "Mant.",
   "settingsKeyCapacity": "Máximo de vehículos con llaves",
+  "settingsReservationGrace": "Tolerancia de reservas (min)",
+  "settingsReservationGraceHint": "Minutos de gracia tras el vencimiento para que el cliente llegue; 0 la desactiva.",
   "settingsCapacityHint": "0 = sin límite",
   "errorParkingFull": "No hay espacios disponibles para este tipo de vehículo",
   "errorKeysFull": "Se alcanzó el máximo de vehículos que pueden dejar las llaves",
@@ -456,22 +1319,29 @@
   "settingsWebsite": "Sitio web",
   "settingsWhatsapp": "Número de WhatsApp",
   "settingsSaved": "Configuración guardada",
+  "settingsCoverSection": "Portada de la página pública",
+  "settingsCoverHint": "Una foto ancha del parqueadero se muestra en la página de reservas.",
+  "settingsCoverConfigured": "Portada configurada. Puedes reemplazarla cuando quieras.",
+  "settingsCoverPick": "Elegir portada",
   "settingsLogoSection": "Logo",
   "settingsLogoPick": "Elegir logo",
   "settingsWebsiteInvalid": "Ingresa una URL válida",
-
   "contactTitle": "Contacto",
   "contactWhatsApp": "WhatsApp",
   "whatsappTooltip": "Escribir por WhatsApp",
-
   "loginSubtitle": "Inicia sesión para continuar",
   "loginUsername": "Usuario",
   "loginPin": "PIN",
   "loginSubmit": "Ingresar",
   "loginFailed": "No se pudo iniciar sesión",
-
   "homeGreeting": "Hola, {name}",
-  "@homeGreeting": {"placeholders": {"name": {"type": "String"}}},
+  "@homeGreeting": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "roleAdmin": "Administrador",
   "roleOperator": "Operador",
   "homeTodayEmpty": "Sin movimientos hoy",
@@ -480,27 +1350,116 @@
   "homeTodayExits": "Salidas",
   "homeTodayCash": "Efectivo",
   "homeTodayPasses": "Mensualidades",
+  "homeTrend": "Tendencia",
+  "homeTrendHint": "Últimos 7 días",
+  "homeTrendRange": "{start} – {end}",
+  "@homeTrendRange": {
+    "placeholders": {
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      }
+    }
+  },
+  "homeTrendTotal": "Ingresos",
+  "homeTrendEntries": "Entradas",
+  "homeTrendExits": "Salidas",
+  "homeTrendOpenReports": "Abrir reportes",
+  "homeTrendEmpty": "Sin movimientos en los últimos días",
+  "homeTrendUnavailable": "Tendencia no disponible",
+  "homeTrendDay": "{date}: {amount} · {entries} entradas · {exits} salidas",
+  "@homeTrendDay": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      },
+      "entries": {
+        "type": "int"
+      },
+      "exits": {
+        "type": "int"
+      }
+    }
+  },
+  "homeTrendVsPrevious": "{delta} vs semana anterior",
+  "@homeTrendVsPrevious": {
+    "placeholders": {
+      "delta": {
+        "type": "String"
+      }
+    }
+  },
+  "homeTrendFlat": "Igual que la semana anterior",
+  "homeStaleData": "Sin conexión · datos guardados de las {time}",
+  "@homeStaleData": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "homeCapacityTitle": "Capacidad del parqueadero",
   "homeCapacityCars": "Carros y camionetas",
   "homeCapacityMotos": "Motos",
   "homeCapacityKeys": "Vehículos con llaves",
   "homeReservedCount": "{count} reservados",
-  "@homeReservedCount": {"placeholders": {"count": {"type": "int"}}},
+  "@homeReservedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "homeReservationsActive": "{count} reservas activas",
-  "@homeReservationsActive": {"placeholders": {"count": {"type": "int"}}},
+  "@homeReservationsActive": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "homeReservationsExpiring": "{count} por vencer",
-  "@homeReservationsExpiring": {"placeholders": {"count": {"type": "int"}}},
+  "@homeReservationsExpiring": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "homeSeeReservations": "Ver reservas",
   "homeNoLimit": "sin límite",
   "homeInsideSeeAll": "Ver todos",
   "spotLabel": "Espacio {code}",
-  "@spotLabel": {"placeholders": {"code": {"type": "String"}}},
+  "@spotLabel": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
   "slotNoSpotAssignedOne": "1 vehículo sin espacio asignado",
   "slotNoSpotAssigned": "{count} vehículos sin espacio asignado",
-  "@slotNoSpotAssigned": {"placeholders": {"count": {"type": "int"}}},
+  "@slotNoSpotAssigned": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "slotBoardTitle": "Mapa de espacios",
   "slotBoardFree": "{count} libres",
-  "@slotBoardFree": {"placeholders": {"count": {"type": "int"}}},
+  "@slotBoardFree": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "slotBoardAll": "Todos",
   "slotBoardCars": "Carros",
   "slotBoardMotos": "Motos",
@@ -521,7 +1480,6 @@
   "homeExitHint": "Cobrar y cerrar una estadía",
   "homeManagement": "Gestión",
   "homeRefreshTooltip": "Actualizar ocupación",
-
   "plateLabel": "Placa",
   "plateKeypadTooltip": "Teclado en pantalla",
   "plateKeypadBackspace": "Borrar",
@@ -529,12 +1487,23 @@
   "plateHint": "ABC123",
   "plateScanTooltip": "Escanear placa con la cámara",
   "plateDetected": "Placa detectada: {plate}",
-  "@plateDetected": {"placeholders": {"plate": {"type": "String"}}},
-
+  "@plateDetected": {
+    "placeholders": {
+      "plate": {
+        "type": "String"
+      }
+    }
+  },
   "checkInTitle": "Registrar entrada",
   "lookupLoading": "Buscando vehículo",
   "lookupError": "No se pudo consultar el vehículo: {message}",
-  "@lookupError": {"placeholders": {"message": {"type": "String"}}},
+  "@lookupError": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
   "registeredVehicle": "Vehículo registrado",
   "newVehicle": "Vehículo nuevo",
   "fieldCategory": "Categoría",
@@ -553,17 +1522,50 @@
   "colorOptional": "Color (opcional)",
   "brandOptional": "Marca (opcional)",
   "photosTitle": "Fotos de evidencia ({count}/{max})",
-  "@photosTitle": {"placeholders": {"count": {"type": "int"}, "max": {"type": "int"}}},
+  "@photosTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
   "addPhoto": "Agregar foto",
   "removePhoto": "Quitar foto",
   "photoLabel": "Foto {index}",
-  "@photoLabel": {"placeholders": {"index": {"type": "int"}}},
+  "@photoLabel": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      }
+    }
+  },
   "photosMaxReached": "Máximo {max} fotos por entrada",
-  "@photosMaxReached": {"placeholders": {"max": {"type": "int"}}},
-  "@checkInRepeat": {"placeholders": {"plate": {"type": "String"}}},
+  "@photosMaxReached": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "@checkInRepeat": {
+    "placeholders": {
+      "plate": {
+        "type": "String"
+      }
+    }
+  },
   "checkInRepeat": "Repetir entrada {plate}",
   "checkInAlreadyInside": "Este vehículo ya figura dentro ({plate}). Verifica antes de registrarlo de nuevo.",
-  "@checkInAlreadyInside": {"placeholders": {"plate": {"type": "String"}}},
+  "@checkInAlreadyInside": {
+    "placeholders": {
+      "plate": {
+        "type": "String"
+      }
+    }
+  },
   "checkInLeftKeys": "Deja las llaves",
   "checkInLeftKeysHint": "Se guardan en recepción",
   "checkInLeftKeysShort": "Llaves",
@@ -572,7 +1574,16 @@
   "checkInSpotAuto": "Automático (primer libre)",
   "checkInSpotNone": "Sin espacios libres para este grupo",
   "checkInSuccessSpot": "Entrada registrada · {plate} en {spot}",
-  "@checkInSuccessSpot": {"placeholders": {"plate": {"type": "String"}, "spot": {"type": "String"}}},
+  "@checkInSuccessSpot": {
+    "placeholders": {
+      "plate": {
+        "type": "String"
+      },
+      "spot": {
+        "type": "String"
+      }
+    }
+  },
   "videoEvidenceTitle": "Video de evidencia (opcional)",
   "videoEvidenceHint": "Graba un recorrido corto del vehículo (máx. 60 s) por si hay reclamos.",
   "videoPick": "Elegir video",
@@ -583,24 +1594,55 @@
   "videoPickFailed": "No se pudo grabar el video",
   "errorVideoTooLarge": "El video debe pesar menos de 50 MB",
   "sessionVideos": "{count} video(s)",
-  "@sessionVideos": {"placeholders": {"count": {"type": "int"}}},
+  "@sessionVideos": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "checkInSuccess": "Entrada registrada: {plate}",
-  "@checkInSuccess": {"placeholders": {"plate": {"type": "String"}}},
+  "@checkInSuccess": {
+    "placeholders": {
+      "plate": {
+        "type": "String"
+      }
+    }
+  },
   "checkInQueued": "Entrada guardada sin conexión: {plate}",
-  "@checkInQueued": {"placeholders": {"plate": {"type": "String"}}},
+  "@checkInQueued": {
+    "placeholders": {
+      "plate": {
+        "type": "String"
+      }
+    }
+  },
   "markExit": "Marcar salida",
   "openSessionsTitle": "Vehículos dentro",
   "openSessionsEmpty": "No hay vehículos en el parqueadero",
   "sessionEntry": "Entrada: {time}",
-  "@sessionEntry": {"placeholders": {"time": {"type": "String"}}},
+  "@sessionEntry": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "sessionPhotos": "{count, plural, =0{sin fotos} =1{1 foto} other{{count} fotos}}",
-  "@sessionPhotos": {"placeholders": {"count": {"type": "int"}}},
+  "@sessionPhotos": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "statusOpen": "Dentro",
   "statusPendingSync": "Pendiente de sincronizar",
   "statusClosed": "Cerrada",
-
   "checkOutTitle": "Registrar salida",
   "searchPlate": "Buscar por placa",
+  "monthlyPassesSearch": "Buscar placa o propietario",
+  "monthlyPassesSearchHint": "Placa, nombre o teléfono",
   "checkOutClearSearch": "Limpiar búsqueda",
   "scanExitTooltip": "Escanear QR y registrar salida",
   "scanQrTitle": "Escanear recibo",
@@ -610,23 +1652,65 @@
   "checkOutScanQr": "Escanear el QR del recibo",
   "checkOutQrUnreadable": "No se pudo leer el código QR",
   "checkOutQrNoSession": "No hay una sesión abierta para {plate}",
-  "@checkOutQrNoSession": {"placeholders": {"plate": {"type": "String"}}},
+  "@checkOutQrNoSession": {
+    "placeholders": {
+      "plate": {
+        "type": "String"
+      }
+    }
+  },
   "checkOutNoMatch": "Ninguna placa coincide con «{query}»",
-  "@checkOutNoMatch": {"placeholders": {"query": {"type": "String"}}},
+  "@checkOutNoMatch": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
   "checkOutLongStay": "Más de 24 h",
   "checkOutEstimate": "Total estimado: {amount}",
-  "@checkOutEstimate": {"placeholders": {"amount": {"type": "String"}}},
+  "@checkOutEstimate": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "checkOutPassCovered": "Mensualidad activa: sin cobro",
   "checkOutReprintTicket": "Reimprimir recibo de entrada",
   "checkOutCharge": "Cobrar",
   "checkOutChargeTooltip": "Cobrar salida de {plate}",
-  "@checkOutChargeTooltip": {"placeholders": {"plate": {"type": "String"}}},
+  "@checkOutChargeTooltip": {
+    "placeholders": {
+      "plate": {
+        "type": "String"
+      }
+    }
+  },
   "checkOutConfirm": "¿Cobrar la salida del vehículo {plate}?",
-  "@checkOutConfirm": {"placeholders": {"plate": {"type": "String"}}},
+  "@checkOutConfirm": {
+    "placeholders": {
+      "plate": {
+        "type": "String"
+      }
+    }
+  },
   "unknownVehicle": "Vehículo #{id}",
-  "@unknownVehicle": {"placeholders": {"id": {"type": "int"}}},
+  "@unknownVehicle": {
+    "placeholders": {
+      "id": {
+        "type": "int"
+      }
+    }
+  },
   "receiptTitle": "Salida de {plate}",
-  "@receiptTitle": {"placeholders": {"plate": {"type": "String"}}},
+  "@receiptTitle": {
+    "placeholders": {
+      "plate": {
+        "type": "String"
+      }
+    }
+  },
   "receiptEntry": "Entrada",
   "receiptExit": "Salida",
   "receiptDuration": "Tiempo",
@@ -639,15 +1723,51 @@
   "receiptDiscount": "Descuento",
   "checkOutSettlement": "Liquidación",
   "fareTime": "Tiempo: {duration}",
-  "@fareTime": {"placeholders": {"duration": {"type": "String"}}},
+  "@fareTime": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
   "fareDays": "{days} días",
-  "@fareDays": {"placeholders": {"days": {"type": "int"}}},
+  "@fareDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "fareDayHours": "{hours} h × {rate} (día)",
-  "@fareDayHours": {"placeholders": {"hours": {"type": "int"}, "rate": {"type": "String"}}},
+  "@fareDayHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      },
+      "rate": {
+        "type": "String"
+      }
+    }
+  },
   "fareNightHours": "{hours} h × {rate} (noche)",
-  "@fareNightHours": {"placeholders": {"hours": {"type": "int"}, "rate": {"type": "String"}}},
+  "@fareNightHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      },
+      "rate": {
+        "type": "String"
+      }
+    }
+  },
   "fareDailyCap": "Tope diario aplicado ({amount})",
-  "@fareDailyCap": {"placeholders": {"amount": {"type": "String"}}},
+  "@fareDailyCap": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "fareTotal": "Total a cobrar",
   "slotBoardError": "No se pudo cargar el mapa de espacios",
   "slotBoardRetry": "Reintentar",
@@ -677,9 +1797,24 @@
   "receiptDoneTitle": "Salida registrada",
   "receiptQueued": "Salida guardada sin conexión. El valor se calculará al sincronizar",
   "durationHoursMinutes": "{hours} h {minutes} min",
-  "@durationHoursMinutes": {"placeholders": {"hours": {"type": "int"}, "minutes": {"type": "int"}}},
+  "@durationHoursMinutes": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
   "durationMinutes": "{minutes} min",
-  "@durationMinutes": {"placeholders": {"minutes": {"type": "int"}}},
+  "@durationMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
   "receiptGenerate": "Generar recibo",
   "receiptView": "Ver recibo",
   "receiptNewCharge": "Nuevo cobro",
@@ -697,58 +1832,136 @@
   "receiptPhotos": "Fotos de evidencia",
   "checkInReceiptTitle": "Entrada registrada",
   "receiptGeneratedAt": "Generado el {time}",
-  "@receiptGeneratedAt": {"placeholders": {"time": {"type": "String"}}},
-
+  "@receiptGeneratedAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "scanTitle": "Escanear placa",
   "scanCapture": "Tomar foto de la placa",
   "scanManualHint": "Escribe la placa manualmente",
   "scanManual": "Ingresar manualmente",
   "scanEmpty": "Ingresa una placa antes de confirmar",
-
   "categoriesTitle": "Categorías",
   "categorySpotsLeft": "quedan {count}",
-  "@categorySpotsLeft": {"placeholders": {"count": {"type": "int"}}},
+  "@categorySpotsLeft": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "categoryNoSpots": "sin cupo",
   "categoriesEmpty": "Aún no hay categorías",
   "categoryNew": "Nueva categoría",
   "categoryRename": "Renombrar categoría",
   "categoryCapacity": "Capacidad: {count}",
-  "@categoryCapacity": {"placeholders": {"count": {"type": "int"}}},
+  "@categoryCapacity": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "categoryCapacityUnlimited": "Sin límite de capacidad",
   "categoryCapacityTitle": "Capacidad de {name}",
-  "@categoryCapacityTitle": {"placeholders": {"name": {"type": "String"}}},
+  "@categoryCapacityTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "categoryCapacityLabel": "Capacidad",
   "errorCategoryFull": "La categoría está llena",
   "homeFull": "Lleno",
   "homeFullCategories": "Categorías llenas: {names}",
-  "@homeFullCategories": {"placeholders": {"names": {"type": "String"}}},
+  "@homeFullCategories": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
   "reportsOccupancyOf": "Vehículos dentro: {open} / {capacity}",
-  "@reportsOccupancyOf": {"placeholders": {"open": {"type": "int"}, "capacity": {"type": "int"}}},
+  "@reportsOccupancyOf": {
+    "placeholders": {
+      "open": {
+        "type": "int"
+      },
+      "capacity": {
+        "type": "int"
+      }
+    }
+  },
   "categoryDeleteTooltip": "Eliminar categoría {name}",
-  "@categoryDeleteTooltip": {"placeholders": {"name": {"type": "String"}}},
+  "@categoryDeleteTooltip": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "categoryDeleteTitle": "¿Eliminar categoría?",
   "categoryDeleteBody": "Se eliminará «{name}». Esta acción no se puede deshacer.",
-  "@categoryDeleteBody": {"placeholders": {"name": {"type": "String"}}},
+  "@categoryDeleteBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "categoryAddTooltip": "Agregar categoría",
   "categoryFallback": "Categoría {id}",
-  "@categoryFallback": {"placeholders": {"id": {"type": "int"}}},
-
-  "vehiclesSearch": "Buscar placa",
+  "@categoryFallback": {
+    "placeholders": {
+      "id": {
+        "type": "int"
+      }
+    }
+  },
+  "vehiclesSearch": "Buscar placa o propietario",
+  "vehiclesSearchHint": "Placa, nombre o teléfono",
   "vehiclesNoMatch": "No hay vehículos para «{query}»",
-  "@vehiclesNoMatch": {"placeholders": {"query": {"type": "String"}}},
+  "@vehiclesNoMatch": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
   "vehicleCreated": "Vehículo creado: {plate}",
-  "@vehicleCreated": {"placeholders": {"plate": {"type": "String"}}},
+  "@vehicleCreated": {
+    "placeholders": {
+      "plate": {
+        "type": "String"
+      }
+    }
+  },
   "vehicleCheckInAction": "Registrar entrada",
   "vehiclesTitle": "Vehículos",
   "vehiclesEmpty": "Aún no hay vehículos registrados",
   "vehicleNew": "Nuevo vehículo",
   "vehicleAddTooltip": "Agregar vehículo",
   "vehicleDeleteTooltip": "Eliminar vehículo {plate}",
-  "@vehicleDeleteTooltip": {"placeholders": {"plate": {"type": "String"}}},
+  "@vehicleDeleteTooltip": {
+    "placeholders": {
+      "plate": {
+        "type": "String"
+      }
+    }
+  },
   "vehicleDeleteTitle": "¿Eliminar vehículo?",
   "vehicleDeleteBody": "Se eliminará el vehículo {plate}. Esta acción no se puede deshacer.",
-  "@vehicleDeleteBody": {"placeholders": {"plate": {"type": "String"}}},
-
+  "@vehicleDeleteBody": {
+    "placeholders": {
+      "plate": {
+        "type": "String"
+      }
+    }
+  },
   "tariffsTitle": "Tarifas",
   "tariffsEmpty": "Aún no hay tarifas",
   "tariffNew": "Nueva tarifa",
@@ -763,11 +1976,16 @@
   "tariffDeleteTooltip": "Eliminar tarifa",
   "tariffDeleteTitle": "¿Eliminar tarifa?",
   "tariffDeleteBody": "Se eliminará la tarifa {label}. Esta acción no se puede deshacer.",
-  "@tariffDeleteBody": {"placeholders": {"label": {"type": "String"}}},
+  "@tariffDeleteBody": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
   "tariffDeactivated": "Tarifa desactivada",
   "invalidTime": "Usa el formato HH:MM (24 h)",
   "invalidAmount": "Ingresa un valor mayor a 0",
-
   "usersTitle": "Usuarios",
   "usersFilterAll": "Todos",
   "usersFilterEmpty": "No hay usuarios con este filtro",
@@ -777,24 +1995,62 @@
   "userActions": "Acciones",
   "userResetPin": "Restablecer PIN",
   "userResetPinTitle": "Nuevo PIN para {name}",
-  "@userResetPinTitle": {"placeholders": {"name": {"type": "String"}}},
+  "@userResetPinTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "userNewPin": "Nuevo PIN (6 dígitos)",
   "userDelete": "Eliminar usuario",
   "userDeleteTitle": "¿Eliminar usuario?",
   "userDeleteBody": "Se eliminará la cuenta de {name}. Esta acción no se puede deshacer.",
-  "@userDeleteBody": {"placeholders": {"name": {"type": "String"}}},
+  "@userDeleteBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "userActiveLabel": "Usuario activo: {name}",
-  "@userActiveLabel": {"placeholders": {"name": {"type": "String"}}},
+  "@userActiveLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "userDeactivated": "Usuario {name} desactivado",
-  "@userDeactivated": {"placeholders": {"name": {"type": "String"}}},
+  "@userDeactivated": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "pinInvalid": "El PIN debe tener 6 dígitos",
-
   "monthlyPassPendingTitle": "Pagos pendientes",
   "monthlyPassDue": "Vence: {date}",
-  "@monthlyPassDue": {"placeholders": {"date": {"type": "String"}}},
+  "@monthlyPassDue": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "monthlyPassWhatsapp": "Avisar por WhatsApp",
   "monthlyPassWhatsappMessage": "Hola, te recordamos que la mensualidad del vehículo {plate} vence el {date}.",
-  "@monthlyPassWhatsappMessage": {"placeholders": {"plate": {"type": "String"}, "date": {"type": "String"}}},
+  "@monthlyPassWhatsappMessage": {
+    "placeholders": {
+      "plate": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "monthlyPassStatusActive": "Vigente",
   "monthlyPassStatusUpcoming": "Próxima",
   "monthlyPassStatusExpired": "Vencida",
@@ -804,80 +2060,272 @@
   "monthlyPassAutoRenewHint": "Se renueva por el mismo periodo y valor al vencer",
   "monthlyPassesTitle": "Mensualidades",
   "monthlyPassesNoMatch": "Ninguna mensualidad coincide con «{query}»",
-  "@monthlyPassesNoMatch": {"placeholders": {"query": {"type": "String"}}},
+  "@monthlyPassesNoMatch": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
   "monthlyPassCreated": "Mensualidad creada",
   "monthlyPassDeleted": "Mensualidad eliminada",
   "monthlyPassPaymentDone": "Pago de mensualidad registrado",
   "monthlyPassRenew": "Renovar 30 días",
   "monthlyPassRenewTitle": "¿Renovar la mensualidad?",
   "monthlyPassRenewBody": "Se extenderá hasta {date}, conservando el valor actual.",
-  "@monthlyPassRenewBody": {"placeholders": {"date": {"type": "String"}}},
+  "@monthlyPassRenewBody": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "monthlyPassRenewed": "Mensualidad renovada 30 días",
   "monthlyPassesEmpty": "Aún no hay mensualidades",
   "monthlyPassNew": "Nueva mensualidad",
   "monthlyPassEdit": "Editar mensualidad",
   "monthlyPassAddTooltip": "Agregar mensualidad",
   "monthlyPassEditTooltip": "Editar mensualidad de {plate}",
-  "@monthlyPassEditTooltip": {"placeholders": {"plate": {"type": "String"}}},
+  "@monthlyPassEditTooltip": {
+    "placeholders": {
+      "plate": {
+        "type": "String"
+      }
+    }
+  },
   "monthlyPassDeleteTooltip": "Eliminar mensualidad de {plate}",
-  "@monthlyPassDeleteTooltip": {"placeholders": {"plate": {"type": "String"}}},
+  "@monthlyPassDeleteTooltip": {
+    "placeholders": {
+      "plate": {
+        "type": "String"
+      }
+    }
+  },
   "monthlyPassDeleteTitle": "¿Eliminar mensualidad?",
   "monthlyPassDeleteBody": "Se eliminará la mensualidad de {plate}. Esta acción no se puede deshacer.",
-  "@monthlyPassDeleteBody": {"placeholders": {"plate": {"type": "String"}}},
+  "@monthlyPassDeleteBody": {
+    "placeholders": {
+      "plate": {
+        "type": "String"
+      }
+    }
+  },
   "monthlyPassActiveLabel": "Mensualidad activa: {plate}",
-  "@monthlyPassActiveLabel": {"placeholders": {"plate": {"type": "String"}}},
+  "@monthlyPassActiveLabel": {
+    "placeholders": {
+      "plate": {
+        "type": "String"
+      }
+    }
+  },
   "monthlyPassDeactivated": "Mensualidad de {plate} desactivada",
-  "@monthlyPassDeactivated": {"placeholders": {"plate": {"type": "String"}}},
+  "@monthlyPassDeactivated": {
+    "placeholders": {
+      "plate": {
+        "type": "String"
+      }
+    }
+  },
   "monthlyPassPeriod": "{start} – {end}",
-  "@monthlyPassPeriod": {"placeholders": {"start": {"type": "String"}, "end": {"type": "String"}}},
+  "@monthlyPassPeriod": {
+    "placeholders": {
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      }
+    }
+  },
   "selectDate": "Seleccionar fecha",
   "dateRangeInvalid": "La fecha de fin debe ser posterior a la de inicio",
-
   "reportsAllLots": "Todas las sedes",
   "reportsAllLotsHint": "Suma las ventas de todas las sedes",
   "reportsLotTickets": "{count} salidas",
-  "@reportsLotTickets": {"placeholders": {"count": {"type": "int"}}},
+  "@reportsLotTickets": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "reportsLotAverage": "promedio {amount}",
-  "@reportsLotAverage": {"placeholders": {"amount": {"type": "String"}}},
+  "@reportsLotAverage": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "reportsLotShare": "{percent}% del total",
-  "@reportsLotShare": {"placeholders": {"percent": {"type": "int"}}},
+  "@reportsLotShare": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
   "reportsByLot": "Ingresos por sede",
   "reportsToday": "Hoy",
   "reportsLast7": "7 días",
   "reportsLast30": "30 días",
+  "reportsThisMonth": "Este mes",
+  "reportsLastMonth": "Mes anterior",
   "reportsTitle": "Reportes",
   "lotSwitchTitle": "Cambiar de sede",
   "lotSwitchTooltip": "Sede actual: {site}. Toca para cambiar.",
-  "@lotSwitchTooltip": {"placeholders": {"site": {"type": "String"}}},
+  "@lotSwitchTooltip": {
+    "placeholders": {
+      "site": {
+        "type": "String"
+      }
+    }
+  },
   "reportsRangeTooltip": "Cambiar rango de fechas",
   "reportsVsPrevious": "{percent} % vs. periodo anterior",
-  "@reportsVsPrevious": {"placeholders": {"percent": {"type": "String"}}},
+  "@reportsVsPrevious": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
   "reportsPreviousTotal": "Antes: {amount}",
-  "@reportsPreviousTotal": {"placeholders": {"amount": {"type": "String"}}},
+  "@reportsPreviousTotal": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "reportsVariationLabel": "Variación vs. periodo anterior",
   "reportsPreviousLabel": "Periodo anterior",
   "reportsExportCsv": "Copiar CSV",
   "reportsCsvCopied": "CSV copiado al portapapeles",
   "reportsTotalRevenue": "Ingresos totales",
   "reportsRevenueByDay": "Ingresos por día",
+  "reportsReservationsTitle": "Reservas de cupo",
+  "reportsReservationsSubtitle": "Cuántas se crearon en el periodo y cómo terminaron",
+  "reportsReservationsPublic": "Reservas web",
+  "reportsReservationsConversion": "{value}% llegaron a entrar",
+  "@reportsReservationsConversion": {
+    "placeholders": {
+      "value": {
+        "type": "int"
+      }
+    }
+  },
+  "reportsReservationsClosed": "Canceladas o vencidas",
+  "reportsReservationsClosedHint": "{cancelled, plural, =1{1 cancelada} other{{cancelled} canceladas}} · {expired, plural, =1{1 vencida} other{{expired} vencidas}}",
+  "@reportsReservationsClosedHint": {
+    "placeholders": {
+      "cancelled": {
+        "type": "int"
+      },
+      "expired": {
+        "type": "int"
+      }
+    }
+  },
+  "reportsReservationsTotal": "{total} reservas en total · {app} desde recepción · {used} terminaron en entrada",
+  "@reportsReservationsTotal": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      },
+      "app": {
+        "type": "int"
+      },
+      "used": {
+        "type": "int"
+      }
+    }
+  },
+  "reportsHourlyTitle": "Tráfico por hora",
+  "reportsHourlySubtitle": "Entradas y salidas en el horario del parqueadero",
+  "reportsHourlyPeak": "Hora pico: {time} · {count} entradas",
+  "@reportsHourlyPeak": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reportsHourlyCell": "{time} · {entries} entradas · {exits} salidas",
+  "@reportsHourlyCell": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      },
+      "entries": {
+        "type": "int"
+      },
+      "exits": {
+        "type": "int"
+      }
+    }
+  },
+  "reportsHourlyEmpty": "Sin entradas en el periodo",
+  "reportsHourlyPair": "{entries} entradas · {exits} salidas",
+  "@reportsHourlyPair": {
+    "placeholders": {
+      "entries": {
+        "type": "int"
+      },
+      "exits": {
+        "type": "int"
+      }
+    }
+  },
+  "reportsHourlyLegend": "La barra muestra las entradas; el detalle incluye las salidas.",
   "reportsPassRevenue": "Mensualidades cobradas",
   "reportsRevenueByPayment": "Ingresos por método de pago",
   "reportsTotalDiscounts": "Descuentos aplicados",
   "reportsDiscountLog": "Detalle de descuentos",
   "reportsDiscountBy": "por {admin}",
-  "@reportsDiscountBy": {"placeholders": {"admin": {"type": "String"}}},
+  "@reportsDiscountBy": {
+    "placeholders": {
+      "admin": {
+        "type": "String"
+      }
+    }
+  },
   "reportsDiscountedSessions": "{count} salidas con descuento",
-  "@reportsDiscountedSessions": {"placeholders": {"count": {"type": "int"}}},
+  "@reportsDiscountedSessions": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "reportsRevenueByCategory": "Ingresos por categoría",
   "reportsWhatsapp": "WhatsApp",
   "reportsWhatsappSent": "Enviados",
   "reportsWhatsappFailed": "Fallidos",
   "reportsWhatsappPending": "En cola",
   "reportsWhatsappDay": "{sent} enviados · {failed} fallidos",
-  "@reportsWhatsappDay": {"placeholders": {"sent": {"type": "int"}, "failed": {"type": "int"}}},
+  "@reportsWhatsappDay": {
+    "placeholders": {
+      "sent": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      }
+    }
+  },
   "reportsOccupancy": "Ocupación",
   "reportsOpenSessions": "Vehículos dentro: {count}",
-  "@reportsOpenSessions": {"placeholders": {"count": {"type": "int"}}},
+  "@reportsOpenSessions": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "reportsNoCategoryData": "Sin datos por categoría",
   "reportsNoRevenue": "Sin ingresos en este rango",
   "errorTitle": "Algo salió mal",
@@ -918,7 +2366,13 @@
   "auditBefore": "Antes",
   "auditAfter": "Después",
   "auditField": "Campo",
-  "@auditCount": {"placeholders": {"count": {"type": "int"}}},
+  "@auditCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "usersSearchLabel": "Buscar usuario",
   "loginOperatorAccess": "Acceso de operador",
   "loginHelper": "Usa el usuario y el PIN de 6 dígitos asignados por el administrador.",
@@ -933,8 +2387,22 @@
   "reservationsEmptyTitle": "Sin reservas",
   "reservationsEmptyHint": "Reserva el cupo de un cliente para asegurar su entrada.",
   "reservationsSearchLabel": "Buscar reserva",
-  "reservationsSearchHint": "Placa",
+  "reservationsSearchHint": "Placa, nombre, celular o código",
+  "reservationWeb": "Web",
+  "reservationCall": "Llamar al cliente",
+  "reservationWhatsApp": "WhatsApp al cliente",
+  "reservationWhatsAppMessage": "Hola, te escribimos por tu reserva de la placa {plate}.",
+  "@reservationWhatsAppMessage": {
+    "placeholders": {
+      "plate": {
+        "type": "String"
+      }
+    }
+  },
   "reservationsOnlyExpiring": "Solo por vencer",
+  "reservationsOnlyPublic": "Solo web",
+  "reservationsCopyCsv": "Copiar CSV",
+  "reservationsCsvCopied": "Reservas copiadas en CSV",
   "reservationsCount": "{count} reservas",
   "reservationsFilteredEmpty": "Ninguna reserva coincide con el filtro",
   "monthlyPassesEmptyTitle": "Sin mensualidades",
@@ -943,8 +2411,20 @@
   "monthlyPassesCount": "{count} mensualidades",
   "monthlyPassesOnlyActive": "Solo vigentes",
   "monthlyPassesFilteredEmpty": "Ninguna mensualidad coincide con el filtro",
-  "@reservationsCount": {"placeholders": {"count": {"type": "int"}}},
-  "@monthlyPassesCount": {"placeholders": {"count": {"type": "int"}}},
+  "@reservationsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@monthlyPassesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "monthlyPassesList": "Mensualidades registradas",
   "categoriesEmptyHint": "Crea las categorías del parqueadero (moto, carro, camioneta…) para asignar tarifas y cupos.",
   "tariffsEmptyHint": "Agrega tarifas por hora, día, noche o mensualidad para cada categoría.",
@@ -952,13 +2432,35 @@
   "diagnosticsAlerts": "Alertas",
   "diagnosticsOpenNow": "Dentro ahora",
   "vehiclesCount": "{count} vehículos",
-  "@vehiclesCount": {"placeholders": {"count": {"type": "int"}}},
+  "@vehiclesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "parkedCount": "{count} dentro",
   "checkOutEmptyTitle": "Parqueadero vacío",
   "checkOutEmptyHint": "Registra una entrada para verla aquí y cobrarla al salir.",
   "checkOutGoToCheckIn": "Registrar entrada",
-  "@parkedCount": {"placeholders": {"count": {"type": "int"}}},
+  "@parkedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "checkInVehicleSection": "Vehículo",
+  "checkInHoldLookup": "Buscar reserva ({count})",
+  "@checkInHoldLookup": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "checkInHoldLookupTitle": "Reservas activas",
+  "checkInHoldLookupEmpty": "No hay reservas activas en este momento.",
   "checkInVehicleHint": "Placa, categoría y datos del vehículo",
   "checkInEvidenceSection": "Evidencia",
   "checkInEvidenceHint": "Fotos o video del estado del vehículo",
@@ -967,6 +2469,7 @@
   "notifTypePassExpiring": "Mensualidad por vencer",
   "notifTypePassRenewed": "Mensualidad renovada",
   "notifTypeOverstay": "Estadía larga",
+  "notifTypeReservation": "Reserva web",
   "notifTypeShiftClosed": "Cierre de turno",
   "notifTypeGeneric": "Aviso",
   "aboutDeveloper": "Acerca del desarrollador",
@@ -984,29 +2487,65 @@
   "aboutRights": "© 2026 DevPaul. Todos los derechos reservados.",
   "aboutLogoLabel": "Logotipo de DevPaul",
   "aboutOpenError": "No se pudo abrir el enlace",
-  "@aboutVersion": {"placeholders": {"version": {"type": "String"}}},
+  "@aboutVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
   "shiftOpeningHint": "Cuenta el efectivo con el que inicia la caja.",
   "shiftClosedHint": "Resumen del último turno cerrado.",
   "diagnosticsHealthyTitle": "Todo en orden",
   "diagnosticsHealthyHint": "No hay alertas ni colas pendientes en este momento.",
   "diagnosticsAttention": "{count} punto(s) requieren atención",
-  "@diagnosticsAttention": {"placeholders": {"count": {"type": "int"}}},
+  "@diagnosticsAttention": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "diagnosticsAttentionHint": "Revisa las secciones marcadas abajo.",
   "routeErrorTitle": "Página no encontrada",
   "routeErrorBody": "La ruta no existe o ya no está disponible. Vuelve al inicio para continuar.",
   "routeErrorHome": "Volver al inicio",
   "loginSessionExpired": "Tu sesión expiró. Ingresa de nuevo para continuar.",
   "checkoutChargeAmount": "Cobrar {amount}",
-  "@checkoutChargeAmount": {"placeholders": {"amount": {"type": "String"}}},
+  "@checkoutChargeAmount": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "checkoutCashExact": "Exacto",
   "cashCountQuantity": "Cantidad de {denomination}",
-  "@cashCountQuantity": {"placeholders": {"denomination": {"type": "String"}}},
+  "@cashCountQuantity": {
+    "placeholders": {
+      "denomination": {
+        "type": "String"
+      }
+    }
+  },
   "plateScanAction": "Escanear placa",
   "vehicleEditTitle": "Editar vehículo",
   "vehicleEditTooltip": "Editar vehículo {plate}",
   "vehicleUpdated": "Vehículo {plate} actualizado",
-  "@vehicleEditTooltip": {"placeholders": {"plate": {"type": "String"}}},
-  "@vehicleUpdated": {"placeholders": {"plate": {"type": "String"}}},
+  "@vehicleEditTooltip": {
+    "placeholders": {
+      "plate": {
+        "type": "String"
+      }
+    }
+  },
+  "@vehicleUpdated": {
+    "placeholders": {
+      "plate": {
+        "type": "String"
+      }
+    }
+  },
   "vehicleEditHint": "La placa no cambia; puedes ajustar categoría, marca y color.",
   "autoLockTitle": "Bloqueo automático",
   "autoLockHint": "Bloquea la app tras este tiempo sin uso y pide el PIN para volver.",
@@ -1018,13 +2557,34 @@
   "lockWrongPin": "PIN incorrecto. Inténtalo de nuevo.",
   "lockAttemptsLeft": "Intentos restantes: {count}",
   "lockLogout": "Cerrar sesión",
-  "@autoLockMinutes": {"placeholders": {"count": {"type": "int"}}},
-  "@lockAttemptsLeft": {"placeholders": {"count": {"type": "int"}}},
+  "@autoLockMinutes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@lockAttemptsLeft": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "settingsMinVersion": "Versión mínima de la app",
   "settingsMinVersionHint": "Opcional, ej. 1.4.2. Los APK más antiguos verán un aviso de actualización.",
   "settingsMinVersionInvalid": "Usa el formato 1.4.2",
   "updateRequired": "Actualiza la app: este equipo tiene {current} y la sede requiere {minimum} o superior.",
-  "@updateRequired": {"placeholders": {"current": {"type": "String"}, "minimum": {"type": "String"}}},
+  "@updateRequired": {
+    "placeholders": {
+      "current": {
+        "type": "String"
+      },
+      "minimum": {
+        "type": "String"
+      }
+    }
+  },
   "helpTitle": "Ayuda",
   "helpIntro": "Guías rápidas para la operación diaria.",
   "helpSearchLabel": "Buscar en la ayuda",
@@ -1056,7 +2616,13 @@
   "helpAutoLockBody": "Si la app queda inactiva pide el PIN. Cambia el tiempo en Menú → Bloqueo automático (o en el sidebar).",
   "helpUpdateTitle": "Aviso de actualización",
   "helpUpdateBody": "Si aparece un aviso de versión, instala el APK más reciente que te entregue el administrador; la app seguirá funcionando para lo básico hasta entonces.",
-  "@helpResults": {"placeholders": {"count": {"type": "int"}}},
+  "@helpResults": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "diagnosticsClientNetwork": "Red del cliente",
   "diagnosticsTimeouts": "Tiempos de espera agotados",
   "diagnosticsRetries": "Reintentos automáticos",
@@ -1069,14 +2635,26 @@
   "evidenceCall": "Llamar al parqueadero",
   "evidenceWhatsApp": "Escribir por WhatsApp",
   "evidenceWhatsAppMessage": "Hola, escribo por el vehículo {plate}.",
-  "@evidenceWhatsAppMessage": {"placeholders": {"plate": {"type": "String"}}},
+  "@evidenceWhatsAppMessage": {
+    "placeholders": {
+      "plate": {
+        "type": "String"
+      }
+    }
+  },
   "preferencesTitle": "Ajustes",
   "preferencesHint": "Idioma, apariencia y bloqueo automático.",
   "aboutTitle": "Acerca de",
   "aboutDevelopers": "Desarrolladores",
   "aboutJimmyRole": "Desarrollador",
   "monthlyPassUseTariff": "Usar tarifa mensual ({amount})",
-  "@monthlyPassUseTariff": {"placeholders": {"amount": {"type": "String"}}},
+  "@monthlyPassUseTariff": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "emergencyTitle": "Emergencia",
   "emergencyBody": "Reporta la emergencia al cuadrante de policía más cercano.",
   "emergencyDrawerHint": "Llamar al cuadrante de policía",
@@ -1085,10 +2663,1082 @@
   "emergencyDefaultHint": "Aún no hay un número del cuadrante configurado.",
   "emergencyCallNow": "Llamar ahora",
   "emergencyCallDefault": "Llamar al {phone}",
-  "@emergencyCallDefault": {"placeholders": {"phone": {"type": "String"}}},
+  "@emergencyCallDefault": {
+    "placeholders": {
+      "phone": {
+        "type": "String"
+      }
+    }
+  },
   "emergencyGoToSettings": "Configurar en Ajustes",
   "emergencyAskAdmin": "Pide al administrador que configure el número del cuadrante en Ajustes.",
   "emergencyCallFailed": "No se pudo abrir el marcador.",
   "emergencyLocation": "Ubicación: {location}",
-  "@emergencyLocation": {"placeholders": {"location": {"type": "String"}}}
+  "@emergencyLocation": {
+    "placeholders": {
+      "location": {
+        "type": "String"
+      }
+    }
+  },
+  "reportsPeriodTitle": "Comparación por periodo",
+  "reportsPeriodSubtitle": "Cada mes frente al mes anterior y al mismo mes del año pasado",
+  "reportsPeriodActiveLotOnly": "Solo la sede activa",
+  "reportsPeriodMonths": "{count} meses",
+  "@reportsPeriodMonths": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reportsPeriodMetricLabel": "Indicador",
+  "reportsPeriodMetricRevenue": "Ingresos",
+  "reportsPeriodMetricEntries": "Entradas",
+  "reportsPeriodMetricExits": "Salidas",
+  "reportsPeriodMetricAvgTicket": "Ticket promedio",
+  "reportsPeriodMetricAvgStay": "Estadía promedio",
+  "reportsPeriodMetricPassRevenue": "Ingresos por mensualidades",
+  "reportsPeriodMetricReservations": "Reservas",
+  "reportsPeriodReservationsUsed": "{count} usadas",
+  "@reportsPeriodReservationsUsed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reportsPeriodPartial": "Mes en curso · {days} de {total} días",
+  "@reportsPeriodPartial": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "reportsPeriodPartialChip": "Parcial",
+  "reportsPeriodPartialHint": "Se compara con los primeros {days} días de cada mes",
+  "@reportsPeriodPartialHint": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "reportsPeriodVsMonth": "{delta} vs mes anterior",
+  "@reportsPeriodVsMonth": {
+    "placeholders": {
+      "delta": {
+        "type": "String"
+      }
+    }
+  },
+  "reportsPeriodVsYear": "{delta} vs año anterior",
+  "@reportsPeriodVsYear": {
+    "placeholders": {
+      "delta": {
+        "type": "String"
+      }
+    }
+  },
+  "reportsPeriodFlatMonth": "Igual que el mes anterior",
+  "reportsPeriodFlatYear": "Igual que el año anterior",
+  "reportsPeriodNoBase": "Sin base de comparación",
+  "reportsPeriodLegendCurrent": "Mes",
+  "reportsPeriodLegendLastYear": "Mismo mes del año anterior",
+  "reportsPeriodEmptyTitle": "Aún no hay historial",
+  "reportsPeriodEmpty": "Cuando el parqueadero tenga movimiento verás aquí la comparación mensual.",
+  "reportsPeriodUnavailable": "No se pudo cargar la comparación.",
+  "reportsPeriodBarSemantics": "{month}: {value}; año anterior: {previous}",
+  "@reportsPeriodBarSemantics": {
+    "placeholders": {
+      "month": {
+        "type": "String"
+      },
+      "value": {
+        "type": "String"
+      },
+      "previous": {
+        "type": "String"
+      }
+    }
+  },
+  "reportsPeriodPdfPartial": "{month} ({days})",
+  "@reportsPeriodPdfPartial": {
+    "placeholders": {
+      "month": {
+        "type": "String"
+      },
+      "days": {
+        "type": "String"
+      }
+    }
+  },
+  "reportsPeriodPdfNoBase": "n/d",
+  "navSatisfaction": "Satisfacción",
+  "feedbackTitle": "Tu opinión",
+  "feedbackGateTitle": "Ingresa la placa para calificar tu visita",
+  "feedbackGateHint": "La placa impresa en el recibo es la clave de acceso.",
+  "feedbackUnlock": "Continuar",
+  "feedbackHeroTitle": "¿Cómo fue tu visita a {lot}?",
+  "@feedbackHeroTitle": {
+    "placeholders": {
+      "lot": {
+        "type": "String"
+      }
+    }
+  },
+  "feedbackHeroSubtitle": "Tu opinión ayuda a mejorar el servicio. Toma menos de un minuto.",
+  "feedbackRateLabel": "Tu calificación",
+  "feedbackStarLabel": "Calificar con {rating} estrellas",
+  "@feedbackStarLabel": {
+    "placeholders": {
+      "rating": {
+        "type": "int"
+      }
+    }
+  },
+  "feedbackRating1": "Muy mala",
+  "feedbackRating2": "Mala",
+  "feedbackRating3": "Regular",
+  "feedbackRating4": "Buena",
+  "feedbackRating5": "Excelente",
+  "feedbackCommentLabel": "Comentario (opcional)",
+  "feedbackCommentHint": "Cuéntanos qué podemos mejorar",
+  "feedbackSubmit": "Enviar calificación",
+  "feedbackThanksTitle": "¡Gracias por tu opinión!",
+  "feedbackThanksBody": "Tu calificación ayuda a que el servicio mejore cada día.",
+  "feedbackCloseHint": "Puedes cerrar esta página.",
+  "feedbackAlreadyTitle": "Ya calificaste esta visita",
+  "feedbackAlreadyBody": "Gracias. Solo se acepta una calificación por visita.",
+  "feedbackInvalidTitle": "No encontramos esta visita",
+  "feedbackInvalidBody": "Revisa el enlace o el código del recibo. Si el problema continúa, pide ayuda en la recepción.",
+  "feedbackPendingTitle": "Tu visita sigue en curso",
+  "feedbackPendingBody": "Podrás calificarla cuando registres la salida.",
+  "feedbackReportTitle": "Satisfacción del cliente",
+  "feedbackReportSubtitle": "Opiniones de tus clientes en el periodo",
+  "feedbackPeriodSummary": "{total, plural, =1{1 respuesta} other{{total} respuestas}} · últimos {days} días",
+  "@feedbackPeriodSummary": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      },
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "feedbackAverage": "Calificación promedio",
+  "feedbackAverageValue": "{whole},{decimal}",
+  "@feedbackAverageValue": {
+    "placeholders": {
+      "whole": {
+        "type": "int"
+      },
+      "decimal": {
+        "type": "int"
+      }
+    }
+  },
+  "feedbackAverageCaption": "{total, plural, =0{Sin respuestas} =1{Basada en 1 respuesta} other{Basada en {total} respuestas}}",
+  "@feedbackAverageCaption": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "feedbackResponses": "Respuestas",
+  "feedbackResponseRate": "{percent}% de las salidas",
+  "@feedbackResponseRate": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "feedbackLowRatings": "Calificaciones bajas",
+  "feedbackLowCaption": "1 a 3 estrellas",
+  "feedbackLowEmpty": "Ninguna",
+  "feedbackDistribution": "Distribución",
+  "feedbackDistributionRow": "{rating} estrellas",
+  "@feedbackDistributionRow": {
+    "placeholders": {
+      "rating": {
+        "type": "int"
+      }
+    }
+  },
+  "feedbackDistributionSemantics": "{rating} estrellas: {count} respuestas",
+  "@feedbackDistributionSemantics": {
+    "placeholders": {
+      "rating": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "feedbackRecent": "Últimos comentarios",
+  "feedbackRecentEmpty": "Sin comentarios en el periodo",
+  "feedbackNoComment": "Sin comentario",
+  "feedbackEmptyTitle": "Aún no hay calificaciones",
+  "feedbackEmptyBody": "Cuando tus clientes califiquen una visita desde el recibo, verás aquí el promedio y sus comentarios.",
+  "feedbackRefresh": "Actualizar",
+  "errorFeedbackAlready": "Ya calificaste esta visita. Solo se acepta una calificación por visita.",
+  "receiptFeedbackHint": "Califica tu visita: escanea el código",
+  "vehicleWhatsappFeedback": "Califica tu visita: {url}",
+  "@vehicleWhatsappFeedback": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "feedbackPeriodDays": "{days, plural, =1{1 día} other{{days} días}}",
+  "@feedbackPeriodDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "paymentOnline": "En línea",
+  "onlinePayTitle": "Paga desde tu celular",
+  "onlinePayDue": "Valor a pagar",
+  "onlinePayAction": "Pagar en línea",
+  "onlinePayHint": "Tarjeta, PSE o Nequi. Después de pagar tienes {minutes} minutos para salir.",
+  "@onlinePayHint": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "onlinePayChecking": "Confirmando tu pago…",
+  "onlinePayApproved": "Pago recibido. Muestra esta pantalla al salir.",
+  "onlinePayDeclined": "El pago no fue aprobado. Puedes intentarlo de nuevo.",
+  "onlinePayPending": "Aún no confirmamos tu pago. Si ya pagaste, espera un momento.",
+  "onlinePayGraceUntil": "Sal antes de las {time}",
+  "@onlinePayGraceUntil": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "onlinePayLate": "Si pasas de esa hora, pagas la diferencia en caja.",
+  "onlinePayNothingDue": "No tienes nada por pagar.",
+  "checkOutPaidOnline": "Pagado en línea",
+  "checkOutBalanceDue": "Saldo en caja",
+  "checkOutNoCashDue": "Sin cobro en caja: ya pagó en línea",
+  "checkOutGraceExpired": "Venció la tolerancia de salida; se cobra la diferencia",
+  "checkOutOnlineUnknownOffline": "Sin conexión no se puede confirmar si este vehículo pagó en línea",
+  "shiftOnlineSales": "Pagos en línea",
+  "receiptPaidOnline": "Pagado en línea",
+  "settingsOnlinePayments": "Pagos en línea",
+  "settingsOnlinePaymentsHint": "Permite que el cliente pague desde el QR del recibo. Requiere credenciales Wompi en el servidor.",
+  "settingsOnlineGraceMinutes": "Minutos para salir después de pagar",
+  "settingsOnlineMinAmount": "Valor mínimo en línea",
+  "settingsOnlineCopOnly": "Solo disponible para sedes en COP",
+  "notifTypeOnlinePayment": "Pago en línea",
+  "notifTypeOnlinePaymentReview": "Pago en línea por revisar",
+  "reportOnlinePayments": "Pagos en línea",
+  "reportOnlineReference": "Referencia",
+  "errorOnlinePaymentsDisabled": "Los pagos en línea no están activos en esta sede",
+  "errorNothingToPay": "No hay nada por pagar",
+  "errorAmountTooLow": "El valor es menor al mínimo para pagar en línea; paga en caja",
+  "errorPaymentsNotConfigured": "El pago en línea no está disponible por ahora; paga en caja",
+  "errorPaymentThrottled": "Demasiados intentos de pago. Intenta de nuevo en una hora o paga en caja",
+  "errorPaymentEventFailed": "No se pudo registrar el pago; intenta más tarde",
+  "errorInvalidLink": "El enlace no es válido o está incompleto",
+  "checkOutConfirmExit": "Confirmar salida",
+  "passRenewalTitle": "Renueva tu mensualidad",
+  "passRenewalPlate": "Vehículo {plate}",
+  "@passRenewalPlate": {
+    "placeholders": {
+      "plate": {
+        "type": "String"
+      }
+    }
+  },
+  "passRenewalPeriod": "Nuevo periodo: {from} a {to}",
+  "@passRenewalPeriod": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      }
+    }
+  },
+  "passRenewalAmount": "Valor",
+  "passRenewalPay": "Pagar y renovar",
+  "passRenewalChecking": "Confirmando tu pago…",
+  "passRenewalPaid": "Mensualidad renovada hasta el {date}.",
+  "@passRenewalPaid": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "passRenewalUnavailable": "Este enlace ya no está disponible. Comunícate con el parqueadero.",
+  "passRenewalPayAtDesk": "El pago en línea no está disponible por ahora; renueva en caja.",
+  "passRenewalLinkSent": "Enlace enviado",
+  "passRenewalRenewedOnline": "Renovada en línea",
+  "passRenewalSendLink": "Enviar enlace de renovación",
+  "passRenewalLinkQueued": "Enlace en cola de WhatsApp",
+  "settingsPassRenewal": "Renovación de mensualidades",
+  "settingsPassRenewalHint": "Envía recordatorios por WhatsApp antes de que venza la mensualidad.",
+  "settingsPassRenewalLinks": "Incluir enlace de pago",
+  "settingsPassRenewalLinksHint": "Requiere pagos en línea activos y credenciales Wompi.",
+  "settingsPassRenewalCadence": "Días de aviso (ej. 7,3,1)",
+  "settingsPassRenewalCadenceInvalid": "Usa hasta 5 números entre 0 y 30 separados por comas",
+  "notifTypePassRenewalPaid": "Mensualidad renovada en línea",
+  "errorPassRenewalNotFound": "Enlace de renovación no válido",
+  "errorPassRenewalPaid": "Esta mensualidad ya fue renovada",
+  "errorPassRenewalExpired": "El enlace de renovación venció",
+  "errorPassRenewalDisabled": "La renovación en línea no está activa en esta sede",
+  "errorMissingOwnerPhone": "El vehículo no tiene teléfono del propietario",
+  "errorPassAlreadyRenewed": "La mensualidad ya tiene una renovación",
+  "errorPassNotFound": "Mensualidad no encontrada",
+  "navMerchants": "Convenios",
+  "merchantsTitle": "Convenios con comercios",
+  "merchantsEmpty": "Aún no hay convenios. Crea uno para dar descuento a los clientes de un comercio vecino.",
+  "merchantsAdd": "Nuevo convenio",
+  "merchantFormName": "Nombre del comercio",
+  "merchantFormKind": "Tipo de beneficio",
+  "merchantKindFreeMinutes": "Minutos gratis",
+  "merchantKindPercentage": "Porcentaje",
+  "merchantKindFixedAmount": "Monto fijo",
+  "merchantFormValueMinutes": "Minutos gratis (1-1440)",
+  "merchantFormValuePercent": "Porcentaje (1-100)",
+  "merchantFormValueAmount": "Monto del descuento",
+  "merchantFormMaxAmount": "Tope por validación (opcional)",
+  "merchantFormBilling": "¿Quién paga el beneficio?",
+  "merchantBillingMerchantPaid": "El comercio paga",
+  "merchantBillingCourtesy": "Cortesía del parqueadero",
+  "merchantFormDailyCap": "Máximo por día (opcional)",
+  "merchantFormMonthlyCap": "Máximo por mes (opcional)",
+  "merchantFormActive": "Activo",
+  "merchantUsage": "Hoy {today} · Mes {month}",
+  "@merchantUsage": {
+    "placeholders": {
+      "today": {
+        "type": "int"
+      },
+      "month": {
+        "type": "int"
+      }
+    }
+  },
+  "merchantPending": "{count, plural, =0{Sin pendientes} =1{1 pendiente} other{{count} pendientes}}",
+  "@merchantPending": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "merchantLocked": "Bloqueado por PIN",
+  "merchantCredentialsTitle": "Credenciales del comercio",
+  "merchantCredentialsHint": "Se muestran una sola vez. Entrega el enlace y el PIN al cajero del comercio.",
+  "merchantCredentialsLink": "Enlace",
+  "merchantCredentialsPin": "PIN",
+  "merchantCredentialsCopy": "Copiar",
+  "merchantCredentialsNoAppUrl": "Falta configurar APP_URL: copia solo la ruta {path}.",
+  "@merchantCredentialsNoAppUrl": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "merchantResetPin": "Generar nuevo PIN",
+  "merchantRotateToken": "Generar nuevo enlace y PIN",
+  "merchantDeleteConfirm": "¿Eliminar el convenio {name}?",
+  "@merchantDeleteConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "merchantPolicyTitle": "Convenios por vehículo",
+  "merchantPolicyMax": "Máximo de convenios por vehículo (0 = desactivar)",
+  "merchantSettlementTitle": "Liquidación",
+  "merchantSettlementEmpty": "No hubo convenios en este rango.",
+  "merchantSettlementValidations": "Validaciones",
+  "merchantSettlementApplied": "Aplicadas",
+  "merchantSettlementForfeited": "Sin efecto",
+  "merchantSettlementRevoked": "Revocadas",
+  "merchantSettlementDiscounted": "Descuento otorgado",
+  "merchantSettlementOwed": "A cobrar al comercio",
+  "merchantSettlementCourtesy": "Cortesía del parqueadero",
+  "merchantSettlementPdfTitle": "Liquidación de convenios",
+  "validateTitle": "Validar parqueo",
+  "validatePlateLabel": "Placa del cliente",
+  "validateScanQr": "Escanear QR del recibo",
+  "validatePinLabel": "PIN del comercio",
+  "validateSubmit": "Validar",
+  "validateBenefitMinutes": "{minutes} minutos gratis",
+  "@validateBenefitMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "validateBenefitPercent": "{percent}% de descuento",
+  "@validateBenefitPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "validateBenefitAmount": "{amount} de descuento",
+  "@validateBenefitAmount": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "validateSuccess": "Convenio registrado: {benefit}",
+  "@validateSuccess": {
+    "placeholders": {
+      "benefit": {
+        "type": "String"
+      }
+    }
+  },
+  "validateWrongPin": "PIN incorrecto. Intentos restantes: {left}",
+  "@validateWrongPin": {
+    "placeholders": {
+      "left": {
+        "type": "int"
+      }
+    }
+  },
+  "validateLocked": "Demasiados intentos. Intenta de nuevo a las {time}.",
+  "@validateLocked": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "validateInvalidLink": "Este enlace no es válido. Pide uno nuevo al parqueadero.",
+  "validateAnother": "Validar otra placa",
+  "deskMerchantTitle": "Convenio",
+  "deskMerchantPick": "Elegir comercio",
+  "deskMerchantApply": "Aplicar convenio",
+  "deskMerchantRevoke": "Quitar convenio",
+  "deskMerchantRevokeReason": "Motivo (mínimo 3 caracteres)",
+  "deskMerchantOffline": "Requiere conexión",
+  "fareGross": "Tarifa",
+  "fareAdjustmentMerchant": "Convenio {name}",
+  "@fareAdjustmentMerchant": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "fareAmountDue": "A pagar",
+  "errorMerchantNotFound": "Comercio no encontrado.",
+  "errorMerchantInactive": "Este convenio está desactivado.",
+  "errorDuplicateMerchant": "Ya existe un comercio con ese nombre.",
+  "errorMerchantInUse": "El convenio tiene validaciones: desactívalo en lugar de eliminarlo.",
+  "errorAlreadyValidated": "Este comercio ya validó ese vehículo.",
+  "errorMerchantLimit": "El vehículo ya alcanzó el máximo de convenios.",
+  "errorMerchantCap": "El comercio alcanzó su límite de validaciones.",
+  "errorSessionNotEligible": "Este vehículo tiene mensualidad: no necesita convenio.",
+  "errorValidationNotFound": "Validación no encontrada.",
+  "errorValidationNotRevocable": "Solo se puede quitar una validación pendiente de un vehículo que sigue dentro.",
+  "errorRevokeReasonRequired": "Escribe un motivo de 3 a 200 caracteres.",
+  "navPricing": "Tarifas dinamicas",
+  "pricingTitle": "Tarifas dinamicas",
+  "pricingEnabled": "Activar tarifas dinamicas",
+  "pricingEnabledHint": "Con la opcion apagada se cobra siempre la tarifa normal.",
+  "pricingFloor": "Minimo (% de la tarifa)",
+  "pricingCeiling": "Maximo (% de la tarifa)",
+  "pricingRoundTo": "Redondear a",
+  "pricingSettingsSaved": "Ajustes guardados",
+  "pricingRulesTitle": "Reglas",
+  "pricingNoRules": "Aun no hay reglas",
+  "pricingNoRulesHint": "Crea una regla para subir o bajar la tarifa segun ocupacion u horario.",
+  "pricingAddRule": "Agregar regla",
+  "pricingEditRule": "Editar regla",
+  "pricingRuleName": "Nombre",
+  "pricingRulePriority": "Prioridad (mayor gana)",
+  "pricingRuleGroup": "Tipo de vehiculo",
+  "pricingRuleGroupAll": "Todos",
+  "pricingRuleOccupancyFrom": "Ocupacion desde (%)",
+  "pricingRuleOccupancyTo": "Ocupacion hasta (%)",
+  "pricingRuleWeekdays": "Dias",
+  "pricingRuleFromTime": "Desde",
+  "pricingRuleToTime": "Hasta",
+  "pricingRuleMultiplier": "Multiplicador (%)",
+  "pricingRuleSurcharge": "Recargo fijo",
+  "pricingRuleActive": "Activa",
+  "pricingRuleSummary": "{group}, {when}: {effect}",
+  "@pricingRuleSummary": {
+    "placeholders": {
+      "group": {
+        "type": "String"
+      },
+      "when": {
+        "type": "String"
+      },
+      "effect": {
+        "type": "String"
+      }
+    }
+  },
+  "pricingRuleSaved": "Regla guardada",
+  "pricingRuleDeleted": "Regla eliminada",
+  "pricingRuleDeleteConfirm": "Las entradas ya registradas conservan su tarifa. Eliminar esta regla?",
+  "pricingSimulate": "Simular",
+  "pricingSimulateDays": "Ultimos {days} dias",
+  "@pricingSimulateDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "pricingSimIncludeDraft": "Incluir la regla sin guardar",
+  "pricingSimBase": "Cobro con tarifa normal",
+  "pricingSimTotal": "Cobro simulado",
+  "pricingSimDelta": "Diferencia",
+  "pricingSimAffected": "{count} entradas afectadas",
+  "@pricingSimAffected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pricingSimAtLimits": "{floor} en el minimo, {ceiling} en el maximo",
+  "@pricingSimAtLimits": {
+    "placeholders": {
+      "floor": {
+        "type": "int"
+      },
+      "ceiling": {
+        "type": "int"
+      }
+    }
+  },
+  "pricingSimByRule": "Por regla",
+  "pricingSimByHour": "Por hora de entrada",
+  "pricingSimEmpty": "No hay entradas cobradas en ese periodo.",
+  "pricingSimNote": "Usa tarifas y capacidad actuales y no cuenta reservas.",
+  "pricingReportTitle": "Impacto de tarifas dinamicas",
+  "pricingReportLocked": "Entradas con tarifa fijada",
+  "pricingReportExtra": "Ingreso adicional",
+  "pricingReportDiscount": "Descuentos por tarifa",
+  "pricingReportNet": "Efecto neto",
+  "priceQuoteNow": "Tarifa ahora: {amount}/h",
+  "@priceQuoteNow": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "priceQuoteUsually": "Normal: {amount}/h",
+  "@priceQuoteUsually": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "priceQuoteHigher": "Mas alta",
+  "priceQuoteLower": "Mas baja",
+  "priceQuoteOffline": "La tarifa se confirma al sincronizar.",
+  "publicPriceNow": "Ahora {amount}/h",
+  "@publicPriceNow": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "publicPriceUsually": "Precio normal {amount}/h",
+  "@publicPriceUsually": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "publicRateLocked": "Tarifa fijada: {amount}/h hasta tu llegada",
+  "@publicRateLocked": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "farePricingRule": "Tarifa dinamica: {name} ({percent})",
+  "@farePricingRule": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "receiptRateLine": "Tarifa: {name}",
+  "@receiptRateLine": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "fareRateLocked": "Tarifa fijada a la entrada",
+  "errorInvalidPricingRule": "Revisa la regla: hay valores fuera de rango.",
+  "errorDuplicatePricingRule": "Ya existe una regla con ese nombre.",
+  "errorPricingRuleNotFound": "La regla ya no existe.",
+  "errorInvalidPricingSettings": "Minimo, maximo o redondeo fuera de rango.",
+  "errorPricingSimulationTooLarge": "Demasiadas entradas: elige menos dias.",
+  "loyaltyTitle": "Fidelización",
+  "loyaltyTabProgram": "Programa",
+  "loyaltyTabMembers": "Clientes",
+  "loyaltyTabReport": "Reporte",
+  "loyaltyEnabled": "Programa activo",
+  "loyaltyVisitsRequired": "Visitas para ganar",
+  "loyaltyRewardKind": "Tipo de recompensa",
+  "loyaltyKindFreeStay": "Estadía gratis",
+  "loyaltyKindFixed": "Descuento fijo",
+  "loyaltyRewardMax": "Tope de la estadía gratis",
+  "loyaltyRewardFixed": "Valor del descuento",
+  "loyaltyMinAmount": "Pago mínimo por visita",
+  "loyaltyMinMinutes": "Minutos mínimos por visita",
+  "loyaltyRedeemMode": "Canje",
+  "loyaltyModeAuto": "Automático",
+  "loyaltyModeOperator": "Lo decide el operador",
+  "loyaltyStackMerchant": "Acumular con convenios",
+  "loyaltyValidDays": "Vigencia de la recompensa (días)",
+  "loyaltySave": "Guardar programa",
+  "loyaltySaved": "Programa guardado",
+  "loyaltyVisitOf": "Visita {current} de {total}",
+  "@loyaltyVisitOf": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "loyaltyRewardAvailable": "Recompensa disponible",
+  "loyaltyRewardEarned": "¡Recompensa ganada!",
+  "loyaltyUseReward": "Usar recompensa",
+  "loyaltyDontUseNow": "No usar ahora",
+  "loyaltyRewardLine": "Recompensa de fidelidad",
+  "loyaltyRewardExpires": "Vence el {date}",
+  "@loyaltyRewardExpires": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "loyaltyMembersEmpty": "Aún no hay clientes con visitas",
+  "loyaltyEnableCta": "Activar el programa",
+  "loyaltySearchPlate": "Buscar placa",
+  "loyaltyAdjust": "Corregir progreso",
+  "loyaltyAdjustDelta": "Cambio (+/-)",
+  "loyaltyAdjustReason": "Motivo (obligatorio)",
+  "loyaltyReportMembers": "Clientes",
+  "loyaltyReportCounted": "Visitas contadas",
+  "loyaltyReportSkipped": "Visitas no contadas",
+  "loyaltyReportEarned": "Recompensas ganadas",
+  "loyaltyReportRedeemed": "Recompensas canjeadas",
+  "loyaltyReportDiscount": "Descuento otorgado",
+  "loyaltyReportTopPlates": "Placas frecuentes",
+  "loyaltySkip_pass": "Pase mensual",
+  "loyaltySkip_lost_ticket": "Ticket perdido",
+  "loyaltySkip_exempt": "Exento",
+  "loyaltySkip_below_amount": "Pago bajo el mínimo",
+  "loyaltySkip_below_minutes": "Estadía muy corta",
+  "loyaltySkip_same_day": "Ya contó hoy",
+  "loyaltySkip_reward_redeemed": "Usó recompensa",
+  "loyaltySkip_error": "Error interno",
+  "loyaltyRefreshReport": "Actualizar reporte",
+  "loyaltyCopyCsv": "Copiar CSV",
+  "loyaltyCsvCopied": "CSV copiado",
+  "loyaltySharePdf": "Compartir PDF",
+  "errorLoyaltyDisabled": "El programa de fidelización está desactivado",
+  "errorLoyaltySettings": "Revisa los valores del programa",
+  "errorLoyaltyChoice": "Opción de canje no válida",
+  "errorNoRewardAvailable": "Esta placa no tiene recompensa disponible",
+  "errorLoyaltyReason": "Escribe un motivo de 3 a 200 caracteres",
+  "errorLoyaltyAdjustRange": "El ajuste dejaría el progreso fuera de rango",
+  "errorLoyaltyAccountNotFound": "Esa placa no tiene cuenta de fidelización",
+  "loyaltyReportEmpty": "Aún no hay datos en el periodo",
+  "navLoyalty": "Fidelización",
+  "navInvoicing": "Facturación",
+  "invoicingTitle": "Facturación electrónica",
+  "invoicingMode": "Modo",
+  "invoicingModeOff": "Apagada",
+  "invoicingModeOnRequest": "Solo a solicitud",
+  "invoicingModeAlways": "Siempre",
+  "invoicingSettings": "Datos del emisor",
+  "invoicingNit": "NIT del emisor",
+  "invoicingLegalName": "Razón social",
+  "invoicingMunicipality": "Código de municipio",
+  "invoicingTaxRate": "Tarifa de impuesto (puntos básicos)",
+  "invoicingPricesIncludeTax": "Los precios ya incluyen el impuesto",
+  "invoicingResolutions": "Resoluciones de numeración",
+  "invoicingResolutionAdd": "Agregar resolución",
+  "invoicingResolutionRemaining": "Quedan {count} números",
+  "@invoicingResolutionRemaining": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "invoicingDocuments": "Documentos",
+  "invoicingEmpty": "Aún no hay documentos. Configura una resolución para empezar.",
+  "invoicingStatusPending": "Pendiente",
+  "invoicingStatusSent": "Enviado",
+  "invoicingStatusAccepted": "Aceptado",
+  "invoicingStatusRejected": "Rechazado",
+  "invoicingStatusFailed": "Falló",
+  "invoicingRetry": "Reintentar envío",
+  "invoicingCreditNote": "Nota crédito",
+  "invoicingCreditReason": "Motivo de la nota crédito",
+  "invoicingIssue": "Emitir factura electrónica",
+  "invoicingIssued": "Documento creado: {number}",
+  "@invoicingIssued": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "invoicingNotConfigured": "El proveedor de facturación no está configurado; los documentos quedan pendientes.",
+  "invoicingOnlineOnly": "Requiere conexión",
+  "fiscalCustomerSection": "Datos para factura (opcional)",
+  "fiscalDocType": "Tipo de documento",
+  "fiscalDocNumber": "Número de documento",
+  "fiscalName": "Nombre o razón social",
+  "fiscalEmail": "Correo electrónico",
+  "fiscalInvalidCustomer": "Revisa los datos del cliente",
+  "receiptFiscalPending": "Documento electrónico en proceso",
+  "notifTypeFiscalFailed": "Documento electrónico con problema",
+  "notifTypeFiscalResolutionLow": "Resolución de numeración por agotarse",
+  "errorFiscalNotEnabled": "La facturación electrónica no está activa",
+  "errorFiscalResolutionMissing": "No hay resolución de numeración activa",
+  "errorFiscalResolutionExpired": "La resolución de numeración venció",
+  "errorFiscalResolutionExhausted": "Se agotó la numeración autorizada",
+  "errorFiscalSourceNotFound": "No se encontró la venta a facturar",
+  "errorFiscalSourceNotBillable": "Esta venta no se puede facturar",
+  "errorInvalidFiscalCustomer": "Datos del cliente no válidos",
+  "errorFiscalDocumentNotFound": "Documento no encontrado",
+  "errorFiscalDocumentNotAccepted": "Solo se puede acreditar un documento aceptado",
+  "errorFiscalDocumentAlreadyCredited": "El documento ya tiene una nota crédito",
+  "errorInvalidFiscalStatus": "El documento no está en un estado que permita reintentar",
+  "errorFiscalSettingsIncomplete": "Completa NIT, razón social y municipio",
+  "errorFiscalDocumentImmutable": "El documento ya está numerado y no se puede modificar",
+  "fiscalInvoiceTitle": "FACTURA ELECTRÓNICA DE VENTA",
+  "fiscalPosTitle": "DOCUMENTO EQUIVALENTE POS",
+  "fiscalCufe": "CUFE",
+  "assistantTitle": "Asistente de reportes",
+  "assistantOpenTooltip": "Preguntar al asistente",
+  "assistantInputHint": "Pregunta sobre ingresos, tráfico o reservas",
+  "assistantSend": "Enviar",
+  "assistantClear": "Nueva conversación",
+  "assistantEmptyTitle": "Pregunta en lenguaje natural",
+  "assistantEmptyMessage": "Las cifras salen de tus reportes y cada una muestra su fuente.",
+  "assistantSuggestionsTitle": "Prueba con",
+  "assistantSuggestRevenueMonth": "¿Cuánto generaron las motos el mes pasado?",
+  "assistantSuggestBusiestHour": "¿A qué hora entran más vehículos?",
+  "assistantSuggestReservations": "¿Cuántas reservas web terminaron en entrada este mes?",
+  "assistantSuggestCompare": "¿Cómo van los ingresos de esta semana frente a la anterior?",
+  "assistantSuggestCash": "¿Hubo diferencias de caja en los últimos cierres?",
+  "assistantSuggestFull": "¿Qué tan lleno está el parqueadero ahora?",
+  "assistantPrivacyNote": "Tu pregunta y datos agregados de tus reportes se envían al proveedor de IA. No escribas placas ni nombres.",
+  "assistantRedacted": "Quitamos datos personales de tu pregunta antes de enviarla.",
+  "assistantBudgetLeft": "Quedan {count} consultas hoy",
+  "@assistantBudgetLeft": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "assistantThinking": "Consultando tus reportes…",
+  "assistantToolRunning": "Consultando {report}…",
+  "@assistantToolRunning": {
+    "placeholders": {
+      "report": {
+        "type": "String"
+      }
+    }
+  },
+  "assistantToolDone": "{report}: listo",
+  "@assistantToolDone": {
+    "placeholders": {
+      "report": {
+        "type": "String"
+      }
+    }
+  },
+  "assistantStatusNeedsClarification": "Necesito un dato más",
+  "assistantStatusOutOfScope": "Fuera de alcance",
+  "assistantStatusNoData": "Sin datos en el periodo",
+  "assistantFigures": "Cifras",
+  "assistantSourceTitle": "De dónde sale esta cifra",
+  "assistantSourceReport": "Reporte: {rpc}",
+  "@assistantSourceReport": {
+    "placeholders": {
+      "rpc": {
+        "type": "String"
+      }
+    }
+  },
+  "assistantSourceArgs": "Parámetros: {args}",
+  "@assistantSourceArgs": {
+    "placeholders": {
+      "args": {
+        "type": "String"
+      }
+    }
+  },
+  "assistantSourcePath": "Campo: {path}",
+  "@assistantSourcePath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "assistantSourceRaw": "Valor en el reporte: {value}",
+  "@assistantSourceRaw": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "assistantVerified": "Cifra verificada con el reporte",
+  "assistantUnverified": "No se pudo verificar esta cifra",
+  "assistantUndefinedValue": "—",
+  "assistantCopyAnswer": "Copiar respuesta",
+  "assistantCopyFigures": "Copiar cifras (CSV)",
+  "assistantCopied": "Copiado al portapapeles",
+  "assistantDisclaimer": "Respuesta generada por IA a partir de tus reportes. Verifica las cifras en su fuente.",
+  "assistantNotConfiguredTitle": "El asistente no está activado",
+  "assistantNotConfiguredMessage": "Falta la clave de la API de IA en el servidor. Consulta el runbook de secretos.",
+  "assistantPeriod": "Periodo: {start} a {end}",
+  "@assistantPeriod": {
+    "placeholders": {
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      }
+    }
+  },
+  "errorAiBudget": "Se alcanzó el límite diario de consultas del asistente",
+  "errorAiUnavailable": "El asistente no está disponible en este momento",
+  "errorAiTimeout": "El asistente tardó demasiado. Intenta de nuevo",
+  "errorAiUpstream": "El servicio de IA no respondió. Intenta de nuevo",
+  "errorAiRefused": "El asistente no pudo responder esta pregunta",
+  "errorAiAnswerInvalid": "La respuesta no pasó la verificación de cifras",
+  "errorAiLimit": "La pregunta es demasiado amplia. Prueba con un periodo más corto",
+  "errorAiQuestionInvalid": "Escribe una pregunta válida",
+  "damageTitle": "Comparación de daños",
+  "damageAdvisoryTitle": "Análisis orientativo con IA",
+  "damageAdvisoryBody": "Puede pasar por alto daños o confundir reflejos y suciedad con daños. Verifica cada punto en el vehículo: la decisión es de una persona.",
+  "damageVerdictNone": "No se detectaron daños nuevos en las fotos comparadas",
+  "damageVerdictPossible": "Posible daño nuevo: verifica",
+  "damageVerdictInsufficient": "Evidencia insuficiente para comparar",
+  "damageClassPre": "Ya existía",
+  "damageClassNew": "Posible daño nuevo: verifica",
+  "damageClassUncertain": "Incierto",
+  "damageRun": "Comparar con las fotos de entrada",
+  "damageRerun": "Volver a analizar",
+  "damageRunning": "Analizando fotos…",
+  "damageEmptyTitle": "Aún no hay comparación",
+  "damageEmptyNeedExit": "Toma fotos de salida en el check-out para poder comparar.",
+  "damageEmptyNeedEntry": "Esta entrada no tiene fotos para comparar.",
+  "damageNotConfigured": "El análisis con IA no está activado en el servidor.",
+  "damageReviewConfirm": "Confirmar",
+  "damageReviewDismiss": "Descartar",
+  "damageReviewNoteLabel": "Nota (obligatoria)",
+  "damageReviewAudited": "La decisión y la nota quedan en la auditoría.",
+  "damageExitSection": "Fotos de salida (opcional)",
+  "damageExitHint": "Sirven para resolver reclamos de daños. Usa los mismos ángulos que a la entrada.",
+  "damageExitOffline": "Las fotos de salida necesitan conexión.",
+  "damageExitSaved": "Fotos de salida guardadas",
+  "damageExitFailed": "No se pudieron guardar las fotos de salida",
+  "damageExitSkippedOffline": "Salida registrada sin conexión: las fotos de salida no se guardaron.",
+  "damageAddPhoto": "Tomar foto",
+  "damagePhotosCount": "{count} foto(s)",
+  "@damagePhotosCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "errorInsufficientEvidence": "Faltan fotos de entrada o de salida para comparar",
+  "errorComparisonInProgress": "Ya hay un análisis en curso para este vehículo",
+  "errorComparisonExists": "Ya se analizó esta salida; un administrador puede repetirla",
+  "errorEvidenceUnreadable": "No se pudieron leer las fotos",
+  "errorEvidenceLimit": "Máximo 5 fotos de salida por vehículo",
+  "errorFindingNotFound": "Hallazgo no encontrado",
+  "errorComparisonNotFound": "Comparación no encontrada",
+  "navDevices": "Dispositivos",
+  "devicesTitle": "Dispositivos",
+  "devicesEmpty": "Aún no hay dispositivos",
+  "devicesEmptyHint": "Registra una cámara, barrera o hub para conectarlo.",
+  "devicesAdd": "Registrar dispositivo",
+  "devicesKind": "Tipo",
+  "devicesName": "Nombre",
+  "devicesRate": "Peticiones por minuto",
+  "devicesStatusOnline": "En línea",
+  "devicesStatusOffline": "Sin conexión",
+  "devicesStatusNeverSeen": "Nunca visto",
+  "devicesStatusDisabled": "Deshabilitado",
+  "devicesRotate": "Rotar clave",
+  "devicesKeyTitle": "Guarda esta clave",
+  "devicesKeyHint": "No se volverá a mostrar. Configúrala en el dispositivo.",
+  "devicesCopied": "Copiado",
+  "devicesEnable": "Habilitar",
+  "devicesDisable": "Deshabilitar",
+  "devicesRename": "Renombrar",
+  "devicesDelete": "Eliminar",
+  "devicesEvents": "Historial",
+  "devicesOfflineMinutes": "Minutos para marcar sin conexión",
+  "devicesSaved": "Guardado",
+  "devicesDeleteConfirm": "El dispositivo dejará de autenticarse. ¿Eliminar?",
+  "devicesLastSeen": "Último contacto: {when}",
+  "@devicesLastSeen": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "devicesFirmware": "Firmware: {version}",
+  "@devicesFirmware": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "errorInvalidDeviceKind": "Tipo de dispositivo no válido",
+  "errorInvalidDeviceName": "Nombre de dispositivo no válido",
+  "errorDeviceNameTaken": "Ya existe un dispositivo con ese nombre",
+  "errorDeviceLimit": "Máximo 50 dispositivos por sede",
+  "errorDeviceNotFound": "Dispositivo no encontrado",
+  "errorDeviceUnauthorized": "Clave de dispositivo no válida",
+  "errorDeviceDisabled": "El dispositivo está deshabilitado",
+  "errorDeviceClockSkew": "Reloj del dispositivo desviado",
+  "errorDeviceReplay": "Petición repetida",
+  "errorDeviceRateLimited": "Demasiadas peticiones del dispositivo",
+  "evidenceSectionEntry": "Fotos de entrada",
+  "evidenceSectionExit": "Fotos de salida",
+  "damageCompareAction": "Comparar con las fotos de entrada",
+  "guideNextPhoto": "Siguiente foto: {slot, select, frontLeft{esquina delantera izquierda} frontRight{esquina delantera derecha} rearRight{esquina trasera derecha} rearLeft{esquina trasera izquierda} detail{detalle de cualquier daño} other{libre}}",
+  "guideRules": "A unos 3 m, vehículo completo en el cuadro, sin contraluz; repite las mismas esquinas a la salida.",
+  "guideSlotChip": "{slot, select, frontLeft{Del. izq.} frontRight{Del. der.} rearRight{Tras. der.} rearLeft{Tras. izq.} detail{Detalle} other{}}",
+  "guideShowIllustration": "Ver ejemplo",
+  "navGate": "Portería",
+  "gateTitle": "Placas detectadas",
+  "gateEmptyTitle": "No hay placas por revisar",
+  "gateEmptyBody": "Cuando la cámara lea una placa que necesite tu confirmación, aparecerá aquí.",
+  "gateGoToCheckIn": "Registrar entrada",
+  "gateConfirmEntry": "Confirmar entrada",
+  "gateDismiss": "Descartar",
+  "gateOpenCheckOut": "Abrir salida",
+  "gateConfirmTitle": "Confirmar placa",
+  "gateConfirmBody": "Revisa la placa antes de abrir la sesión.",
+  "gateConfidence": "Confianza {percent}%",
+  "@gateConfidence": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "gateVotes": "{count} lecturas",
+  "@gateVotes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "gateDevice": "Cámara {name}",
+  "@gateDevice": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "gateSnapshotMissing": "Sin imagen",
+  "gateNeedsConnection": "Confirmar requiere conexión",
+  "gateConfirmed": "Entrada confirmada",
+  "gateDismissed": "Lectura descartada",
+  "gateDismissTitle": "Descartar lectura",
+  "gateDismissBody": "¿Descartar esta lectura sin abrir una sesión?",
+  "gateReasonAssist": "Modo asistido",
+  "gateReasonLowConfidence": "Confianza baja",
+  "gateReasonUnknownPlate": "Placa no registrada",
+  "gateReasonNoSystemOperator": "Sin operador del sistema",
+  "gateReasonDuplicateSession": "Ya tiene una sesión abierta",
+  "gateReasonLotFull": "Parqueadero lleno",
+  "gateReasonError": "No se pudo registrar",
+  "gateReasonBlacklisted": "Vehículo en lista negra",
+  "gateReasonExitUnpaid": "Sale con la sesión sin cobrar",
+  "gateReasonNoOpenSession": "Sale sin sesión abierta",
+  "gateReasonExitPaid": "Salida ya pagada",
+  "gateSettingsTitle": "Cámara de placas",
+  "gateModeLabel": "Modo",
+  "gateModeAssist": "Asistido: el operador confirma cada entrada",
+  "gateModeAuto": "Automático: la cámara registra la entrada",
+  "gateModeAutoConfirm": "En modo automático, una placa falsa puede abrir una sesión sin que nadie la revise. ¿Activarlo?",
+  "gateMinConfidence": "Confianza mínima",
+  "gateAutoConfidence": "Confianza para modo automático",
+  "gateMinVotes": "Lecturas mínimas",
+  "gateVoteWindow": "Ventana de lecturas (s)",
+  "gateCooldown": "Pausa entre eventos de la misma placa (s)",
+  "gateDefaultCategory": "Categoría para placas nuevas",
+  "gateActingUser": "Operador del sistema",
+  "gateCameraDirection": "Sentido de la cámara",
+  "gateDirectionEntry": "Entrada",
+  "gateDirectionExit": "Salida",
+  "gateDirectionMissing": "Sin sentido asignado",
+  "gateSave": "Guardar",
+  "gateSaved": "Ajustes guardados",
+  "gateNoCamerasTitle": "No hay cámaras registradas",
+  "gateNoCamerasBody": "Registra una cámara en Dispositivos y asígnale entrada o salida.",
+  "gateGoToDevices": "Ir a Dispositivos",
+  "gateSelectOption": "Sin asignar",
+  "gateModeAssistShort": "Asistido",
+  "gateModeAutoShort": "Automático"
 }

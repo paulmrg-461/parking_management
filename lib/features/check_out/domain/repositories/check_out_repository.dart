@@ -2,6 +2,9 @@ import '../../../../core/pagination/paged_result.dart';
 import '../entities/capacity_snapshot.dart';
 import '../entities/check_out_preview.dart';
 import '../entities/check_out_receipt.dart';
+import '../entities/dashboard_trend.dart';
+import '../entities/lot_setup_status.dart';
+import '../entities/occupancy_forecast.dart';
 import '../entities/occupancy_snapshot.dart';
 import '../entities/slot_board.dart';
 import '../entities/open_session.dart';
@@ -46,4 +49,13 @@ abstract class CheckOutRepository {
 
   /// Today's revenue/entries/exits for the active site (home dashboard).
   Future<TodaySummary> todaySummary();
+
+  /// Daily revenue/entries/exits for the last [days] business days.
+  Future<DashboardTrend> dashboardTrend({int days = 7});
+
+  /// First-steps checklist of the active site (home onboarding card).
+  Future<LotSetupStatus> lotSetup();
+
+  /// "Will it be full at 6 pm?" for the next [horizon] hours.
+  Future<OccupancyForecast> occupancyForecast({int horizon = 12});
 }

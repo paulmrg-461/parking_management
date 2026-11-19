@@ -181,6 +181,9 @@ before rotating secrets.
 Run the notification/retention script every minute from the host:
 
 ```bash
+# Optional on a VM: the `supabase-jobs` compose service already runs these
+# tasks every 5 minutes inside the stack. Use system cron only if you want the
+# faster cadence or the push/WhatsApp dispatch from the host:
 * * * * * cd /opt/parking && sh supabase/notifications-cron.sh >> /var/log/parking-cron.log 2>&1
 # daily, after the 02:30 backup; sites with retention_days = 0 are skipped
 40 3 * * * cd /opt/parking && sh supabase/evidence-archive.sh >> /var/log/parking-evidence.log 2>&1
@@ -223,13 +226,21 @@ Automated customer messages go through Meta, not the phone:
 
 1. Create a Meta app with the WhatsApp product, add a sender number and get its
    **phone number id** and a permanent **system-user token**.
-2. Create two message templates (Spanish/English as needed):
+2. Create the message templates you need (Spanish/English as needed):
    - `receipt` with body params `{{1}}` plate, `{{2}}` amount, `{{3}}` ticket.
    - `pass_expiry` with `{{1}}` plate, `{{2}}` date.
    - `vehicle_ready` with `{{1}}` plate (open session, "ready for pickup").
+   - `reservation_confirmed` (`{{1}}` name, `{{2}}` plate, `{{3}}` until,
+     `{{4}}` lot) and `reservation_reminder`; `reservation_cancelled`;
+     `waitlist_offer` (`{{1}}` name, `{{2}}` plate, `{{3}}` deadline,
+     `{{4}}` lot, `{{5}}` code).
+   - `pass_renewal_link` for monthly pass auto-renewal: body
+     "Hola {{1}}, la mensualidad del vehiculo {{2}} vence el {{3}}. Renuevala
+     por {{4}} aqui:" and a **URL button** whose base is
+     `https://<APP_URL>/renew?t=` (the queued token is the button parameter).
 3. Put the values in `.env` (`WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`,
-   optional `WHATSAPP_API_VERSION`/`WHATSAPP_TEMPLATE_*`) and restart
-   `functions`.
+   optional `WHATSAPP_API_VERSION`/`WHATSAPP_TEMPLATE_*`, including
+   `WHATSAPP_TEMPLATE_PASS_RENEWAL`) and restart `functions`.
 4. Enable **WhatsApp automático** in the site settings. From then on the
    receipt/pass actions enqueue rows in `whatsapp_messages`; the cron calls
    `whatsapp-dispatch`, which retries up to 3 times and marks failures.

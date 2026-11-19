@@ -193,7 +193,9 @@ python3 tool/generate_branding.py   # needs Pillow
 ### 3.8 Production builds
 
 ```bash
-# Static web (any host; use HTTPS in production)
+# Static web (any host; use HTTPS in production).
+# Over plain HTTP the browser login uses localStorage; HTTPS (or localhost) is
+# still recommended — see the note below.
 flutter build web --release \
   --dart-define=SUPABASE_URL=https://your-domain.com \
   --dart-define=SUPABASE_ANON_KEY=<production ANON_KEY>
@@ -367,3 +369,14 @@ backups:
 
 Technical details: [`architecture.md`](architecture.md),
 [`infrastructure.md`](infrastructure.md), [`database.md`](database.md).
+
+## Monthly pass auto-renewal (WhatsApp)
+
+Set `pass_renewal_enabled` for a site to send reminders before a pass ends
+(cadence `7,3,1` by default). Turn `pass_renewal_payment_links` on only after
+online payments (Wompi) work: the reminder then carries a token-keyed
+`/renew?t=...` link and the customer pays from the phone. The Meta template is
+`pass_renewal_link` with body `{{1}}` name, `{{2}}` plate, `{{3}}` date,
+`{{4}}` amount and a URL button based on `https://<APP_URL>/renew?t=`. Without
+template approval the messages stay queued and visible in `/diagnostics`; the
+in-app reminder to the admins still works.

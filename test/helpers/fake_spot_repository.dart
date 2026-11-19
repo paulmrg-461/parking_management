@@ -1,6 +1,7 @@
 import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/features/check_out/domain/entities/slot_board.dart';
 import 'package:parking_management/features/spots/domain/entities/parking_spot.dart';
+import 'package:parking_management/features/spots/domain/entities/spot_event.dart';
 import 'package:parking_management/features/spots/domain/repositories/spot_repository.dart';
 
 class FakeSpotRepository implements SpotRepository {
@@ -13,6 +14,13 @@ class FakeSpotRepository implements SpotRepository {
   int nextId = 100;
   int listCalls = 0;
   int deleteCalls = 0;
+
+  /// Last reason sent with a save (`null` when absent).
+  String? lastReason;
+
+  List<SpotEvent> events = const [];
+  Failure? eventsError;
+  int eventCalls = 0;
 
   @override
   Future<List<ParkingSpot>> list() async {
@@ -32,11 +40,13 @@ class FakeSpotRepository implements SpotRepository {
     required int row,
     required int col,
     bool active = true,
+    String? reason,
   }) async {
     final error = writeError;
     if (error != null) {
       throw error;
     }
+    lastReason = reason;
     final spot = ParkingSpot(
       id: id ?? nextId++,
       code: code,
@@ -65,5 +75,15 @@ class FakeSpotRepository implements SpotRepository {
       for (final item in spots)
         if (item.id != id) item,
     ];
+  }
+
+  @override
+  Future<List<SpotEvent>> listEvents(int spotId) async {
+    eventCalls++;
+    final error = eventsError;
+    if (error != null) {
+      throw error;
+    }
+    return events.where((event) => event.spotId == spotId).toList();
   }
 }

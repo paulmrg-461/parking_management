@@ -6,6 +6,7 @@ import '../sync/pending_mutation.dart';
 import '../theme/tokens.dart';
 import '../sync/sync_outbox.dart';
 import '../sync/sync_status_cubit.dart';
+import 'conflict_resolution_dialog.dart';
 
 /// AppBar action showing how many offline changes are waiting to sync.
 /// Hidden when the queue is empty (or no [SyncStatusCubit] is provided, e.g.
@@ -26,15 +27,22 @@ class SyncBadge extends StatelessWidget {
           return const SizedBox.shrink();
         }
         final hasErrors = status.deadLetters.isNotEmpty;
+        final hasConflicts = status.conflicts.isNotEmpty;
         return IconButton(
           tooltip: _tooltip(context.l10n, status),
           onPressed: () => _showDetails(context, cubit),
           icon: Badge(
             label: Text('${status.total}'),
-            backgroundColor: hasErrors
+            backgroundColor: hasErrors || hasConflicts
                 ? Theme.of(context).colorScheme.error
                 : null,
-            child: Icon(hasErrors ? Icons.sync_problem : Icons.sync),
+            child: Icon(
+              hasErrors
+                  ? Icons.sync_problem
+                  : hasConflicts
+                  ? Icons.merge_type
+                  : Icons.sync,
+            ),
           ),
         );
       },
@@ -52,7 +60,12 @@ class SyncBadge extends StatelessWidget {
   String _tooltip(AppLocalizations l10n, SyncStatus status) {
     final base = l10n.syncPendingTooltip(status.total);
     final errors = status.deadLetters.length;
-    return errors == 0 ? base : l10n.syncPendingWithErrors(base, errors);
+    final withErrors = errors == 0
+        ? base
+        : l10n.syncPendingWithErrors(base, errors);
+    return status.conflicts.isEmpty
+        ? withErrors
+        : '$withErrors · ${l10n.syncConflicts(status.conflicts.length)}';
   }
 
   void _showDetails(BuildContext context, SyncStatusCubit cubit) {
@@ -65,8 +78,17 @@ class SyncBadge extends StatelessWidget {
   }
 }
 
-class _SyncDetailsSheet extends StatelessWidget {
+class _SyncDetailsSheet extends StatefulWidget {
   const _SyncDetailsSheet();
+
+  @override
+  State<_SyncDetailsSheet> createState() => _SyncDetailsSheetState();
+}
+
+class _SyncDetailsSheetState extends State<_SyncDetailsSheet> {
+  /// The server version each conflict showed the last time it was opened, so
+  /// a record that changed again can say so.
+  final Map<int, int> _seenVersions = {};
 
   @override
   Widget build(BuildContext context) {
@@ -91,10 +113,67 @@ class _SyncDetailsSheet extends StatelessWidget {
                 ),
               ),
             Text(context.l10n.syncQueued(status.pendingCount)),
+            if (status.conflicts.isNotEmpty) ...[
+              const SizedBox(height: Space.sm),
+              Text(
+                context.l10n.syncConflictSection,
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              for (final entry in status.conflicts)
+                _ConflictTile(
+                  entry,
+                  onTap: () => _openConflict(context, entry),
+                ),
+            ],
             for (final entry in status.deadLetters) _DeadLetterTile(entry),
           ],
         ),
       ),
+    );
+  }
+
+  Future<void> _openConflict(BuildContext context, OutboxEntry entry) async {
+    final cubit = context.read<SyncStatusCubit>();
+    final version = entry.value.decodeServerRow()?['version'];
+    final seen = _seenVersions[entry.key];
+    if (version is num) {
+      _seenVersions[entry.key] = version.toInt();
+    }
+    await showDialog<bool>(
+      context: context,
+      builder: (_) => ConflictResolutionDialog(
+        entry: entry,
+        apply: cubit.resolve,
+        seenVersion: seen,
+      ),
+    );
+    if (mounted) {
+      await cubit.load();
+    }
+  }
+}
+
+/// A parked conflict: tapping opens the field-by-field resolution dialog.
+class _ConflictTile extends StatelessWidget {
+  const _ConflictTile(this.entry, {required this.onTap});
+
+  final OutboxEntry entry;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final mutation = entry.value;
+    final id = mutation.entityId == null ? '' : ' #${mutation.entityId}';
+    return ListTile(
+      key: Key('sync-resolve-${entry.key}'),
+      contentPadding: EdgeInsets.zero,
+      leading: const Icon(Icons.merge_type),
+      title: Text(
+        '${_DeadLetterTile._label(context.l10n, mutation.entityType)}$id',
+      ),
+      subtitle: Text(context.l10n.syncConflictTileSubtitle),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: onTap,
     );
   }
 }

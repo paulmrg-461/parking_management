@@ -17,6 +17,9 @@ erDiagram
   parking_lots ||--o{ shifts : "hosts"
   parking_lots ||--o{ monthly_passes : "hosts"
   parking_lots ||--o{ category_reservations : "holds"
+  parking_lots ||--o{ parking_spots : "maps"
+  parking_spots ||--o{ parking_spot_events : "logged in"
+  users ||--o{ parking_spot_events : "changes"
 
   categories ||--o{ tariffs : "priced by"
   categories ||--o{ vehicles : "classifies"
@@ -31,6 +34,8 @@ erDiagram
   users ||--o{ web_push_subscriptions : "subscribes"
 
   parking_sessions ||--o{ evidence_photos : "has"
+  parking_sessions ||--o| session_feedback : "rated by"
+  parking_lots ||--o{ session_feedback : "collects"
   shifts ||--o{ parking_sessions : "reconciles"
   shifts ||--o{ cash_movements : "records"
   shifts ||--o{ shift_adjustments : "corrected by"
@@ -38,6 +43,38 @@ erDiagram
 
   monthly_passes ||--|| monthly_pass_payments : "charged once"
   monthly_passes ||--o| monthly_passes : "renews"
+
+  parking_lots ||--o{ payment_intents : "bills"
+  parking_sessions ||--o{ payment_intents : "paid by"
+  payment_intents ||--o{ payment_events : "confirmed by"
+
+  monthly_passes ||--o{ pass_renewal_offers : "offered by"
+  pass_renewal_offers ||--o| payment_intents : "paid by"
+
+  parking_lots ||--o{ merchants : "agrees with"
+  merchants ||--|| merchant_credentials : "authenticated by"
+  merchants ||--o{ merchant_validations : "grants"
+  parking_sessions ||--o{ merchant_validations : "validated by"
+
+  parking_lots ||--o{ pricing_rules : "rules"
+  pricing_rules ||--o{ parking_sessions : "locks at entry"
+
+  parking_lots ||--o{ loyalty_accounts : "has members"
+  parking_lots ||--o{ loyalty_rewards : "grants"
+  parking_lots ||--o{ loyalty_visits : "records"
+  parking_lots ||--o{ loyalty_adjustments : "corrects"
+  parking_sessions ||--o| loyalty_visits : "explains"
+  loyalty_rewards ||--o| loyalty_visits : "earned by"
+
+  parking_lots ||--o| fiscal_settings : "configures"
+  parking_lots ||--o{ fiscal_resolutions : "authorizes"
+  parking_lots ||--o{ fiscal_documents : "issues"
+  fiscal_resolutions ||--o{ fiscal_documents : "numbers"
+  fiscal_documents ||--o| fiscal_documents : "credited by"
+
+  parking_lots ||--o{ ai_limits : "limits"
+  parking_lots ||--o{ ai_requests : "usage"
+  ai_features ||--o{ ai_limits : "configures"
 ```
 
 ## 2. Tables
@@ -50,15 +87,39 @@ erDiagram
 | `categories` | Vehicle category per site (`unique (lot_id, name)`) with optional capacity (0 = unlimited). | yes |
 | `tariffs` | Hourly/daily/nightly/monthly amounts per category, with the night window; `(category_id, lot_id)` must match the category's lot (composite FK). | yes |
 | `vehicles` | Global plate registry (category, color, brand, notes, blacklist, customer phone). A plate can park anywhere. | no |
-| `parking_sessions` | A stay: entry/exit, amount, payment method, discount audit, lost ticket, shift, lot, ticket number; `closed_recorded_at` is the server time of the check-out (the exit time may be an offline client time). | yes |
+| `parking_sessions` | A stay: entry/exit, amount, payment method, discount audit, lost ticket, shift, lot, ticket number; `closed_recorded_at` is the server time of the check-out (the exit time may be an offline client time); `loyalty_choice` records the operator's reward choice (`redeem`/`skip`, NULL = automatic). | yes |
 | `evidence_photos` | Check-in photos/videos (storage path per session, unique `file_path`). | via session |
+| `session_feedback` | Customer survey: one row per closed session (`unique (session_id)`), rating 1..5 and an optional comment up to 500 characters. Written only by the public RPCs, read by the lot. | yes |
 | `shifts` | Operator cash shift per site: opening float, counted cash, expected, difference. | yes |
 | `cash_movements` | Withdrawals/deposits/adjustments inside a shift. | via shift |
 | `shift_adjustments` | Audit of admin corrections to a closed shift. | via shift |
 | `monthly_passes` | Pass period/amount, auto-renew flag, renewal link. | yes |
 | `monthly_pass_payments` | Exactly one charge per pass (`pending`/`paid`/`waived`), collected into a shift. | yes |
-| `category_reservations` | Capacity hold for a plate (`active`/`used`/`cancelled`/`expired`). | yes |
-| `parking_settings` (`car_capacity`, `moto_capacity`, `key_capacity`) | Per-site branding (name, address, schedule, contacts, police quadrant, logo version/path) + `business_timezone`, `overstay_hours`, `lost_ticket_fee`, `evidence_retention_days`. | yes |
+| `category_reservations` | Capacity hold for a plate (`active`/`used`/`cancelled`/`expired`), with the public customer name/phone and `source` when created from `/reserve`. | yes |
+| `parking_spots` | Physical bay per site: code, group (`car`/`moto`/`heavy`), grid cell and `active`/`out_of_service`; unique code and cell per lot. | yes |
+| `parking_spot_events` | Maintenance history of a bay: status transition, optional reason, actor and timestamp; written by `save_parking_spot`, lot-scoped RLS. | yes |
+| `parking_settings` (`car_capacity`, `moto_capacity`, `key_capacity`) | Per-site branding (name, address, schedule, contacts, police quadrant, logo version/path) + `business_timezone`, `overstay_hours`, `lost_ticket_fee`, `evidence_retention_days`, online-payment switch/window/minimum. | yes |
+| `payment_intents` | Frozen amount for a gateway checkout: `reference` (random `PM-…`), `amount`, `currency` (COP only), `gateway` (`wompi`), `status` (`pending`/`approved`/`declined`/`voided`/`error`/`expired`), transaction id/method, `expires_at`. Written only by the service RPCs. | yes |
+| `lot_devices` | Per-lot hardware: kind, name, key prefix + SHA-256 hash, enabled, last seen/sequence/status, firmware, rate window, offline marker. No API grant (the hash never leaves the definer RPCs). | yes |
+| `device_events` | Device audit trail: registration, rotation, rename, enable/disable, delete, online/offline, auth failures and rejected requests. Admin-read only; no audit trigger on `lot_devices`. | yes |
+| `damage_comparisons` | One advisory comparison run per session (run number, status, overall verdict, summary, quality, model, counts, error). Written by the service role only. | yes |
+| `damage_findings` | One possible finding per comparison: zone, description, classification (`pre_existing`/`new`/`uncertain`), categorical confidence, downgrade marker, photo ids and the human review (status/note/reviewer/time). Audited on update. | yes |
+| `ai_features` | AI feature registry: `admin_only` and the default daily request/token caps. Seeded with `report_assistant`. No API grant. | — |
+| `ai_limits` | Per-lot override of the daily request/token budget, audited. | yes |
+| `ai_requests` | Operational AI usage ledger: feature, actor, status, model, token counters, tool calls, duration, error code, business day. Never stores question/answer text. | yes |
+| `fiscal_settings` | Per-site fiscal switch (`off`/`on_request`/`always`), issuer NIT/legal name/municipality, tax regime and one tax rate in basis points. Prices are tax-inclusive. | yes (PK) |
+| `fiscal_resolutions` | Authorized numbering range per document type (`pos`/`invoice`/`credit_note`), prefix, validity, `next_number`; one active per `(lot, type)`. | yes |
+| `fiscal_documents` | The outbox and the legal record: number, source, snapshot amounts/tax, optional customer PII, status/attempts/backoff, provider id, CUFE/QR, rejection/void. Immutable once numbered. | yes |
+| `loyalty_accounts` | Counter per `(lot, plate)`: progress, earned/redeemed totals and the last counted day. Created lazily by the closed-session trigger. | yes |
+| `loyalty_rewards` | One reward: snapshot of kind/max/fixed at earn time, `available`/`redeemed`/`expired`/`reversed`, earning and redeeming session, redeemed amount and expiry. Audited. | yes |
+| `loyalty_visits` | Ledger of closed sessions: counted, skipped (with reason) or reversed, amount, progress before and the reward it earned. Unique per session. | yes |
+| `loyalty_adjustments` | Manual progress corrections: signed delta, reason, actor and progress after. Audited; bounded so it cannot mint a reward. | yes |
+| `pricing_rules` | Dynamic-pricing rule: name, active, priority, vehicle group, occupancy band, weekday mask, local window, multiplier bps, flat surcharge. Audited; admin RPCs only. | yes |
+| `merchants` | Agreement of the lot: name, one benefit rule (`free_minutes`/`percentage`/`fixed_amount` + optional per-validation cap), billing mode, daily/monthly caps, `active`, `credentials_version`. Audited. | yes |
+| `merchant_credentials` | SHA-256 `token_hash`, bcrypt `pin_hash`, failure counter, lock. RLS on with no policy and no grant: only the definer RPCs read it. | via merchant |
+| `merchant_validations` | One row per (merchant, session): source, actor, `status` (pending/applied/forfeited/revoked), `terms` snapshot, `amount`, timestamps and revoke reason. | yes |
+| `pass_renewal_offers` | Token-keyed renewal offer (192-bit `token`, planned period/amount, `status` open/paid/expired/cancelled, `expires_at`, reminder counters, `renewal_pass_id`). The pass is created only when the offer is paid; one open offer per pass. | yes |
+| `payment_events` | Idempotent webhook log: `unique (gateway, gateway_transaction_id, gateway_status)` plus `outcome` (`applied`/`ignored`/`unknown_reference`/`mismatch`/`late_closed`) and the raw payload. Service role only (RLS on, no policy). | via intent |
 | `notifications` | Per-user inbox rows (type, title, body, data, read/pushed state, dedupe key). | optional |
 | `device_tokens` | FCM tokens per user/device. | no |
 | `web_push_subscriptions` | Browser push endpoints (endpoint + p256dh + auth). | no |
@@ -101,8 +162,10 @@ there).
 
 **Physical map**
 `parking_spots` (`code`, `group_name`, `grid_row`, `grid_col`, `status`;
-unique code and cell per lot), `parking_sessions.spot_id` (one open session per
-bay), `save_parking_spot`, `delete_parking_spot`, `assign_session_spot`,
+unique code and cell per lot), `parking_spot_events` (status transitions with
+actor, reason and timestamp; lot-scoped RLS, written by `save_parking_spot`),
+`parking_sessions.spot_id` (one open session per bay), `save_parking_spot`,
+`delete_parking_spot`, `assign_session_spot`, `list_spot_events`,
 `category_group(name)`, `spot_target_capacity(lot, group)`; a group with spots
 limits check-ins and holds to its active bays, and `save/delete_parking_spot`
 keep the drawn bays equal to the configured capacity (`0` = no limit).
@@ -112,7 +175,8 @@ settings) beside the derived `car_capacity`/`moto_capacity`.
 **Billing and reports**
 `report_revenue` (active lot), `report_revenue_all` (platform admins),
 `report_occupancy`, `occupancy_snapshot`, `dashboard_today` (home KPIs),
-`report_whatsapp` (customer message delivery).
+`dashboard_trend` (home 7-day series), `report_hourly_traffic` (entries/exits
+per hour), `report_whatsapp` (customer message delivery).
 
 **Legal policy**
 `parking_settings.legal_policy` (template), `default_legal_policy()`,
@@ -124,10 +188,124 @@ identity, contact, policy).
 returns 1-hour signed URLs for that session's photos/videos (no login; the
 plate is the key).
 
+**Branding**
+`set_branding_logo(path)` / `set_branding_cover(path)` (lot admin) store the
+logo and the wide cover of the public page; `public_availability` ships
+`logo_path` and `cover_path` to the anonymous page (public `branding` bucket).
+
+**Reservation notices**
+`cancel_reservation(id)` (operator) marks the hold cancelled and, for a public
+hold with a phone and automated WhatsApp, queues `reservation_cancelled`.
+
+**Reservation reminders**
+`notify_expiring_reservations(window)` queues a `reservation_reminder`
+WhatsApp for public holds ending inside the window (default 60 min) when the
+lot has automated WhatsApp on, and stamps `reminder_sent_at` (idempotent).
+
+**Customer feedback** (`0111`)
+`public_feedback_session(session, plate)` (anon) returns the lot name,
+`rateable`, `rated` and the stored rating, or `null` when the session does not
+exist or the plate does not match; `public_submit_feedback(session, plate,
+rating, comment)` (anon) requires a closed session matching the plate, trims the
+comment, stores one row and raises `InvalidDataError`, `SessionNotFoundError`
+or `FeedbackAlreadyError`. `feedback_summary(p_days)` (`require_admin()`,
+lot-scoped, business timezone, 1..365 days) returns `total`, `average_x10`,
+`closed_sessions`, `response_rate_bp`, `low_count`, the five-bucket
+`distribution` and the newest 20 rows. The survey link is built by the client
+(`APP_URL`); no edge function is involved.
+
+**Cash anomalies** (`0110`)
+`cash_anomalies` (rule, severity, dedupe key, subject/shift/session, details,
+open/acknowledged/dismissed, resolver and note) and `anomaly_settings` (the
+thresholds, admin-only RLS). Rules: `anomaly_rule_shift_shortage`,
+`lost_ticket_rate`, `post_close_adjustment`, `zero_charge`,
+`short_lost_ticket`, `discount_rate`, `shift_open_long`, `session_open_long`,
+all revoked from the API roles and driven by `detect_cash_anomalies()` (summary
+notification to admins) and `purge_cash_anomalies(p_days)`. Review RPCs:
+`list_cash_anomalies`, `resolve_cash_anomaly`, `get_anomaly_settings`,
+`set_anomaly_settings` (lot admin). `anomaly_zero_charge_excluded(session)` is
+the extension point later changes redefine to explain a zero charge.
+
+**Occupancy forecast** (`0109`)
+`occupancy_profile` (lot, group, weekday, hour → median + samples + computed_at)
+and `forecast_settings` (enabled, history weeks, minimum samples, decay, full
+threshold, public visibility; audited). Helpers: `group_capacity`,
+`occupancy_grid` (hourly net occupancy from sessions, 72 h cap),
+`refresh_occupancy_profile` (median per cell, six-hour throttle, job entry
+point), `forecast_compute` (blend + clamp + `full_at` + confidence) and
+`public_forecast_block` (aggregates only). Public RPCs: `occupancy_forecast`
+(any member), `occupancy_forecast_backtest` and `get/set_forecast_settings`
+(lot admin). `public_availability` is a wrapper over `public_availability_base`
+that adds the `forecast` key.
+
+**Booking waitlist** (`0106`, `0107`)
+`reservation_waitlist` holds the turns (`status` waiting/offered/claimed/
+expired/left/cancelled, `wait_until`, `hold_minutes`, `offer_until`,
+`reservation_id`) with a partial unique index per plate and lot and a FIFO
+index; `waitlist_kicks` records a group whose dispatch could not take its lock
+and is drained by `waitlist_dispatch_all()`. An offer is a normal
+`category_reservations` row with `source = 'waitlist'`; claiming flips it to
+`public`. RPCs: `public_waitlist_info`, `public_join_waitlist`(+`_verified`),
+`public_waitlist_lookup`, `public_claim_waitlist`, `public_leave_waitlist`,
+`list_waitlist`, `desk_claim_waitlist`, `desk_remove_waitlist`,
+`set_waitlist_settings`, and the jobs `waitlist_expire`,
+`waitlist_dispatch_all`, `purge_waitlist`. Triggers on session closed, hold
+released, bay back in service and capacity raised call the try-lock dispatch.
+`report_reservations` counts the queue in a `waitlist` block and excludes
+unclaimed offers from the booking counts.
+
+**Row versions (offline conflict resolution)**
+`vehicles`, `tariffs`, `categories` and `parking_settings` carry `version`
+(bumped by `row_version_guard()` only when the row really changes).
+`set_row_version_policy(required)` (lot admin, needs `min_app_version`) turns on
+`row_version_enforcement`: a direct table write without the `x-versioned-write`
+header is refused with `VersionRequiredError`; `/rpc/*` paths are exempt.
+
+**Period comparison**
+`report_period_comparison(months, as_of)` (admin, lot-scoped, business
+timezone): the trailing 1..24 calendar months, each with `current`,
+`previous_month` and `previous_year` windows (revenue, entries, exits,
+`avg_ticket`, `avg_stay_minutes`, `pass_revenue`, reservations/used), plus
+`is_partial` for the running month and `covered` per window (the lot existed
+before it). Indexes `ix_sessions_lot_exit_closed`, `ix_pass_payments_lot_paid`
+and `ix_reservations_lot_from` back it.
+
+**Reservations report**
+`report_reservations(from, to)`: holds created in the window (business
+timezone), split by `source` (`public`/`app`) and `status`, plus
+`used_public` for the web conversion.
+
+**Public booking**
+`public_availability(lot_id)` (anon: identity + per-category availability and
+hourly tariff, no plates), `public_create_reservation(lot, plate, category, until, name,
+phone)` (anon: name required, phone must be a Colombian mobile — 10 digits
+starting with 3, optional +57 —, 10-min..24-h window, one active hold per
+plate, two per phone, shared capacity check) and
+`reservation_capacity_check(lot, category, plate)`,
+`public_cancel_reservation(lot, reservation_id, plate, phone)` (anon: only
+public holds, all three values must match, sets `status = 'cancelled'`) and
+`public_reservation_lookup(lot, reservation_id, phone)` (anon: the active
+public hold for that code + mobile, or `null`) and
+`list_active_reservations()` (authenticated: the lot's active holds with the
+category name and an `in_grace` flag; it applies `reservation_grace()`, so the
+app never re-implements the window)
+(shared by the operator and public paths; holds count until
+`reserved_until + reservation_grace(lot)`, the `parking_settings
+.reservation_grace_minutes` value — 0..120, default 15, `0` disables it). `category_reservations` also stores
+`customer_name`, `customer_phone` and `source` (`app`/`public`); the constraint
+`category_reservations_public_contact_check` keeps public rows from existing
+without a name and a 10-digit mobile. A public hold also inserts a
+`public_reservation` notification for every active member of the lot
+(`user_id`, `lot_id`, `data.reservation_id`), deduplicated per reservation,
+and — when `parking_settings.whatsapp_auto` is on — a `reservation_confirmed`
+row in `whatsapp_messages` (params: name, plate, until, lot) for
+`whatsapp-dispatch` to send.
+
 **Records**
 `session_records(plate, limit, offset, from, to)`: lot-scoped session log
-(entry, exit, duration, amount, status) with a partial plate filter, an
-inclusive business-date range and a total; powers `/records` and its exports.
+(entry, exit, duration, amount, status, evidence count) with a partial plate
+filter, an inclusive business-date range and a total; powers `/records` and
+its exports.
 
 **Shifts and cash**
 `open_shift`, `current_shift`, `close_shift`, `add_cash_movement`,
@@ -143,13 +321,14 @@ inclusive business-date range and a total; powers `/records` and its exports.
 
 **Sites and users**
 `my_lots`, `list_lots`, `create_lot`, `update_lot`, `set_lot_member`,
-`list_lot_members`, `set_branding_logo`.
+`list_lot_members`, `set_branding_logo`, `lot_setup_status` (home checklist:
+categories, active tariffs, capacity/bays, address + phone).
 
 **Audit**
-`list_audit_log` (filters: limit, date range, table, actor username),
-`purge_audit_log`,
-`record_audit` (trigger on categories, tariffs, vehicles, monthly passes,
-settings, lots and memberships).
+`list_audit_log` (filters: limit, date range, table, actor username and
+free-text search over entity, table, actor, plate and name; filters run
+before the limit), `purge_audit_log`, `record_audit` (trigger on categories,
+tariffs, vehicles, monthly passes, settings, lots and memberships).
 
 **Customer messages**
 `enqueue_whatsapp_message` (operators, only when the site enabled
@@ -174,6 +353,106 @@ days).
 `purge_client_error_reports`, `report_client_error`,
 `handle_auth_user` (trigger), `add_default_lot_member` (trigger).
 
+**Online payments (`0112`–`0114`)**
+`session_settlement(session, at)` (internal) → `gross`, `paid`, `due`,
+`grace_active`, `grace_until`, `enabled`, `min_amount`;
+`create_session_payment_intent(session, plate)` (service role; plate-keyed,
+5/hour);
+`apply_payment_event(gateway, event)` (service role; idempotent);
+`settle_payment_intent(intent)` (internal; the only `kind` switch);
+`payment_intent_status(reference, plate)` (anon; `null` on a mismatch);
+`expire_payment_intents()`; `list_reconcilable_payment_intents(minutes)`
+(service role); `report_online_payments(start, end)` (lot admin);
+`online_settlement_amounts(gross, paid, paid_at, exit, grace)` is the pure
+grace-window rule (internal, immutable).
+
+**Monthly pass auto-renewal (`0115`–`0116`)**
+`queue_pass_renewal_reminders()` (cron) expires stale offers, deactivates
+ended parents with a child and queues at most one reminder per pass/window;
+`send_pass_renewal_link(pass)` (lot admin) queues the link now;
+`public_pass_renewal(token)` (anon) returns the masked offer;
+`create_pass_renewal_intent(token)` (service role; 5/hour);
+`settle_pass_renewal(intent)` (internal) creates the child pass and marks its
+charge `online`; `settle_payment_intent` delegates `kind = 'pass'`;
+`report_online_payments` adds `kind`/`pass_id`; `queue_whatsapp_message` is the
+internal dedupe-aware queue helper.
+
+**Merchant agreements (`0117`–`0119`)**
+`fare_quote(session, exit, discount, lost)` (internal) composes base fare →
+`fare_pricing_step` → pending merchant lines → `fare_reward_step` → manual
+discount; `save_merchant` / `list_merchants` / `list_active_merchants` /
+`reset_merchant_credentials` / `delete_merchant` / `set_merchant_policy`;
+`add_merchant_validation` / `revoke_merchant_validation`;
+`merchant_portal(token)` (anon) and `merchant_validate(token, pin, plate)`
+(anon; a wrong PIN returns JSON); `report_merchant_settlement(range)` (admin);
+internal `create_merchant_validation`, `merchant_hash_token`, `merchant_summary`,
+`rotate_merchant_credentials`.
+
+**Dynamic pricing (`0120`–`0121`)**
+`pricing_apply_detail` / `pricing_apply` (pure), `pricing_group_capacity`,
+`pricing_group_occupancy`, `pricing_rule_matches`, `pricing_identity_lock`,
+`pricing_lock_for` (internal); triggers `trg_parking_sessions_pricing_lock`
+(BEFORE INSERT: writes the lock; never blocks the entry),
+`trg_parking_sessions_pricing_lock_guard` (immutable),
+`trg_category_reservations_pricing_lock` (+ `_claim`);
+`get/set_pricing_settings`, `list/save/delete_pricing_rule`,
+`pricing_quote`, `pricing_session_lock`, `public_reservation_pricing`,
+`pricing_simulate`, `report_pricing_impact`,
+`pricing_decorate_availability`; `fare_pricing_step` is now the real hook.
+
+**Loyalty rewards (`0122`–`0123`)**
+`loyalty_norm_plate` (pure), `loyalty_settings_json` (internal);
+`fare_reward_step` is now the real hook (same signature), and
+`trg_loyalty_session_closed` runs `loyalty_on_session_closed` after a session
+closes (never raises); `loyalty_plate_status` (operators; counts only),
+`get_loyalty_settings` / `set_loyalty_settings`, `adjust_loyalty_progress`,
+`choose_loyalty_redemption`, `report_loyalty`, `list_loyalty_accounts`
+(admin); `loyalty_reverse_visit` (internal, for a future void feature) and
+`loyalty_expire_rewards` (service role, job).
+
+**Electronic invoicing (`0124`–`0125`)**
+`fiscal_amounts` (pure), `fiscal_customer` (validation), `fiscal_settings_json`,
+`fiscal_resolution_json`, `fiscal_document_summary`, `fiscal_notify_admins`,
+`next_fiscal_number` (row-locked, gap-free), `fiscal_document_payload`
+(canonical provider-neutral JSON), `fiscal_create_document` (internal);
+`fiscal_config`, `get/save_fiscal_settings`, `save/list_fiscal_resolutions`,
+`issue_fiscal_document`, `fiscal_document_for_session`,
+`list_fiscal_documents`, `retry_fiscal_document`, `request_credit_note`
+(authenticated); `enqueue_pending_fiscal_documents` (cron);
+`claim_fiscal_documents` / `record_fiscal_result` (service role). The
+immutability trigger `guard_fiscal_document` protects the number and money;
+there is no delete grant.
+
+**Shared AI platform (`0126`)**
+`ai_default_limit` (internal), `ai_budget_reserve` (authenticates the caller,
+enforces the lot budget under an advisory lock and inserts the reserved row),
+`ai_usage_record` (closes the caller's own reservation with actual tokens),
+`ai_budget_status`, `set_ai_limit` (lot admin, audited) and
+`purge_ai_requests` (internal, 30-day floor). The report assistant never writes
+through these tables directly; the Edge Function uses the caller's JWT.
+
+**Damage comparison (`0127`)**
+`evidence_photos.phase` (`entry`/`exit`); `add_exit_evidence` (idempotent, max
+5); `begin_damage_comparison` (validates both sets, expires a stale pending
+run, reserves the run number), `get_damage_comparison` (latest/requested run,
+stale detection, reviewer name), `review_damage_finding` (note 3..400,
+re-open admin-only, audited) and `purge_damage_comparisons` (internal; follows
+`evidence_retention_days`). `store_damage_comparison` and
+`fail_damage_comparison` are granted to `service_role` only: the Edge Function
+holds the service key and nothing else does. `photo_count` now includes exit
+photos.
+
+**Device gateway (`0128`–`0129`)**
+`max_client_clock_skew()`, `device_status`, `device_json`, `device_event`
+(internal); `register_lot_device`, `rotate_lot_device_key`,
+`update_lot_device`, `delete_lot_device`, `list_lot_devices`,
+`list_device_events`, `set_device_offline_minutes` (lot admins);
+`device_lookup`, `device_accept_request`, `device_record_auth_failure`,
+`device_heartbeat` (service role); `notify_offline_devices`,
+`purge_device_events` (jobs). Keys are generated with `gen_random_bytes` and
+stored only as a SHA-256 hash; `lot_devices` has no audit trigger so the hash
+cannot leak into `audit_log`.
+
 ## 4. Access control (RLS)
 
 | Table | Read | Write |
@@ -187,7 +466,23 @@ days).
 | `shifts`, `cash_movements`, `shift_adjustments` | own shift or lot admin, active lot | RPCs |
 | `monthly_pass_payments`, `category_reservations` | active lot | RPCs |
 | `parking_settings` (`car_capacity`, `moto_capacity`, `key_capacity`) | active lot; anonymous only the first lot (login branding) | lot admins |
-| `whatsapp_messages` | admins | `enqueue_whatsapp_message` + the dispatcher |
+| `whatsapp_messages` | admins | `enqueue_whatsapp_message` / `queue_whatsapp_message` + the dispatcher |
+| `session_feedback` | active lot | only the public RPCs (no client write grant) |
+| `payment_intents` | lot admins of the active lot | service RPCs only (Edge Functions) |
+| `payment_events` | nobody (RLS on, no policy, no grant) | `apply_payment_event` / service role |
+| `pass_renewal_offers` | lot admins of the active lot | RPCs only (cron/admin/service) |
+| `merchants` | active lot (staff need the desk picker) | RPCs (lot admins) |
+| `pricing_rules` | lot admins of the active lot | RPCs (lot admins) |
+| `loyalty_accounts`, `loyalty_rewards`, `loyalty_visits`, `loyalty_adjustments` | lot admins of the active lot (operators get counts through `loyalty_plate_status`) | definer RPCs only |
+| `fiscal_settings`, `fiscal_resolutions`, `fiscal_documents` | lot admins of the active lot (no operator PII read) | definer RPCs only; no update/delete grant |
+| `ai_features` | nobody (RLS on, no policy, no grant) | seed only |
+| `ai_limits`, `ai_requests` | lot admins of the active lot | definer RPCs only |
+| `damage_comparisons`, `damage_findings` | active lot (RLS) | definer RPCs; the result writers are service-role only |
+| `lot_devices` | nobody (RLS on, no policy, no grant) | definer RPCs only |
+| `device_events` | lot admins of the active lot | definer RPCs only |
+| `fiscal_documents` (service role) | — | `claim_fiscal_documents` / `record_fiscal_result` |
+| `merchant_credentials` | nobody (RLS on, no policy, no grant) | definer RPCs only |
+| `merchant_validations` | active lot | RPCs (desk/admin/public) |
 | `notifications` | own rows, active lot (or global) | RPCs/triggers |
 | `audit_log` | platform admins | triggers and the `admin-users` Edge Function |
 | `device_tokens`, `web_push_subscriptions` | own rows | RPCs |
@@ -277,6 +572,67 @@ operator pick cash/card/transfer and retries). `check_out_preview` returns:
 (`StaleExitTimeError`) and not later than now + 5 min nor before entry
 (`InvalidExitTimeError`). `closed_recorded_at` stores the server time.
 
+**Online payments.** `online_settlement_amounts(gross, paid, paid_at, exit,
+grace)`: inside the window (`exit <= paid_at + grace`) the charge is exactly
+`paid` and the desk due is 0; outside it the charge is `greatest(gross, paid)`
+and the desk collects `charge - paid`. `check_out` stores
+`amount_charged = online_paid_amount + desk_due` and sets `payment_method =
+'online'` when nothing is left to collect (the caller can never send
+`online`). `shift_totals` nets the online part out of the desk methods and adds
+`online_sales`; `expected_cash` never includes it. `report_online_payments`
+(lot admin) lists approved/voided intents of a business-date window.
+
+**Pass renewal.** An offer freezes the next period (`end + 1` through the
+month-aware end) and amount. `settle_pass_renewal` creates the child **after**
+the approval; when the expiry job renewed first, it marks that pending charge
+paid instead of creating a second pass, and a second approval of the same
+offer is `late_closed` plus an admin review. The new period starts at
+`greatest(offer.start, lot today)`: a late payment is not retroactive.
+Reminders are deduped by `(offer|pass, cadence window)` through
+`whatsapp_messages.dedupe_key`; the URL button parameter is the offer token.
+
+**Dynamic pricing.** The lock is a versioned JSON snapshot written once at
+insert (rule effect + floor/ceiling/round + occupancy); `fare_pricing_step`
+never reads rules or settings again, so previews, check-out and reprints agree.
+Base = tariff → pricing → merchant lines → reward → manual discount. A
+pass holder or lost ticket is excluded. Offline entries may only keep a cheaper
+lock; a public hold's promise wins when it is cheaper.
+
+**Electronic invoicing.** Issuance is separate from `check_out`: the page, the
+pass dialog or the cron sweeper call `issue_fiscal_document` after the money is
+settled. The document total is the amount charged, `gross = total + discount`,
+and `tax_base = round(total * 10000 / (10000 + tax_rate_bps))` (tax-inclusive
+prices; one rule per lot). `next_fiscal_number` locks the active resolution
+`for update`, so a rollback releases the number and the sequence stays gap-free.
+Documents are immutable once numbered (only the delivery state and, while
+`rejected`/`failed`, the customer data can change); an accepted credit note
+stamps `voided_at` on the original, which frees the source for a new document.
+
+**Loyalty rewards.** The closed-session trigger takes a per-plate advisory lock,
+upserts the account, consumes any `reward` line of `fare_adjustments`, and then
+applies the first failing rule as the skip reason (`reward_redeemed`, `pass`,
+`lost_ticket`, `exempt`, `below_amount`, `below_minutes`, `same_day`). A counted
+visit raises the counter; at N it creates the reward with the settings
+snapshot, points the visit at it and resets progress. `fare_reward_step` only
+reads (the preview has no side effect); it picks the oldest available
+non-expired reward, honours the mode/choice, the merchant-stack switch and the
+online-paid cap, and returns the adjustment line plus the info block. Reversal
+never creates a reward: an available reward goes `reversed`, a redeemed one is
+kept (no clawback of a benefit already given), and the progress returns to
+`N-1` only when the earning reward was still available.
+
+**Merchant agreements.** Benefits apply at check-out, never while the session
+is open. `fare_quote` walks the `pending` validations ordered by
+`(created_at, id)`: `percentage` rounds half up, `fixed_amount` is fixed,
+`free_minutes` shortens the stay and re-bills it (lumpy because billing rounds
+up hours), each line capped by the running amount and `max_amount`. The terms
+are snapshotted at validation time. `check_out` stores `gross_amount` (after
+pricing, before benefits) and `fare_adjustments`, marks the lines it used
+`applied` and the rest `forfeited`. A pass holder, a lost ticket and a zero
+benefit forfeit instead of charging. The token is 192 bits and hashed with
+SHA-256 (tokens are high entropy); the PIN is server-generated and bcrypt
+hashed; a wrong PIN is a JSON answer so the attempt counter commits.
+
 **Shifts.** Sales, cash movements and cash pass payments attach only to the
 actor's open shift (`closed_at is null`), locked `FOR SHARE`; `close_shift`
 locks it `FOR UPDATE`, so its totals include every committed writer. A
@@ -304,3 +660,30 @@ Upload the files **before** calling (or replaying) `check_in`.
 **Currency in notifications.** `format_money(amount, currency)` mirrors
 `Money.format`: COP `$5.000` (no decimals), USD `US$1,234.50` (minor units
 / 100), negative `-$1.000`.
+
+**LPR gate (`0131`-`0134`).** `lpr_settings` (one row per lot; mode, thresholds,
+default category, system operator) with a member read policy and the audit
+trigger, written only by `set_lpr_settings`; `lpr_camera_config` (one direction
+per camera, read through `get_lpr_settings`); `lpr_events` and `lpr_reads`
+(no client grants: reads go through `list_lpr_events`). The device RPCs
+(`device_lpr_config`, `device_ingest_lpr_read`,
+`device_lpr_attach_snapshot`) are service-role only; the operator RPCs are
+`list_lpr_events`, `confirm_lpr_entry` (runs `check_in` as the caller, with
+`p_idempotency_key = 'lpr-confirm:<event>'`), `dismiss_lpr_event` and, for the
+jobs, `expire_lpr_events` / `purge_lpr_events`. Auto entry impersonates the
+lot's system operator by setting the request claims inside the ingest
+transaction and restoring them afterwards. `can_read_lpr_snapshot(path)` backs
+the Storage read policy for snapshots that are not yet evidence.
+
+**Barrier control (`0135` so far).** `barrier_config` stores one row per
+`barrier` device (direction, paired camera, the event rules and the timings the
+firmware enforces); a check trigger refuses a device that is not a barrier and a
+camera from another lot. Members read through `list_barriers()`, admins write
+through `set_barrier_config()` (a zero camera id clears the pairing).
+`device_firmware` (shared with the sensor wave) and the private `firmware`
+bucket hold signed releases; the bucket has no client policy. `barrier_commands`
+is the queue and the audit trail (source, nonce, status, deliveries, short
+TTL); `barrier_events` stores the device-reported events (unique per device and
+`client_ref`). The service-role RPCs deliver, acknowledge and record events;
+`expire_barrier_commands` and `purge_barrier_events(365)` run from the jobs.
+Signing and the issuing triggers are the next slice.

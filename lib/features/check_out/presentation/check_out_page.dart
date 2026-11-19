@@ -1,12 +1,16 @@
 import 'dart:async';
 
+import 'package:cross_file/cross_file.dart';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 import '../../../app/di/injection.dart';
+import '../../../core/error/failure.dart';
 import '../../../core/l10n/failure_messages.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/realtime/local_activity.dart';
@@ -21,6 +25,7 @@ import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/filter_bar.dart';
 import '../../../core/widgets/error_state.dart';
 import '../../../core/receipt/evidence_link.dart';
+import '../../../core/receipt/feedback_link.dart';
 import '../../../core/widgets/receipt_card.dart';
 import '../../../core/widgets/plate_keypad.dart';
 import '../../../core/widgets/search_field.dart';
@@ -29,6 +34,20 @@ import '../../../core/widgets/skeleton.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/widgets/sync_badge.dart';
 import '../../emergency/presentation/emergency_action.dart';
+import '../../evidence/domain/repositories/session_evidence_repository.dart';
+import '../../evidence/presentation/session_evidence_sheet.dart';
+import '../../../core/network/connectivity_cubit.dart';
+import '../../invoicing/application/issue_fiscal_document.dart';
+import '../../damage_comparison/application/attach_exit_evidence.dart';
+import '../../invoicing/domain/entities/fiscal_customer.dart';
+import '../../invoicing/domain/entities/fiscal_document.dart';
+import '../../invoicing/domain/entities/fiscal_resolution.dart';
+import '../../invoicing/domain/entities/fiscal_settings.dart';
+import '../../invoicing/domain/repositories/invoicing_repository.dart';
+import '../../loyalty/application/loyalty_status_cubit.dart';
+import '../../loyalty/domain/entities/loyalty_status.dart';
+import '../../loyalty/domain/repositories/loyalty_repository.dart';
+import '../../loyalty/presentation/desk_loyalty_section.dart';
 import '../../auth/application/auth_cubit.dart';
 import '../../auth/domain/entities/user.dart';
 import '../../plate_scanning/domain/repositories/plate_image_capture.dart';
@@ -42,6 +61,11 @@ import '../domain/entities/check_out_receipt.dart';
 import '../../../core/receipt/payment_method.dart';
 import '../../../core/storage/key_value_store.dart';
 import '../domain/entities/open_session.dart';
+import '../../merchants/domain/entities/merchant.dart';
+import '../domain/entities/check_out_preview.dart';
+import '../../pricing/domain/entities/fare_pricing.dart';
+import '../../merchants/domain/repositories/merchant_repository.dart';
+import '../../merchants/presentation/desk_merchant_section.dart';
 import 'payment_method_dialog.dart';
 
 /// Lists currently open parking sessions (plates resolved by the cubit),
@@ -55,6 +79,7 @@ class CheckOutPage extends StatefulWidget {
     this.capture,
     this.qrDecoder,
     this.scanQr,
+    this.evidenceRepository,
   });
 
   /// Plate to filter by (e.g. arriving from the vehicle history).
@@ -72,11 +97,18 @@ class CheckOutPage extends StatefulWidget {
   /// Test seam: returns the payload the live scanner read (or null to cancel).
   final Future<String?> Function(BuildContext context)? scanQr;
 
+  /// Injectable for widget tests; production resolves it from the locator.
+  final SessionEvidenceRepository? evidenceRepository;
+
   @override
   State<CheckOutPage> createState() => _CheckOutPageState();
 }
 
 class _CheckOutPageState extends State<CheckOutPage> {
+  FiscalConfig? _fiscalConfig;
+  FiscalCustomer? _pendingFiscalCustomer;
+  List<XFile> _pendingExitPhotos = const [];
+  String? _exitClientRef;
   static const _prefsBox = 'preferences';
   static const _lastPaymentKey = 'last_payment_method';
 
@@ -244,6 +276,7 @@ class _CheckOutPageState extends State<CheckOutPage> {
                 onCheckOut: _startCheckout,
                 canReprint: _canDiscount(context),
                 openingSessionId: _openingSessionId,
+                evidenceRepository: widget.evidenceRepository,
               ),
             ),
           ],
@@ -271,7 +304,7 @@ class _CheckOutPageState extends State<CheckOutPage> {
         );
         unawaited(context.read<DashboardCubit>().load());
         _refreshShift(context);
-        unawaited(_showReceipt(context, result));
+        unawaited(_issueAndShowReceipt(context, result));
       case SubmissionFailed(:final message, :final failure):
         showErrorSnack(context, context.l10n.errorText(message, failure));
       default:
@@ -325,6 +358,9 @@ class _CheckOutPageState extends State<CheckOutPage> {
     final cubit = context.read<CheckOutCubit>();
     _setOpening(session.id);
     final preview = await cubit.preview(session.id);
+    final merchants = await _merchantOptions(context, session.id);
+    final loyalty = _loyaltyOptions(context, session.id, preview);
+    _fiscalConfig = await _fiscalConfigFor();
     _setOpening(null);
     if (!context.mounted) {
       return;
@@ -334,12 +370,23 @@ class _CheckOutPageState extends State<CheckOutPage> {
       plate: plate,
       canDiscount: _canDiscount(context),
       preview: preview,
+      merchants: merchants,
+      loyalty: loyalty,
+      fiscal: _fiscalConfig,
+      online: _online(context),
+      exitPhotosEnabled: _online(context),
+      capture: widget.capture,
       initialMethod: (preview?.hasPass ?? false)
           ? PaymentMethod.monthlyPass
           : _basePaymentMethod(_rememberedMethod),
     );
     if (choice == null) {
       return;
+    }
+    _pendingFiscalCustomer = choice.fiscalCustomer;
+    _pendingExitPhotos = choice.exitPhotos;
+    if (_pendingExitPhotos.isNotEmpty) {
+      _exitClientRef ??= DateTime.now().microsecondsSinceEpoch.toString();
     }
     _chooseMethod(choice.method);
     _setOpening(session.id);
@@ -352,6 +399,79 @@ class _CheckOutPageState extends State<CheckOutPage> {
       lostTicketReason: choice.lostTicketReason,
       cardType: choice.cardType?.wire,
       cashReceived: choice.cashReceived,
+    );
+  }
+
+  /// Desk agreements: loaded online only (a failure hides the section), and
+  /// every apply/revoke refreshes the server preview.
+  Future<MerchantDeskOptions?> _merchantOptions(
+    BuildContext context,
+    int sessionId,
+  ) async {
+    if (!serviceLocator.isRegistered<MerchantRepository>()) {
+      return null;
+    }
+    final repository = serviceLocator<MerchantRepository>();
+    final List<Merchant> options;
+    try {
+      options = await repository.listActive();
+    } on Failure {
+      return null;
+    }
+    if (options.isEmpty || !context.mounted) {
+      return null;
+    }
+    final cubit = context.read<CheckOutCubit>();
+
+    Future<CheckOutPreview> refresh() async {
+      final updated = await cubit.preview(sessionId);
+      if (updated == null) {
+        throw const NetworkFailure('Unable to refresh the preview');
+      }
+      return updated;
+    }
+
+    return MerchantDeskOptions(
+      options: options,
+      apply: (merchantId) async {
+        await repository.addValidation(
+          merchantId: merchantId,
+          sessionId: sessionId,
+        );
+        return refresh();
+      },
+      revoke: (validationId, reason) async {
+        await repository.revokeValidation(
+          validationId: validationId,
+          reason: reason,
+        );
+        return refresh();
+      },
+    );
+  }
+
+  /// Rewards: the section only appears when the preview reports one; the
+  /// choice refreshes the server preview like the agreements do.
+  LoyaltyDeskOptions? _loyaltyOptions(
+    BuildContext context,
+    int sessionId,
+    CheckOutPreview? preview,
+  ) {
+    if (preview?.quote?.reward == null ||
+        !serviceLocator.isRegistered<LoyaltyRepository>()) {
+      return null;
+    }
+    final repository = serviceLocator<LoyaltyRepository>();
+    final cubit = context.read<CheckOutCubit>();
+    return LoyaltyDeskOptions(
+      choose: (choice) async {
+        await repository.choose(sessionId: sessionId, choice: choice);
+        final updated = await cubit.preview(sessionId);
+        if (updated == null) {
+          throw const NetworkFailure('Unable to refresh the preview');
+        }
+        return updated;
+      },
     );
   }
 
@@ -421,8 +541,98 @@ class _CheckOutPageState extends State<CheckOutPage> {
     await _startCheckout(context, session, _plateOf(context, session));
   }
 
-  Future<void> _showReceipt(BuildContext context, CheckOutReceipt receipt) {
-    final data = _receiptData(receipt);
+  Future<void> _issueAndShowReceipt(
+    BuildContext context,
+    CheckOutReceipt receipt,
+  ) async {
+    await _attachExitEvidence(context, receipt);
+    final fiscal = await _issueFiscal(receipt);
+    if (!mounted) {
+      return;
+    }
+    await _showReceipt(context, receipt, fiscal: fiscal);
+  }
+
+  Future<void> _attachExitEvidence(
+    BuildContext context,
+    CheckOutReceipt receipt,
+  ) async {
+    final photos = _pendingExitPhotos;
+    final clientRef = _exitClientRef;
+    _pendingExitPhotos = const [];
+    _exitClientRef = null;
+    if (photos.isEmpty) {
+      return;
+    }
+    if (receipt.pendingSync) {
+      if (context.mounted) showInfoSnack(context, context.l10n.damageExitSkippedOffline);
+      return;
+    }
+    if (!serviceLocator.isRegistered<AttachExitEvidence>()) {
+      return;
+    }
+    final count = await serviceLocator<AttachExitEvidence>()(
+      sessionId: receipt.id,
+      photos: photos,
+      clientRef: clientRef ?? DateTime.now().microsecondsSinceEpoch.toString(),
+    );
+    if (!context.mounted) {
+      return;
+    }
+    if (count == null) {
+      showErrorSnack(context, context.l10n.damageExitFailed);
+    } else {
+      showInfoSnack(context, context.l10n.damageExitSaved);
+    }
+  }
+
+  /// Best effort: a fiscal failure never delays or breaks the receipt.
+  Future<FiscalDocSummary?> _issueFiscal(CheckOutReceipt receipt) async {
+    final customer = _pendingFiscalCustomer;
+    _pendingFiscalCustomer = null;
+    final config = _fiscalConfig;
+    if (config == null || !config.enabled ||
+        !serviceLocator.isRegistered<IssueFiscalDocument>()) {
+      return null;
+    }
+    return serviceLocator<IssueFiscalDocument>().forSession(
+      receipt.id,
+      config: config,
+      customer: customer,
+      online: _online(context),
+    );
+  }
+
+  bool _online(BuildContext context) {
+    try {
+      return context.read<ConnectivityCubit>().state;
+    } on ProviderNotFoundException {
+      return true;
+    }
+  }
+
+  Future<FiscalConfig?> _fiscalConfigFor() async {
+    if (!serviceLocator.isRegistered<InvoicingRepository>()) {
+      return null;
+    }
+    try {
+      final config = await serviceLocator<InvoicingRepository>().config();
+      return config.enabled ? config : null;
+    } on Failure {
+      return null;
+    }
+  }
+
+  Future<void> _showReceipt(
+    BuildContext context,
+    CheckOutReceipt receipt, {
+    FiscalDocSummary? fiscal,
+  }) async {
+    await _loadLoyalty(receipt.plate);
+    if (!mounted) {
+      return;
+    }
+    final data = _receiptData(receipt, fiscal: fiscal);
     return showReceiptSummary(
       context,
       data,
@@ -437,7 +647,44 @@ class _CheckOutPageState extends State<CheckOutPage> {
     );
   }
 
-  ReceiptData _receiptData(CheckOutReceipt receipt) => ReceiptData(
+  /// Refreshes the plate progress so the receipt can print it.
+  Future<void> _loadLoyalty(String plate) async {
+    if (!serviceLocator.isRegistered<LoyaltyStatusCubit>()) {
+      return;
+    }
+    try {
+      await context.read<LoyaltyStatusCubit>().load(plate);
+    } on ProviderNotFoundException {
+      // No loyalty provider on this route.
+    }
+  }
+
+  LoyaltyStatus? get _loyaltyStatus {
+    if (!serviceLocator.isRegistered<LoyaltyStatusCubit>()) {
+      return null;
+    }
+    try {
+      final state = context.read<LoyaltyStatusCubit>().state;
+      return state is LoyaltyStatusReady ? state.status : null;
+    } on ProviderNotFoundException {
+      return null;
+    }
+  }
+
+  static String? _pricingLabel(FarePricing? pricing) {
+    if (pricing == null) {
+      return null;
+    }
+    final percent = (pricing.multiplierBps / 100).toStringAsFixed(
+      pricing.multiplierBps % 100 == 0 ? 0 : 2,
+    );
+    return '${pricing.ruleName} x$percent';
+  }
+
+  ReceiptData _receiptData(
+    CheckOutReceipt receipt, {
+    FiscalDocSummary? fiscal,
+  }) => ReceiptData(
     kind: ReceiptKind.checkOut,
     plate: receipt.plate,
     entryTime: receipt.entryTime,
@@ -451,7 +698,24 @@ class _CheckOutPageState extends State<CheckOutPage> {
     discountAmount: receipt.discountAmount,
     discountReason: receipt.discountReason,
     pendingSync: receipt.pendingSync,
+    onlinePaidAmount: receipt.onlinePaidAmount,
+    grossAmount: receipt.grossAmount,
+    adjustments: receipt.adjustments,
+    pricingLabel: _pricingLabel(receipt.pricing),
+    pricingDelta: receipt.pricing?.delta ?? 0,
+    loyaltyVisits: _loyaltyStatus?.visits,
+    loyaltyRequired: _loyaltyStatus?.required,
+    fiscalNumber: fiscal?.fullNumber,
+    fiscalType: fiscal == null
+        ? null
+        : (fiscal.docType == FiscalDocType.invoice ? 'invoice' : 'pos'),
+    cufe: fiscal?.status.isAccepted ?? false ? fiscal?.cufe : null,
+    fiscalQr: fiscal?.status.isAccepted ?? false ? fiscal?.qrData : null,
+    fiscalPending: fiscal != null && !fiscal.status.isAccepted,
     evidenceUrl: receipt.pendingSync ? null : publicEvidenceUrl(receipt.id),
+    feedbackUrl: receipt.pendingSync
+        ? null
+        : publicFeedbackUrl(receipt.id, plate: receipt.plate),
   );
 }
 
@@ -470,11 +734,13 @@ class _SessionsList extends StatelessWidget {
     required this.onCheckOut,
     required this.canReprint,
     this.openingSessionId,
+    this.evidenceRepository,
   });
 
   final PaymentMethod? rememberedMethod;
   final ValueChanged<PaymentMethod> onMethodChosen;
   final bool canReprint;
+  final SessionEvidenceRepository? evidenceRepository;
   final int? openingSessionId;
   final Future<void> Function(
     BuildContext context,
@@ -556,6 +822,7 @@ class _SessionsList extends StatelessWidget {
       plate: plate,
       canReprint: canReprint,
       busy: session.id == openingSessionId,
+      evidenceRepository: evidenceRepository,
       onCharge: () => onCheckOut(context, session, plate),
     );
   }
@@ -568,12 +835,14 @@ class _SessionTile extends StatelessWidget {
     required this.onCharge,
     required this.canReprint,
     this.busy = false,
+    this.evidenceRepository,
   });
 
   final OpenSession session;
   final String plate;
   final VoidCallback onCharge;
   final bool canReprint;
+  final SessionEvidenceRepository? evidenceRepository;
 
   /// Its charge flow is running: the button shows progress and is disabled.
   final bool busy;
@@ -650,11 +919,30 @@ class _SessionTile extends StatelessWidget {
                     tone: StatusTone.success,
                     icon: Icons.card_membership,
                   ),
+                if (session.onlinePaidAmount > 0)
+                  StatusChip(
+                    label: l10n.checkOutPaidOnline,
+                    tone: StatusTone.success,
+                    icon: Icons.qr_code_2_outlined,
+                  ),
                 if (session.leftKeys)
                   StatusChip(
                     label: l10n.checkInLeftKeysShort,
                     tone: StatusTone.neutral,
                     icon: Icons.key_outlined,
+                  ),
+                if (session.photoCount > 0)
+                  ActionChip(
+                    avatar: const Icon(Icons.photo_library_outlined, size: 16),
+                    label: Text(l10n.sessionEvidenceShort(session.photoCount)),
+                    materialTapTargetSize: MaterialTapTargetSize.padded,
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () => showSessionEvidence(
+                      context,
+                      sessionId: session.id,
+                      plate: plate,
+                      repository: evidenceRepository,
+                    ),
                   ),
               ],
             ),

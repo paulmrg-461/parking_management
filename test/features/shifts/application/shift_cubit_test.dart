@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/core/state/submission.dart';
@@ -67,11 +69,7 @@ void main() {
     final cubit = ShiftCubit(repository);
     addTearDown(cubit.close);
 
-    await cubit.adjust(
-      shiftId: 1,
-      countedCash: 13900,
-      reason: 'correccion',
-    );
+    await cubit.adjust(shiftId: 1, countedCash: 13900, reason: 'correccion');
 
     expect(cubit.state.history.single.countedCash, 13900);
     expect(cubit.state.history.single.notes, 'correccion');
@@ -110,5 +108,22 @@ void main() {
 
     expect(repository.lastHistoryFrom, isNull);
     expect(cubit.state.historyFrom, isNull);
+  });
+
+  test('Success: current and history load in parallel', () async {
+    final gate = Completer<void>();
+    final repository = FakeShiftRepository(
+      historyShifts: [sampleShift(closed: true)],
+    )..currentGate = gate.future;
+    final cubit = ShiftCubit(repository);
+    addTearDown(cubit.close);
+
+    final pending = cubit.load(admin: true);
+    await pumpEventQueue();
+
+    expect(repository.historyCalls, 1);
+    gate.complete();
+    await pending;
+    expect(cubit.state.history, hasLength(1));
   });
 }

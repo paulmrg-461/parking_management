@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:go_router/go_router.dart';
 
@@ -23,9 +24,11 @@ import '../../../core/utils/formatters.dart';
 import '../../../core/storage/key_value_store.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/confirm_dialog.dart';
+import '../../../core/widgets/capture_guide.dart';
 import '../../../core/widgets/photo_strip.dart';
 import '../../../core/widgets/plate_input_field.dart';
 import '../../../core/widgets/plate_keypad.dart';
+import '../../../core/widgets/plate_text.dart';
 import '../../../core/receipt/evidence_link.dart';
 import '../../../core/widgets/receipt_card.dart';
 import '../../../core/widgets/section_header.dart';
@@ -46,6 +49,11 @@ import '../../vehicles/domain/repositories/vehicle_repository.dart';
 import '../../notifications/presentation/notification_bell.dart';
 import '../../notifications/presentation/realtime_activity_listener.dart';
 import '../application/check_in_cubit.dart';
+import '../../loyalty/application/loyalty_status_cubit.dart';
+import '../../loyalty/domain/entities/loyalty_status.dart';
+import '../../loyalty/presentation/loyalty_progress_chip.dart';
+import '../../pricing/application/price_quote_cubit.dart';
+import '../../pricing/presentation/price_quote_chip.dart';
 import '../application/vehicle_lookup_cubit.dart';
 import '../domain/entities/new_vehicle_info.dart';
 import '../domain/entities/parking_session.dart';
@@ -120,6 +128,7 @@ class _CheckInPageState extends State<CheckInPage> {
   final List<_Photo> _photos = [];
   Timer? _debounce;
   int? _categoryId;
+  int? _quoteCategoryId;
   int? _spotId;
 
   /// Bay requested by the deep link; re-applied when the category changes
@@ -131,6 +140,8 @@ class _CheckInPageState extends State<CheckInPage> {
   bool _leftKeys = false;
   List<Reservation> _activeHolds = const [];
   List<String> _knownPlates = const [];
+  bool _knownPlatesLoaded = false;
+  bool _knownPlatesLoading = false;
   static const _prefsBox = 'preferences';
   static const _lastPlateKey = 'last_plate';
 
@@ -143,18 +154,13 @@ class _CheckInPageState extends State<CheckInPage> {
     _spotId = _requestedSpotId;
     unawaited(context.read<CheckInCubit>().loadOpenSessions());
     unawaited(_loadHolds());
-    unawaited(_loadKnownPlates());
     // Fresh capacity snapshot so full categories are disabled in the
     // registration dropdown even on a deep link.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) {
         return;
       }
-      try {
-        unawaited(context.read<DashboardCubit>().load());
-      } on ProviderNotFoundException {
-        // Isolated tests may not provide the dashboard cubit.
-      }
+      _refreshDashboard();
       _restoreLastPlate();
       _prefillPlate();
     });
@@ -260,6 +266,26 @@ class _CheckInPageState extends State<CheckInPage> {
     _plateFocus.requestFocus();
   }
 
+  /// The customer shows the code from the web confirmation: list the active
+  /// holds so reception can pick one instead of asking for the plate.
+  Future<void> _pickHoldByCode() async {
+    await _loadHolds();
+    if (!mounted) {
+      return;
+    }
+    final selected = await showModalBottomSheet<Reservation>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => _HoldsSheet(holds: _activeHolds),
+    );
+    if (selected == null || !mounted) {
+      return;
+    }
+    setState(() => _plateController.text = selected.plate);
+    _plateFocus.requestFocus();
+    _lookupNow();
+  }
+
   Future<void> _loadHolds() async {
     final repository = widget.reservations;
     if (repository == null) {
@@ -275,22 +301,49 @@ class _CheckInPageState extends State<CheckInPage> {
     }
   }
 
+  /// The check-in form only needs the capacity snapshot (full categories).
+  /// When the shell already loaded the dashboard, refresh that one value
+  /// instead of re-fetching the six KPI reads.
+  void _refreshDashboard() {
+    try {
+      final dashboard = context.read<DashboardCubit>();
+      if (dashboard.state is DashboardLoaded) {
+        unawaited(dashboard.refreshCapacity());
+      } else {
+        unawaited(dashboard.load());
+      }
+    } on ProviderNotFoundException {
+      // Isolated tests may not provide the dashboard cubit.
+    }
+  }
+
   /// Repeat customers type two letters and pick their plate: no full plate
-  /// memory needed from the operator.
+  /// memory needed from the operator. Loading waits for the first two
+  /// characters so opening check-in never downloads the vehicle page.
   Future<void> _loadKnownPlates() async {
     final repository = widget.vehicles;
     if (repository == null) {
+      _knownPlatesLoaded = true;
       return;
     }
+    if (_knownPlatesLoading) {
+      return;
+    }
+    _knownPlatesLoading = true;
     try {
       final page = await repository.listPage(offset: 0, limit: 200);
+      _knownPlatesLoaded = true;
       if (mounted) {
         setState(() {
           _knownPlates = [for (final vehicle in page.items) vehicle.plate];
         });
       }
     } catch (_) {
-      // Suggestions are an extra; check-in keeps working without them.
+      // Suggestions are an extra; check-in keeps working without them. Mark
+      // the attempt as done so typing does not hammer a failing endpoint.
+      _knownPlatesLoaded = true;
+    } finally {
+      _knownPlatesLoading = false;
     }
   }
 
@@ -366,6 +419,10 @@ class _CheckInPageState extends State<CheckInPage> {
 
   void _onPlateChanged(String _) {
     setState(() {});
+    final typed = _plateController.text.replaceAll(RegExp(r'\s'), '');
+    if (typed.length >= 2 && !_knownPlatesLoaded && !_knownPlatesLoading) {
+      unawaited(_loadKnownPlates());
+    }
     _debounce?.cancel();
     _debounce = Timer(_lookupDebounce, _lookupNow);
   }
@@ -373,6 +430,31 @@ class _CheckInPageState extends State<CheckInPage> {
   void _lookupNow() {
     _debounce?.cancel();
     unawaited(context.read<VehicleLookupCubit>().lookup(_plateController.text));
+    _refreshLoyalty(_plateController.text);
+  }
+
+  /// The loyalty chip is a read-only convenience; a missing cubit is fine.
+  void _refreshLoyalty(String plate) {
+    if (!serviceLocator.isRegistered<LoyaltyStatusCubit>()) {
+      return;
+    }
+    try {
+      unawaited(context.read<LoyaltyStatusCubit>().load(plate));
+    } on ProviderNotFoundException {
+      // No chip in this context.
+    }
+  }
+
+  LoyaltyStatus? get _loyaltyStatus {
+    if (!serviceLocator.isRegistered<LoyaltyStatusCubit>()) {
+      return null;
+    }
+    try {
+      final state = context.read<LoyaltyStatusCubit>().state;
+      return state is LoyaltyStatusReady ? state.status : null;
+    } on ProviderNotFoundException {
+      return null;
+    }
   }
 
   Future<void> _addPhoto() async {
@@ -515,6 +597,8 @@ class _CheckInPageState extends State<CheckInPage> {
       entryTime: result.entryTime,
       photoCount: result.photoCount,
       pendingSync: result.status == ParkingSessionStatus.pendingSync,
+      loyaltyVisits: _loyaltyStatus?.visits,
+      loyaltyRequired: _loyaltyStatus?.required,
       evidenceUrl: result.status == ParkingSessionStatus.pendingSync
           ? null
           : publicEvidenceUrl(result.id),
@@ -585,11 +669,18 @@ class _CheckInPageState extends State<CheckInPage> {
 
   Widget _buildForm(BuildContext context) {
     return BlocConsumer<VehicleLookupCubit, VehicleLookupState>(
-      listenWhen: (previous, current) => current is VehicleLookupNotFound,
-      listener: (context, _) => setState(() {
-        _categoryId = null;
-        _spotId = _requestedSpotId;
-      }),
+      listenWhen: (previous, current) =>
+          current is VehicleLookupNotFound || current is VehicleLookupFound,
+      listener: (context, lookup) {
+        if (lookup is VehicleLookupFound) {
+          _refreshQuote(lookup.vehicle.categoryId);
+          return;
+        }
+        setState(() {
+          _categoryId = null;
+          _spotId = _requestedSpotId;
+        });
+      },
       builder: (context, lookup) => _buildFormFields(context, lookup),
     );
   }
@@ -770,6 +861,15 @@ class _CheckInPageState extends State<CheckInPage> {
           ),
           const SizedBox(height: 8),
         ],
+        if (_activeHolds.isNotEmpty) ...[
+          OutlinedButton.icon(
+            key: const Key('check_in_hold_lookup'),
+            onPressed: _pickHoldByCode,
+            icon: const Icon(Icons.confirmation_number_outlined),
+            label: Text(l10n.checkInHoldLookup(_activeHolds.length)),
+          ),
+          const SizedBox(height: 8),
+        ],
         PlateInputField(
           controller: _plateController,
           focusNode: _plateFocus,
@@ -782,6 +882,8 @@ class _CheckInPageState extends State<CheckInPage> {
             onChanged: _onPlateChanged,
           ),
         ),
+        if (serviceLocator.isRegistered<LoyaltyStatusCubit>())
+          const LoyaltyProgressChip(),
         if (_plateSuggestions() case final suggestions
             when suggestions.isNotEmpty)
           Padding(
@@ -832,6 +934,10 @@ class _CheckInPageState extends State<CheckInPage> {
           subtitle: l10n.checkInEvidenceHint,
         ),
         const SizedBox(height: Space.sm),
+        AngleGuideBanner(captured: _photos.length),
+        const SizedBox(height: Space.xs),
+        AngleSlotChips(captured: _photos.length),
+        const SizedBox(height: Space.xs),
         PhotoStrip(
           photos: [for (final photo in _photos) photo.bytes],
           max: EvidencePolicy.maxPhotos,
@@ -982,10 +1088,27 @@ class _CheckInPageState extends State<CheckInPage> {
   /// to the dropdown so the form does not grow a wall of chips.
   static const _maxCategoryChips = 5;
 
-  void _selectCategory(int? id) => setState(() {
-    _categoryId = id;
-    _spotId = _requestedSpotId;
-  });
+  void _selectCategory(int? id) {
+    setState(() {
+      _categoryId = id;
+      _spotId = _requestedSpotId;
+    });
+    _refreshQuote(id);
+  }
+
+  /// The check-in price chip is a convenience: a missing cubit (isolated
+  /// tests) or a failed quote never blocks the form.
+  void _refreshQuote(int? categoryId) {
+    if (categoryId == null || categoryId == _quoteCategoryId) {
+      return;
+    }
+    _quoteCategoryId = categoryId;
+    try {
+      unawaited(context.read<PriceQuoteCubit>().load(categoryId));
+    } on ProviderNotFoundException {
+      // No chip in this context.
+    }
+  }
 
   String _categoryLabel(Category category, Set<int> full) {
     final l10n = context.l10n;
@@ -1005,6 +1128,7 @@ class _CheckInPageState extends State<CheckInPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const PriceQuoteChip(),
         Text(l10n.fieldCategory, style: theme.textTheme.labelLarge),
         const SizedBox(height: Space.xs),
         Wrap(
@@ -1059,6 +1183,7 @@ class _CheckInPageState extends State<CheckInPage> {
           _buildCategoryChips(context, lookup, full)
         else
           DropdownButtonFormField<int>(
+            isExpanded: true,
             key: ObjectKey(lookup),
             initialValue: _categoryId,
             decoration: InputDecoration(
@@ -1097,6 +1222,89 @@ class _CheckInPageState extends State<CheckInPage> {
 
 /// Live context above the form: how many vehicles are inside and how many
 /// reservations are waiting, without leaving the check-in flow.
+
+/// Active holds in a sheet: the code the customer shows (#7), the plate, the
+/// category and the expiry. Tapping one fills the plate.
+class _HoldsSheet extends StatelessWidget {
+  const _HoldsSheet({required this.holds});
+
+  final List<Reservation> holds;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    return SafeArea(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.7,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                Space.md,
+                0,
+                Space.md,
+                Space.sm,
+              ),
+              child: Text(
+                l10n.checkInHoldLookupTitle,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            if (holds.isEmpty)
+              Padding(
+                padding: const EdgeInsets.all(Space.md),
+                child: Text(l10n.checkInHoldLookupEmpty),
+              )
+            else
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: holds.length,
+                  separatorBuilder: (_, _) => const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final hold = holds[index];
+                    final until = Formatters.dateTime(
+                      hold.reservedUntil.toLocal(),
+                    );
+                    return ListTile(
+                      key: ValueKey('hold_${hold.id}'),
+                      leading: CircleAvatar(
+                        child: Text(
+                          '#${hold.id}',
+                          style: theme.textTheme.labelSmall,
+                        ),
+                      ),
+                      title: PlateText(hold.plate),
+                      subtitle: Text(
+                        [
+                          if (hold.customerName?.trim().isNotEmpty ?? false)
+                            hold.customerName!.trim(),
+                          hold.categoryName,
+                          '${l10n.bookingUntil} $until',
+                        ].join(' · '),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      onTap: () => Navigator.of(context).pop(hold),
+                    );
+                  },
+                ),
+              ),
+            const SizedBox(height: Space.sm),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _SessionPulse extends StatelessWidget {
   const _SessionPulse({required this.holds});
 

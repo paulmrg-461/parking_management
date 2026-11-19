@@ -37,7 +37,6 @@ class LotSwitcher extends StatelessWidget {
       ),
     );
   }
-
 }
 
 /// Bottom sheet with the sites the user belongs to; picking one switches the

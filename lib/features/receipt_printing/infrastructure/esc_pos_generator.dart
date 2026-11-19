@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../../../core/fare/fare_adjustment.dart';
 import '../../../core/receipt/receipt_data.dart';
 import '../../../core/receipt/receipt_labels.dart';
 import '../../../core/utils/cop_formatter.dart';
@@ -69,6 +70,34 @@ class EscPosGenerator {
       _row(bytes, labels.photos, '${data.photoCount}');
     }
 
+    if (data.isCheckOut && !data.pendingSync && data.pricingLabel != null) {
+      _row(bytes, labels.pricingRule, data.pricingLabel!);
+    }
+    if (!data.pendingSync && data.loyaltyRequired != null) {
+      _row(
+        bytes,
+        '',
+        data.loyaltyRewardEarned
+            ? labels.loyaltyRewardEarned
+            : labels.loyaltyVisit(
+                (data.loyaltyVisits ?? 0) + 1,
+                data.loyaltyRequired!,
+              ),
+      );
+    }
+    if (data.isCheckOut && !data.pendingSync && data.grossAmount != null) {
+      _row(bytes, labels.gross, CopFormatter.format(data.grossAmount!));
+      for (final line in data.adjustments) {
+        _row(
+          bytes,
+          line.type == FareAdjustmentType.reward
+              ? labels.loyaltyReward
+              : '${labels.benefit} ${line.label}',
+          '-${CopFormatter.format(line.amount)}',
+        );
+      }
+    }
+
     if (data.pendingSync) {
       _text(bytes, labels.pendingSync, align: 1, bold: true);
     } else if (data.isCheckOut && data.amountCharged != null) {
@@ -90,9 +119,16 @@ class EscPosGenerator {
     }
 
     if (data.isCheckOut && !data.pendingSync && data.paymentMethod != null) {
-      _row(bytes, labels.payment, labels.paymentMethod(data.paymentMethod!, data.cardType));
+      _row(
+        bytes,
+        labels.payment,
+        labels.paymentMethod(data.paymentMethod!, data.cardType),
+      );
     }
 
+    if (data.isCheckOut && !data.pendingSync && data.onlinePaidAmount > 0) {
+      _row(bytes, labels.onlinePaid, CopFormatter.format(data.onlinePaidAmount));
+    }
     if (data.isCheckOut && !data.pendingSync && data.cashReceived != null) {
       _row(bytes, labels.received, CopFormatter.format(data.cashReceived!));
     }
@@ -104,6 +140,30 @@ class EscPosGenerator {
       _row(bytes, labels.ticket, data.ticketNumber!);
     }
 
+    if (data.isCheckOut &&
+        (data.fiscalNumber != null || data.fiscalPending)) {
+      _rule(bytes);
+      _text(
+        bytes,
+        data.fiscalType == 'invoice'
+            ? labels.fiscalInvoice
+            : labels.fiscalPos,
+        align: 1,
+      );
+      if (data.fiscalNumber != null) {
+        _row(bytes, labels.ticket, data.fiscalNumber!);
+      }
+      if (data.cufe != null) {
+        _text(bytes, '${labels.cufeLabel} ${data.cufe}', align: 1);
+      }
+      if (data.fiscalPending) {
+        _text(bytes, labels.fiscalPendingLabel, align: 1);
+      }
+      if (data.fiscalQr != null) {
+        _qr(bytes, data.fiscalQr!);
+      }
+    }
+
     if (!data.isCheckOut) {
       _qr(bytes, data.plate);
       _text(bytes, labels.scanHint, align: 1);
@@ -113,11 +173,22 @@ class EscPosGenerator {
       _qr(bytes, data.evidenceUrl!);
       _text(bytes, labels.evidenceHint, align: 1);
     }
-    if (!data.isCheckOut || data.evidenceUrl != null) {
+    if (data.feedbackUrl != null) {
+      _rule(bytes);
+      _qr(bytes, data.feedbackUrl!);
+      _text(bytes, labels.feedbackHint, align: 1);
+    }
+    if (!data.isCheckOut ||
+        data.evidenceUrl != null ||
+        data.feedbackUrl != null) {
       _rule(bytes);
     }
 
-    _text(bytes, '${labels.generatedOn} ${_dateTime(DateTime.now())}', align: 1);
+    _text(
+      bytes,
+      '${labels.generatedOn} ${_dateTime(DateTime.now())}',
+      align: 1,
+    );
     _text(bytes, labels.thanks, align: 1);
     _footer(bytes, settings);
     _feed(bytes, 2);
@@ -135,9 +206,11 @@ class EscPosGenerator {
     if (settings == null) {
       return;
     }
-    final lines = [settings.address, settings.schedule, settings.phone]
-        .map((line) => line.trim())
-        .where((line) => line.isNotEmpty);
+    final lines = [
+      settings.address,
+      settings.schedule,
+      settings.phone,
+    ].map((line) => line.trim()).where((line) => line.isNotEmpty);
     for (final line in lines) {
       _text(out, line, align: 1);
     }

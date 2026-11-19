@@ -21,6 +21,8 @@ import '../../../core/widgets/status_chip.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/widgets/sync_badge.dart';
 import '../../emergency/presentation/emergency_action.dart';
+import '../../evidence/domain/repositories/session_evidence_repository.dart';
+import '../../evidence/presentation/session_evidence_sheet.dart';
 import '../application/records_cubit.dart';
 import '../domain/entities/session_record.dart';
 import 'records_csv.dart';
@@ -29,10 +31,13 @@ import 'records_pdf.dart';
 /// Site activity log: every session (entry + exit) with a plate filter. Tapping
 /// a row opens that vehicle's full history (visits, spend, notes).
 class RecordsPage extends StatefulWidget {
-  const RecordsPage({super.key, this.onOpenHistory});
+  const RecordsPage({super.key, this.onOpenHistory, this.evidenceRepository});
 
   /// Test seam: opens the vehicle history without a router.
   final void Function(BuildContext context, String plate)? onOpenHistory;
+
+  /// Injectable for widget tests; production resolves it from the locator.
+  final SessionEvidenceRepository? evidenceRepository;
 
   @override
   State<RecordsPage> createState() => _RecordsPageState();
@@ -149,18 +154,11 @@ class _RecordsPageState extends State<RecordsPage> {
             PopupMenuButton<String>(
               tooltip: l10n.recordsExportCsv,
               icon: const Icon(Icons.ios_share),
-              onSelected: (value) => value == 'pdf'
-                  ? _exportPdf(context)
-                  : _copyCsv(context),
+              onSelected: (value) =>
+                  value == 'pdf' ? _exportPdf(context) : _copyCsv(context),
               itemBuilder: (_) => [
-                PopupMenuItem(
-                  value: 'pdf',
-                  child: Text(l10n.recordsExportPdf),
-                ),
-                PopupMenuItem(
-                  value: 'csv',
-                  child: Text(l10n.recordsExportCsv),
-                ),
+                PopupMenuItem(value: 'pdf', child: Text(l10n.recordsExportPdf)),
+                PopupMenuItem(value: 'csv', child: Text(l10n.recordsExportCsv)),
               ],
             ),
           IconButton(
@@ -218,8 +216,8 @@ class _RecordsPageState extends State<RecordsPage> {
               ),
               Expanded(
                 child: switch (state.status) {
-                  RecordsStatus.initial || RecordsStatus.loading =>
-                    const _RecordsSkeleton(),
+                  RecordsStatus.initial ||
+                  RecordsStatus.loading => const _RecordsSkeleton(),
                   RecordsStatus.failure => ErrorState(
                     message: context.l10n.failure(state.failure!),
                     onRetry: () => cubit.load(),
@@ -227,6 +225,7 @@ class _RecordsPageState extends State<RecordsPage> {
                   RecordsStatus.loaded => _RecordsList(
                     state: state,
                     onOpen: (plate) => _openHistory(context, plate),
+                    evidenceRepository: widget.evidenceRepository,
                   ),
                 },
               ),
@@ -253,7 +252,8 @@ class _RangeFilter extends StatelessWidget {
       return null;
     }
     final start = _today.subtract(Duration(days: days - 1));
-    final same = state.from!.year == start.year &&
+    final same =
+        state.from!.year == start.year &&
         state.from!.month == start.month &&
         state.from!.day == start.day &&
         state.to!.year == _today.year &&
@@ -297,18 +297,14 @@ class _RangeFilter extends StatelessWidget {
         chip(
           l10n.recordsRangeWeek,
           week,
-          () => cubit.setRange(
-            _today.subtract(const Duration(days: 6)),
-            _today,
-          ),
+          () =>
+              cubit.setRange(_today.subtract(const Duration(days: 6)), _today),
         ),
         chip(
           l10n.recordsRangeMonth,
           month,
-          () => cubit.setRange(
-            _today.subtract(const Duration(days: 29)),
-            _today,
-          ),
+          () =>
+              cubit.setRange(_today.subtract(const Duration(days: 29)), _today),
         ),
         IconButton.filledTonal(
           tooltip: l10n.recordsRangeTooltip,
@@ -326,10 +322,15 @@ class _RangeFilter extends StatelessWidget {
 }
 
 class _RecordsList extends StatelessWidget {
-  const _RecordsList({required this.state, required this.onOpen});
+  const _RecordsList({
+    required this.state,
+    required this.onOpen,
+    this.evidenceRepository,
+  });
 
   final RecordsState state;
   final ValueChanged<String> onOpen;
+  final SessionEvidenceRepository? evidenceRepository;
 
   @override
   Widget build(BuildContext context) {
@@ -357,17 +358,26 @@ class _RecordsList extends StatelessWidget {
           );
         }
         final record = state.records[index];
-        return _RecordTile(record: record, onTap: () => onOpen(record.plate));
+        return _RecordTile(
+          record: record,
+          onTap: () => onOpen(record.plate),
+          evidenceRepository: evidenceRepository,
+        );
       },
     );
   }
 }
 
 class _RecordTile extends StatelessWidget {
-  const _RecordTile({required this.record, required this.onTap});
+  const _RecordTile({
+    required this.record,
+    required this.onTap,
+    this.evidenceRepository,
+  });
 
   final SessionRecord record;
   final VoidCallback onTap;
+  final SessionEvidenceRepository? evidenceRepository;
 
   @override
   Widget build(BuildContext context) {
@@ -424,6 +434,32 @@ class _RecordTile extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(subtitle, style: theme.textTheme.bodySmall),
+                    if (record.photoCount > 0) ...[
+                      const SizedBox(height: Space.xs),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton.icon(
+                          style: TextButton.styleFrom(
+                            minimumSize: const Size(48, 48),
+                            padding: EdgeInsets.zero,
+                            alignment: Alignment.centerLeft,
+                          ),
+                          onPressed: () => showSessionEvidence(
+                            context,
+                            sessionId: record.id,
+                            plate: record.plate,
+                            repository: evidenceRepository,
+                          ),
+                          icon: const Icon(
+                            Icons.photo_library_outlined,
+                            size: 16,
+                          ),
+                          label: Text(
+                            l10n.sessionEvidenceShort(record.photoCount),
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),

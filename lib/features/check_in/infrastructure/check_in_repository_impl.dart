@@ -95,10 +95,7 @@ class CheckInRepositoryImpl implements CheckInRepository {
           'spot_id': ?spotId,
           'video_ref': video == null
               ? null
-              : await _photos.persistVideo(
-                  clientRef: clientRef,
-                  video: video,
-                ),
+              : await _photos.persistVideo(clientRef: clientRef, video: video),
           'lot_id': ?_lots.activeLotId,
           ..._newVehiclePayload(newVehicle),
         }),

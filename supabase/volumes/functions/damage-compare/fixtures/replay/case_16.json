@@ -1,0 +1,27 @@
+{
+  "case": "a malformed findings field is ignored",
+  "entry_ids": [
+    1
+  ],
+  "exit_ids": [
+    2
+  ],
+  "model_answer": {
+    "summary": "Sin hallazgos.",
+    "quality": {
+      "same_vehicle": "yes",
+      "covered_zones": [
+        "front",
+        "rear",
+        "left",
+        "right"
+      ],
+      "issues": []
+    },
+    "findings": "none"
+  },
+  "expected": {
+    "overall": "no_new_damage",
+    "count": 0
+  }
+}

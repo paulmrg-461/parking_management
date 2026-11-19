@@ -1,14 +1,19 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/l10n/l10n.dart';
+import '../../waitlist/application/waitlist_cubit.dart';
+import '../../waitlist/presentation/waitlist_section.dart';
 import '../../../core/state/submission.dart';
 import '../../../core/theme/tokens.dart';
+import '../../../core/utils/dialer.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/utils/whatsapp_launcher.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_state.dart';
 import '../../../core/widgets/filter_bar.dart';
@@ -21,16 +26,18 @@ import '../../../core/widgets/staggered_list_item.dart';
 import '../../../core/widgets/status_chip.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/widgets/submission_listener.dart';
+import '../../settings/domain/whatsapp_url.dart';
 import '../application/reservations_cubit.dart';
 import '../domain/entities/reservation.dart';
 import 'reservation_dialog.dart';
+import 'reservations_csv.dart';
 
 class ReservationsPage extends StatefulWidget {
   const ReservationsPage({super.key, this.onCheckIn});
 
   /// Sends the operator to check-in with the plate prefilled. Injectable so a
   /// widget test can record it without a router.
-  final void Function(BuildContext context, String plate)? onCheckIn;
+  final Future<void> Function(BuildContext context, String plate)? onCheckIn;
 
   @override
   State<ReservationsPage> createState() => _ReservationsPageState();
@@ -41,6 +48,13 @@ class _ReservationsPageState extends State<ReservationsPage> {
   void initState() {
     super.initState();
     unawaited(context.read<ReservationsCubit>().load());
+    // The queue is a section of this board; a test that mounts the page
+    // without the waitlist still renders the reservations.
+    try {
+      unawaited(context.read<WaitlistCubit>().load());
+    } on ProviderNotFoundException {
+      // No waitlist provider in this tree.
+    }
   }
 
   @override
@@ -54,23 +68,49 @@ class _ReservationsPageState extends State<ReservationsPage> {
         addTooltip: l10n.reservationAdd,
         onAdd: _add,
         onRefresh: context.read<ReservationsCubit>().load,
-        body: BlocBuilder<ReservationsCubit, ReservationsState>(
-          builder: (context, state) => switch (state) {
-            ReservationsInitial() || ReservationsLoading() =>
-              const SkeletonList(),
-            ReservationsFailure(:final message) => ErrorState(
-              message: message,
-              onRetry: context.read<ReservationsCubit>().load,
+        body: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                Space.md,
+                Space.md,
+                Space.md,
+                0,
+              ),
+              child: _waitlist(),
             ),
-            final ReservationsLoaded loaded => _List(
-              loaded: loaded,
-              onAdd: _add,
-              onCheckIn: widget.onCheckIn ?? _checkInWithPlate,
+            Expanded(
+              child: BlocBuilder<ReservationsCubit, ReservationsState>(
+                builder: (context, state) => switch (state) {
+                  ReservationsInitial() ||
+                  ReservationsLoading() => const SkeletonList(),
+                  ReservationsFailure(:final message) => ErrorState(
+                    message: message,
+                    onRetry: context.read<ReservationsCubit>().load,
+                  ),
+                  final ReservationsLoaded loaded => _List(
+                    loaded: loaded,
+                    onAdd: _add,
+                    onCheckIn: widget.onCheckIn ?? _checkInWithPlate,
+                  ),
+                },
+              ),
             ),
-          },
+          ],
         ),
       ),
     );
+  }
+
+  Widget _waitlist() {
+    try {
+      return BlocProvider.value(
+        value: context.read<WaitlistCubit>(),
+        child: const WaitlistSection(),
+      );
+    } on ProviderNotFoundException {
+      return const SizedBox.shrink();
+    }
   }
 
   static Submission? _submissionOf(ReservationsState state) =>
@@ -113,9 +153,8 @@ class _ReservationsPageState extends State<ReservationsPage> {
   }
 }
 
-void _checkInWithPlate(BuildContext context, String plate) => context.push(
-  '/check-in?plate=${Uri.encodeQueryComponent(plate)}',
-);
+Future<void> _checkInWithPlate(BuildContext context, String plate) =>
+    context.push('/check-in?plate=${Uri.encodeQueryComponent(plate)}');
 
 class _List extends StatefulWidget {
   const _List({
@@ -126,7 +165,7 @@ class _List extends StatefulWidget {
 
   final ReservationsLoaded loaded;
   final VoidCallback onAdd;
-  final void Function(BuildContext context, String plate) onCheckIn;
+  final Future<void> Function(BuildContext context, String plate) onCheckIn;
 
   @override
   State<_List> createState() => _ListState();
@@ -135,6 +174,7 @@ class _List extends StatefulWidget {
 class _ListState extends State<_List> {
   String _query = '';
   bool _onlyExpiring = false;
+  bool _onlyPublic = false;
 
   List<Reservation> get _all => sortedByExpiry(widget.loaded.reservations);
 
@@ -143,18 +183,40 @@ class _ListState extends State<_List> {
     final now = DateTime.now();
     return [
       for (final reservation in all)
-        if ((needle.isEmpty ||
-                reservation.plate.toLowerCase().contains(needle)) &&
-            (!_onlyExpiring || reservation.expiresSoon(now: now)))
+        if ((needle.isEmpty || _matches(reservation, needle)) &&
+            (!_onlyExpiring || reservation.expiresSoon(now: now)) &&
+            (!_onlyPublic || reservation.isPublic))
           reservation,
     ];
   }
 
-  bool get _filtered => _query.trim().isNotEmpty || _onlyExpiring;
+  bool _matches(Reservation reservation, String needle) {
+    // A short number can be the reservation code printed on the confirmation.
+    if (RegExp(r'^\d{1,6}$').hasMatch(needle) &&
+        reservation.id.toString() == needle) {
+      return true;
+    }
+    return reservation.plate.toLowerCase().contains(needle) ||
+        (reservation.customerName ?? '').toLowerCase().contains(needle) ||
+        (reservation.customerPhone ?? '').contains(needle);
+  }
+
+  bool get _filtered =>
+      _query.trim().isNotEmpty || _onlyExpiring || _onlyPublic;
+
+  /// Reception prints the shift list: the visible rows (filters included) as
+  /// CSV, with the code the customer shows.
+  Future<void> _copyCsv(BuildContext context, List<Reservation> rows) async {
+    await Clipboard.setData(ClipboardData(text: reservationsCsv(rows)));
+    if (context.mounted) {
+      showInfoSnack(context, context.l10n.reservationsCsvCopied);
+    }
+  }
 
   void _clear() => setState(() {
     _query = '';
     _onlyExpiring = false;
+    _onlyPublic = false;
   });
 
   @override
@@ -222,7 +284,9 @@ class _ListState extends State<_List> {
                     ),
                   ),
                   ConstrainedBox(
-                    constraints: const BoxConstraints(minHeight: Layout.minTouch),
+                    constraints: const BoxConstraints(
+                      minHeight: Layout.minTouch,
+                    ),
                     child: FilterChip(
                       selected: _onlyExpiring,
                       showCheckmark: false,
@@ -230,6 +294,32 @@ class _ListState extends State<_List> {
                       label: Text(l10n.reservationsOnlyExpiring),
                       onSelected: (value) =>
                           setState(() => _onlyExpiring = value),
+                    ),
+                  ),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      minHeight: Layout.minTouch,
+                    ),
+                    child: OutlinedButton.icon(
+                      key: const Key('reservations_csv'),
+                      onPressed: visible.isEmpty
+                          ? null
+                          : () => _copyCsv(context, visible),
+                      icon: const Icon(Icons.file_download_outlined),
+                      label: Text(l10n.reservationsCopyCsv),
+                    ),
+                  ),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      minHeight: Layout.minTouch,
+                    ),
+                    child: FilterChip(
+                      selected: _onlyPublic,
+                      showCheckmark: false,
+                      avatar: const Icon(Icons.public, size: 18),
+                      label: Text(l10n.reservationsOnlyPublic),
+                      onSelected: (value) =>
+                          setState(() => _onlyPublic = value),
                     ),
                   ),
                 ],
@@ -266,11 +356,62 @@ class _ListState extends State<_List> {
   }
 }
 
+/// Name + phone of a public booking, with the one-tap actions the front desk
+/// needs: call or WhatsApp the customer without copying the number.
+class _ContactLine extends StatelessWidget {
+  const _ContactLine({required this.reservation});
+
+  final Reservation reservation;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final phone = reservation.customerPhone?.trim();
+    final hasPhone = phone != null && phone.isNotEmpty;
+    return Row(
+      children: [
+        Icon(Icons.person_outline, size: 16, color: scheme.onSurfaceVariant),
+        const SizedBox(width: Space.xs),
+        Expanded(
+          child: Text(
+            reservation.contactLine ?? '',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+        if (hasPhone) ...[
+          IconButton(
+            tooltip: l10n.reservationCall,
+            icon: const Icon(Icons.call_outlined),
+            onPressed: () => openDialer(phone),
+          ),
+          IconButton(
+            tooltip: l10n.reservationWhatsApp,
+            icon: const Icon(Icons.chat_outlined),
+            onPressed: () => openWhatsapp(
+              context,
+              whatsappUrl(
+                phone,
+                text: l10n.reservationWhatsAppMessage(reservation.plate),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
 class _ReservationTile extends StatelessWidget {
   const _ReservationTile({required this.reservation, required this.onCheckIn});
 
   final Reservation reservation;
-  final void Function(BuildContext context, String plate) onCheckIn;
+  final Future<void> Function(BuildContext context, String plate) onCheckIn;
 
   @override
   Widget build(BuildContext context) {
@@ -279,12 +420,18 @@ class _ReservationTile extends StatelessWidget {
     final scheme = theme.colorScheme;
     final now = DateTime.now();
     final soon = reservation.expiresSoon(now: now);
+    final inGrace = reservation.inGrace;
     final notes = reservation.notes;
     return Card(
       margin: const EdgeInsets.fromLTRB(Space.md, Space.xs, Space.md, Space.xs),
       clipBehavior: Clip.antiAlias,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(Space.md, Space.sm, Space.sm, Space.sm),
+        padding: const EdgeInsets.fromLTRB(
+          Space.md,
+          Space.sm,
+          Space.sm,
+          Space.sm,
+        ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -292,7 +439,9 @@ class _ReservationTile extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: soon ? scheme.tertiaryContainer : scheme.primaryContainer,
+                color: soon
+                    ? scheme.tertiaryContainer
+                    : scheme.primaryContainer,
                 borderRadius: BorderRadius.circular(Radii.sm),
               ),
               child: Icon(
@@ -310,6 +459,24 @@ class _ReservationTile extends StatelessWidget {
                   Row(
                     children: [
                       Expanded(child: PlateText(reservation.plate)),
+                      if (reservation.isPublic) ...[
+                        StatusChip(
+                          key: const Key('reservation_public'),
+                          label: l10n.reservationWeb,
+                          tone: StatusTone.success,
+                          icon: Icons.public,
+                        ),
+                        const SizedBox(width: Space.xs),
+                      ],
+                      if (reservation.isWaitlistOffer) ...[
+                        StatusChip(
+                          key: const Key('reservation_waitlist'),
+                          label: l10n.waitlistOfferChip,
+                          tone: StatusTone.pending,
+                          icon: Icons.hourglass_top_outlined,
+                        ),
+                        const SizedBox(width: Space.xs),
+                      ],
                       if (reservation.categoryName.isNotEmpty)
                         StatusChip(
                           label: reservation.categoryName,
@@ -318,14 +485,19 @@ class _ReservationTile extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: Space.xs),
+                  // The code the customer shows (#7) sits first: reception can
+                  // match it against the web confirmation at a glance.
                   Text(
-                    l10n.reservationUntil(
-                      Formatters.dateTime(reservation.reservedUntil.toLocal()),
-                    ),
+                    '#${reservation.id} · '
+                    '${l10n.reservationUntil(Formatters.dateTime(reservation.reservedUntil.toLocal()))}',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: scheme.onSurfaceVariant,
                     ),
                   ),
+                  if (reservation.hasContact) ...[
+                    const SizedBox(height: Space.xs),
+                    _ContactLine(reservation: reservation),
+                  ],
                   if (notes != null && notes.isNotEmpty) ...[
                     const SizedBox(height: 2),
                     Text(
@@ -335,7 +507,15 @@ class _ReservationTile extends StatelessWidget {
                       style: theme.textTheme.bodySmall,
                     ),
                   ],
-                  if (soon) ...[
+                  if (inGrace) ...[
+                    const SizedBox(height: Space.xs),
+                    StatusChip(
+                      key: const Key('reservation_in_grace'),
+                      label: l10n.reservationInGrace,
+                      tone: StatusTone.warning,
+                      icon: Icons.hourglass_bottom,
+                    ),
+                  ] else if (soon) ...[
                     const SizedBox(height: Space.xs),
                     StatusChip(
                       label: l10n.reservationExpiresIn(
@@ -357,7 +537,14 @@ class _ReservationTile extends StatelessWidget {
                 IconButton(
                   tooltip: l10n.reservationCheckIn,
                   icon: const Icon(Icons.login),
-                  onPressed: () => onCheckIn(context, reservation.plate),
+                  onPressed: () async {
+                    // Coming back from check-in, the hold is gone (`used`):
+                    // reload so the board is not stale.
+                    await onCheckIn(context, reservation.plate);
+                    if (context.mounted) {
+                      unawaited(context.read<ReservationsCubit>().load());
+                    }
+                  },
                 ),
                 IconButton(
                   tooltip: l10n.reservationCancel,

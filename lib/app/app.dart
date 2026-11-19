@@ -16,6 +16,7 @@ import '../features/auth/application/auth_cubit.dart';
 import '../features/lots/application/lots_cubit.dart';
 import '../features/settings/application/branding_cubit.dart';
 import 'router/app_router.dart';
+import 'router/route_access.dart';
 import 'lock/app_lock_gate.dart';
 import 'router/go_router_refresh_stream.dart';
 
@@ -32,6 +33,7 @@ class ParkingApp extends StatefulWidget {
     this.themeCubit,
     this.localeCubit,
     this.autoLockCubit,
+    this.initialLocation = homePath,
   });
 
   final AuthCubit authCubit;
@@ -53,6 +55,10 @@ class ParkingApp extends StatefulWidget {
   /// Drives the offline banner; optional so tests can omit it.
   final ConnectivityCubit? connectivityCubit;
 
+  /// Deep link captured before the bootstrap splash touched the browser
+  /// history (web); home everywhere else.
+  final String initialLocation;
+
   @override
   State<ParkingApp> createState() => _ParkingAppState();
 }
@@ -65,7 +71,11 @@ class _ParkingAppState extends State<ParkingApp> {
   void initState() {
     super.initState();
     _refresh = GoRouterRefreshStream(widget.authCubit.stream);
-    _router = buildRouter(widget.authCubit, _refresh);
+    _router = buildRouter(
+      widget.authCubit,
+      _refresh,
+      initialLocation: widget.initialLocation,
+    );
     // Seed from Hive, then refresh: a no-network first run just stays put.
     unawaited(widget.brandingCubit.load());
     if (widget.lotsCubit case final lots?) {

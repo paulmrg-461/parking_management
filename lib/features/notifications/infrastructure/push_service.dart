@@ -51,9 +51,11 @@ class FcmPushService implements PushService {
       if (settings.authorizationStatus == AuthorizationStatus.denied) {
         return;
       }
-      await _register(await FirebaseMessaging.instance.getToken(
-        vapidKey: _config.fcmVapidKey.isEmpty ? null : _config.fcmVapidKey,
-      ));
+      await _register(
+        await FirebaseMessaging.instance.getToken(
+          vapidKey: _config.fcmVapidKey.isEmpty ? null : _config.fcmVapidKey,
+        ),
+      );
       FirebaseMessaging.instance.onTokenRefresh.listen(_register);
     } catch (_) {
       // A missing/invalid Firebase project must never block login.

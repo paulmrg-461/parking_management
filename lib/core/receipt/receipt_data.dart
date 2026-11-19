@@ -1,3 +1,5 @@
+import '../fare/fare_adjustment.dart';
+
 /// Whether a receipt describes a vehicle entering or leaving.
 enum ReceiptKind { checkIn, checkOut }
 
@@ -19,8 +21,22 @@ class ReceiptData {
     this.cashChange,
     this.discountAmount = 0,
     this.discountReason,
+    this.onlinePaidAmount = 0,
+    this.grossAmount,
+    this.adjustments = const [],
+    this.pricingLabel,
+    this.pricingDelta = 0,
+    this.loyaltyVisits,
+    this.loyaltyRequired,
+    this.loyaltyRewardEarned = false,
+    this.fiscalNumber,
+    this.fiscalType,
+    this.cufe,
+    this.fiscalQr,
+    this.fiscalPending = false,
     this.pendingSync = false,
     this.evidenceUrl,
+    this.feedbackUrl,
   });
 
   final ReceiptKind kind;
@@ -38,10 +54,45 @@ class ReceiptData {
   final int? cashChange;
   final int discountAmount;
   final String? discountReason;
+
+  /// Part of the charge the customer already paid online (0 = none). The
+  /// session's `amount_charged` already includes it.
+  final int onlinePaidAmount;
+
+  /// Fare before the automatic lines and the manual discount.
+  final int? grossAmount;
+
+  /// Merchant (and later reward) reductions applied by the server.
+  final List<FareAdjustment> adjustments;
+
+  /// Formatted dynamic-pricing label (built by the feature, never here).
+  final String? pricingLabel;
+
+  /// Signed difference of the locked rate against the base fare.
+  final int pricingDelta;
+
+  /// Loyalty progress at the moment of the receipt (null = unknown).
+  final int? loyaltyVisits;
+  final int? loyaltyRequired;
+
+  /// The visit being registered earned a reward.
+  final bool loyaltyRewardEarned;
+
+  /// Fiscal document number (`full_number`), type and CUFE once issued.
+  final String? fiscalNumber;
+  final String? fiscalType;
+  final String? cufe;
+  final String? fiscalQr;
+
+  /// The document exists but the provider has not accepted it yet.
+  final bool fiscalPending;
   final bool pendingSync;
 
   /// Public page (plate is the key) with the session's photos and videos.
   final String? evidenceUrl;
+
+  /// Public survey page for this visit (check-out receipts only).
+  final String? feedbackUrl;
 
   bool get isCheckOut => kind == ReceiptKind.checkOut;
 }

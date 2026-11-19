@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lpr-edge"
+version = "0.1.0"
+description = "Reference LPR edge service for the parking management device gateway"
+requires-python = ">=3.10"
+dependencies = [
+  "PyYAML>=6.0",
+  "numpy>=1.24",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "opencv-python-headless>=4.8"]
+jetson = ["pycuda"]
+
+[tool.setuptools.packages.find]
+include = ["lpr_edge*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+  "hardware: needs a Jetson, a camera or TensorRT",
+  "slow: takes more than a few seconds",
+]
+addopts = "-m 'not hardware and not slow'"

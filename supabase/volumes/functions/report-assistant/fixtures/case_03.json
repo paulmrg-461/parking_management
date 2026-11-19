@@ -1,0 +1,28 @@
+{
+  "case": "plate question is out of scope and redacted",
+  "question": "How much did plate ABC123 pay on Monday?",
+  "locale": "en",
+  "today": "2026-11-10",
+  "timezone": "America/Bogota",
+  "currency": "COP",
+  "rpc_outputs": {},
+  "model_script": [
+    {
+      "content": [
+        {"type": "tool_use", "id": "submit", "name": "submit_answer",
+         "input": {
+           "status": "out_of_scope",
+           "headline": "Use vehicle history for one vehicle.",
+           "explanation": "The reports cover totals, not one vehicle.",
+           "period_start": "", "period_end": "", "figures": [], "caveats": []
+         }
+      }
+      ],
+      "stop_reason": "end_turn"
+    }
+  ],
+  "expected": {
+    "tools": [],
+    "answer": {"status": "out_of_scope", "question_redacted": true}
+  }
+}

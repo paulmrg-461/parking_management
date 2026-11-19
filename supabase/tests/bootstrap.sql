@@ -9,6 +9,13 @@ create table if not exists public.schema_migrations (
 
 create schema if not exists storage;
 
+-- Supabase's image installs pgcrypto in the `extensions` schema, so a fresh
+-- database must mimic that before the migrations run; otherwise migration
+-- 0001 creates it in `public` and the suite cannot catch a function that
+-- only works because pgcrypto happens to resolve from its search_path.
+create schema if not exists extensions;
+create extension if not exists pgcrypto with schema extensions;
+
 create table if not exists auth.users (
     id uuid primary key,
     email text,
@@ -52,3 +59,15 @@ end $$;
 
 -- The Supabase image revokes CREATE on public from postgres.
 grant create, usage on schema public to postgres;
+
+-- The Supabase image grants every new object to anon/authenticated. The
+-- migrations grant what each function and table needs, so drop those default
+-- grants here and keep the test database's privileges identical to the
+-- compose stack (whose cluster has no default ACLs); otherwise the negative
+-- privilege tests can only pass on one of the two.
+alter default privileges for role supabase_admin in schema public
+    revoke all on tables from anon, authenticated;
+alter default privileges for role supabase_admin in schema public
+    revoke all on functions from anon, authenticated;
+alter default privileges for role supabase_admin in schema public
+    revoke all on sequences from anon, authenticated;

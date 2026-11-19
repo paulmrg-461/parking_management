@@ -94,8 +94,7 @@ class EmergencyDialog extends StatelessWidget {
     }
   }
 
-  Future<bool> _launchTel(String phone) =>
-      launchUrl(Uri.parse('tel:$phone'));
+  Future<bool> _launchTel(String phone) => launchUrl(Uri.parse('tel:$phone'));
 
   @override
   Widget build(BuildContext context) {

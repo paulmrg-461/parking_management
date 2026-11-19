@@ -38,7 +38,9 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      const MaterialApp(home: Center(child: QrCode(data: ''))),
+      const MaterialApp(
+        home: Center(child: QrCode(data: '')),
+      ),
     );
 
     expect(find.byType(QrCode), findsOneWidget);

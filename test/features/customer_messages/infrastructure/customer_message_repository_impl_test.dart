@@ -26,8 +26,9 @@ class _FakeRemote implements CustomerMessageRemoteDataSource {
 void main() {
   test('Success: the queue payload keeps the template and params', () async {
     final remote = _FakeRemote();
-    final CustomerMessageRepository repository =
-        CustomerMessageRepositoryImpl(remote);
+    final CustomerMessageRepository repository = CustomerMessageRepositoryImpl(
+      remote,
+    );
 
     await repository.enqueueWhatsapp(
       phone: '573001112233',

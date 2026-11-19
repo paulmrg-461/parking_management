@@ -11,8 +11,7 @@ void registerCustomerMessagesModule(GetIt sl) {
       () => SupabaseCustomerMessageRemoteDataSource(sl<SupabaseClient>()),
     )
     ..registerLazySingleton<CustomerMessageRepository>(
-      () => CustomerMessageRepositoryImpl(
-        sl<CustomerMessageRemoteDataSource>(),
-      ),
+      () =>
+          CustomerMessageRepositoryImpl(sl<CustomerMessageRemoteDataSource>()),
     );
 }

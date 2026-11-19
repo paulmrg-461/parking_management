@@ -11,15 +11,11 @@ Future<FakeAuditRepository> pumpPage(
   WidgetTester tester, {
   List<dynamic> entries = const [],
 }) async {
-  final repository = FakeAuditRepository([
-    for (final entry in entries) entry,
-  ]);
+  final repository = FakeAuditRepository([for (final entry in entries) entry]);
   final cubit = AuditCubit(repository);
   addTearDown(cubit.close);
   await tester.pumpWidget(
-    testApp(
-      BlocProvider.value(value: cubit, child: const AuditPage()),
-    ),
+    testApp(BlocProvider.value(value: cubit, child: const AuditPage())),
   );
   await tester.pumpAndSettle();
   return repository;
@@ -70,6 +66,19 @@ void main() {
     expect(find.text('tariffs #3'), findsOneWidget);
   });
 
+  testWidgets('Success: typing in the search reloads with the term', (
+    tester,
+  ) async {
+    final repository = await pumpPage(tester, entries: [sampleAudit()]);
+
+    await tester.enterText(find.byType(TextField), 'SRCH01');
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.pumpAndSettle();
+
+    expect(repository.lastSearch, 'SRCH01');
+    expect(find.text('tariffs #3'), findsOneWidget);
+  });
+
   testWidgets('Success: the export menu offers PDF and CSV', (tester) async {
     await pumpPage(tester, entries: [sampleAudit()]);
 
@@ -85,7 +94,10 @@ void main() {
   ) async {
     final repository = await pumpPage(
       tester,
-      entries: [sampleAudit(), sampleAudit(id: 2, actor: 'juan')],
+      entries: [
+        sampleAudit(),
+        sampleAudit(id: 2, actor: 'juan'),
+      ],
     );
 
     await tester.tap(find.text('Todos').last);

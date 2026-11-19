@@ -64,10 +64,7 @@ class SupabaseUserRemoteDataSource implements UserRemoteDataSource {
 
   Future<User> _adminAction(Map<String, dynamic> body) async {
     try {
-      final response = await _client.functions.invoke(
-        _function,
-        body: body,
-      );
+      final response = await _client.functions.invoke(_function, body: body);
       final data = response.data;
       if (data is! Map) {
         throw const ServerFailure('Invalid admin-users response');

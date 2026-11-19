@@ -1,19 +1,21 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/app/router/route_access.dart';
+import 'package:parking_management/core/receipt/feedback_link.dart';
 import 'package:parking_management/features/auth/application/auth_cubit.dart';
 import 'package:parking_management/features/auth/domain/entities/auth_session.dart';
 import 'package:parking_management/features/auth/domain/entities/user.dart';
 
 AuthAuthenticated _as(UserRole role) => AuthAuthenticated(
-      AuthSession(
-        user: User(id: 1, username: 'u', displayName: 'U', role: role),
-        token: 't',
-      ),
-    );
+  AuthSession(
+    user: User(id: 1, username: 'u', displayName: 'U', role: role),
+    token: 't',
+  ),
+);
 
 const _adminOnly = [
   '/users',
   '/reports',
+  '/satisfaction',
   '/categories',
   '/tariffs',
   '/vehicles',
@@ -44,6 +46,113 @@ void main() {
       expect(authRedirect(const AuthLoading(), '/users'), '/login');
       expect(authRedirect(const AuthFailure('x'), '/login'), isNull);
       expect(authRedirect(const AuthUnauthenticated(), '/login'), isNull);
+    });
+
+    test('Success: operators reach the gate inbox', () {
+      expect(authRedirect(_as(UserRole.operator), '/gate'), isNull);
+      expect(canAccess(UserRole.operator, '/gate'), isTrue);
+    });
+
+    test('Failure: only admins open the gate settings', () {
+      expect(canAccess(UserRole.operator, '/gate-settings'), isFalse);
+      expect(canAccess(UserRole.admin, '/gate-settings'), isTrue);
+      expect(authRedirect(_as(UserRole.operator), '/gate-settings'), '/');
+    });
+
+    test('Success: operators run the reservations board', () {
+      expect(authRedirect(_as(UserRole.operator), '/reservations'), isNull);
+      expect(canAccess(UserRole.operator, '/reservations'), isTrue);
+    });
+
+    test('Success: the public booking page needs no session', () {
+      expect(authRedirect(const AuthUnauthenticated(), reservePath), isNull);
+      expect(
+        authRedirect(const AuthUnauthenticated(), '/reserve?lot=1'),
+        isNull,
+      );
+    });
+
+    test('Security: devices are admin only', () {
+      expect(canAccess(UserRole.operator, '/devices'), isFalse);
+      expect(canAccess(UserRole.admin, '/devices'), isTrue);
+    });
+
+    test('Success: operators can open the damage comparison', () {
+      expect(canAccess(UserRole.operator, '/damage-comparison'), isTrue);
+      expect(canAccess(UserRole.operator, '/report-assistant'), isFalse);
+    });
+
+    test('Security: the report assistant is admin only', () {
+      expect(canAccess(UserRole.operator, '/report-assistant'), isFalse);
+      expect(
+        authRedirect(_as(UserRole.operator), '/report-assistant'),
+        homePath,
+      );
+      expect(canAccess(UserRole.admin, '/report-assistant'), isTrue);
+    });
+
+    test('Security: invoicing is admin only', () {
+      expect(canAccess(UserRole.operator, '/invoicing'), isFalse);
+      expect(
+        authRedirect(_as(UserRole.operator), '/invoicing'),
+        homePath,
+      );
+      expect(canAccess(UserRole.admin, '/invoicing'), isTrue);
+    });
+
+    test('Security: loyalty is admin only', () {
+      expect(canAccess(UserRole.operator, '/loyalty'), isFalse);
+      expect(
+        authRedirect(_as(UserRole.operator), '/loyalty'),
+        homePath,
+      );
+      expect(canAccess(UserRole.admin, '/loyalty'), isTrue);
+    });
+
+    test('Security: dynamic pricing is admin only', () {
+      expect(canAccess(UserRole.operator, '/pricing'), isFalse);
+      expect(
+        authRedirect(_as(UserRole.operator), '/pricing'),
+        homePath,
+      );
+      expect(canAccess(UserRole.admin, '/pricing'), isTrue);
+    });
+
+    test('Success: the merchant validation page is public and not an operator route', () {
+      expect(authRedirect(const AuthUnauthenticated(), validatePath), isNull);
+      expect(
+        authRedirect(const AuthUnauthenticated(), '/validate?m=${'a' * 48}'),
+        isNull,
+      );
+      expect(canAccess(UserRole.operator, validatePath), isFalse);
+      expect(canAccess(UserRole.operator, '/merchants'), isFalse);
+    });
+
+    test('Success: the renewal page needs no session and is not an operator route', () {
+      expect(authRedirect(const AuthUnauthenticated(), renewPath), isNull);
+      expect(
+        authRedirect(const AuthUnauthenticated(), '/renew?t=${'a' * 48}'),
+        isNull,
+      );
+      expect(canAccess(UserRole.operator, renewPath), isFalse);
+    });
+
+    test('Security: the survey page is public (plate-keyed link)', () {
+      expect(authRedirect(const AuthUnauthenticated(), feedbackPath), isNull);
+      expect(
+        authRedirect(
+          const AuthUnauthenticated(),
+          '/feedback?session=7&plate=ABC123',
+        ),
+        isNull,
+      );
+      expect(authRedirect(_as(UserRole.operator), feedbackPath), isNull);
+    });
+
+    test('Security: operators cannot open the satisfaction report', () {
+      expect(authRedirect(_as(UserRole.operator), '/satisfaction'), '/');
+      expect(canAccess(UserRole.operator, '/satisfaction'), isFalse);
+      expect(authRedirect(_as(UserRole.admin), '/satisfaction'), isNull);
     });
 
     test('Security: the evidence page is public (plate-keyed link)', () {
@@ -77,15 +186,59 @@ void main() {
     test('Security: operators are bounced from every admin-only route', () {
       for (final route in _adminOnly) {
         expect(authRedirect(_as(UserRole.operator), route), '/', reason: route);
-        expect(authRedirect(_as(UserRole.operator), '$route/'), '/', reason: route);
-        expect(authRedirect(_as(UserRole.operator), '$route/5'), '/', reason: route);
+        expect(
+          authRedirect(_as(UserRole.operator), '$route/'),
+          '/',
+          reason: route,
+        );
+        expect(
+          authRedirect(_as(UserRole.operator), '$route/5'),
+          '/',
+          reason: route,
+        );
       }
     });
 
-    test('Security: operator access is an allowlist (unknown routes denied)', () {
-      expect(authRedirect(_as(UserRole.operator), '/something-new'), '/');
-      expect(canAccess(UserRole.operator, '/check-in'), isTrue);
-      expect(canAccess(UserRole.operator, '/check-inx'), isFalse);
+    test(
+      'Security: operator access is an allowlist (unknown routes denied)',
+      () {
+        expect(authRedirect(_as(UserRole.operator), '/something-new'), '/');
+        expect(canAccess(UserRole.operator, '/check-in'), isTrue);
+        expect(canAccess(UserRole.operator, '/check-inx'), isFalse);
+      },
+    );
+  });
+
+  group('initialRouteFrom', () {
+    test('Success: web keeps the deep link and its query', () {
+      expect(
+        initialRouteFrom(Uri.parse('http://host/reserve?lot=1'), web: true),
+        '/reserve?lot=1',
+      );
+      expect(
+        initialRouteFrom(
+          Uri.parse('http://host/evidence?session=4&plate=ABC123'),
+          web: true,
+        ),
+        '/evidence?session=4&plate=ABC123',
+      );
+      expect(
+        initialRouteFrom(Uri.parse('http://host/policies/?lot=1'), web: true),
+        '/policies?lot=1',
+      );
+    });
+
+    test('Success: web at the root starts home', () {
+      expect(initialRouteFrom(Uri.parse('http://host/'), web: true), '/');
+      expect(initialRouteFrom(Uri.parse('http://host'), web: true), '/');
+    });
+
+    test('Success: mobile uses the engine launch route (home)', () {
+      expect(
+        initialRouteFrom(Uri.parse('http://host/reserve?lot=1')),
+        '/',
+        reason: 'kIsWeb is false outside a browser',
+      );
     });
   });
 }

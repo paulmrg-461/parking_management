@@ -65,8 +65,29 @@ class _NotificationsPageState extends State<NotificationsPage> {
                   ('check_in', context.l10n.notifTypeCheckIn),
                   ('check_out', context.l10n.notifTypeCheckOut),
                   ('monthly_pass', context.l10n.notifTypePassExpiring),
+                  (
+                    'pass_renewal_paid',
+                    context.l10n.notifTypePassRenewalPaid,
+                  ),
                   ('overstay', context.l10n.notifTypeOverstay),
                   ('shift_closed', context.l10n.notifTypeShiftClosed),
+                  ('public_reservation', context.l10n.notifTypeReservation),
+                  ('waitlist_joined', context.l10n.notifTypeWaitlist),
+                  ('waitlist_offer', context.l10n.notifTypeWaitlist),
+                  ('cash_anomaly', context.l10n.notifTypeCashAnomaly),
+                  (
+                    'fiscal_document_failed',
+                    context.l10n.notifTypeFiscalFailed,
+                  ),
+                  (
+                    'fiscal_resolution_low',
+                    context.l10n.notifTypeFiscalResolutionLow,
+                  ),
+                  ('online_payment', context.l10n.notifTypeOnlinePayment),
+                  (
+                    'online_payment_review',
+                    context.l10n.notifTypeOnlinePaymentReview,
+                  ),
                 ])
                   PopupMenuItem(value: entry.$1, child: Text(entry.$2)),
               ],
@@ -440,11 +461,15 @@ class _NotificationTile extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     return Material(
-      color: unread ? scheme.primaryContainer.withValues(alpha: 0.35) : scheme.surface,
+      color: unread
+          ? scheme.primaryContainer.withValues(alpha: 0.35)
+          : scheme.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(Radii.md),
         side: BorderSide(
-          color: unread ? scheme.primary.withValues(alpha: 0.4) : scheme.outlineVariant,
+          color: unread
+              ? scheme.primary.withValues(alpha: 0.4)
+              : scheme.outlineVariant,
         ),
       ),
       clipBehavior: Clip.antiAlias,
@@ -508,8 +533,13 @@ class _NotificationTile extends StatelessWidget {
         'check_out' => l10n.notifTypeCheckOut,
         'monthly_pass_expiring' => l10n.notifTypePassExpiring,
         'monthly_pass_renewed' => l10n.notifTypePassRenewed,
+        'pass_renewal_paid' => l10n.notifTypePassRenewalPaid,
         'overstay' => l10n.notifTypeOverstay,
         'shift_closed' => l10n.notifTypeShiftClosed,
+        'public_reservation' => l10n.notifTypeReservation,
+        'online_payment' => l10n.notifTypeOnlinePayment,
+        'online_payment_review' => l10n.notifTypeOnlinePaymentReview,
+        'lpr_pending' || 'lpr_exit' || 'lpr_blacklisted' => l10n.gateTitle,
         _ => l10n.notifTypeGeneric,
       };
 
@@ -518,8 +548,15 @@ class _NotificationTile extends StatelessWidget {
     'check_out' => Icons.logout,
     'monthly_pass_expiring' => Icons.card_membership,
     'monthly_pass_renewed' => Icons.autorenew,
+    'pass_renewal_paid' => Icons.autorenew,
     'overstay' => Icons.timer_outlined,
     'shift_closed' => Icons.point_of_sale,
+    'public_reservation' => Icons.event_available_outlined,
+    'waitlist_joined' || 'waitlist_offer' => Icons.hourglass_top_outlined,
+    'cash_anomaly' => Icons.report_problem_outlined,
+    'online_payment' => Icons.qr_code_2_outlined,
+    'online_payment_review' => Icons.pending_actions_outlined,
+    'lpr_pending' || 'lpr_exit' || 'lpr_blacklisted' => Icons.videocam_outlined,
     _ => Icons.notifications,
   };
 }

@@ -121,6 +121,11 @@ sequenceDiagram
 - GoTrue rotates tokens; the auth-state listener rewrites the Hive snapshot.
 - Logout clears reference-data caches and signs out locally; the outbox is
   **never** cleared (work done offline must still reach the server).
+- The home dashboard keeps its last successful KPIs (occupancy, today, trend
+  and capacity) in the Hive `cache` box, keyed by site. When a load fails the
+  cubit serves that snapshot with `cachedAt`, the UI marks it as offline data
+  and hides the live board/inside list; the next complete load rewrites it.
+  A degraded load (one KPI failed) never overwrites a complete snapshot.
 
 ## 4. Check-in (online and offline)
 
@@ -163,6 +168,29 @@ Key invariants:
 - The lot is captured at enqueue time and validated by `resolve_lot()`, so a
   queued entry lands in the site where it happened even after a lot switch.
 
+### Outbox states
+
+```mermaid
+stateDiagram-v2
+  [*] --> Pending: mutation queued (payload + baseVersion + base snapshot)
+  Pending --> [*]: replayed (settled)
+  Pending --> Pending: ServerFailure / backoff, or auto-merge rebased
+  Pending --> DeadLetter: ValidationFailure (never retried)
+  Pending --> Conflict: VersionConflictFailure (needs a human)
+  Conflict --> Pending: keep mine / merge fields / keep delete (rebased)
+  Conflict --> [*]: keep theirs / accept deletion (adopt server row)
+  DeadLetter --> [*]: discarded by the operator
+```
+
+`version` columns (`vehicles`, `tariffs`, `categories`, `parking_settings`)
+plus the `x-versioned-write` header make a stale write a conflict instead of a
+silent overwrite. The outbox entry keeps the version and the cached row it was
+based on, so `SyncService` can three-way merge disjoint field edits without
+asking; only overlapping fields reach the operator, who chooses per field in
+the conflict dialog. Conflicts are parked (`needsResolution`) and never
+replayed until resolved. Check-in/check-out are safe by idempotency instead of
+by version.
+
 ## 5. Check-out and billing
 
 ```mermaid
@@ -189,6 +217,188 @@ daily cap per day touched, night window replaces the day tariff, monthly pass
 → 0. Discounts are admin-only with a required reason and an audit trail; lost
 tickets require a reason and charge the full daily tariff. Ticket numbers carry
 the site code (`TCK-<LOT>-000123`).
+
+## 5b. Online payment (Wompi)
+
+```mermaid
+sequenceDiagram
+  participant C as Customer (/evidence)
+  participant FN as payment-intent
+  participant DB as PostgreSQL
+  participant W as Wompi
+  participant WH as payment-webhook
+  participant J as payments-reconcile
+  participant O as Operator
+
+  C->>FN: session + plate
+  FN->>DB: create_session_payment_intent
+  DB->>DB: session_settlement → fare_breakdown + grace rule
+  DB-->>FN: reference, frozen amount
+  FN-->>C: checkout_url (signed)
+  C->>W: pay (card/PSE/Nequi)
+  W->>WH: transaction.updated (+ checksum)
+  WH->>WH: verify SHA-256 checksum
+  WH->>DB: apply_payment_event (idempotent event row)
+  DB->>DB: settle_payment_intent → online_paid_amount/paid_at
+  DB-->>O: "online_payment" notification
+  W-->>C: redirect /evidence?session&pay=reference
+  C->>DB: payment_intent_status(reference, plate) every 3 s
+  O->>DB: check_out → online_settlement_amounts → desk_due
+  Note over J,DB: a lost webhook is recovered by the reconcile job<br/>through the same apply_payment_event path
+```
+
+The browser never holds a gateway key: `payment-intent` and the webhook use
+the service role, the amount is computed server-side and frozen in
+`payment_intents`, and `payment_events` (unique per gateway transaction and
+status) makes a replayed event a no-op. Inside the grace window the session
+charges exactly what was paid; after it the desk collects the difference.
+`online` is written only by the database, never by the client.
+
+## 5c. Electronic invoicing (outbox)
+
+```mermaid
+sequenceDiagram
+  participant O as Operator
+  participant APP as Flutter
+  participant DB as PostgreSQL
+  participant J as jobs (cron)
+  participant FN as fiscal-dispatch
+  participant P as Proveedor tecnologico
+
+  O->>APP: check-out (unchanged) + optional invoice data
+  APP->>DB: issue_fiscal_document(source, customer?)
+  DB->>DB: next_fiscal_number (row lock) + fiscal_amounts
+  DB-->>APP: number + status pending
+  APP-->>O: receipt "documento electronico en proceso"
+  J->>DB: enqueue_pending_fiscal_documents (always mode, POS after 10 min)
+  J->>FN: POST /functions/v1/fiscal-dispatch (service key)
+  FN->>DB: claim_fiscal_documents (FOR UPDATE SKIP LOCKED)
+  FN->>P: submit(payload, Idempotency-Key) / query(provider id)
+  P-->>FN: accepted | rejected | processing | transient
+  FN->>DB: record_fiscal_result (accepted: CUFE + QR, credit note voids original)
+  O->>APP: history reprint
+  APP->>DB: fiscal_document_for_session
+  DB-->>APP: number, CUFE, QR (no customer PII)
+```
+
+`mode = 'off'` (default) creates nothing; without `FISCAL_PROVIDER_*` the
+function answers `{configured:false}` and documents stay `pending`. Every DIAN
+rule (document type, IVA rate, codes, resolution fields, CUFE/CUDE, QR) is an
+ASSUMPTION pending the owner's and accountant's confirmation.
+
+## 5d. Report assistant
+
+```mermaid
+sequenceDiagram
+  participant A as Admin (/report-assistant)
+  participant APP as Flutter
+  participant FN as report-assistant
+  participant DB as PostgreSQL (PostgREST)
+  participant M as DeepSeek API
+
+  A->>APP: question (es/en)
+  APP->>FN: POST ask (Authorization + x-lot-id, SSE)
+  FN->>DB: ai_budget_reserve (caller JWT) → 429 if over budget
+  loop bounded tool loop
+    FN->>M: chat/completions (tools, system prompt, redacted question)
+    M-->>FN: tool calls (report RPC + args) / submit_answer
+    FN->>DB: GET rpc/report_* with the caller's JWT and x-lot-id
+    DB-->>FN: projected aggregate JSON (plates/owners/notes removed)
+  end
+  FN->>FN: resolve figures (call id + path) with integer math
+  FN-->>APP: SSE started/tool/answer/done
+  APP->>APP: re-verify each figure from its raw sources
+  FN->>DB: ai_usage_record (caller JWT, no content)
+```
+
+The function never reads the service key; tools execute under the caller's
+identity, so a prompt injection cannot reach another lot or a write. Without
+`DEEPSEEK_API_KEY` the function answers `{configured:false}` and reserves
+nothing. Every DIAN-style provider decision is out of scope here; the AI
+provider sees only aggregated, field-allowlisted report data.
+
+## 5e. Damage comparison (advisory)
+
+```mermaid
+sequenceDiagram
+  participant O as Operator
+  participant APP as Flutter
+  participant DB as PostgreSQL
+  participant FN as damage-compare
+  participant S as Storage
+  participant M as DeepSeek vision
+
+  O->>APP: check-out + optional exit photos
+  APP->>S: upload exit-<session>-<clientRef>/<i>.jpg
+  APP->>DB: add_exit_evidence(session, paths) (phase=exit, max 5)
+  APP->>DB: begin_damage_comparison(session) (caller JWT)
+  APP->>FN: run session (Authorization, x-lot-id)
+  FN->>DB: ai_budget_reserve('damage_compare')
+  FN->>S: render entry/exit photos at 1024 px (caller JWT)
+  FN->>M: chat/completions with image_url parts, JSON answer
+  M-->>FN: findings (zones, classification, confidence)
+  FN->>FN: normalise + downgrade unsupported "new" + overall verdict
+  FN->>DB: store_damage_comparison (service role only)
+  APP->>DB: get_damage_comparison
+  O->>APP: confirm/dismiss with a note (audited)
+```
+
+The model never writes a verdict: the code downgrades "new" to "uncertain"
+unless a clear entry/exit pair, medium/high confidence and a same-vehicle yes
+support it, and computes the overall result. Exit photos need connectivity in
+v1; billing and the check-out path never change.
+
+## 5f. Device gateway
+
+```mermaid
+sequenceDiagram
+  participant D as Device (camera/barrier/hub)
+  participant G as device-gateway
+  participant DB as PostgreSQL
+
+  D->>G: GET /v1/time
+  G-->>D: server_time, max_skew 300 s
+  D->>G: POST /v1/heartbeat<br/>X-Device-Key, X-Device-Seq, X-Device-Timestamp
+  G->>DB: device_lookup(prefix) (service role)
+  DB-->>G: id + key_hash
+  G->>G: SHA-256(key) constant-time compare
+  G->>DB: device_accept_request(id, seq, sent_at, firmware)
+  DB-->>G: ok | disabled | skew | replay | rate
+  G->>DB: device_heartbeat(id, status)
+  G-->>D: server_time, heartbeat_interval_s, device, offline_minutes
+  Note over DB: offline_notified_at + notify_offline_devices()<br/>alerts the lot admins once per silence
+```
+
+The device never sends a lot id or a user JWT: the gateway derives both from
+the registry. The service key lives only in this function; the follow-up
+hardware changes add routes to the same table and reuse the same checks.
+
+## 5g. LPR gate (plate camera)
+
+A fixed camera runs a small edge service (Jetson/CPU reference in `edge/lpr/`,
+task 7 of the change) that samples RTSP frames, reads plates and posts them to
+the device gateway. The camera is just another device: same key, sequence and
+clock rules as the heartbeat. The server owns the decision — voting, debounce
+and the decision table — because the camera can lie or misread. Auto entries
+impersonate the lot's system operator inside one transaction; exits only raise
+an alert for the desk and never touch a session.
+
+```mermaid
+flowchart LR
+  cam[Fixed camera] -->|RTSP| edge[Jetson edge service]
+  edge -->|X-Device-Key + reads| gw[device-gateway /v1/lpr/*]
+  gw -->|service role| db[(lpr_reads / lpr_events)]
+  db -->|decide| ci[check_in as system operator]
+  db -->|notifications| gate[/gate inbox/]
+  gate -->|confirm / dismiss| db
+  gate -->|unpaid exit| co[Check-out]
+  db -->|snapshot| bucket[(evidence/lpr/...)]
+```
+
+The reference implementation and the hardware validation are the only parts
+not shipped yet; the protocol, the schema, the gateway routes and the UI are
+in place and covered by SQL, Deno and widget tests plus a live end-to-end
+smoke that registers a camera and posts reads without any hardware.
 
 ## 6. Shifts and cash
 
@@ -265,6 +475,7 @@ platform admins can request the consolidated view.
 | No application server | One deployable, no duplicated business rules, RLS is the boundary. |
 | SQL RPCs own logic | Billing/capacity must be atomic; the client cannot be trusted. |
 | Hive + outbox instead of live-sync | A parking lot loses connectivity; operators must keep working. |
+| Row `version` + field-level merge instead of last-write-wins | Two operators editing the same tariff/category/settings row must not silently overwrite each other; disjoint edits still merge without asking. |
 | Header-selected lot (mandatory) | No re-login to switch sites; validated server-side, so it is only a selector. Missing header fails closed. |
 | PDF/thermal receipts, no e-invoicing | Product scope: internal receipt only. |
 | Separate `admin-users` function | GoTrue admin API needs the service key; it must never reach the app. |

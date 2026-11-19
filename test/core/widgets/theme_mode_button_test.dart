@@ -18,10 +18,7 @@ void main() {
       testApp(
         BlocProvider<ThemeCubit>.value(
           value: cubit,
-          child: const Scaffold(
-            appBar: null,
-            body: ThemeModeButton(),
-          ),
+          child: const Scaffold(appBar: null, body: ThemeModeButton()),
         ),
       ),
     );

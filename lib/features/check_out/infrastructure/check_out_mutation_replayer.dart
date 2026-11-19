@@ -13,7 +13,7 @@ class CheckOutMutationReplayer extends MutationReplayer {
   MutationEntity get entity => MutationEntity.checkOut;
 
   @override
-  Future<void> replay(PendingMutation mutation) async {
+  Future<int?> replay(PendingMutation mutation) async {
     final payload = mutation.decodePayload();
     await _remote.checkOut(
       mutation.entityId!,
@@ -28,5 +28,7 @@ class CheckOutMutationReplayer extends MutationReplayer {
       cashReceived: (payload['cash_received'] as num?)?.toInt(),
       lotId: (payload['lot_id'] as num?)?.toInt(),
     );
+    // A close is safe by idempotency and status, not by version.
+    return null;
   }
 }

@@ -11,6 +11,8 @@ class OpenSession extends Equatable {
     this.hasPass = false,
     this.photoCount = 0,
     this.leftKeys = false,
+    this.onlinePaidAmount = 0,
+    this.onlineGraceUntil,
   });
 
   final int id;
@@ -30,6 +32,12 @@ class OpenSession extends Equatable {
   /// The customer left the keys at the desk.
   final bool leftKeys;
 
+  /// Already paid online for this open session (0 = nothing paid).
+  final int onlinePaidAmount;
+
+  /// Deadline to leave without paying the difference (null = not paid).
+  final DateTime? onlineGraceUntil;
+
   @override
   List<Object?> get props => [
     id,
@@ -39,5 +47,7 @@ class OpenSession extends Equatable {
     hasPass,
     photoCount,
     leftKeys,
+    onlinePaidAmount,
+    onlineGraceUntil,
   ];
 }

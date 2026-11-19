@@ -32,12 +32,15 @@ void main() {
     }
   });
 
-  test('Security: the auth session box is not touched by the cache cleaner', () async {
-    final auth = await Hive.openBox<String>('auth');
-    await auth.put('session', 'still-here');
+  test(
+    'Security: the auth session box is not touched by the cache cleaner',
+    () async {
+      final auth = await Hive.openBox<String>('auth');
+      await auth.put('session', 'still-here');
 
-    await const SessionCacheCleaner().clear();
+      await const SessionCacheCleaner().clear();
 
-    expect(Hive.box<String>('auth').get('session'), 'still-here');
-  });
+      expect(Hive.box<String>('auth').get('session'), 'still-here');
+    },
+  );
 }

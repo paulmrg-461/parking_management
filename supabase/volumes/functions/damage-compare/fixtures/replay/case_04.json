@@ -1,0 +1,45 @@
+{
+  "case": "pre-existing both sides",
+  "entry_ids": [
+    1
+  ],
+  "exit_ids": [
+    2
+  ],
+  "model_answer": {
+    "summary": "Golpe ya existente.",
+    "quality": {
+      "same_vehicle": "yes",
+      "covered_zones": [
+        "front",
+        "rear",
+        "left",
+        "right"
+      ],
+      "issues": []
+    },
+    "findings": [
+      {
+        "zone": "left",
+        "description": "Rayón",
+        "classification": "pre_existing",
+        "confidence": "high",
+        "entry_photo_ids": [
+          1
+        ],
+        "exit_photo_ids": [
+          2
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "overall": "no_new_damage",
+    "count": 1,
+    "findings": [
+      {
+        "classification": "pre_existing"
+      }
+    ]
+  }
+}

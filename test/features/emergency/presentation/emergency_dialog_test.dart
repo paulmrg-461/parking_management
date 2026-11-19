@@ -64,7 +64,12 @@ void main() {
 
     expect(find.text('123'), findsOneWidget);
     expect(find.text('Llamar al 123'), findsOneWidget);
-    expect(find.text('Pide al administrador que configure el número del cuadrante en Ajustes.'), findsOneWidget);
+    expect(
+      find.text(
+        'Pide al administrador que configure el número del cuadrante en Ajustes.',
+      ),
+      findsOneWidget,
+    );
 
     await tester.tap(find.byKey(const Key('emergency_call')));
     await tester.pumpAndSettle();
@@ -112,9 +117,7 @@ void main() {
       testApp(
         BlocProvider<BrandingCubit>.value(
           value: branding,
-          child: Scaffold(
-            appBar: AppBar(actions: const [EmergencyAction()]),
-          ),
+          child: Scaffold(appBar: AppBar(actions: const [EmergencyAction()])),
         ),
       ),
     );

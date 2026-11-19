@@ -124,4 +124,21 @@ class CapacitySnapshot extends Equatable {
     reservationsActive,
     reservationsExpiring,
   ];
+
+  Map<String, dynamic> toJson() => {
+    'car_open': carOpen,
+    'car_capacity': carCapacity,
+    'car_out_of_service': carOutOfService,
+    'car_target_capacity': carTargetCapacity,
+    'car_reserved': carReserved,
+    'moto_open': motoOpen,
+    'moto_capacity': motoCapacity,
+    'moto_out_of_service': motoOutOfService,
+    'moto_target_capacity': motoTargetCapacity,
+    'moto_reserved': motoReserved,
+    'keys_open': keysOpen,
+    'key_capacity': keyCapacity,
+    'reservations_active': reservationsActive,
+    'reservations_expiring': reservationsExpiring,
+  };
 }

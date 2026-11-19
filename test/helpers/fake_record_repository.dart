@@ -57,15 +57,15 @@ SessionRecord sampleRecord({
   DateTime? exitTime,
   int amountCharged = 5000,
   int durationSeconds = 3600,
+  int photoCount = 0,
 }) => SessionRecord(
   id: id,
   plate: plate,
   category: 'car',
   entryTime: entryTime ?? DateTime(2026, 10, 28, 8),
-  exitTime: status == 'open'
-      ? null
-      : exitTime ?? DateTime(2026, 10, 28, 9),
+  exitTime: status == 'open' ? null : exitTime ?? DateTime(2026, 10, 28, 9),
   status: status,
   amountCharged: amountCharged,
   durationSeconds: durationSeconds,
+  photoCount: photoCount,
 );

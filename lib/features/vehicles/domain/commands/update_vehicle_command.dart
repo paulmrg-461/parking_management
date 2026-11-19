@@ -6,6 +6,7 @@ class UpdateVehicleCommand {
     this.brand,
     this.ownerPhone,
     this.ownerName,
+    this.baseVersion,
   });
 
   final int id;
@@ -18,4 +19,7 @@ class UpdateVehicleCommand {
 
   /// `null` keeps the stored value; an empty string clears it.
   final String? ownerName;
+
+  /// The row version the editor opened (`null` = use the cached one).
+  final int? baseVersion;
 }

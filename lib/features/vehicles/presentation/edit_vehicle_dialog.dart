@@ -49,9 +49,7 @@ class _EditVehicleDialogState extends State<EditVehicleDialog> {
 
   String? _validateOwnerName(AppLocalizations l10n, String? value) {
     final name = (value ?? '').trim();
-    return name.isEmpty || name.length >= 2
-        ? null
-        : l10n.errorInvalidOwnerName;
+    return name.isEmpty || name.length >= 2 ? null : l10n.errorInvalidOwnerName;
   }
 
   String? _validatePhone(AppLocalizations l10n, String? value) {
@@ -73,6 +71,9 @@ class _EditVehicleDialogState extends State<EditVehicleDialog> {
         color: _color.text.trim(),
         ownerName: _ownerName.text.trim(),
         ownerPhone: _ownerPhone.text.trim(),
+        // The version this editor opened: another writer's change becomes a
+        // conflict instead of a silent overwrite.
+        baseVersion: widget.existing.version,
       ),
     );
     Navigator.of(context).pop();
@@ -109,6 +110,7 @@ class _EditVehicleDialogState extends State<EditVehicleDialog> {
               ),
               const SizedBox(height: Space.md),
               DropdownButtonFormField<int>(
+                isExpanded: true,
                 key: const Key('vehicle_edit_category'),
                 initialValue: _categoryId,
                 decoration: InputDecoration(labelText: l10n.fieldCategory),
@@ -121,8 +123,7 @@ class _EditVehicleDialogState extends State<EditVehicleDialog> {
                       ),
                 ],
                 onChanged: (value) => setState(() => _categoryId = value),
-                validator: (value) =>
-                    value == null ? l10n.fieldRequired : null,
+                validator: (value) => value == null ? l10n.fieldRequired : null,
               ),
               const SizedBox(height: Space.md),
               TextFormField(

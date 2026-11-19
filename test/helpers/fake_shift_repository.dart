@@ -8,10 +8,14 @@ class FakeShiftRepository implements ShiftRepository {
   ShiftSummary? currentShift;
   List<ShiftSummary> historyShifts;
   Failure? error;
+  Future<void>? currentGate;
+  Future<void>? historyGate;
+  int historyCalls = 0;
 
   @override
   Future<ShiftSummary?> current() async {
     _throwIfNeeded();
+    await currentGate;
     return currentShift;
   }
 
@@ -83,9 +87,11 @@ class FakeShiftRepository implements ShiftRepository {
     DateTime? from,
     DateTime? to,
   }) async {
+    historyCalls++;
     lastHistoryFrom = from;
     lastHistoryTo = to;
     _throwIfNeeded();
+    await historyGate;
     return historyShifts;
   }
 
@@ -106,6 +112,7 @@ ShiftSummary sampleShift({
   String? notes,
   int withdrawals = 0,
   int deposits = 0,
+  int onlineSales = 0,
 }) => ShiftSummary(
   id: id,
   operatorId: 1,
@@ -119,6 +126,7 @@ ShiftSummary sampleShift({
   sessionCount: 1,
   revenue: 5000,
   cashSales: 5000,
+  onlineSales: onlineSales,
   discounts: 1000,
   withdrawals: withdrawals,
   deposits: deposits,

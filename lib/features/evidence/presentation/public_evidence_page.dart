@@ -17,6 +17,7 @@ import '../../../core/widgets/plate_text.dart';
 import '../../../core/widgets/skeleton.dart';
 import '../../../core/widgets/status_chip.dart';
 import '../../../core/widgets/submission_feedback.dart';
+import '../../online_payments/presentation/widgets/pay_online_panel.dart';
 import '../application/evidence_cubit.dart';
 import '../../settings/domain/whatsapp_url.dart';
 import '../domain/entities/public_evidence.dart';
@@ -24,10 +25,19 @@ import '../domain/entities/public_evidence.dart';
 /// Public, plate-keyed evidence page opened by the QR/link on the receipt.
 /// No login: the link carries the session and the plate is the access key.
 class PublicEvidencePage extends StatefulWidget {
-  const PublicEvidencePage({super.key, this.sessionId, this.plate});
+  const PublicEvidencePage({
+    super.key,
+    this.sessionId,
+    this.plate,
+    this.payReference,
+  });
 
   final int? sessionId;
   final String? plate;
+
+  /// `pay` query parameter: the customer is back from the gateway and the
+  /// page polls this reference until it is decided.
+  final String? payReference;
 
   @override
   State<PublicEvidencePage> createState() => _PublicEvidencePageState();
@@ -83,29 +93,31 @@ class _PublicEvidencePageState extends State<PublicEvidencePage> {
         builder: (context, state) {
           if ((_key ?? '').trim().isEmpty) {
             return _PlateGate(
-              sessionInvalid: widget.sessionId == null || widget.sessionId! <= 0,
+              sessionInvalid:
+                  widget.sessionId == null || widget.sessionId! <= 0,
               controller: _plate,
               onUnlock: _unlock,
             );
           }
           return switch (state.status) {
-          EvidenceStatus.initial ||
-          EvidenceStatus.loading => const SkeletonCardList(itemCount: 3),
-          EvidenceStatus.failure => Padding(
-            padding: const EdgeInsets.all(Space.lg),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ErrorState(
-                  message: l10n.evidenceInvalid,
-                  onRetry: () => unawaited(_load()),
-                ),
-              ],
+            EvidenceStatus.initial ||
+            EvidenceStatus.loading => const SkeletonCardList(itemCount: 3),
+            EvidenceStatus.failure => Padding(
+              padding: const EdgeInsets.all(Space.lg),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ErrorState(
+                    message: l10n.evidenceInvalid,
+                    onRetry: () => unawaited(_load()),
+                  ),
+                ],
+              ),
             ),
-          ),
             EvidenceStatus.loaded => _EvidenceBody(
               evidence: state.evidence!,
               onOpen: _open,
+              payReference: widget.payReference,
             ),
           };
         },
@@ -217,10 +229,15 @@ class _PlateGate extends StatelessWidget {
 }
 
 class _EvidenceBody extends StatelessWidget {
-  const _EvidenceBody({required this.evidence, required this.onOpen});
+  const _EvidenceBody({
+    required this.evidence,
+    required this.onOpen,
+    this.payReference,
+  });
 
   final PublicEvidence evidence;
   final ValueChanged<String> onOpen;
+  final String? payReference;
 
   Future<void> _call(BuildContext context, String phone) async {
     final digits = phone.replaceAll(RegExp(r'\D'), '');
@@ -317,6 +334,15 @@ class _EvidenceBody extends StatelessWidget {
                     ],
                   ),
                 ],
+                if (evidence.lot case final lot? when lot.id > 0) ...[
+                  const SizedBox(height: Space.md),
+                  FilledButton.icon(
+                    key: const Key('evidence_book'),
+                    onPressed: () => context.push('/reserve?lot=${lot.id}'),
+                    icon: const Icon(Icons.event_available),
+                    label: Text(l10n.bookingTitle),
+                  ),
+                ],
               ],
             ),
           ),
@@ -358,6 +384,38 @@ class _EvidenceBody extends StatelessWidget {
             ),
           ),
         ],
+        if (evidence.summary case final summary?
+            when summary.adjustments.isNotEmpty) ...[
+          const SizedBox(height: Space.sm),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(Space.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (final line in summary.adjustments)
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            context.l10n.fareAdjustmentMerchant(line.label),
+                          ),
+                        ),
+                        Text('-${Money.formatAs(summary.currency, line.amount)}'),
+                      ],
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+        if (evidence.summary case final summary?
+            when summary.isOpen && summary.onlinePaymentsEnabled)
+          PayOnlinePanel(
+            summary: summary,
+            plate: evidence.plate,
+            payReference: payReference,
+          ),
         const SizedBox(height: Space.md),
         if (evidence.isEmpty)
           EmptyState(
@@ -381,10 +439,7 @@ class _EvidenceBody extends StatelessWidget {
               crossAxisSpacing: Space.sm,
               children: [
                 for (final photo in evidence.photos)
-                  _PhotoTile(
-                    media: photo,
-                    onTap: () => onOpen(photo.url),
-                  ),
+                  _PhotoTile(media: photo, onTap: () => onOpen(photo.url)),
               ],
             ),
           if (evidence.videos.isNotEmpty) ...[

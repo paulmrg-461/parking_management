@@ -62,36 +62,36 @@ class AppShell extends StatelessWidget {
       listener: (context, state) =>
           _reloadForLot(context, admin: role == UserRole.admin),
       child: BlocListener<NotificationsCubit, NotificationsState>(
-      listenWhen: (previous, current) =>
-          previous.latestArrived?.id != current.latestArrived?.id,
-      listener: (context, state) {
-        final notification = state.latestArrived;
-        if (notification == null) {
-          return;
-        }
-        // Another device moved a vehicle: refetch the shell summaries. The
-        // acting device already refreshed locally, so the echo is harmless.
-        _reloadForLot(context, admin: role == UserRole.admin);
-        if (_isOwnEcho(notification)) {
-          return;
-        }
-        showInfoSnack(context, activityMessage(context, notification));
-      },
-      child: Column(
-        children: [
-          const VersionBanner(),
-          const OfflineBanner(),
-          Expanded(
-            child: Center(
-              child: ConstrainedBox(
-                key: const Key('app-shell-content'),
-                constraints: const BoxConstraints(maxWidth: maxContentWidth),
-                child: child,
+        listenWhen: (previous, current) =>
+            previous.latestArrived?.id != current.latestArrived?.id,
+        listener: (context, state) {
+          final notification = state.latestArrived;
+          if (notification == null) {
+            return;
+          }
+          // Another device moved a vehicle: refetch the shell summaries. The
+          // acting device already refreshed locally, so the echo is harmless.
+          _reloadForLot(context, admin: role == UserRole.admin);
+          if (_isOwnEcho(notification)) {
+            return;
+          }
+          showInfoSnack(context, activityMessage(context, notification));
+        },
+        child: Column(
+          children: [
+            const VersionBanner(),
+            const OfflineBanner(),
+            Expanded(
+              child: Center(
+                child: ConstrainedBox(
+                  key: const Key('app-shell-content'),
+                  constraints: const BoxConstraints(maxWidth: maxContentWidth),
+                  child: child,
+                ),
               ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
     );
     return LayoutBuilder(
@@ -351,9 +351,8 @@ class _AppMenuDrawer extends StatelessWidget {
                     ),
                   ),
                   IconButton(
-                    tooltip: MaterialLocalizations.of(
-                      context,
-                    ).closeButtonTooltip,
+                    tooltip: MaterialLocalizations.of(context)
+                        .closeButtonTooltip,
                     onPressed: () => Navigator.of(context).pop(),
                     icon: const Icon(Icons.close),
                   ),
@@ -415,10 +414,7 @@ class _AppMenuDrawer extends StatelessWidget {
 
 /// Drawer footer: Ajustes (device preferences + help), Acerca de and sign-out.
 class _DrawerPreferences extends StatelessWidget {
-  const _DrawerPreferences({
-    required this.onNavigate,
-    required this.onLogout,
-  });
+  const _DrawerPreferences({required this.onNavigate, required this.onLogout});
 
   final ValueChanged<String> onNavigate;
   final VoidCallback onLogout;

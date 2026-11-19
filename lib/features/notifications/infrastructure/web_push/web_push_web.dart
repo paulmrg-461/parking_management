@@ -48,7 +48,9 @@ class BrowserWebPushRegistrar implements WebPushRegistrar {
   Future<WebPushSubscription?> current() async {
     try {
       final registration = await _registration();
-      final subscription = await registration.pushManager.getSubscription().toDart;
+      final subscription = await registration.pushManager
+          .getSubscription()
+          .toDart;
       return subscription == null ? null : _toSubscription(subscription);
     } catch (_) {
       return null;
@@ -59,7 +61,9 @@ class BrowserWebPushRegistrar implements WebPushRegistrar {
   Future<void> unsubscribe() async {
     try {
       final registration = await _registration();
-      final subscription = await registration.pushManager.getSubscription().toDart;
+      final subscription = await registration.pushManager
+          .getSubscription()
+          .toDart;
       await subscription?.unsubscribe().toDart;
     } catch (_) {
       // Nothing to release: the endpoint is dropped server-side anyway.

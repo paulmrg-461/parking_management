@@ -4,20 +4,877 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-11-05 (owner contact data, emergency action, monthly-pass
-tariff, device preferences, QR contact/summary). Branch `feature/supabase`.
+Last updated: 2026-11-19 (LPR settings slice).
 
 ## Where we are
 
 - Stack: Flutter (android + web) + self-hosted Supabase only. No FastAPI,
   Alembic, Dio, Redis or `backend/` — never reintroduce them.
-- `supabase/migrations/0001..0079` are the schema owner (applied by
+- `supabase/migrations/0001..0129` are the schema owner (applied by
   `supabase-migrate`); SQL RPCs own business logic; RLS everywhere.
-- Flutter: 993 tests green, `flutter analyze` reports only SDK deprecation
-  infos from the pinned beta channel (0 errors/warnings). Web build green.
+- Flutter: 1890 tests green (coverage 79.1% global; application 90.2%,
+  domain 63.0%, infrastructure 48.0%), `flutter analyze` reports only SDK
+  deprecation infos from the pinned beta channel (0 errors/warnings). Web
+  build green. Deno tests for the Edge Functions: 30 green.
   `supabase/tests/run.sh` and `supabase/tests/e2e.sh` green.
 - OpenSpec: multi-lot archived (`openspec/specs/parking-lots`); the only open
   item is the manual smoke for `add-parking-settings` (task 10.4).
+
+
+
+
+
+
+
+
+
+
+
+## Hardening batch (2026-11-18)
+
+- **Q3 closed:** `report_revenue`/`report_by_payment` `pass_revenue` and
+  `pass_by_payment` ARE lot-scoped in the current body (`0114`); the assistant's
+  design Q3 described the old `0024` body. A regression test
+  (`reports: pass revenue is isolated per lot`) now pins the isolation: a paid
+  pass in a second lot must not change lot 1's `pass_revenue`. No migration
+  was needed.
+- `/devices` gained the **rename** action (dialog + `update_lot_device`); the
+  API/cubit existed, only the affordance was missing.
+- The evidence sheet groups photos by **phase** (`Fotos de entrada` /
+  `Fotos de salida`) and shows a `Comparar` button when both phases exist,
+  navigating to `/damage-comparison?session=<id>`.
+- CI gained the **`edge-functions`** job (`deno test --allow-env --allow-read`,
+  Deno v2.6.3, no network) that the hardware wave requires.
+- `integration_test/app_flow_test.dart` now exists as a wrapper around
+  `test/integration/supabase_flow_test.dart` (it skips without
+  `SUPABASE_URL`/`SUPABASE_ANON_KEY`), so the AGENTS section 6 command runs
+  green; `integration_test` was added to `pubspec.yaml` dev_dependencies.
+- Archived (specs synced), recent waves: `add-dynamic-pricing`,
+  `add-loyalty-rewards`, `add-electronic-invoicing`, `add-report-assistant`,
+  `add-ai-damage-comparison`, `add-device-gateway`.
+- Archived on 2026-11-19 (the ten older delivered changes whose specs were
+  never synced): `add-parking-settings`, `add-public-booking-captcha`,
+  `add-booking-waitlist`, `add-offline-conflict-resolution`,
+  `add-period-comparison-reports`, `add-occupancy-forecast`,
+  `add-cash-anomaly-detection`, `add-online-payments`,
+  `add-pass-auto-renewal`, `add-merchant-validations`.
+  `openspec/specs` now has every capability (41 specs, all validating); only
+  the three hardware changes stay active.
+- Angle guidance shipped: `core/widgets/capture_guide.dart` with `AngleSlot`
+  (4 corners + detail), `AngleGuideBanner`, `AngleSlotChips` and
+  `showAngleIllustration` (a `CustomPainter` car outline using theme colors
+  only, no hardcoded `Color(…)`). Wired into the check-in form above the photo
+  strip and the exit-photo section of the settlement dialog; the guide never
+  blocks capture or submission (the existing check-in/dialog suites stay
+  green). `slotForIndex` clamps negatives to `frontLeft` and overflow to
+  `detail`.
+- Replay harness shipped: `report-assistant/replay_test.ts` iterates
+  `fixtures/*.json` (question, recorded RPC output, recorded model script and
+  the expected figures) and runs the real agent loop with a scripted model and
+  a fake PostgREST — no network, so the CI `edge-functions` job runs it.
+  Eight cases cover the design table: per-category revenue (F1), two payment
+  methods (F3), percent_change between two months (F4), share_percent (F5),
+  busiest hour (F6), shift cash differences (F12), the out-of-scope plate
+  question with redaction (F16) and a hostile category name that must not
+  change the figures (F18). The remaining 10 recorded cases and `eval:live`
+  still need a manual live run with the owner's key.
+- Two real bugs found by the replay fixtures and fixed:
+  (1) `validateAnswer` wrongly rejected a legitimate `percent_change` figure
+  because it compared the DECLARED unit (`percent`) with the leaf unit
+  (`money`) of each operand; percent ops now compare leaf units only against
+  each other and the computed-unit check still guards the declared unit.
+  (2) The shifts tool projected a bare array, which the path grammar (keys
+  first) cannot address; it now wraps the rows in `{"shifts":[...]}` so
+  `shifts[0].difference` resolves.
+- The harness serves two recorded bodies for the same RPC (period
+  comparisons) keyed by `name|p_start_date`.
+- Damage comparison replay harness: `damage-compare/replay_test.ts` +
+  `fixtures/replay/*.json` push recorded model JSON through the real
+  `normalise` and assert the verdict, the cheap-model downgrades and the
+  sanitisation — no images and no network. Nine cases: identical sets,
+  clear new damage, low-confidence downgrade, pre-existing, glare forcing
+  `insufficient_evidence`, different-vehicle downgrade, the 12-finding cap,
+  hostile HTML stripped from descriptions, and unknown zone/classification
+  falling back to `uncertain`.
+- The report-assistant replay now covers the whole design table (18 cases:
+  F1-F18), all hand-authored against the recorded RPC shapes. No live key was
+  needed. The damage replay now has 18 cases too (pairing, foreign photo
+  ids, missing exit photo, sort order, quality caps, control-character
+  stripping, malformed findings, summary truncation, unknown identity).
+  The overall verdict now follows the design's safety rule: any `new` finding
+  wins; otherwise an all-clear needs `same_vehicle = yes`, at least three
+  covered zones (`AI_DAMAGE_MIN_COVERED_ZONES`, default 3) and no uncertain
+  finding. Deno suite is 138 tests.
+- `report-assistant/eval_live.ts` + `deno task eval:live` (manual, needs
+  `DEEPSEEK_API_KEY`, never in CI): runs the same 18 fixtures against the
+  real model, scores tool selection (expected subset of called, with
+  `get_capacity_now` noise allowed), the date arguments and every figure
+  value, and fails under 17/18. `eval_guard.ts` refuses without a key and
+  inside CI; three tests pin the refusals.
+- Damage live eval shipped: `deno task eval:damage` (manual, guarded like
+  `eval:live`) reads labelled pairs from `DAMAGE_FIXTURES_DIR` (default
+  `damage-compare/fixtures/pairs`, README only in the repo), runs the same
+  prompt/vision/normaliser and scores with `damage-compare/eval/scoring.ts`
+  (A+D false-positive budget 1, B zone hit >= 80%, zero tolerance for an
+  all-clear on E/G/H). What is still missing is the owner's consented,
+  plate-blurred photo pairs; the tooling is ready for them.
+- The vision call was extracted to `createVision(env)` in `index.ts` so the
+  function and the eval share one code path.
+- `deno task eval:record` re-records a fixture's `model_script` from a live
+  run; it only writes when the outcome is `ok`, and `report-assistant/eval/
+  script.ts` (tested) does the swap without touching the rest of the fixture.
+- Deno tasks: `test`, `eval:live`, `eval:record`, `eval:damage`, all in
+  `supabase/volumes/functions/deno.jsonc`.
+- `tests/bootstrap.sql` now installs pgcrypto in `extensions` before the
+  migrations (the image's layout), so the suite stops hiding search_path
+  bugs; migration 0001's `create extension if not exists` then no-ops. It
+  also revokes the image's default grants on new tables/functions/sequences
+  for `supabase_admin`, which makes the negative privilege tests pass on both
+  the image and the compose cluster (they only passed on one before).
+- Real bug found by the new device E2E: Supabase keeps pgcrypto in the
+  `extensions` schema, so the device key functions (`search_path = public`)
+  failed live with `gen_random_bytes does not exist`. `0130` sets both search
+  paths; the SQL suite only passed before because its database resolved
+  pgcrypto from `public`. Whenever a migration calls pgcrypto, use
+  `set search_path = public, extensions`.
+- `test/integration/device_gateway_test.dart` now automates the protocol
+  smoke (register, time, heartbeat, replay, skew, bad key, audit events); it
+  runs from `integration_test/app_flow_test.dart` and skips without env.
+  Only physical boot/network retries still need hardware.
+- SQL suite flakiness fixed in `rpc_test.sql`: two blocks were tied to the
+  wall clock. The forecast median fixture now anchors on the most recent
+  Wednesday strictly before today (the profile window is `today - 8 weeks ..
+  today - 1`), and the loyalty online-cap fixture uses a fixed past daytime
+  window (`09:00 -> 11:30`) instead of `now() - 3 hours`, which crossed the
+  night-rate boundary and changed the fare with the hour of the run.
+- Run the SQL suite against a scratch database **inside `supabase-db`**
+  (the compose container, matching production grants): drop/create `sql_test`
+  and run `tests/run.sh` from a `postgres:17-alpine` client on the
+  `parking_management_default` network. A standalone `supabase/postgres`
+  container gets the image's default grants (anon/authenticated can read and
+  execute new objects), so the privilege assertions that expect
+  `insufficient_privilege` fail there; the production-like compose database
+  has no such default ACLs. The `payment_events` block now accepts either a
+  privilege error or zero visible rows (the invariant is no rows).
+- Still pending: rotate the exposed DeepSeek key (owner), the manual smokes
+  (payments/passes/damage/devices), the damage fixtures 10-16 (two-photo
+  pairing, extra vehicles in frame, photo caps), the `eval:live` tooling and
+  the three hardware changes.
+
+## Device gateway backend (2026-11-18, `0128`-`0129`)
+
+- Devices are not users: `lot_devices` stores only a SHA-256 hash and a public
+  12-hex prefix; the `pkd_<prefix>_<64 hex>` plaintext is returned once by
+  `register_lot_device`/`rotate_lot_device_key`. Do NOT attach `record_audit()`
+  to `lot_devices`; `device_events` is the audit trail and never holds a key or
+  hash. Rotation resets `last_seq` and clears `offline_notified_at`.
+- Auth path: `device-gateway` computes SHA-256 of `X-Device-Key`, compares it
+  in constant time with `device_lookup(prefix)`, then `device_accept_request`
+  checks enabled -> clock (±5 min via `max_client_clock_skew()`) -> strictly
+  increasing `X-Device-Seq` -> per-device rate window. Refusals are returned as
+  JSON, not raised, so the `request_rejected` event commits. `last_seen_at` and
+  `last_seq` are untouched on refusal.
+- `device_heartbeat` stores a JSON object <= 2048 bytes; the default offline
+  threshold is 5 minutes (`parking_settings.device_offline_minutes`, 2..1440).
+  `notify_offline_devices` alerts admins once per silence and writes an
+  `offline` event; the next accepted request writes `online` and clears the
+  marker.
+- Only `/v1/time` (public) and `/v1/heartbeat` are implemented. The camera,
+  barrier and sensor changes extend a route table; do not change the auth
+  order. The gateway is the only device-facing function with the service key.
+- Gotcha: test queries comparing an unqualified `device_id` against a
+  `device_events.device_id` column are ambiguous; qualify the column or read the
+  id from `current_setting`.
+- Gatekeeper: migrations `0128`-`0129` applied live (offline 5 min), SQL suite
+  green over `0001`-`0129`, **84 Deno tests** green, `/v1/time` answers 200.
+  Flutter tests unchanged (1866).
+- Flutter shipped: `/devices` (admin/deferred) with list + status, register
+  with show-once key, rotate, toggle, delete confirmation (rename lives in the
+  cubit/API and has no UI control yet),
+  event history sheet and the offline threshold in the list header; notification
+  routes for `device_offline`/`device_online`/`device_auth_failed`.
+- Pending: the manual device smoke (real ESP32/Jetson with `/v1/time` and
+  `/v1/heartbeat`) and the follow-up hardware changes. The registry, admin
+  screen and transport are ready for them.
+
+## LPR camera gate (wave started 2026-11-19, `0131`)
+
+The hardware wave (`add-lpr-camera-gate`, then `add-barrier-control` and
+`add-bay-sensors`) is being built software-first: the camera/Jetson is only
+needed for the physical validation, not for the schema, the gateway routes or
+the Flutter inbox. Progress is committed in slices; the change stays active
+until the edge service exists.
+
+- `0131_lpr_settings.sql`: `lpr_settings` (mode, thresholds, windows, default
+  category, system operator), `lpr_camera_config` (one direction per camera),
+  `lpr_effective_settings()` (the row or the documented defaults),
+  `get_lpr_settings()` (member), `set_lpr_settings()` and
+  `set_lpr_camera_direction()` (admin). Writes are security definer only; the
+  table has an audit trigger and a member read policy.
+- Every profile joins lot 1 automatically (`trg_add_default_lot_member`), so a
+  "user from another lot" fixture must use a second lot; the LPR block does.
+- The acting-user primitive (design D1) is verified in SQL: claims set with
+  `set_config(..., true)` inside a security definer resolve
+  `current_app_user_id()` and are restored afterwards.
+- `lpr_effective_settings` uses a `row(...)` literal in table order; a SQL
+  test compares its keys with `information_schema.columns` and fails when a
+  column is added without updating the literal.
+- `0132_lpr_ingest.sql`: `lpr_events`, `lpr_reads`, `can_read_lpr_snapshot()`
+  + `lpr_snapshots_read` (the policy never calls `current_lot_id()`),
+  `lpr_event_json()`, `lpr_notify()` (one notification per event and member,
+  deduped), and the three service-role RPCs `device_lpr_config`,
+  `device_ingest_lpr_read`, `device_lpr_attach_snapshot`.
+- Ingest order matters: advisory lock per camera → device/kind/direction →
+  plate and confidence → replay by `(device_id, client_ref)` → insert read →
+  stale (>15 min) → low confidence → debounce (cooldown) → votes (same
+  camera, unattached, window) → decision. Auto entry impersonates the system
+  operator and calls `check_in` with named arguments; the claims are restored
+  in both the success and the exception path (the subtransaction rollback
+  would also restore them, but the explicit restore keeps it obvious).
+- Decision order: blacklist → duplicate open session → assist → low automatic
+  confidence → unknown plate without default category → no system operator →
+  auto `check_in`; exit never writes to the session and `exit_paid` uses
+  `exit_paid_window_minutes`.
+- Snapshot path is exactly `lpr/<lot>/<device>/<event>.jpg`; the attach RPC
+  rejects anything else, inserts `evidence_photos` when the event already has
+  a session and answers `SnapshotAlreadyAttachedError` on a second PUT (the
+  device treats 409 as success).
+- Test gotchas: every new profile auto-joins lot 1, so an "outsider" must have
+  that membership deleted; use a distinct plate per decision scenario (the
+  120 s cooldown would otherwise debounce the next test); `pg_temp.lpr_triple`
+  posts three reads with fresh client refs.
+- `0133_lpr_operator_rpcs.sql`: `list_lpr_events` (status filter incl. `all`,
+  clamp 1..200, `device_name`), `confirm_lpr_entry` (member; calls `check_in`
+  as that operator with `p_idempotency_key = 'lpr-confirm:<id>'`, a corrected
+  plate is normalized, attaches the snapshot as evidence and marks the event
+  confirmed; a second call replays the same session), `dismiss_lpr_event`
+  (pending or blocked, note ≤200 chars in `detail.note`), `expire_lpr_events`
+  (pending past the lot's `pending_expire_minutes` → expired; `exit_unpaid`
+  whose session closed → confirmed) and `purge_lpr_events` (deletes old reads
+  and events, returns the orphan snapshot paths for the storage janitor).
+- `expire_lpr_events` runs from `jobs.sh` and `notifications-cron.sh`;
+  `purge_lpr_events` is called by `evidence-archive` (task 4.3), not by the
+  shell loops.
+- Gateway routes shipped: `routing.ts` (suffix matcher with `:name` segments,
+  tested) and the three camera-only routes `GET /v1/lpr/config`,
+  `POST /v1/lpr/reads` (Idempotency-Key must equal `client_ref`, 4 KiB cap)
+  and `PUT /v1/lpr/events/:id/snapshot` (JPEG magic, 256 KiB cap, path built
+  from the authenticated device, upload then attach, object removed when the
+  attach refuses, a Storage 409 maps to `SnapshotAlreadyAttachedError`). Each
+  route consumes the device sequence like the heartbeat.
+- `evidence-archive` now calls `purge_lpr_events` and deletes the returned
+  orphan paths (`lpr_janitor.ts`, five tests); the response adds
+  `lpr_snapshots` and `lpr_deleted`.
+- The device E2E now covers the whole LPR path against the live stack:
+  direction, config, three reads → `assist_mode` event, upload of a 1x1 JPEG
+  and the attach answer. No hardware or AI key needed.
+- Flutter inbox shipped (`lib/features/lpr/`): `LprEvent`/enums, repository
+  port and command, the Supabase data source (reusing the check-in session
+  DTO), the polling `LprInboxCubit` (four states, single-flight submissions,
+  timer cancelled on close) and `/gate` with cards, skeleton, empty/error
+  states, the plate-correction dialog, the offline guard and the unpaid-exit
+  shortcut to `/check-out?scan=`. The gate sits in the drawer ("Portería"):
+  the bottom bar is capped at four routes.
+- `0134` lets `confirm_lpr_entry` fall back to the lot's default category, so
+  an unknown plate can be confirmed from the dialog without a category picker.
+- `/gate-settings` shipped: `LprSettings`/`LprCamera`, the settings update
+  command, `get_lpr_settings`/`set_lpr_settings`/`set_lpr_camera_direction`
+  on the data source, the `LprSettingsCubit` (four states plus `NoCameras`,
+  single-flight saves, direction reload) and the admin page (mode with the
+  auto confirmation, two confidence sliders, three steppers, category/user
+  pickers, per-camera direction, save). The page creates its three cubits so
+  the router stays free of deferred-heavy imports; the route is admin-only
+  and the drawer entry is "Cámara de placas".
+- The gate cards show the snapshot thumbnail (`LprSnapshotThumb`, loader
+  injected by the route from the repository) with the `Sin imagen`/`No image`
+  placeholder on error; three widget tests cover it.
+- Docs shipped: `docs/lpr-gate.md` (decision table, operator flow, settings,
+  protocol, retention, rollback, limits) plus the database/architecture/
+  infrastructure/project-overview/index updates. Mermaid: camera -> edge
+  service -> gateway -> DB -> gate inbox.
+- `edge/lpr/` started (task 7.1 done, 7.2 partial): the hardware-free core
+  is implemented and tested with pytest (31 tests) — `postprocess.py`
+  (confusable fold), `config.py` (strict YAML, HTTPS, 0600 secrets, engine
+  hashes), `tracker.py` (greedy IoU, one read per interval, max reads, best
+  crop), `outbox.py` (durable SQLite, client_ref before send, expiry/cap,
+  crash test via subprocess) and `gateway.py` (seq `boot<<32|n`, replay/skew
+  retries, backoff bounds, TLS always verified). No OpenCV needed for these.
+- Edge additions: `capture.py` (OpenCV/GStreamer source + reconnecting
+  wrapper with stall detection and a 30 s backoff reset), `sampler.py`
+  (idle/active cadence, motion gate, ROI, stale), `models.py` (ports +
+  fixture-driven fakes), `health.py` (heartbeat + watchdog),
+  `service.py` (the loop plus snapshot upload and outbox drain) and
+  `testing.py` (localhost fake gateway). `tools/fake_gateway.py` and
+  `tools/export_models.sh`, systemd unit and env example are in place.
+  pytest is now 43 tests, including a three-case integration test over real
+  HTTP against the fake gateway (decision + snapshot, replay, outage).
+- Remaining on the edge: the ONNX/TensorRT adapters, `__main__.py` and the
+  recorded video fixtures (they need the owner's model shapes and
+  OpenCV/TensorRT, absent here), plus the hardware validation (7.11).
+  Tasks 1.1-6.4, 7.1, 7.3, 7.8 and 8.1-8.3 are checked; `openspec validate
+  --strict` passes.
+
+## Barrier control (wave started 2026-11-19, `0135`)
+
+The next hardware wave (`add-barrier-control`) is also being built
+software-first. Only the configuration slice exists so far; nothing can open a
+barrier until the command/signing migrations and routes land, so lots without a
+barrier are untouched.
+
+- `0135_barrier_config.sql`: `barrier_config` (direction, paired LPR camera,
+  which events may open it, the firmware timings) with a check trigger that
+  requires a `barrier` device and a same-lot `camera`, an audit trigger and no
+  client grants; `device_firmware` (shared with `add-bay-sensors`) and the
+  private `firmware` bucket with no Storage policy (service role only);
+  `list_barriers()` (member) and `set_barrier_config()` (admin, coalescing
+  upsert, `p_camera_device_id = 0` clears the pairing).
+- SQL block `-- barrier` covers the roundtrip, the pairing clear, every range
+  and enum, a foreign camera, a non-barrier device, operators read-only, the
+  trigger on direct writes, lot isolation, the table grants and the bucket.
+- `0136_barrier_commands.sql`: `barrier_commands` (uuid id, nonce, source,
+  status, deliveries, short TTL) and `barrier_events` (unique per device and
+  client_ref), the command/event JSON, `barrier_notify` (members or admins,
+  unique dedupe key) and `barrier_notify_failed`; the service-role RPCs
+  `device_barrier_config`, `device_barrier_next` (oldest first, max 3
+  deliveries at least 5 s apart, skips expired), `device_barrier_ack`
+  (`opened`/`refused`, idempotent, refusal notifies members),
+  `device_barrier_event` (idempotent; obstruction/tamper/power/fault notify
+  admins once per device+event+minute) and `device_firmware_manifest`; plus
+  `expire_barrier_commands` and `purge_barrier_events(365)`, wired into
+  `jobs.sh` and the host cron.
+- SQL block `-- barrier` (commands): config for the edge, delivery and
+  redelivery rules, expired skip, ack opened/refused/idempotent, foreign
+  device, event idempotency, fault audience and dedupe, expiry notifications,
+  firmware manifest, purge and the grants.
+- Next: the Ed25519 signing module, `barrier_issue_command` + the triggers,
+  the gateway routes, the operator RPCs (manual open, config/list, command
+  history), the Flutter `/barrier` page and the ESP32 firmware. Tasks 1.1-1.3
+  and 2.2 are checked.
+
+## Damage comparison backend (2026-11-18, `0127`)
+
+- Owner approved sending **vehicle photos** to DeepSeek for this advisory
+  comparison; the key is the same server-only `DEEPSEEK_API_KEY`.
+- `evidence_photos.phase` (`entry`/`exit`, default entry) + `add_exit_evidence`
+  (1..5, idempotent per session/path, `require_evidence_object`, never touches
+  `check_out`). Existing `photo_count` readers now include exit photos.
+- `damage_comparisons`/`damage_findings`; results are written ONLY by
+  `store_damage_comparison`/`fail_damage_comparison`, granted to `service_role`.
+  An operator cannot call them, so an AI finding cannot be forged. The Edge
+  `store.ts` is the only file that reads `SUPABASE_SERVICE_ROLE_KEY`.
+- `begin_damage_comparison` expires a pending run older than 3 minutes, caps
+  each set at 8 (default 5), needs both sets and gives an operator one run
+  (admin can re-run). `get_damage_comparison` returns the latest/requested run,
+  findings ordered by position and a `stale` flag when the photo counts changed.
+- `review_damage_finding`: confirm/dismiss require a 3..400 character note and
+  write an `audit_log` row; re-open is admin-only. The comparison never changes
+  `amount_charged`, `discount_amount` or `vehicles.is_blacklisted`.
+- `damage-compare` Edge Function: caller-scoped begin, Storage render at 1024 px
+  (caller JWT), DeepSeek vision (`image_url`, JSON output), code-side
+  normalisation (unsupported `new` -> `uncertain` when a photo pair, confidence
+  or same-vehicle confirmation is missing; 12-finding cap; overall verdict
+  computed in code) and service-role store. It reserves `damage_compare` in the
+  shared budget (seed 60 requests / 1.2M tokens) before beginning.
+- Gotchas: the owner's `get_damage_comparison` query uses a nested subquery to
+  return a pending run only when it is the latest; `require_evidence_object`
+  also rejects a path already used by ANY session, so the app must retry with
+  the same paths only (our own retry is skipped before that check).
+- Gatekeeper (2026-11-18): migration `0127` applied live (`damage_compare` seed
+  60/1.2M), SQL suite green over `0001`-`0127`, **79 Deno tests** green, the
+  function answers 200 `{configured:false}` without a key. Flutter tests are
+  unchanged (1840).
+- Flutter shipped: `evidence_photos.phase` parsing, exit-photo capture in the
+  settlement dialog (online only), `AttachExitEvidence` upload after a
+  successful online check-out (409 retry is success, same `clientRef`), and the
+  `/damage-comparison` page (operator route) with the advisory banner, verdict,
+  findings, confirm/dismiss note dialog, admin re-run and the four states.
+- Pending: the angle guidance (capture guide, check-in/out chips), the evidence
+  sheet phase grouping/compare button, the 16 replay fixtures and live eval,
+  and the manual photo smoke. They are UI-only; the backend is complete.
+
+## Report assistant (2026-11-18, `0126`)
+
+- **Provider decision (owner, 2026-11-18):** DeepSeek instead of Anthropic.
+  `_shared/ai` exposes a provider-neutral `ModelClient`; `deepseek.ts` talks the
+  OpenAI-compatible `/chat/completions` API with function calling. There is no
+  `@anthropic-ai/sdk`, no `cache_control`/`effort` and no refusal-fallback beta;
+  schema strictness is enforced in code (the model's `submit_answer` is fully
+  validated). `DEEPSEEK_API_KEY` + `DEEPSEEK_BASE_URL` +
+  `DEEPSEEK_MODEL_REPORT_ASSISTANT` are server-only. Keep the design's
+  ASSUMPTION about third-party processing (now DeepSeek) pending the owner's
+  written sign-off.
+- The API key that was shared in plain text during implementation must be
+  rotated; it is not written to any tracked file, test or log.
+- Inert behaviour: no key -> `mode=status` answers `{configured:false}` and
+  `mode=ask` answers 503 `AiUnavailableError` **before** reserving or calling
+  out (`ai_requests` stays empty).
+- Tools execute with the caller's `Authorization` + `x-lot-id` over
+  `GET /rest/v1/rpc/<name>`; the function never reads
+  `SUPABASE_SERVICE_ROLE_KEY`. PostgREST runs the stable RPC in a read-only
+  transaction, so a registry mistake still cannot write.
+- The model never types numbers: it submits figure recipes (`call_id` + path);
+  the Edge Function resolves them from the projected RPC JSON with BigInt math
+  (`value`/`sum`/`difference`/`percent_change`/`share_percent`, half away from
+  zero) and the Flutter `FigureVerifier` recomputes every figure from its raw
+  sources. A digit in prose (other than a four-digit year) triggers one repair
+  turn and otherwise `AiAnswerInvalidError`.
+- Tool allowlist: revenue, hourly traffic, reservations, WhatsApp, occupancy,
+  capacity, today, daily trend, shifts. `report_revenue_all`, `session_records`,
+  `vehicle_history` and `list_audit_log` are registered disabled
+  (cross-lot/PII). Projection drops `discount_audit`, shift `notes`/operator id
+  and lot ids; the question is redacted (plates, long digits, emails).
+- Budget: `ai_budget_reserve` takes `pg_advisory_xact_lock(hashtext('ai_budget'),
+  lot)`, counts today's rows in the lot timezone (reserved rows count their
+  reservation), and raises `AiBudgetExceededError`. A crashed request keeps its
+  reservation until the day ends (conservative). `ai_usage_record` only closes
+  the caller's own reserved row.
+- Gotchas: the Edge runtime serves the new function without restarting the
+  `functions` container (it mounts the folder), so the live status call returned
+  200 `{configured:false}` immediately. `report_revenue.pass_revenue` still has
+  no lot predicate (design Q3); the assistant reports it as returned.
+- Deviations/pending from the task list: the 18 replay fixtures + live eval
+  tooling (tasks 3.7/3.8) and the temporary `hello-ai` SSE spike (2.6) were not
+  added; their deterministic coverage lives in the unit/handler tests instead.
+  The CI `edge-functions` job was not added. The full-page a11y/text-contrast
+  cases and the manual live smoke (8.5) remain pending.
+- Gatekeeper (2026-11-18): migration `0126` applied live (budget 100/1M, one
+  reserved smoke row; purged), **1840 Flutter tests** green, coverage 79.1%
+  global / 90.4% application, `flutter analyze` clean, SQL suite green over
+  `0001`-`0126`, **73 Deno tests** green, web release + web-public + debug APK
+  built. Live function status without a key: 200 `{configured:false}`.
+
+
+### Damage comparison provider decision (2026-11-18)
+
+The owner approved sending **vehicle photos** to DeepSeek for the advisory
+damage comparison (`add-ai-damage-comparison`). DeepSeek's chat API accepts
+image content parts (`image_url` with `detail: low|high|original`) on
+`deepseek-flash`, so the change can reuse `DEEPSEEK_API_KEY` and `_shared/ai`
+without Anthropic. This is a stronger privacy decision than the report
+assistant (photos may show plates, people and the surroundings): the banner,
+the privacy note and the retention rules of the design remain mandatory, and
+the feature stays inert without the key. Implementation starts with migration
+`0127_damage_comparison.sql` (exit evidence phase + comparison tables/RPCs),
+then the `damage-compare` Edge Function, then the Flutter exit-photo and
+review flows.
+
+## Electronic invoicing (2026-11-18, `0124`-`0125`)
+
+- **Decision 0.2 (recorded as required):** the change ships with `mode = 'off'`
+  and every DIAN rule flagged ASSUMPTION. The owner/accountant has NOT confirmed
+  the document type, IVA rate, codes, resolution fields, CUFE/CUDE, QR format
+  or retention; do not switch a production lot away from `off` until they do.
+  The generic REST adapter is a placeholder for a real "proveedor tecnologico".
+- Issuance is **separate from `check_out`**: the page/request or the cron
+  sweeper calls `issue_fiscal_document` after the money is settled. `check_out`
+  keeps its 11 arguments and offline replays are untouched. A failure never
+  delays the receipt (the use case swallows `Failure` and returns null).
+- `mode` semantics: `off` creates nothing; `on_request` issues only when the
+  operator/admin asks; `always` also lets `enqueue_pending_fiscal_documents`
+  issue a default POS for paid sessions/pass charges older than 10 minutes
+  (offline check-outs and forgotten clicks). `started_at` is stamped once, when
+  the mode first leaves `off`, and sources closed/paid before it are refused.
+- Numbering is gap-free: `next_fiscal_number` locks the active resolution
+  `for update` and increments inside the issuing transaction, so a rollback
+  releases the number. One active resolution per `(lot, doc_type)`; saving a new
+  one deactivates the previous. Expired/exhausted/missing resolutions raise
+  their typed errors before any row is written.
+- Documents are immutable once numbered (`guard_fiscal_document`): number,
+  prefix, lot, source, amounts, tax, `issued_at` and `related_document_id`
+  never change; customer columns only while `rejected`/`failed` (through
+  `retry_fiscal_document`). There is no delete grant. Accepted credit notes
+  stamp `voided_at` on the original and free the source for a new document.
+- Tax (single rule per lot): prices are tax-inclusive, so
+  `tax_base = round(total * 10000 / (10000 + rate_bps))`,
+  `tax = total - tax_base`, `gross = total + discount`. Totals always equal what
+  the customer paid; there is no per-category rate, withholding or tax engine.
+- Outbox: `pending -> sent -> accepted`, `rejected` or `failed` (8 transient
+  attempts, backoff `1,5,15,60,240,240,240` minutes). `claim_fiscal_documents`
+  uses `for update skip locked`, a 5-minute lease and increments `attempts`;
+  `record_fiscal_result` clears the lease on every outcome, stores CUFE/QR and
+  notifies admins on `rejected`/`failed` (deduped per document, status, user).
+- Privacy: customer name/document/email are PII. Only lot admins can select the
+  tables; operators use `fiscal_document_for_session`, which returns the number,
+  status, CUFE/QR and amounts only. No fiscal function is granted to `anon`.
+- Security boundary: the provider token lives only in the `functions` env
+  (`FISCAL_PROVIDER_URL/TOKEN/ENV/TIMEOUT_MS`), never in SQL, the client or a
+  log line. `fiscal-dispatch` is service-role only and answers
+  `{configured:false}` without credentials.
+- Gotchas: `fiscal_settings` has a PK on `lot_id` (one row per site) but it is
+  NOT in the versioned set (no offline edits). A monthly pass already gets a
+  pending payment row from its trigger, so issuing fixtures must update that
+  row, not insert a second one. PL/pgSQL variable/column shadowing (`doc_type`,
+  `status`, `plate`) bit twice; all variables are `*_value`/`*_kind`.
+- Flutter: the check-out dialog shows the fiscal section only when the lot is
+  enabled and the device is online; the pass-payment dialog reuses the same
+  form; the history reprint loads `fiscal_document_for_session` (pending label
+  until accepted) and offers "Emitir factura electrónica". `/invoicing` is
+  deferred and admin-only (not in `operatorRoutes`).
+- Gatekeeper (2026-11-18): migrations `0124`-`0125` applied live (mode off, no
+  resolutions, tax 1900), **1797 tests** green, coverage 79.1% global,
+  `flutter analyze` clean, SQL suite green over `0001`-`0125`, **49 Deno tests**
+  green, web release + web-public + debug APK built. Live smoke:
+  `fiscal_config` -> `{"mode":"off", ...}`, `get_fiscal_settings` -> off,
+  sweeper 0, claim queue empty, document list empty.
+- Pending: the real habilitacion smoke with the provider (task 7.2) needs the
+  owner's credentials, and the legal confirmation of every ASSUMPTION; the
+  manual two-device fiscal receipt smoke is also unrun. `integration_test/
+  app_flow_test.dart` still does not exist (reported, not invented).
+
+## Loyalty rewards (2026-11-18, `0122`-`0123`)
+
+- Accrual and redemption live in `trg_loyalty_session_closed` (AFTER UPDATE of
+  `status`, `open -> closed`), so `check_out` stays at 11 arguments. The
+  trigger sees the final stored row (`amount_charged`, `payment_method`,
+  `lost_ticket`, `fare_adjustments`, `exit_time`); the merchant-validation
+  updates happen in the same transaction before the trigger's statement ends.
+- The trigger **never blocks a check-out**: steps 2-6 sit in a block whose
+  `exception when others` writes a `skipped(error)` visit (itself guarded) and
+  raises a warning. A test installs a `check (false) not valid` constraint to
+  prove the session still closes.
+- The reward is a line of `fare_quote` computed by `fare_reward_step` (the
+  no-op hook of `add-merchant-validations`, replaced with the same signature).
+  Order: tariff -> pricing -> merchant lines -> reward -> manual discount. The
+  hook only reads: the preview must have no side effect.
+- Value: `free_stay` is the running amount (or its `max_amount`), `fixed_amount`
+  is its snapshot; then capped to `greatest(R - online_paid_amount, 0)` so a
+  reward never subsidises money already paid online. A zero result is skipped
+  with reason `zero` and the reward stays `available` (this deliberately
+  overrides the design's earlier `p_running <= 0` short-circuit; the worked
+  example F7 expects `zero`).
+- Modes: `auto` applies unless the session's `loyalty_choice = 'skip'`;
+  `operator` applies only on `'redeem'` (null -> `operator_choice_pending`).
+  `choose_loyalty_redemption` stores the choice before check-out; `auto` is
+  stored as NULL. A skipped reward does not make the visit a redeeming visit.
+- Anti-abuse: one counted visit per plate per business day (`exit_time` in the
+  lot timezone), paid-only (`amount_charged > 0` and >= `loyalty_min_amount`),
+  minimum minutes, pass/lost/exempt excluded, a redeeming visit does not count.
+  The plate key is `pg_advisory_xact_lock(hashtext('loyalty:' || lot || ':' ||
+  plate))`, so two concurrent closes cannot double count.
+- Progress is a counter, the ledger is the audit: `loyalty_accounts.progress`
+  (0..N-1), `loyalty_visits` explains every number. A reward snapshots kind and
+  value at earn time, so later settings changes do not inflate or cheat old
+  rewards. Settings changes of N apply from the next counted visit.
+- `loyalty_reverse_visit` is internal (no void feature exists today). A reward
+  redeemed by the reversed session is restored only before expiry (else it
+  becomes `expired`); a still-available earned reward goes `reversed` and
+  progress returns to `N-1`; a reward already redeemed is KEPT (no clawback) and
+  progress is unchanged. Reversal never mints a reward.
+- One policy per loyalty table, admin of the active lot only; operators read
+  counts through `loyalty_plate_status`. No grant to `anon`, no public page:
+  a plate plus visits is personal data.
+- `anomaly_zero_charge_excluded` is type-agnostic (sum of `fare_adjustments`
+  equals `gross_amount`), so a free-stay reward explains a zero charge without
+  touching that function. `add-electronic-invoicing` must compute its discount
+  as `gross_amount - amount_charged` (rule A.10) when it lands.
+- Jobs: `jobs.sh` and `notifications-cron.sh` now call
+  `loyalty_expire_rewards()` (granted to `service_role`; `jobs.sh` connects as
+  postgres). Append only, no reordering.
+- Test gotchas: PL/pgSQL variables shadowing column names (`plate`,
+  `business_day`, `status`, `progress`) raise "column reference is ambiguous";
+  all trigger/hook/RPC variables use `*_value`/`*_count` names. The SQL suite
+  appends the loyalty blocks before the final `rollback;` and uses direct
+  `update ... set status = 'closed', exit_time = ...` to backdate business days
+  (check_out caps a replayed exit at 12 h). A past entry is an offline pricing
+  replay, so a "surcharge" test needs a recent entry or an explicit lock.
+- Flutter: `LoyaltyStatusCubit` (check-in chip; short plates and
+  `NetworkFailure` hide it, stale answers are dropped) and `LoyaltyAdminCubit`
+  (program/members/report). `/loyalty` is deferred and admin-only (NOT added to
+  `operatorRoutes`). The check-in chip and the check-out reward section are
+  registered only when the DI module is present, so isolated tests and the
+  public pages work without it.
+- Gatekeeper (2026-11-18): migrations `0122`-`0123` applied live (program off,
+  5 visits, free stay, auto, 90 days), **1727 tests** green, coverage 79.1%
+  global, `flutter analyze` clean, SQL suite green over `0001`-`0123`, Deno 30
+  green, web release + debug APK built. Live smoke: `loyalty_plate_status`
+  answers `{"enabled": false}`, settings report 5/90, `loyalty_expire_rewards`
+  0, report and members list answer empty shapes.
+- Pending: the manual reward smoke with two devices and a real promotion to
+  `available` (tasks 8.3/9.3 remain unchecked where they need a device), the
+  check-out receipt prints progress only when the plate status was loaded in
+  time (no blocking spinner), and the design's open questions (N/kind defaults,
+  pass days counting, operator vs auto default, stacking default, replay expiry,
+  retention, void balance, one visit per day vs per exit) stay with the owner.
+
+## Dynamic pricing (2026-11-18, `0120`-`0121`)
+
+- The lock is written by a **BEFORE INSERT trigger** on `parking_sessions`
+  (`lock_session_price`), not by `check_in`: the 11-argument signature stays
+  intact and offline replays are covered. `pricing_lock` is immutable
+  afterwards (`PricingLockImmutableError`).
+- `fare_pricing_step` is the hook owned by `add-merchant-validations`; this
+  change only replaces its body (`create or replace`, same signature). It reads
+  the stored lock and never settings/rules, so previews, check-out, the public
+  page and a reprint agree forever.
+- Rule selection: highest priority, lowest id; one winner (no stacking).
+  `priced = round_half_up(base * multiplier_bps / 10000) + surcharge`, clamped
+  to the floor/ceiling snapshot, then rounded to `round_to` (last).
+- Occupancy = `floor(100 * (open + active holds of the group) / capacity)`,
+  capacity from drawn active bays or `usable_capacity`; `heavy` is unknown and
+  never matches an occupancy band. Windows use the lot timezone; an overnight
+  window's after-midnight part uses the previous weekday bit.
+- Offline (entry older than 5 minutes): only a lock whose hourly price is `<=`
+  the tariff is kept (`source = 'offline'`); surcharges are dropped.
+  A public hold stores its own lock (identity when nothing matched) and the
+  session keeps the cheaper of hold and current at the hourly reference; an
+  identity winner stores no lock.
+- `public_availability` was already a wrapper since `0109`, so this is Case A:
+  the wrapper now calls `pricing_decorate_availability` before adding the
+  forecast block. The forecast change must NOT rename again.
+- Test gotcha: the merchant test `quote: hook replaced is honoured` used to
+  restore a hardcoded no-op body; it now captures `pg_get_functiondef` first and
+  re-executes it, otherwise it silently removed the dynamic-pricing hook.
+- Test gotcha: a pricing test that inserts a session with an entry older than
+  5 minutes is an *offline* entry and correctly gets no surcharge; use a recent
+  entry (or write the lock explicitly) to test a surcharge.
+- Settings columns live in `parking_settings` (versioned); `pricing_rules` is
+  NOT versioned and never enters the outbox (admin CRUD is online only).
+- Gatekeeper (2026-11-18): migrations `0120`-`0121` applied live (switch off,
+  floor 10000, ceiling 15000, round 1), **1656 tests** green, coverage 79.0%
+  global, `flutter analyze` clean, SQL suite green over `0001`-`0121`, web
+  release + debug APK built. Live smoke: `public_availability(1)` answers
+  `pricing.enabled = false` and keeps `hourly_amount`; `pricing_apply` with a
+  12000 lock on 9000 returns 10800.
+- Pending: the manual two-device smoke (task 5.4), the public booking
+  "usual price" line and the history reprint rate line (wired in the design but
+  not implemented in this batch); the owner's open questions (ceilings,
+  stacking, holds locking cheap rates).
+
+## Merchant agreements (2026-11-17, `0117`-`0119`)
+
+- `fare_quote(session, exit, discount, lost)` is now the **only** composer of
+  what a session owes: base fare → `fare_pricing_step` → pending merchant
+  lines → `fare_reward_step` → manual discount. `check_out`,
+  `check_out_preview` and `public_session_summary` call it; do not re-implement
+  the order anywhere. `check_out` stores `gross_amount` (after pricing, before
+  benefits) and `fare_adjustments`; `discount_amount` stays the MANUAL part.
+- The two hooks are the merge points: `add-dynamic-pricing` replaces
+  `fare_pricing_step` and `add-loyalty-rewards` replaces `fare_reward_step`
+  with `create or replace` (same signature). Never re-declare `fare_quote` in
+  those changes.
+- Merchants are **not** a role: the public page is `/validate?m=<48-hex>`
+  (token) + the 6-digit PIN. `merchants` is audited and readable by the lot
+  staff; `merchant_credentials` has RLS with no policy and no grant, and
+  `record_audit` only strips a column named `pin_hash`, so NEVER put a hash in
+  `merchants`.
+- A wrong PIN must NOT raise: `merchant_validate` returns
+  `{status: invalid_pin}` / `{status: locked}` so the failure counter is
+  committed (a raise would roll it back). Five wrong PINs lock for 15 minutes;
+  the admin resets.
+- Tokens are `gen_random_bytes(24)` hashed with SHA-256 (`merchant_hash_token`);
+  the PIN is generated by the server (bcrypt). Both are returned exactly once;
+  a PIN reset keeps the token, a rotation replaces it.
+- A validation is one row per (merchant, session), created while the session is
+  open, **applied at check-out**: `terms` is a snapshot, so editing or deleting
+  a merchant cannot rewrite a promise. Caps and the per-vehicle limit are
+  checked under `pg_advisory_xact_lock('merchant_validation', merchant)`.
+- Benefit rules: `percentage` rounds half up; `fixed_amount` fixed;
+  `free_minutes` shortens the stay and re-bills it (lumpy: a 30-minute benefit
+  saves money only when the shortened stay crosses an hour boundary — open
+  question for the owner). Every line is capped by the running amount and
+  `max_amount`. `merchant_max_per_session` (0..5) lives in `parking_settings`,
+  which is versioned; the Flutter entity deliberately does not include it.
+- Pass holders and lost tickets **forfeit** validations (no line); a zero
+  benefit forfeits too. The desk path records `created_by`, the public one has
+  a null actor; both are audited.
+- `anomaly_zero_charge_excluded` now explains a zero charge when
+  `gross_amount > 0`, `discount_amount = 0` and the lines sum to the gross, so
+  merchants (and later rewards) stop being flagged. Do not redefine it in
+  those later changes.
+- Flutter: `core/fare` (`FareQuote`, `FareAdjustment`), `features/merchants`
+  (`/merchants` deferred admin page, `/validate` public page, desk section in
+  the settlement dialog). The desk section is hidden offline (a failing
+  `listActive` just hides it), for pass holders and for lost tickets; an
+  operator can apply but not remove (`canRevoke` is admin-only).
+- Receipts (screen/PDF/thermal), the vehicle history session and the public
+  summary print `grossAmount` + one benefit row per adjustment.
+- Gotcha: two dialogs owned their `TextEditingController` and disposed it right
+  after `await showDialog`, which crashes during the exit animation; the revoke
+  and policy prompts are StatefulWidgets that own the controller.
+- Gotcha: `constraint merchant_validations_source_check` collided with the
+  implicit check name of the `source` column — it is
+  `merchant_validations_actor_check` now.
+- Gotcha: `lpad` needs text, so the PIN cast goes through `::text`; and any
+  `RAISE` message containing `%` must escape it (`%%`) or use a word.
+- Gatekeeper (2026-11-17): migrations `0117`-`0119` applied live, **1601
+  tests** green, coverage 79.2% global, `flutter analyze` clean, SQL suite
+  green over `0001`-`0119`, Deno 30 green, web release + debug APK built and
+  `build/web-public` republished. Live smoke: anon `merchant_portal` with an
+  unknown token -> `null`, `merchant_validate` -> `MerchantNotFoundError`,
+  `merchant_hash_token` 64 hex chars and `fare_quote` answers on a live open
+  session.
+- Pending: the owner's open questions (free-minutes lumpiness, courtesy by
+  operators, settlement basis, printable QR sticker) and the manual smoke with
+  two devices (task 6.2 of the change).
+
+## Pass auto-renewal (2026-11-17, `0115`-`0116`)
+
+- An offer is **not** a pass: `pass_renewal_offers` freezes the next period and
+  amount behind a 192-bit token, and the child pass is created only when
+  `settle_pass_renewal` runs after an approved payment. An early pass would let
+  the customer park free from its start date (`has_pass` only reads dates).
+- Three switches again: `pass_renewal_enabled` (reminders),
+  `pass_renewal_payment_links` (the link; CHECK requires
+  `online_payments_enabled` and `currency = 'COP'`) and `whatsapp_auto`. Keys
+  are invisible to SQL: with the link on and keys missing, the page says
+  "renew at the desk" (fail soft).
+- Cadence is text (`'7,3,1'`) validated by a regex; SQL picks the smallest
+  `d >= days_left` and dedupes with `pass_renewal:<offer>:<d>` (or
+  `pass_reminder:<pass>:<end>:<d>` without links). A late cron run sends the
+  nearest missed window once, never a burst. Passes ended more than 3 days ago
+  are not nudged.
+- `queue_pass_renewal_reminders` also deactivates ended parents that already
+  have a child: `renew_monthly_passes` never revisits them. It never touches a
+  pass whose dates still cover today. Never use `current_lot_id()` in it.
+- Settlement is idempotent: (a) no child -> create it and mark its pending
+  charge paid `online` (`paid_by`/`shift_id` null, so cash reconciliation is
+  untouched); (b) the expiry job already created the child -> pay that charge,
+  create nothing; (c) offer already paid or the child was already paid by cash
+  -> `late_closed` + `online_payment_review` for the admins. The parent pass is
+  locked and a `unique_violation` on `renewed_from_id` adopts the racing child.
+- Period rule: `start = greatest(offer.period_start, lot today)`, month-aware
+  end via `pass_period_months`. ASSUMPTION: a late payment is not retroactive;
+  the owner must confirm.
+- `settle_payment_intent` returns the pass outcome in `kind` (`applied` /
+  `late_closed` / `ignored`) so `apply_payment_event` (unchanged) records a
+  valid `payment_events.outcome`. Do not return `kind = 'pass'` there.
+- `whatsapp_messages` gained `button_param` and a unique `dedupe_key` (partial
+  index); `queue_whatsapp_message` is the internal dedupe-aware helper (the
+  cron has no actor and no lot header). The dispatcher appends the URL button
+  only when `button_param` exists; the base URL lives in the approved Meta
+  template. `whatsapp-dispatch` is versioned in git now.
+- Public page `/renew?t=<48 hex>`: masked plate, period and amount only;
+  polling every 3 s up to 180 s until `paid`. `renewPath` is public in
+  `authRedirect` and is not an operator route.
+- Gotcha: the page starts polling right after the first load of an open offer
+  (the redirect back is the same URL), so widget tests must use `pump()`, not
+  `pumpAndSettle()`, exactly like the pay-online panel.
+- Gotcha: anon cannot read `pass_renewal_offers`; tests that need a token must
+  read it as the owner (`set_config`) before `set local role anon`.
+- Jobs: `run queue_pass_renewal_reminders` in `jobs.sh` and the matching psql
+  line in `notifications-cron.sh`.
+- Meta template the owner must create/approve: `pass_renewal_link`, es, body
+  "Hola {{1}}, la mensualidad del vehículo {{2}} vence el {{3}}. Renuévala por
+  {{4}} aquí:" plus a URL button `https://<APP_URL>/renew?t={{1}}`.
+- Gatekeeper (2026-11-17): migrations `0115`-`0116` applied live (flags off),
+  **1544 tests** green, coverage 80.1% global, `flutter analyze` clean, SQL
+  suite green over `0001`-`0116`, Deno **30 tests** green, web release + debug
+  APK built, `build/web-public` rebuilt and republished. Live inert smoke:
+  `public_pass_renewal` unknown token -> `null`, `pass-renewal-intent` ->
+  `503 PaymentsNotConfiguredError`, `queue_pass_renewal_reminders()` -> 0 with
+  the flags off.
+- Not verified: a real sandbox renewal payment (no Wompi/Meta credentials) and
+  the approved template (waiting on Meta). Task 7.2 of the change records this.
+
+## Online payments (2026-11-17, `0112`-`0114`)
+
+- Invariant: `amount_charged = online_paid_amount + desk_due` (`desk_due >= 0`).
+  Reports derive the desk part as `amount_charged - online_paid_amount`; never
+  store the split twice.
+- `online` is a **server-only** payment method. `check_out` keeps rejecting it
+  from the caller (`InvalidPaymentMethod`) and sets it when `paid > 0 and
+  desk_due = 0` (after the pass override). The Flutter enum still has no online
+  member on purpose: `PaymentMethod.values` drives the dialog buttons.
+- `online_settlement_amounts(gross, paid, paid_at, exit, grace)` is the single
+  rule: inside the window the charge is exactly `paid` (desk due 0); outside it
+  `greatest(gross, paid)` and the desk collects the difference. `check_out`,
+  `check_out_preview`, `public_session_summary` and `session_settlement` all
+  call it; do not re-implement the comparison.
+- Three switches must agree to protect a lot: Wompi secrets in `.env` (restart
+  `functions`), `PAYMENT_REDIRECT_BASE_URL`, and the lot switch in Ajustes.
+  Turn the lot switch on **last**; on without keys refuses online payment and
+  the page sends the customer to the desk.
+- The webhook is the only source of truth: `payment-webhook` verifies the
+  SHA-256 checksum over the raw body and calls `apply_payment_event` (service
+  role). It MUST stay reachable without a JWT, so `FUNCTIONS_VERIFY_JWT` stays
+  false. The redirect page only polls `payment_intent_status(reference,
+  plate)`, which returns `null` for a wrong plate (no oracle).
+- `payment_events` (`unique (gateway, transaction_id, gateway_status)`) is the
+  dedupe; an `APPROVED` event for an `expired` intent still pays (money was
+  taken), an approval for a closed session records `late_closed` and notifies
+  the admins, and a `VOIDED` subtracts the amount while the session is open.
+  Refunds are human decisions, never automatic.
+- `settle_payment_intent` is the only dispatch on `payment_intents.kind`
+  (`add-pass-auto-renewal` re-declares it to add `pass`); the hook functions
+  (`fare_pricing_step`, `fare_reward_step`) do not exist yet and belong to
+  `add-merchant-validations`/`add-dynamic-pricing`.
+- Client: `features/online_payments` (cubit polls every 3 s, stops at a final
+  status or 180 s). `/evidence` wraps `EvidenceCubit` + `OnlinePaymentCubit`
+  and forwards `?pay=`; the panel hides when the switch is off, the session is
+  closed or `amount_due` is 0.
+- Gotcha: `functions.invoke` turns a dropped connection into
+  `FunctionException(status: 0)`; the data source maps that to `NetworkFailure`
+  and any `{"message": "<Name>Error"}` body to `ValidationFailure(name, name)`
+  for every status (429/503 included), otherwise the code is lost.
+- Gotcha: a polling test must not `pumpAndSettle` (each poll emits a state and
+  schedules a frame forever). Use `pump()` twice and let the teardown close the
+  cubit; `await cubit.close()` while its widget is still mounted deadlocks.
+- Gotcha: `fake_async` is now a declared dev dependency (the waitlist test
+  imported it transitively and the analyzer complained).
+- Jobs: `jobs.sh`/`notifications-cron.sh` run `expire_payment_intents` and
+  `dispatch /functions/v1/payments-reconcile`. The reconcile job uses the same
+  `apply_payment_event`, so a lost webhook is recovered, and it is inert
+  (`{configured:false}`) without keys.
+- Edge Functions live in `payment-intent`, `payment-webhook`,
+  `payments-reconcile` with tests next to `_shared/*_test.ts` (Deno tests must
+  not live inside the function folders: `supabase/.gitignore` only allowlists
+  `index.ts` there).
+- ASSUMPTIONS to confirm with Wompi before go-live: the event JSON shape and
+  checksum concatenation, the checkout integrity signature, the minimum amount
+  per method, `GET {api}/transactions?reference=` for the reconcile, and one
+  merchant account per deployment.
+- Gatekeeper (2026-11-17): migrations `0112`-`0114` applied live (defaults
+  `online_payments_enabled = false`, grace 15, minimum 1500), **1493 tests**
+  green, coverage 80.0% global (application 91.8%, domain 60.8%,
+  infrastructure 45.0%), `flutter analyze` clean, SQL suite green over
+  `0001`-`0114`, Deno **22 tests** green, web release + debug APK built,
+  `build/web-public` rebuilt with the LAN API and `APP_URL` and republished
+  (`/evidence` 200). Live inert-path smoke: `payment-intent` →
+  `503 PaymentsNotConfiguredError`, anon `payment_intent_status` → `null`,
+  `online_settlement_amounts(9000, 6000, now, now, 15)` → charged 6000 /
+  desk_due 0. No device attached: the APK was not installed.
+- Not verified: a real Wompi sandbox payment (no credentials), the function
+  inside the edge-runtime container (Deno tests use mocks), and the operator
+  smoke (task 6.2 of the change). The SQL suite runs the schema, RPCs and
+  check-out blocks.
+
+## Customer feedback (2026-11-17, `0111`)
+
+- `session_feedback` (lot, session unique, rating 1..5, comment <= 500,
+  created_at) is read-only for clients (select grant + `lot_id =
+  current_lot_id()` policy); inserts happen only inside
+  `public_submit_feedback` (security definer), which derives the lot from the
+  session, never from the request.
+- The key is the session **plus** the plate (uppercase, blanks removed), same
+  as `/evidence`: the id alone walks integers and the plate alone is guessable.
+  `public_feedback_session` returns `null` for an unknown session or a wrong
+  plate — "not found" is an answer, not an error.
+- Only closed sessions are rateable (`exit_time is not null`); `unique
+  (session_id)` plus `on conflict do nothing` is what makes a double tap safe
+  (`FeedbackAlreadyError`). Do not replace it with a pre-check: the conflict
+  path is the dedupe.
+- `feedback_summary(p_days)` is platform-admin only (`require_admin()`, like the
+  reports) and lot-scoped; `average_x10` (43 = 4.3) and `response_rate_bp` are
+  integers so Dart never averages floats. `closed_sessions` counts exits in the
+  period in the business timezone; `recent` is the newest 20 by
+  `(created_at desc, id desc)`.
+- Flutter: `features/feedback` (public survey cubit + admin summary cubit);
+  `/feedback` is public in `authRedirect`, `/satisfaction` is a deferred admin
+  route and a management destination (home shortcuts and sidebar derive from
+  it). The period chips keep the content
+  (`FeedbackSummaryLoaded.refreshing`) instead of flashing the skeleton.
+- Receipts: `ReceiptData.feedbackUrl` (built by
+  `core/receipt/feedback_link.dart` from `APP_URL`) drives the QR in the
+  PDF/thermal/on-screen receipt and the line in the manual WhatsApp message;
+  without `APP_URL` nothing is printed. `ReceiptLabels.feedbackHint` is ASCII
+  for the thermal printer.
+- Online only on purpose: nothing is queued in the outbox; a failed submit
+  keeps the stars/comment in the page and shows the localized retry.
+- Live smoke (2026-11-17): anon lookup with `mjs 368` resolved session 55, anon
+  submit stored "Prueba de humo" (rating 5), admin `feedback_summary(30)`
+  returned `average_x10 50`, `response_rate_bp 667` (1/15 exits) and the
+  five-bucket distribution; the smoke row was deleted afterwards.
+  Test count: 1437; schema `0001..0111`.
 
 ## Live deployment (2026-11-05)
 
@@ -74,6 +931,728 @@ tariff, device preferences, QR contact/summary). Branch `feature/supabase`.
   configured number, the 123 fallback and the settings shortcut; the settings,
   shell, SQL and repository tests cover the rest. Test count: 993, schema
   `0001..0079`.
+
+## Home weekly trend (2026-11-06)
+
+- `0080_dashboard_trend` adds `dashboard_trend(p_days default 7, allowed
+  1..31)`: `security definer`, `require_app_user()`, lot-scoped through
+  `current_lot_id()`, business timezone. It returns
+  `{lot_id, start_date, end_date, days:[{date, revenue, entries, exits}]}` and
+  uses `generate_series`, so quiet days are zero rows (the client never fills
+  gaps). Operators may call it (unlike `report_revenue`); an out-of-range
+  `p_days` raises `InvalidTrendRangeError`.
+- `CheckOutRepository.dashboardTrend()` feeds `DashboardLoaded.trend`; a failed
+  trend degrades to `DashboardTrend.empty` without hiding the rest of the home
+  (same rule as `todaySummary`). `TrendCard` in
+  `home/presentation/widgets/dashboard_widgets.dart` paints the bars scaled to
+  the peak day (today in `tertiary`), the weekly revenue/entries/exits totals,
+  a skeleton while loading and a quiet-week message; admins get a reports
+  shortcut, operators do not.
+- Tests: entity parsing, cubit degradation, card totals/quiet/failure and the
+  admin-only shortcut; SQL covers the contiguous 7-day series, today's revenue,
+  invalid ranges and lot isolation. Test count: 1013; schema `0001..0080`.
+- The new 400 px + 1.6 text-scale test exposed a pre-existing overflow in
+  `_CapacityRow` (home capacity card): its label is now clamped to two lines
+  and the counter is a flexible, ellipsized `Text`. Keep the test; it guards
+  both cards.
+
+### Home trend comparison + parallel load (2026-11-09)
+
+- The dashboard asks for `dashboard_trend(days: 14)`. `TrendCard` paints the
+  last 7 (`window(7)`) and compares them with `window(7, skip: 7)`: success
+  chip when revenue grows, warning when it drops, neutral "same as last week"
+  when flat, and no chip when the previous window is incomplete or earned
+  nothing (a zero base would divide by zero).
+- `DashboardCubit._fetch` awaits occupancy first, then runs today / trend /
+  capacity / board / inside with the record `.wait` (concurrent, each with its
+  own `catchError`). `FakeCheckOutRepository.todayGate` + `pumpEventQueue`
+  prove the extras start before the gated one finishes.
+- The KPI grid shows `SkeletonPulse` + four `SkeletonCard`s while the first
+  load is in flight. `SkeletonPulse`/`SkeletonCard` are public in
+  `core/widgets/skeleton.dart` (`SkeletonCardList` reuses them).
+- Gotcha: never `pumpAndSettle` while the dashboard is still loading — the
+  skeleton pulse repeats forever. Use `pump()` and complete the gate first.
+
+### Bay maintenance history (2026-11-09)
+
+- `0081` adds `parking_spot_events` (lot, spot, spot_code, status, reason,
+  actor, created_at; RLS `lot_id = current_lot_id()`, select grant only). The
+  RPC `save_parking_spot` gained a trailing `p_reason text default null` and
+  logs a row on real status transitions (a bay created already out of service,
+  or an update that changes the status). A no-op save does not pollute it.
+- The 6-argument `save_parking_spot` overload is **dropped on purpose**: with
+  the trailing default, keeping both makes 6-argument calls ambiguous (same
+  trap as `check_in`). Positional test calls still work.
+- `list_spot_events(p_spot_id, p_limit default 20)` returns newest first and
+  must order by `created_at desc, id desc`: `now()` is constant inside a
+  transaction, so the id is the tiebreaker between two transitions made in the
+  same RPC/test.
+- UI: turning a bay off reveals an optional reason (3..200 characters or
+  empty; shorter values are blocked client-side), "Ver historial" opens a
+  dialog with skeleton/empty/error+retry, and the editor refreshes
+  `DashboardCubit` whenever the map changes so the home board is not stale.
+  Operators can read the history; only admins can change a bay.
+- Live smoke (PostgREST): took bay S1 out with "prueba de humo", the event came
+  back with actor Admin and the reason, then restored it and deleted the two
+  smoke rows. Test count: 1022; schema `0001..0081`.
+
+### Offline dashboard cache (2026-11-09)
+
+- `DashboardSnapshot` (`home/domain/entities`) serializes occupancy, today,
+  trend and capacity + `cachedAt` as versioned JSON. `DashboardCache` is the
+  port; `HiveDashboardCache` stores it in the `cache` box under
+  `dashboard_<lot>` so switching sites never shows another site's numbers.
+  `HiveKeyValueStore.init()` opens `cache` for the same cold-start reason as
+  `preferences` (`get` is synchronous and only sees open boxes).
+- `DashboardCubit` writes the cache only after a **complete** load (occupancy
+  plus today/trend/capacity all succeeded); a degraded load never overwrites a
+  good snapshot. On a failed initial/lot-switch load it reads the cache and
+  emits `DashboardLoaded(cachedAt: ...)` (`isStale`); without a cache it still
+  emits `DashboardFailure`. Cache read/write errors are ignored.
+- The stale state carries only the KPIs: the space board and inside list stay
+  empty and `HomePage` hides them (including the wide side panel), showing
+  `_StaleDashboardNotice` above the summary with the capture time and a retry.
+  The shell `OfflineBanner` still reports connectivity separately.
+- Coverage floors raised with the new domain tests: global 79 (79.2 measured),
+  application 90 (90.7), domain 52 (53.3), infrastructure 40 (40.3).
+  Test count: 1030; schema `0001..0081`.
+
+### Hourly traffic reports (2026-11-09)
+
+- `0082_report_hourly_traffic.sql`: `report_hourly_traffic(date, date)` is
+  admin-only (`require_admin()`), lot-scoped, and returns
+  `{start_date, end_date, timezone, hours:[{hour, entries, exits}]}` for all
+  24 business-day hours (quiet hours included). Entries count `entry_time`;
+  exits count closed `exit_time`; the 0069 lot/entry and lot/exit indexes cover
+  both.
+- `HourlyTraffic`/`HourlyTrafficPoint` sort the buckets; `ReportsCubit` loads
+  it in the same `Future.wait` as the other reports and **degrades to empty**
+  when the RPC fails, so the page never fails because of the chart.
+  `HourlyTrafficChart` is a 4/6/8-column grid scaled to the peak entry hour,
+  with a peak-hour summary, per-cell tooltip/semantics (entries + exits), an
+  empty state and a legend.
+- The new 400 px test exposed a pre-existing overflow in `_DeltaRow` ("vs
+  previous period"): it now uses a `Wrap`, so it flows to a second line instead
+  of overflowing the summary card.
+- Coverage: global 79 (79.3), application 90 (90.7), domain 53 (54.2),
+  infrastructure 40 (40.2). Test count: 1036; schema `0001..0082`.
+- Live smoke: `report_hourly_traffic(2026-11-03, 2026-11-09)` returned 24
+  buckets with the expected entries/exits and `America/Bogota`.
+- Follow-up: the report presets added **Este mes / Mes anterior** (calendar
+  boundaries) and moved from a `SegmentedButton` to `ChoiceChip`s inside the
+  `FilterBar`, so they wrap on phones. `reportCsv` gains
+  `hourly_entries`/`hourly_exits` raw rows and `buildRevenueReportPdf` a
+  "Tráfico por hora" table via `reportHourlyRows`; both include only hours
+  with movement. Test count: 1039.
+
+### Audit search (2026-11-09)
+
+- `0083_audit_search.sql` drops/recreates `list_audit_log` with a trailing
+  `p_search text default null` (the 5-arg overload must stay dropped: with the
+  default, leaving both makes 5-arg calls ambiguous). It also fixes a real bug:
+  the old version limited the newest N rows **before** filtering by actor, so
+  selecting an actor only searched that page. Filters now run in the scan and
+  the limit applies last.
+- Search is case-insensitive over `entity_id`, `table_name`, actor
+  username/display name, and `after`/`before` `plate`/`name`; an empty term
+  means no filter and it composes with table/actor/date. JSONB text is not
+  searched wholesale (avoids matching timestamps/keys by accident).
+- Flutter: `AuditLoaded.search` + `AuditCubit.load(search:)`; the page adds a
+  300 ms debounced `SearchField`, clears it with "Limpiar filtros", and the PDF
+  subtitle includes the term. Tests cover search persistence, clearing and the
+  debounced reload. Test count: 1041; schema `0001..0083`.
+- Live smoke: `list_audit_log` with `p_search=LCR481` returned the vehicle row
+  (`entity_id 34`).
+
+### In-app evidence viewer (2026-11-09)
+
+- `0084_vehicle_history_evidence.sql` redefines `vehicle_history` with a
+  per-session `photo_count`, scoped to `current_lot_id()`: the history lists
+  sessions from every site, but evidence viewing (and its count) follows the
+  active lot, matching the evidence RLS policy.
+- `SessionEvidenceRepository` lists `evidence_photos` and signs each object for
+  one hour. A refused signature keeps the row with `url = null` (the tile shows
+  a cloud-off placeholder instead of hiding that evidence exists); list errors
+  map to a `Failure` and the sheet offers retry.
+- The history tile shows "Ver evidencias (N)" when `photo_count > 0`, below the
+  amount so the action row never overflows a 360 dp phone. The bottom sheet has
+  a photo grid (tap → black `InteractiveViewer` dialog) and video tiles (tap →
+  external player), with skeleton/empty/error states.
+- Tests: SQL photo_count, entity parsing, remote signing/denied/list-failure
+  with a MockClient, repository delegation, sheet states and the history
+  action. Test count: 1051; schema `0001..0084`.
+- Follow-up: the check-out row also shows an "Evidencias (N)" `ActionChip`
+  when the session has photos, using the same sheet (`CheckOutPage`'s
+  `evidenceRepository` is the test seam). It wraps with the status chips, so
+  the 400 px row stays overflow-free. Test count: 1052.
+- Live smoke: `vehicle_history('LCR481')` returned session 48 with
+  `photo_count: 2` (session 43 has 0).
+
+### Site setup checklist (2026-11-09)
+
+- `0085_lot_setup_status.sql` adds `lot_setup_status()` (any lot member):
+  category count, active tariffs, car/moto capacity, active bays and
+  address/phone flags. `complete` requires categories, tariffs and
+  capacity-or-bays plus address and phone. It is `security definer` and reads
+  `current_lot_id()`.
+- `CheckOutRepository.lotSetup()` feeds `DashboardLoaded.setup` (unknown on
+  failure, never a false "unconfigured"). `SetupChecklistCard` on the home is
+  admin-only, hidden when complete/unknown, and shows 4 steps with a progress
+  bar and links (`/categories`, `/tariffs`, `/settings`). Operators never see
+  it; the card is the onboarding fix for the "new lot without categories"
+  gotcha.
+- Tests: SQL flags against `parking_settings` and an incomplete lot, entity
+  step math, cubit fallback to unknown, and home visibility for admin/
+  operator/complete. Coverage floor: domain 54 (55.0 measured). Test count:
+  1058; schema `0001..0085`.
+- Live smoke: `lot_setup_status()` for lot 1 returned
+  `complete: true` (5 categories, 7 active tariffs, capacity 20/10,
+  address/phone set).
+
+### Evidence from records (2026-11-09)
+
+- `0086_session_records_evidence.sql` recreates `session_records` with a
+  `photo_count` per row (the query is already lot-scoped, so no extra filter is
+  needed). The activity log shows "Evidencias (N)" under the times when the
+  count is positive and opens the shared evidence sheet; the log row still
+  opens the vehicle history when tapped elsewhere.
+- `SessionRecord.photoCount` + `RecordsPage(evidenceRepository:)` (test seam).
+  Tests cover the SQL count, the parser and the log action; no evidence is
+  queried until the operator taps the action. Test count: 1059; schema
+  `0001..0086`.
+- Live smoke: `session_records` for `LCR481` returned session 48 with
+  `photo_count: 2` (session 43 with 0), matching `vehicle_history`.
+
+### Revenue chart in the PDF (2026-11-09)
+
+- `buildRevenueReportPdf` now draws a compact bar chart above the by-day table:
+  `revenueBarHeights` (pure, tested) scales the best day to 68 pt and zero days
+  to 0; `buildRevenueBarChart` renders it with the first/last dates underneath
+  and no per-bar labels (the table below keeps the exact numbers). An empty
+  range skips the chart, and quiet periods keep flat bars.
+- No new SQL. Test count: 1061; schema `0001..0086`.
+
+### Parallel page loads (2026-11-09)
+
+- `ShiftCubit.load` runs `current()` and the admin `history()` in one
+  `Future.wait`; `ReservationsCubit.load` runs active reservations and
+  categories together; `MonthlyPassesCubit.load` starts passes, pending
+  payments, vehicles and tariffs together (`Future.wait<Object>` + casts,
+  still wrapped in the `on Failure` handler so list failures keep their
+  screen-level state). Each page saves one or more sequential round trips.
+- Tests use gates on the first fake call (`currentGate`, `activeGate`,
+  `listGate`) and `pumpEventQueue` to assert the second call already started.
+  Test count: 1064; schema `0001..0086`.
+
+### Hourly chart in the PDF (2026-11-09)
+
+- The hourly section of the revenue PDF now draws 24 bars (`buildHourlyBarChart`)
+  scaled to the busiest entry hour, with 00/06/12/18/23 labels; the table below
+  keeps exact entries/exits. `hourlyBarHeights` is pure and tested (busiest =
+  68 pt, zero hours = 0). No new SQL. Test count: 1066.
+
+### Startup splash (2026-11-09)
+
+- `main()` now `runApp`s a minimal `_BootstrapSplash` (logo + loading, theme
+  and locale from the cubits) **before** `await authCubit.restore()`. The real
+  `ParkingApp` replaces it once the restore (Hive session + lot memberships +
+  `x-lot-id`) resolves, so a slow network no longer leaves a blank screen.
+  `initialLocation` stays `homePath`, so deep links/bookmarks are unaffected.
+- `AuthCubit.restore` catches local-storage errors and emits
+  `AuthUnauthenticated` (a corrupt cache lands on login, never a stuck splash).
+  `SyncService.start()` still runs after the restore so queued writes never
+  fire token-less.
+- `SplashPage` test covers the brand + progress; test count: 1067.
+
+### Check-in first paint (2026-11-09)
+
+- Known-plate suggestions no longer download `listPage(limit: 200)` on open:
+  `_loadKnownPlates` starts on the second typed character, guards against
+  concurrent loads, and marks a failed attempt as done so typing does not
+  hammer a failing endpoint (a successful check-in still refreshes it).
+- When the shell already has a `DashboardLoaded` state, the check-in page
+  refreshes only the space snapshot (`DashboardCubit.refreshCapacity`, one
+  request) instead of `load()` (occupancy + today + trend + capacity + board +
+  inside + setup). A successful entry still does the full refresh so the home
+  counters stay fresh.
+- Tests: `vehicle.listPageCalls` stays 0 for one letter and becomes 1 on the
+  second; a preloaded dashboard does one occupancy read and one extra capacity
+  read on open (`occupancyCalls == 1`, `capacityCalls == 2`). Test count: 1069.
+
+### PDF fonts and the em dash (2026-11-09)
+
+- The `pdf` package uses built-in Helvetica, which has **no em/en dash
+  glyphs**: the report and records PDFs were drawing a missing glyph for
+  `—`. PDF date ranges now go through `Formatters.pdfDateRange` (ASCII
+  hyphen) and the shift/records separators use the same ASCII hyphen. The
+  middle dot `·` and Spanish accents are fine (Latin-1).
+- On-screen labels may keep the typographic dash; only PDF text must stay
+  ASCII/Latin-1. A test guards `pdfDateRange` against `—`/`–`, and the PDF
+  suite no longer logs "Unable to find a font to draw". Test count: 1070.
+
+### Vehicle search by owner (2026-11-09)
+
+- `VehicleRepository.listPage(plate:)` became `query:` (interface, remote,
+  repository, fakes): the remote builds
+  `vehicleSearchFilter(query)` → `plate.ilike."%term%",owner_name.ilike...,
+  owner_phone.ilike...` (values quoted so names with spaces/commas do not break
+  the PostgREST `or` expression). Empty/blank → no filter.
+- The offline cache filter mirrors plate/owner-name/owner-phone; the page label
+  is "Buscar placa o propietario" with a "Placa, nombre o teléfono" hint.
+  No schema/RLS change: owner data already exists and vehicles are global.
+- Tests: filter builder (including quote safety), cubit search by name and
+  phone, plus the existing paging/offline tests. Live PostgREST check: the
+  quoted `or` filter found `LCR481` by plate, by "Samuel" (owner name) and by
+  "310428" (owner phone). Test count: 1074.
+- Follow-up: monthly passes apply the same owner search client-side
+  (`MonthlyPassesLoaded.matchesPass/matchesPayment` over plate, owner name and
+  phone; pending charges resolve the owner through the loaded vehicles). The
+  page label/hint say "Buscar placa o propietario". Test count: 1075.
+- Follow-up: each registry row has a "Ver historial" action → `/history?plate=…`
+  (`VehiclesPage(onHistory:)` is the test seam); the row still fits 400 px with
+  three actions. l10n gotcha: `vehicleHistoryOpen` was already the "in progress"
+  label, so the action key is `vehicleHistoryAction` (a duplicate key silently
+  wins in gen-l10n). Test count: 1077.
+- Follow-up: a vehicle with no open session offers "Registrar entrada" from
+  its history (`/check-in?plate=`, `onCheckIn` injectable); a vehicle already
+  inside keeps the charge action. Fixing the sample fixture's `openSessions`
+  exposed the guard in tests. Test count: 1153.
+
+### Public booking page (2026-11-09)
+
+- `0087_public_booking.sql` adds `customer_name`, `customer_phone` and
+  `source` (`app`/`public`) to `category_reservations`, a shared
+  `reservation_capacity_check(lot, category, plate)` (same locks/order as
+  check-in; `create_reservation` now delegates to it), anon
+  `public_availability(lot)` (identity + per-category availability, **no
+  plates**) and anon `public_create_reservation(...)` with guards: 10 min..24 h
+  window, one active hold per plate/lot, two active public holds per phone,
+  plate/phone validation and the full category/group refusal. Anon has no
+  SELECT grant on the reservation table. Public holds carry the customer
+  name/phone and `source='public'`.
+- Flutter `features/public_booking`: entities/cubit/repository + a mobile-first
+  page at `/reserve?lot=<id>` (public in `authRedirect`). Hero with lot
+  identity/logo/contact, live category cards (available/full/no limit, progress
+  bar), plate/phone/name + hourly duration chips, submit, and a confirmation
+  with code, until, call/WhatsApp and "Hacer otra reserva". Loading skeleton,
+  empty, error+retry and inline submit errors. Linked from the public policy
+  page and the evidence page; DI registers the repository/cubit.
+- Live smoke: `public_availability(1)` returned the lot and categories; anon
+  `public_create_reservation` created `WEBTEST1` (`source=public`, phone
+  stored), then the row was deleted. A full booking through the deployed page
+  (headless Chrome, 420 px) created reservation #2 and rendered the
+  confirmation; the row was deleted afterwards.
+- **Deep links were broken on web** (found while testing the page on the
+  phone): the bootstrap splash's `MaterialApp` pushes its own route to the
+  browser history, so by the time the router was built the engine reported `/`
+  and `/reserve`, `/policies` and `/evidence` all redirected to `/login`.
+  Fix: `initialRouteFrom(Uri.base)` (pure, unit-tested) is captured in
+  `main()` **before** the first `runApp` and passed to `buildRouter` through
+  `ParkingApp.initialLocation`; mobile keeps home. Do not move that capture
+  after `runApp` — the history is already rewritten by then.
+- Abuse note: there is no captcha/proof-of-work; the per-plate/phone limits and
+  capacity guard are the only controls. Add a captcha at the edge if the page
+  is exposed to the open internet.
+- `0088_public_booking_contact.sql` makes the name required and the phone a
+  Colombian mobile (10 digits starting with 3, optional +57, stored as the
+  10-digit local form so the per-phone guard still counts one customer). The
+  check is duplicated in a table constraint (`source = 'public'` rows need
+  name + `^3[0-9]{9}$`), so a direct insert cannot bypass it. The Flutter rule
+  lives in `features/public_booking/domain/phone_rules.dart`
+  (`normalizeMobilePhone`, shared by the form validator and the submit).
+- `0089_public_booking_notification.sql`: a public hold inserts a
+  `public_reservation` notification for the lot's active admins (dedupe
+  `public_reservation:<id>:user:<uid>`), body with the customer, category and
+  expiry in the lot timezone. Flutter maps the type to "Reserva web" with an
+  event icon and routes the tap to `/reservations`; it is also in the inbox
+  filter.
+- The reservations board shows `customer_name`/`customer_phone`/`source` (a
+  "Web" badge) with call/WhatsApp actions, and its search matches plate, name
+  or phone. `openDialer` lives in `core/utils/dialer.dart`.
+- **Operators now run the board** (decision taken 2026-11-09): `/reservations`
+  is in `operatorRoutes`, the home "Ver reservas" shortcut is not admin-only,
+  and the management section on Home lists only the sections the role may use.
+  `0090` widens the `public_reservation` alert to every active lot member
+  (admins + operators); the SQL test checks one row per active member and none
+  duplicated. If this is ever reversed, restore the allowlist entry, the home
+  guard and the audience in the RPC together.
+- `0091_public_cancel_reservation.sql`: the customer cancels with code +
+  plate + phone (anon); only `source = 'public'` and `status = 'active'` rows
+  are updated, anything else raises `ReservationNotFoundError`. The page keeps
+  the plate/phone in the cubit after submitting so the confirmation can cancel
+  without asking again, and shows a "Reserva cancelada" screen. Cancelling is
+  only reachable from the confirmation screen today — a "cancel with my code"
+  lookup is the natural follow-up.
+- `0092_public_reservation_lookup.sql`: code + mobile returns the active
+  public hold (`null` when nothing matches, so "no encontramos" is an answer
+  and not an error), used by the "¿Ya reservaste?" card at the bottom of
+  `/reserve`. The card reuses the same RPC for the plate, so cancelling from
+  the lookup still sends code + plate + phone.
+- `0093_public_availability_prices.sql`: `public_availability` per-category
+  `hourly_amount` from `tariffs` (`type='hourly'`, active, first row; `0` when
+  unset). The card shows `Money.formatAs(currency, amount)` and falls back to
+  "Tarifa en recepción" for `0`, so a missing tariff never looks free.
+- Public page polish: "Cómo llegar" (`core/utils/maps_launcher.dart`,
+  `mapsUrl` is pure and tested) opens a Google Maps search for the lot address;
+  `PublicBookingPage.refreshInterval` (1 min, `null` disables it in tests) calls
+  `PublicBookingCubit.refresh`, which re-reads availability without emitting
+  the loading state, so the form never flashes.
+- The reservations board has a "Solo web" filter (`isPublic`) beside "por
+  vencer"; `_clear` resets both.
+- **Scheduled jobs**: `supabase-jobs` (docker-compose) runs
+  `supabase/jobs.sh` every `JOBS_INTERVAL_SECONDS` (default 300) inside the
+  network: monthly-pass/overstay alerts, renewals, `expire_reservations`,
+  purges and the push/WhatsApp dispatch via busybox `wget` to
+  `http://api-gw:8000`. Why: the stock image has no pg_cron and this host has
+  no `crontab`, so nothing expired holds or dispatched push. Verified by
+  inserting an active hold that ended 30 h ago and restarting the service: it
+  became `expired` within seconds, and `push-dispatch` answered
+  `{"configured":false}`. `supabase/notifications-cron.sh` still works from
+  host cron; both are idempotent.
+- The reservations board shows `#<id> · Hasta …` on every card and its search
+  matches a 1..6 digit code exactly (`_matches`), so the customer's "code #7"
+  is usable at reception; check-in is still the one-tap action on the card.
+- `0094_reservation_grace.sql`: `reservation_grace()` = 15 min, used by the
+  shared capacity check, `public_availability` and `check_in` (which now marks
+  a late hold `used`). Dart mirrors it as `Reservation.graceWindow`, the board
+  queries `reserved_until > now - grace` and flags those cards "En tolerancia".
+  If the window changes, update the SQL function and the Dart constant together.
+- `0095_public_booking_whatsapp.sql`: `public_create_reservation` queues a
+  `reservation_confirmed` row (params: name, plate, "DD/MM HH24:MI", lot) when
+  `whatsapp_auto` is on; the Edge Function maps the template with
+  `WHATSAPP_TEMPLATE_RESERVATION` (default `reservation_confirmed`). Live
+  smoke: reservation `WAMSG1` queued
+  `["Ana Wa","WAMSG1","10/11 10:40","Parqueadero"]`; row removed afterwards.
+  Reminder: the live lot has `whatsapp_auto = true`, so every new web booking
+  queues a message — approval of the Meta template is what makes it send.
+- `0096_whatsapp_purge_pending.sql`: the purge drops rows older than 90 days
+  regardless of status, so a queue that cannot drain does not grow.
+- `/reserve` when everything is full: `availability.hasAvailability` false
+  renders `_NoSpace` (message + phone/WhatsApp) instead of `_FormCard`; the
+  lookup card stays and the 1-minute refresh restores the form by itself.
+- Test count: 1153; schema `0001..0096`.
+
+### Public booking bot protection (2026-11-10)
+
+- `0103_public_booking_protection.sql`: the booking body lives in
+  `public_create_reservation_verified` (**service_role only**; the revoke
+  names `anon, authenticated` because Supabase default privileges grant new
+  functions to them). `public_create_reservation` keeps its 6-arg signature
+  and anon grant as a gate: `CaptchaRequiredError` when
+  `parking_settings.public_booking_captcha` is on, else it calls the verified
+  body. No parameter was added on purpose (no overload). When the booking
+  rules change, edit the **verified** function, not the gate.
+- Throttle: `public_booking_hourly_limit` (1..1000, default 20) = public holds
+  created per lot in the last hour, any status, counted under
+  `pg_advisory_xact_lock(hashtext('public_booking_throttle'), lot)` taken
+  before the capacity locks. `source = 'app'` holds are outside it.
+  `BookingThrottledError`.
+- `set_public_booking_protection(p_captcha, p_hourly_limit)` (lot admin, null
+  keeps the value). There is no UI for it yet.
+- Edge Function `public-booking`: verifies Turnstile with
+  `TURNSTILE_SECRET_KEY`, then calls the verified RPC with the service key.
+  No secret → forwards to the anonymous RPC with the anon key (inert, never
+  permissive). Errors travel as `{"message": "<Name>Error"}`
+  (`CaptchaRequiredError`/`CaptchaExpiredError`/`CaptchaFailedError`/
+  `CaptchaUnavailableError`, throttle as 429). `TURNSTILE_VERIFY_URL` exists
+  only to point it at a mock.
+- Three switches must agree to protect a lot: secret in `.env` (+ restart
+  `functions`), `--dart-define=TURNSTILE_SITE_KEY` in the web build, and the
+  lot switch. Turn the lot switch on last; on without keys = online booking
+  refused for that lot.
+- Flutter: the client picks the path by the token — no token → RPC (today's
+  request), token → `functions.invoke('public-booking')`. The page takes
+  `captchaSiteKey` + an injectable `captchaBuilder`; `presentation/captcha/`
+  has the Turnstile web view behind a conditional export (stub elsewhere, so
+  mobile shows no widget). Tokens are single use: the page drops the token and
+  re-renders the challenge after every submit.
+- Gotcha: a new Edge Function must be allowlisted in `supabase/.gitignore`
+  (`volumes/functions/**` is ignored) and any new function env var must be
+  added to the `functions` service in `supabase/docker-compose.yml`.
+  `public-evidence`, `whatsapp-dispatch` and `evidence-archive` are **not**
+  allowlisted (untracked), and `WHATSAPP_*`/`VAPID_*` are not passed to the
+  container — both predate this change and are still open.
+- Gotcha: `supabase/tests/run.sh` fails at "anon read the reservation table"
+  on the image's pre-initialized database (`POSTGRES_DB`, where Supabase
+  default privileges give anon table access) — also at `17b454e`, before this
+  change. It passes on a plain `create database` scratch database, which is
+  what the documented command uses.
+- Not verified: the real Turnstile iframe in a browser and the function inside
+  the edge-runtime container (it was exercised with Deno against mocks).
+- Test count: 1172; schema `0001..0103`.
+
+## Cash anomalies (2026-11-12, `0110`)
+
+- Eight rules, one row per finding, dedupe key chosen so a legitimate
+  recurrence is new and a review is final: `shift_shortage:<operator>:<max id>`,
+  `lost_ticket_rate:<operator>:<ISO week>`, `post_close_adjustment:<adj id>`,
+  `zero_charge:<session id>`, `short_lost_ticket:<session id>`,
+  `discount_rate:<admin>:<ISO week>`, `shift_open_long:<shift id>`,
+  `session_open_long:<session id>`. A dismissed row stays in the table, so it is
+  never raised again (the job inserts `on conflict do nothing`).
+- Thresholds live in `anomaly_settings`, **not** `parking_settings`: every lot
+  member can read the latter, which would tell operators exactly how much they
+  can get away with. The table policy requires `is_lot_admin(lot_id)` and the
+  active lot; operators get 0 rows and `AdminRequiredError` from the RPCs.
+- `detect_cash_anomalies()` runs under `pg_try_advisory_xact_lock`, so the host
+  cron and the jobs container overlapping is a no-op, and notifies once per lot
+  and run: the "not yet notified" state is the `notified_at` column, not job
+  memory. Low-severity findings never notify.
+- Findings explained by later changes: `anomaly_zero_charge_excluded(session)`
+  returns false today; `add-merchant-validations` (and a future loyalty change)
+  redefine it with `create or replace` to return true for an explained zero.
+  Nothing else has to change when they land.
+- Attribution gap: the closing operator is `parking_sessions.shift_id ->
+  shifts.operator_id`; a session closed without an open shift is invisible to
+  the per-operator rules (it still feeds the session-based ones). Adjustments
+  and discounts are reported to admins about admins: the audit log is the second
+  line of review, there is no role above lot admin.
+- `exempt` is a zero charge any operator can pick, so it is flagged `medium`
+  (not high); a monthly pass is excluded. A shift with `difference is null` is
+  ignored (it is open).
+- Jobs: `run detect_cash_anomalies` and `run purge_cash_anomalies` in
+  `jobs.sh` (and the equivalent psql lines in `notifications-cron.sh`). Live
+  run: the first pass created 2 findings, the second 0 (idempotent) with one
+  settings row per lot.
+- Gatekeeper (2026-11-12): migration `0110` applied live, **1379 tests** green,
+  coverage 79.6% (application 92.3%, domain 60.5%), `flutter analyze` clean,
+  SQL suite over `0001`-`0110`, web rebuilt and republished (`/reserve` 200),
+  release APK installed and launched on the connected phone.
+- Left open: the widget tests listed for the settings sheet edge cases and the
+  audit deep-link navigation are covered only by review; `flutter test -d linux`
+  was not run.
+
+## Occupancy forecast (2026-11-12, `0109`)
+
+- Algorithm in five lines: `occupancy_grid` rebuilds the hourly net occupancy
+  per group from `entry_time`/`exit_time` (a stay is capped at **72 h** so one
+  forgotten gate cannot poison the profile); `refresh_occupancy_profile` stores
+  `percentile_cont(0.5)` per (group, weekday, hour) over the last K
+  same-weekday days, skipping dates before the lot's first session;
+  `forecast_compute` adds `(live - profile_now) * w^hours_ahead` (w = decay/100,
+  default 0.85), clamps to capacity and reports the first crossing as `full_at`;
+  confidence comes from the smallest sample count used; below `min_samples` the
+  group is omitted and the status says `insufficient_history`.
+- `forecast_compute(p_lot, p_horizon, p_now)` takes `p_now` explicitly because
+  `now()` is constant inside a transaction: the SQL tests replay a fixed
+  Wednesday 14:20. Do not "simplify" it to `now()`.
+- **`public_availability` is now a wrapper**: edit `public_availability_base`
+  for any change to its body, never the wrapper, or the forecast key is lost.
+  The rename block is guarded so a re-run cannot rename the wrapper.
+- The forecast is **not cached**: `DashboardSnapshot` is untouched, a stale
+  (offline) dashboard renders no card and `_fromCache` yields
+  `OccupancyForecast.unavailable`. The backtest and the public strip are online
+  only.
+- The public block is an allow-list (`group, confidence, full_now, full_at,
+  hours[{hour, level}]`): no capacity, current, samples or session data, and
+  any failure inside it yields `unavailable` so it can never break booking.
+  Public visibility defaults to **on** (`public_enabled`), because there is no
+  settings UI in this change; turn it off with
+  `select set_forecast_settings('{"public_enabled": false}')`.
+- Holidays are **out of scope** (the median absorbs isolated ones and the live
+  blend corrects today within hours). Reservation holds are not subtracted, so
+  a lot can look "not full" while bays are held (the public strip carries a
+  disclaimer).
+- `refresh_occupancy_profile` runs from `jobs.sh` /
+  `notifications-cron.sh` with no arguments (the `run` helper passes none) and
+  skips a lot whose profile is newer than six hours unless forced.
+- Note for testers: the median of an **even** sample is the average of the two
+  middle values, so the design's worked example yields `35.50` (35 and 36), not
+  `35.00`; the test pins 35.50.
+- Gatekeeper (2026-11-12): migration `0109` applied live (504 profile rows for
+  lot 1), `public_availability(1).forecast.status = insufficient_history` for
+  the dev data, **1351 tests** green, coverage 79.7% (application 92.2%,
+  domain 60.8%), `flutter analyze` clean, SQL suite green over `0001`-`0109`,
+  web rebuilt and republished (`/reserve` 200), release APK built and installed
+  on the connected phone (`pro.devpaul.parking_management`).
+- Not done: the 50 000-session benchmark of task 1.3 and the remaining widget
+  tests of sections 4.2/6.1 (the entities, cubits and the reports section are
+  covered; the home card and the public strip are covered by review, not by a
+  widget test yet).
+
+## Booking waitlist (2026-11-11, `0106`-`0107`)
+
+- An offer **is a real hold**: `category_reservations` with
+  `source = 'waitlist'`, inserted after `reservation_capacity_check`, so every
+  capacity counter already counts it and an offer cannot overbook. Claiming
+  extends the same row and flips `source` to `public`; from then on it is a
+  normal web booking (`public_cancel_reservation`, the "Web" badge,
+  `report_reservations.public`).
+- Dispatch rules: FIFO `(created_at, id)` per `(lot, group)`;
+  `ParkingFullError` exits the loop, `CategoryFullError` /
+  `VehicleAlreadyInsideError` skip that turn and keep the order; an entry whose
+  plate already holds a space is expired on the spot. The loop is capped at 50
+  turns per call and tracks tried ids in memory (never by touching rows).
+- Triggers (session closed, hold released, bay back in service, capacity
+  raised) call `waitlist_try_dispatch`, which uses
+  `pg_try_advisory_xact_lock` and **never** waits: a blocking wait inside
+  `check_out` could deadlock with a `check_in` of the same plate. A miss (or any
+  exception) inserts a row into `waitlist_kicks` and the origin write succeeds;
+  `waitlist_dispatch_all()` drains the kicks and then every queue.
+- Lock order: always the waitlist entry first, then the reservation; the group
+  lock (`hashtext('group:<lot>:<group>')`) before any category lock. Advisory
+  locks are re-entrant per session, so a trigger fired inside a transaction
+  that already holds the group lock goes straight through — that is why the
+  "held by someone else" case cannot be simulated in a single test transaction
+  (it is covered by the kick-table assertions and the job drain).
+- Expiry is **status-based**, not grace-based: `waitlist_expire()` sets the hold
+  `status = 'expired'` explicitly so an unclaimed offer frees the space at
+  `offer_until`, then dispatches. It also reconciles: a hold `used` (the
+  customer walked in) becomes `claimed`, a `cancelled`/`expired` hold closes the
+  turn.
+- `waitlist_enabled` is off by default; with it off every RPC refuses or reports
+  `enabled = false`, the triggers return at once and the page is unchanged.
+- Jobs: `jobs.sh` and `notifications-cron.sh` run `waitlist_expire`,
+  `waitlist_dispatch_all` and `purge_waitlist` after `expire_reservations`. With
+  the default 300 s interval a job-only dispatch is at most 5 minutes late
+  against a 15 minute claim window; lower `JOBS_INTERVAL_SECONDS` if the site
+  relies on the fallback.
+- WhatsApp: template `waitlist_offer`, params `[name, plate, deadline "HH24:MI"
+  in the lot timezone, lot, code]`; only queued when `whatsapp_auto`. Claim
+  queues the existing `reservation_confirmed`.
+- `0107` re-declares `report_reservations` only to add `and r.source <>
+  'waitlist'` to every booking count and the `waitlist` object; forgot it and a
+  table shows more bookings than receipts.
+- Two pre-existing gaps fixed while wiring this: `whatsapp-dispatch` was not
+  allowlisted in `supabase/.gitignore` (never versioned), and the `functions`
+  container received no `WHATSAPP_*` variable (the dispatcher would have been
+  inert with credentials set).
+
+## Offline conflict resolution, database half (2026-11-11, `0105`)
+
+- `vehicles`, `tariffs`, `categories` and `parking_settings` have `version`
+  (default 1). `row_version_guard()` bumps it only on a real change (a no-op
+  update keeps it) and ignores a client-supplied value, so an offline base can
+  be checked with `version=eq.<n>`: zero rows means someone else changed the
+  row.
+- `parking_settings.row_version_required` plus the `row_version_enforcement`
+  trigger refuse a direct table write without the `x-versioned-write` header;
+  `/rpc/*` paths are exempt. `set_row_version_policy(boolean)` (lot admin)
+  turns it on, and only after `min_app_version` is set (an old build cannot be
+  locked out). Off by default.
+- `request.path` was verified as a PostgREST GUC in the suite by setting it
+  explicitly; with an empty path the guard does nothing.
+- Client core ready: `planMerge` (three-way merge; `null`/`''` and numeric
+  equality, fields the server already has are dropped), `VersionConflictFailure`
+  (extends `Failure`, carries the server row; the code is not in `_domainCodes`
+  because the helper builds it) and `updateVersioned`/`deleteVersioned`
+  (`version=eq.<base>` filter, zero rows decides conflict vs permission vs
+  legacy not-found). Four ARB keys map the new codes.
+- Queue mechanics: `enqueue` coalesces patches of the same row keeping the
+  **old** base (and refuses to coalesce into a conflict/dead letter; check-in
+  and check-out are never coalesced; settings coalesce per `lot_id`), success
+  settles instead of removing (an edit coalesced during the replay survives),
+  and a parked conflict is serialised with `deadLettered: true` so an older
+  build skips it, while reading it back with `needsResolution: true` wins.
+- Legacy entries (no `baseVersion`) replay with no version filter: that single
+  edit stays last-write-wins. The client sends `x-versioned-write: 1` on every
+  request, so turning `set_row_version_policy(true)` on does not lock out this
+  build. Procedure to enforce: set `min_app_version` in Ajustes, then
+  `select set_row_version_policy(true)` as a lot admin.
+- `mapSupabaseError` passes an already typed `Failure` through unchanged; without
+  that, every remote data source flattened `VersionConflictFailure` into
+  `ServerFailure`.
+- `PendingMutation` now carries `baseVersion`, `baseSnapshotJson`,
+  `needsResolution`, `conflictKind` and `serverJson`, with `state`
+  (pending/conflict/deadLetter), `asConflict` and `rebased`; legacy JSON loads
+  as a pending entry and a conflict is written as `deadLettered` for older
+  builds but read back as a conflict.
+- Outbox: `listConflicts()` and `settle(key, expected)` (removes only an
+  unchanged entry, so a coalesced edit survives); pending and dead letters
+  exclude conflicts. `MutationReplayer.adoptServer` (no-op by default).
+- `SyncService`: `VersionConflictFailure` is handled before validation —
+  disjoint fields auto-apply and rebase the entry (max 3 rounds), a server that
+  already has mine removes it and adopts the row, overlapping fields or an
+  edit/delete mismatch park a conflict, `delete` of a vanished row succeeds.
+  `resolve(key, ConflictResolution)` (see below) rebases on the server version
+  or adopts and removes.
+- Vehicles are wired: `Vehicle.version` (entity, DTO and Hive adapter), the
+  remote update/delete send it through the versioned helpers, the repository
+  refuses an edit while the row has a parked conflict (`ConflictPendingError`)
+  and parks an online conflict with the server row, the replayer sends the base
+  and implements `adoptServer`, and the edit dialog passes
+  `existing.version`. The client also sends the `x-versioned-write` header.
+- Tariffs are wired like vehicles: `Tariff.version` in entity/DTO/Hive, the
+  remote update/delete send it, the repository sends the cached version
+  (`command.baseVersion` when the editor has it), parks an online conflict with
+  the server row, refuses edits while it is pending, stores the base and the
+  snapshot offline, and the replayer adopts the server row.
+- Categories are wired too (5.3): `Category.version` in entity/DTO/Hive, a
+  public `patch(id, fields, {baseVersion})` on the remote (with `update` and
+  `setCapacity` as thin wrappers), a single repository `_patch` that sends the
+  cached base, parks conflicts, guards pending ones, and queues the **whole
+  row** offline so a rename never drops a queued capacity change. The replayer
+  replays that whole payload with the base and adopts the server row.
+- Settings are wired (5.4): `ParkingSettings.version` in entity/DTO/Hive, the
+  remote `patch(fields, {lotId, baseVersion})` goes through `updateVersioned`
+  (match `lot_id`, same header), and `save` writes **only the fields that
+  differ** from the cached row (an empty diff sends nothing, so the form does
+  not rewrite the whole row). Text edits therefore cannot clobber a logo
+  someone else uploaded: the queued payload is the diff plus `lot_id`.
+  Conflicts park with the server row, a pending conflict blocks saving, and
+  the replayer sends the base and adopts the server row.
+- `mapSupabaseError` now passes an already typed `Failure` through unchanged;
+  without it the versioned `VersionConflictFailure` was flattened into
+  `ServerFailure` inside every remote data source.
+- Conflicts are visible: `SyncStatus` carries the parked conflicts, the cubit
+  loads them and exposes `resolve(key, choice)`, and the `SyncBadge` shows a
+  merge icon with the count and a dialog offering keep-mine / keep-theirs.
+  The field-by-field merge and the per-field dialog are still pending.
+- `MutationReplayer.replay` returns `Future<int?>`: entity replayers return the
+  version the server assigned (check-in/check-out return `null`, they rely on
+  idempotency instead).
+- `SyncService.resolve(key, ConflictResolution)` takes the sealed model
+  (`KeepTheirs`, `KeepMine`, `MergeFields(mineFields)`, `KeepDelete`,
+  `AcceptDeletion`), recomputes `planMerge` from the stored base/server rows at
+  resolve time, and rebases only `autoApply ∪ chosen conflicting fields`.
+  Invalid combinations throw `StateError`; nothing is dropped silently.
+- The conflict UI is complete: `entity_fields.dart` maps every conflictable
+  payload key to the label the edit form already uses (`amount` via `Money`,
+  times as `HH:mm`, `true`/`false` as `cfYes`/`cfNo`), the
+  `ConflictResolutionCubit` tracks a per-field choice (`choices: {field: mine?}`,
+  so "theirs" is a choice, not the absence of one) with idle/submitting/done/
+  failed states and retry, and `ConflictResolutionDialog` renders the
+  base/mine/theirs columns, the auto-merged count, the "changed again" banner
+  and the deleted / edited-while-deleting variants. The badge sheet lists the
+  conflicts under "Requieren tu decisión" and opens the dialog, remembering the
+  server version it showed per entry to detect a re-edit.
+- End-to-end flow test `test/features/vehicles/offline_conflict_flow_test.dart`:
+  a disjoint change merges silently, keep mine wins through the real dialog, keep
+  theirs adopts the server row, a parked conflict is never replayed blindly.
+- Gatekeeper after the change (2026-11-11): `flutter analyze` clean,
+  **1295 tests** green, coverage 80.8% global (application 91.8%,
+  infrastructure 46.7%), `dart run tool/check_coverage.dart` green,
+  `supabase/tests/run.sh` green over migrations `0001`–`0105` (scratch
+  `postgres:17-alpine` needs `create role anon/authenticated/service_role`
+  before the suite, the CI image already has them), web release rebuilt with
+  `--no-web-resources-cdn` and republished (`/reserve` 200), release APK built
+  (no device attached: not installed).
+- Waitlist gatekeeper (2026-11-11): migrations `0106`-`0107` applied live,
+  `public_waitlist_info(1)` answers `enabled: false` as shipped;
+  **1333 tests** green, coverage 80.1% (application 91.9%, infrastructure
+  44.7%), `flutter analyze` clean, SQL suite green over `0001`-`0107`, web
+  release rebuilt and republished (`/reserve` 200), release APK rebuilt. The
+  manual two-session smoke was not run (see below).
+- Task 7.3 (two-browser manual smoke) was not run: no second session was
+  available. The same paths are covered by the end-to-end widget test above and
+  by the SQL stale-base blocks.
+
+## Period comparison reports (2026-11-11, `0104`)
+
+- `report_period_comparison(months, as_of)` returns the trailing 1..24 calendar
+  months, each with `current`, `previous_month` and `previous_year`: revenue,
+  entries, exits, `avg_ticket`, `avg_stay_minutes`, `pass_revenue`,
+  reservations/used. The running month is cut to the elapsed days
+  (`is_partial`), every window says `covered` (the lot's first session is on or
+  before it) and `p_as_of` makes the tests deterministic without faking clock.
+- Deltas are a Dart rule (`periodDelta`): no chip on a zero, uncovered or
+  shorter base, mirroring `TrendCard`. The section keeps its own
+  loading/error/empty state and never fails the page; `loadComparison` switches
+  6/12 months without emitting `ReportsLoading`.
+- CSV/PDF export raw integers and Latin-1 text (no em dash). New indexes:
+  `ix_sessions_lot_exit_closed`, `ix_pass_payments_lot_paid`,
+  `ix_reservations_lot_from`; the `(lot_id, exit_time)` one was missing.
+- Test count: 1200; schema `0001..0104`.
 
 ## Owner contact data (2026-11-05)
 
@@ -924,6 +2503,8 @@ docker run --rm --network parking_management_default -v "$PWD/supabase:/work" \
 
 ## Boot order (fresh installs)
 
+- `main()` renders a branded splash while `auth.restore()` reads the Hive
+  session and loads memberships; the real app replaces it when that resolves.
 - `configureDependencies()` initializes `KeyValueStore` (Hive) **before**
   `_initSupabase`: the boot clears a stale cached session through Hive, which
   needs `Hive.init(path)` on mobile (web needs no path, so the bug only showed

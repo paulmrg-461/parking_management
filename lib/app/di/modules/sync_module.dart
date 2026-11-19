@@ -66,6 +66,7 @@ void registerSyncModule(GetIt sl) {
         sl<SyncOutbox>(),
         sl<SyncService>().discard,
         sl<SyncService>().flush,
+        sl<SyncService>().resolve,
       ),
     );
 }

@@ -21,7 +21,7 @@ Future<Uint8List> buildShiftPdf({
     subtitle: [
       ?lotName,
       '${Formatters.dateTime(shift.openedAt)}'
-          '${shift.closedAt == null ? '' : ' — ${Formatters.dateTime(shift.closedAt!)}'}',
+          '${shift.closedAt == null ? '' : ' - ${Formatters.dateTime(shift.closedAt!)}'}',
     ].join(' · '),
   );
 
@@ -61,6 +61,11 @@ Future<Uint8List> buildShiftPdf({
               l10n.shiftPassSales,
               CopFormatter.format(shift.passSales),
             ),
+            if (shift.onlineSales > 0)
+              PdfDocumentBuilder.row(
+                l10n.shiftOnlineSales,
+                CopFormatter.format(shift.onlineSales),
+              ),
             if (shift.passCashSales > 0)
               PdfDocumentBuilder.row(
                 l10n.reportsPassRevenue,

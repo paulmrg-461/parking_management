@@ -27,6 +27,7 @@ final class AuditLoaded extends AuditState {
     this.to,
     this.table,
     this.actor,
+    this.search,
   });
 
   final List<AuditEntry> entries;
@@ -34,6 +35,7 @@ final class AuditLoaded extends AuditState {
   final DateTime? to;
   final String? table;
   final String? actor;
+  final String? search;
 
   /// Distinct actors in the current page, for the filter dropdown.
   List<String> get actors {
@@ -45,14 +47,13 @@ final class AuditLoaded extends AuditState {
   }
 
   @override
-  List<Object?> get props => [entries, from, to, table, actor];
+  List<Object?> get props => [entries, from, to, table, actor, search];
 }
 
 final class AuditFailure extends AuditState {
   const AuditFailure(this.message, {this.failure});
 
-  AuditFailure.of(Failure failure)
-    : this(failure.message, failure: failure);
+  AuditFailure.of(Failure failure) : this(failure.message, failure: failure);
 
   final String message;
   final Failure? failure;
@@ -71,6 +72,7 @@ class AuditCubit extends ResilientCubit<AuditState> {
     DateTime? to,
     String? table,
     String? actor,
+    String? search,
     bool clearFilters = false,
   }) async {
     final current = state;
@@ -79,6 +81,7 @@ class AuditCubit extends ResilientCubit<AuditState> {
     final nextTo = clearFilters ? null : (to ?? previous?.to);
     final nextTable = clearFilters ? null : (table ?? previous?.table);
     final nextActor = clearFilters ? null : (actor ?? previous?.actor);
+    final nextSearch = clearFilters ? null : (search ?? previous?.search);
 
     emit(const AuditLoading());
     try {
@@ -87,14 +90,18 @@ class AuditCubit extends ResilientCubit<AuditState> {
         to: nextTo,
         table: nextTable,
         actor: nextActor,
+        search: nextSearch,
       );
-      emit(AuditLoaded(
-        entries,
-        from: nextFrom,
-        to: nextTo,
-        table: nextTable,
-        actor: nextActor,
-      ));
+      emit(
+        AuditLoaded(
+          entries,
+          from: nextFrom,
+          to: nextTo,
+          table: nextTable,
+          actor: nextActor,
+          search: nextSearch,
+        ),
+      );
     } on Failure catch (failure) {
       emit(AuditFailure.of(failure));
     }

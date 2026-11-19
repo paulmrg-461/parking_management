@@ -101,7 +101,11 @@ class AboutDeveloperPage extends StatelessWidget {
                     links: [
                       _AboutLink(Icons.language, l10n.aboutWebsite, _devpaul),
                       _AboutLink(Icons.code, l10n.aboutGitHub, _github),
-                      _AboutLink(Icons.work_outline, l10n.aboutLinkedIn, _linkedin),
+                      _AboutLink(
+                        Icons.work_outline,
+                        l10n.aboutLinkedIn,
+                        _linkedin,
+                      ),
                       _AboutLink(
                         Icons.camera_alt_outlined,
                         l10n.aboutInstagram,

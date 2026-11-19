@@ -12,8 +12,20 @@ void main() {
       testApp(
         const LotComparison(
           lots: [
-            LotRevenue(lotId: 1, lotName: 'Central', amount: 100, tickets: 2, avgTicket: 50),
-            LotRevenue(lotId: 2, lotName: 'North', amount: 300, tickets: 3, avgTicket: 100),
+            LotRevenue(
+              lotId: 1,
+              lotName: 'Central',
+              amount: 100,
+              tickets: 2,
+              avgTicket: 50,
+            ),
+            LotRevenue(
+              lotId: 2,
+              lotName: 'North',
+              amount: 300,
+              tickets: 3,
+              avgTicket: 100,
+            ),
             LotRevenue(lotId: 3, lotName: 'Empty', amount: 0),
           ],
         ),
@@ -31,7 +43,9 @@ void main() {
     expect(find.textContaining('promedio'), findsNWidgets(3));
   });
 
-  testWidgets('Failure: an all-zero period shows no percentage', (tester) async {
+  testWidgets('Failure: an all-zero period shows no percentage', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       testApp(
         const LotComparison(

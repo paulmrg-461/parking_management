@@ -230,9 +230,11 @@ a banner when a new row arrives.
 
 **Background push (FCM):** Supabase does not deliver push itself. Set
 `FCM_SERVICE_ACCOUNT_JSON` in `.env` (single-line Firebase service-account
-JSON), restart the `functions` service, and schedule `supabase/notifications-cron.sh`
-from host cron every minute. The cron also renews monthly passes, raises
-overstay alerts and purges expired idempotency keys. The `push-dispatch` Edge
+JSON) and restart the `functions` service. The `supabase-jobs` service (part
+of `docker-compose.yml`) dispatches pending pushes every 5 minutes, renews
+monthly passes, raises overstay alerts, expires unused holds and purges old
+rows; `supabase/notifications-cron.sh` remains available for hosts that
+prefer system cron. The `push-dispatch` Edge
 Function sends pending notifications to FCM and is protected by the service-role
 key.
 
@@ -295,8 +297,13 @@ prefilled; an open session can notify that the vehicle is **ready for pickup**.
 If the site enables **automated WhatsApp** in settings, those actions enqueue
 the message instead (`whatsapp_messages`) and the `whatsapp-dispatch` Edge
 Function sends it with the Meta token, so the operator does not need WhatsApp
-installed. The revenue report shows delivery metrics (sent/failed/queued per
-day). Check-out searches plates **server-side** with pagination, so
+installed. A **web booking** queues `reservation_confirmed` (body params:
+name, plate, until, lot) the same way, so the customer receives the code they
+will show at the door; nothing is queued while `automated WhatsApp` is off.
+The templates are approved in Meta and mapped with `WHATSAPP_TEMPLATE_*`
+(`RECEIPT`, `PASS`, `READY`, `RESERVATION`). The queue drops rows older than
+90 days even if they were never sent. The revenue report shows delivery
+metrics (sent/failed/queued per day). Check-out searches plates **server-side** with pagination, so
 a vehicle outside the first page is still found; the query shows a proper
 "no plate matches" state. Discounts appear in the report with their reason,
 admin and timestamp.
@@ -447,8 +454,10 @@ These functions are safe to call repeatedly:
   (and anything older than a year).
 - `purge_expired_idempotency()` drops expired retry keys.
 
-`supabase/notifications-cron.sh` runs all of them every minute from host cron,
-which is the supported path. If your Postgres ships **pg_cron**, run
+`supabase-jobs` (the compose service) runs all of them every 5 minutes inside
+the stack, so no host cron daemon is needed; `supabase/notifications-cron.sh`
+still works from host cron (every minute) if you prefer it. Both are
+idempotent. If your Postgres ships **pg_cron**, run
 `ALTER SYSTEM SET cron.database_name = 'parking';`, restart the database,
 `CREATE EXTENSION pg_cron;` and re-apply `0028_retention.sql`: it then
 schedules the same jobs inside Postgres. Storage evidence files are not purged

@@ -1,0 +1,45 @@
+device:
+  gateway_url: https://parking.example.com/functions/v1/device-gateway
+  api_key_file: /etc/lpr-edge/api_key
+  firmware_version: lpr-1.0.0
+  ca_file: null
+capture:
+  rtsp_url_file: /etc/lpr-edge/rtsp_url
+  decoder: nvidia
+  stall_seconds: 10
+sampling:
+  idle_fps: 2
+  active_fps: 8
+  active_hold_s: 3
+  motion_threshold: 6.0
+  roi: [0.1, 0.2, 0.8, 0.7]
+models:
+  detector:
+    engine: /opt/lpr-edge/models/plate_fp16.engine
+    sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+    input: 640
+    score: 0.40
+  ocr:
+    engine: /opt/lpr-edge/models/ocr_fp16.engine
+    sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+    width: 128
+    height: 64
+plate:
+  patterns:
+    - '^[A-Z]{3}[0-9]{3}$'
+    - '^[A-Z]{3}[0-9]{2}[A-Z]$'
+  fold_confusables: true
+  accept_unmatched: false
+tracking:
+  iou_threshold: 0.3
+  max_age_frames: 15
+  read_interval_ms: 400
+  max_reads_per_track: 5
+queue:
+  path: /var/lib/lpr-edge/outbox.db
+  max_age_s: 900
+  max_rows: 2000
+state:
+  path: /var/lib/lpr-edge/state.json
+heartbeat_interval_s: 60
+log_level: info

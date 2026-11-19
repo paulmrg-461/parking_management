@@ -5,6 +5,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
+import '../../../core/fare/fare_adjustment.dart';
 import '../../../core/receipt/receipt_data.dart';
 import '../../../core/receipt/receipt_labels.dart';
 import '../../../core/utils/cop_formatter.dart';
@@ -89,6 +90,30 @@ class SystemDialogReceiptPrinter implements ReceiptPrinter {
           ),
         ] else if (data.photoCount != null)
           _row(context, labels.photos, '${data.photoCount}'),
+        if (data.isCheckOut && !data.pendingSync && data.pricingLabel != null)
+          _row(context, labels.pricingRule, data.pricingLabel!),
+        if (!data.pendingSync && data.loyaltyRequired != null)
+          _row(
+            context,
+            '',
+            data.loyaltyRewardEarned
+                ? labels.loyaltyRewardEarned
+                : labels.loyaltyVisit(
+                    (data.loyaltyVisits ?? 0) + 1,
+                    data.loyaltyRequired!,
+                  ),
+          ),
+        if (data.isCheckOut && !data.pendingSync && data.grossAmount != null) ...[
+          _row(context, labels.gross, CopFormatter.format(data.grossAmount!)),
+          for (final line in data.adjustments)
+            _row(
+              context,
+              line.type == FareAdjustmentType.reward
+                  ? labels.loyaltyReward
+                  : '${labels.benefit} ${line.label}',
+              '-${CopFormatter.format(line.amount)}',
+            ),
+        ],
         if (data.pendingSync)
           pw.Text(labels.pendingSync, textAlign: pw.TextAlign.center)
         else if (data.isCheckOut && data.amountCharged != null) ...[
@@ -107,13 +132,56 @@ class SystemDialogReceiptPrinter implements ReceiptPrinter {
             '-${CopFormatter.format(data.discountAmount)}',
           ),
         if (data.isCheckOut && !data.pendingSync && data.paymentMethod != null)
-          _row(context, labels.payment, labels.paymentMethod(data.paymentMethod!, data.cardType)),
+          _row(
+            context,
+            labels.payment,
+            labels.paymentMethod(data.paymentMethod!, data.cardType),
+          ),
+        if (data.isCheckOut && !data.pendingSync && data.onlinePaidAmount > 0)
+          _row(
+            context,
+            labels.onlinePaid,
+            CopFormatter.format(data.onlinePaidAmount),
+          ),
         if (data.isCheckOut && !data.pendingSync && data.cashReceived != null)
-          _row(context, labels.received, CopFormatter.format(data.cashReceived!)),
+          _row(
+            context,
+            labels.received,
+            CopFormatter.format(data.cashReceived!),
+          ),
         if (data.isCheckOut && !data.pendingSync && data.cashChange != null)
           _row(context, labels.change, CopFormatter.format(data.cashChange!)),
         if (data.isCheckOut && !data.pendingSync && data.ticketNumber != null)
           _row(context, labels.ticket, data.ticketNumber!),
+        if (data.isCheckOut &&
+            (data.fiscalNumber != null || data.fiscalPending)) ...[
+          pw.Divider(),
+          pw.Text(
+            data.fiscalType == 'invoice'
+                ? labels.fiscalInvoice
+                : labels.fiscalPos,
+            textAlign: pw.TextAlign.center,
+            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+          ),
+          if (data.fiscalNumber != null)
+            _row(context, labels.ticket, data.fiscalNumber!),
+          if (data.cufe != null)
+            _row(context, labels.cufeLabel, data.cufe!),
+          if (data.fiscalPending)
+            pw.Text(
+              labels.fiscalPendingLabel,
+              textAlign: pw.TextAlign.center,
+            ),
+          if (data.fiscalQr != null)
+            pw.Center(
+              child: pw.BarcodeWidget(
+                barcode: Barcode.qrCode(),
+                data: data.fiscalQr!,
+                width: 72,
+                height: 72,
+              ),
+            ),
+        ],
         pw.Divider(),
         if (!data.isCheckOut) ...[
           pw.SizedBox(height: 8),
@@ -143,6 +211,22 @@ class SystemDialogReceiptPrinter implements ReceiptPrinter {
           ),
           pw.Text(
             labels.evidenceHint,
+            textAlign: pw.TextAlign.center,
+            style: const pw.TextStyle(fontSize: 7),
+          ),
+        ],
+        if (data.feedbackUrl != null) ...[
+          pw.SizedBox(height: 10),
+          pw.Center(
+            child: pw.BarcodeWidget(
+              barcode: Barcode.qrCode(),
+              data: data.feedbackUrl!,
+              width: 70,
+              height: 70,
+            ),
+          ),
+          pw.Text(
+            labels.feedbackHint,
             textAlign: pw.TextAlign.center,
             style: const pw.TextStyle(fontSize: 7),
           ),
@@ -185,23 +269,34 @@ class SystemDialogReceiptPrinter implements ReceiptPrinter {
     if (settings == null) {
       return const [];
     }
-    final lines = [settings.address, settings.schedule, settings.phone]
-        .map((line) => line.trim())
-        .where((line) => line.isNotEmpty);
+    final lines = [
+      settings.address,
+      settings.schedule,
+      settings.phone,
+    ].map((line) => line.trim()).where((line) => line.isNotEmpty);
     return [
-      for (final line in lines)
-        pw.Text(line, textAlign: pw.TextAlign.center),
+      for (final line in lines) pw.Text(line, textAlign: pw.TextAlign.center),
     ];
   }
 
-  pw.Widget _row(pw.Context context, String label, String value, {bool bold = false}) {
+  pw.Widget _row(
+    pw.Context context,
+    String label,
+    String value, {
+    bool bold = false,
+  }) {
     return pw.Padding(
       padding: const pw.EdgeInsets.symmetric(vertical: 2),
       child: pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: [
           pw.Text(label),
-          pw.Text(value, style: bold ? const pw.TextStyle(fontWeight: pw.FontWeight.bold) : null),
+          pw.Text(
+            value,
+            style: bold
+                ? const pw.TextStyle(fontWeight: pw.FontWeight.bold)
+                : null,
+          ),
         ],
       ),
     );

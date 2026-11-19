@@ -4,9 +4,8 @@ import 'package:parking_management/core/receipt/receipt_labels.dart';
 import 'package:parking_management/features/receipt_printing/infrastructure/esc_pos_generator.dart';
 import 'package:parking_management/features/settings/domain/entities/parking_settings.dart';
 
-String _decode(List<int> bytes) => String.fromCharCodes(
-  bytes.where((b) => b >= 0x20 && b < 0x7F),
-);
+String _decode(List<int> bytes) =>
+    String.fromCharCodes(bytes.where((b) => b >= 0x20 && b < 0x7F));
 
 const _configured = ParkingSettings(
   name: 'Parqueadero Central',
@@ -106,6 +105,31 @@ void main() {
     expect(text, isNot(contains('TCK-000043')));
   });
 
+  test('Success: a feedback URL prints its own QR and caption', () {
+    final bytes = const EscPosGenerator().build(
+      ReceiptData(
+        kind: ReceiptKind.checkOut,
+        plate: 'ABC123',
+        entryTime: DateTime(2026, 1, 1, 8, 30),
+        exitTime: DateTime(2026, 1, 1, 9, 30),
+        amountCharged: 8000,
+        feedbackUrl: 'https://app.test/feedback?session=7&plate=ABC123',
+      ),
+      _configured,
+    );
+
+    final text = _decode(bytes);
+    expect(text, contains('Califica tu visita'));
+    expect(text, contains('/feedback?session=7&plate=ABC123'));
+    expect(_contains(bytes, _qrPrint), isTrue);
+  });
+
+  test('Failure: without a feedback URL the caption is absent', () {
+    final bytes = const EscPosGenerator().build(_checkOut, _configured);
+
+    expect(_decode(bytes), isNot(contains('Califica tu visita')));
+  });
+
   test('Success: English labels print a fully translated receipt', () {
     final bytes = const EscPosGenerator().build(
       _checkOut,
@@ -148,5 +172,78 @@ void main() {
     final bytes = const EscPosGenerator().build(_checkOut, _configured);
 
     expect(_contains(bytes, _qrPrint), isFalse);
+  });
+
+  test('Success: a paid-online receipt prints the paid row in ASCII', () {
+    final data = ReceiptData(
+      kind: ReceiptKind.checkOut,
+      plate: 'ABC123',
+      entryTime: DateTime(2026, 1, 1, 8, 30),
+      exitTime: DateTime(2026, 1, 1, 11, 45),
+      amountCharged: 12500,
+      paymentMethod: 'online',
+      onlinePaidAmount: 12500,
+      ticketNumber: 'TCK-000042',
+    );
+    for (final labels in [ReceiptLabels.spanish, ReceiptLabels.english]) {
+      final text = _decode(
+        const EscPosGenerator().build(data, _configured, labels),
+      );
+      expect(text, contains(labels.onlinePaid));
+      expect(text, contains(labels.paymentMethod('online', null)));
+      // Thermal printers run on CP437: the label must stay ASCII.
+      expect(labels.onlinePaid.codeUnits.every((unit) => unit < 128), isTrue);
+      expect(
+        labels.paymentMethod('online', null).codeUnits.every((unit) => unit < 128),
+        isTrue,
+      );
+    }
+  });
+
+  test('thermal output contains the loyalty progress line', () {
+    final data = ReceiptData(
+      kind: ReceiptKind.checkIn,
+      plate: 'ABC123',
+      entryTime: DateTime(2026, 1, 1, 8, 30),
+      loyaltyVisits: 3,
+      loyaltyRequired: 5,
+    );
+    final text = _decode(const EscPosGenerator().build(data, _configured));
+    expect(text, contains('Visita 4 de 5'));
+  });
+
+  test('Security: a pending sync receipt prints no loyalty line', () {
+    final data = ReceiptData(
+      kind: ReceiptKind.checkIn,
+      plate: 'ABC123',
+      entryTime: DateTime(2026, 1, 1, 8, 30),
+      loyaltyVisits: 3,
+      loyaltyRequired: 5,
+      pendingSync: true,
+    );
+    final text = _decode(const EscPosGenerator().build(data, _configured));
+    expect(text, isNot(contains('Visita 4 de 5')));
+  });
+
+  test('thermal output contains the fiscal number and CUFE', () {
+    final data = ReceiptData(
+      kind: ReceiptKind.checkOut,
+      plate: 'ABC123',
+      entryTime: DateTime(2026, 1, 1, 8, 30),
+      exitTime: DateTime(2026, 1, 1, 10, 30),
+      amountCharged: 11900,
+      fiscalNumber: 'SETP7',
+      fiscalType: 'pos',
+      cufe: 'CUFE-7',
+    );
+    final text = _decode(const EscPosGenerator().build(data, _configured));
+    expect(text, contains('SETP7'));
+    expect(text, contains('CUFE-7'));
+    expect(text, contains('DOCUMENTO EQUIVALENTE POS'));
+  });
+
+  test('thermal output omits the fiscal block without a document', () {
+    final text = _decode(const EscPosGenerator().build(_checkOut, _configured));
+    expect(text, isNot(contains('DOCUMENTO EQUIVALENTE POS')));
   });
 }

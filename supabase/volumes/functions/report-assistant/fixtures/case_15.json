@@ -1,0 +1,91 @@
+{
+  "case": "case_15.json",
+  "question": "How many WhatsApp messages failed last week?",
+  "locale": "en",
+  "today": "2026-11-10",
+  "timezone": "America/Bogota",
+  "currency": "COP",
+  "rpc_outputs": {
+    "report_whatsapp": {
+      "sent": 480,
+      "failed": 7,
+      "pending": 2,
+      "by_day": [
+        {
+          "date": "2026-11-02",
+          "sent": 60,
+          "failed": 1
+        },
+        {
+          "date": "2026-11-06",
+          "sent": 80,
+          "failed": 6
+        }
+      ]
+    }
+  },
+  "model_script": [
+    {
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "w1",
+          "name": "get_whatsapp_report",
+          "input": {
+            "start_date": "2026-11-02",
+            "end_date": "2026-11-08"
+          }
+        }
+      ],
+      "stop_reason": "tool_use"
+    },
+    {
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "submit",
+          "name": "submit_answer",
+          "input": {
+            "status": "answered",
+            "headline": "{f1} WhatsApp messages failed.",
+            "explanation": "",
+            "period_start": "2026-11-02",
+            "period_end": "2026-11-08",
+            "figures": [
+              {
+                "id": "f1",
+                "label": "Failed messages",
+                "unit": "count",
+                "op": "value",
+                "operands": [
+                  {
+                    "call_id": "w1",
+                    "path": "failed"
+                  }
+                ]
+              }
+            ],
+            "caveats": []
+          }
+        }
+      ],
+      "stop_reason": "end_turn"
+    }
+  ],
+  "expected": {
+    "tools": [
+      {
+        "tool": "get_whatsapp_report"
+      }
+    ],
+    "answer": {
+      "status": "answered",
+      "figures": [
+        {
+          "id": "f1",
+          "value": 7
+        }
+      ]
+    }
+  }
+}

@@ -30,11 +30,12 @@ class QrCode extends StatelessWidget {
     // Generate for the inner square only: painting it into the padded canvas
     // keeps every module (an outer-sized matrix used to clip the last rows).
     final inner = size - _quietZone * 2;
-    final bars = Barcode.qrCode(
-      errorCorrectLevel: BarcodeQRCorrectionLevel.medium,
-    ).make(data, width: inner, height: inner).whereType<BarcodeBar>().where(
-      (bar) => bar.black,
-    ).toList();
+    final bars =
+        Barcode.qrCode(errorCorrectLevel: BarcodeQRCorrectionLevel.medium)
+            .make(data, width: inner, height: inner)
+            .whereType<BarcodeBar>()
+            .where((bar) => bar.black)
+            .toList();
 
     return Semantics(
       label: semanticLabel,
@@ -67,12 +68,7 @@ class _QrPainter extends CustomPainter {
     for (final bar in bars) {
       // The extra half pixel closes anti-aliasing seams between modules.
       canvas.drawRect(
-        Rect.fromLTWH(
-          bar.left,
-          bar.top,
-          bar.width + 0.5,
-          bar.height + 0.5,
-        ),
+        Rect.fromLTWH(bar.left, bar.top, bar.width + 0.5, bar.height + 0.5),
         paint,
       );
     }

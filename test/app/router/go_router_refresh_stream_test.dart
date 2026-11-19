@@ -31,15 +31,18 @@ void main() {
     refresh.dispose();
   });
 
-  test('Security: dispose cancels the subscription (no leaks, no late notify)', () async {
-    final controller = StreamController<int>.broadcast();
-    final refresh = GoRouterRefreshStream(controller.stream);
-    expect(controller.hasListener, isTrue);
+  test(
+    'Security: dispose cancels the subscription (no leaks, no late notify)',
+    () async {
+      final controller = StreamController<int>.broadcast();
+      final refresh = GoRouterRefreshStream(controller.stream);
+      expect(controller.hasListener, isTrue);
 
-    refresh.dispose();
+      refresh.dispose();
 
-    expect(controller.hasListener, isFalse);
-    controller.add(1);
-    await Future<void>.delayed(Duration.zero);
-  });
+      expect(controller.hasListener, isFalse);
+      controller.add(1);
+      await Future<void>.delayed(Duration.zero);
+    },
+  );
 }

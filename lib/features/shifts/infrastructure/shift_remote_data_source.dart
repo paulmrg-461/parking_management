@@ -16,11 +16,7 @@ abstract class ShiftRemoteDataSource {
     required String reason,
   });
 
-  Future<List<ShiftSummary>> history({
-    int limit,
-    DateTime? from,
-    DateTime? to,
-  });
+  Future<List<ShiftSummary>> history({int limit, DateTime? from, DateTime? to});
 
   Future<ShiftSummary> adjust({
     required int shiftId,
@@ -60,17 +56,11 @@ class SupabaseShiftRemoteDataSource implements ShiftRemoteDataSource {
   }
 
   @override
-  Future<ShiftSummary> close({
-    required int countedCash,
-    String? notes,
-  }) async {
+  Future<ShiftSummary> close({required int countedCash, String? notes}) async {
     try {
       final result = await _client.rpc(
         'close_shift',
-        params: {
-          'p_counted_cash': countedCash,
-          'p_notes': ?notes,
-        },
+        params: {'p_counted_cash': countedCash, 'p_notes': ?notes},
       );
       return ShiftSummary.fromJson(Map<String, dynamic>.from(result as Map));
     } catch (error) {
@@ -87,11 +77,7 @@ class SupabaseShiftRemoteDataSource implements ShiftRemoteDataSource {
     try {
       final result = await _client.rpc(
         'add_cash_movement',
-        params: {
-          'p_type': type,
-          'p_amount': amount,
-          'p_reason': reason,
-        },
+        params: {'p_type': type, 'p_amount': amount, 'p_reason': reason},
       );
       return ShiftSummary.fromJson(Map<String, dynamic>.from(result as Map));
     } catch (error) {

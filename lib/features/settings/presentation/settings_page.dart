@@ -10,10 +10,14 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/error/failure.dart';
 import '../../../core/l10n/failure_messages.dart';
 import '../../../core/l10n/l10n.dart';
+import '../../../core/money/money.dart';
+import '../../../core/money/money_input.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/confirm_dialog.dart';
+import '../../../core/widgets/error_state.dart';
 import '../../../core/widgets/list_page_scaffold.dart';
 import '../../../core/widgets/section_header.dart';
+import '../../../core/widgets/skeleton.dart';
 import '../../../core/widgets/submission_feedback.dart';
 import '../../../core/utils/policy_template.dart';
 import '../../../core/widgets/submission_listener.dart';
@@ -30,7 +34,7 @@ final _websitePattern = RegExp(
 
 /// Admin-only form for the singleton parking identity plus logo upload.
 class SettingsPage extends StatefulWidget {
-  const SettingsPage({super.key, this.pickLogo, this.spots});
+  const SettingsPage({super.key, this.pickLogo, this.pickCover, this.spots});
 
   /// Optional map access: when the site already drew bays, out-of-service is
   /// per bay and the count fields are hidden.
@@ -38,6 +42,9 @@ class SettingsPage extends StatefulWidget {
 
   /// Test seam: returns the picked logo bytes (or null when cancelled).
   final Future<Uint8List?> Function()? pickLogo;
+
+  /// Test seam for the wide cover shown on the public page.
+  final Future<Uint8List?> Function()? pickCover;
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -53,6 +60,7 @@ class _SettingsPageState extends State<SettingsPage> {
   late final TextEditingController _whatsapp;
   late final TextEditingController _policePhone;
   late final TextEditingController _evidenceRetention;
+  late final TextEditingController _grace;
   late final TextEditingController _carCapacity;
   late final TextEditingController _motoCapacity;
   late final TextEditingController _keyCapacity;
@@ -60,12 +68,20 @@ class _SettingsPageState extends State<SettingsPage> {
   late final TextEditingController _motoOutOfService;
   late final TextEditingController _legalPolicy;
   late final TextEditingController _minVersion;
+  late final TextEditingController _onlineGrace;
+  late final TextEditingController _onlineMin;
+  late final TextEditingController _passCadence;
   String _currency = 'COP';
+  bool _onlineEnabled = false;
+  bool _passRenewalEnabled = false;
+  bool _passRenewalLinks = false;
   final _identityKey = GlobalKey();
   final _emergencyKey = GlobalKey();
   final _spacesKey = GlobalKey();
   final _evidenceKey = GlobalKey();
   final _messagingKey = GlobalKey();
+  final _onlineKey = GlobalKey();
+  final _passRenewalKey = GlobalKey();
   final _preferencesKey = GlobalKey();
   final _legalKey = GlobalKey();
   var _seeded = false;
@@ -87,6 +103,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _whatsapp = TextEditingController();
     _policePhone = TextEditingController();
     _evidenceRetention = TextEditingController();
+    _grace = TextEditingController();
     _carCapacity = TextEditingController();
     _motoCapacity = TextEditingController();
     _keyCapacity = TextEditingController();
@@ -94,6 +111,9 @@ class _SettingsPageState extends State<SettingsPage> {
     _motoOutOfService = TextEditingController();
     _legalPolicy = TextEditingController();
     _minVersion = TextEditingController();
+    _onlineGrace = TextEditingController();
+    _onlineMin = TextEditingController();
+    _passCadence = TextEditingController();
     unawaited(context.read<SettingsCubit>().load());
     unawaited(_loadSpotCounts());
   }
@@ -108,6 +128,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _whatsapp.dispose();
     _policePhone.dispose();
     _evidenceRetention.dispose();
+    _grace.dispose();
     _carCapacity.dispose();
     _motoCapacity.dispose();
     _keyCapacity.dispose();
@@ -115,6 +136,9 @@ class _SettingsPageState extends State<SettingsPage> {
     _motoOutOfService.dispose();
     _legalPolicy.dispose();
     _minVersion.dispose();
+    _onlineGrace.dispose();
+    _onlineMin.dispose();
+    _passCadence.dispose();
     super.dispose();
   }
 
@@ -142,14 +166,10 @@ class _SettingsPageState extends State<SettingsPage> {
             listener: (context, state) =>
                 _seed((state as SettingsLoaded).settings),
             builder: (context, state) => switch (state) {
-              SettingsInitial() || SettingsLoading() => const Center(
-                child: CircularProgressIndicator(),
-              ),
-              SettingsFailure(:final message, :final failure) => Center(
-                child: Text(
-                  context.l10n.errorText(message, failure),
-                  textAlign: TextAlign.center,
-                ),
+              SettingsInitial() || SettingsLoading() => const SkeletonList(),
+              SettingsFailure(:final message, :final failure) => ErrorState(
+                message: context.l10n.errorText(message, failure),
+                onRetry: cubit.load,
               ),
               SettingsLoaded() => _form(context, state.settings),
             },
@@ -196,6 +216,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _whatsapp.text,
     _policePhone.text,
     _evidenceRetention.text,
+    _grace.text,
     _carCapacity.text,
     _motoCapacity.text,
     _keyCapacity.text,
@@ -205,6 +226,12 @@ class _SettingsPageState extends State<SettingsPage> {
     _currency,
     _minVersion.text,
     '$_whatsappAuto',
+    _onlineGrace.text,
+    _onlineMin.text,
+    '$_onlineEnabled',
+    _passCadence.text,
+    '$_passRenewalEnabled',
+    '$_passRenewalLinks',
   ];
 
   bool get _dirty => _baseline != null && !listEquals(_snapshot(), _baseline!);
@@ -242,6 +269,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _whatsapp.text = settings.whatsapp;
     _policePhone.text = settings.policePhone;
     _evidenceRetention.text = settings.evidenceRetentionDays.toString();
+    _grace.text = settings.reservationGraceMinutes.toString();
     _carCapacity.text = settings.carCapacity.toString();
     _motoCapacity.text = settings.motoCapacity.toString();
     _keyCapacity.text = settings.keyCapacity.toString();
@@ -249,6 +277,12 @@ class _SettingsPageState extends State<SettingsPage> {
     _motoOutOfService.text = settings.motoOutOfService.toString();
     _legalPolicy.text = settings.legalPolicy;
     _minVersion.text = settings.minAppVersion;
+    _onlineGrace.text = settings.onlinePaymentGraceMinutes.toString();
+    _onlineMin.text = settings.onlinePaymentMinAmount.toString();
+    _onlineEnabled = settings.onlinePaymentsEnabled;
+    _passCadence.text = settings.passRenewalCadence;
+    _passRenewalEnabled = settings.passRenewalEnabled;
+    _passRenewalLinks = settings.passRenewalPaymentLinks;
     _currency = settings.currency;
     _whatsappAuto = settings.whatsappAuto;
     _baseline = _snapshot();
@@ -273,6 +307,7 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         children: [
           _logoSection(context, settings),
+          _coverSection(context, settings),
           if (MediaQuery.sizeOf(context).width >= 720) ...[
             _sectionIndex(context),
             const SizedBox(height: Space.md),
@@ -391,10 +426,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const SizedBox(height: Space.md),
           if (_carBays > 0)
-            _MapMaintenanceNote(
-              label: l10n.homeCapacityCars,
-              bays: _carBaysOut,
-            )
+            _MapMaintenanceNote(label: l10n.homeCapacityCars, bays: _carBaysOut)
           else
             TextFormField(
               key: const Key('settings_car_out_of_service'),
@@ -439,6 +471,24 @@ class _SettingsPageState extends State<SettingsPage> {
               helperMaxLines: 2,
             ),
             validator: _capacity,
+          ),
+          const SizedBox(height: Space.md),
+          TextFormField(
+            key: const Key('settings_reservation_grace'),
+            controller: _grace,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: InputDecoration(
+              labelText: l10n.settingsReservationGrace,
+              helperText: l10n.settingsReservationGraceHint,
+              helperMaxLines: 2,
+            ),
+            validator: (value) {
+              final minutes = int.tryParse((value ?? '').trim());
+              return minutes == null || minutes < 0 || minutes > 120
+                  ? l10n.invalidAmount
+                  : null;
+            },
           ),
           const SizedBox(height: Space.md),
           OutlinedButton.icon(
@@ -487,12 +537,118 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const SizedBox(height: Space.lg),
           SectionHeader(
+            key: _onlineKey,
+            icon: Icons.qr_code_2_outlined,
+            title: l10n.settingsOnlinePayments,
+          ),
+          SwitchListTile(
+            key: const Key('settings_online_enabled'),
+            contentPadding: EdgeInsets.zero,
+            value: _onlineEnabled,
+            onChanged: _currency == 'COP'
+                ? (value) => setState(() => _onlineEnabled = value)
+                : null,
+            title: Text(l10n.settingsOnlinePayments),
+            subtitle: Text(
+              _currency == 'COP'
+                  ? l10n.settingsOnlinePaymentsHint
+                  : l10n.settingsOnlineCopOnly,
+            ),
+          ),
+          const SizedBox(height: Space.sm),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: TextFormField(
+                  key: const Key('settings_online_grace'),
+                  controller: _onlineGrace,
+                  enabled: _onlineEnabled && _currency == 'COP',
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  decoration: InputDecoration(
+                    labelText: l10n.settingsOnlineGraceMinutes,
+                  ),
+                  validator: (value) {
+                    final minutes = int.tryParse((value ?? '').trim());
+                    return minutes == null || minutes < 5 || minutes > 120
+                        ? l10n.invalidAmount
+                        : null;
+                  },
+                ),
+              ),
+              const SizedBox(width: Space.md),
+              Expanded(
+                child: TextFormField(
+                  key: const Key('settings_online_min_amount'),
+                  controller: _onlineMin,
+                  enabled: _onlineEnabled && _currency == 'COP',
+                  keyboardType: TextInputType.number,
+                  inputFormatters: moneyInputFormatters(),
+                  decoration: InputDecoration(
+                    labelText: l10n.settingsOnlineMinAmount,
+                  ),
+                  validator: (value) {
+                    final amount = Money.parse((value ?? '').trim());
+                    return amount == null || amount < 0
+                        ? l10n.invalidAmount
+                        : null;
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: Space.lg),
+          SectionHeader(
+            key: _passRenewalKey,
+            icon: Icons.autorenew,
+            title: l10n.settingsPassRenewal,
+          ),
+          SwitchListTile(
+            key: const Key('settings_pass_renewal_enabled'),
+            contentPadding: EdgeInsets.zero,
+            value: _passRenewalEnabled,
+            onChanged: (value) => setState(() {
+              _passRenewalEnabled = value;
+              if (!value) {
+                _passRenewalLinks = false;
+              }
+            }),
+            title: Text(l10n.settingsPassRenewal),
+            subtitle: Text(l10n.settingsPassRenewalHint),
+          ),
+          SwitchListTile(
+            key: const Key('settings_pass_renewal_links'),
+            contentPadding: EdgeInsets.zero,
+            value: _passRenewalLinks,
+            onChanged: _passRenewalEnabled &&
+                    _onlineEnabled &&
+                    _currency == 'COP'
+                ? (value) => setState(() => _passRenewalLinks = value)
+                : null,
+            title: Text(l10n.settingsPassRenewalLinks),
+            subtitle: Text(l10n.settingsPassRenewalLinksHint),
+          ),
+          const SizedBox(height: Space.sm),
+          TextFormField(
+            key: const Key('settings_pass_cadence'),
+            controller: _passCadence,
+            enabled: _passRenewalEnabled,
+            keyboardType: TextInputType.text,
+            decoration: InputDecoration(
+              labelText: l10n.settingsPassRenewalCadence,
+            ),
+            validator: _passCadenceValidator,
+          ),
+          const SizedBox(height: Space.lg),
+          SectionHeader(
             key: _preferencesKey,
             icon: Icons.tune,
             title: l10n.settingsSectionPreferences,
           ),
           const SizedBox(height: Space.sm),
           DropdownButtonFormField<String>(
+            isExpanded: true,
             key: const Key('settings_currency'),
             initialValue: _currency,
             decoration: InputDecoration(
@@ -655,6 +811,12 @@ class _SettingsPageState extends State<SettingsPage> {
       (Icons.grid_view_rounded, l10n.settingsSectionSpaces, _spacesKey),
       (Icons.photo_camera_outlined, l10n.settingsSectionEvidence, _evidenceKey),
       (Icons.chat_outlined, l10n.settingsSectionMessaging, _messagingKey),
+      (Icons.qr_code_2_outlined, l10n.settingsOnlinePayments, _onlineKey),
+      (
+        Icons.autorenew,
+        l10n.settingsPassRenewal,
+        _passRenewalKey,
+      ),
       (Icons.tune, l10n.settingsSectionPreferences, _preferencesKey),
       (Icons.gavel_outlined, l10n.settingsSectionLegal, _legalKey),
     ];
@@ -700,60 +862,70 @@ class _SettingsPageState extends State<SettingsPage> {
           clipBehavior: Clip.antiAlias,
           child: Padding(
             padding: const EdgeInsets.all(Space.md),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Container(
-                  width: 64,
-                  height: 64,
-                  padding: const EdgeInsets.all(Space.sm),
-                  decoration: BoxDecoration(
-                    color: scheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(Radii.md),
-                  ),
-                  child: bytes == null
-                      ? Icon(
-                          Icons.local_parking_rounded,
-                          size: 36,
-                          color: scheme.onPrimaryContainer,
-                        )
-                      : ClipRRect(
-                          borderRadius: BorderRadius.circular(Radii.sm),
-                          child: Image.memory(
-                            bytes,
-                            fit: BoxFit.contain,
-                            errorBuilder: (_, _, _) => Icon(
-                              Icons.broken_image_outlined,
+                Row(
+                  children: [
+                    Container(
+                      width: 64,
+                      height: 64,
+                      padding: const EdgeInsets.all(Space.sm),
+                      decoration: BoxDecoration(
+                        color: scheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(Radii.md),
+                      ),
+                      child: bytes == null
+                          ? Icon(
+                              Icons.local_parking_rounded,
+                              size: 36,
                               color: scheme.onPrimaryContainer,
+                            )
+                          : ClipRRect(
+                              borderRadius: BorderRadius.circular(Radii.sm),
+                              child: Image.memory(
+                                bytes,
+                                fit: BoxFit.contain,
+                                errorBuilder: (_, _, _) => Icon(
+                                  Icons.broken_image_outlined,
+                                  color: scheme.onPrimaryContainer,
+                                ),
+                              ),
                             ),
+                    ),
+                    const SizedBox(width: Space.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            settings.name.isEmpty
+                                ? l10n.appTitle
+                                : settings.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w700),
                           ),
-                        ),
+                          const SizedBox(height: 2),
+                          Text(
+                            l10n.settingsLogoSection,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: scheme.onSurfaceVariant),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: Space.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        settings.name.isEmpty ? l10n.appTitle : settings.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w700),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        l10n.settingsLogoSection,
-                        style: Theme.of(context).textTheme.bodySmall
-                            ?.copyWith(color: scheme.onSurfaceVariant),
-                      ),
-                    ],
+                const SizedBox(height: Space.sm),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: FilledButton.tonalIcon(
+                    onPressed: _uploadLogo,
+                    icon: const Icon(Icons.image_outlined),
+                    label: Text(l10n.settingsLogoPick),
                   ),
-                ),
-                const SizedBox(width: Space.sm),
-                FilledButton.tonalIcon(
-                  onPressed: _uploadLogo,
-                  icon: const Icon(Icons.image_outlined),
-                  label: Text(l10n.settingsLogoPick),
                 ),
               ],
             ),
@@ -761,6 +933,62 @@ class _SettingsPageState extends State<SettingsPage> {
         );
       },
     );
+  }
+
+  Widget _coverSection(BuildContext context, ParkingSettings settings) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Card(
+      margin: const EdgeInsets.only(bottom: Space.lg),
+      child: Padding(
+        padding: const EdgeInsets.all(Space.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.panorama_outlined, color: scheme.primary),
+                const SizedBox(width: Space.sm),
+                Expanded(
+                  child: Text(
+                    l10n.settingsCoverSection,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: Space.xs),
+            Text(
+              settings.hasCover
+                  ? l10n.settingsCoverConfigured
+                  : l10n.settingsCoverHint,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: Space.sm),
+            FilledButton.tonalIcon(
+              key: const Key('settings_cover_pick'),
+              onPressed: _uploadCover,
+              icon: const Icon(Icons.image_outlined),
+              label: Text(l10n.settingsCoverPick),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _uploadCover() async {
+    final pick = widget.pickCover ?? _pickFromGallery;
+    final bytes = await pick();
+    if (bytes == null || !mounted) {
+      return;
+    }
+    await context.read<SettingsCubit>().uploadCover(bytes);
   }
 
   Future<void> _save(BuildContext context, ParkingSettings current) async {
@@ -778,6 +1006,7 @@ class _SettingsPageState extends State<SettingsPage> {
         policePhone: _policePhone.text.trim(),
         evidenceRetentionDays:
             int.tryParse(_evidenceRetention.text.trim()) ?? 0,
+        reservationGraceMinutes: int.tryParse(_grace.text.trim()) ?? 15,
         whatsappAuto: _whatsappAuto,
         carCapacity: int.tryParse(_carCapacity.text.trim()) ?? 0,
         motoCapacity: int.tryParse(_motoCapacity.text.trim()) ?? 0,
@@ -787,6 +1016,13 @@ class _SettingsPageState extends State<SettingsPage> {
         legalPolicy: _legalPolicy.text.trim(),
         currency: _currency,
         minAppVersion: _minVersion.text.trim(),
+        onlinePaymentsEnabled: _onlineEnabled,
+        onlinePaymentGraceMinutes: int.tryParse(_onlineGrace.text.trim()) ?? 15,
+        onlinePaymentMinAmount:
+            Money.parse(_onlineMin.text.trim()) ?? 1500,
+        passRenewalEnabled: _passRenewalEnabled,
+        passRenewalPaymentLinks: _passRenewalLinks,
+        passRenewalCadence: _passCadence.text.trim(),
       ),
     );
   }
@@ -803,6 +1039,20 @@ class _SettingsPageState extends State<SettingsPage> {
       return context.l10n.settingsOutOfServiceTooMany;
     }
     return null;
+  }
+
+  String? _passCadenceValidator(String? value) {
+    final text = (value ?? '').trim();
+    if (text.isEmpty) {
+      return null;
+    }
+    final parts = text.split(',');
+    final valid = parts.length <= 5 &&
+        parts.every((part) {
+          final days = int.tryParse(part);
+          return days != null && days >= 0 && days <= 30;
+        });
+    return valid ? null : context.l10n.settingsPassRenewalCadenceInvalid;
   }
 
   String? _emergencyPhone(String? value) {

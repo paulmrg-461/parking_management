@@ -1,0 +1,49 @@
+{
+  "case": "one finding backed by two entry photos and one exit photo",
+  "entry_ids": [
+    1,
+    2
+  ],
+  "exit_ids": [
+    3
+  ],
+  "model_answer": {
+    "summary": "Rayón en la puerta izquierda.",
+    "quality": {
+      "same_vehicle": "yes",
+      "covered_zones": [
+        "front",
+        "rear",
+        "left",
+        "right"
+      ],
+      "issues": []
+    },
+    "findings": [
+      {
+        "zone": "left",
+        "description": "Rayón",
+        "classification": "new",
+        "confidence": "high",
+        "entry_photo_ids": [
+          1,
+          2
+        ],
+        "exit_photo_ids": [
+          3
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "overall": "possible_new_damage",
+    "count": 1,
+    "findings": [
+      {
+        "classification": "new",
+        "entry_len": 2,
+        "exit_len": 1
+      }
+    ]
+  }
+}

@@ -25,9 +25,7 @@ class _FakeScanner implements BluetoothPrinterScanner {
   @override
   Future<void> startScan() async {
     _scanning.add(true);
-    _results.add(const [
-      BluetoothPrinter(name: 'EPSON', address: 'AA:BB:CC'),
-    ]);
+    _results.add(const [BluetoothPrinter(name: 'EPSON', address: 'AA:BB:CC')]);
     _scanning.add(false);
   }
 
@@ -61,10 +59,7 @@ void main() {
     cubit.startScan();
     await Future<void>.delayed(Duration.zero);
 
-    expect(
-      states.any((s) => s.printers.any((p) => p.name == 'EPSON')),
-      isTrue,
-    );
+    expect(states.any((s) => s.printers.any((p) => p.name == 'EPSON')), isTrue);
     await sub.cancel();
     await cubit.close();
   });

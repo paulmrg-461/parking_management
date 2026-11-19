@@ -15,6 +15,12 @@ abstract final class Formatters {
   static String date(DateTime value) =>
       DateFormat.yMd(formatLocale).format(value.toLocal());
 
+  /// Range label for exported PDFs. The built-in Helvetica font has no em/en
+  /// dash glyph, so PDFs must use the ASCII hyphen (on-screen labels may keep
+  /// the typographic dash).
+  static String pdfDateRange(DateTime start, DateTime end) =>
+      '${date(start)} - ${date(end)}';
+
   static String time(DateTime value) =>
       DateFormat.Hm(formatLocale).format(value.toLocal());
 

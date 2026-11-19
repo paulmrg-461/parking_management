@@ -16,7 +16,10 @@ void main() {
     ]);
 
     final lines = csv.split('\n');
-    expect(lines.first, 'plate,category,entry,exit,minutes,amount,status,ticket');
+    expect(
+      lines.first,
+      'plate,category,entry,exit,minutes,amount,status,ticket',
+    );
     expect(lines, hasLength(3));
     expect(lines[1], contains('ABC123'));
     expect(lines[1], contains('5000'));

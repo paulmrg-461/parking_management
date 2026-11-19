@@ -18,9 +18,7 @@ void registerAuditModule(GetIt sl) {
     ..registerLazySingleton<AuditRepository>(
       () => AuditRepositoryImpl(sl<AuditRemoteDataSource>()),
     )
-    ..registerFactory<AuditCubit>(
-      () => AuditCubit(sl<AuditRepository>()),
-    )
+    ..registerFactory<AuditCubit>(() => AuditCubit(sl<AuditRepository>()))
     ..registerLazySingleton<DiagnosticsRemoteDataSource>(
       () => SupabaseDiagnosticsRemoteDataSource(sl<SupabaseClient>()),
     )

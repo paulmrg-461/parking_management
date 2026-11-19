@@ -18,18 +18,18 @@ void main() {
       expect(session.user.username, 'juan');
     });
 
-    test('Success: login kicks the offline outbox once a token exists', () async {
-      var flushes = 0;
-      final cubit = AuthCubit(
-        FakeAuthRepository(),
-        () async => flushes++,
-      );
+    test(
+      'Success: login kicks the offline outbox once a token exists',
+      () async {
+        var flushes = 0;
+        final cubit = AuthCubit(FakeAuthRepository(), () async => flushes++);
 
-      await cubit.login('juan', '123456');
-      await Future<void>.delayed(Duration.zero);
+        await cubit.login('juan', '123456');
+        await Future<void>.delayed(Duration.zero);
 
-      expect(flushes, 1);
-    });
+        expect(flushes, 1);
+      },
+    );
 
     test('login failure emits failure state', () async {
       final cubit = AuthCubit(

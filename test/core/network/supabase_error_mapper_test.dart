@@ -152,4 +152,10 @@ void main() {
       expect(viaFunction.code, code, reason: code);
     }
   });
+
+  test('Success: an already typed failure keeps its identity', () {
+    const conflict = VersionConflictFailure({'id': 1, 'version': 3});
+
+    expect(mapSupabaseError(conflict), same(conflict));
+  });
 }

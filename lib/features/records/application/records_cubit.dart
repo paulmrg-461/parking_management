@@ -86,11 +86,7 @@ class RecordsCubit extends ResilientCubit<RecordsState> {
     final term = query ?? state.query;
     final token = ++_token;
     emit(
-      state.copyWith(
-        status: RecordsStatus.loading,
-        query: term,
-        failure: null,
-      ),
+      state.copyWith(status: RecordsStatus.loading, query: term, failure: null),
     );
     try {
       final page = await _repository.list(
@@ -116,9 +112,7 @@ class RecordsCubit extends ResilientCubit<RecordsState> {
       if (isClosed || token != _token) {
         return;
       }
-      emit(
-        state.copyWith(status: RecordsStatus.failure, failure: failure),
-      );
+      emit(state.copyWith(status: RecordsStatus.failure, failure: failure));
     }
   }
 

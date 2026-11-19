@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/fare/fare_adjustment.dart';
+import '../../../pricing/presentation/applied_rule_tile.dart';
 import '../../../../core/l10n/l10n.dart';
 import '../../../../core/theme/status_colors.dart';
 import '../../../../core/theme/tokens.dart';
@@ -75,6 +77,16 @@ class FareBreakdownView extends StatelessWidget {
             text: l10n.checkOutPassCovered,
             tone: StatusColors.of(context).success,
           ),
+        if (preview.pricing case final pricing?) AppliedRuleTile(pricing: pricing),
+        if (preview.quote case final quote?)
+          for (final line in quote.adjustments)
+            _ValueLine(
+              label: l10n.fareAdjustmentMerchant(line.label),
+              value: '-${CopFormatter.format(line.amount)}',
+              icon: line.type == FareAdjustmentType.merchant
+                  ? Icons.storefront_outlined
+                  : Icons.card_giftcard,
+            ),
         Padding(
           padding: const EdgeInsets.symmetric(vertical: Space.xs),
           child: Divider(height: 1, color: theme.dividerColor),
@@ -82,7 +94,10 @@ class FareBreakdownView extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: Text(l10n.fareTotal, style: theme.textTheme.titleSmall),
+              child: Text(
+                preview.quote == null ? l10n.fareTotal : l10n.fareGross,
+                style: theme.textTheme.titleSmall,
+              ),
             ),
             Text(
               CopFormatter.format(preview.amount),
@@ -93,7 +108,68 @@ class FareBreakdownView extends StatelessWidget {
             ),
           ],
         ),
+        if (preview.quote case final quote?
+            when quote.adjustments.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: Space.xs),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    l10n.fareAmountDue,
+                    style: theme.textTheme.titleSmall,
+                  ),
+                ),
+                Text(
+                  CopFormatter.format(quote.amountDue),
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: theme.colorScheme.primary,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ],
+            ),
+          ),
       ],
+    );
+  }
+}
+
+/// A label with a negative amount (one automatic fare line).
+class _ValueLine extends StatelessWidget {
+  const _ValueLine({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final tone = StatusColors.of(context).success;
+    return Padding(
+      padding: const EdgeInsets.only(top: Space.xs),
+      child: Row(
+        children: [
+          Icon(icon, size: 15, color: tone),
+          const SizedBox(width: Space.xs),
+          Expanded(
+            child: Text(label, style: theme.textTheme.bodyMedium),
+          ),
+          Text(
+            value,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: tone,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

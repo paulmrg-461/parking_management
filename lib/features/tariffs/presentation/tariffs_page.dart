@@ -146,9 +146,8 @@ class _TariffTile extends StatelessWidget {
         ),
         title: Text(
           '$categoryName · ${tariff.type.label(l10n)}',
-          style: Theme.of(
-            context,
-          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+          style: Theme.of(context).textTheme.titleSmall
+              ?.copyWith(fontWeight: FontWeight.w600),
         ),
         subtitle: Text('${Formatters.money(tariff.amount)}$_window'),
         trailing: Row(
@@ -175,7 +174,9 @@ class _TariffTile extends StatelessWidget {
   void _toggle(BuildContext context) {
     final cubit = context.read<TariffsCubit>();
     final id = tariff.id!;
-    unawaited(cubit.update(UpdateTariffCommand(id: id, active: !tariff.active)));
+    unawaited(
+      cubit.update(UpdateTariffCommand(id: id, active: !tariff.active)),
+    );
     if (tariff.active) {
       showUndoSnack(
         context,

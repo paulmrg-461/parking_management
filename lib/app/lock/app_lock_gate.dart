@@ -21,8 +21,7 @@ class AppLockGate extends StatefulWidget {
   State<AppLockGate> createState() => _AppLockGateState();
 }
 
-class _AppLockGateState extends State<AppLockGate>
-    with WidgetsBindingObserver {
+class _AppLockGateState extends State<AppLockGate> with WidgetsBindingObserver {
   Timer? _timer;
   String? _username;
 
@@ -63,8 +62,7 @@ class _AppLockGateState extends State<AppLockGate>
   Widget build(BuildContext context) {
     return BlocListener<AuthCubit, AuthState>(
       listenWhen: (previous, current) =>
-          current is AuthUnauthenticated &&
-          previous is! AuthUnauthenticated,
+          current is AuthUnauthenticated && previous is! AuthUnauthenticated,
       listener: (_, _) => widget.cubit.unlock(),
       child: Listener(
         behavior: HitTestBehavior.translucent,
@@ -82,9 +80,8 @@ class _AppLockGateState extends State<AppLockGate>
             // While the PIN is being checked the state is AuthLoading or
             // AuthFailure; keep the overlay until it succeeds or the user
             // signs out (AuthUnauthenticated unlocks via the listener).
-            final hide = !locked ||
-                _username == null ||
-                auth is AuthUnauthenticated;
+            final hide =
+                !locked || _username == null || auth is AuthUnauthenticated;
             if (hide) {
               return widget.child;
             }

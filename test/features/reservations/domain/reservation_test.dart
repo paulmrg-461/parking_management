@@ -22,7 +22,10 @@ void main() {
 
     expect(hold.expiresSoon(now: now), isFalse);
     // The window is configurable for callers with a tighter policy.
-    expect(hold.expiresSoon(now: now, window: const Duration(hours: 6)), isTrue);
+    expect(
+      hold.expiresSoon(now: now, window: const Duration(hours: 6)),
+      isTrue,
+    );
   });
 
   test('Security: an expired hold is never reported as expiring soon', () {
@@ -30,6 +33,57 @@ void main() {
 
     expect(hold.isExpiredAt(now), isTrue);
     expect(hold.expiresSoon(now: now), isFalse);
+  });
+
+  test('Success: a public booking exposes the customer contact', () {
+    final hold = Reservation.fromJson({
+      'id': 9,
+      'plate': 'WEB123',
+      'category_id': 2,
+      'reserved_until': '2026-11-09T20:00:00Z',
+      'status': 'active',
+      'customer_name': ' Ana Perez ',
+      'customer_phone': '3009998877',
+      'source': 'public',
+      'categories': {'name': 'car'},
+    });
+
+    expect(hold.isPublic, isTrue);
+    expect(hold.hasContact, isTrue);
+    expect(hold.customerName, ' Ana Perez ');
+    expect(hold.contactLine, 'Ana Perez · 3009998877');
+  });
+
+  test('Failure: an operator hold has no contact line', () {
+    final hold = Reservation.fromJson({
+      'id': 10,
+      'plate': 'ABC123',
+      'category_id': 2,
+      'reserved_until': '2026-11-09T20:00:00Z',
+    });
+
+    expect(hold.isPublic, isFalse);
+    expect(hold.hasContact, isFalse);
+    expect(hold.contactLine, isNull);
+  });
+
+  test('Success: the grace flag comes from the server', () {
+    final late = Reservation.fromJson({
+      'id': 3,
+      'plate': 'LATE01',
+      'category_id': 2,
+      'reserved_until': '2026-11-10T10:00:00Z',
+      'in_grace': true,
+    });
+    final onTime = Reservation.fromJson({
+      'id': 4,
+      'plate': 'SOON01',
+      'category_id': 2,
+      'reserved_until': '2026-11-10T12:00:00Z',
+    });
+
+    expect(late.inGrace, isTrue);
+    expect(onTime.inGrace, isFalse);
   });
 
   test('Success: sorting lists the soonest expiry first without mutating', () {
@@ -41,5 +95,18 @@ void main() {
 
     expect(sorted.map((r) => r.id), [1, 2]);
     expect(input.map((r) => r.id), [2, 1]);
+  });
+
+  test('Success: a waitlist offer is not a web booking', () {
+    final offer = Reservation.fromJson({
+      'id': 4,
+      'plate': 'ABC123',
+      'category_id': 2,
+      'reserved_until': '2026-01-01T12:00:00Z',
+      'source': 'waitlist',
+    });
+
+    expect(offer.isWaitlistOffer, isTrue);
+    expect(offer.isPublic, isFalse);
   });
 }

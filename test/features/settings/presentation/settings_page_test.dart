@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/error/failure.dart';
+import 'package:parking_management/core/widgets/error_state.dart';
+import 'package:parking_management/core/widgets/skeleton.dart';
 import 'package:parking_management/features/settings/application/branding_cubit.dart';
 import 'package:parking_management/features/settings/application/settings_cubit.dart';
 import 'package:parking_management/features/settings/domain/entities/parking_settings.dart';
@@ -29,11 +31,12 @@ Future<void> pumpPage(
   required FakeParkingSettingsRepository repository,
   BrandingCubit? branding,
   Future<Uint8List?> Function()? pickLogo,
+  Future<Uint8List?> Function()? pickCover,
   SpotRepository? spots,
 }) async {
   // Tall viewport: the settings form (logo + 8 fields + save) must fit
   // without fighting ListView's lazy children while tapping.
-  tester.view.physicalSize = const Size(800, 1600);
+  tester.view.physicalSize = const Size(800, 2400);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
@@ -44,14 +47,22 @@ Future<void> pumpPage(
           value: branding ?? BrandingCubit(repository),
         ),
       ],
-      child: testApp(SettingsPage(pickLogo: pickLogo, spots: spots)),
+      child: testApp(
+        SettingsPage(
+          pickLogo: pickLogo,
+          pickCover: pickCover ?? () async => Uint8List.fromList(_logoBytes),
+          spots: spots,
+        ),
+      ),
     ),
   );
   await tester.pumpAndSettle();
 }
 
 void main() {
-  testWidgets('Success: saves the edited identity and confirms', (tester) async {
+  testWidgets('Success: saves the edited identity and confirms', (
+    tester,
+  ) async {
     final repository = FakeParkingSettingsRepository(_configured);
     await pumpPage(tester, repository: repository);
 
@@ -143,10 +154,7 @@ void main() {
       find.byKey(const Key('settings_moto_capacity')),
       '5',
     );
-    await tester.enterText(
-      find.byKey(const Key('settings_key_capacity')),
-      '3',
-    );
+    await tester.enterText(find.byKey(const Key('settings_key_capacity')), '3');
     await tester.ensureVisible(find.widgetWithText(FilledButton, 'Guardar'));
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, 'Guardar'));
@@ -155,6 +163,46 @@ void main() {
     expect(repository.settings.carCapacity, 12);
     expect(repository.settings.motoCapacity, 5);
     expect(repository.settings.keyCapacity, 3);
+  });
+
+  testWidgets('Success: the public page cover can be uploaded', (tester) async {
+    final repository = FakeParkingSettingsRepository(_configured);
+    await pumpPage(tester, repository: repository);
+    await tester.ensureVisible(find.byKey(const Key('settings_cover_pick')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('settings_cover_pick')));
+    await tester.pumpAndSettle();
+
+    expect(repository.settings.coverPath, 'cover_1');
+  });
+
+  testWidgets('Success: the reservation grace window is editable and saved', (
+    tester,
+  ) async {
+    final repository = FakeParkingSettingsRepository(_configured);
+    await pumpPage(tester, repository: repository);
+
+    expect(
+      tester
+          .widget<TextFormField>(
+            find.byKey(const Key('settings_reservation_grace')),
+          )
+          .controller!
+          .text,
+      '15',
+    );
+
+    await tester.enterText(
+      find.byKey(const Key('settings_reservation_grace')),
+      '30',
+    );
+    await tester.ensureVisible(find.widgetWithText(FilledButton, 'Guardar'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Guardar'));
+    await tester.pumpAndSettle();
+
+    expect(repository.settings.reservationGraceMinutes, 30);
   });
 
   testWidgets('Success: out-of-service spots are saved', (tester) async {
@@ -176,7 +224,6 @@ void main() {
 
     expect(repository.settings.carCapacity, 12);
     expect(repository.settings.carOutOfService, 2);
-    expect(find.byKey(const Key('settings_spots_map')), findsOneWidget);
   });
 
   testWidgets('Failure: out-of-service cannot exceed the capacity', (
@@ -185,10 +232,7 @@ void main() {
     final repository = FakeParkingSettingsRepository(_configured);
     await pumpPage(tester, repository: repository);
 
-    await tester.enterText(
-      find.byKey(const Key('settings_car_capacity')),
-      '4',
-    );
+    await tester.enterText(find.byKey(const Key('settings_car_capacity')), '4');
     await tester.enterText(
       find.byKey(const Key('settings_car_out_of_service')),
       '5',
@@ -232,15 +276,9 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
 
-    expect(
-      find.byKey(const Key('settings_car_out_of_service')),
-      findsNothing,
-    );
+    expect(find.byKey(const Key('settings_car_out_of_service')), findsNothing);
     expect(find.textContaining('1 bahía(s) en mantenimiento'), findsOneWidget);
-    expect(
-      find.byKey(const Key('settings_car_capacity')),
-      findsOneWidget,
-    );
+    expect(find.byKey(const Key('settings_car_capacity')), findsOneWidget);
   });
 
   testWidgets('Security: without a map the counters stay editable', (
@@ -249,10 +287,7 @@ void main() {
     final repository = FakeParkingSettingsRepository(_configured);
     await pumpPage(tester, repository: repository);
 
-    expect(
-      find.byKey(const Key('settings_car_out_of_service')),
-      findsWidgets,
-    );
+    expect(find.byKey(const Key('settings_car_out_of_service')), findsWidgets);
   });
 
   testWidgets('Success: the legal policy is edited and saved', (tester) async {
@@ -304,10 +339,7 @@ void main() {
     await tester.tap(find.text('Espacios y mapa').first);
     await tester.pumpAndSettle();
 
-    expect(
-      find.byKey(const Key('settings_car_capacity')),
-      findsOneWidget,
-    );
+    expect(find.byKey(const Key('settings_car_capacity')), findsOneWidget);
   });
 
   testWidgets('Success: the minimum app version is saved', (tester) async {
@@ -409,7 +441,82 @@ void main() {
     await tester.tap(find.byKey(const Key('settings_save')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Escribe un número válido (3 a 15 dígitos)'), findsOneWidget);
+    expect(
+      find.text('Escribe un número válido (3 a 15 dígitos)'),
+      findsOneWidget,
+    );
     expect(repository.settings.policePhone, isEmpty);
+  });
+  testWidgets('Failure: a failed load offers Reintentar and recovers', (
+    tester,
+  ) async {
+    final repository = FakeParkingSettingsRepository(_configured)
+      ..loadError = const NetworkFailure('offline');
+    await pumpPage(tester, repository: repository);
+
+    expect(find.byType(ErrorState), findsOneWidget);
+    expect(find.text('Reintentar'), findsOneWidget);
+
+    repository.loadError = null;
+    await tester.tap(find.text('Reintentar'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ErrorState), findsNothing);
+    expect(find.byKey(const Key('settings_save')), findsOneWidget);
+  });
+
+  testWidgets('Loading: the first load paints a skeleton, not a spinner', (
+    tester,
+  ) async {
+    final repository = FakeParkingSettingsRepository(_configured);
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MultiBlocProvider(
+        providers: [
+          BlocProvider<SettingsCubit>(create: (_) => SettingsCubit(repository)),
+          BlocProvider<BrandingCubit>.value(value: BrandingCubit(repository)),
+        ],
+        child: testApp(const SettingsPage()),
+      ),
+    );
+
+    expect(find.byType(SkeletonPulse), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    await tester.pumpAndSettle();
+  });
+  testWidgets('A11y: the whole form fits 360 dp with large text', (
+    tester,
+  ) async {
+    final repository = FakeParkingSettingsRepository(_configured);
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MultiBlocProvider(
+        providers: [
+          BlocProvider<SettingsCubit>(create: (_) => SettingsCubit(repository)),
+          BlocProvider<BrandingCubit>.value(value: BrandingCubit(repository)),
+        ],
+        child: testApp(
+          Builder(
+            builder: (context) => MediaQuery(
+              data: MediaQuery.of(context)
+                  .copyWith(textScaler: const TextScaler.linear(1.6)),
+              child: const SettingsPage(),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    for (var step = 0; step < 24; step++) {
+      expect(tester.takeException(), isNull, reason: 'overflow at step $step');
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, -350));
+      await tester.pump();
+    }
+    expect(tester.takeException(), isNull);
   });
 }

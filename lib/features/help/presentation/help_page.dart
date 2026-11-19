@@ -64,11 +64,12 @@ class _HelpPageState extends State<HelpPage> {
     return [
       for (final section in _sections(l10n))
         if ([
-          for (final entry in section.entries)
-            if (entry.title.toLowerCase().contains(needle) ||
-                entry.body.toLowerCase().contains(needle))
-              entry,
-        ] case final entries when entries.isNotEmpty)
+              for (final entry in section.entries)
+                if (entry.title.toLowerCase().contains(needle) ||
+                    entry.body.toLowerCase().contains(needle))
+                  entry,
+            ]
+            case final entries when entries.isNotEmpty)
           _HelpSection(section.title, section.icon, entries),
     ];
   }
@@ -126,7 +127,11 @@ class _HelpPageState extends State<HelpPage> {
                           clipBehavior: Clip.antiAlias,
                           child: Column(
                             children: [
-                              for (var i = 0; i < section.entries.length; i++) ...[
+                              for (
+                                var i = 0;
+                                i < section.entries.length;
+                                i++
+                              ) ...[
                                 if (i > 0) const Divider(height: 1),
                                 ExpansionTile(
                                   key: ValueKey(
@@ -145,11 +150,10 @@ class _HelpPageState extends State<HelpPage> {
                                   children: [
                                     Text(
                                       section.entries[i].body,
-                                      style: Theme.of(
-                                        context,
-                                      ).textTheme.bodyMedium?.copyWith(
-                                        height: 1.5,
-                                      ),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.copyWith(height: 1.5),
                                     ),
                                   ],
                                 ),

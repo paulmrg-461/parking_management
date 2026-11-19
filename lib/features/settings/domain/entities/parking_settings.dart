@@ -12,7 +12,10 @@ class ParkingSettings extends Equatable {
     this.website = '',
     this.whatsapp = '',
     this.logoVersion = 0,
+    this.coverPath = '',
+    this.coverVersion = 0,
     this.evidenceRetentionDays = 0,
+    this.reservationGraceMinutes = 15,
     this.whatsappAuto = false,
     this.carCapacity = 0,
     this.motoCapacity = 0,
@@ -23,6 +26,13 @@ class ParkingSettings extends Equatable {
     this.currency = 'COP',
     this.minAppVersion = '',
     this.policePhone = '',
+    this.onlinePaymentsEnabled = false,
+    this.onlinePaymentGraceMinutes = 15,
+    this.onlinePaymentMinAmount = 1500,
+    this.passRenewalEnabled = false,
+    this.passRenewalPaymentLinks = false,
+    this.passRenewalCadence = '7,3,1',
+    this.version = 0,
   });
 
   final String name;
@@ -35,9 +45,19 @@ class ParkingSettings extends Equatable {
   /// Server-side counter (`0` = no logo); doubles as the logo cache key.
   final int logoVersion;
 
+  /// Storage path of the wide cover shown on the public page ('' = none).
+  final String coverPath;
+  final int coverVersion;
+
+  bool get hasCover => coverPath.isNotEmpty;
+
   /// Evidence photos older than this are deleted by `evidence-archive`.
   /// `0` keeps them forever (default).
   final int evidenceRetentionDays;
+
+  /// Minutes after a hold's expiry where it still counts (and check-in
+  /// consumes it). `0` means the hold stops counting exactly on time.
+  final int reservationGraceMinutes;
 
   /// When true, customer messages are queued for the WhatsApp dispatcher
   /// instead of opening `wa.me` on the device.
@@ -71,6 +91,28 @@ class ParkingSettings extends Equatable {
   /// Nearest police quadrant for the emergency action ('' = use 123).
   final String policePhone;
 
+  /// Customers may pay from the receipt QR (COP lots only).
+  final bool onlinePaymentsEnabled;
+
+  /// Minutes to leave the lot after an approved online payment.
+  final int onlinePaymentGraceMinutes;
+
+  /// Smallest amount accepted online (minor units); below it the desk charges.
+  final int onlinePaymentMinAmount;
+
+  /// WhatsApp reminders before a monthly pass ends.
+  final bool passRenewalEnabled;
+
+  /// The reminder carries a token-keyed renewal link with online payment.
+  final bool passRenewalPaymentLinks;
+
+  /// Comma-separated reminder days (e.g. `7,3,1`), validated server-side.
+  final String passRenewalCadence;
+
+  /// Row version from the server (`0` when unknown); an edit sends it so a
+  /// concurrent change is a conflict, not an overwrite.
+  final int version;
+
   /// The never-configured record (mirrors the backend default).
   static ParkingSettings defaults() => const ParkingSettings();
 
@@ -82,7 +124,10 @@ class ParkingSettings extends Equatable {
     String? website,
     String? whatsapp,
     int? logoVersion,
+    String? coverPath,
+    int? coverVersion,
     int? evidenceRetentionDays,
+    int? reservationGraceMinutes,
     bool? whatsappAuto,
     int? carCapacity,
     int? motoCapacity,
@@ -93,6 +138,13 @@ class ParkingSettings extends Equatable {
     String? currency,
     String? minAppVersion,
     String? policePhone,
+    bool? onlinePaymentsEnabled,
+    int? onlinePaymentGraceMinutes,
+    int? onlinePaymentMinAmount,
+    bool? passRenewalEnabled,
+    bool? passRenewalPaymentLinks,
+    String? passRenewalCadence,
+    int? version,
   }) => ParkingSettings(
     name: name ?? this.name,
     address: address ?? this.address,
@@ -101,7 +153,11 @@ class ParkingSettings extends Equatable {
     website: website ?? this.website,
     whatsapp: whatsapp ?? this.whatsapp,
     logoVersion: logoVersion ?? this.logoVersion,
+    coverPath: coverPath ?? this.coverPath,
+    coverVersion: coverVersion ?? this.coverVersion,
     evidenceRetentionDays: evidenceRetentionDays ?? this.evidenceRetentionDays,
+    reservationGraceMinutes:
+        reservationGraceMinutes ?? this.reservationGraceMinutes,
     whatsappAuto: whatsappAuto ?? this.whatsappAuto,
     carCapacity: carCapacity ?? this.carCapacity,
     motoCapacity: motoCapacity ?? this.motoCapacity,
@@ -112,6 +168,17 @@ class ParkingSettings extends Equatable {
     currency: currency ?? this.currency,
     minAppVersion: minAppVersion ?? this.minAppVersion,
     policePhone: policePhone ?? this.policePhone,
+    onlinePaymentsEnabled:
+        onlinePaymentsEnabled ?? this.onlinePaymentsEnabled,
+    onlinePaymentGraceMinutes:
+        onlinePaymentGraceMinutes ?? this.onlinePaymentGraceMinutes,
+    onlinePaymentMinAmount:
+        onlinePaymentMinAmount ?? this.onlinePaymentMinAmount,
+    passRenewalEnabled: passRenewalEnabled ?? this.passRenewalEnabled,
+    passRenewalPaymentLinks:
+        passRenewalPaymentLinks ?? this.passRenewalPaymentLinks,
+    passRenewalCadence: passRenewalCadence ?? this.passRenewalCadence,
+    version: version ?? this.version,
   );
 
   /// Editable fields (metadata excluded).
@@ -123,6 +190,7 @@ class ParkingSettings extends Equatable {
     'website': website,
     'whatsapp': whatsapp,
     'evidence_retention_days': evidenceRetentionDays,
+    'reservation_grace_minutes': reservationGraceMinutes,
     'whatsapp_auto': whatsappAuto,
     'car_capacity': carCapacity,
     'moto_capacity': motoCapacity,
@@ -133,6 +201,12 @@ class ParkingSettings extends Equatable {
     'currency': currency,
     'min_app_version': minAppVersion,
     'police_phone': policePhone,
+    'online_payments_enabled': onlinePaymentsEnabled,
+    'online_payment_grace_minutes': onlinePaymentGraceMinutes,
+    'online_payment_min_amount': onlinePaymentMinAmount,
+    'pass_renewal_enabled': passRenewalEnabled,
+    'pass_renewal_payment_links': passRenewalPaymentLinks,
+    'pass_renewal_cadence': passRenewalCadence,
   };
 
   @override
@@ -144,7 +218,10 @@ class ParkingSettings extends Equatable {
     website,
     whatsapp,
     logoVersion,
+    coverPath,
+    coverVersion,
     evidenceRetentionDays,
+    reservationGraceMinutes,
     whatsappAuto,
     carCapacity,
     motoCapacity,
@@ -155,5 +232,12 @@ class ParkingSettings extends Equatable {
     currency,
     minAppVersion,
     policePhone,
+    onlinePaymentsEnabled,
+    onlinePaymentGraceMinutes,
+    onlinePaymentMinAmount,
+    passRenewalEnabled,
+    passRenewalPaymentLinks,
+    passRenewalCadence,
+    version,
   ];
 }

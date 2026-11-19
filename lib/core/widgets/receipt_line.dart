@@ -27,14 +27,14 @@ class ReceiptLine extends StatelessWidget {
             Expanded(
               child: Text(
                 label,
-                style: emphasized ? textTheme.titleMedium : textTheme.bodyMedium,
+                style: emphasized
+                    ? textTheme.titleMedium
+                    : textTheme.bodyMedium,
               ),
             ),
             const SizedBox(width: Space.md),
             DefaultTextStyle.merge(
-              style: emphasized
-                  ? textTheme.headlineSmall
-                  : textTheme.bodyLarge,
+              style: emphasized ? textTheme.headlineSmall : textTheme.bodyLarge,
               child: value,
             ),
           ],

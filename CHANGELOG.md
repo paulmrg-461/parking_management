@@ -10,6 +10,49 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 ## [Unreleased] — 2026-11 (app reliability and operator UX)
 
 ### Fixed
+- **Device registration failed on the real stack**: `register_lot_device` and
+  `rotate_lot_device_key` were created with `search_path = public`, but
+  Supabase installs pgcrypto in `extensions`, so the first call raised
+  `function gen_random_bytes(integer) does not exist` (the SQL suite only saw
+  a database where it resolved). `0130` widens both search paths and a
+  regression block asserts it. The SQL bootstrap now installs pgcrypto in
+  `extensions` before the migrations, like the Supabase image, so the suite
+  can catch this class of bug from now on, and it revokes the image's default
+  grants on new objects so the privilege tests run under the same rules as
+  the compose stack (they now pass against both databases).
+- **Settings** no longer shows a bare spinner while loading or a plain text
+  with no way out when the load fails: it paints a skeleton and an
+  `ErrorState` with **Reintentar**. The vehicle history lookup also paints a
+  skeleton instead of a spinner.
+- Settings overflowed on a 360 dp phone with large text: the currency
+  selector and the logo card (image, text and **Elegir logo** in one row).
+  Every form dropdown now sets `isExpanded` (check-in, passes, reservations,
+  bays, tariffs, users, vehicles, waitlist) so long labels ellipsize instead
+  of overflowing.
+- **Pass income leaked across lots**: `report_revenue` summed monthly-pass
+  payments of every lot (`pass_revenue` and `pass_by_payment`) inside a
+  `security definer` function, so a lot admin saw other lots' pass income in
+  their own report. `0108` scopes both reads to the active lot; the SQL suite
+  asserts it with two lots. `report_revenue_all` stays cross-lot on purpose.
+- The SQL suite no longer fails on CI's database: Supabase's default
+  privileges give `anon` ALL on new public tables, so RLS (not a privilege
+  error) hides the reservation rows; the assertion now accepts either.
+- `public-evidence` and `evidence-archive` Edge Functions were ignored by
+  `supabase/.gitignore` and not in git; they are tracked now.
+- **Web deep links were lost**: the bootstrap splash pushed its own route to
+  the browser history before the router existed, so `/reserve?lot=1`,
+  `/policies?lot=1` and the receipt `/evidence?…` links all landed on
+  `/login`. `main()` now captures the browser URL (`initialRouteFrom`) before
+  the first frame and hands it to the router; mobile still starts home.
+- Exported PDFs no longer contain a missing glyph where the report/records
+  date range used an em dash: the built-in Helvetica font has no em/en dash,
+  so PDFs now use `Formatters.pdfDateRange` (ASCII hyphen). On-screen labels
+  keep the typographic dash.
+- Reports: the variation line ("vs previous period") now wraps on narrow
+  screens instead of overflowing its summary card.
+- Capacity rows (home capacity card) no longer overflow with large
+  accessibility text: the label clamps to two lines and the counter is
+  flexible and ellipsized.
 - Device preferences (auto-lock, language, appearance, sidebar state) were lost
   on a cold start: `HiveKeyValueStore.get` is synchronous and only reads open
   boxes, and the `preferences` box was opened only on the first `put`. `init()`
@@ -34,7 +77,737 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - Android release build: R8 keep rules for the optional ML Kit scripts.
 
 ### Added
+- **Barrier commands and device RPCs (`0136`)**: the command queue (nonce,
+  short TTL, delivery counter) and device events, with service-role delivery
+  (oldest first, at most three deliveries five seconds apart, expired ones
+  skipped), idempotent acknowledgements (`opened`/`refused`), idempotent
+  device events, fault alerts to admins deduped per device/event/minute,
+  failed-command alerts to every member, the firmware manifest, and the
+  expiry/purge jobs wired into both schedulers. Nothing issues commands yet:
+  signing and the triggers are the next slice.
+- **Barrier configuration (`0135`)**: per-barrier direction, paired LPR
+  camera, which events may open it and the firmware timings, with a trigger
+  that only accepts a same-lot camera, an audit trail, admin-only writes and
+  member reads through `list_barriers()`. The shared `device_firmware` table
+  and the private `firmware` bucket land with it. Commands, signing and the
+  device routes are the next slice, so nothing opens a barrier yet.
+- **Gate snapshot thumbnail**: a pending read with a snapshot shows the image
+  in its card (loaded through the repository, so the Storage membership policy
+  decides), with a "no image" placeholder when it is missing or denied. The
+  route passes the loader; tests cover the image, the placeholder and the
+  no-snapshot case.
+- **LPR edge service core** (`edge/lpr/`, `pytest`): strict configuration
+  (unknown keys, HTTPS, `0600` secrets, engine hashes), plate post-processing
+  with the positional confusable fold, the IoU tracker and read schedule, the
+  durable SQLite outbox (`client_ref` before the first send, expiry and cap,
+  crash-safe) and the gateway client (boot-counter sequence, replay/skew
+  retries, bounded backoff, TLS always verified). 31 hardware-free tests; the
+  capture/detector/OCR adapters and the entry point are the next slice.
+- **LPR edge loop and tools**: sampler (idle/active cadence, motion gate, ROI,
+  stale frames), reconnecting capture wrapper, detector/OCR ports with
+  fixture fakes, heartbeat/watchdog, the frame → track → read → outbox →
+  gateway loop with snapshot upload, and a localhost fake gateway used by
+  three HTTP integration tests (decision + snapshot, replay, outage). The
+  systemd unit, env example and `tools/export_models.sh` are included.
+- **Gate settings (`/gate-settings`, admin)**: mode assist/auto with the
+  spoofing confirmation, the two confidence sliders, the votes/window/cooldown
+  steppers, the default category and system-operator pickers and each
+  camera's direction. Saves answer with the stored settings; the page creates
+  its three cubits so the router stays light. New strings in ES/EN.
+- **Gate inbox (`/gate`)**: the LPR feature now has its entity, repository,
+  Supabase data source, a polling cubit (single-flight confirm/dismiss,
+  timer cancelled on close) and a four-state page with skeleton cards, plate
+  correction, an offline guard and the unpaid-exit shortcut to check-out.
+  Alerts route to the gate, the destination lives in the drawer and the
+  confirmation falls back to the lot's default category for unknown plates
+  (`0134`). New error codes and ES/EN messages included.
+- **LPR gateway routes and snapshot janitor**: the device gateway gained a
+  suffix route matcher and three camera-only routes — `GET /v1/lpr/config`,
+  `POST /v1/lpr/reads` (the `Idempotency-Key` must equal `client_ref`, 4 KiB
+  cap) and `PUT /v1/lpr/events/:id/snapshot` (JPEG magic, 256 KiB, the path
+  is derived from the authenticated device, a refused attach deletes the
+  uploaded object and a Storage 409 means already attached). Every route
+  consumes the device sequence. `evidence-archive` now purges aged LPR events
+  through `purge_lpr_events` and deletes only the orphan snapshot paths.
+  The device E2E drives the whole path (config, three reads, event, JPEG
+  upload, attach) against the live stack.
+- **LPR operator inbox and jobs** (`0133`): `list_lpr_events` filters by
+  status with the device name; `confirm_lpr_entry` checks in as the signed-in
+  operator (deterministic idempotency key, corrected plate normalized,
+  snapshot attached as evidence) and a double confirmation replays the same
+  session; `dismiss_lpr_event` stores an optional note. `expire_lpr_events`
+  ages out pending reads and confirms unpaid exits whose session the desk
+  closed; `purge_lpr_events` deletes old reads/events and returns the orphan
+  snapshot paths. The expiry job runs from `jobs.sh` and the host cron.
+- **LPR ingest** (`0132`): cameras post plate reads to
+  `device_ingest_lpr_read`, which serialises per camera, replays a repeated
+  `client_ref`, marks late reads `stale`, ignores low confidence, debounces by
+  cooldown and only decides after the configured votes. The decision table
+  covers assist/inspect, auto check-in attributed to the lot's system
+  operator, unknown plates with a default category, blacklist, duplicate
+  sessions, a full lot, and exits that never touch the session (`exit_unpaid`,
+  `exit_paid`, `no_open_session`) while recording the pass flag. Pending and
+  blocked events notify every active member once. Snapshots are attached by
+  exact path, become `evidence_photos` for a decided entry and stay readable
+  through a membership-based Storage policy.
+- **Specs synced for ten delivered changes**: parking settings, public booking
+  CAPTCHA, booking waitlist, offline conflict resolution, period comparison,
+  occupancy forecast, cash anomaly detection, online payments, pass
+  auto-renewal and merchant validations were implemented but still sat as
+  active changes. They are archived and their deltas merged
+  (`openspec/specs` now describes every capability, 41 specs validating);
+  only the three hardware changes remain active.
+- **Automated device-gateway E2E** (`test/integration/device_gateway_test.dart`,
+  wired into `integration_test/app_flow_test.dart`): registers a device as a
+  lot admin and speaks the firmware protocol against the live stack — `/v1/time`,
+  heartbeat, replay `409`, clock skew `400`, tampered key `401`, recovery `200`
+  and the audit events. No hardware needed; skips without the stack env.
+- **Damage comparison replay harness** (`damage-compare/replay_test.ts` +
+  `fixtures/replay/*.json`): recorded model answers go through the real
+  normaliser with no images and no network. Nine cases pin the verdict rules
+  — identical sets, confident new damage, low-confidence downgrade,
+  pre-existing damage, glare forcing `insufficient_evidence`, a
+  different-vehicle answer downgrading every claim, the twelve-finding cap,
+  HTML stripped from descriptions and unknown zone/classification falling
+  back to `uncertain`.
 
+- **AI replay harness** (`report-assistant/replay_test.ts` + fixtures):
+  deterministic, network-free regression of the agent loop — recorded RPC
+  output and model scripts, expected figure values asserted — runnable in the
+  CI `edge-functions` job. All 18 design cases are covered: per-category
+  revenue, today's takings, payment split, percent change between periods,
+  share percent, busiest hour, reservations, cancelled/expired holds,
+  capacity, occupancy, daily trend, shift cash differences, WhatsApp
+  failures, discounts, pass revenue with its caveat, the out-of-scope plate
+  question with redaction, a quarter range, and a hostile category name.
+  Two real bugs found and fixed: a legitimate percent-change figure was
+  rejected by the answer validator (declared unit vs leaf unit), and the
+  shift tool's bare-array projection could not be addressed by the path
+  grammar.
+
+- **SQL suite made wall-clock independent**: the forecast median fixture
+  anchors on the most recent Wednesday before today (the profile window is
+  relative to the run date) and the loyalty online-cap fixture uses a fixed
+  past daytime window instead of `now() - 3 hours`, which crossed the night
+  rate boundary and changed the fare depending on the hour of the run. The
+  `payment_events` guard now asserts the invariant (an authenticated user
+  sees no rows) instead of assuming a privilege error, which some Supabase
+  images do not produce because of their default grants.
+- **Fixture recorder** (`deno task eval:record`): re-runs a replay fixture
+  against the real model and rewrites only its `model_script`, so the
+  committed cases can be refreshed after a prompt or model change. It writes
+  a file only when the run ends `ok` (a failure leaves it untouched and exits
+  non-zero), and it is guarded like the other manual tasks (no key or CI →
+  refuse). The script swap is a pure helper with three tests.
+
+- **Damage live eval** (`deno task eval:damage`): reads labelled photo
+  pairs from `DAMAGE_FIXTURES_DIR` (default `fixtures/pairs/`, no images
+  committed), runs the production prompt/vision call/normaliser and scores
+  the verdicts with the design's rules — zero tolerance for an all-clear on
+  the angle/blur/vehicle-swap categories, at most one false positive across
+  A+D and the right zone on at least 80% of the new-damage pairs. The
+  scoring is pure and tested; the task refuses to run in CI or without a
+  key, and `fixtures/pairs/README.md` documents the 24-pair plan, the
+  capture protocol and the consent/blur requirement. The vision call is now
+  one exported factory (`createVision`) shared by the function and the
+  eval. Two tests pin the vision request itself (system prompt, image
+  parts, `response_format: json_object`, model id) and the 502 mapping.
+
+- **Damage verdicts are conservative by construction**: an all-clear now
+  requires a confirmed same vehicle, at least three zones visible in both
+  photo sets and no uncertain finding; otherwise the verdict is
+  `insufficient_evidence`. The zone floor is `AI_DAMAGE_MIN_COVERED_ZONES`
+  (default 3). Three replay cases and two handler tests pin the rule
+  (different vehicle, two covered zones, the three-zone boundary).
+
+- **Damage replay parity**: nine more normaliser cases — multi-photo
+  pairing, foreign photo ids dropped and downgraded, missing exit photo,
+  severity sort order, the quality caps, control-character and tag
+  stripping, malformed `findings`, summary truncation and an unknown
+  vehicle identity.
+- **Live eval task** (`report-assistant/eval_live.ts`, `deno task
+  eval:live`): runs the eighteen fixtures against the real model, scores
+  tool selection, dates and figure values, prints a per-case report and
+  enforces the design's 17/18 bar. Manual only: it refuses to run without
+  `DEEPSEEK_API_KEY` or inside CI (`eval_guard.ts`, tested), and is not wired
+  into the workflow.
+
+- **Guided photo capture** (`core/widgets/capture_guide.dart`): a next-angle
+  banner and slot chips shown at check-in and in the exit-photo section, plus a
+  simple illustration dialog, so the entry and exit sets cover the same four
+  corners plus an optional damage detail. Guidance only: it never blocks
+  capture or submission.
+
+- **Device gateway (`0128`–`0129`)**
+  (`openspec/changes/add-device-gateway`). Hardware devices get their own
+  per-lot identity, never a user account:
+  - `lot_devices` (kind, name, SHA-256 key hash, show-once plaintext, enabled,
+    last seen, monotonic sequence, firmware, rate window, offline marker) and
+    the `device_events` trail. No audit trigger copies the hash; the event log
+    is the audit. Admin RPCs register/rotate/update/delete/list devices, read
+    events and set the offline threshold (`parking_settings.device_offline_minutes`).
+  - Service-role-only `device_lookup`, `device_accept_request` (strictly
+    increasing `X-Device-Seq`, ±5 min clock skew, per-device rate window,
+    online/offline events) and `device_heartbeat`. `notify_offline_devices` and
+    `purge_device_events` run from the jobs container.
+  - `device-gateway` Edge Function: `GET /v1/time` and `POST /v1/heartbeat`
+    with `X-Device-Key` (constant-time hash compare), no user JWT and no lot
+    header from the device. The route table is ready for the camera, barrier
+    and sensor changes.
+  - Flutter `/devices` (admin, deferred): list with status, register with
+    show-once key, rotate, enable/disable, delete, event history and the
+    offline threshold; notification routes for device alerts. Rename exists in
+    the cubit/API and awaits a UI affordance.
+
+- **Damage comparison (backend, `0127`)**
+  (`openspec/changes/add-ai-damage-comparison`). Exit evidence and the
+  advisory AI comparison record, with a human review workflow:
+  - `evidence_photos.phase` (`entry`/`exit`), `add_exit_evidence` (idempotent,
+    max 5, same upload rule) and `check_out` left untouched.
+  - `damage_comparisons` / `damage_findings`, `begin_damage_comparison`,
+    `get_damage_comparison`, `review_damage_finding` (note required, re-open
+    admin-only, audited) and the retention purge. Results are written only by
+    the service role (`store_damage_comparison` / `fail_damage_comparison`),
+    so an operator cannot forge an AI finding.
+  - `damage-compare` Edge Function: caller-scoped begin, Storage-rendered
+    photos (1024 px), DeepSeek vision (`image_url`) with a JSON answer,
+    code-side normalisation (new -> uncertain when unsupported, 12-finding cap,
+    overall verdict computed in code) and service-role store. Additive to the
+    shared AI budget (`damage_compare`). Inert without the key.
+  - Flutter: optional exit-photo capture in the settlement dialog, upload after
+    a successful online check-out (same `clientRef` on retry), the
+    `/damage-comparison` page (session-scoped, operator-accessible) with the
+    advisory banner, verdict, findings, confirm/dismiss with a mandatory note
+    and an admin re-run. Angle guidance and the evidence-sheet phase grouping
+    remain pending.
+
+- **Report assistant** (`0126_ai_usage`, `openspec/changes/add-report-assistant`).
+  Admins ask a report question in Spanish or English and receive figures
+  resolved from the existing read-only report RPCs, each with its source:
+  - `_shared/ai` (DeepSeek/OpenAI-compatible `ModelClient`, typed errors,
+    caller-scoped PostgREST, budget, SSE, deadline, safe logging) and the
+    `report-assistant` Edge Function. Tools run with the caller's JWT and
+    `x-lot-id` over `GET`, so RLS and `require_admin()`/`current_lot_id()`
+    decide visibility; the function never reads the service key.
+  - Closed tool allowlist (revenue, traffic, reservations, WhatsApp,
+    occupancy, capacity, today, daily trend, shifts). The model never writes
+    SQL, numbers or arithmetic: it returns figure recipes (call id + path) and
+    the Edge Function resolves them from the real RPC output with integer math;
+    the Flutter client re-verifies every figure from its raw sources.
+  - `ai_features`/`ai_limits`/`ai_requests` with per-lot daily request/token
+    budgets, reservation-before-call, usage accounting and a 30-day-floor purge
+    job. Inert without `DEEPSEEK_API_KEY` (`configured:false`, no reservation).
+  - `/report-assistant` (deferred, admin only, reachable from `/reports`):
+    suggestions, live tool progress, answer cards with source sheets,
+    budget chip, copy answer / figures CSV, and the four UI states.
+
+- **Electronic invoicing** (`0124`–`0125`, `openspec/changes/add-electronic-invoicing`).
+  Provider-agnostic, inert by default and with every DIAN rule marked as an
+  ASSUMPTION pending the owner/accountant's confirmation:
+  - `fiscal_settings` (mode `off`/`on_request`/`always`, issuer NIT/legal
+    name/municipality, tax regime and one tax rate in basis points; prices are
+    tax-inclusive and the tax is extracted from the amount already charged),
+    `fiscal_resolutions` (authorized range per document type, one active per
+    lot/type, gap-free numbering under a row lock) and `fiscal_documents` (the
+    outbox and the legal record, immutable once numbered).
+  - `issue_fiscal_document` runs **after** check-out (never inside it), so the
+    11-argument `check_out` and offline replays are untouched. A POS document
+    is issued without customer data; an invoice with NIT/CC/etc. A cron sweeper
+    issues the default POS for paid sessions/pass charges in `always` mode
+    after 10 minutes and warns before a resolution runs out.
+  - Async outbox `pending -> sent -> accepted|rejected`, 8 transient attempts
+    with backoff, `failed` + admin notification, retry with corrected customer
+    data, and a full-reversal credit note that voids the original and frees the
+    source for a new document.
+  - Edge Function `fiscal-dispatch` + `_shared/fiscal_provider.ts` /
+    `rest_fiscal_provider.ts`: service-role only, `{configured:false}` without
+    `FISCAL_PROVIDER_*`, the token never reaches the client or a log line.
+  - `/invoicing` (admin): issuer data, resolutions, document list with filters,
+    retry and credit note. The check-out and pass-payment dialogs get an
+    optional "Datos para factura" section; receipts and the history reprint show
+    the number, CUFE and QR (or "documento electrónico en proceso").
+
+- **Loyalty rewards** (`0122`–`0123`, `openspec/changes/add-loyalty-rewards`).
+  A lot can reward its regular customers without any Dart-side money math:
+  - Per-lot program (off by default): visits required, reward kind
+    (`free_stay` with an optional cap, or a `fixed_amount`), minimum paid amount
+    and minutes per visit, redemption mode (`auto` / `operator`), optional
+    stacking with merchant benefits and the reward validity in days.
+  - Accrual and redemption bookkeeping run in `trg_loyalty_session_closed`
+    (AFTER UPDATE of `status`), so `check_out` keeps its 11 arguments. The
+    trigger holds a per-plate advisory lock, counts at most one visit per plate
+    per business day, never counts a redeeming/pass/lost/exempt/zero-charge
+    stay, and **never blocks a customer from leaving** (any error becomes a
+    `skipped(error)` visit plus a warning).
+  - `fare_reward_step` (the no-op hook from the merchant change) now applies
+    the oldest available, non-expired reward after the merchant lines; the
+    reward value is capped so it never subsidises an online payment already
+    made. Preview, check-out, receipts and a future reprint all show the same
+    line, and a zero charge stays explained for the anomaly rule.
+  - `/loyalty` (admin): program form, member list with search and a bounded,
+    reasoned progress correction, and an impact report (visits by skip reason,
+    rewards earned/redeemed/expired/available, discount given, top plates) with
+    CSV and PDF export. A `loyalty_expire_rewards` job runs from the jobs
+    container.
+  - Check-in shows “Visita 4 de 5” / “Recompensa disponible” for the plate; the
+    settlement dialog lets the operator use or skip the reward (or shows the
+    automatic line), and receipts print the progress or the earned reward.
+
+- **Dynamic pricing** (`0120`–`0121`, `openspec/changes/add-dynamic-pricing`).
+  The lot can charge surge or valley rates without ever surprising the
+  customer:
+  - `pricing_rules` (vehicle group, occupancy band, weekday mask, local time
+    window, multiplier and/or flat surcharge) with a lot floor/ceiling and a
+    rounding step. One winning rule per entry (priority, then id); inert until
+    the lot enables it.
+  - The rate is LOCKED on the session by a `BEFORE INSERT` trigger
+    (`pricing_lock`, immutable afterwards), so `check_in` keeps its 11
+    arguments and offline replays are covered. A queued (offline) entry can
+    never be surcharged, only discounted.
+  - A public hold locks the price it promised; the session that consumes the
+    hold keeps the cheaper of the two.
+  - `fare_pricing_step` (the hook owned by the merchant change) now applies the
+    stored lock; `fare_quote`, check-out, the preview, the public QR page and a
+    reprint all show the same line. Pricing is a price change (`gross_amount`),
+    never an adjustment line.
+  - `/pricing` admin screen: settings, rule CRUD, a read-only simulation over
+    the last 7/30/90 days (optionally with an unsaved candidate rule) and the
+    real impact report. The check-in screen shows "Tarifa ahora" before
+    committing, and the public booking page shows the current vs usual price.
+
+- **Merchant agreements ("convenios")** (`0117`–`0119`,
+  `openspec/changes/add-merchant-validations`). A neighbouring business grants
+  a benefit to a parked customer without an app account:
+  - `fare_quote` is now the single composer of what a session owes (base fare →
+    pricing hook → merchant lines → reward hook → manual discount). Check-out,
+    the preview and the public summary call it, so the four views can never
+    drift; `fare_pricing_step` and `fare_reward_step` are no-op hooks for
+    `add-dynamic-pricing` and `add-loyalty-rewards`.
+  - `merchants` (audited, readable by the lot staff) + `merchant_credentials`
+    (RLS with no policy/grant: SHA-256 token hash and bcrypt PIN hash, shown
+    once) + `merchant_validations` (terms snapshot, one per merchant/session,
+    daily/monthly caps, `pending` → `applied`/`forfeited`/`revoked`).
+  - Public page `/validate?m=<token>`: the merchant validates a plate with its
+    6-digit PIN. A wrong PIN returns JSON (the attempt counter must commit) and
+    five in a row lock the merchant for 15 minutes; the page never sees
+    sessions, plates of others or amounts.
+  - Admin screen `/merchants`: CRUD, credentials (link + PIN shown once, with
+    "new PIN" / "new link"), per-vehicle policy and a monthly settlement with
+    CSV/PDF (`amount_owed` for merchant-paid, `courtesy_amount` for the lot).
+  - Desk: the settlement dialog shows a collapsed "Convenio" section (online
+    only, hidden for pass holders and lost tickets) that applies a validation
+    and refreshes the preview; admins can remove a pending one with a reason.
+  - Check-out stores `gross_amount` and `fare_adjustments`; receipts (screen,
+    PDF, thermal), the vehicle history and the public page print the fare and
+    one row per agreement; an explained zero charge stops being a cash anomaly.
+  - Operators can apply a desk validation in their own lot but cannot manage
+    merchants, revoke validations or read the settlement.
+
+- **Monthly pass auto-renewal** (`0115`–`0116`,
+  `openspec/changes/add-pass-auto-renewal`). A pass can be renewed from a
+  WhatsApp link before it ends, without the desk:
+  - Per-site switches: reminders (`pass_renewal_enabled`), payment links
+    (`pass_renewal_payment_links`, only with online payments and COP) and the
+    reminder cadence as text (`pass_renewal_cadence`, default `7,3,1`; checked
+    by a regex, one message per pass and window).
+  - `pass_renewal_offers` holds the planned next period and amount behind a
+    192-bit token; the pass is created **only after** the payment is approved
+    (an early pass would let the customer park free). The reminder job also
+    expires stale offers and deactivates ended parents that already have a
+    child (which `renew_monthly_passes` never revisits).
+  - Public page `/renew?t=<token>`: masked plate, period, amount, pay button
+    (or "renew at the desk" when links are off), skeleton/empty/error states
+    and polling until the webhook marks it paid. The token only exposes the
+    masked plate, dates and amount.
+  - `pass-renewal-intent` Edge Function (service role) freezes the offer
+    amount; `settle_pass_renewal` creates the child pass, marks its charge
+    `online` (no shift, no cash) and notifies the lot. A second approval, a
+    late approval after a cash renewal or a pass-covered payment raise an
+    `online_payment_review` notification instead of double-charging.
+  - `whatsapp_messages` gains `button_param` and a unique `dedupe_key`; the
+    dispatcher appends the URL button (`pass_renewal_link`) when present. The
+    folder is versioned in git now.
+  - Admin list: "Enlace enviado" / "Renovada en línea" chips and a
+    "Send renewal link" action (hidden without an owner phone or with the
+    switch off); the online report lists pass renewals with `kind = 'pass'`.
+
+- **Online payments with Wompi** (`0112`–`0114`,
+  `openspec/changes/add-online-payments`). The customer can pay from the
+  receipt QR and the desk closes the session without collecting cash:
+  - Per-site opt-in (`online_payments_enabled`, COP only), a grace window
+    (`online_payment_grace_minutes`, 5..120, default 15) and a minimum amount
+    (`online_payment_min_amount`, default 1500). Without Wompi credentials the
+    functions stay inert and the site behaves exactly as before.
+  - `payment-intent` prices the stay **server-side** and freezes the amount in
+    `payment_intents`; the gateway is signed with that amount, so the browser
+    cannot change it. Five intents per session per hour, and a wrong plate and
+    an unknown session answer the same (`SessionNotFoundError`).
+  - `payment-webhook` is the only source of truth: the Wompi checksum is
+    verified, `payment_events` makes it idempotent and `apply_payment_event`
+    stamps `online_paid_amount` + `online_paid_at`. The redirect page only
+    polls `payment_intent_status(reference, plate)`.
+  - `check_out` applies `online_settlement_amounts(gross, paid, paid_at, exit,
+    grace)`: inside the window the charge is exactly what was paid, after it
+    the desk collects `max(gross, paid) − paid`. `online` is a **server-only**
+    payment method (the client still cannot send it) and
+    `amount_charged = online_paid_amount + desk_due`.
+  - Shifts keep the online money out of `expected_cash` (`cash_sales` and the
+    other desk methods are net of the online part) and add `online_sales`;
+    `report_revenue.by_payment` splits an `online` row; a new
+    `report_online_payments` lists approved/voided intents for bank
+    reconciliation (`/reports` → "Pagos en línea").
+  - Public page: `/evidence` shows the amount due, the pay button and, on
+    return, polls for up to 180 s, then renders the exit deadline. The
+    operator list shows a "Pagado en línea" chip and the settlement dialog
+    hides the payment choice when nothing is due (or collects only the
+    difference after the window, with a warning).
+  - Rejected webhooks, amount mismatches, late approvals (session already
+    closed), voids and pass-covered payments raise
+    `online_payment`/`online_payment_review` notifications; refunds are a
+    human decision.
+  - `payments-reconcile` (jobs container/host cron) asks the gateway for
+    pending intents older than 10 minutes, so a lost webhook is recovered
+    through the same idempotent path. `expire_payment_intents` closes stale
+    intents but an `APPROVED` event after expiry still counts.
+
+- **Customer satisfaction survey** (`0111`, `openspec/changes/add-customer-feedback`).
+  The receipt now closes the loop with the customer:
+  - `session_feedback` stores **one answer per closed session** (1..5 stars and
+    an optional comment up to 500 characters), lot-scoped and read-only for
+    clients; only the `security definer` RPCs write it.
+  - Public, plate-keyed page `/feedback?session=…&plate=…` (the plate is the
+    access key, like `/evidence`): branded hero with the lot name, a 48 dp star
+    selector, the counter on the comment, explicit loading / survey / already
+    rated / submitted / invalid link / retry states. Open sessions explain that
+    the visit can be rated after check-out.
+  - Admin page `/satisfaction`: average (integer `average_x10`), answers plus
+    the response rate against closed sessions, low ratings (≤ 3), the full 1..5
+    distribution and the latest comments, with 7 / 30 / 90-day chips. Operators
+    are refused by the router and by `feedback_summary` itself.
+  - Discovery: the PDF and thermal check-out receipts print the survey QR when
+    `APP_URL` is configured, the on-screen receipt preview shows it too, and the
+    manual WhatsApp receipt appends the link. Without `APP_URL` there is no
+    dangling code.
+  - Online only by design: the server must verify the session and the one-answer
+    rule, so nothing is queued in the outbox.
+
+
+- **Cash anomaly detection** (`0110`,
+  `openspec/changes/add-cash-anomaly-detection`). Eight deterministic rules over
+  the rows the lot already has, so the admin stops finding the leak patterns by
+  browsing:
+  - Repeated shift shortages per operator, lost-ticket rate against the lot
+    baseline, adjustments after close, zero-charge check-outs that are not
+    passes, lost tickets on very short stays, discount share per admin, shifts
+    open too long and sessions open for many days.
+  - One row per anomaly (`cash_anomalies`), deduped per lot and subject so
+    nothing is raised twice; a dismissed anomaly never comes back.
+  - Thresholds live in `anomaly_settings`, **admin-only** (operators can read
+    `parking_settings`), tunable from the new "Anomalías" screen.
+  - Review workflow: acknowledge or dismiss with a note, audited with the actor.
+    One summary notification per lot and run goes to the admins (deep link to
+    `/anomalies`); low-severity findings stay in the page.
+  - Detection and retention run from the jobs container. Everything is
+    remote-only and read-mostly: nothing blocks or reverses a transaction.
+- **Occupancy forecast** (`0109`, `openspec/changes/add-occupancy-forecast`).
+  The home dashboard and the public page could only say how full the lot is
+  *now*. The system now answers "will it be full at 6 pm?":
+  - `occupancy_profile` stores, per lot, group, weekday and hour, the **median**
+    of the last K same-weekday days, rebuilt by the job runner (six-hour
+    throttle); `occupancy_grid` rebuilds the hourly net occupancy from the
+    entry/exit timestamps and caps a stuck-open session at 72 h.
+  - `occupancy_forecast` blends the profile with today's live deviation (fading
+    15 % per hour), clamps to capacity, reports the first crossing as `full_at`
+    and labels confidence from the sample count. Below the minimum history it
+    says so instead of guessing.
+  - The public page gets an aggregate-only strip ("¿Cuándo se llena?") through a
+    new `forecast` key: levels, deadline and confidence, never counts or plates.
+    `public_availability` is now a thin wrapper around
+    `public_availability_base`, so later changes edit the base function.
+  - `occupancy_forecast_backtest` replays the algorithm over past weeks and
+    compares it with the profile alone ("Precisión del pronóstico" in reports).
+  - Six per-lot settings through `get/set_forecast_settings` (RPC only).
+- **Booking waitlist** (`0106`, `0107`,
+  `openspec/changes/add-booking-waitlist`). When every category is full the
+  public page used to say "call us" and the customer left. Now they can join a
+  queue with name, mobile, plate, how long they can wait and how long they want
+  the space held:
+  - An offer is a **real hold** (`category_reservations.source = 'waitlist'`)
+    created through the same capacity check as any other hold, so an offer can
+    never overbook. Claiming extends it and flips it to a normal web booking.
+  - FIFO per group; the dispatch runs inside the capacity-freeing transaction
+    (check-out, released hold, repaired bay, raised capacity) with a try-lock so
+    it can never block or break the original write. A missed dispatch lands in
+    `waitlist_kicks` and the job drains it.
+  - Limits: one active turn per plate, two per mobile, `waitlist_max_entries`
+    per lot, the booking hourly ceiling and the same captcha gate.
+  - Desk: "Lista de espera" section on `/reservations` (call, give the space,
+    remove) and an admin dialog for the three settings. Lot members get
+    notifications; the offer queues a `waitlist_offer` WhatsApp template.
+  - Reports: `report_reservations` excludes unclaimed offers from the booking
+    counts and adds a waitlist block.
+  - Off by default (`waitlist_enabled`), and every waitlist call is online only.
+- **Offline edits never overwrite each other silently**
+  (`0105`, `openspec/changes/add-offline-conflict-resolution`).
+  `vehicles`, `tariffs`, `categories` and `parking_settings` carry a `version`
+  column bumped by a trigger only when the row really changes. Every client
+  edit sends the version it was based on (and the `x-versioned-write` header
+  the guard requires), so a concurrent change becomes a **conflict** instead of
+  a last-write-wins overwrite:
+  - Disjoint field edits **auto-merge** without asking (three-way merge on the
+    cached base row, up to three rounds).
+  - Overlapping fields are **parked** in the outbox and never replayed until
+    the operator decides, from the sync badge: *Resolver conflicto* shows the
+    before / mine / server values per field with keep-mine, keep-theirs and
+    per-field selection. Deletes are covered too (delete vs edit, edit vs
+    delete).
+  - Settings save only the fields that actually changed, so a text edit cannot
+    clobber a logo someone else uploaded.
+  - `set_row_version_policy(true)` (after setting `min_app_version`) refuses
+    version-unaware clients for a site; it is off by default.
+- **Bot protection on the public booking page** (`0103`,
+  `openspec/changes/add-public-booking-captcha`). Two controls per lot:
+  - *Hourly ceiling*, no credentials needed: at most
+    `parking_settings.public_booking_hourly_limit` public holds (default 20)
+    are created per lot in any hour; the next one gets `BookingThrottledError`
+    and a "try again in a few minutes or call" message. Cancelled holds still
+    count; staff reservations neither count nor are refused.
+  - *Cloudflare Turnstile*, inert without keys: the new `public-booking` Edge
+    Function verifies the token with `TURNSTILE_SECRET_KEY` and books through
+    `public_create_reservation_verified` (service role only). A lot with
+    `public_booking_captcha = true` refuses the anonymous RPC
+    (`CaptchaRequiredError`), so the captcha cannot be skipped with a direct
+    call. Lot admins switch it with
+    `set_public_booking_protection(p_captcha, p_hourly_limit)`.
+  The web form renders the widget when built with
+  `--dart-define=TURNSTILE_SITE_KEY=...`, blocks the submit until it is
+  solved, and recovers from expiry/failure with a retry (ES/EN). With no keys
+  and the switch off (default) the page books exactly as before, plus the
+  ceiling.
+
+- **Home trend card**: `0080_dashboard_trend` adds `dashboard_trend(p_days)`, a
+  lot-scoped, operator-callable daily series (revenue, entries, exits) in the
+  site's business timezone. Days without movement come back as zeroes, so the
+  home dashboard paints the last 7 days as bars scaled to the best day, with
+  weekly revenue/entries/exits totals, a quiet-week message, a loading skeleton
+  and an admin shortcut to reports.
+- **Week-over-week insight**: the home trend now loads fourteen days and
+  compares the current week with the previous one (`+18 %` in success tone,
+  warning tone when revenue drops, "same as last week" when flat). It is
+  hidden when the previous week has no revenue to compare against.
+- **Bay maintenance history**: taking a bay out of service (or bringing it
+  back) now asks for an optional reason (3–200 characters) and records who,
+  when and why in `parking_spot_events` (`0081`): lot-scoped RLS, written by
+  `save_parking_spot` in the same transaction that changes the status, so the
+  log cannot drift. The bay editor shows **Ver historial** with the last
+  transitions (skeleton, empty and retry states); operators can read it, only
+  admins can change a bay. Any map edit refreshes the home board.
+- **Offline dashboard**: the home keeps the last successful occupancy, today,
+  trend and capacity snapshot on the device (versioned JSON, one entry per
+  site). When a load fails the operator still sees those KPIs with a
+  "Sin conexión · datos guardados de las HH:mm" notice and a retry, instead of
+  an empty dashboard; the live space board and inside list are hidden because
+  they would be stale. A partial load (one RPC failed) never overwrites a
+  complete snapshot.
+- **Hourly traffic on reports**: `0082` adds `report_hourly_traffic(start,
+  end)` (admin, lot-scoped, business timezone) with entries and exits for all
+  24 hours. The reports screen renders a compact hour grid sized for the
+  screen (4/6/8 columns), scaled to the busiest entry hour, with a peak-hour
+  summary, per-hour tooltip/semantics, an empty state and a legend. A failed
+  hourly RPC degrades to the empty grid without failing the report.
+- **Month presets and hourly exports**: the report range now offers **Este
+  mes** and **Mes anterior** with calendar boundaries, shown as chips in the
+  filter bar (they wrap on phones instead of squeezing a segmented button).
+  The CSV gains `hourly_entries`/`hourly_exits` raw rows and the PDF a
+  "Tráfico por hora" table, both limited to hours with movement.
+- **Audit search**: the audit screen has a debounced free-text field matching
+  the entity id, table, actor (username/display name), plate and name — for
+  example a plate from a support call — combinable with the table, actor and
+  date filters. `0083` recreates `list_audit_log` with `p_search` and fixes the
+  old ordering bug where the page limit was applied before the actor filter.
+- **In-app evidence viewer**: `0084` exposes `photo_count` per session in
+  `vehicle_history` (scoped to the active lot). The vehicle history now offers
+  "Ver evidencias (N)" when a session has photos or videos; a bottom sheet
+  signs Storage URLs on demand and shows a photo grid (tap to zoom) and video
+  tiles with a play action, with loading, empty and error+retry states. Listing
+  stays protected by the lot RLS; a file whose signature fails is kept as an
+  unavailable tile instead of hiding the row.
+- **Evidence from check-out**: the open-session row shows an "Evidencias (N)"
+  chip when the car has photos/videos, so an operator can review the entry
+  evidence without leaving the exit flow. It opens the same viewer and wraps
+  with the other status chips on phones.
+- **Evidence from records**: `0086` adds the photo count to `session_records`,
+  so each activity-log row with evidence offers "Evidencias (N)" under its
+  times. The log reuses the same viewer (signed URLs, zoom, video, retry); the
+  evidence is only queried when the operator taps it.
+- **First-steps checklist**: `0085` adds `lot_setup_status()` with the active
+  site's categories, active tariffs, capacity/active bays and identity flags.
+  Admins of a new site see a **Primeros pasos** card on the home with a
+  4-step progress bar (categories, tariffs, capacity/map, address + phone) and
+  a shortcut to the screen that fixes each step; operators never see it and it
+  hides once the site is complete. A failed status call hides the card instead
+  of showing a false "not configured" state.
+- **Daily revenue chart in the PDF**: the exported report draws a compact bar
+  chart of revenue by day above the table (scaled to the best day, with the
+  first and last dates underneath), so the period's shape is visible without
+  reading every row. Quiet periods keep zero-height bars and an empty range
+  skips the chart.
+- **Hourly chart in the PDF**: the hourly section now also draws 24 bars
+  scaled to the busiest entry hour, with 00/06/12/18/23 labels above the
+  table. Exits stay in the table, so the chart answers "when is the gate
+  busiest?" at a glance.
+- **Branded startup**: the app shows a splash (logo + loading) for the first
+  frame while the session and lot memberships restore, instead of waiting on
+  the network before the first `runApp` (a blank screen on slow links). The
+  real app replaces the splash once the restore resolves; corrupt local
+  storage falls back to login instead of leaving the splash forever.
+- **Search vehicles by owner**: the registry search now matches the plate, the
+  owner name or the owner phone (`plate.ilike` OR `owner_name.ilike` OR
+  `owner_phone.ilike`, quoted so names with spaces/commas work), and the
+  offline cache filter mirrors it. The field label/hint say so; owner data was
+  already captured, so no schema change was needed.
+- **Owner search in monthly passes**: the passes search now also matches the
+  owner name or phone, for both passes and pending charges (resolved through
+  the loaded vehicles); the empty state and count follow the same filter.
+- **History from the registry**: each vehicle row has a "Ver historial"
+  action (48 dp) that opens `/history?plate=…`, so finding a car by owner name
+  or phone and reviewing its visits takes one tap. The row fits a 400 px phone
+  with the three actions.
+- **Check-in from the history**: a vehicle with no open session offers
+  "Registrar entrada" in its history, opening `/check-in?plate=…` with the
+  plate prefilled; a vehicle already inside keeps "Cobrar en caja".
+- **Public booking page**: `/reserve?lot=<id>` is a public, mobile-first page
+  served by the self-hosted web host. It shows the lot identity and real
+  availability per vehicle category (`public_availability`, anon), lets the
+  customer pick a category and duration (1/2/4/8 h), and creates a hold with
+  plate, **name** and **mobile phone** (`public_create_reservation`).
+  The confirmation carries the reservation code, until, lot contact, call and
+  WhatsApp actions. Guards: 10-minute minimum / 24-hour maximum window, one
+  active hold per plate, two active public holds per phone, invalid plates
+  rejected, the name is required and the phone has to be a Colombian mobile
+  (10 digits starting with 3, optional +57, stored without the country code),
+  and a full category/group is refused. The capacity rules are
+  shared with the operator path, and anon cannot read the reservation table.
+  The page is linked from the public policy page and the evidence page.
+- **Scheduled jobs actually run**: `docker-compose.yml` gains `supabase-jobs`,
+  a small container that calls the retention/notification functions every 5
+  minutes (expire unused holds, renew passes, overstay and expiring-pass
+  alerts, purge old notifications/audit/idempotency/WhatsApp rows) and
+  dispatches pending push/WhatsApp messages. Neither the stock Postgres image
+  (no pg_cron) nor this host (no cron daemon) ran them before, so stale holds
+  stayed `active` forever and push never left the queue.
+- **Directions and live numbers**: the `/reserve` hero offers "Cómo llegar"
+  (Google Maps search for the lot address, `core/utils/maps_launcher.dart`)
+  next to the phone and WhatsApp actions, and the availability re-reads itself
+  every minute without flashing the skeleton, so a customer deciding on the
+  page never reads stale numbers.
+- **Web login no longer hangs over plain HTTP**: the session was persisted with
+  `flutter_secure_storage`, whose browser backend needs a secure context
+  (HTTPS or localhost). On the LAN address the auth call succeeded but the
+  storage call never resolved, leaving the Sign in button spinning forever and
+  nothing in localStorage. The web build now uses GoTrue's localStorage store;
+  mobile keeps the Keychain/Keystore.
+- **The board refreshes after check-in**: coming back from "Registrar entrada"
+  reloads the list, so the hold that just turned into a stay disappears
+  instead of lingering until a manual refresh.
+- **Month-over-month and year-over-year reports**: the reports screen has a
+  "Comparación por periodo" section (6 or 12 months) with the month, the month
+  before it and the same month last year — revenue, entries, exits, average
+  ticket and stay, pass revenue and reservations. A running month is compared
+  against the same elapsed days and labelled partial; a delta chip only shows
+  when the base existed, had activity and is comparable. CSV and PDF export
+  include it. New `report_period_comparison` RPC plus the missing
+  `(lot_id, exit_time)` index.
+- **Reservations CSV**: the board has "Copiar CSV" (visible rows, filters
+  included) with the code, plate, category, ISO expiry, customer, phone,
+  source, status and grace flag, escaped for Excel — reception can print the
+  shift list or hand it to the accountant.
+- **The web no longer needs the internet**: the release build ships
+  CanvasKit inside the app (`--no-web-resources-cdn`), so a LAN without
+  outbound access still renders; verified with gstatic/googleapis blocked.
+- **The lot's cancellation reaches the customer**: when an operator cancels a
+  web hold, `cancel_reservation` queues a `reservation_cancelled` WhatsApp
+  (name, plate, lot) if automated messaging is on, so nobody travels for a
+  space that is gone. Operator holds are untouched (no phone was collected).
+- **Cover photo for the public page**: Ajustes has "Portada de la página
+  pública" (wide image, `branding/cover_<lot>`, lot-admin RPC
+  `set_branding_cover`); `/reserve` shows it as a 16:9 banner above the lot
+  identity, with the logo and a placeholder when there is no cover.
+- **Reminder before the hold lapses**: `notify_expiring_reservations()` queues
+  a `reservation_reminder` WhatsApp one hour before `reserved_until` (only
+  public holds with a mobile and automated WhatsApp on), stamped with
+  `reminder_sent_at` so the 5-minute job never repeats it. The jobs service
+  runs it every cycle.
+- **Check-in by reservation code**: the check-in screen lists the active holds
+  ("Buscar reserva (N)") with the code the customer shows (#7), the plate, the
+  customer and the expiry; picking one fills the plate and runs the lookup, so
+  reception does not have to ask for it.
+- **Did the web page bring cars in?**: the reports screen has a "Reservas de
+  cupo" section with the holds created in the period, how many came from
+  `/reserve`, the share that turned into a stay, and the cancelled/expired
+  count (`report_reservations`, admin, business-timezone window).
+- **The grace window is a setting**: "Tolerancia de reservas (min)" in Ajustes
+  (0..120, default 15) is the single value the capacity check, public
+  availability, check-in and the board read. `0` disables it: the hold stops
+  counting exactly on time.
+- **One owner for the grace window**: the reservations board now loads through
+  `list_active_reservations()`, which applies `reservation_grace()` and
+  returns an `in_grace` flag. The Dart copy of the 15 minutes (and the
+  PostgREST date arithmetic) is gone, so changing the window in SQL can no
+  longer disagree with the app.
+- **A full lot says so**: when every vehicle type is at capacity, `/reserve`
+  hides the booking form (a form nobody can submit is a dead end) and shows
+  "No hay cupo en este momento" with the call/WhatsApp actions; the code
+  lookup stays, so a returning customer can free their own hold and the
+  one-minute refresh brings the form back as soon as a spot opens.
+- **The customer gets the booking on WhatsApp**: with "automated WhatsApp" on,
+  a public hold queues a `reservation_confirmed` message (name, plate, time,
+  lot) that `whatsapp-dispatch` sends once the Meta token and the approved
+  template exist — nothing is sent while the switch is off. The queue now
+  ages out pending rows too (90 days), so a lot without credentials does not
+  accumulate them forever.
+- **Grace window for late customers**: `reservation_grace()` (15 minutes) is
+  honoured by the shared capacity check, `public_availability` and `check_in`,
+  so a customer who arrives a few minutes late still has the space: the hold
+  keeps counting until the window ends and check-in turns it into `used`
+  instead of leaving a stale row. The board keeps those holds visible with an
+  "En tolerancia" chip.
+- **The reservation code reaches reception**: each card on the reservations
+  board shows the code the customer was given (`#7 · Hasta 20:35`) and the
+  search matches it, so the front desk can act on the number printed on the
+  confirmation instead of asking for the plate. "Registrar entrada" on the
+  card still opens check-in with the plate prefilled.
+- **"Web only" filter**: the reservations board can show just the holds that
+  came from the public page, next to "por vencer", and the filter chip resets
+  with "limpiar filtros".
+- **Prices on the public page**: each vehicle card shows the lot's real
+  hourly tariff ("Desde $5.000/hora") from `tariffs` (`type='hourly'`,
+  active), formatted with the lot currency; a category without a tariff says
+  "Tarifa en recepción" instead of inventing a number.
+- **"Already booked?" lookup**: the public page ends with a code + mobile form
+  (`public_reservation_lookup`, anon) that retrieves the active hold and lets
+  the customer cancel it without the confirmation screen. It returns null for
+  a wrong code/phone, an expired hold or an operator hold, so only the
+  customer's own visible booking is exposed.
+- **Customers can give the space back**: the `/reserve` confirmation offers
+  "Cancelar reserva" (with a confirmation dialog) and ends on a
+  "Reserva cancelada" screen. `public_cancel_reservation(code, plate, phone)`
+  (anon) only cancels `source = 'public'` holds and needs all three values, so
+  a plate alone is not enough to free someone else's space; availability
+  refreshes right away. The hold is marked `cancelled` (history is kept).
+- **Operators run the reservations board**: `/reservations` joined the operator
+  allowlist (with its "Ver reservas" shortcut on the home dashboard), because
+  whoever is at the desk hands the web bookings to the customer. The management
+  section on Home now lists only the sections the signed-in role may use.
+- **Who booked from the web**: the reservations board now shows the customer's
+  name and mobile, a "Web" badge for holds created on `/reserve`, and one-tap
+  call/WhatsApp actions, so the front desk can reach the person before they
+  arrive. Search matches the plate, the name or the phone.
+- **Web bookings alert the lot**: every public hold leaves a
+  `public_reservation` notification for every active member of the lot (admins
+  and operators, who now work the board), with the plate, the customer and the
+  expiry in the lot's timezone; tapping it opens the reservations board.
+  Deduplicated per reservation and user.
 - **Emergency action**: a red police icon in every app bar (and an entry in the
   desktop sidebar footer and the phone drawer) opens a one-tap panel with the
   site location, the nearest police quadrant and a large **Call now** button.
@@ -97,6 +870,20 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 
 ### Hardened
 
+- Check-in no longer downloads the 200-vehicle suggestion page on open: known
+  plates load when the operator types the second character (a failed attempt
+  is remembered so typing does not hammer the endpoint). On open it also
+  refreshes only the **capacity snapshot** when the shell already has the
+  dashboard loaded (one request instead of the six/seven KPI reads); a
+  successful entry still does the full refresh so home counters stay current.
+- Shift, reservations and monthly-pass screens load their independent reads
+  concurrently instead of chaining round trips: current shift + history,
+  active reservations + categories, and passes + pending payments + vehicles +
+  tariffs now start together (each keeping its own failure handling). Tests
+  gate the first call and assert the second already started.
+- Home dashboard reads are concurrent: occupancy first, then today, trend,
+  capacity, the space board and the inside list run together (each degrading on
+  its own), instead of six serial round trips.
 - Ops: optional `BACKUP_REMOTE` offsite copy with `rclone` (job fails if the
   copy fails), backup-age and disk warnings in `healthcheck.sh`, and systemd
   units/timers for healthcheck, cron and nightly backups
@@ -117,6 +904,9 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   release-only failures are caught before shipping.
 
 ### Changed (UX)
+- The home KPI grid paints `SkeletonCard` placeholders (shared pulse, static
+  under reduce motion) while the first dashboard load is in flight, instead of
+  mixing a progress bar with cards that appeared one by one.
 - Charge rows show a busy spinner, ignore double taps and are fully tappable.
 - Payment dialog: live total after discount, per-field errors, "Cobrar $X"
   button, "Exacto" and banknote shortcuts for cash received.
@@ -781,6 +1571,20 @@ Migrations are append-only and applied in filename order by `supabase-migrate`.
 | `0033`–`0038` | Evidence retention, storage membership, diagnostics, audit export, report comparison, home KPIs |
 | `0039`–`0044` | Site comparison fields, ticket reprint, customer phone, WhatsApp queue/report |
 | `0045`–`0059` | Check-out preview, pass flag, capacity groups, reservations consuming group capacity, reserved counts, hold counters, space board, fare breakdown, out-of-service spaces, live activity notifications, physical spot map and its editor |
+| `0060`–`0073` | Bay capacity, records log, video evidence, policies, card type, cash received, billing integrity (hour allocation, lost ticket, closed-at), shift integrity |
+| `0074`–`0086` | Statement timeouts, vehicle update grant, version guard, evidence retention, scale indexes, audit search, setup checklist, records evidence |
+| `0087`–`0096` | Public booking (availability, holds, notifications, cancel/lookup, prices, grace, WhatsApp), purge |
+| `0097`–`0103` | Reservation listing/reminders, reports, branding cover, period comparison, row versions, waitlist, public booking protection |
+| `0104`–`0111` | Pass lot scope, occupancy forecast, cash anomalies, customer feedback |
+| `0112`–`0114` | Online payments: settings/columns, `payment_intents`/`payment_events`, settlement rule, service RPCs, check-out/preview/summary/shift/report integration |
+| `0115`–`0116` | Pass auto-renewal: settings/`pass_renewal_offers`/WhatsApp columns, reminder job, public page, renewal settlement |
+| `0117`–`0119` | Merchant agreements: schema/credentials, `fare_quote` + hooks, validations, public page, settlement, check-out lines |
+| `0120`–`0121` | Dynamic pricing: rules, session/hold locks, triggers, hook, quote/simulation/impact RPCs, availability price keys |
+| `0122`–`0123` | Loyalty rewards: program settings, accounts/rewards/visits/adjustments, closed-session trigger, reward hook, status/settings/adjust/reverse/expiry RPCs, report and members list |
+| `0124`–`0125` | Electronic invoicing: fiscal settings/resolutions/documents, numbering, issuance, outbox, credit notes, sweeper, admin list |
+| `0126` | Shared AI platform: features, per-lot limits, request/token ledger, budget RPCs and retention |
+| `0127` | Damage comparison: exit evidence phase, comparisons/findings, begin/get/review, service-role store/fail and retention |
+| `0128`–`0129` | Device gateway: registry/events, admin + service RPCs, offline alerts, retention |
 
 ## Verification snapshot
 
