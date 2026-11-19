@@ -98,6 +98,13 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
   `payment_events` guard now asserts the invariant (an authenticated user
   sees no rows) instead of assuming a privilege error, which some Supabase
   images do not produce because of their default grants.
+- **Fixture recorder** (`deno task eval:record`): re-runs a replay fixture
+  against the real model and rewrites only its `model_script`, so the
+  committed cases can be refreshed after a prompt or model change. It writes
+  a file only when the run ends `ok` (a failure leaves it untouched and exits
+  non-zero), and it is guarded like the other manual tasks (no key or CI →
+  refuse). The script swap is a pure helper with three tests.
+
 - **Damage live eval** (`deno task eval:damage`): reads labelled photo
   pairs from `DAMAGE_FIXTURES_DIR` (default `fixtures/pairs/`, no images
   committed), runs the production prompt/vision call/normaliser and scores

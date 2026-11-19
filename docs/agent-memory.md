@@ -96,7 +96,7 @@ Last updated: 2026-11-18 (replay parity).
   The overall verdict now follows the design's safety rule: any `new` finding
   wins; otherwise an all-clear needs `same_vehicle = yes`, at least three
   covered zones (`AI_DAMAGE_MIN_COVERED_ZONES`, default 3) and no uncertain
-  finding. Deno suite is 133 tests.
+  finding. Deno suite is 136 tests.
 - `report-assistant/eval_live.ts` + `deno task eval:live` (manual, needs
   `DEEPSEEK_API_KEY`, never in CI): runs the same 18 fixtures against the
   real model, scores tool selection (expected subset of called, with
@@ -112,6 +112,11 @@ Last updated: 2026-11-18 (replay parity).
   plate-blurred photo pairs; the tooling is ready for them.
 - The vision call was extracted to `createVision(env)` in `index.ts` so the
   function and the eval share one code path.
+- `deno task eval:record` re-records a fixture's `model_script` from a live
+  run; it only writes when the outcome is `ok`, and `report-assistant/eval/
+  script.ts` (tested) does the swap without touching the rest of the fixture.
+- Deno tasks: `test`, `eval:live`, `eval:record`, `eval:damage`, all in
+  `supabase/volumes/functions/deno.jsonc`.
 - SQL suite flakiness fixed in `rpc_test.sql`: two blocks were tied to the
   wall clock. The forecast median fixture now anchors on the most recent
   Wednesday strictly before today (the profile window is `today - 8 weeks ..
