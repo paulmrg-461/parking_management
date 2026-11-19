@@ -51,7 +51,7 @@ WhatsApp (manual or automated).
 | Device gateway | Complete (registry, keys, `/devices` admin, transport, offline alerts) | SQL + Deno + widget tests |
 | Backups / restore | Complete, with a safe drill | Drill executed against a real backup |
 | Secrets / PIN operations | Complete (scripts + runbook) | PIN rotation verified live |
-| E2E and CI | Complete (API + Flutter client, real stack) | CI job `supabase-e2e` |
+| E2E and CI | Complete (API + Flutter client + device protocol, real stack) | CI job `supabase-e2e`; local `integration_test/app_flow_test.dart` |
 
 Quality snapshot (2026-11-19, local stack): **1899 Flutter tests + 1 integration
 test**, **133 Deno tests** (unit, replay and eval guards), SQL/RLS suite green
