@@ -1,0 +1,91 @@
+{
+  "case": "case_17.json",
+  "question": "¿Cuánto ingresó por pases mensuales en octubre?",
+  "locale": "es",
+  "today": "2026-11-10",
+  "timezone": "America/Bogota",
+  "currency": "COP",
+  "rpc_outputs": {
+    "report_revenue": {
+      "total": 6100000,
+      "pass_revenue": 400000,
+      "total_discounts": 0,
+      "discounted_sessions": 0,
+      "by_day": [],
+      "by_category": [],
+      "by_payment": [],
+      "pass_by_payment": [
+        {
+          "payment_method": "card",
+          "amount": 400000
+        }
+      ]
+    }
+  },
+  "model_script": [
+    {
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "v2",
+          "name": "get_revenue_report",
+          "input": {
+            "start_date": "2026-10-01",
+            "end_date": "2026-10-31"
+          }
+        }
+      ],
+      "stop_reason": "tool_use"
+    },
+    {
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "submit",
+          "name": "submit_answer",
+          "input": {
+            "status": "answered",
+            "headline": "Los pases mensuales aportaron {f1}.",
+            "explanation": "",
+            "period_start": "2026-10-01",
+            "period_end": "2026-10-31",
+            "figures": [
+              {
+                "id": "f1",
+                "label": "Ingresos por pases",
+                "unit": "money",
+                "op": "value",
+                "operands": [
+                  {
+                    "call_id": "v2",
+                    "path": "pass_revenue"
+                  }
+                ]
+              }
+            ],
+            "caveats": [
+              "Los ingresos por sesiones no incluyen los pases mensuales."
+            ]
+          }
+        }
+      ],
+      "stop_reason": "end_turn"
+    }
+  ],
+  "expected": {
+    "tools": [
+      {
+        "tool": "get_revenue_report"
+      }
+    ],
+    "answer": {
+      "status": "answered",
+      "figures": [
+        {
+          "id": "f1",
+          "value": 400000
+        }
+      ]
+    }
+  }
+}

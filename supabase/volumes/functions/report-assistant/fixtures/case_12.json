@@ -1,0 +1,97 @@
+{
+  "case": "case_12.json",
+  "question": "¿Cuántos carros hay adentro y cuántos cupos quedan?",
+  "locale": "es",
+  "today": "2026-11-10",
+  "timezone": "America/Bogota",
+  "currency": "COP",
+  "rpc_outputs": {
+    "capacity_snapshot": {
+      "car_open": 42,
+      "car_capacity": 80,
+      "car_available": 38,
+      "car_out_of_service": 0,
+      "car_reserved": 3,
+      "moto_open": 10,
+      "moto_capacity": 30,
+      "moto_available": 20
+    }
+  },
+  "model_script": [
+    {
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "c1",
+          "name": "get_capacity_now",
+          "input": {}
+        }
+      ],
+      "stop_reason": "tool_use"
+    },
+    {
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "submit",
+          "name": "submit_answer",
+          "input": {
+            "status": "answered",
+            "headline": "Hay {f1} carros adentro y quedan {f2} cupos.",
+            "explanation": "",
+            "period_start": "",
+            "period_end": "",
+            "figures": [
+              {
+                "id": "f1",
+                "label": "Carros adentro",
+                "unit": "count",
+                "op": "value",
+                "operands": [
+                  {
+                    "call_id": "c1",
+                    "path": "car_open"
+                  }
+                ]
+              },
+              {
+                "id": "f2",
+                "label": "Cupos libres",
+                "unit": "count",
+                "op": "value",
+                "operands": [
+                  {
+                    "call_id": "c1",
+                    "path": "car_available"
+                  }
+                ]
+              }
+            ],
+            "caveats": []
+          }
+        }
+      ],
+      "stop_reason": "end_turn"
+    }
+  ],
+  "expected": {
+    "tools": [
+      {
+        "tool": "get_capacity_now"
+      }
+    ],
+    "answer": {
+      "status": "answered",
+      "figures": [
+        {
+          "id": "f1",
+          "value": 42
+        },
+        {
+          "id": "f2",
+          "value": 38
+        }
+      ]
+    }
+  }
+}

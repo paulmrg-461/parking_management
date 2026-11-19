@@ -6362,19 +6362,32 @@ declare
     values integer[] := array[33, 35, 36, 38, 31, 35, 39, 60];
     median numeric;
     samples integer;
-    wed_dow integer := extract(dow from date '2026-11-04')::integer;
+    tz text := 'America/Bogota';
+    today date := (now() at time zone tz)::date;
+    anchor date;
+    days_since integer;
+    wed_dow integer;
 begin
     delete from public.occupancy_profile;
+    -- The profile window is relative to the wall clock (today - 8 weeks ..
+    -- today - 1), so the fixture must be too: anchor on the most recent
+    -- Wednesday strictly before today and walk back one week per sample.
+    days_since := (extract(dow from today)::integer - 3 + 7) % 7;
+    if days_since = 0 then
+        days_since := 7;
+    end if;
+    anchor := today - days_since;
+    wed_dow := extract(dow from anchor)::integer;
     for week in 1 .. 8 loop
         n := values[week];
         insert into public.parking_sessions (
             vehicle_id, operator_id, status, lot_id, entry_time, exit_time
         )
-        -- The eight Wednesdays that end yesterday (yesterday is a Wednesday
-        -- in this fixture), so every one of them has a sample.
+        -- The eight Wednesdays that end before today, so every one of them
+        -- has a sample inside the profile window.
         select v.id, 2, 'closed', 1,
-               (date '2026-11-11' - 7 * (week - 1))::timestamp + interval '17 hours',
-               (date '2026-11-11' - 7 * (week - 1))::timestamp + interval '18 hours'
+               (anchor - 7 * (week - 1))::timestamp + interval '17 hours',
+               (anchor - 7 * (week - 1))::timestamp + interval '18 hours'
           from public.vehicles v
          where v.category_id = current_setting('app.fc_cat')::integer
          order by v.id
@@ -12981,20 +12994,32 @@ begin
     insert into public.loyalty_rewards (
         lot_id, plate, kind, fixed_amount, visits_required, expires_at
     ) values (lot, 'LYL21', 'fixed_amount', 2000, 5, now() + interval '30 days');
+    -- Fixed daytime window on a past date: `now() - 3 hours` would cross the
+    -- night-rate boundary depending on the wall clock and change the fare.
     insert into public.parking_sessions (
         vehicle_id, operator_id, lot_id, entry_time, status, online_paid_amount
     )
-    select v.id, 1, lot, now() - interval '3 hours', 'open', 9000
+    select v.id, 1, lot,
+           ((current_date - 1) + time '09:00') at time zone 'America/Bogota',
+           'open', 9000
       from public.vehicles v where v.plate = 'LYL21'
     returning id into session_row;
-    quote := public.fare_quote(session_row, now(), 0, false);
+    quote := public.fare_quote(
+        session_row,
+        (current_date - 1 + time '11:30') at time zone 'America/Bogota',
+        0, false
+    );
     if (quote -> 'reward' ->> 'reason') <> 'zero'
        or (quote ->> 'amount_due')::integer <> 9000 then
         raise exception 'a fully paid online session got a reward: %', quote;
     end if;
 
     update public.parking_sessions set online_paid_amount = 6000 where id = session_row;
-    quote := public.fare_quote(session_row, now(), 0, false);
+    quote := public.fare_quote(
+        session_row,
+        (current_date - 1 + time '11:30') at time zone 'America/Bogota',
+        0, false
+    );
     if (quote ->> 'amount_due')::integer <> 7000
        or (quote -> 'adjustments' -> 0 ->> 'amount')::integer <> 2000 then
         raise exception 'the partial online cap is wrong: %', quote;

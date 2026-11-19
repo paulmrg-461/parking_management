@@ -1,0 +1,79 @@
+{
+  "case": "case_09.json",
+  "question": "¿Cuánto facturamos hoy?",
+  "locale": "es",
+  "today": "2026-11-10",
+  "timezone": "America/Bogota",
+  "currency": "COP",
+  "rpc_outputs": {
+    "dashboard_today": {
+      "revenue": 875000,
+      "cash_revenue": 400000,
+      "pass_revenue": 25000,
+      "entries": 41,
+      "exits": 33,
+      "open_now": 28
+    }
+  },
+  "model_script": [
+    {
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "t1",
+          "name": "get_today_summary",
+          "input": {}
+        }
+      ],
+      "stop_reason": "tool_use"
+    },
+    {
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "submit",
+          "name": "submit_answer",
+          "input": {
+            "status": "answered",
+            "headline": "Hoy facturamos {f1}.",
+            "explanation": "",
+            "period_start": "",
+            "period_end": "",
+            "figures": [
+              {
+                "id": "f1",
+                "label": "Ingresos de hoy",
+                "unit": "money",
+                "op": "value",
+                "operands": [
+                  {
+                    "call_id": "t1",
+                    "path": "revenue"
+                  }
+                ]
+              }
+            ],
+            "caveats": []
+          }
+        }
+      ],
+      "stop_reason": "end_turn"
+    }
+  ],
+  "expected": {
+    "tools": [
+      {
+        "tool": "get_today_summary"
+      }
+    ],
+    "answer": {
+      "status": "answered",
+      "figures": [
+        {
+          "id": "f1",
+          "value": 875000
+        }
+      ]
+    }
+  }
+}

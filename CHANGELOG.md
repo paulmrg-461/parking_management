@@ -79,13 +79,22 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - **AI replay harness** (`report-assistant/replay_test.ts` + fixtures):
   deterministic, network-free regression of the agent loop — recorded RPC
   output and model scripts, expected figure values asserted — runnable in the
-  CI `edge-functions` job. Eight design cases included (per-category revenue,
-  payment split, percent change between periods, share percent, busiest hour,
-  shift cash differences, out-of-scope plate question with redaction, hostile
-  category-name injection). Two real bugs found and fixed: a legitimate
-  percent-change figure was rejected by the answer validator (declared unit
-  vs leaf unit), and the shift tool's bare-array projection could not be
-  addressed by the path grammar.
+  CI `edge-functions` job. All 18 design cases are covered: per-category
+  revenue, today's takings, payment split, percent change between periods,
+  share percent, busiest hour, reservations, cancelled/expired holds,
+  capacity, occupancy, daily trend, shift cash differences, WhatsApp
+  failures, discounts, pass revenue with its caveat, the out-of-scope plate
+  question with redaction, a quarter range, and a hostile category name.
+  Two real bugs found and fixed: a legitimate percent-change figure was
+  rejected by the answer validator (declared unit vs leaf unit), and the
+  shift tool's bare-array projection could not be addressed by the path
+  grammar.
+
+- **SQL suite made wall-clock independent**: the forecast median fixture
+  anchors on the most recent Wednesday before today (the profile window is
+  relative to the run date) and the loyalty online-cap fixture uses a fixed
+  past daytime window instead of `now() - 3 hours`, which crossed the night
+  rate boundary and changed the fare depending on the hour of the run.
 
 - **Guided photo capture** (`core/widgets/capture_guide.dart`): a next-angle
   banner and slot chips shown at check-in and in the exit-photo section, plus a

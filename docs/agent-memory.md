@@ -4,7 +4,7 @@ Durable context for any agent working on this repo. Read this first, then
 `AGENTS.md` (rules) and `PROGRESS.md` (product history). Keep it short and
 current: append decisions and gotchas, delete what the code now explains.
 
-Last updated: 2026-11-18 (damage replay).
+Last updated: 2026-11-18 (replay parity).
 
 ## Where we are
 
@@ -88,11 +88,25 @@ Last updated: 2026-11-18 (damage replay).
   `insufficient_evidence`, different-vehicle downgrade, the 12-finding cap,
   hostile HTML stripped from descriptions, and unknown zone/classification
   falling back to `uncertain`.
-- Deno suite is now 101 tests.
+- The report-assistant replay now covers the whole design table (18 cases:
+  F1-F18), all hand-authored against the recorded RPC shapes. No live key was
+  needed. Deno suite is 111 tests.
+- SQL suite flakiness fixed in `rpc_test.sql`: two blocks were tied to the
+  wall clock. The forecast median fixture now anchors on the most recent
+  Wednesday strictly before today (the profile window is `today - 8 weeks ..
+  today - 1`), and the loyalty online-cap fixture uses a fixed past daytime
+  window (`09:00 -> 11:30`) instead of `now() - 3 hours`, which crossed the
+  night-rate boundary and changed the fare with the hour of the run.
+- Run the SQL suite against a scratch database **inside `supabase-db`**
+  (the compose container, matching production grants): drop/create `sql_test`
+  and run `tests/run.sh` from a `postgres:17-alpine` client on the
+  `parking_management_default` network. A standalone `supabase/postgres`
+  container gets the image's default grants (`authenticated` can SELECT every
+  new table), which fails the `payment_events` privilege test.
 - Still pending: rotate the exposed DeepSeek key (owner), the manual smokes
-  (payments/passes/damage/devices), the 10 remaining report-assistant replay
-  fixtures, the damage fixtures 10-16 (two-photo pairing, extra vehicles in
-  frame, photo caps), the `eval:live` tooling and the three hardware changes.
+  (payments/passes/damage/devices), the damage fixtures 10-16 (two-photo
+  pairing, extra vehicles in frame, photo caps), the `eval:live` tooling and
+  the three hardware changes.
 
 ## Device gateway backend (2026-11-18, `0128`-`0129`)
 

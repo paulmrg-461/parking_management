@@ -1,0 +1,100 @@
+{
+  "case": "case_16.json",
+  "question": "¿Cuánto descuento se dio en octubre?",
+  "locale": "es",
+  "today": "2026-11-10",
+  "timezone": "America/Bogota",
+  "currency": "COP",
+  "rpc_outputs": {
+    "report_revenue": {
+      "total": 6100000,
+      "pass_revenue": 400000,
+      "total_discounts": 85000,
+      "discounted_sessions": 34,
+      "by_day": [],
+      "by_category": [],
+      "by_payment": [],
+      "pass_by_payment": []
+    }
+  },
+  "model_script": [
+    {
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "v1",
+          "name": "get_revenue_report",
+          "input": {
+            "start_date": "2026-10-01",
+            "end_date": "2026-10-31"
+          }
+        }
+      ],
+      "stop_reason": "tool_use"
+    },
+    {
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "submit",
+          "name": "submit_answer",
+          "input": {
+            "status": "answered",
+            "headline": "Se dieron {f1} de descuento en {f2} sesiones.",
+            "explanation": "",
+            "period_start": "2026-10-01",
+            "period_end": "2026-10-31",
+            "figures": [
+              {
+                "id": "f1",
+                "label": "Descuentos",
+                "unit": "money",
+                "op": "value",
+                "operands": [
+                  {
+                    "call_id": "v1",
+                    "path": "total_discounts"
+                  }
+                ]
+              },
+              {
+                "id": "f2",
+                "label": "Sesiones con descuento",
+                "unit": "count",
+                "op": "value",
+                "operands": [
+                  {
+                    "call_id": "v1",
+                    "path": "discounted_sessions"
+                  }
+                ]
+              }
+            ],
+            "caveats": []
+          }
+        }
+      ],
+      "stop_reason": "end_turn"
+    }
+  ],
+  "expected": {
+    "tools": [
+      {
+        "tool": "get_revenue_report"
+      }
+    ],
+    "answer": {
+      "status": "answered",
+      "figures": [
+        {
+          "id": "f1",
+          "value": 85000
+        },
+        {
+          "id": "f2",
+          "value": 34
+        }
+      ]
+    }
+  }
+}

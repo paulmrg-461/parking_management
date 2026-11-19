@@ -1,0 +1,173 @@
+{
+  "case": "case_14.json",
+  "question": "Revenue trend for the last five days",
+  "locale": "en",
+  "today": "2026-11-10",
+  "timezone": "America/Bogota",
+  "currency": "COP",
+  "rpc_outputs": {
+    "dashboard_trend": {
+      "start_date": "2026-11-06",
+      "end_date": "2026-11-10",
+      "days": [
+        {
+          "date": "2026-11-06",
+          "revenue": 120000,
+          "entries": 30,
+          "exits": 28
+        },
+        {
+          "date": "2026-11-07",
+          "revenue": 180000,
+          "entries": 44,
+          "exits": 40
+        },
+        {
+          "date": "2026-11-08",
+          "revenue": 90000,
+          "entries": 22,
+          "exits": 21
+        },
+        {
+          "date": "2026-11-09",
+          "revenue": 210000,
+          "entries": 51,
+          "exits": 48
+        },
+        {
+          "date": "2026-11-10",
+          "revenue": 875000,
+          "entries": 41,
+          "exits": 33
+        }
+      ]
+    }
+  },
+  "model_script": [
+    {
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "d1",
+          "name": "get_daily_trend",
+          "input": {
+            "days": 5
+          }
+        }
+      ],
+      "stop_reason": "tool_use"
+    },
+    {
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "submit",
+          "name": "submit_answer",
+          "input": {
+            "status": "answered",
+            "headline": "Daily revenue was {f1}, {f2}, {f3}, {f4} and {f5}.",
+            "explanation": "",
+            "period_start": "2026-11-06",
+            "period_end": "2026-11-10",
+            "figures": [
+              {
+                "id": "f1",
+                "label": "Revenue 2026-11-06",
+                "unit": "money",
+                "op": "value",
+                "operands": [
+                  {
+                    "call_id": "d1",
+                    "path": "days[date=2026-11-06].revenue"
+                  }
+                ]
+              },
+              {
+                "id": "f2",
+                "label": "Revenue 2026-11-07",
+                "unit": "money",
+                "op": "value",
+                "operands": [
+                  {
+                    "call_id": "d1",
+                    "path": "days[date=2026-11-07].revenue"
+                  }
+                ]
+              },
+              {
+                "id": "f3",
+                "label": "Revenue 2026-11-08",
+                "unit": "money",
+                "op": "value",
+                "operands": [
+                  {
+                    "call_id": "d1",
+                    "path": "days[date=2026-11-08].revenue"
+                  }
+                ]
+              },
+              {
+                "id": "f4",
+                "label": "Revenue 2026-11-09",
+                "unit": "money",
+                "op": "value",
+                "operands": [
+                  {
+                    "call_id": "d1",
+                    "path": "days[date=2026-11-09].revenue"
+                  }
+                ]
+              },
+              {
+                "id": "f5",
+                "label": "Revenue 2026-11-10",
+                "unit": "money",
+                "op": "value",
+                "operands": [
+                  {
+                    "call_id": "d1",
+                    "path": "days[date=2026-11-10].revenue"
+                  }
+                ]
+              }
+            ],
+            "caveats": []
+          }
+        }
+      ],
+      "stop_reason": "end_turn"
+    }
+  ],
+  "expected": {
+    "tools": [
+      {
+        "tool": "get_daily_trend"
+      }
+    ],
+    "answer": {
+      "status": "answered",
+      "figures": [
+        {
+          "id": "f1",
+          "value": 120000
+        },
+        {
+          "id": "f2",
+          "value": 180000
+        },
+        {
+          "id": "f3",
+          "value": 90000
+        },
+        {
+          "id": "f4",
+          "value": 210000
+        },
+        {
+          "id": "f5",
+          "value": 875000
+        }
+      ]
+    }
+  }
+}
