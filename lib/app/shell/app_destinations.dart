@@ -45,6 +45,7 @@ String _loyalty(AppLocalizations l) => l.navLoyalty;
 String _invoicing(AppLocalizations l) => l.navInvoicing;
 String _devices(AppLocalizations l) => l.navDevices;
 String _gate(AppLocalizations l) => l.navGate;
+String _gateSettings(AppLocalizations l) => l.gateSettingsTitle;
 
 const primaryDestinations = [
   AppDestination(homePath, _home, Icons.home_outlined, Icons.home),
@@ -77,6 +78,12 @@ const primaryDestinations = [
 ];
 
 const managementDestinations = [
+  AppDestination(
+    '/gate-settings',
+    _gateSettings,
+    Icons.settings_outlined,
+    Icons.settings,
+  ),
   AppDestination(
     '/devices',
     _devices,

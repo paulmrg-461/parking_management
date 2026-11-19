@@ -6228,4 +6228,78 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get gateReasonExitPaid => 'Exit already paid';
+
+  @override
+  String get gateSettingsTitle => 'Plate camera';
+
+  @override
+  String get gateModeLabel => 'Mode';
+
+  @override
+  String get gateModeAssist => 'Assist: the operator confirms every entry';
+
+  @override
+  String get gateModeAuto => 'Automatic: the camera registers the entry';
+
+  @override
+  String get gateModeAutoConfirm =>
+      'In automatic mode a spoofed plate can open a session without anyone reviewing it. Enable it?';
+
+  @override
+  String get gateMinConfidence => 'Minimum confidence';
+
+  @override
+  String get gateAutoConfidence => 'Confidence for automatic mode';
+
+  @override
+  String get gateMinVotes => 'Minimum reads';
+
+  @override
+  String get gateVoteWindow => 'Read window (s)';
+
+  @override
+  String get gateCooldown => 'Pause between events of the same plate (s)';
+
+  @override
+  String get gateDefaultCategory => 'Category for new plates';
+
+  @override
+  String get gateActingUser => 'System operator';
+
+  @override
+  String get gateCameraDirection => 'Camera direction';
+
+  @override
+  String get gateDirectionEntry => 'Entry';
+
+  @override
+  String get gateDirectionExit => 'Exit';
+
+  @override
+  String get gateDirectionMissing => 'No direction assigned';
+
+  @override
+  String get gateSave => 'Save';
+
+  @override
+  String get gateSaved => 'Settings saved';
+
+  @override
+  String get gateNoCamerasTitle => 'No cameras registered';
+
+  @override
+  String get gateNoCamerasBody =>
+      'Register a camera in Devices and assign it entry or exit.';
+
+  @override
+  String get gateGoToDevices => 'Go to Devices';
+
+  @override
+  String get gateSelectOption => 'Unassigned';
+
+  @override
+  String get gateModeAssistShort => 'Assist';
+
+  @override
+  String get gateModeAutoShort => 'Automatic';
 }

@@ -120,6 +120,24 @@ void main() {
     expect(find.text('checkout ABC123'), findsOneWidget);
   });
 
+  testWidgets('an admin sees the settings action and it fires', (tester) async {
+    var opened = false;
+    await tester.pumpWidget(
+      testApp(
+        BlocProvider(
+          create: (_) => LprInboxCubit(FakeLprRepository()),
+          child: GatePage(
+            online: () async => true,
+            onSettings: () => opened = true,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('gate_settings_action')));
+    expect(opened, isTrue);
+  });
+
   testWidgets('meets the tap-target and label guidelines', (tester) async {
     final handle = tester.ensureSemantics();
     await tester.pumpWidget(gate(FakeLprRepository()));

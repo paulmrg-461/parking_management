@@ -3,6 +3,8 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parking_management/core/error/failure.dart';
 import 'package:parking_management/features/lpr/domain/commands/confirm_lpr_entry.dart';
+import 'package:parking_management/features/lpr/domain/commands/lpr_settings_update.dart';
+import 'package:parking_management/features/lpr/domain/entities/lpr_settings.dart';
 import 'package:parking_management/features/lpr/infrastructure/lpr_remote_data_source.dart';
 
 void main() {
@@ -97,5 +99,50 @@ void main() {
       const ConfirmLprEntry(eventId: 4),
     );
     expect(session.id, 88);
+  });
+}
+
+void settingsTests() {
+  test('settings maps the payload and cameras', () async {
+    final remote = SupabaseLprRemoteDataSource((name, params) async {
+      expect(name, 'get_lpr_settings');
+      return {
+        'mode': 'assist',
+        'min_confidence': 0.8,
+        'auto_confidence': 0.92,
+        'min_votes': 3,
+        'vote_window_seconds': 8,
+        'cooldown_seconds': 120,
+        'cameras': [],
+      };
+    }, (path) async => Uint8List(0));
+    final settings = await remote.settings();
+    expect(settings.mode.name, 'assist');
+    expect(settings.cameras, isEmpty);
+  });
+
+  test('saveSettings sends only the provided fields', () async {
+    Map<String, dynamic>? sent;
+    final remote = SupabaseLprRemoteDataSource((name, params) async {
+      sent = params;
+      return {'mode': 'auto', 'min_votes': 3};
+    }, (path) async => Uint8List(0));
+    await remote.saveSettings(
+      const LprSettingsUpdate(mode: LprMode.auto, actingUserId: 7),
+    );
+    expect(sent?['p_mode'], 'auto');
+    expect(sent?['p_acting_user_id'], 7);
+    expect(sent?['p_min_votes'], isNull);
+  });
+
+  test('setCameraDirection sends the device and direction', () async {
+    Map<String, dynamic>? sent;
+    final remote = SupabaseLprRemoteDataSource((name, params) async {
+      sent = params;
+      return {'device_id': 4, 'direction': 'exit'};
+    }, (path) async => Uint8List(0));
+    await remote.setCameraDirection(4, 'exit');
+    expect(sent?['p_device_id'], 4);
+    expect(sent?['p_direction'], 'exit');
   });
 }

@@ -53,6 +53,12 @@ void main() {
       expect(canAccess(UserRole.operator, '/gate'), isTrue);
     });
 
+    test('Failure: only admins open the gate settings', () {
+      expect(canAccess(UserRole.operator, '/gate-settings'), isFalse);
+      expect(canAccess(UserRole.admin, '/gate-settings'), isTrue);
+      expect(authRedirect(_as(UserRole.operator), '/gate-settings'), '/');
+    });
+
     test('Success: operators run the reservations board', () {
       expect(authRedirect(_as(UserRole.operator), '/reservations'), isNull);
       expect(canAccess(UserRole.operator, '/reservations'), isTrue);

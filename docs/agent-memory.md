@@ -277,9 +277,16 @@ until the edge service exists.
   the bottom bar is capped at four routes.
 - `0134` lets `confirm_lpr_entry` fall back to the lot's default category, so
   an unknown plate can be confirmed from the dialog without a category picker.
-- Still to build: the `/gate-settings` page and its cubit (task 6.1/6.3), the
-  `edge/lpr` service (task 7) and the docs pass (task 8). Tasks 1.1-1.4,
-  2.1-2.4, 3.1-3.4, 4.1-4.5 and 5.1-5.3 are checked.
+- `/gate-settings` shipped: `LprSettings`/`LprCamera`, the settings update
+  command, `get_lpr_settings`/`set_lpr_settings`/`set_lpr_camera_direction`
+  on the data source, the `LprSettingsCubit` (four states plus `NoCameras`,
+  single-flight saves, direction reload) and the admin page (mode with the
+  auto confirmation, two confidence sliders, three steppers, category/user
+  pickers, per-camera direction, save). The page creates its three cubits so
+  the router stays free of deferred-heavy imports; the route is admin-only
+  and the drawer entry is "Cámara de placas".
+- Still to build: the `edge/lpr` service (task 7) and the docs pass (task 8).
+  Tasks 1.1-1.4, 2.1-2.4, 3.1-3.4, 4.1-4.5, 5.1-5.3 and 6.1-6.4 are checked.
 
 ## Damage comparison backend (2026-11-18, `0127`)
 

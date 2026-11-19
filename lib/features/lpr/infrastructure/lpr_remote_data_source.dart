@@ -4,7 +4,9 @@ import '../../../core/network/supabase_error_mapper.dart';
 import '../../check_in/domain/entities/parking_session.dart';
 import '../../check_in/infrastructure/models/parking_session_dto.dart';
 import '../domain/commands/confirm_lpr_entry.dart';
+import '../domain/commands/lpr_settings_update.dart';
 import '../domain/entities/lpr_event.dart';
+import '../domain/entities/lpr_settings.dart';
 import '../domain/repositories/lpr_repository.dart';
 
 typedef LprRpc = Future<dynamic> Function(
@@ -26,6 +28,12 @@ abstract class LprRemoteDataSource {
   Future<void> dismiss(int eventId, {String? note});
 
   Future<Uint8List> snapshot(String path);
+
+  Future<LprSettings> settings();
+
+  Future<LprSettings> saveSettings(LprSettingsUpdate update);
+
+  Future<void> setCameraDirection(int deviceId, String direction);
 }
 
 class SupabaseLprRemoteDataSource implements LprRemoteDataSource {
@@ -85,6 +93,47 @@ class SupabaseLprRemoteDataSource implements LprRemoteDataSource {
       throw mapSupabaseError(error);
     }
   }
+
+  @override
+  Future<LprSettings> settings() async {
+    try {
+      final data = await _rpc('get_lpr_settings', {});
+      return LprSettings.fromJson(Map<String, dynamic>.from(data as Map));
+    } catch (error) {
+      throw mapSupabaseError(error);
+    }
+  }
+
+  @override
+  Future<LprSettings> saveSettings(LprSettingsUpdate update) async {
+    try {
+      final data = await _rpc('set_lpr_settings', {
+        'p_mode': update.mode?.name,
+        'p_min_confidence': update.minConfidence,
+        'p_auto_confidence': update.autoConfidence,
+        'p_min_votes': update.minVotes,
+        'p_vote_window_seconds': update.voteWindowSeconds,
+        'p_cooldown_seconds': update.cooldownSeconds,
+        'p_default_category_id': update.defaultCategoryId,
+        'p_acting_user_id': update.actingUserId,
+      });
+      return LprSettings.fromJson(Map<String, dynamic>.from(data as Map));
+    } catch (error) {
+      throw mapSupabaseError(error);
+    }
+  }
+
+  @override
+  Future<void> setCameraDirection(int deviceId, String direction) async {
+    try {
+      await _rpc('set_lpr_camera_direction', {
+        'p_device_id': deviceId,
+        'p_direction': direction,
+      });
+    } catch (error) {
+      throw mapSupabaseError(error);
+    }
+  }
 }
 
 class LprRepositoryImpl implements LprRepository {
@@ -112,4 +161,17 @@ class LprRepositoryImpl implements LprRepository {
 
   @override
   Future<Uint8List> snapshot(String path) => _remote.snapshot(path);
+
+  @override
+  Future<LprSettings> settings() => _remote.settings();
+
+  @override
+  Future<LprSettings> saveSettings(LprSettingsUpdate update) =>
+      _remote.saveSettings(update);
+
+  @override
+  Future<void> setCameraDirection({
+    required int deviceId,
+    required String direction,
+  }) => _remote.setCameraDirection(deviceId, direction);
 }

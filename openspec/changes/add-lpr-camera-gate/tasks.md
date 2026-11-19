@@ -37,10 +37,10 @@ Prerequisite: `add-device-gateway` is implemented (its tasks 1 to 6 done). Migra
 
 ## 6. Flutter: presentation, routing, l10n
 
-- [ ] 6.1 Write widget tests first: `gate_page_test.dart` (loaded cards show plate, reason text and icon; four states; exit card navigates to `/check-out?scan=ABC123` (assert with a `GoRouter` test double); confirm dialog lets the plate be edited and sends the edited value; confirming offline shows `gateNeedsConnection` and sends nothing; touch targets ≥ 48 dp; semantics label includes plate and reason), `gate_settings_page_test.dart` (auto mode asks for confirmation; cancel keeps assist; no cameras → call to action), router tests in `test/app_router_test.dart` (`/gate` allowed for operator, `/gate-settings` redirects an operator to `/`), notification route test (`lpr_*` → `/gate`).
-- [ ] 6.2 Add ARB keys of the design table to `app_es.arb` and `app_en.arb`, run `flutter gen-l10n`.
-- [ ] 6.3 Create `gate_page.dart`, `gate_settings_page.dart` and widgets; `lpr_module.dart`; `gate_settings_entry.dart`; modify `app_router.dart`, `route_access.dart`, `app_destinations.dart`, `injection.dart`, notification files.
-- [ ] 6.4 Acceptance: `flutter analyze` (0 errors/warnings), `flutter test`. DoD: UX audit note (4 states, a11y, tokens only, no hardcoded colors).
+- [x] 6.1 Write widget tests first: `gate_page_test.dart` (loaded cards show plate, reason text and icon; four states; exit card navigates to `/check-out?scan=ABC123` (assert with a `GoRouter` test double); confirm dialog lets the plate be edited and sends the edited value; confirming offline shows `gateNeedsConnection` and sends nothing; touch targets ≥ 48 dp; semantics label includes plate and reason), `gate_settings_page_test.dart` (auto mode asks for confirmation; cancel keeps assist; no cameras → call to action), router tests in `test/app_router_test.dart` (`/gate` allowed for operator, `/gate-settings` redirects an operator to `/`), notification route test (`lpr_*` → `/gate`).
+- [x] 6.2 Add ARB keys of the design table to `app_es.arb` and `app_en.arb`, run `flutter gen-l10n`.
+- [x] 6.3 Create `gate_page.dart`, `gate_settings_page.dart` and widgets; `lpr_module.dart`; `gate_settings_entry.dart`; modify `app_router.dart`, `route_access.dart`, `app_destinations.dart`, `injection.dart`, notification files.
+- [x] 6.4 Acceptance: `flutter analyze` (0 errors/warnings), `flutter test`. DoD: UX audit note (4 states, a11y, tokens only, no hardcoded colors).
 
 ## 7. Edge service `edge/lpr/` (NEW top-level directory; do not touch `lib/`)
 

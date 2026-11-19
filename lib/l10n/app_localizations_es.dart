@@ -6287,4 +6287,78 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get gateReasonExitPaid => 'Salida ya pagada';
+
+  @override
+  String get gateSettingsTitle => 'Cámara de placas';
+
+  @override
+  String get gateModeLabel => 'Modo';
+
+  @override
+  String get gateModeAssist => 'Asistido: el operador confirma cada entrada';
+
+  @override
+  String get gateModeAuto => 'Automático: la cámara registra la entrada';
+
+  @override
+  String get gateModeAutoConfirm =>
+      'En modo automático, una placa falsa puede abrir una sesión sin que nadie la revise. ¿Activarlo?';
+
+  @override
+  String get gateMinConfidence => 'Confianza mínima';
+
+  @override
+  String get gateAutoConfidence => 'Confianza para modo automático';
+
+  @override
+  String get gateMinVotes => 'Lecturas mínimas';
+
+  @override
+  String get gateVoteWindow => 'Ventana de lecturas (s)';
+
+  @override
+  String get gateCooldown => 'Pausa entre eventos de la misma placa (s)';
+
+  @override
+  String get gateDefaultCategory => 'Categoría para placas nuevas';
+
+  @override
+  String get gateActingUser => 'Operador del sistema';
+
+  @override
+  String get gateCameraDirection => 'Sentido de la cámara';
+
+  @override
+  String get gateDirectionEntry => 'Entrada';
+
+  @override
+  String get gateDirectionExit => 'Salida';
+
+  @override
+  String get gateDirectionMissing => 'Sin sentido asignado';
+
+  @override
+  String get gateSave => 'Guardar';
+
+  @override
+  String get gateSaved => 'Ajustes guardados';
+
+  @override
+  String get gateNoCamerasTitle => 'No hay cámaras registradas';
+
+  @override
+  String get gateNoCamerasBody =>
+      'Registra una cámara en Dispositivos y asígnale entrada o salida.';
+
+  @override
+  String get gateGoToDevices => 'Ir a Dispositivos';
+
+  @override
+  String get gateSelectOption => 'Sin asignar';
+
+  @override
+  String get gateModeAssistShort => 'Asistido';
+
+  @override
+  String get gateModeAutoShort => 'Automático';
 }

@@ -77,6 +77,11 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - Android release build: R8 keep rules for the optional ML Kit scripts.
 
 ### Added
+- **Gate settings (`/gate-settings`, admin)**: mode assist/auto with the
+  spoofing confirmation, the two confidence sliders, the votes/window/cooldown
+  steppers, the default category and system-operator pickers and each
+  camera's direction. Saves answer with the stored settings; the page creates
+  its three cubits so the router stays light. New strings in ES/EN.
 - **Gate inbox (`/gate`)**: the LPR feature now has its entity, repository,
   Supabase data source, a polling cubit (single-flight confirm/dismiss,
   timer cancelled on close) and a four-state page with skeleton cards, plate

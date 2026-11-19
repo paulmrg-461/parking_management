@@ -22,10 +22,13 @@ import 'widgets/lpr_event_card.dart';
 /// admins see it; confirming is a normal check-in performed by the signed-in
 /// operator.
 class GatePage extends StatefulWidget {
-  const GatePage({super.key, this.online});
+  const GatePage({super.key, this.online, this.onSettings});
 
   /// Test seam for the connectivity check.
   final Future<bool> Function()? online;
+
+  /// Opens `/gate-settings`; null hides the action (non-admins, tests).
+  final VoidCallback? onSettings;
 
   @override
   State<GatePage> createState() => _GatePageState();
@@ -84,7 +87,18 @@ class _GatePageState extends State<GatePage> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.gateTitle)),
+      appBar: AppBar(
+        title: Text(l10n.gateTitle),
+        actions: [
+          if (widget.onSettings case final open?)
+            IconButton(
+              key: const Key('gate_settings_action'),
+              tooltip: l10n.gateSettingsTitle,
+              onPressed: open,
+              icon: const Icon(Icons.settings_outlined),
+            ),
+        ],
+      ),
       body: BlocConsumer<LprInboxCubit, LprInboxState>(
         listenWhen: (previous, current) =>
             _submissionOf(current) is! SubmissionIdle,

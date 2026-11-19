@@ -10945,6 +10945,150 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Salida ya pagada'**
   String get gateReasonExitPaid;
+
+  /// No description provided for @gateSettingsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Cámara de placas'**
+  String get gateSettingsTitle;
+
+  /// No description provided for @gateModeLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Modo'**
+  String get gateModeLabel;
+
+  /// No description provided for @gateModeAssist.
+  ///
+  /// In es, this message translates to:
+  /// **'Asistido: el operador confirma cada entrada'**
+  String get gateModeAssist;
+
+  /// No description provided for @gateModeAuto.
+  ///
+  /// In es, this message translates to:
+  /// **'Automático: la cámara registra la entrada'**
+  String get gateModeAuto;
+
+  /// No description provided for @gateModeAutoConfirm.
+  ///
+  /// In es, this message translates to:
+  /// **'En modo automático, una placa falsa puede abrir una sesión sin que nadie la revise. ¿Activarlo?'**
+  String get gateModeAutoConfirm;
+
+  /// No description provided for @gateMinConfidence.
+  ///
+  /// In es, this message translates to:
+  /// **'Confianza mínima'**
+  String get gateMinConfidence;
+
+  /// No description provided for @gateAutoConfidence.
+  ///
+  /// In es, this message translates to:
+  /// **'Confianza para modo automático'**
+  String get gateAutoConfidence;
+
+  /// No description provided for @gateMinVotes.
+  ///
+  /// In es, this message translates to:
+  /// **'Lecturas mínimas'**
+  String get gateMinVotes;
+
+  /// No description provided for @gateVoteWindow.
+  ///
+  /// In es, this message translates to:
+  /// **'Ventana de lecturas (s)'**
+  String get gateVoteWindow;
+
+  /// No description provided for @gateCooldown.
+  ///
+  /// In es, this message translates to:
+  /// **'Pausa entre eventos de la misma placa (s)'**
+  String get gateCooldown;
+
+  /// No description provided for @gateDefaultCategory.
+  ///
+  /// In es, this message translates to:
+  /// **'Categoría para placas nuevas'**
+  String get gateDefaultCategory;
+
+  /// No description provided for @gateActingUser.
+  ///
+  /// In es, this message translates to:
+  /// **'Operador del sistema'**
+  String get gateActingUser;
+
+  /// No description provided for @gateCameraDirection.
+  ///
+  /// In es, this message translates to:
+  /// **'Sentido de la cámara'**
+  String get gateCameraDirection;
+
+  /// No description provided for @gateDirectionEntry.
+  ///
+  /// In es, this message translates to:
+  /// **'Entrada'**
+  String get gateDirectionEntry;
+
+  /// No description provided for @gateDirectionExit.
+  ///
+  /// In es, this message translates to:
+  /// **'Salida'**
+  String get gateDirectionExit;
+
+  /// No description provided for @gateDirectionMissing.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin sentido asignado'**
+  String get gateDirectionMissing;
+
+  /// No description provided for @gateSave.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardar'**
+  String get gateSave;
+
+  /// No description provided for @gateSaved.
+  ///
+  /// In es, this message translates to:
+  /// **'Ajustes guardados'**
+  String get gateSaved;
+
+  /// No description provided for @gateNoCamerasTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay cámaras registradas'**
+  String get gateNoCamerasTitle;
+
+  /// No description provided for @gateNoCamerasBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Registra una cámara en Dispositivos y asígnale entrada o salida.'**
+  String get gateNoCamerasBody;
+
+  /// No description provided for @gateGoToDevices.
+  ///
+  /// In es, this message translates to:
+  /// **'Ir a Dispositivos'**
+  String get gateGoToDevices;
+
+  /// No description provided for @gateSelectOption.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin asignar'**
+  String get gateSelectOption;
+
+  /// No description provided for @gateModeAssistShort.
+  ///
+  /// In es, this message translates to:
+  /// **'Asistido'**
+  String get gateModeAssistShort;
+
+  /// No description provided for @gateModeAutoShort.
+  ///
+  /// In es, this message translates to:
+  /// **'Automático'**
+  String get gateModeAutoShort;
 }
 
 class _AppLocalizationsDelegate
