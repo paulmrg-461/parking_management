@@ -77,6 +77,17 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - Android release build: R8 keep rules for the optional ML Kit scripts.
 
 ### Added
+- **Barrier issuing and manual open (`0137`-`0138`)**: check-in, paid-exit
+  and recognised-pass events open the paired barrier through one issuing
+  function that de-duplicates an in-flight command and records an expired one
+  (with an alert) when the barrier is offline; the `always` rule opens the
+  single enabled barrier on any session open/close, and an online-payments
+  hook reuses the paid-exit pairing. The triggers are wrapped so they never
+  fail the business transaction. Operators get `list_barriers` (config and
+  in-flight command), a reason-required manual open with offline/busy/rate
+  limits and admin alerts, command lookup/history; platform admins release
+  firmware with SHA/version validation. The live E2E drives heartbeat,
+  config, manual open, signed poll and ack end to end.
 - **Signed barrier commands**: Ed25519 signing in the gateway (`signing.ts`)
   over the versioned canonical message (including `hold_ms` and
   `max_open_s`), with the key only in the functions environment and a

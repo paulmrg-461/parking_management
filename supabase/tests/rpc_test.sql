@@ -17563,4 +17563,358 @@ begin
     end loop;
 end $$;
 
+
+-- ---------------------------------------------------------------------------
+-- barrier: issuing rules, triggers, manual open and firmware releases.
+-- ---------------------------------------------------------------------------
+create or replace function pg_temp.barrier_event(
+    p_device integer, p_direction text, p_status text, p_reason text,
+    p_session integer, p_plate text, p_confidence numeric, p_has_pass boolean)
+returns bigint
+language plpgsql
+as $$
+declare
+    event_id bigint;
+begin
+    insert into public.lpr_events (
+        lot_id, device_id, direction, plate, confidence, votes, status,
+        reason, session_id, has_pass
+    ) values (
+        1, p_device, p_direction, p_plate, p_confidence, 3, p_status,
+        p_reason, p_session, p_has_pass
+    ) returning id into event_id;
+    return event_id;
+end $$;
+
+do $$
+declare
+    entry_camera integer;
+    entry_barrier integer;
+    exit_camera integer;
+    exit_barrier integer;
+    vehicle integer;
+    session_id integer;
+    event_id bigint;
+    command jsonb;
+    command_id uuid;
+    commands integer;
+    admins integer;
+    notified integer;
+begin
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    entry_camera := (public.register_lot_device('camera', 'Cam entrada barrera') ->> 'id')::integer;
+    entry_barrier := (public.register_lot_device('barrier', 'Barrera entrada') ->> 'id')::integer;
+    exit_camera := (public.register_lot_device('camera', 'Cam salida barrera') ->> 'id')::integer;
+    exit_barrier := (public.register_lot_device('barrier', 'Barrera salida') ->> 'id')::integer;
+    perform set_config('app.bar_entry_cam', entry_camera::text, true);
+    perform set_config('app.bar_entry', entry_barrier::text, true);
+    perform set_config('app.bar_exit_cam', exit_camera::text, true);
+    perform set_config('app.bar_exit', exit_barrier::text, true);
+    update public.lot_devices set last_seen_at = now()
+     where id in (entry_barrier, exit_barrier);
+    perform public.set_barrier_config(
+        p_device_id => entry_barrier,
+        p_direction => 'entry',
+        p_camera_device_id => entry_camera,
+        p_open_on_checkin => 'lpr_only',
+        p_open_for_pass_entry => false
+    );
+    perform public.set_barrier_config(
+        p_device_id => exit_barrier,
+        p_direction => 'exit',
+        p_camera_device_id => exit_camera,
+        p_open_on_paid_exit => 'lpr_only'
+    );
+    insert into public.vehicles (plate, category_id)
+    select 'BAR' || lpad(n::text, 3, '0'),
+           (select id from public.categories where lot_id = 1 and name = 'LPR car')
+      from generate_series(100, 110) as n;
+    select id into vehicle from public.vehicles where plate = 'BAR100';
+
+    -- check-in event opens the paired entry barrier
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    values (vehicle, 1, 1, now(), 'open') returning id into session_id;
+    event_id := pg_temp.barrier_event(
+        entry_camera, 'entry', 'done', null, session_id, 'BAR100', 0.95, false);
+    select count(*), min(id::text)::uuid into commands, command_id
+      from public.barrier_commands where device_id = entry_barrier;
+    if commands <> 1 then
+        raise exception 'a check-in event created % commands', commands;
+    end if;
+    if (select c.source from public.barrier_commands c where c.id = command_id) <> 'checkin'
+       or (select c.session_id from public.barrier_commands c where c.id = command_id) <> session_id then
+        raise exception 'the check-in command has the wrong source or session';
+    end if;
+    -- Re-deciding the same event returns the same open command.
+    update public.lpr_events set status = 'confirmed' where id = event_id;
+    select count(*) into commands from public.barrier_commands
+     where device_id = entry_barrier;
+    if commands <> 1 then
+        raise exception 'a duplicate trigger created a second command (%)', commands;
+    end if;
+
+    -- exit_unpaid never opens; exit_paid does
+    event_id := pg_temp.barrier_event(
+        exit_camera, 'exit', 'pending', 'exit_unpaid', session_id, 'BAR100', 0.95, false);
+    if exists (select 1 from public.barrier_commands where device_id = exit_barrier) then
+        raise exception 'an unpaid exit opened the barrier';
+    end if;
+    event_id := pg_temp.barrier_event(
+        exit_camera, 'exit', 'done', 'exit_paid', session_id, 'BAR100', 0.95, false);
+    select count(*) into commands from public.barrier_commands
+     where device_id = exit_barrier and source = 'paid_exit';
+    if commands <> 1 then
+        raise exception 'a paid exit did not open the barrier';
+    end if;
+
+    -- a blacklisted or duplicate event never opens
+    delete from public.barrier_commands where device_id = entry_barrier;
+    perform pg_temp.barrier_event(
+        entry_camera, 'entry', 'blocked', 'blacklisted', null, 'BAR101', 0.95, false);
+    perform pg_temp.barrier_event(
+        entry_camera, 'entry', 'pending', 'duplicate_session', session_id, 'BAR100', 0.95, false);
+    if exists (select 1 from public.barrier_commands where device_id = entry_barrier) then
+        raise exception 'a blocked or duplicate event opened the barrier';
+    end if;
+
+    -- pass holder: opt-in and confidence
+    delete from public.barrier_commands where device_id = entry_barrier;
+    perform pg_temp.barrier_event(
+        entry_camera, 'entry', 'pending', 'assist_mode', null, 'BAR102', 0.96, true);
+    if exists (select 1 from public.barrier_commands where device_id = entry_barrier) then
+        raise exception 'a pass opened the barrier without the opt-in';
+    end if;
+    perform public.set_barrier_config(
+        p_device_id => entry_barrier, p_open_for_pass_entry => true);
+    perform pg_temp.barrier_event(
+        entry_camera, 'entry', 'pending', 'assist_mode', null, 'BAR103', 0.90, true);
+    if exists (select 1 from public.barrier_commands where device_id = entry_barrier) then
+        raise exception 'a low-confidence pass opened the barrier';
+    end if;
+    perform pg_temp.barrier_event(
+        entry_camera, 'entry', 'pending', 'assist_mode', null, 'BAR104', 0.96, true);
+    if not exists (
+        select 1 from public.barrier_commands
+         where device_id = entry_barrier and source = 'pass_recognised'
+    ) then
+        raise exception 'a recognised pass did not open the barrier';
+    end if;
+
+    -- closing a session with a waiting exit event opens the paid exit
+    delete from public.barrier_commands where device_id = exit_barrier;
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    values ((select id from public.vehicles where plate = 'BAR105'), 1, 1,
+            now() - interval '1 hour', 'open')
+    returning id into session_id;
+    perform pg_temp.barrier_event(
+        exit_camera, 'exit', 'pending', 'exit_unpaid', session_id, 'BAR105', 0.95, false);
+    update public.parking_sessions
+       set status = 'closed', exit_time = now()
+     where id = session_id;
+    if not exists (
+        select 1 from public.barrier_commands
+         where device_id = exit_barrier and source = 'paid_exit'
+    ) then
+        raise exception 'closing the session did not open the paid exit';
+    end if;
+
+    -- 'always' opens the single entry barrier on any session insert
+    delete from public.barrier_commands where device_id = entry_barrier;
+    perform public.set_barrier_config(
+        p_device_id => entry_barrier, p_open_on_checkin => 'always');
+    insert into public.parking_sessions (vehicle_id, operator_id, lot_id, entry_time, status)
+    values ((select id from public.vehicles where plate = 'BAR106'), 1, 1, now(), 'open');
+    if not exists (
+        select 1 from public.barrier_commands
+         where device_id = entry_barrier and source = 'checkin'
+    ) then
+        raise exception 'the always rule did not open the entry barrier';
+    end if;
+
+    -- offline barrier records an expired command and alerts
+    delete from public.barrier_commands where device_id = entry_barrier;
+    update public.lot_devices set last_seen_at = null where id = entry_barrier;
+    perform pg_temp.barrier_event(
+        entry_camera, 'entry', 'done', null,
+        (select id from public.parking_sessions where vehicle_id =
+            (select id from public.vehicles where plate = 'BAR100') order by id desc limit 1),
+        'BAR100', 0.95, false);
+    if not exists (
+        select 1 from public.barrier_commands
+         where device_id = entry_barrier and status = 'expired'
+           and result ->> 'error' = 'offline'
+    ) then
+        raise exception 'an offline barrier did not record an expired command';
+    end if;
+    select count(distinct lm.user_id) into notified
+      from public.lot_members lm
+      join public.users u on u.id = lm.user_id
+     where lm.lot_id = 1 and u.is_active;
+    if (select count(distinct n.user_id) from public.notifications n
+         where n.dedupe_key like 'barrier_command_failed:%') < 1 then
+        raise exception 'an offline command did not notify the members';
+    end if;
+    update public.lot_devices set last_seen_at = now() where id = entry_barrier;
+
+    -- the rule 'never' blocks the event
+    delete from public.barrier_commands where device_id = exit_barrier;
+    perform public.set_barrier_config(
+        p_device_id => exit_barrier, p_open_on_paid_exit => 'never');
+    perform pg_temp.barrier_event(
+        exit_camera, 'exit', 'done', 'exit_paid', null, 'BAR107', 0.95, false);
+    if exists (select 1 from public.barrier_commands where device_id = exit_barrier) then
+        raise exception 'the never rule did not block the paid exit';
+    end if;
+    perform public.set_barrier_config(
+        p_device_id => exit_barrier, p_open_on_paid_exit => 'lpr_only');
+    perform set_config('request.jwt.claim.sub', '', true);
+end $$;
+
+-- barrier: manual open, listing, firmware release and grants
+do $$
+declare
+    entry_barrier integer := current_setting('app.bar_entry')::integer;
+    exit_barrier integer := current_setting('app.bar_exit')::integer;
+    response jsonb;
+    command_id uuid;
+    admins integer;
+    notified integer;
+begin
+    delete from public.barrier_commands where lot_id = 1;
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', true);
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    if not exists (
+        select 1 from jsonb_array_elements(public.list_barriers()) item
+         where (item ->> 'device_id')::integer = entry_barrier
+           and item -> 'config' ->> 'direction' = 'entry'
+    ) then
+        raise exception 'list_barriers did not expose the barrier config';
+    end if;
+    response := public.request_manual_barrier_open(
+        entry_barrier, '  Cliente sin ticket  ');
+    command_id := (response ->> 'command_id')::uuid;
+    if (select source from public.barrier_commands where id = command_id) <> 'manual'
+       or (select requested_by from public.barrier_commands where id = command_id) <> 2
+       or (select reason from public.barrier_commands where id = command_id) <> 'Cliente sin ticket' then
+        raise exception 'the manual command was not recorded correctly';
+    end if;
+    select count(distinct lm.user_id) into admins
+      from public.lot_members lm
+      join public.users u on u.id = lm.user_id
+     where lm.lot_id = 1 and u.is_active and lm.role = 'admin';
+    select count(distinct n.user_id) into notified
+      from public.notifications n
+     where n.dedupe_key like 'barrier_manual_open:' || command_id || ':%';
+    if notified <> admins then
+        raise exception 'the manual open notified % of % admins', notified, admins;
+    end if;
+    -- busy while the command is open
+    begin
+        perform public.request_manual_barrier_open(entry_barrier, 'Otra vez');
+        raise exception 'a second manual open was accepted while busy';
+    exception when others then
+        if sqlerrm not like '%BarrierBusyError%' then raise; end if;
+    end;
+    -- offline
+    update public.lot_devices set last_seen_at = null where id = entry_barrier;
+    begin
+        perform public.request_manual_barrier_open(entry_barrier, 'Sin conexión');
+        raise exception 'an offline barrier accepted a manual open';
+    exception when others then
+        if sqlerrm not like '%BarrierOfflineError%' then raise; end if;
+    end;
+    update public.lot_devices set last_seen_at = now() where id = entry_barrier;
+    -- reason length
+    begin
+        perform public.request_manual_barrier_open(entry_barrier, ' x ');
+        raise exception 'a short reason was accepted';
+    exception when others then
+        if sqlerrm not like '%BarrierReasonRequiredError%' then raise; end if;
+    end;
+    -- foreign lot
+    perform set_config('request.headers',
+        jsonb_build_object('x-lot-id', current_setting('app.pricing_lot'))::text,
+        true);
+    begin
+        perform public.request_manual_barrier_open(entry_barrier, 'Placa ajena');
+        raise exception 'a foreign lot opened the barrier';
+    exception when others then
+        if sqlerrm not like '%DeviceNotFoundError%' then raise; end if;
+    end;
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+
+    -- command lookup and history
+    response := public.get_barrier_command(command_id);
+    if response ->> 'requested_by_name' is null then
+        raise exception 'the command did not include the operator name';
+    end if;
+    if jsonb_array_length(public.list_barrier_commands(entry_barrier, 10)) < 1 then
+        raise exception 'the command history is empty';
+    end if;
+    begin
+        perform public.get_barrier_command(gen_random_uuid());
+        raise exception 'an unknown command was found';
+    exception when others then
+        if sqlerrm not like '%BarrierCommandNotFoundError%' then raise; end if;
+    end;
+
+    -- rate limit: 10 manual commands in the last hour
+    delete from public.barrier_commands where lot_id = 1;
+    for i in 1 .. 10 loop
+        perform public.barrier_issue_command(
+            1, entry_barrier, 'manual', 'Razón ' || i, null, null, 2);
+        update public.barrier_commands set status = 'executed'
+         where device_id = entry_barrier and status in ('queued', 'delivered');
+    end loop;
+    begin
+        perform public.request_manual_barrier_open(entry_barrier, 'Once');
+        raise exception 'the 11th manual open in an hour was accepted';
+    exception when others then
+        if sqlerrm not like '%BarrierRateLimitedError%' then raise; end if;
+    end;
+
+    -- firmware release (platform admin only)
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+    response := public.release_device_firmware(
+        'barrier', '2.0.0', repeat('d', 64), 2048, 'barrier/2.0.0.bin', 1);
+    if response ->> 'version' <> '2.0.0' then
+        raise exception 'the firmware was not released: %', response;
+    end if;
+    begin
+        perform public.release_device_firmware(
+            'barrier', '2.0.0', repeat('d', 64), 2048, 'barrier/2.0.0.bin', 1);
+        raise exception 'a duplicate firmware version was accepted';
+    exception when others then
+        if sqlerrm not like '%ConflictError%' then raise; end if;
+    end;
+    begin
+        perform public.release_device_firmware(
+            'barrier', '2.0.1', 'short', 2048, 'barrier/2.0.1.bin', 1);
+        raise exception 'an invalid hash was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', true);
+    begin
+        perform public.release_device_firmware(
+            'barrier', '2.0.2', repeat('d', 64), 2048, 'barrier/2.0.2.bin', 1);
+        raise exception 'an operator released firmware';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+
+    -- job functions stay service-role only
+    if has_function_privilege('authenticated',
+        'public.barrier_issue_command(integer, integer, text, text, integer, bigint, integer)',
+        'execute') then
+        raise exception 'authenticated can issue barrier commands';
+    end if;
+    if has_function_privilege('anon',
+        'public.barrier_request_exit_open(integer, text)', 'execute') then
+        raise exception 'anon can call the exit hook';
+    end if;
+    perform set_config('request.jwt.claim.sub', '', true);
+end $$;
+
 rollback;

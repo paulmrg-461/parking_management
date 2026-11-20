@@ -368,9 +368,26 @@ barrier are untouched.
 - The live device E2E now registers a barrier, sets its config, reads
   `/v1/barrier/config` and polls `commands/next` (204) — proving the key is
   loaded. Deno suite 179 tests.
-- Next: `barrier_issue_command` + the triggers, the operator RPCs (manual
-  open, list/history), the Flutter `/barrier` page and the ESP32 firmware.
-  Tasks 1.1-1.3, 2.2 and 4.1-4.4 are checked.
+- `0137_barrier_issue.sql`: `barrier_issue_command` (dedupes an open command,
+  records `expired` + alerts when the barrier is offline), the single-barrier
+  helper for the `always` rule, the online-payments hook
+  (`barrier_request_exit_open`) and three triggers (`lpr_events` insert/status,
+  session close, session open), each wrapped so a broken barrier never fails
+  check-in/check-out. Rules: check-in event `done/confirmed` with a session,
+  exit `exit_paid`, pass only with the opt-in and confidence >= 0.95, never
+  for `exit_unpaid`, blacklist or duplicate session.
+- `0138_barrier_operator_rpcs.sql`: richer `list_barriers` (config, in-flight
+  and last command), `request_manual_barrier_open` (reason 3..200, online,
+  not busy, 10/user/hour, admins notified), `get_barrier_command`,
+  `list_barrier_commands` and `release_device_firmware` (platform admin,
+  SHA/version validation, `ConflictError` on duplicates).
+- The live device E2E now drives the whole barrier path: heartbeat → config →
+  manual open → signed poll (signature, hold/max_open) → ack `executed`.
+  SQL suite green over `0001`-`0138` on compose and the CI image, no
+  duplicate overloads.
+- Next: the Flutter `/barrier` page (status, manual open, history, admin
+  config), notification routing/l10n, then the ESP32 firmware and the docs
+  page. Tasks 1.1-1.3, 2.1-2.4, 3.1-3.4 and 4.1-4.4 are checked.
 
 ## Damage comparison backend (2026-11-18, `0127`)
 

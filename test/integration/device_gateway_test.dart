@@ -234,13 +234,28 @@ void main() {
         'p_direction': 'entry',
         'p_open_hold_ms': 1000,
       });
+      // A heartbeat marks the barrier online before a manual open.
+      final barrierBeat = await http
+          .post(
+            Uri.parse('$gateway/v1/heartbeat'),
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Device-Key': barrierKey,
+              'X-Device-Timestamp': '$now',
+              'X-Device-Seq': '1',
+            },
+            body: jsonEncode({'status': {'uptime_s': 1}}),
+          )
+          .timeout(const Duration(seconds: 15));
+      expect(barrierBeat.statusCode, 200);
+
       final barrierConfig = await http
           .get(
             Uri.parse('$gateway/v1/barrier/config'),
             headers: {
               'X-Device-Key': barrierKey,
               'X-Device-Timestamp': '$now',
-              'X-Device-Seq': '1',
+              'X-Device-Seq': '2',
             },
           )
           .timeout(const Duration(seconds: 15));
@@ -250,17 +265,51 @@ void main() {
       expect(configBody['open_hold_ms'], 1000);
       expect(configBody['command_ttl_s'], 30);
 
+      final manual = Map<String, dynamic>.from(
+        await client.rpc('request_manual_barrier_open', params: {
+          'p_device_id': barrierId,
+          'p_reason': 'E2E manual open',
+        }) as Map,
+      );
+      final commandId = manual['command_id'] as String;
+
       final poll = await http
           .get(
             Uri.parse('$gateway/v1/barrier/commands/next?wait=0'),
             headers: {
               'X-Device-Key': barrierKey,
               'X-Device-Timestamp': '$now',
-              'X-Device-Seq': '2',
+              'X-Device-Seq': '3',
             },
           )
           .timeout(const Duration(seconds: 15));
-      expect(poll.statusCode, 204);
+      expect(poll.statusCode, 200);
+      final polled = jsonDecode(poll.body) as Map<String, dynamic>;
+      final command = polled['command'] as Map<String, dynamic>;
+      expect(command['id'], commandId);
+      expect(command['hold_ms'], 1000);
+      expect(command['max_open_s'], 20);
+      expect((command['signature'] as String).isNotEmpty, isTrue);
+      expect((command['issued_at'] as int) > 0, isTrue);
+
+      final ack = await http
+          .post(
+            Uri.parse('$gateway/v1/barrier/commands/$commandId/ack'),
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Device-Key': barrierKey,
+              'X-Device-Timestamp': '$now',
+              'X-Device-Seq': '4',
+              'Idempotency-Key': commandId,
+            },
+            body: jsonEncode({'result': 'opened', 'open_ms': 1234}),
+          )
+          .timeout(const Duration(seconds: 15));
+      expect(ack.statusCode, 200);
+      expect(
+        (jsonDecode(ack.body) as Map<String, dynamic>)['status'],
+        'executed',
+      );
 
       final events = await client.rpc('list_device_events', params: {
         'p_device_id': deviceId,

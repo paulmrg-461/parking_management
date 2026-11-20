@@ -686,4 +686,10 @@ is the queue and the audit trail (source, nonce, status, deliveries, short
 TTL); `barrier_events` stores the device-reported events (unique per device and
 `client_ref`). The service-role RPCs deliver, acknowledge and record events;
 `expire_barrier_commands` and `purge_barrier_events(365)` run from the jobs.
-Signing and the issuing triggers are the next slice.
+`barrier_issue_command` is the only issuer (check-in, paid exit, recognised
+pass, manual, online-payment hook); it de-duplicates an open command and
+records an `expired` one (with a notification) when the device is offline. The
+three triggers are wrapped so they never roll back check-in/check-out.
+`request_manual_barrier_open` requires a reason, an online and idle barrier and
+allows ten opens per user per hour; `list_barriers` exposes the config and the
+in-flight command; `release_device_firmware` is platform-admin only.
