@@ -400,6 +400,26 @@ not shipped yet; the protocol, the schema, the gateway routes and the UI are
 in place and covered by SQL, Deno and widget tests plus a live end-to-end
 smoke that registers a camera and posts reads without any hardware.
 
+## 5h. Barrier control
+
+The barrier is a device like the camera: it authenticates with its own key,
+polls the gateway for commands and acknowledges them. The server decides to
+open it (check-in, paid exit, recognised pass, manual request) and the
+gateway signs the order with Ed25519; the firmware verifies the signature, the
+device id, the TTL and the replay state before energising the relay. The
+controller's safety devices keep the physical authority.
+
+```mermaid
+flowchart LR
+  ev[Check-in / paid exit / pass / manual] --> db[(barrier_commands)]
+  db -->|poll| gw[device-gateway /v1/barrier/*]
+  gw -->|sign Ed25519| b[ESP32 barrier]
+  b -->|ack + events| gw
+  gw --> db
+  ui[/barrier page/] -->|manual open + reason| db
+  db -->|alerts| notif[Notifications]
+```
+
 ## 6. Shifts and cash
 
 An operator opens one shift per site (`unique (operator_id, lot_id)`), records

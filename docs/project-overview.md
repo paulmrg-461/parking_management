@@ -53,11 +53,11 @@ WhatsApp (manual or automated).
 | Secrets / PIN operations | Complete (scripts + runbook) | PIN rotation verified live |
 | E2E and CI | Complete (API + Flutter client + device protocol, real stack) | CI job `supabase-e2e`; local `integration_test/app_flow_test.dart` |
 
-Quality snapshot (2026-11-19, local stack): **1948 Flutter tests + 2 integration
-tests**, **158 Deno tests** (unit, replay, eval guards and the device gateway),
-SQL/RLS suite green over `0001`-`0134`, web builds green, analyzer with **0
-errors and 0 warnings** (only SDK deprecation infos from the pinned beta
-channel), restore drill green.
+Quality snapshot (2026-11-20, local stack): **1981 Flutter tests + 2 integration
+tests**, **179 Deno tests** (unit, replay, eval guards, the device gateway and
+the barrier signing/vector), SQL/RLS suite green over `0001`-`0138`, web
+builds green, analyzer with **0 errors and 0 warnings** (only SDK deprecation
+infos from the pinned beta channel), restore drill green.
 
 ## 3. Module map
 
@@ -91,6 +91,7 @@ the main data it touches.
 | `devices` | Per-lot hardware registry, key rotation, heartbeat/offline alerts, the `device-gateway` transport and the `/devices` admin screen | `lot_devices`, `device_events`, `register_lot_device`, `device_accept_request`, `device_heartbeat`, `notify_offline_devices` |
 | `damage_comparison` | Exit photos, advisory AI comparison of entry/exit photos, the `/damage-comparison` page and the human review | `damage_comparisons`, `damage_findings`, `add_exit_evidence`, `begin/get_damage_comparison`, `review_damage_finding`, `damage-compare` |
 | `lpr_gate` | Fixed plate camera: server-side voting and decisions, `/gate` inbox, assist/auto settings, snapshot evidence and the device protocol | `lpr_settings`, `lpr_camera_config`, `lpr_reads`, `lpr_events`, `device_ingest_lpr_read`, `confirm_lpr_entry`, `expire_lpr_events`, `device-gateway /v1/lpr/*` |
+| `barrier_control` | Boom barriers: configured rules, signed single-use commands, manual open with reason, device events and firmware releases | `barrier_config`, `barrier_commands`, `barrier_events`, `device_firmware`, `barrier_issue_command`, `request_manual_barrier_open`, `device-gateway /v1/barrier/*` |
 | `report_assistant` | Natural-language questions over the report RPCs with a verified figure/source for each number (`/report-assistant`) | `ai_requests`/`ai_limits`, `ai_budget_*`, `report-assistant` Edge Function, `report_revenue` and the other report RPCs |
 | `invoicing` | Fiscal issuer/resolutions, document outbox, credit notes and the admin list (`/invoicing`) | `fiscal_settings`, `fiscal_resolutions`, `fiscal_documents`, `issue_fiscal_document`, `list_fiscal_documents`, `request_credit_note`, `fiscal-dispatch` |
 | `loyalty` | Visit program, reward redemption, member corrections and the impact report (`/loyalty`) | `loyalty_accounts`, `loyalty_rewards`, `loyalty_visits`, `loyalty_adjustments`, `fare_reward_step`, `loyalty_plate_status`, `choose_loyalty_redemption`, `report_loyalty`, `list_loyalty_accounts` |
@@ -314,6 +315,21 @@ ordinary evidence photos once a session exists and are purged with the events.
 What remains is the Jetson reference service (`edge/lpr/`) and the physical
 validation; the protocol and the rest are covered by SQL, Deno, widget and
 end-to-end tests.
+
+## 7.13 Barrier control (software complete, firmware pending)
+
+The barrier is the physical enforcement of the system: it opens for a
+check-in, a paid exit, a recognised pass holder (opt-in) and a logged manual
+request. Every opening is a command row with its source, session, camera event,
+operator and reason, delivered at most three times inside a 30-second TTL and
+signed with Ed25519 by the gateway; the firmware verifies the signature, the
+device id, the TTL and the replay state before energising the relay. The
+triggers that issue commands never roll back a check-in or a check-out, an
+offline barrier records an expired command and alerts, and the operator page
+asks for a reason, notifies the admins, limits ten manual openings per user
+per hour and tracks the command until it executes. Admins configure the rules
+and timings; firmware releases are platform-admin only. What remains is the
+ESP32-S3 firmware and the physical commissioning.
 
 ## 7.10 Report assistant (implemented, inert without a key)
 

@@ -155,3 +155,15 @@ Order matters: stop the bleeding, then invalidate, then verify.
    logs for unexpected access.
 5. Review users: disable anything unknown (`/users`), rotate all PINs.
 6. Write down the incident: what leaked, window, actions, verification.
+
+## Barrier command signing key
+
+`BARRIER_COMMAND_SIGNING_KEY` is the Ed25519 private key (base64 PKCS#8) that
+signs every barrier command; it exists only in the `functions` environment.
+Generate a pair with `sh edge/barrier/tools/gen_command_key.sh`, keep the
+private half in `.env`, embed the public half in the firmware. Rotate by
+shipping firmware that trusts the new public key first (it accepts two during
+the window), then switch the server key and recreate the functions container
+(`docker compose up -d functions`; a restart does not reload env). A leaked
+key means an attacker who can also answer a device poll can forge openings:
+treat it as a live incident.

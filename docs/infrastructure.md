@@ -150,6 +150,12 @@ Recommended crons:
   desk closed. `evidence-archive` calls `purge_lpr_events(30)` daily and
   deletes the orphan snapshots it returns.
 
+- **Barrier commands**: `expire_barrier_commands()` in `jobs.sh` and the host
+  cron (set `JOBS_INTERVAL_SECONDS=30` on sites with barriers so an
+  undelivered command alerts quickly); `purge_barrier_events(365)` keeps a
+  year of openings. The `firmware` bucket is private and served only by the
+  gateway.
+
 ## 9. Scaling notes
 
 - The DB is the bottleneck for writes (capacity locks are per category).
