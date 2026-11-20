@@ -30,6 +30,7 @@ const operatorRoutes = {
   '/records',
   '/reservations',
   '/gate',
+  '/barrier',
   '/shift',
   '/scan',
   '/contact',

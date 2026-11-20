@@ -3740,5 +3740,82 @@
   "gateGoToDevices": "Ir a Dispositivos",
   "gateSelectOption": "Sin asignar",
   "gateModeAssistShort": "Asistido",
-  "gateModeAutoShort": "Automático"
+  "gateModeAutoShort": "Automático",
+  "navBarrier": "Barrera",
+  "barrierTitle": "Barreras",
+  "barrierEmptyTitle": "No hay barreras registradas",
+  "barrierEmptyBody": "Registra una barrera en Dispositivos para controlarla desde aquí.",
+  "barrierOpen": "Abrir barrera",
+  "barrierOpenTitle": "Abrir {name}",
+  "@barrierOpenTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "barrierReasonLabel": "Motivo (obligatorio)",
+  "barrierReasonHint": "Ej. Cliente sin ticket",
+  "barrierReasonInvalid": "Escribe un motivo de 3 a 200 caracteres",
+  "barrierOpenConfirm": "Se registrará quién la abrió y por qué, y los administradores serán avisados.",
+  "barrierOpening": "Abriendo…",
+  "barrierOpened": "Barrera abierta",
+  "barrierOpenFailed": "No se pudo abrir: {reason}",
+  "@barrierOpenFailed": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "barrierOffline": "Sin conexión: usa la llave o el control de la barrera",
+  "barrierDirectionEntry": "Entrada",
+  "barrierDirectionExit": "Salida",
+  "barrierLastCommand": "Última orden: {source} · {when}",
+  "@barrierLastCommand": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      },
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "barrierSourceCheckin": "Entrada registrada",
+  "barrierSourcePaidExit": "Salida pagada",
+  "barrierSourcePass": "Mensualidad reconocida",
+  "barrierSourceManual": "Manual",
+  "barrierSourceOnlinePayment": "Pago en línea",
+  "barrierStatusQueued": "En cola",
+  "barrierStatusDelivered": "Enviada",
+  "barrierStatusExecuted": "Ejecutada",
+  "barrierStatusRejected": "Rechazada",
+  "barrierStatusExpired": "Vencida",
+  "barrierConfigTitle": "Configuración de la barrera",
+  "barrierConfigCamera": "Cámara asociada",
+  "barrierConfigOpenOnCheckin": "Abrir al registrar entrada",
+  "barrierConfigOpenOnPaidExit": "Abrir al pagar la salida",
+  "barrierConfigRuleNever": "Nunca",
+  "barrierConfigRuleLpr": "Solo con cámara",
+  "barrierConfigRuleAlways": "Siempre",
+  "barrierConfigPass": "Abrir para mensualidades en la entrada",
+  "barrierConfigPassWarning": "Una placa falsa con una mensualidad vigente podría abrirla.",
+  "barrierConfigHold": "Duración del pulso (ms)",
+  "barrierConfigMaxOpen": "Máximo abierta (s)",
+  "barrierConfigPostClear": "Cierre tras pasar (ms)",
+  "barrierConfigTtl": "Vigencia de la orden (s)",
+  "barrierHistory": "Historial",
+  "barrierHistoryEmpty": "Sin órdenes registradas",
+  "barrierNeedsConnection": "Abrir la barrera necesita conexión",
+  "notifTypeBarrierManual": "Barrera abierta manualmente",
+  "notifTypeBarrierFailed": "La barrera no abrió",
+  "notifTypeBarrierFault": "Alerta en la barrera",
+  "errorBarrierReason": "Escribe un motivo de 3 a 200 caracteres",
+  "errorBarrierOffline": "La barrera no está en línea",
+  "errorBarrierBusy": "Ya hay una orden en curso para esta barrera",
+  "errorBarrierRate": "Demasiadas aperturas manuales; espera un momento",
+  "errorBarrierCommandNotFound": "La orden ya no existe",
+  "barrierSave": "Guardar",
+  "barrierSaved": "Configuración guardada"
 }

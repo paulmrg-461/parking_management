@@ -53,6 +53,12 @@ void main() {
       expect(canAccess(UserRole.operator, '/gate'), isTrue);
     });
 
+    test('Success: operators reach the barrier page', () {
+      expect(authRedirect(_as(UserRole.operator), '/barrier'), isNull);
+      expect(canAccess(UserRole.operator, '/barrier'), isTrue);
+      expect(canAccess(UserRole.admin, '/barrier'), isTrue);
+    });
+
     test('Failure: only admins open the gate settings', () {
       expect(canAccess(UserRole.operator, '/gate-settings'), isFalse);
       expect(canAccess(UserRole.admin, '/gate-settings'), isTrue);

@@ -11089,6 +11089,324 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Automático'**
   String get gateModeAutoShort;
+
+  /// No description provided for @navBarrier.
+  ///
+  /// In es, this message translates to:
+  /// **'Barrera'**
+  String get navBarrier;
+
+  /// No description provided for @barrierTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Barreras'**
+  String get barrierTitle;
+
+  /// No description provided for @barrierEmptyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay barreras registradas'**
+  String get barrierEmptyTitle;
+
+  /// No description provided for @barrierEmptyBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Registra una barrera en Dispositivos para controlarla desde aquí.'**
+  String get barrierEmptyBody;
+
+  /// No description provided for @barrierOpen.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir barrera'**
+  String get barrierOpen;
+
+  /// No description provided for @barrierOpenTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir {name}'**
+  String barrierOpenTitle(String name);
+
+  /// No description provided for @barrierReasonLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Motivo (obligatorio)'**
+  String get barrierReasonLabel;
+
+  /// No description provided for @barrierReasonHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Ej. Cliente sin ticket'**
+  String get barrierReasonHint;
+
+  /// No description provided for @barrierReasonInvalid.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe un motivo de 3 a 200 caracteres'**
+  String get barrierReasonInvalid;
+
+  /// No description provided for @barrierOpenConfirm.
+  ///
+  /// In es, this message translates to:
+  /// **'Se registrará quién la abrió y por qué, y los administradores serán avisados.'**
+  String get barrierOpenConfirm;
+
+  /// No description provided for @barrierOpening.
+  ///
+  /// In es, this message translates to:
+  /// **'Abriendo…'**
+  String get barrierOpening;
+
+  /// No description provided for @barrierOpened.
+  ///
+  /// In es, this message translates to:
+  /// **'Barrera abierta'**
+  String get barrierOpened;
+
+  /// No description provided for @barrierOpenFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo abrir: {reason}'**
+  String barrierOpenFailed(String reason);
+
+  /// No description provided for @barrierOffline.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin conexión: usa la llave o el control de la barrera'**
+  String get barrierOffline;
+
+  /// No description provided for @barrierDirectionEntry.
+  ///
+  /// In es, this message translates to:
+  /// **'Entrada'**
+  String get barrierDirectionEntry;
+
+  /// No description provided for @barrierDirectionExit.
+  ///
+  /// In es, this message translates to:
+  /// **'Salida'**
+  String get barrierDirectionExit;
+
+  /// No description provided for @barrierLastCommand.
+  ///
+  /// In es, this message translates to:
+  /// **'Última orden: {source} · {when}'**
+  String barrierLastCommand(String source, String when);
+
+  /// No description provided for @barrierSourceCheckin.
+  ///
+  /// In es, this message translates to:
+  /// **'Entrada registrada'**
+  String get barrierSourceCheckin;
+
+  /// No description provided for @barrierSourcePaidExit.
+  ///
+  /// In es, this message translates to:
+  /// **'Salida pagada'**
+  String get barrierSourcePaidExit;
+
+  /// No description provided for @barrierSourcePass.
+  ///
+  /// In es, this message translates to:
+  /// **'Mensualidad reconocida'**
+  String get barrierSourcePass;
+
+  /// No description provided for @barrierSourceManual.
+  ///
+  /// In es, this message translates to:
+  /// **'Manual'**
+  String get barrierSourceManual;
+
+  /// No description provided for @barrierSourceOnlinePayment.
+  ///
+  /// In es, this message translates to:
+  /// **'Pago en línea'**
+  String get barrierSourceOnlinePayment;
+
+  /// No description provided for @barrierStatusQueued.
+  ///
+  /// In es, this message translates to:
+  /// **'En cola'**
+  String get barrierStatusQueued;
+
+  /// No description provided for @barrierStatusDelivered.
+  ///
+  /// In es, this message translates to:
+  /// **'Enviada'**
+  String get barrierStatusDelivered;
+
+  /// No description provided for @barrierStatusExecuted.
+  ///
+  /// In es, this message translates to:
+  /// **'Ejecutada'**
+  String get barrierStatusExecuted;
+
+  /// No description provided for @barrierStatusRejected.
+  ///
+  /// In es, this message translates to:
+  /// **'Rechazada'**
+  String get barrierStatusRejected;
+
+  /// No description provided for @barrierStatusExpired.
+  ///
+  /// In es, this message translates to:
+  /// **'Vencida'**
+  String get barrierStatusExpired;
+
+  /// No description provided for @barrierConfigTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Configuración de la barrera'**
+  String get barrierConfigTitle;
+
+  /// No description provided for @barrierConfigCamera.
+  ///
+  /// In es, this message translates to:
+  /// **'Cámara asociada'**
+  String get barrierConfigCamera;
+
+  /// No description provided for @barrierConfigOpenOnCheckin.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir al registrar entrada'**
+  String get barrierConfigOpenOnCheckin;
+
+  /// No description provided for @barrierConfigOpenOnPaidExit.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir al pagar la salida'**
+  String get barrierConfigOpenOnPaidExit;
+
+  /// No description provided for @barrierConfigRuleNever.
+  ///
+  /// In es, this message translates to:
+  /// **'Nunca'**
+  String get barrierConfigRuleNever;
+
+  /// No description provided for @barrierConfigRuleLpr.
+  ///
+  /// In es, this message translates to:
+  /// **'Solo con cámara'**
+  String get barrierConfigRuleLpr;
+
+  /// No description provided for @barrierConfigRuleAlways.
+  ///
+  /// In es, this message translates to:
+  /// **'Siempre'**
+  String get barrierConfigRuleAlways;
+
+  /// No description provided for @barrierConfigPass.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir para mensualidades en la entrada'**
+  String get barrierConfigPass;
+
+  /// No description provided for @barrierConfigPassWarning.
+  ///
+  /// In es, this message translates to:
+  /// **'Una placa falsa con una mensualidad vigente podría abrirla.'**
+  String get barrierConfigPassWarning;
+
+  /// No description provided for @barrierConfigHold.
+  ///
+  /// In es, this message translates to:
+  /// **'Duración del pulso (ms)'**
+  String get barrierConfigHold;
+
+  /// No description provided for @barrierConfigMaxOpen.
+  ///
+  /// In es, this message translates to:
+  /// **'Máximo abierta (s)'**
+  String get barrierConfigMaxOpen;
+
+  /// No description provided for @barrierConfigPostClear.
+  ///
+  /// In es, this message translates to:
+  /// **'Cierre tras pasar (ms)'**
+  String get barrierConfigPostClear;
+
+  /// No description provided for @barrierConfigTtl.
+  ///
+  /// In es, this message translates to:
+  /// **'Vigencia de la orden (s)'**
+  String get barrierConfigTtl;
+
+  /// No description provided for @barrierHistory.
+  ///
+  /// In es, this message translates to:
+  /// **'Historial'**
+  String get barrierHistory;
+
+  /// No description provided for @barrierHistoryEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin órdenes registradas'**
+  String get barrierHistoryEmpty;
+
+  /// No description provided for @barrierNeedsConnection.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir la barrera necesita conexión'**
+  String get barrierNeedsConnection;
+
+  /// No description provided for @notifTypeBarrierManual.
+  ///
+  /// In es, this message translates to:
+  /// **'Barrera abierta manualmente'**
+  String get notifTypeBarrierManual;
+
+  /// No description provided for @notifTypeBarrierFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'La barrera no abrió'**
+  String get notifTypeBarrierFailed;
+
+  /// No description provided for @notifTypeBarrierFault.
+  ///
+  /// In es, this message translates to:
+  /// **'Alerta en la barrera'**
+  String get notifTypeBarrierFault;
+
+  /// No description provided for @errorBarrierReason.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe un motivo de 3 a 200 caracteres'**
+  String get errorBarrierReason;
+
+  /// No description provided for @errorBarrierOffline.
+  ///
+  /// In es, this message translates to:
+  /// **'La barrera no está en línea'**
+  String get errorBarrierOffline;
+
+  /// No description provided for @errorBarrierBusy.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya hay una orden en curso para esta barrera'**
+  String get errorBarrierBusy;
+
+  /// No description provided for @errorBarrierRate.
+  ///
+  /// In es, this message translates to:
+  /// **'Demasiadas aperturas manuales; espera un momento'**
+  String get errorBarrierRate;
+
+  /// No description provided for @errorBarrierCommandNotFound.
+  ///
+  /// In es, this message translates to:
+  /// **'La orden ya no existe'**
+  String get errorBarrierCommandNotFound;
+
+  /// No description provided for @barrierSave.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardar'**
+  String get barrierSave;
+
+  /// No description provided for @barrierSaved.
+  ///
+  /// In es, this message translates to:
+  /// **'Configuración guardada'**
+  String get barrierSaved;
 }
 
 class _AppLocalizationsDelegate

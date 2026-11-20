@@ -44,6 +44,8 @@ import '../../features/lpr/application/lpr_inbox_cubit.dart';
 import '../../features/lpr/domain/repositories/lpr_repository.dart';
 import '../../features/lpr/presentation/gate_page.dart';
 import '../../features/lpr/presentation/gate_settings_page.dart';
+import '../../features/barrier/application/barrier_cubit.dart';
+import '../../features/barrier/presentation/barrier_page.dart';
 import '../../features/damage_comparison/application/damage_comparison_cubit.dart';
 import '../../features/damage_comparison/presentation/damage_comparison_page.dart';
 import '../../features/pass_renewal/presentation/pass_renewal_page.dart';
@@ -366,6 +368,20 @@ GoRoute _homeRoute(AuthCubit auth) => GoRoute(
     GoRoute(
       path: 'gate-settings',
       builder: (context, state) => const GateSettingsPage(),
+    ),
+    GoRoute(
+      path: 'barrier',
+      builder: (context, state) => BlocProvider<BarrierCubit>(
+        create: (_) => serviceLocator<BarrierCubit>(),
+        child: Builder(
+          builder: (context) {
+            final auth = context.watch<AuthCubit>().state;
+            final admin = auth is AuthAuthenticated &&
+                auth.session.user.role == UserRole.admin;
+            return BarrierPage(isAdmin: admin);
+          },
+        ),
+      ),
     ),
     GoRoute(path: 'help', builder: (context, state) => const HelpPage()),
     GoRoute(

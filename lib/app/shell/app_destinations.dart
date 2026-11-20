@@ -46,6 +46,7 @@ String _invoicing(AppLocalizations l) => l.navInvoicing;
 String _devices(AppLocalizations l) => l.navDevices;
 String _gate(AppLocalizations l) => l.navGate;
 String _gateSettings(AppLocalizations l) => l.gateSettingsTitle;
+String _barrier(AppLocalizations l) => l.navBarrier;
 
 const primaryDestinations = [
   AppDestination(homePath, _home, Icons.home_outlined, Icons.home),
@@ -62,6 +63,12 @@ const primaryDestinations = [
     _gate,
     Icons.videocam_outlined,
     Icons.videocam,
+  ),
+  AppDestination(
+    '/barrier',
+    _barrier,
+    Icons.garage_outlined,
+    Icons.garage,
   ),
   AppDestination(
     '/notifications',

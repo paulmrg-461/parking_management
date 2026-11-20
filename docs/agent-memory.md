@@ -385,9 +385,16 @@ barrier are untouched.
   manual open → signed poll (signature, hold/max_open) → ack `executed`.
   SQL suite green over `0001`-`0138` on compose and the CI image, no
   duplicate overloads.
-- Next: the Flutter `/barrier` page (status, manual open, history, admin
-  config), notification routing/l10n, then the ESP32 firmware and the docs
-  page. Tasks 1.1-1.3, 2.1-2.4, 3.1-3.4 and 4.1-4.4 are checked.
+- Flutter `/barrier` shipped (`lib/features/barrier/`): entities/commands,
+  the repository and Supabase data source, the cubit (load/open with a 1 s
+  tracking poll for 40 tries, config save, history) and the page (status,
+  direction, offline hint, open-with-reason dialog, live-region tracking
+  banner, history sheet and the admin config sheet). Route `/barrier` for
+  operators, drawer entry `Barrera`, alerts routed there, ES/EN strings and
+  the error codes wired. The sheets take the cubit explicitly because the
+  root navigator is above the page's provider.
+- Remaining: the ESP32 firmware (`edge/barrier/`, tasks 6.x) and the physical
+  validation (7.x). Tasks 1.1-5.4 and 8.1-8.3 are checked.
 
 ## Damage comparison backend (2026-11-18, `0127`)
 

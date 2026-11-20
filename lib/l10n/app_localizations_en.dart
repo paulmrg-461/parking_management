@@ -6302,4 +6302,173 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get gateModeAutoShort => 'Automatic';
+
+  @override
+  String get navBarrier => 'Barrier';
+
+  @override
+  String get barrierTitle => 'Barriers';
+
+  @override
+  String get barrierEmptyTitle => 'No barriers registered';
+
+  @override
+  String get barrierEmptyBody =>
+      'Register a barrier under Devices to control it from here.';
+
+  @override
+  String get barrierOpen => 'Open barrier';
+
+  @override
+  String barrierOpenTitle(String name) {
+    return 'Open $name';
+  }
+
+  @override
+  String get barrierReasonLabel => 'Reason (required)';
+
+  @override
+  String get barrierReasonHint => 'e.g. Customer without ticket';
+
+  @override
+  String get barrierReasonInvalid => 'Enter a reason of 3 to 200 characters';
+
+  @override
+  String get barrierOpenConfirm =>
+      'Who opened it and why will be recorded, and admins will be notified.';
+
+  @override
+  String get barrierOpening => 'Opening…';
+
+  @override
+  String get barrierOpened => 'Barrier opened';
+
+  @override
+  String barrierOpenFailed(String reason) {
+    return 'Could not open: $reason';
+  }
+
+  @override
+  String get barrierOffline => 'Offline: use the barrier\'s key or remote';
+
+  @override
+  String get barrierDirectionEntry => 'Entry';
+
+  @override
+  String get barrierDirectionExit => 'Exit';
+
+  @override
+  String barrierLastCommand(String source, String when) {
+    return 'Last command: $source · $when';
+  }
+
+  @override
+  String get barrierSourceCheckin => 'Check-in';
+
+  @override
+  String get barrierSourcePaidExit => 'Paid exit';
+
+  @override
+  String get barrierSourcePass => 'Pass recognised';
+
+  @override
+  String get barrierSourceManual => 'Manual';
+
+  @override
+  String get barrierSourceOnlinePayment => 'Online payment';
+
+  @override
+  String get barrierStatusQueued => 'Queued';
+
+  @override
+  String get barrierStatusDelivered => 'Sent';
+
+  @override
+  String get barrierStatusExecuted => 'Executed';
+
+  @override
+  String get barrierStatusRejected => 'Rejected';
+
+  @override
+  String get barrierStatusExpired => 'Expired';
+
+  @override
+  String get barrierConfigTitle => 'Barrier settings';
+
+  @override
+  String get barrierConfigCamera => 'Paired camera';
+
+  @override
+  String get barrierConfigOpenOnCheckin => 'Open on check-in';
+
+  @override
+  String get barrierConfigOpenOnPaidExit => 'Open on paid exit';
+
+  @override
+  String get barrierConfigRuleNever => 'Never';
+
+  @override
+  String get barrierConfigRuleLpr => 'Camera only';
+
+  @override
+  String get barrierConfigRuleAlways => 'Always';
+
+  @override
+  String get barrierConfigPass => 'Open for pass holders at the entry';
+
+  @override
+  String get barrierConfigPassWarning =>
+      'A spoofed plate with a valid pass could open it.';
+
+  @override
+  String get barrierConfigHold => 'Pulse length (ms)';
+
+  @override
+  String get barrierConfigMaxOpen => 'Maximum open time (s)';
+
+  @override
+  String get barrierConfigPostClear => 'Close delay after passing (ms)';
+
+  @override
+  String get barrierConfigTtl => 'Command lifetime (s)';
+
+  @override
+  String get barrierHistory => 'History';
+
+  @override
+  String get barrierHistoryEmpty => 'No commands recorded';
+
+  @override
+  String get barrierNeedsConnection => 'Opening the barrier needs a connection';
+
+  @override
+  String get notifTypeBarrierManual => 'Barrier opened manually';
+
+  @override
+  String get notifTypeBarrierFailed => 'Barrier did not open';
+
+  @override
+  String get notifTypeBarrierFault => 'Barrier alert';
+
+  @override
+  String get errorBarrierReason => 'Enter a reason of 3 to 200 characters';
+
+  @override
+  String get errorBarrierOffline => 'The barrier is offline';
+
+  @override
+  String get errorBarrierBusy =>
+      'A command is already in progress for this barrier';
+
+  @override
+  String get errorBarrierRate => 'Too many manual openings; wait a moment';
+
+  @override
+  String get errorBarrierCommandNotFound => 'The command no longer exists';
+
+  @override
+  String get barrierSave => 'Save';
+
+  @override
+  String get barrierSaved => 'Settings saved';
 }

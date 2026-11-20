@@ -19,6 +19,16 @@ void main() {
     }
   });
 
+  test('Success: barrier alerts open the barrier page', () {
+    for (final type in [
+      'barrier_manual_open',
+      'barrier_command_failed',
+      'barrier_fault',
+    ]) {
+      expect(routeForNotification(_n(type)), '/barrier', reason: type);
+    }
+  });
+
   test('Success: shift and pass notifications open their screens', () {
     expect(routeForNotification(_n('shift_closed')), '/shift');
     expect(routeForNotification(_n('monthly_pass_renewed')), '/monthly-passes');

@@ -540,6 +540,9 @@ class _NotificationTile extends StatelessWidget {
         'online_payment' => l10n.notifTypeOnlinePayment,
         'online_payment_review' => l10n.notifTypeOnlinePaymentReview,
         'lpr_pending' || 'lpr_exit' || 'lpr_blacklisted' => l10n.gateTitle,
+        'barrier_manual_open' => l10n.notifTypeBarrierManual,
+        'barrier_command_failed' => l10n.notifTypeBarrierFailed,
+        'barrier_fault' => l10n.notifTypeBarrierFault,
         _ => l10n.notifTypeGeneric,
       };
 
@@ -557,6 +560,9 @@ class _NotificationTile extends StatelessWidget {
     'online_payment' => Icons.qr_code_2_outlined,
     'online_payment_review' => Icons.pending_actions_outlined,
     'lpr_pending' || 'lpr_exit' || 'lpr_blacklisted' => Icons.videocam_outlined,
+    'barrier_manual_open' ||
+    'barrier_command_failed' ||
+    'barrier_fault' => Icons.garage_outlined,
     _ => Icons.notifications,
   };
 }

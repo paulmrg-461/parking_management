@@ -20,6 +20,9 @@ String? routeForNotification(AppNotification notification) {
     'fiscal_document_failed' || 'fiscal_resolution_low' => '/invoicing',
     'device_offline' || 'device_online' || 'device_auth_failed' => '/devices',
     'lpr_pending' || 'lpr_exit' || 'lpr_blacklisted' => '/gate',
+    'barrier_manual_open' ||
+    'barrier_command_failed' ||
+    'barrier_fault' => '/barrier',
     _ => null,
   };
 }

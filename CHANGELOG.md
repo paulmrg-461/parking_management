@@ -77,6 +77,13 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - Android release build: R8 keep rules for the optional ML Kit scripts.
 
 ### Added
+- **Barrier page (`/barrier`)**: status and direction per barrier, an
+  offline hint, the reason-required manual open (3..200 chars) with a
+  live-region tracking banner (queued → executed / failed), the command
+  history sheet and the admin configuration sheet (direction, check-in and
+  paid-exit rules, pass opt-in with the spoofing warning, pulse/max-open/
+  close-delay/TTL). Operators reach it from the drawer; barrier alerts open
+  it. New ES/EN strings and error codes. 1981 Flutter tests.
 - **Barrier issuing and manual open (`0137`-`0138`)**: check-in, paid-exit
   and recognised-pass events open the paired barrier through one issuing
   function that de-duplicates an in-flight command and records an expired one

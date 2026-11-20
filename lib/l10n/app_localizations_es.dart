@@ -6361,4 +6361,174 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get gateModeAutoShort => 'Automático';
+
+  @override
+  String get navBarrier => 'Barrera';
+
+  @override
+  String get barrierTitle => 'Barreras';
+
+  @override
+  String get barrierEmptyTitle => 'No hay barreras registradas';
+
+  @override
+  String get barrierEmptyBody =>
+      'Registra una barrera en Dispositivos para controlarla desde aquí.';
+
+  @override
+  String get barrierOpen => 'Abrir barrera';
+
+  @override
+  String barrierOpenTitle(String name) {
+    return 'Abrir $name';
+  }
+
+  @override
+  String get barrierReasonLabel => 'Motivo (obligatorio)';
+
+  @override
+  String get barrierReasonHint => 'Ej. Cliente sin ticket';
+
+  @override
+  String get barrierReasonInvalid => 'Escribe un motivo de 3 a 200 caracteres';
+
+  @override
+  String get barrierOpenConfirm =>
+      'Se registrará quién la abrió y por qué, y los administradores serán avisados.';
+
+  @override
+  String get barrierOpening => 'Abriendo…';
+
+  @override
+  String get barrierOpened => 'Barrera abierta';
+
+  @override
+  String barrierOpenFailed(String reason) {
+    return 'No se pudo abrir: $reason';
+  }
+
+  @override
+  String get barrierOffline =>
+      'Sin conexión: usa la llave o el control de la barrera';
+
+  @override
+  String get barrierDirectionEntry => 'Entrada';
+
+  @override
+  String get barrierDirectionExit => 'Salida';
+
+  @override
+  String barrierLastCommand(String source, String when) {
+    return 'Última orden: $source · $when';
+  }
+
+  @override
+  String get barrierSourceCheckin => 'Entrada registrada';
+
+  @override
+  String get barrierSourcePaidExit => 'Salida pagada';
+
+  @override
+  String get barrierSourcePass => 'Mensualidad reconocida';
+
+  @override
+  String get barrierSourceManual => 'Manual';
+
+  @override
+  String get barrierSourceOnlinePayment => 'Pago en línea';
+
+  @override
+  String get barrierStatusQueued => 'En cola';
+
+  @override
+  String get barrierStatusDelivered => 'Enviada';
+
+  @override
+  String get barrierStatusExecuted => 'Ejecutada';
+
+  @override
+  String get barrierStatusRejected => 'Rechazada';
+
+  @override
+  String get barrierStatusExpired => 'Vencida';
+
+  @override
+  String get barrierConfigTitle => 'Configuración de la barrera';
+
+  @override
+  String get barrierConfigCamera => 'Cámara asociada';
+
+  @override
+  String get barrierConfigOpenOnCheckin => 'Abrir al registrar entrada';
+
+  @override
+  String get barrierConfigOpenOnPaidExit => 'Abrir al pagar la salida';
+
+  @override
+  String get barrierConfigRuleNever => 'Nunca';
+
+  @override
+  String get barrierConfigRuleLpr => 'Solo con cámara';
+
+  @override
+  String get barrierConfigRuleAlways => 'Siempre';
+
+  @override
+  String get barrierConfigPass => 'Abrir para mensualidades en la entrada';
+
+  @override
+  String get barrierConfigPassWarning =>
+      'Una placa falsa con una mensualidad vigente podría abrirla.';
+
+  @override
+  String get barrierConfigHold => 'Duración del pulso (ms)';
+
+  @override
+  String get barrierConfigMaxOpen => 'Máximo abierta (s)';
+
+  @override
+  String get barrierConfigPostClear => 'Cierre tras pasar (ms)';
+
+  @override
+  String get barrierConfigTtl => 'Vigencia de la orden (s)';
+
+  @override
+  String get barrierHistory => 'Historial';
+
+  @override
+  String get barrierHistoryEmpty => 'Sin órdenes registradas';
+
+  @override
+  String get barrierNeedsConnection => 'Abrir la barrera necesita conexión';
+
+  @override
+  String get notifTypeBarrierManual => 'Barrera abierta manualmente';
+
+  @override
+  String get notifTypeBarrierFailed => 'La barrera no abrió';
+
+  @override
+  String get notifTypeBarrierFault => 'Alerta en la barrera';
+
+  @override
+  String get errorBarrierReason => 'Escribe un motivo de 3 a 200 caracteres';
+
+  @override
+  String get errorBarrierOffline => 'La barrera no está en línea';
+
+  @override
+  String get errorBarrierBusy => 'Ya hay una orden en curso para esta barrera';
+
+  @override
+  String get errorBarrierRate =>
+      'Demasiadas aperturas manuales; espera un momento';
+
+  @override
+  String get errorBarrierCommandNotFound => 'La orden ya no existe';
+
+  @override
+  String get barrierSave => 'Guardar';
+
+  @override
+  String get barrierSaved => 'Configuración guardada';
 }

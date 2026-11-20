@@ -3264,5 +3264,82 @@
   "gateGoToDevices": "Go to Devices",
   "gateSelectOption": "Unassigned",
   "gateModeAssistShort": "Assist",
-  "gateModeAutoShort": "Automatic"
+  "gateModeAutoShort": "Automatic",
+  "navBarrier": "Barrier",
+  "barrierTitle": "Barriers",
+  "barrierEmptyTitle": "No barriers registered",
+  "barrierEmptyBody": "Register a barrier under Devices to control it from here.",
+  "barrierOpen": "Open barrier",
+  "barrierOpenTitle": "Open {name}",
+  "@barrierOpenTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "barrierReasonLabel": "Reason (required)",
+  "barrierReasonHint": "e.g. Customer without ticket",
+  "barrierReasonInvalid": "Enter a reason of 3 to 200 characters",
+  "barrierOpenConfirm": "Who opened it and why will be recorded, and admins will be notified.",
+  "barrierOpening": "Opening…",
+  "barrierOpened": "Barrier opened",
+  "barrierOpenFailed": "Could not open: {reason}",
+  "@barrierOpenFailed": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "barrierOffline": "Offline: use the barrier's key or remote",
+  "barrierDirectionEntry": "Entry",
+  "barrierDirectionExit": "Exit",
+  "barrierLastCommand": "Last command: {source} · {when}",
+  "@barrierLastCommand": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      },
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "barrierSourceCheckin": "Check-in",
+  "barrierSourcePaidExit": "Paid exit",
+  "barrierSourcePass": "Pass recognised",
+  "barrierSourceManual": "Manual",
+  "barrierSourceOnlinePayment": "Online payment",
+  "barrierStatusQueued": "Queued",
+  "barrierStatusDelivered": "Sent",
+  "barrierStatusExecuted": "Executed",
+  "barrierStatusRejected": "Rejected",
+  "barrierStatusExpired": "Expired",
+  "barrierConfigTitle": "Barrier settings",
+  "barrierConfigCamera": "Paired camera",
+  "barrierConfigOpenOnCheckin": "Open on check-in",
+  "barrierConfigOpenOnPaidExit": "Open on paid exit",
+  "barrierConfigRuleNever": "Never",
+  "barrierConfigRuleLpr": "Camera only",
+  "barrierConfigRuleAlways": "Always",
+  "barrierConfigPass": "Open for pass holders at the entry",
+  "barrierConfigPassWarning": "A spoofed plate with a valid pass could open it.",
+  "barrierConfigHold": "Pulse length (ms)",
+  "barrierConfigMaxOpen": "Maximum open time (s)",
+  "barrierConfigPostClear": "Close delay after passing (ms)",
+  "barrierConfigTtl": "Command lifetime (s)",
+  "barrierHistory": "History",
+  "barrierHistoryEmpty": "No commands recorded",
+  "barrierNeedsConnection": "Opening the barrier needs a connection",
+  "notifTypeBarrierManual": "Barrier opened manually",
+  "notifTypeBarrierFailed": "Barrier did not open",
+  "notifTypeBarrierFault": "Barrier alert",
+  "errorBarrierReason": "Enter a reason of 3 to 200 characters",
+  "errorBarrierOffline": "The barrier is offline",
+  "errorBarrierBusy": "A command is already in progress for this barrier",
+  "errorBarrierRate": "Too many manual openings; wait a moment",
+  "errorBarrierCommandNotFound": "The command no longer exists",
+  "barrierSave": "Save",
+  "barrierSaved": "Settings saved"
 }
