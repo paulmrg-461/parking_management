@@ -21,6 +21,7 @@ import 'modules/customer_messages_module.dart';
 import 'modules/lots_module.dart';
 import 'modules/lpr_module.dart';
 import 'modules/barrier_module.dart';
+import 'modules/bay_sensors_module.dart';
 import 'modules/monthly_passes_module.dart';
 import 'modules/notifications_module.dart';
 import 'modules/observability_module.dart';
@@ -160,6 +161,7 @@ void registerAllModules(GetIt sl, AppConfig config) {
   registerDevicesModule(sl);
   registerLprModule(sl);
   registerBarrierModule(sl);
+  registerBaySensorsModule(sl);
   registerPublicBookingModule(sl);
   registerWaitlistModule(sl);
   registerAnomaliesModule(sl);
