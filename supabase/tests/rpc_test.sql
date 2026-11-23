@@ -17917,4 +17917,705 @@ begin
     perform set_config('request.jwt.claim.sub', '', true);
 end $$;
 
+
+-- ---------------------------------------------------------------------------
+-- bay sensors: schema, effective state, health and the mapping guards.
+-- ---------------------------------------------------------------------------
+do $$
+declare
+    hub integer;
+    bay integer;
+    sensor integer;
+    settings public.bay_sensor_settings%rowtype;
+    state text;
+    health text;
+    pricing_lot integer := current_setting('app.pricing_lot')::integer;
+begin
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+    hub := (public.register_lot_device('sensor_hub', 'Hub sensores') ->> 'id')::integer;
+    perform set_config('app.bay_hub', hub::text, true);
+    bay := (public.save_parking_spot('BS1', 'car', 90, 1) ->> 'id')::integer;
+    perform set_config('app.bay_spot', bay::text, true);
+    perform public.save_parking_spot('BS2', 'car', 90, 2);
+    perform public.save_parking_spot('BS3', 'car', 90, 3);
+
+    insert into public.bay_sensors (lot_id, hub_device_id, channel, spot_id)
+    values (1, hub, 1, bay) returning id into sensor;
+    perform set_config('app.bay_sensor', sensor::text, true);
+    settings := public.bay_sensor_effective_settings(1);
+
+    -- effective state: recent change keeps the previous state
+    update public.bay_sensors
+       set reported_state = 'occupied', confirmed_state = 'free',
+           reported_since = now() - interval '5 seconds',
+           last_report_at = now()
+     where id = sensor;
+    state := public.bay_effective_state(
+        (select s from public.bay_sensors s where s.id = sensor), 20, 5);
+    if state <> 'free' then
+        raise exception 'a recent change replaced the confirmed state: %', state;
+    end if;
+    update public.bay_sensors set reported_since = now() - interval '30 seconds'
+     where id = sensor;
+    state := public.bay_effective_state(
+        (select s from public.bay_sensors s where s.id = sensor), 20, 5);
+    if state <> 'occupied' then
+        raise exception 'a stable change was not applied: %', state;
+    end if;
+    -- unknown: never seen, stale and error
+    update public.bay_sensors
+       set reported_state = null, confirmed_state = null,
+           reported_since = null, last_report_at = null
+     where id = sensor;
+    if public.bay_effective_state(
+        (select s from public.bay_sensors s where s.id = sensor), 20, 5) <> 'unknown' then
+        raise exception 'a never-seen sensor was not unknown';
+    end if;
+    update public.bay_sensors
+       set reported_state = 'free', last_report_at = now() - interval '10 minutes'
+     where id = sensor;
+    if public.bay_effective_state(
+        (select s from public.bay_sensors s where s.id = sensor), 20, 5) <> 'unknown' then
+        raise exception 'a stale sensor was not unknown';
+    end if;
+    update public.bay_sensors
+       set reported_state = 'error', last_report_at = now()
+     where id = sensor;
+    if public.bay_effective_state(
+        (select s from public.bay_sensors s where s.id = sensor), 20, 5) <> 'unknown' then
+        raise exception 'an error sensor was not unknown';
+    end if;
+
+    -- health priority
+    update public.bay_sensors
+       set spot_id = null, reported_state = null, last_report_at = null
+     where id = sensor;
+    health := public.bay_health(
+        (select s from public.bay_sensors s where s.id = sensor), settings);
+    if health <> 'unmapped' then
+        raise exception 'an unmapped sensor is %', health;
+    end if;
+    update public.bay_sensors set spot_id = bay where id = sensor;
+    health := public.bay_health(
+        (select s from public.bay_sensors s where s.id = sensor), settings);
+    if health <> 'never_seen' then
+        raise exception 'a new mapped sensor is %', health;
+    end if;
+    update public.bay_sensors
+       set reported_state = 'free', last_report_at = now() - interval '10 minutes'
+     where id = sensor;
+    health := public.bay_health(
+        (select s from public.bay_sensors s where s.id = sensor), settings);
+    if health <> 'stale' then
+        raise exception 'an old sensor is %', health;
+    end if;
+    update public.bay_sensors
+       set reported_state = 'error', last_report_at = now()
+     where id = sensor;
+    health := public.bay_health(
+        (select s from public.bay_sensors s where s.id = sensor), settings);
+    if health <> 'fault' then
+        raise exception 'an error sensor is %', health;
+    end if;
+    update public.bay_sensors
+       set reported_state = 'free', reported_since = now(),
+           confirmed_state = null, last_report_at = now()
+     where id = sensor;
+    for i in 1 .. 12 loop
+        insert into public.bay_sensor_events (lot_id, sensor_id, state, at)
+        values (1, sensor, 'free', now() - interval '10 minutes');
+    end loop;
+    health := public.bay_health(
+        (select s from public.bay_sensors s where s.id = sensor), settings);
+    if health <> 'flapping' then
+        raise exception 'a flapping sensor is %', health;
+    end if;
+    delete from public.bay_sensor_events where sensor_id = sensor;
+    health := public.bay_health(
+        (select s from public.bay_sensors s where s.id = sensor), settings);
+    if health <> 'ok' then
+        raise exception 'a healthy sensor is %', health;
+    end if;
+
+    -- settings defaults and column parity
+    if settings.debounce_seconds <> 20 or settings.stale_minutes <> 5
+       or settings.flap_per_hour <> 12
+       or settings.mismatch_grace_minutes <> 3
+       or settings.cooldown_minutes <> 30 then
+        raise exception 'the bay settings defaults are wrong: %', settings;
+    end if;
+    if (select count(*) from information_schema.columns
+         where table_schema = 'public' and table_name = 'bay_sensor_settings')
+       <> (select count(*) from jsonb_object_keys(
+               to_jsonb(public.bay_sensor_effective_settings(999)))) then
+        raise exception 'bay_sensor_effective_settings misses a column';
+    end if;
+
+    -- mapping guards
+    begin
+        insert into public.bay_sensors (lot_id, hub_device_id, channel, spot_id)
+        values (1, hub, 2, 999999);
+        raise exception 'a cross-lot or unknown bay was mapped';
+    exception when others then
+        if sqlerrm not like '%SpotNotFoundError%' then raise; end if;
+    end;
+    begin
+        insert into public.bay_sensors (lot_id, hub_device_id, channel)
+        values (1, (select id from public.lot_devices where name = 'Barrera test'), 2);
+        raise exception 'a non-hub device was used as a hub';
+    exception when others then
+        if sqlerrm not like '%InvalidDeviceKindError%' then raise; end if;
+    end;
+    -- mapping changes are audited
+    update public.bay_sensors set spot_id = (select id from public.parking_spots
+        where lot_id = 1 and code = 'BS2') where id = sensor;
+    if not exists (
+        select 1 from public.audit_log
+         where table_name = 'bay_sensors' and after ->> 'spot_id' is not null
+    ) then
+        raise exception 'a mapping change was not audited';
+    end if;
+    update public.bay_sensors set spot_id = bay where id = sensor;
+end $$;
+
+-- bay sensors: clients have no grants on the sensor tables
+do $$
+declare
+    table_name text;
+begin
+    for table_name in
+        select unnest(array['bay_sensor_settings', 'bay_sensors',
+                           'bay_sensor_events', 'bay_mismatches'])
+    loop
+        if has_table_privilege('authenticated', 'public.' || table_name, 'select') then
+            raise exception 'authenticated can select %', table_name;
+        end if;
+        if has_table_privilege('anon', 'public.' || table_name, 'select') then
+            raise exception 'anon can select %', table_name;
+        end if;
+    end loop;
+end $$;
+
+
+-- ---------------------------------------------------------------------------
+-- bay sensors: ingest, effective state and mismatch evaluation.
+-- ---------------------------------------------------------------------------
+create or replace function pg_temp.bay_report(
+    p_hub integer, p_channels jsonb, p_full boolean default false)
+returns jsonb
+language sql
+as $$
+    select public.device_bay_report(p_hub, p_channels, p_full);
+$$;
+
+do $$
+declare
+    hub integer := current_setting('app.bay_hub')::integer;
+    sensor integer := current_setting('app.bay_sensor')::integer;
+    bay integer := current_setting('app.bay_spot')::integer;
+    response jsonb;
+    events integer;
+    state public.bay_sensors%rowtype;
+begin
+    -- config lists the known channel and its mapping
+    response := public.device_bay_config(hub);
+    if not exists (
+        select 1 from jsonb_array_elements(response -> 'channels') item
+         where (item ->> 'ch')::integer = 1 and (item ->> 'mapped')::boolean is true
+    ) then
+        raise exception 'the bay config did not list channel 1: %', response;
+    end if;
+
+    -- a new channel creates an unmapped sensor
+    response := pg_temp.bay_report(hub, jsonb_build_array(
+        jsonb_build_object('ch', 7, 'state', 'free', 'raw', 1200,
+                           'at', now())));
+    if (response ->> 'accepted')::integer <> 1
+       or not (response -> 'created_channels') @> '[7]'::jsonb then
+        raise exception 'a new channel was not created: %', response;
+    end if;
+    if not exists (
+        select 1 from public.bay_sensors s
+         where s.hub_device_id = hub and s.channel = 7 and s.spot_id is null
+    ) then
+        raise exception 'the new channel is not unmapped';
+    end if;
+
+    -- a change stores the previous effective state and logs one event
+    update public.bay_sensors
+       set reported_state = 'free', reported_since = now() - interval '1 minute',
+           confirmed_state = null, last_report_at = now() - interval '1 minute',
+           last_raw = 1500
+     where id = sensor;
+    delete from public.bay_sensor_events where sensor_id = sensor;
+    response := pg_temp.bay_report(hub, jsonb_build_array(
+        jsonb_build_object('ch', 1, 'state', 'occupied', 'raw', 900,
+                           'at', now())));
+    select * into state from public.bay_sensors where id = sensor;
+    if (response ->> 'accepted')::integer <> 1
+       or state.reported_state <> 'occupied'
+       or state.confirmed_state <> 'free'
+       or state.last_raw <> 900 then
+        raise exception 'the change was not applied: % / %', response, state;
+    end if;
+    select count(*) into events from public.bay_sensor_events where sensor_id = sensor;
+    if events <> 1 then
+        raise exception 'the change logged % events', events;
+    end if;
+    -- the same state creates no event
+    response := pg_temp.bay_report(hub, jsonb_build_array(
+        jsonb_build_object('ch', 1, 'state', 'occupied', 'raw', 910,
+                           'at', now() + interval '1 second')));
+    select count(*) into events from public.bay_sensor_events where sensor_id = sensor;
+    if events <> 1 or (response ->> 'accepted')::integer <> 1 then
+        raise exception 'a repeated state logged an event';
+    end if;
+    -- an older report is ignored and counted
+    response := pg_temp.bay_report(hub, jsonb_build_array(
+        jsonb_build_object('ch', 1, 'state', 'free', 'at', now() - interval '1 hour')));
+    if (response ->> 'ignored')::integer <> 1 then
+        raise exception 'an older report was not ignored: %', response;
+    end if;
+
+    -- buffered changes apply in order
+    update public.bay_sensors
+       set reported_state = null, reported_since = null, confirmed_state = null,
+           last_report_at = now() - interval '10 minutes'
+     where id = sensor;
+    delete from public.bay_sensor_events where sensor_id = sensor;
+    response := pg_temp.bay_report(hub, jsonb_build_array(
+        jsonb_build_object('ch', 1, 'state', 'occupied',
+                           'at', now() - interval '5 minutes'),
+        jsonb_build_object('ch', 1, 'state', 'free',
+                           'at', now() - interval '4 minutes')));
+    select * into state from public.bay_sensors where id = sensor;
+    if (response ->> 'accepted')::integer <> 2
+       or state.reported_state <> 'free' then
+        raise exception 'buffered changes were not applied in order: % / %',
+            response, state;
+    end if;
+    select count(*) into events from public.bay_sensor_events where sensor_id = sensor;
+    if events <> 2 then
+        raise exception 'buffered changes logged % events', events;
+    end if;
+
+    -- validation
+    begin
+        perform pg_temp.bay_report(hub, jsonb_build_array(
+            jsonb_build_object('ch', 1, 'state', 'free', 'at', now() + interval '10 minutes')));
+        raise exception 'a future report was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidReadTimeError%' then raise; end if;
+    end;
+    begin
+        perform pg_temp.bay_report(hub, jsonb_build_array(
+            jsonb_build_object('ch', 1, 'state', 'sideways', 'at', now())));
+        raise exception 'an unknown state was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+    begin
+        perform pg_temp.bay_report(hub, jsonb_build_array(
+            jsonb_build_object('ch', 0, 'state', 'free', 'at', now())));
+        raise exception 'channel 0 was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+    begin
+        perform pg_temp.bay_report(
+            (select id from public.lot_devices where name = 'Barrera test'),
+            jsonb_build_array(jsonb_build_object('ch', 1, 'state', 'free', 'at', now())));
+        raise exception 'a barrier hub reported sensors';
+    exception when others then
+        if sqlerrm not like '%InvalidDeviceKindError%' then raise; end if;
+    end;
+    if has_function_privilege('authenticated',
+        'public.device_bay_report(integer, jsonb, boolean)', 'execute') then
+        raise exception 'authenticated can report sensors';
+    end if;
+    if has_function_privilege('anon',
+        'public.device_bay_config(integer)', 'execute') then
+        raise exception 'anon can read the sensor config';
+    end if;
+
+    -- delete the extra channel for the evaluator fixtures
+    delete from public.bay_sensors where hub_device_id = hub and channel = 7;
+end $$;
+
+do $$
+declare
+    hub integer := current_setting('app.bay_hub')::integer;
+    sensor integer := current_setting('app.bay_sensor')::integer;
+    bay integer := current_setting('app.bay_spot')::integer;
+    spot2 integer := (select id from public.parking_spots where lot_id = 1 and code = 'BS2');
+    spot3 integer := (select id from public.parking_spots where lot_id = 1 and code = 'BS3');
+    second integer;
+    third integer;
+    vehicle integer;
+    session_id integer;
+    members integer;
+    mismatch bigint;
+    notified integer;
+    before_capacity jsonb;
+    after_capacity jsonb;
+begin
+    -- fixtures: channel 2 on BS2, channel 3 on BS3, hub online
+    update public.lot_devices set last_seen_at = now() where id = hub;
+    insert into public.bay_sensors (lot_id, hub_device_id, channel, spot_id)
+    values (1, hub, 2, spot2) returning id into second;
+    insert into public.bay_sensors (lot_id, hub_device_id, channel, spot_id)
+    values (1, hub, 3, spot3) returning id into third;
+    perform set_config('app.bay_second', second::text, true);
+    perform set_config('app.bay_third', third::text, true);
+    perform set_config('app.bay_spot2', spot2::text, true);
+    perform set_config('app.bay_spot3', spot3::text, true);
+
+    before_capacity := public.capacity_snapshot();
+    -- stable occupied on BS2 with no session -> mismatch after grace
+    update public.bay_sensors
+       set reported_state = 'occupied', reported_since = now() - interval '5 minutes',
+           confirmed_state = null, last_report_at = now()
+     where id = second;
+    if public.evaluate_bay_mismatches() < 1 then
+        raise exception 'the evaluator opened nothing';
+    end if;
+    select id into mismatch from public.bay_mismatches
+     where spot_id = spot2 and kind = 'occupied_unassigned' and status = 'open';
+    if mismatch is null then
+        raise exception 'the occupied-unassigned mismatch was not opened';
+    end if;
+    select count(distinct lm.user_id) into members
+      from public.lot_members lm join public.users u on u.id = lm.user_id
+     where lm.lot_id = 1 and u.is_active;
+    select count(distinct n.user_id) into notified
+      from public.notifications n
+     where n.dedupe_key like 'bay_mismatch:' || mismatch || ':%';
+    if notified <> members then
+        raise exception 'the mismatch notified % of % members', notified, members;
+    end if;
+    perform public.evaluate_bay_mismatches();
+    select count(*) into notified from public.notifications n
+     where n.dedupe_key like 'bay_mismatch:' || mismatch || ':%';
+    if notified <> members then
+        raise exception 'a second evaluation duplicated the notification';
+    end if;
+    after_capacity := public.capacity_snapshot();
+    if before_capacity <> after_capacity then
+        raise exception 'the sensors changed capacity_snapshot()';
+    end if;
+
+    -- assigned empty: a free bay with an old open session
+    insert into public.vehicles (plate, category_id)
+    select 'BSV01', (select id from public.categories where lot_id = 1 and name = 'LPR car');
+    select id into vehicle from public.vehicles where plate = 'BSV01';
+    insert into public.parking_sessions (
+        vehicle_id, operator_id, lot_id, entry_time, status, spot_id
+    ) values (vehicle, 1, 1, now() - interval '30 minutes', 'open', spot3)
+    returning id into session_id;
+    update public.bay_sensors
+       set reported_state = 'free', reported_since = now() - interval '5 minutes',
+           last_report_at = now()
+     where id = third;
+    perform public.evaluate_bay_mismatches();
+    if not exists (
+        select 1 from public.bay_mismatches
+         where spot_id = spot3 and kind = 'assigned_empty' and status = 'open'
+    ) then
+        raise exception 'the assigned-empty mismatch was not opened';
+    end if;
+
+    -- occupied out of service
+    update public.parking_spots set status = 'out_of_service' where id = spot2;
+    update public.bay_sensors
+       set reported_state = 'occupied', reported_since = now() - interval '5 minutes',
+           last_report_at = now()
+     where id = second;
+    perform public.evaluate_bay_mismatches();
+    if not exists (
+        select 1 from public.bay_mismatches
+         where spot_id = spot2 and kind = 'occupied_out_of_service' and status = 'open'
+    ) then
+        raise exception 'the out-of-service mismatch was not opened';
+    end if;
+    update public.parking_spots set status = 'active' where id = spot2;
+
+    -- the condition stops holding -> auto resolve
+    update public.bay_sensors
+       set reported_state = 'free', reported_since = now() - interval '5 minutes',
+           last_report_at = now()
+     where id = second;
+    perform public.evaluate_bay_mismatches();
+    if exists (
+        select 1 from public.bay_mismatches
+         where spot_id = spot2 and kind = 'occupied_unassigned' and status = 'open'
+    ) then
+        raise exception 'the mismatch did not resolve automatically';
+    end if;
+
+    -- a stale sensor resolves the open mismatches as unreliable
+    update public.bay_sensors set last_report_at = now() - interval '10 minutes'
+     where id = third;
+    perform public.evaluate_bay_mismatches();
+    if exists (
+        select 1 from public.bay_mismatches
+         where spot_id = spot3 and status = 'open'
+    ) then
+        raise exception 'a stale sensor kept its mismatches open';
+    end if;
+
+    -- cooldown: reoccupy immediately -> blocked; after the cooldown -> opened
+    update public.bay_sensors
+       set reported_state = 'occupied', reported_since = now() - interval '5 minutes',
+           last_report_at = now()
+     where id = second;
+    perform public.evaluate_bay_mismatches();
+    if exists (
+        select 1 from public.bay_mismatches
+         where spot_id = spot2 and kind = 'occupied_unassigned' and status = 'open'
+    ) then
+        raise exception 'the cooldown did not block a reopen';
+    end if;
+    update public.bay_mismatches
+       set resolved_at = now() - interval '2 hours'
+     where spot_id = spot2 and kind = 'occupied_unassigned';
+    perform public.evaluate_bay_mismatches();
+    if not exists (
+        select 1 from public.bay_mismatches
+         where spot_id = spot2 and kind = 'occupied_unassigned' and status = 'open'
+    ) then
+        raise exception 'the mismatch did not reopen after the cooldown';
+    end if;
+
+    -- purge keeps recent events
+    insert into public.bay_sensor_events (lot_id, sensor_id, state, at)
+    values (1, second, 'free', now() - interval '200 days');
+    if public.purge_bay_sensor_events(90) < 1 then
+        raise exception 'the purge removed nothing';
+    end if;
+    if exists (select 1 from public.bay_sensor_events
+                where sensor_id = second and at < now() - interval '90 days') then
+        raise exception 'the purge left an old event';
+    end if;
+    if not exists (select 1 from public.bay_sensor_events where sensor_id = sensor) then
+        raise exception 'the purge removed a recent event';
+    end if;
+    delete from public.parking_sessions where id = session_id;
+    if has_function_privilege('authenticated',
+        'public.evaluate_bay_mismatches()', 'execute') then
+        raise exception 'authenticated can run the bay evaluator';
+    end if;
+end $$;
+
+
+-- ---------------------------------------------------------------------------
+-- bay sensors: client RPCs, mapping, thresholds, settings and dismissal.
+-- ---------------------------------------------------------------------------
+do $$
+declare
+    hub integer := current_setting('app.bay_hub')::integer;
+    sensor integer := current_setting('app.bay_sensor')::integer;
+    bay integer := current_setting('app.bay_spot')::integer;
+    spot2 integer := current_setting('app.bay_spot2')::integer;
+    spot3 integer := current_setting('app.bay_spot3')::integer;
+    new_sensor integer;
+    spot4 integer;
+    mismatch bigint;
+    response jsonb;
+    previous_capacity integer;
+    third_sensor integer;
+begin
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', true);
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+
+    -- the board reads the sensor layer
+    response := public.bay_occupancy();
+    if (response ->> 'sensors_enabled')::boolean is not true then
+        raise exception 'sensors are not enabled for lot 1';
+    end if;
+    if jsonb_array_length(response -> 'bays') < 3 then
+        raise exception 'bay_occupancy returned % bays', jsonb_array_length(response -> 'bays');
+    end if;
+    if not exists (
+        select 1 from jsonb_array_elements(response -> 'bays') item
+         where (item ->> 'spot_id')::integer = spot2
+           and item ->> 'state' = 'occupied'
+           and item ->> 'health' = 'ok'
+           and item ->> 'mismatch' = 'occupied_unassigned'
+    ) then
+        raise exception 'bay_occupancy did not expose the mismatch: %', response;
+    end if;
+    if jsonb_array_length(response -> 'mismatches') < 1 then
+        raise exception 'bay_occupancy did not list the mismatches';
+    end if;
+    select id into mismatch from public.bay_mismatches
+     where spot_id = spot2 and kind = 'occupied_unassigned' and status = 'open';
+
+    -- operators read the board but do not administer the sensors
+    begin
+        perform public.list_bay_sensors();
+        raise exception 'an operator listed the sensors';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+    begin
+        perform public.set_bay_sensor_settings(p_debounce_seconds => 30);
+        raise exception 'an operator changed the settings';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+    begin
+        perform public.map_bay_sensor(sensor, spot3);
+        raise exception 'an operator mapped a sensor';
+    exception when others then
+        if sqlerrm not like '%AdminRequiredError%' then raise; end if;
+    end;
+
+    -- dismissing records the operator, the note and the time
+    response := public.dismiss_bay_mismatch(mismatch, '  Carro sin registrar  ');
+    if response ->> 'status' <> 'resolved' then
+        raise exception 'the mismatch was not dismissed';
+    end if;
+    if (select status from public.bay_mismatches where id = mismatch) <> 'resolved'
+       or (select resolved_reason from public.bay_mismatches where id = mismatch) <> 'dismissed'
+       or (select resolved_by from public.bay_mismatches where id = mismatch) <> 2
+       or (select note from public.bay_mismatches where id = mismatch) <> 'Carro sin registrar' then
+        raise exception 'the dismissal was not recorded';
+    end if;
+    begin
+        perform public.dismiss_bay_mismatch(mismatch);
+        raise exception 'a resolved mismatch was dismissed again';
+    exception when others then
+        if sqlerrm not like '%MismatchResolvedError%' then raise; end if;
+    end;
+
+    -- another lot cannot see the mismatch
+    perform set_config('request.headers',
+        jsonb_build_object('x-lot-id', current_setting('app.pricing_lot'))::text, true);
+    response := public.bay_occupancy();
+    if (response ->> 'sensors_enabled')::boolean is not false then
+        raise exception 'a lot without sensors reports them enabled';
+    end if;
+    begin
+        perform public.dismiss_bay_mismatch(mismatch);
+        raise exception 'another lot dismissed the mismatch';
+    exception when others then
+        if sqlerrm not like '%MismatchNotFoundError%' then raise; end if;
+    end;
+    perform set_config('request.headers', '{"x-lot-id":"1"}', true);
+
+    -- admin: list, map, threshold and settings
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+    response := public.list_bay_sensors();
+    if not exists (
+        select 1 from jsonb_array_elements(response) item
+         where (item ->> 'sensor_id')::integer = sensor
+           and (item ->> 'mapped')::boolean is not false
+    ) then
+        raise exception 'the sensor list is missing the mapped sensor: %', response;
+    end if;
+    insert into public.bay_sensors (lot_id, hub_device_id, channel)
+    values (1, hub, 8) returning id into new_sensor;
+    spot4 := (public.save_parking_spot('BS4', 'car', 90, 4) ->> 'id')::integer;
+    if (select spot_id from public.bay_sensors where id = sensor) is null then
+        raise exception 'fixture: the mapped sensor is unmapped';
+    end if;
+    if spot4 is null then
+        raise exception 'fixture: BS4 was not created';
+    end if;
+    begin
+        perform public.map_bay_sensor(sensor, spot4);
+        raise exception 'a mapped sensor was mapped again';
+    exception when others then
+        if sqlerrm not like '%SensorAlreadyMappedError%' then raise; end if;
+    end;
+    begin
+        perform public.map_bay_sensor(new_sensor, bay);
+        raise exception 'a bay with a sensor accepted another one';
+    exception when others then
+        if sqlerrm not like '%SpotHasSensorError%' then raise; end if;
+    end;
+    response := public.map_bay_sensor(new_sensor, spot4);
+    if response ->> 'spot_code' <> 'BS4' then
+        raise exception 'the sensor was not mapped: %', response;
+    end if;
+    response := public.unmap_bay_sensor(new_sensor);
+    if (select spot_id from public.bay_sensors where id = new_sensor) is not null then
+        raise exception 'the sensor was not unmapped';
+    end if;
+    begin
+        perform public.map_bay_sensor(new_sensor, 999999);
+        raise exception 'an unknown bay was mapped';
+    exception when others then
+        if sqlerrm not like '%SpotNotFoundError%' then raise; end if;
+    end;
+
+    -- thresholds reach the device config
+    response := public.set_bay_sensor_threshold(sensor, 2200, 200);
+    if (response ->> 'threshold')::numeric <> 2200 then
+        raise exception 'the threshold was not saved: %', response;
+    end if;
+    if not exists (
+        select 1 from jsonb_array_elements(public.device_bay_config(hub) -> 'channels') item
+         where (item ->> 'ch')::integer = 1
+           and (item ->> 'threshold')::numeric = 2200
+           and (item ->> 'hysteresis')::numeric = 200
+    ) then
+        raise exception 'the device config did not reflect the threshold';
+    end if;
+    begin
+        perform public.set_bay_sensor_threshold(sensor, 0);
+        raise exception 'a zero threshold was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+
+    -- settings: defaults, update, ranges and column parity
+    response := public.get_bay_sensor_settings();
+    if (response ->> 'debounce_seconds')::integer not between 5 and 300 then
+        raise exception 'the settings are wrong: %', response;
+    end if;
+    response := public.set_bay_sensor_settings(
+        p_debounce_seconds => 30, p_mismatch_grace_minutes => 2);
+    if (response ->> 'debounce_seconds')::integer <> 30
+       or (response ->> 'mismatch_grace_minutes')::integer <> 2 then
+        raise exception 'the settings were not saved: %', response;
+    end if;
+    begin
+        perform public.set_bay_sensor_settings(p_cooldown_minutes => 0);
+        raise exception 'an out-of-range setting was accepted';
+    exception when others then
+        if sqlerrm not like '%InvalidDataError%' then raise; end if;
+    end;
+
+    -- deleting a bay unmaps its sensor and drops its mismatches
+    third_sensor := (select id from public.bay_sensors where spot_id = spot3);
+    insert into public.bay_mismatches (lot_id, spot_id, sensor_id, kind)
+    values (1, spot3, third_sensor, 'assigned_empty');
+    -- Deleting a bay is refused while the lot is below its spot target;
+    -- lift it for the test and restore it afterwards.
+    select car_capacity into previous_capacity
+      from public.parking_settings where lot_id = 1;
+    update public.parking_settings set car_capacity = 0 where lot_id = 1;
+    perform public.delete_parking_spot(spot3);
+    update public.parking_settings
+       set car_capacity = previous_capacity where lot_id = 1;
+    if (select spot_id from public.bay_sensors where id = third_sensor) is not null then
+        raise exception 'the sensor kept the deleted bay';
+    end if;
+    if exists (select 1 from public.bay_mismatches where spot_id = spot3) then
+        raise exception 'the mismatches of the deleted bay survived';
+    end if;
+
+    -- grants
+    if has_function_privilege('anon', 'public.bay_occupancy()', 'execute') then
+        raise exception 'anon can read the sensor layer';
+    end if;
+    if not has_function_privilege('authenticated',
+        'public.bay_occupancy()', 'execute') then
+        raise exception 'authenticated cannot read the sensor layer';
+    end if;
+    perform set_config('request.jwt.claim.sub', '', true);
+end $$;
+
 rollback;

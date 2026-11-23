@@ -77,6 +77,15 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - Android release build: R8 keep rules for the optional ML Kit scripts.
 
 ### Added
+- **Bay sensors backend (`0139`-`0141`)**: per-lot settings and effective
+  state, sensors mapped to bays (one per hub channel, audited, same-lot
+  checks), the ingest RPCs that apply reports in order and debounce at read
+  time, health (unmapped/never seen/stale/fault/flapping), mismatch detection
+  with grace, cooldown, auto-resolve and unreliable-sensor resolution,
+  member/admin alerts, the board read (`bay_occupancy`), the admin mapping,
+  threshold and settings RPCs, mismatch dismissal and the retention job.
+  Sensors never change capacity, sessions or check-in. Jobs wired into both
+  schedulers; SQL suite green over `0001`-`0141`.
 - **Barrier page (`/barrier`)**: status and direction per barrier, an
   offline hint, the reason-required manual open (3..200 chars) with a
   live-region tracking banner (queued → executed / failed), the command

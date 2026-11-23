@@ -396,6 +396,40 @@ barrier are untouched.
 - Remaining: the ESP32 firmware (`edge/barrier/`, tasks 6.x) and the physical
   validation (7.x). Tasks 1.1-5.4 and 8.1-8.3 are checked.
 
+## Bay sensors (wave started 2026-11-23, `0139`-`0141`)
+
+The third hardware wave (`add-bay-sensors`) is being built software-first like
+the other two. Sensors are advisory: `slot_board()`, capacity, check-in and
+reservations never read them; the board merges `bay_occupancy()` separately.
+
+- `0139_bay_sensors.sql`: `bay_sensor_settings` + `bay_sensor_effective_settings`
+  (row literal; a test pins the columns), `bay_sensors` (one per hub channel,
+  unique spot when mapped, check trigger for a same-lot hub/bay, audit),
+  `bay_sensor_events`, `bay_mismatches` (one open per spot+kind),
+  `bay_effective_state` (debounce at read time; unknown when never/stale/error)
+  and `bay_health` (unmapped > never_seen > stale > fault > flapping > ok).
+- `0140_bay_sensor_ingest.sql`: `device_bay_config` and `device_bay_report`
+  (validate the whole batch first, lock the hub's channels in order, ignore an
+  `at` not newer than `last_report_at`, store the previous effective state as
+  `confirmed_state`, log one event per real change); `bay_notify`,
+  `bay_sync_mismatch` (cooldown + one open row + member alert) and
+  `evaluate_bay_mismatches` (per-lot advisory lock, unreliable sensors resolve
+  their mismatches, grace on all three kinds, unhealthy admins alerted once
+  per sensor per day unless the hub is offline); `purge_bay_sensor_events(90)`.
+- `0141_bay_sensor_rpcs.sql`: `bay_occupancy` (sensors enabled, bays with
+  state/health/mismatch, open mismatches), `list_bay_sensors` (flaps),
+  `map_bay_sensor`/`unmap_bay_sensor` (resolve the sensor's open mismatches),
+  `set_bay_sensor_threshold`, `dismiss_bay_mismatch` (note ≤ 200) and
+  `get/set_bay_sensor_settings` (admin, ranges).
+- Jobs: `evaluate_bay_mismatches` and `purge_bay_sensor_events` are in
+  `jobs.sh` and the host cron (advice: `JOBS_INTERVAL_SECONDS=60`).
+- Test gotchas: deleting a bay is refused while the lot is below its spot
+  target (`car_capacity`), so the test lifts it temporarily; `parking_spots`
+  has `code`, not `name`; a mapped sensor mapping to a free bay raises
+  `SensorAlreadyMappedError` before the bay check.
+- Next: the gateway `/v1/bays/*` routes, the Flutter sensor overlay/alerts,
+  the hub firmware and the docs page. Tasks 1.1-3.3 are checked.
+
 ## Damage comparison backend (2026-11-18, `0127`)
 
 - Owner approved sending **vehicle photos** to DeepSeek for this advisory

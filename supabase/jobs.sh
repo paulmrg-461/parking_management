@@ -63,6 +63,9 @@ while true; do
   # Barrier control: expire commands nobody delivered and drop old history.
   run expire_barrier_commands
   run purge_barrier_events
+  # Bay sensors: compare the physical state with the sessions, then prune.
+  run evaluate_bay_mismatches
+  run purge_bay_sensor_events
   run purge_cash_anomalies
   # Pass renewal reminders (queued only when the lot opted in).
   run queue_pass_renewal_reminders

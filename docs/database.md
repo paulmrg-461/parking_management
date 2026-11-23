@@ -693,3 +693,16 @@ three triggers are wrapped so they never roll back check-in/check-out.
 `request_manual_barrier_open` requires a reason, an online and idle barrier and
 allows ten opens per user per hour; `list_barriers` exposes the config and the
 in-flight command; `release_device_firmware` is platform-admin only.
+
+**Bay sensors (`0139`-`0141`).** `bay_sensors` maps one hub channel to one bay
+(unique when mapped; the check trigger requires a same-lot `sensor_hub` and
+bay), `bay_sensor_events` stores transitions, `bay_mismatches` keeps one open
+row per bay and kind, and `bay_sensor_settings` holds the debounce/stale/flap/
+grace/cooldown values (effective defaults per lot). `device_bay_report`
+applies reports in order, deduplicates by `last_report_at` and records the
+previous effective state; `bay_effective_state` and `bay_health` compute at
+read time. `evaluate_bay_mismatches` (job, per-lot advisory lock) opens,
+auto-resolves and cools down the three mismatch kinds and alerts the lot;
+`bay_occupancy`, `list_bay_sensors`, `map/unmap_bay_sensor`,
+`set_bay_sensor_threshold`, `dismiss_bay_mismatch` and the settings pair are
+the client RPCs. Nothing here touches capacity or a session.
