@@ -77,6 +77,11 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - Android release build: R8 keep rules for the optional ML Kit scripts.
 
 ### Added
+- **Bay sensor Flutter data layer**: occupancy/reading/mismatch, sensor and
+  settings entities, the commands, the repository and Supabase data source
+  and the editor cubit (mapped/unmapped split, map/unmap/threshold with
+  submissions), plus the DI module. 16 tests; the dashboard overlay and the
+  editor UI are next.
 - **Bay sensor gateway routes**: `/v1/bays/config`, `/v1/bays/report` (16 KiB,
   channels and `full` only) and `/v1/bays/firmware[/:version/image]` for
   kind `sensor_hub`, with the usual kind checks and error passthrough. The

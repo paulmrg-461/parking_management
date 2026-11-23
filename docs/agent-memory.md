@@ -433,8 +433,14 @@ reservations never read them; the board merges `bay_occupancy()` separately.
   400. The live E2E registers a hub, reads the config and reports two
   channels, then `list_bay_sensors` shows the two unmapped sensors. Deno 188
   tests.
-- Next: the Flutter sensor overlay/alerts/settings, the hub firmware and the
-  docs page. Tasks 1.1-4.4 are checked.
+- Flutter data layer shipped (`lib/features/bay_sensors/`): occupancy/
+  reading/mismatch/sensor/settings entities, commands, the repository and
+  Supabase data source (map/unmap/threshold re-read the list) and the editor
+  `BaySensorsCubit` (split mapped/unmapped, submissions, four states) plus the
+  DI module. 16 tests. The UI (dashboard marker and alerts card, bay editor
+  section and settings sheet) is next.
+- Next: the Flutter sensor UI, the hub firmware and the docs page. Tasks
+  1.1-4.4 are checked.
 
 ## Damage comparison backend (2026-11-18, `0127`)
 
