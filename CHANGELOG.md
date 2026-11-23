@@ -77,6 +77,11 @@ releases yet; everything below is unreleased work on `feature/supabase`.**
 - Android release build: R8 keep rules for the optional ML Kit scripts.
 
 ### Added
+- **Bay sensor gateway routes**: `/v1/bays/config`, `/v1/bays/report` (16 KiB,
+  channels and `full` only) and `/v1/bays/firmware[/:version/image]` for
+  kind `sensor_hub`, with the usual kind checks and error passthrough. The
+  live E2E registers a hub, reads its config, reports two channels and sees
+  both unmapped sensors through `list_bay_sensors`.
 - **Bay sensors backend (`0139`-`0141`)**: per-lot settings and effective
   state, sensors mapped to bays (one per hub channel, audited, same-lot
   checks), the ingest RPCs that apply reports in order and debounce at read

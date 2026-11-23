@@ -427,8 +427,14 @@ reservations never read them; the board merges `bay_occupancy()` separately.
   target (`car_capacity`), so the test lifts it temporarily; `parking_spots`
   has `code`, not `name`; a mapped sensor mapping to a free bay raises
   `SensorAlreadyMappedError` before the bay check.
-- Next: the gateway `/v1/bays/*` routes, the Flutter sensor overlay/alerts,
-  the hub firmware and the docs page. Tasks 1.1-3.3 are checked.
+- Gateway routes shipped: `/v1/bays/config`, `/v1/bays/report` (16 KiB,
+  forwards only the channels and `full`), `/v1/bays/firmware[/:version/image]`
+  for kind `sensor_hub`; camera/barrier get 403, `ChannelLimitError` maps to
+  400. The live E2E registers a hub, reads the config and reports two
+  channels, then `list_bay_sensors` shows the two unmapped sensors. Deno 188
+  tests.
+- Next: the Flutter sensor overlay/alerts/settings, the hub firmware and the
+  docs page. Tasks 1.1-4.4 are checked.
 
 ## Damage comparison backend (2026-11-18, `0127`)
 

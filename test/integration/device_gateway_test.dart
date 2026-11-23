@@ -311,6 +311,80 @@ void main() {
         'executed',
       );
 
+      // Bay hub: config and a two-channel report.
+      final hubName = 'e2e-hub-${DateTime.now().millisecondsSinceEpoch}';
+      final hub = Map<String, dynamic>.from(
+        await client.rpc('register_lot_device', params: {
+          'p_kind': 'sensor_hub',
+          'p_name': hubName,
+        }) as Map,
+      );
+      final hubKey = hub['api_key'] as String;
+      final hubId = hub['id'] as int;
+      addTearDown(() async {
+        try {
+          await client.rpc('delete_lot_device', params: {'p_id': hubId});
+        } catch (_) {}
+      });
+      final hubBeat = await http
+          .post(
+            Uri.parse('$gateway/v1/heartbeat'),
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Device-Key': hubKey,
+              'X-Device-Timestamp': '$now',
+              'X-Device-Seq': '1',
+            },
+            body: jsonEncode({'status': {'uptime_s': 1}}),
+          )
+          .timeout(const Duration(seconds: 15));
+      expect(hubBeat.statusCode, 200);
+
+      final baysConfig = await http
+          .get(
+            Uri.parse('$gateway/v1/bays/config'),
+            headers: {
+              'X-Device-Key': hubKey,
+              'X-Device-Timestamp': '$now',
+              'X-Device-Seq': '2',
+            },
+          )
+          .timeout(const Duration(seconds: 15));
+      expect(baysConfig.statusCode, 200);
+      final baysBody = jsonDecode(baysConfig.body) as Map<String, dynamic>;
+      expect(baysBody['stable_ms'], 5000);
+      expect(baysBody['channels'], isEmpty);
+
+      final capturedAt = DateTime.now().toUtc().toIso8601String();
+      final bayReport = await http
+          .post(
+            Uri.parse('$gateway/v1/bays/report'),
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Device-Key': hubKey,
+              'X-Device-Timestamp': '$now',
+              'X-Device-Seq': '3',
+            },
+            body: jsonEncode({
+              'channels': [
+                {'ch': 1, 'state': 'occupied', 'raw': 900, 'at': capturedAt},
+                {'ch': 2, 'state': 'free', 'raw': 2200, 'at': capturedAt},
+              ],
+              'full': true,
+            }),
+          )
+          .timeout(const Duration(seconds: 15));
+      expect(bayReport.statusCode, 200);
+      final reportBody = jsonDecode(bayReport.body) as Map<String, dynamic>;
+      expect(reportBody['accepted'], 2);
+      expect(reportBody['created_channels'], containsAll([1, 2]));
+
+      final sensors = await client.rpc('list_bay_sensors') as List<dynamic>;
+      expect(
+        sensors.where((item) => (item as Map)['hub_device_id'] == hubId).length,
+        2,
+      );
+
       final events = await client.rpc('list_device_events', params: {
         'p_device_id': deviceId,
         'p_limit': 20,

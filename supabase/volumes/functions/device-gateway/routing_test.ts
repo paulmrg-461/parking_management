@@ -44,6 +44,18 @@ Deno.test('matches the barrier routes', () => {
   )
 })
 
+Deno.test('matches the bay sensor routes', () => {
+  assertEquals(matchRoute('GET', fn('/v1/bays/config'))?.name, 'bays_config')
+  assertEquals(matchRoute('POST', fn('/v1/bays/report'))?.name, 'bays_report')
+  assertEquals(
+    matchRoute('GET', fn('/v1/bays/firmware'))?.name,
+    'bays_firmware',
+  )
+  const image = matchRoute('GET', fn('/v1/bays/firmware/1.0.1/image'))
+  assertEquals(image?.name, 'bays_image')
+  assertEquals(image?.params['version'], '1.0.1')
+})
+
 Deno.test('a route only matches its method', () => {
   assertEquals(matchRoute('GET', fn('/v1/heartbeat')), null)
   assertEquals(matchRoute('POST', fn('/v1/time')), null)

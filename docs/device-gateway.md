@@ -63,3 +63,17 @@ All three use the standard headers (key, sequence, timestamp, firmware) and
 answer `403 InvalidDeviceKindError` for a non-camera device. The full path is
 covered by the automated smoke: it registers a camera, assigns the direction,
 posts three reads (one `assist` event) and uploads a small JPEG.
+
+## Bay sensor routes (kind `sensor_hub`)
+
+- `GET /v1/bays/config` → `{report_interval_s, stable_ms, channels:[{ch,
+  type, threshold, hysteresis, mapped}]}`.
+- `POST /v1/bays/report` with `{"channels":[{"ch":1,"state":"occupied",
+  "raw":900,"at":"..."}],"full":true}` (body ≤ 16 KiB) →
+  `{accepted, ignored, created_channels}`. Feed the channels in order; the
+  server ignores an `at` that is not newer than the last report.
+- `GET /v1/bays/firmware?current=1.0.0` and
+  `GET /v1/bays/firmware/:version/image` (released `sensor_hub` images only).
+
+A non-`sensor_hub` device gets `403`. The whole path is covered by the
+automated smoke: register a hub, read the config and report two channels.

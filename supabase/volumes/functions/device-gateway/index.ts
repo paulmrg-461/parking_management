@@ -62,6 +62,20 @@ export type BarrierDeps = {
   sleep: (ms: number) => Promise<void>
 }
 
+export type BaysDeps = {
+  config: (deviceId: number) => Promise<Record<string, unknown>>
+  report: (
+    deviceId: number,
+    channels: unknown,
+    full: boolean,
+  ) => Promise<Record<string, unknown>>
+  firmware: (
+    deviceId: number,
+    current: string | null,
+  ) => Promise<Record<string, unknown> | null>
+  image: (version: string) => Promise<Uint8Array | null>
+}
+
 export type GatewayDeps = {
   serviceKey: () => string
   lookup: (prefix: string) => Promise<{ id: number; key_hash: string } | null>
@@ -79,6 +93,7 @@ export type GatewayDeps = {
   now: () => Date
   lpr: LprDeps
   barrier: BarrierDeps
+  bays: BaysDeps
 }
 
 const KEY = /^pkd_([0-9a-f]{12})_([0-9a-f]{64})$/
@@ -126,7 +141,8 @@ export function createHandler(deps: GatewayDeps) {
       : code === 'InvalidPlateError' || code === 'InvalidConfidenceError' ||
           code === 'InvalidReadTimeError' ||
           code === 'LprDirectionNotSetError' ||
-          code === 'InvalidSnapshotPathError' || code === 'InvalidDataError'
+          code === 'InvalidSnapshotPathError' || code === 'InvalidDataError' ||
+          code === 'ChannelLimitError'
       ? 400
       : 502
     return refuse(code, status)
@@ -425,6 +441,77 @@ export function createHandler(deps: GatewayDeps) {
     }
   }
 
+
+  async function baysConfig(deviceId: number): Promise<Response> {
+    try {
+      return json(await deps.bays.config(deviceId))
+    } catch (error) {
+      return failure(error)
+    }
+  }
+
+  async function baysReport(
+    req: Request,
+    deviceId: number,
+  ): Promise<Response> {
+    const parsed = await readJson(req, 16384)
+    if (parsed instanceof Response) return parsed
+    const channels = parsed.channels
+    if (!Array.isArray(channels) || channels.length === 0) {
+      return refuse('InvalidDataError', 400)
+    }
+    const full = parsed.full === true
+    try {
+      return json(await deps.bays.report(deviceId, channels, full))
+    } catch (error) {
+      return failure(error)
+    }
+  }
+
+  async function baysFirmware(
+    url: URL,
+    deviceId: number,
+  ): Promise<Response> {
+    try {
+      const manifest = await deps.bays.firmware(
+        deviceId,
+        url.searchParams.get('current'),
+      )
+      if (manifest === null) {
+        return new Response(null, { status: 204 })
+      }
+      return json({
+        version: manifest.version,
+        sha256: manifest.sha256,
+        size: Number(manifest.size_bytes),
+        secure_version: Number(manifest.secure_version),
+        image_path: `/v1/bays/firmware/${manifest.version}/image`,
+      })
+    } catch (error) {
+      return failure(error)
+    }
+  }
+
+  async function baysImage(version: string): Promise<Response> {
+    if (!BARRIER_VERSION.test(version)) {
+      return refuse('NotFoundError', 404)
+    }
+    try {
+      const bytes = await deps.bays.image(version)
+      if (bytes === null) {
+        return refuse('NotFoundError', 404)
+      }
+      const copy = new Uint8Array(new ArrayBuffer(bytes.length))
+      copy.set(bytes)
+      return new Response(copy.buffer, {
+        status: 200,
+        headers: { 'Content-Type': 'application/octet-stream' },
+      })
+    } catch (error) {
+      return failure(error)
+    }
+  }
+
   return async (req: Request): Promise<Response> => {
     const url = new URL(req.url)
     const route = matchRoute(req.method, url.pathname)
@@ -499,10 +586,27 @@ export function createHandler(deps: GatewayDeps) {
       })
     }
 
-    // LPR routes are camera-only, barrier routes barrier-only.
-    const requiredKind = route.name.startsWith('lpr_') ? 'camera' : 'barrier'
+    // LPR routes are camera-only, barrier routes barrier-only, bay routes
+    // sensor-hub only.
+    const requiredKind = route.name.startsWith('lpr_')
+      ? 'camera'
+      : route.name.startsWith('barrier_')
+      ? 'barrier'
+      : 'sensor_hub'
     if (accepted.kind !== requiredKind) {
       return refuse('InvalidDeviceKindError', 403)
+    }
+    if (route.name === 'bays_config') {
+      return baysConfig(deviceId)
+    }
+    if (route.name === 'bays_report') {
+      return baysReport(req, deviceId)
+    }
+    if (route.name === 'bays_firmware') {
+      return baysFirmware(url, deviceId)
+    }
+    if (route.name === 'bays_image') {
+      return baysImage(route.params['version'] ?? '')
     }
     if (route.name === 'barrier_config') {
       return barrierConfig(deviceId)
@@ -670,6 +774,38 @@ function realDeps(): GatewayDeps {
         return signerPromise
       },
       sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+    },
+    bays: {
+      config: (deviceId) => rpc('device_bay_config', { p_device_id: deviceId }),
+      report: (deviceId, channels, full) =>
+        rpc('device_bay_report', {
+          p_device_id: deviceId,
+          p_channels: channels,
+          p_full: full,
+        }),
+      firmware: (deviceId, current) =>
+        rpc('device_firmware_manifest', {
+          p_device_id: deviceId,
+          p_current: current,
+        }),
+      image: async (version) => {
+        const query = 'device_firmware?kind=eq.sensor_hub' +
+          `&version=eq.${encodeURIComponent(version)}` +
+          '&released=eq.true&select=storage_path&limit=1'
+        const response = await fetch(`${url}/rest/v1/${query}`, {
+          headers: { apikey: key, Authorization: `Bearer ${key}` },
+        })
+        if (!response.ok) return null
+        const rows = await response.json() as Array<{ storage_path?: string }>
+        const path = rows[0]?.storage_path
+        if (!path) return null
+        const object = await fetch(
+          `${url}/storage/v1/object/firmware/${path}`,
+          { headers: { apikey: key, Authorization: `Bearer ${key}` } },
+        )
+        if (!object.ok) return null
+        return new Uint8Array(await object.arrayBuffer())
+      },
     },
   }
 }

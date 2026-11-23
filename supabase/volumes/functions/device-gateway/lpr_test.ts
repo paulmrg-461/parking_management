@@ -49,6 +49,20 @@ function deps(options: {
         Promise.resolve({ publicKey: '', sign: () => Promise.resolve('sig') }),
       sleep: () => Promise.resolve(),
     },
+    bays: {
+      config: () => Promise.resolve({
+        report_interval_s: 60,
+        stable_ms: 5000,
+        channels: [],
+      }),
+      report: () => Promise.resolve({
+        accepted: 1,
+        ignored: 0,
+        created_channels: [1],
+      }),
+      firmware: () => Promise.resolve(null),
+      image: () => Promise.resolve(null),
+    },
   }
 }
 

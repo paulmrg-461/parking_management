@@ -14,6 +14,10 @@ export type RouteName =
   | 'barrier_event'
   | 'barrier_firmware'
   | 'barrier_image'
+  | 'bays_config'
+  | 'bays_report'
+  | 'bays_firmware'
+  | 'bays_image'
 
 type Route = {
   method: string
@@ -65,6 +69,26 @@ const ROUTES: Route[] = [
     method: 'GET',
     name: 'barrier_image',
     segments: ['v1', 'barrier', 'firmware', ':version', 'image'],
+  },
+  {
+    method: 'GET',
+    name: 'bays_config',
+    segments: ['v1', 'bays', 'config'],
+  },
+  {
+    method: 'POST',
+    name: 'bays_report',
+    segments: ['v1', 'bays', 'report'],
+  },
+  {
+    method: 'GET',
+    name: 'bays_firmware',
+    segments: ['v1', 'bays', 'firmware'],
+  },
+  {
+    method: 'GET',
+    name: 'bays_image',
+    segments: ['v1', 'bays', 'firmware', ':version', 'image'],
   },
 ]
 

@@ -22,10 +22,10 @@ Prerequisite: `add-device-gateway` implemented (and, for tasks 3.3 and 6.x, awar
 
 ## 4. Edge Function routes
 
-- [ ] 4.1 Write Deno tests first (`supabase/volumes/functions/device-gateway/bays_test.ts`, fake `deps`): Success `report_forwards_channels_and_returns_counts`, Success `config_returns_channels`, Success `firmware_routes_use_sensor_hub_kind`, Failure `body_over_16kib_413`, Failure `malformed_json_400`, Failure `rpc_error_name_passthrough` (`ChannelLimitError`, `InvalidReadTimeError` → 400), Security `barrier_and_camera_get_403`, Security `lot_and_spot_fields_in_body_are_ignored` (RPC params contain only `p_device_id`, `p_channels`, `p_full`), Security `no_cors_headers`.
-- [ ] 4.2 Create `routes/bays_config.ts`, `routes/bays_report.ts`, `routes/bays_firmware.ts` (kinds `['sensor_hub']`, `maxBytes` 16384 for the report) and register them in `routes.ts`. If `add-barrier-control` shipped, extract its firmware handlers into `routes/firmware_common.ts` parameterised by kind and keep the barrier tests green; otherwise implement `firmware_common.ts` now and let the barrier change reuse it.
-- [ ] 4.3 Acceptance: `deno test --no-check supabase/volumes/functions/device-gateway/`.
-- [ ] 4.4 [needs-hardware: none; needs the running stack] Manual: register a hub, `curl` a report with 2 channels (new `X-Device-Seq` each time), see two unmapped sensors in `select * from list_bay_sensors()` under an admin claim, repeat the same body and see `ignored: 2`.
+- [x] 4.1 Write Deno tests first (`supabase/volumes/functions/device-gateway/bays_test.ts`, fake `deps`): Success `report_forwards_channels_and_returns_counts`, Success `config_returns_channels`, Success `firmware_routes_use_sensor_hub_kind`, Failure `body_over_16kib_413`, Failure `malformed_json_400`, Failure `rpc_error_name_passthrough` (`ChannelLimitError`, `InvalidReadTimeError` → 400), Security `barrier_and_camera_get_403`, Security `lot_and_spot_fields_in_body_are_ignored` (RPC params contain only `p_device_id`, `p_channels`, `p_full`), Security `no_cors_headers`.
+- [x] 4.2 Create `routes/bays_config.ts`, `routes/bays_report.ts`, `routes/bays_firmware.ts` (kinds `['sensor_hub']`, `maxBytes` 16384 for the report) and register them in `routes.ts`. If `add-barrier-control` shipped, extract its firmware handlers into `routes/firmware_common.ts` parameterised by kind and keep the barrier tests green; otherwise implement `firmware_common.ts` now and let the barrier change reuse it.
+- [x] 4.3 Acceptance: `deno test --no-check supabase/volumes/functions/device-gateway/`.
+- [x] 4.4 [needs-hardware: none; needs the running stack] Manual: register a hub, `curl` a report with 2 channels (new `X-Device-Seq` each time), see two unmapped sensors in `select * from list_bay_sensors()` under an admin claim, repeat the same body and see `ignored: 2`.
 
 ## 5. Flutter
 
